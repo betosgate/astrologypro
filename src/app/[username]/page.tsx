@@ -151,6 +151,7 @@ export default async function DivinerPage({ params }: PageProps) {
         avatarUrl={diviner.avatar_url}
         specialties={diviner.specialties ?? []}
         youtubeChannelId={diviner.youtube_channel_id ?? null}
+        facebookLiveUrl={diviner.facebook_live_url ?? null}
       />
 
       {/* Featured Services */}

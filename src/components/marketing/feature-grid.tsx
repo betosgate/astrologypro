@@ -1,28 +1,98 @@
 import {
   Globe, Video, Calendar, CreditCard, Users, Share2,
   MessageSquare, BarChart3, Sparkles, Shield, Zap, Heart,
+  Moon, Sun, Star,
 } from "lucide-react";
+import { StarField } from "./astro-decorations";
 
 const features = [
-  { icon: Globe, title: "Your Branded Page", description: "Get a professional landing page at astrologypro.com/yourname. Showcase your services, testimonials, and book clients." },
-  { icon: Video, title: "HD Video Sessions", description: "Crystal-clear video with screen sharing. Show your charts and cards live. Every session auto-recorded." },
-  { icon: Calendar, title: "Smart Booking", description: "Clients book based on your real availability. Google Calendar sync. Automatic reminders." },
-  { icon: CreditCard, title: "Instant Payments", description: "Accept payments via Stripe. Automatic overage billing. Your money, your account." },
-  { icon: Users, title: "Client CRM", description: "Track birth data, session history, and notes for every client. Build lasting relationships." },
-  { icon: Share2, title: "Social Marketing", description: "Auto-post to Instagram, Twitter, YouTube, and more. Pre-made content with your links." },
-  { icon: MessageSquare, title: "Testimonials", description: "Collect and display client reviews on your page. Build trust and credibility automatically." },
-  { icon: BarChart3, title: "Affiliate Program", description: "Set up affiliates to send you clients. Track referrals, commissions, and payouts." },
-  { icon: Sparkles, title: "Astrology & Tarot Tools", description: "Full access to professional chart calculation and tarot software during sessions." },
-  { icon: Shield, title: "Session Recordings", description: "Every session recorded automatically. Clients can rewatch and share on social media." },
-  { icon: Zap, title: "Event Reminders", description: "Auto-detect solar returns, Saturn returns, and more. Remind clients to book at the perfect time." },
-  { icon: Heart, title: "Live Streaming", description: "Stream from YouTube or Facebook Live right on your page. Attract viewers to your services." },
+  {
+    icon: Globe,
+    title: "Your Branded Page",
+    description: "Get a professional landing page at astrologypro.com/yourname. Showcase your services, testimonials, and book clients instantly.",
+    gradient: "from-purple-500/20 to-indigo-500/20",
+  },
+  {
+    icon: Video,
+    title: "HD Video Sessions",
+    description: "Crystal-clear video with screen sharing. Show your charts and cards live. Every session auto-recorded for your clients.",
+    gradient: "from-blue-500/20 to-cyan-500/20",
+  },
+  {
+    icon: Sun,
+    title: "Astrology Chart Tools",
+    description: "Full access to professional natal chart calculation, solar returns, synastry, transits, and more during live sessions.",
+    gradient: "from-amber-500/20 to-orange-500/20",
+  },
+  {
+    icon: Moon,
+    title: "Tarot Reading Software",
+    description: "Professional tarot spreads — Celtic Cross, Horseshoe, Astrological, and more. Display cards beautifully during sessions.",
+    gradient: "from-indigo-500/20 to-purple-500/20",
+  },
+  {
+    icon: Calendar,
+    title: "Smart Booking",
+    description: "Clients book based on your real availability. Google Calendar sync. Automatic timezone conversion and reminders.",
+    gradient: "from-emerald-500/20 to-teal-500/20",
+  },
+  {
+    icon: CreditCard,
+    title: "Instant Payments",
+    description: "Accept payments via Stripe directly to your account. Automatic overage billing for sessions that run long.",
+    gradient: "from-green-500/20 to-emerald-500/20",
+  },
+  {
+    icon: Users,
+    title: "Client CRM",
+    description: "Store birth data, session history, and private notes for every client. Build lasting relationships that grow your practice.",
+    gradient: "from-pink-500/20 to-rose-500/20",
+  },
+  {
+    icon: Share2,
+    title: "Social Marketing",
+    description: "Auto-post to Instagram, Twitter, YouTube, and TikTok. Pre-made astrology and tarot content with your unique links.",
+    gradient: "from-violet-500/20 to-purple-500/20",
+  },
+  {
+    icon: BarChart3,
+    title: "Affiliate Program",
+    description: "Set up affiliates to send you clients. Track referrals, set custom commission rates, and manage payouts.",
+    gradient: "from-sky-500/20 to-blue-500/20",
+  },
+  {
+    icon: Zap,
+    title: "Event Reminders",
+    description: "Auto-detect solar returns, Saturn returns, and Jupiter returns. Remind clients to book at the cosmically perfect time.",
+    gradient: "from-yellow-500/20 to-amber-500/20",
+  },
+  {
+    icon: Heart,
+    title: "Live Streaming",
+    description: "Stream from YouTube or Facebook Live right on your page. Turn viewers into booking clients during your lives.",
+    gradient: "from-red-500/20 to-pink-500/20",
+  },
+  {
+    icon: Shield,
+    title: "Session Recordings",
+    description: "Every session recorded automatically. Clients can rewatch, share on social media, and book again with one click.",
+    gradient: "from-teal-500/20 to-cyan-500/20",
+  },
 ];
 
 export function FeatureGrid() {
   return (
-    <section className="px-4 py-24 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+    <section className="relative px-4 py-24 sm:px-6 lg:px-8">
+      {/* Subtle star background */}
+      <StarField className="pointer-events-none absolute inset-0 h-full w-full text-purple-300 opacity-30" />
+
+      <div className="relative mx-auto max-w-7xl">
         <div className="text-center">
+          <div className="mb-4 inline-flex items-center gap-2 text-sm text-primary">
+            <Sparkles className="h-4 w-4" />
+            <span>Complete Business Toolkit</span>
+            <Sparkles className="h-4 w-4" />
+          </div>
           <h2 className="text-3xl font-bold sm:text-4xl">
             Everything You Need to <span className="text-primary">Thrive</span>
           </h2>
@@ -35,12 +105,26 @@ export function FeatureGrid() {
           {features.map((feature) => (
             <div
               key={feature.title}
-              className="group rounded-xl border border-border/60 bg-card/50 p-6 transition-colors hover:border-primary/30 hover:bg-card"
+              className="group relative overflow-hidden rounded-xl border border-border/60 bg-card/50 p-6 transition-all duration-300 hover:border-primary/30 hover:bg-card hover:shadow-lg hover:shadow-primary/5"
             >
-              <feature.icon className="h-10 w-10 text-primary" />
-              <h3 className="mt-4 text-lg font-semibold">{feature.title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{feature.description}</p>
+              {/* Gradient background on hover */}
+              <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 transition-opacity group-hover:opacity-100`} />
+
+              <div className="relative">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                  <feature.icon className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold">{feature.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
+              </div>
             </div>
+          ))}
+        </div>
+
+        {/* Zodiac symbols row */}
+        <div className="mt-16 flex items-center justify-center gap-4 text-2xl text-muted-foreground/20">
+          {["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"].map((symbol) => (
+            <span key={symbol} className="hidden sm:inline">{symbol}</span>
           ))}
         </div>
       </div>

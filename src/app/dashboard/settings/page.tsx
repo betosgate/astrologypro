@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
@@ -46,9 +46,24 @@ interface DivinerSettings {
 
 export default function SettingsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<DivinerSettings | null>(null);
+
+  useEffect(() => {
+    const calendarStatus = searchParams.get("calendar");
+    if (calendarStatus === "connected") {
+      toast.success("Google Calendar connected successfully!");
+      router.replace("/dashboard/settings", { scroll: false });
+    } else if (calendarStatus === "error") {
+      const reason = searchParams.get("reason");
+      toast.error(
+        `Failed to connect Google Calendar${reason ? `: ${reason}` : ""}`
+      );
+      router.replace("/dashboard/settings", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   useEffect(() => {
     async function load() {
@@ -285,7 +300,7 @@ export default function SettingsPage() {
                 ) : (
                   <XCircle className="size-5 text-muted-foreground" />
                 )}
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-medium">Google Calendar</p>
                   <p className="text-xs text-muted-foreground">
                     {settings.google_calendar_connected
@@ -293,11 +308,54 @@ export default function SettingsPage() {
                       : "Not connected"}
                   </p>
                 </div>
+                {settings.google_calendar_connected && (
+                  <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+                    Connected
+                  </Badge>
+                )}
               </div>
+              {settings.google_calendar_connected ? (
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      const supabase = createClient();
+                      const { error } = await supabase
+                        .from("diviners")
+                        .update({
+                          google_calendar_token: null,
+                          google_calendar_connected: false,
+                        })
+                        .eq("id", settings.id);
+                      if (error) {
+                        toast.error("Failed to disconnect Google Calendar");
+                      } else {
+                        setSettings({
+                          ...settings,
+                          google_calendar_connected: false,
+                        });
+                        toast.success("Google Calendar disconnected");
+                      }
+                    } catch {
+                      toast.error("Failed to disconnect Google Calendar");
+                    }
+                  }}
+                >
+                  Disconnect Google Calendar
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => {
+                    window.location.href = "/api/calendar/connect";
+                  }}
+                >
+                  <CalendarDays className="mr-2 size-4" />
+                  Connect Google Calendar
+                </Button>
+              )}
               <p className="text-sm text-muted-foreground">
-                Google Calendar integration is coming in Phase 2. Stay tuned for
-                automatic booking sync, availability management, and calendar
-                overlay features.
+                When connected, client bookings will automatically appear on
+                your Google Calendar.
               </p>
             </CardContent>
           </Card>

@@ -11,6 +11,10 @@ import {
   Settings,
   Menu,
   LogOut,
+  MessageSquare,
+  Radio,
+  Users2,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -35,6 +39,10 @@ const navItems = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { label: "Bookings", href: "/dashboard/bookings", icon: Calendar },
   { label: "Clients", href: "/dashboard/clients", icon: Users },
+  { label: "Testimonials", href: "/dashboard/testimonials", icon: MessageSquare },
+  { label: "Affiliates", href: "/dashboard/affiliates", icon: Users2 },
+  { label: "Live", href: "/dashboard/live", icon: Radio },
+  { label: "Marketing", href: "/dashboard/marketing", icon: Megaphone },
   { label: "Services", href: "/dashboard/services", icon: Sparkles },
   { label: "Profile", href: "/dashboard/profile", icon: User },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },

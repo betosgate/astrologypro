@@ -11,6 +11,7 @@ interface DivinerHeroProps {
   avatarUrl: string | null;
   specialties: string[];
   youtubeChannelId: string | null;
+  facebookLiveUrl: string | null;
 }
 
 export function DivinerHero({
@@ -20,6 +21,7 @@ export function DivinerHero({
   avatarUrl,
   specialties,
   youtubeChannelId,
+  facebookLiveUrl,
 }: DivinerHeroProps) {
   const initials = displayName
     .split(" ")
@@ -27,6 +29,8 @@ export function DivinerHero({
     .join("")
     .slice(0, 2)
     .toUpperCase();
+
+  const hasLiveStream = !!youtubeChannelId || !!facebookLiveUrl;
 
   return (
     <section className="relative overflow-hidden border-b bg-gradient-to-b from-card to-background py-16 md:py-24">
@@ -73,18 +77,57 @@ export function DivinerHero({
           </Link>
         </Button>
 
-        {/* YouTube Live Embed */}
-        {youtubeChannelId && (
-          <div className="mx-auto mt-10 max-w-2xl overflow-hidden rounded-xl border shadow-lg">
-            <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
-              <iframe
-                className="absolute inset-0 h-full w-full"
-                src={`https://www.youtube.com/embed/live_stream?channel=${youtubeChannelId}`}
-                title="Live Stream"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+        {/* Live Stream Section */}
+        {hasLiveStream && (
+          <div className="mx-auto mt-10 max-w-2xl">
+            {/* LIVE NOW Banner */}
+            <div className="mb-4 flex items-center justify-center gap-2">
+              <span className="relative flex size-3">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                <span className="relative inline-flex size-3 rounded-full bg-red-500" />
+              </span>
+              <span className="text-sm font-semibold uppercase tracking-wider text-red-500">
+                Live Now
+              </span>
             </div>
+
+            {/* YouTube Live Embed */}
+            {youtubeChannelId && (
+              <div className="overflow-hidden rounded-xl border shadow-lg">
+                <div
+                  className="relative w-full"
+                  style={{ paddingBottom: "56.25%" }}
+                >
+                  <iframe
+                    className="absolute inset-0 h-full w-full"
+                    src={`https://www.youtube.com/embed/live_stream?channel=${youtubeChannelId}&autoplay=1&mute=1`}
+                    title="Live Stream"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Facebook Live Embed */}
+            {facebookLiveUrl && (
+              <div
+                className={`overflow-hidden rounded-xl border shadow-lg${youtubeChannelId ? " mt-4" : ""}`}
+              >
+                <div
+                  className="relative w-full"
+                  style={{ paddingBottom: "56.25%" }}
+                >
+                  <iframe
+                    className="absolute inset-0 h-full w-full"
+                    src={`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(facebookLiveUrl)}&width=720&autoplay=true`}
+                    title="Facebook Live Stream"
+                    allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
