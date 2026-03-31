@@ -24,6 +24,15 @@ import {
   Users,
   Video,
 } from "lucide-react";
+import {
+  LandingPageMockup,
+  VideoSessionMockup,
+  DashboardMockup,
+  ShareHubMockup,
+  BookingFlowMockup,
+  NatalChartIllustration,
+  MobilePhoneMockup,
+} from "@/components/marketing/illustrations";
 
 export const metadata = {
   title: "See Demo - AstrologyPro",
@@ -55,6 +64,11 @@ function LandingPageTab() {
       <p className="text-sm text-muted-foreground">
         This is what your clients see when they visit your personal page.
       </p>
+
+      {/* SVG Preview Illustration */}
+      <div className="overflow-hidden rounded-xl border border-border/50 bg-muted/5">
+        <LandingPageMockup className="w-full h-auto" />
+      </div>
 
       {/* Diviner Hero Mock */}
       <div className="overflow-hidden rounded-xl border bg-card">
@@ -206,6 +220,11 @@ function DashboardTab() {
         Your command center for managing bookings, clients, and revenue.
       </p>
 
+      {/* SVG Dashboard Preview */}
+      <div className="overflow-hidden rounded-xl border border-border/50 bg-muted/5">
+        <DashboardMockup className="w-full h-auto" />
+      </div>
+
       {/* Revenue Stats */}
       <div className="grid gap-3 sm:grid-cols-4">
         {[
@@ -348,15 +367,9 @@ function SessionTab() {
           </div>
         </div>
 
-        {/* Video area mock */}
-        <div className="relative flex h-56 items-center justify-center bg-gradient-to-br from-zinc-900 to-zinc-800 sm:h-72">
-          <div className="text-center">
-            <Video className="mx-auto h-12 w-12 text-zinc-600" />
-            <p className="mt-2 text-sm text-zinc-500">
-              Live video session area
-            </p>
-          </div>
-
+        {/* Video area — SVG illustration */}
+        <div className="relative">
+          <VideoSessionMockup className="w-full h-auto" />
           {/* Annotation callouts */}
           <div className="absolute left-3 top-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
             Timer & cost tracker
@@ -430,6 +443,11 @@ function MarketingTab() {
       <p className="text-sm text-muted-foreground">
         Share your services everywhere in seconds with the Push-to-Share hub.
       </p>
+
+      {/* SVG Share Hub Preview */}
+      <div className="overflow-hidden rounded-xl border border-border/50 bg-muted/5">
+        <ShareHubMockup className="w-full h-auto" />
+      </div>
 
       {/* Share Hub Mockup */}
       <Card>
@@ -509,6 +527,11 @@ function ClientPortalTab() {
       <p className="text-sm text-muted-foreground">
         A polished experience for your clients, from booking to replay.
       </p>
+
+      {/* SVG Booking Flow Preview */}
+      <div className="overflow-hidden rounded-xl border border-border/50 bg-muted/5">
+        <BookingFlowMockup className="w-full h-auto" />
+      </div>
 
       {/* Booking Flow Mock */}
       <Card>

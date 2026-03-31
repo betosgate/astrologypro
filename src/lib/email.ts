@@ -1,4 +1,6 @@
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const APP_URL =
+  process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
 
 interface SendEmailParams {
   to: string;
@@ -37,14 +39,229 @@ export async function sendEmail({ to, subject, html }: SendEmailParams) {
   return { success: true, id: data.id };
 }
 
-// --- Specific email types ---
+// ---------------------------------------------------------------------------
+// Base HTML email template
+// ---------------------------------------------------------------------------
+
+interface EmailTemplateParams {
+  title: string;
+  preheader: string;
+  content: string;
+  ctaText?: string;
+  ctaUrl?: string;
+  footer?: string;
+}
+
+function emailTemplate({
+  title,
+  preheader,
+  content,
+  ctaText,
+  ctaUrl,
+  footer,
+}: EmailTemplateParams): string {
+  const ctaBlock =
+    ctaText && ctaUrl
+      ? `<!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${ctaUrl}" style="height:50px;v-text-anchor:middle;width:220px;" arcsize="16%" strokecolor="#8b5cf6" fillcolor="#8b5cf6">
+<w:anchorlock/>
+<center style="color:#ffffff;font-family:sans-serif;font-size:16px;font-weight:bold;">
+${ctaText}
+</center>
+</v:roundrect>
+<![endif]-->
+<!--[if !mso]><!-->
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:24px auto 0;">
+  <tr>
+    <td align="center" style="border-radius:8px;background-color:#8b5cf6;">
+      <a href="${ctaUrl}" target="_blank" style="display:inline-block;padding:14px 32px;font-family:system-ui,-apple-system,sans-serif;font-size:16px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">
+        ${ctaText}
+      </a>
+    </td>
+  </tr>
+</table>
+<!--<![endif]-->`
+      : "";
+
+  const footerText =
+    footer ??
+    "AstrologyPro &mdash; Run Your Divination Business";
+
+  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="color-scheme" content="dark" />
+<meta name="supported-color-schemes" content="dark" />
+<title>${title}</title>
+<!--[if !mso]><!-->
+<style>
+  @media only screen and (max-width: 620px) {
+    .email-container { width: 100% !important; padding: 12px !important; }
+    .content-cell { padding: 24px 16px !important; }
+  }
+</style>
+<!--<![endif]-->
+</head>
+<body style="margin:0;padding:0;background-color:#0a0a0a;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+<!-- Preheader (hidden preview text) -->
+<div style="display:none;font-size:1px;color:#0a0a0a;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+  ${preheader}
+</div>
+
+<!-- Outer wrapper -->
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#0a0a0a;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+
+      <!-- Email container -->
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" class="email-container" style="max-width:600px;width:100%;">
+
+        <!-- Logo / Header -->
+        <tr>
+          <td align="center" style="padding:0 0 24px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="font-family:system-ui,-apple-system,sans-serif;font-size:28px;font-weight:700;color:#8b5cf6;letter-spacing:-0.5px;">
+                  &#10024; AstrologyPro
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Content card -->
+        <tr>
+          <td>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#18181b;border-radius:12px;border:1px solid #27272a;">
+              <tr>
+                <td class="content-cell" style="padding:40px 32px;">
+
+                  <!-- Title -->
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                    <tr>
+                      <td style="font-family:system-ui,-apple-system,sans-serif;font-size:24px;font-weight:700;color:#f4f4f5;padding-bottom:16px;">
+                        ${title}
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Body content -->
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                    <tr>
+                      <td style="font-family:system-ui,-apple-system,sans-serif;font-size:15px;line-height:1.7;color:#a1a1aa;">
+                        ${content}
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- CTA Button -->
+                  ${ctaBlock}
+
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:24px 0 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              <tr>
+                <td align="center" style="font-family:system-ui,-apple-system,sans-serif;font-size:13px;color:#52525b;line-height:1.6;">
+                  ${footerText}
+                  <br />
+                  <a href="${APP_URL}/unsubscribe" style="color:#71717a;text-decoration:underline;">Unsubscribe</a>
+                  &nbsp;&middot;&nbsp;
+                  <a href="${APP_URL}/privacy" style="color:#71717a;text-decoration:underline;">Privacy Policy</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+      </table>
+      <!-- /Email container -->
+
+    </td>
+  </tr>
+</table>
+</body>
+</html>`;
+}
+
+// ---------------------------------------------------------------------------
+// Helper: render a detail row inside the content area
+// ---------------------------------------------------------------------------
+
+function detailRow(label: string, value: string): string {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:4px;">
+  <tr>
+    <td width="140" style="font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#71717a;padding:6px 0;">${label}</td>
+    <td style="font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#f4f4f5;font-weight:600;padding:6px 0;">${value}</td>
+  </tr>
+</table>`;
+}
+
+// Helper: secondary CTA (outline style)
+function secondaryCta(text: string, url: string): string {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:16px auto 0;">
+  <tr>
+    <td align="center" style="border-radius:8px;border:1px solid #8b5cf6;">
+      <a href="${url}" target="_blank" style="display:inline-block;padding:12px 28px;font-family:system-ui,-apple-system,sans-serif;font-size:14px;font-weight:600;color:#8b5cf6;text-decoration:none;border-radius:8px;">
+        ${text}
+      </a>
+    </td>
+  </tr>
+</table>`;
+}
+
+// Helper: section heading inside content
+function sectionHeading(text: string): string {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:24px;margin-bottom:8px;">
+  <tr>
+    <td style="font-family:system-ui,-apple-system,sans-serif;font-size:16px;font-weight:700;color:#e4e4e7;">${text}</td>
+  </tr>
+</table>`;
+}
+
+// Helper: info card (highlight box)
+function infoCard(inner: string): string {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0;background-color:#1e1b2e;border:1px solid #2e2548;border-radius:8px;">
+  <tr>
+    <td style="padding:20px;font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#c4b5fd;line-height:1.6;">
+      ${inner}
+    </td>
+  </tr>
+</table>`;
+}
+
+// Helper: star rating display
+function starRating(): string {
+  const stars = Array.from(
+    { length: 5 },
+    () =>
+      `<td style="font-size:28px;padding:0 4px;color:#8b5cf6;">&#9733;</td>`
+  ).join("");
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:16px auto;">
+  <tr>${stars}</tr>
+</table>`;
+}
+
+// ---------------------------------------------------------------------------
+// 1. Booking Confirmation
+// ---------------------------------------------------------------------------
 
 interface BookingConfirmationParams {
   clientEmail: string;
   divinerName: string;
   serviceName: string;
   dateTime: string;
+  duration?: number;
   sessionLink: string;
+  birthData?: string;
 }
 
 export async function sendBookingConfirmation({
@@ -52,65 +269,116 @@ export async function sendBookingConfirmation({
   divinerName,
   serviceName,
   dateTime,
+  duration,
   sessionLink,
+  birthData,
 }: BookingConfirmationParams) {
+  const durationText = duration ? `${duration} minutes` : "See details";
+
+  const birthSection = birthData
+    ? `${sectionHeading("Birth Data on File")}
+       ${infoCard(birthData)}`
+    : "";
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Your reading is confirmed! We are looking forward to your session.</p>
+
+    ${detailRow("Service", serviceName)}
+    ${detailRow("Diviner", divinerName)}
+    ${detailRow("Date &amp; Time", dateTime)}
+    ${detailRow("Duration", durationText)}
+
+    ${birthSection}
+
+    ${sectionHeading("What to Expect")}
+    <p style="margin:0 0 8px;color:#a1a1aa;">Your diviner will guide you through your reading in a private, one-on-one video session. Feel free to ask questions throughout.</p>
+
+    ${sectionHeading("How to Prepare")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">Find a quiet, comfortable space</li>
+      <li style="margin-bottom:6px;">Have your questions or intentions ready</li>
+      <li style="margin-bottom:6px;">Keep a journal nearby for notes</li>
+      <li>Test your camera and microphone beforehand</li>
+    </ul>
+  `;
+
   return sendEmail({
     to: clientEmail,
-    subject: `Booking Confirmed with ${divinerName}`,
-    html: `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Your Booking is Confirmed</h2>
-        <p>Your session with <strong>${divinerName}</strong> has been confirmed.</p>
-        <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
-          <tr>
-            <td style="padding: 8px 0; color: #666;">Service</td>
-            <td style="padding: 8px 0; font-weight: bold;">${serviceName}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0; color: #666;">Date &amp; Time</td>
-            <td style="padding: 8px 0; font-weight: bold;">${dateTime}</td>
-          </tr>
-        </table>
-        <a href="${sessionLink}" style="display: inline-block; background: #7c3aed; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;">
-          Join Session
-        </a>
-        <p style="color: #999; font-size: 12px; margin-top: 32px;">
-          If you need to reschedule, please contact your diviner directly.
-        </p>
-      </div>
-    `,
+    subject: `Your reading is confirmed! ✨ ${serviceName} with ${divinerName}`,
+    html: emailTemplate({
+      title: "Your reading is confirmed! &#10024;",
+      preheader: `${serviceName} with ${divinerName} on ${dateTime}`,
+      content,
+      ctaText: "Join Session",
+      ctaUrl: sessionLink,
+      footer:
+        "Need to reschedule? Contact your diviner directly.<br/>AstrologyPro &mdash; Run Your Divination Business",
+    }),
   });
 }
+
+// ---------------------------------------------------------------------------
+// 2. Session Recording
+// ---------------------------------------------------------------------------
 
 interface SessionRecordingParams {
   clientEmail: string;
   divinerName: string;
+  serviceName?: string;
+  sessionDate?: string;
   recordingUrl: string;
   shareUrl: string;
+  rebookUrl?: string;
 }
 
 export async function sendSessionRecording({
   clientEmail,
   divinerName,
+  serviceName,
+  sessionDate,
   recordingUrl,
   shareUrl,
+  rebookUrl,
 }: SessionRecordingParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Your session recording is ready to watch! Revisit the insights anytime.</p>
+
+    ${serviceName ? detailRow("Service", serviceName) : ""}
+    ${detailRow("Diviner", divinerName)}
+    ${sessionDate ? detailRow("Session Date", sessionDate) : ""}
+
+    ${sectionHeading("Share Your Experience")}
+    <p style="margin:0 0 8px;color:#a1a1aa;">Loved your reading? Share it with friends who might benefit from guidance.</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0;">
+      <tr>
+        <td style="padding-right:8px;">
+          <a href="https://twitter.com/intent/tweet?text=Just%20had%20an%20amazing%20reading%20with%20${encodeURIComponent(divinerName)}%20on%20AstrologyPro!&url=${encodeURIComponent(shareUrl)}" style="color:#8b5cf6;font-family:system-ui,-apple-system,sans-serif;font-size:13px;text-decoration:underline;">Twitter</a>
+        </td>
+        <td style="padding-right:8px;">
+          <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}" style="color:#8b5cf6;font-family:system-ui,-apple-system,sans-serif;font-size:13px;text-decoration:underline;">Facebook</a>
+        </td>
+      </tr>
+    </table>
+
+    ${rebookUrl ? secondaryCta("Book Another Reading", rebookUrl) : ""}
+  `;
+
   return sendEmail({
     to: clientEmail,
-    subject: `Your Session Recording with ${divinerName}`,
-    html: `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Your Session Recording is Ready</h2>
-        <p>Your session recording with <strong>${divinerName}</strong> is now available.</p>
-        <a href="${recordingUrl}" style="display: inline-block; background: #7c3aed; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;">
-          Watch Recording
-        </a>
-        <p style="margin-top: 16px;">You can also share this link with others:</p>
-        <p style="background: #f3f4f6; padding: 12px; border-radius: 4px; word-break: break-all;">${shareUrl}</p>
-      </div>
-    `,
+    subject: `Your session recording is ready 🎬`,
+    html: emailTemplate({
+      title: "Your session recording is ready &#127916;",
+      preheader: `Watch your session with ${divinerName}`,
+      content,
+      ctaText: "Watch Recording",
+      ctaUrl: recordingUrl,
+    }),
   });
 }
+
+// ---------------------------------------------------------------------------
+// 3. Testimonial Request
+// ---------------------------------------------------------------------------
 
 interface TestimonialRequestParams {
   clientEmail: string;
@@ -123,28 +391,116 @@ export async function sendTestimonialRequest({
   divinerName,
   bookingId,
 }: TestimonialRequestParams) {
-  const reviewUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/portal/review/${bookingId}`;
+  const reviewUrl = `${APP_URL}/portal/review/${bookingId}`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">We hope you enjoyed your reading with <strong style="color:#f4f4f5;">${divinerName}</strong>. Your feedback means the world!</p>
+
+    ${starRating()}
+
+    <p style="margin:16px 0 0;color:#a1a1aa;text-align:center;">Tap to rate your experience</p>
+
+    ${infoCard(`Your feedback helps <strong style="color:#e4e4e7;">${divinerName}</strong> grow their practice and helps other seekers find the right diviner for them.`)}
+  `;
 
   return sendEmail({
     to: clientEmail,
-    subject: `How was your session with ${divinerName}?`,
-    html: `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>We would love your feedback</h2>
-        <p>How was your recent session with <strong>${divinerName}</strong>?</p>
-        <p>Your review helps other seekers find the right diviner for them.</p>
-        <a href="${reviewUrl}" style="display: inline-block; background: #7c3aed; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;">
-          Leave a Review
-        </a>
-        <p style="color: #999; font-size: 12px; margin-top: 32px;">
-          This email was sent because you recently had a session on AstrologyPro.
-        </p>
-      </div>
-    `,
+    subject: `How was your reading with ${divinerName}? ⭐`,
+    html: emailTemplate({
+      title: `How was your reading with ${divinerName}? &#11088;`,
+      preheader: `Share your experience with ${divinerName}`,
+      content,
+      ctaText: "Leave a Review",
+      ctaUrl: reviewUrl,
+    }),
   });
 }
 
-// --- Follow-up email types ---
+// ---------------------------------------------------------------------------
+// 4. Event Reminder
+// ---------------------------------------------------------------------------
+
+interface EventReminderParams {
+  clientEmail: string;
+  divinerName: string;
+  eventType: string;
+  eventDate: string;
+  bookingLink: string;
+}
+
+export async function sendEventReminder({
+  clientEmail,
+  divinerName,
+  eventType,
+  eventDate,
+  bookingLink,
+}: EventReminderParams) {
+  const eventContent: Record<
+    string,
+    { name: string; subject: string; headline: string; body: string; cta: string; why: string }
+  > = {
+    solar_return: {
+      name: "Solar Return",
+      subject: `Your Solar Return is approaching! 🌟 ${eventDate}`,
+      headline: "Your Solar Return is approaching! &#127775;",
+      body: `This is a powerful time for reflection and setting intentions for your year ahead. Your Solar Return on <strong style="color:#f4f4f5;">${eventDate}</strong> marks the moment the Sun returns to its exact position at your birth &mdash; a cosmic birthday that sets the tone for your entire year.`,
+      cta: "Book Your Solar Return Reading",
+      why: "A Solar Return reading reveals the themes, challenges, and opportunities that will define your next year. It is your personal cosmic forecast.",
+    },
+    saturn_return: {
+      name: "Saturn Return",
+      subject: `Your Saturn Return is approaching &mdash; a pivotal life transit`,
+      headline: "A Major Life Transit Awaits &#127775;",
+      body: `Your Saturn Return is one of the most significant astrological events you will experience. Happening roughly every 29.5 years, this transit around <strong style="color:#f4f4f5;">${eventDate}</strong> often catalyzes profound shifts in career, relationships, and personal identity.`,
+      cta: "Book Your Saturn Return Reading",
+      why: "Saturn Return is a call to maturity and authenticity. A reading helps you understand the lessons Saturn is asking you to learn and how to navigate them with grace.",
+    },
+    jupiter_return: {
+      name: "Jupiter Return",
+      subject: `Your Jupiter Return is near &mdash; expansion and fortune await 🌟`,
+      headline: "A Window of Expansion Opens &#127775;",
+      body: `Your Jupiter Return around <strong style="color:#f4f4f5;">${eventDate}</strong> heralds a period of growth, opportunity, and good fortune. Occurring roughly every 12 years, this transit amplifies your potential and opens doors you may not have imagined.`,
+      cta: "Book Your Jupiter Return Reading",
+      why: "Understanding Jupiter's gift can help you direct this abundant energy toward the areas of life where you need it most.",
+    },
+  };
+
+  const ec = eventContent[eventType] ?? {
+    name: eventType,
+    subject: `Your ${eventType} is approaching! 🌟`,
+    headline: `Your ${eventType} is approaching! &#127775;`,
+    body: `An important astrological transit is coming up for you on <strong style="color:#f4f4f5;">${eventDate}</strong>.`,
+    cta: "Book a Session",
+    why: "A personalized reading will help you understand and prepare for this transit.",
+  };
+
+  const content = `
+    <p style="margin:0 0 4px;color:#8b5cf6;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">${ec.name} &mdash; ${eventDate}</p>
+    <p style="margin:0 0 16px;color:#d4d4d8;line-height:1.7;">${ec.body}</p>
+
+    ${sectionHeading("Why This Matters")}
+    <p style="margin:0 0 16px;color:#a1a1aa;">${ec.why}</p>
+
+    <p style="margin:0;color:#a1a1aa;"><strong style="color:#f4f4f5;">${divinerName}</strong> specializes in this transit and can help you prepare for and navigate the energies ahead with clarity and confidence.</p>
+  `;
+
+  return sendEmail({
+    to: clientEmail,
+    subject: ec.subject,
+    html: emailTemplate({
+      title: ec.headline,
+      preheader: `${ec.name} on ${eventDate} — book a reading with ${divinerName}`,
+      content,
+      ctaText: ec.cta,
+      ctaUrl: bookingLink,
+      footer: `You are receiving this because you are a client of ${divinerName} on AstrologyPro.<br/>AstrologyPro &mdash; Run Your Divination Business`,
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 5. Recording Ready (immediate post-session)
+// ---------------------------------------------------------------------------
 
 interface RecordingReadyParams {
   clientEmail: string;
@@ -159,27 +515,31 @@ export async function sendRecordingReady({
   recordingUrl,
   testimonialLink,
 }: RecordingReadyParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Thank you for your session with <strong style="color:#f4f4f5;">${divinerName}</strong>! Your recording is now available to revisit anytime.</p>
+
+    ${sectionHeading("Share Your Experience")}
+    <p style="margin:0 0 8px;color:#a1a1aa;">We would love to hear about your experience. Your feedback helps others find the guidance they need.</p>
+
+    ${secondaryCta("Leave a Testimonial", testimonialLink)}
+  `;
+
   return sendEmail({
     to: clientEmail,
     subject: `Your session recording with ${divinerName} is ready!`,
-    html: `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Your Session Recording is Ready</h2>
-        <p>Thank you for your session with <strong>${divinerName}</strong>! Your recording is now available to revisit anytime.</p>
-        <a href="${recordingUrl}" style="display: inline-block; background: #7c3aed; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;">
-          Watch Recording
-        </a>
-        <p style="margin-top: 24px;">We would love to hear about your experience. Your feedback helps others find the guidance they need.</p>
-        <a href="${testimonialLink}" style="display: inline-block; background: #059669; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 8px;">
-          Leave a Testimonial
-        </a>
-        <p style="color: #999; font-size: 12px; margin-top: 32px;">
-          This email was sent because you recently had a session on AstrologyPro.
-        </p>
-      </div>
-    `,
+    html: emailTemplate({
+      title: "Your recording is ready!",
+      preheader: `Watch your session with ${divinerName}`,
+      content,
+      ctaText: "Watch Recording",
+      ctaUrl: recordingUrl,
+    }),
   });
 }
+
+// ---------------------------------------------------------------------------
+// 6. Reflection Email (3 days after session)
+// ---------------------------------------------------------------------------
 
 interface ReflectionEmailParams {
   clientEmail: string;
@@ -196,25 +556,30 @@ export async function sendReflectionEmail({
   bookingDate,
   rebookUrl,
 }: ReflectionEmailParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">A few days have passed since your <strong style="color:#f4f4f5;">${serviceName}</strong> session with <strong style="color:#f4f4f5;">${divinerName}</strong> on ${bookingDate}.</p>
+
+    ${infoCard("This is a wonderful time to revisit the insights from your reading. Have any of the themes started to manifest in your life? Journaling about your experience can deepen your understanding.")}
+
+    <p style="margin:0;color:#a1a1aa;">If you have new questions or would like to explore further, <strong style="color:#f4f4f5;">${divinerName}</strong> is available for follow-up sessions.</p>
+  `;
+
   return sendEmail({
     to: clientEmail,
-    subject: `Reflecting on your reading with ${divinerName}`,
-    html: `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Time to Reflect</h2>
-        <p>A few days have passed since your <strong>${serviceName}</strong> session with <strong>${divinerName}</strong> on ${bookingDate}.</p>
-        <p>This is a wonderful time to revisit the insights from your reading. Have any of the themes started to manifest in your life? Journaling about your experience can deepen your understanding.</p>
-        <p>If you have new questions or would like to explore further, <strong>${divinerName}</strong> is available for follow-up sessions.</p>
-        <a href="${rebookUrl}" style="display: inline-block; background: #7c3aed; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;">
-          Book a Follow-Up
-        </a>
-        <p style="color: #999; font-size: 12px; margin-top: 32px;">
-          This email was sent because you recently had a session on AstrologyPro.
-        </p>
-      </div>
-    `,
+    subject: `Reflecting on your reading with ${divinerName} ✨`,
+    html: emailTemplate({
+      title: "Reflecting on your reading &#10024;",
+      preheader: `How are the insights from your ${serviceName} session unfolding?`,
+      content,
+      ctaText: "Book a Follow-Up",
+      ctaUrl: rebookUrl,
+    }),
   });
 }
+
+// ---------------------------------------------------------------------------
+// 7. Rebooking Nudge (30 days after session)
+// ---------------------------------------------------------------------------
 
 interface RebookingNudgeParams {
   clientEmail: string;
@@ -227,26 +592,31 @@ export async function sendRebookingNudge({
   divinerName,
   rebookUrl,
 }: RebookingNudgeParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">It has been about a month since your last session with <strong style="color:#f4f4f5;">${divinerName}</strong>. A lot can shift in the cosmos in that time!</p>
+
+    ${infoCard(`<strong style="color:#e4e4e7;">${divinerName}</strong> has openings this week and would love to check in on how the energies have been unfolding for you.`)}
+
+    <p style="margin:0;color:#a1a1aa;">The stars keep moving &mdash; keep moving with them.</p>
+  `;
+
   return sendEmail({
     to: clientEmail,
-    subject: `It's been a month! ${divinerName} has openings this week`,
-    html: `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>The Stars Keep Moving</h2>
-        <p>It has been about a month since your last session with <strong>${divinerName}</strong>. A lot can shift in the cosmos in that time!</p>
-        <p><strong>${divinerName}</strong> has openings this week and would love to check in on how the energies have been unfolding for you.</p>
-        <a href="${rebookUrl}" style="display: inline-block; background: #7c3aed; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;">
-          Book a Session
-        </a>
-        <p style="color: #999; font-size: 12px; margin-top: 32px;">
-          This email was sent because you are a client of ${divinerName} on AstrologyPro. You can manage your notification preferences in your client portal.
-        </p>
-      </div>
-    `,
+    subject: `It's been a month since your reading 🌙`,
+    html: emailTemplate({
+      title: "It's been a month since your reading &#127769;",
+      preheader: `${divinerName} has openings this week`,
+      content,
+      ctaText: "Rebook a Session",
+      ctaUrl: rebookUrl,
+      footer: `You are receiving this because you are a client of ${divinerName} on AstrologyPro. <a href="${APP_URL}/portal/settings" style="color:#71717a;text-decoration:underline;">Manage preferences</a><br/>AstrologyPro &mdash; Run Your Divination Business`,
+    }),
   });
 }
 
-// --- Gift certificate email types ---
+// ---------------------------------------------------------------------------
+// 8. Gift Certificate — Recipient
+// ---------------------------------------------------------------------------
 
 interface GiftRecipientEmailParams {
   recipientEmail: string;
@@ -267,29 +637,55 @@ export async function sendGiftCertificateToRecipient({
   message,
   redeemUrl,
 }: GiftRecipientEmailParams) {
+  const messageBlock = message
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0;border-left:3px solid #8b5cf6;background-color:#1e1b2e;border-radius:0 8px 8px 0;">
+  <tr>
+    <td style="padding:16px;font-family:system-ui,-apple-system,sans-serif;">
+      <p style="margin:0;font-style:italic;color:#d4d4d8;font-size:15px;">&ldquo;${message}&rdquo;</p>
+      <p style="margin:8px 0 0;color:#71717a;font-size:13px;">&mdash; ${purchaserName}</p>
+    </td>
+  </tr>
+</table>`
+    : "";
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;"><strong style="color:#f4f4f5;">${purchaserName}</strong> has gifted you a reading with <strong style="color:#f4f4f5;">${divinerName}</strong> on AstrologyPro.</p>
+
+    <!-- Gift card display -->
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0;background-color:#1e1b2e;border:1px solid #2e2548;border-radius:12px;">
+      <tr>
+        <td align="center" style="padding:28px 20px;">
+          <p style="margin:0;font-family:system-ui,-apple-system,sans-serif;font-size:13px;color:#71717a;text-transform:uppercase;letter-spacing:1px;">Gift Certificate Value</p>
+          <p style="margin:8px 0;font-family:system-ui,-apple-system,sans-serif;font-size:36px;font-weight:700;color:#8b5cf6;">$${amount.toFixed(2)}</p>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background-color:#27272a;border-radius:6px;">
+            <tr>
+              <td style="padding:8px 16px;font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#e4e4e7;letter-spacing:2px;font-weight:600;">${code}</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    ${messageBlock}
+  `;
+
   return sendEmail({
     to: recipientEmail,
-    subject: `You've been gifted a reading with ${divinerName}!`,
-    html: `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #7c3aed;">You Have Received a Gift!</h2>
-        <p><strong>${purchaserName}</strong> has gifted you a reading with <strong>${divinerName}</strong> on AstrologyPro.</p>
-        <div style="background: linear-gradient(135deg, #7c3aed15, #a855f715); border: 1px solid #7c3aed30; border-radius: 12px; padding: 24px; margin: 20px 0; text-align: center;">
-          <p style="font-size: 14px; color: #666; margin: 0;">Gift Certificate Value</p>
-          <p style="font-size: 32px; font-weight: bold; color: #7c3aed; margin: 8px 0;">$${amount.toFixed(2)}</p>
-          <p style="font-size: 14px; color: #666; margin: 0;">Your code: <strong>${code}</strong></p>
-        </div>
-        ${message ? `<div style="background: #f9fafb; border-left: 3px solid #7c3aed; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;"><p style="margin: 0; font-style: italic;">"${message}"</p><p style="margin: 8px 0 0; color: #666; font-size: 14px;">- ${purchaserName}</p></div>` : ""}
-        <a href="${redeemUrl}" style="display: inline-block; background: #7c3aed; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;">
-          Redeem Your Gift
-        </a>
-        <p style="color: #999; font-size: 12px; margin-top: 32px;">
-          This gift certificate is valid for one year from the date of purchase.
-        </p>
-      </div>
-    `,
+    subject: `You've been gifted a reading! 🎁`,
+    html: emailTemplate({
+      title: "You've been gifted a reading! &#127873;",
+      preheader: `${purchaserName} sent you a $${amount.toFixed(2)} gift for a reading with ${divinerName}`,
+      content,
+      ctaText: "Redeem Your Gift",
+      ctaUrl: redeemUrl,
+      footer: "This gift certificate is valid for one year from the date of purchase.<br/>AstrologyPro &mdash; Run Your Divination Business",
+    }),
   });
 }
+
+// ---------------------------------------------------------------------------
+// 9. Gift Certificate — Purchaser Confirmation
+// ---------------------------------------------------------------------------
 
 interface GiftPurchaserConfirmationParams {
   purchaserEmail: string;
@@ -306,102 +702,217 @@ export async function sendGiftCertificateConfirmation({
   amount,
   code,
 }: GiftPurchaserConfirmationParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Your gift certificate for a reading with <strong style="color:#f4f4f5;">${divinerName}</strong> has been purchased successfully.</p>
+
+    ${detailRow("Amount", `$${amount.toFixed(2)}`)}
+    ${detailRow("Gift Code", code)}
+    ${recipientName ? detailRow("Recipient", recipientName) : ""}
+
+    ${infoCard("The recipient will receive an email with instructions to redeem the gift certificate. Save the code above for your records.")}
+  `;
+
   return sendEmail({
     to: purchaserEmail,
-    subject: `Gift certificate purchase confirmed - ${divinerName}`,
-    html: `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Gift Certificate Confirmed</h2>
-        <p>Your gift certificate for a reading with <strong>${divinerName}</strong> has been purchased successfully.</p>
-        <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
-          <tr>
-            <td style="padding: 8px 0; color: #666;">Amount</td>
-            <td style="padding: 8px 0; font-weight: bold;">$${amount.toFixed(2)}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0; color: #666;">Code</td>
-            <td style="padding: 8px 0; font-weight: bold;">${code}</td>
-          </tr>
-          ${recipientName ? `<tr><td style="padding: 8px 0; color: #666;">Recipient</td><td style="padding: 8px 0; font-weight: bold;">${recipientName}</td></tr>` : ""}
-        </table>
-        <p style="color: #999; font-size: 12px; margin-top: 32px;">
-          The recipient will receive an email with instructions to redeem the gift certificate.
-        </p>
-      </div>
-    `,
+    subject: `Your gift has been sent! 🎁`,
+    html: emailTemplate({
+      title: "Your gift has been sent! &#127873;",
+      preheader: `Gift certificate confirmed — $${amount.toFixed(2)} for ${divinerName}`,
+      content,
+    }),
   });
 }
 
-interface EventReminderParams {
+// ---------------------------------------------------------------------------
+// 10. Booking Access Instructions (NEW)
+// ---------------------------------------------------------------------------
+
+interface BookingAccessInstructionsParams {
   clientEmail: string;
   divinerName: string;
-  eventType: string;
-  eventDate: string;
-  bookingLink: string;
+  serviceName: string;
+  dateTime: string;
+  sessionLink: string;
+  calendarLink?: string;
 }
 
-export async function sendEventReminder({
+export async function sendBookingAccessInstructions({
   clientEmail,
   divinerName,
-  eventType,
-  eventDate,
-  bookingLink,
-}: EventReminderParams) {
-  const eventContent: Record<
-    string,
-    { name: string; subject: string; headline: string; body: string; cta: string }
-  > = {
-    solar_return: {
-      name: "Solar Return",
-      subject: `The stars are aligning for your Solar Return on ${eventDate}!`,
-      headline: "Your Solar Return is Approaching",
-      body: `This is a powerful time for reflection and setting intentions for your year ahead. Your Solar Return on <strong>${eventDate}</strong> marks the moment the Sun returns to its exact position at your birth — a cosmic birthday that sets the tone for your entire year.`,
-      cta: "Book Your Solar Return Reading",
-    },
-    saturn_return: {
-      name: "Saturn Return",
-      subject: `Your Saturn Return is approaching — a pivotal life transit`,
-      headline: "A Major Life Transit Awaits",
-      body: `Your Saturn Return is one of the most significant astrological events you will experience. Happening roughly every 29.5 years, this transit around <strong>${eventDate}</strong> often catalyzes profound shifts in career, relationships, and personal identity. This is your invitation to step into a more authentic version of yourself.`,
-      cta: "Book Your Saturn Return Reading",
-    },
-    jupiter_return: {
-      name: "Jupiter Return",
-      subject: `Your Jupiter Return is near — expansion and fortune await`,
-      headline: "A Window of Expansion Opens",
-      body: `Your Jupiter Return around <strong>${eventDate}</strong> heralds a period of growth, opportunity, and good fortune. Occurring roughly every 12 years, this transit amplifies your potential and opens doors you may not have imagined. Understanding this energy can help you make the most of this abundant cycle.`,
-      cta: "Book Your Jupiter Return Reading",
-    },
-  };
+  serviceName,
+  dateTime,
+  sessionLink,
+  calendarLink,
+}: BookingAccessInstructionsParams) {
+  const calendarSection = calendarLink
+    ? `${sectionHeading("Add to Calendar")}
+       ${secondaryCta("Add to Google Calendar", calendarLink)}`
+    : "";
 
-  const content = eventContent[eventType] ?? {
-    name: eventType,
-    subject: `An important astrological event is approaching on ${eventDate}`,
-    headline: "A Cosmic Event is Approaching",
-    body: `An important astrological transit is coming up for you on <strong>${eventDate}</strong>.`,
-    cta: "Book a Session",
-  };
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Here is everything you need to join your <strong style="color:#f4f4f5;">${serviceName}</strong> session with <strong style="color:#f4f4f5;">${divinerName}</strong> on <strong style="color:#f4f4f5;">${dateTime}</strong>.</p>
+
+    <!-- Session link prominently displayed -->
+    ${infoCard(`<strong style="color:#e4e4e7;">Your session link:</strong><br/><a href="${sessionLink}" style="color:#8b5cf6;word-break:break-all;">${sessionLink}</a>`)}
+
+    ${sectionHeading("How to Join Your Session")}
+
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td style="padding:8px 0;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td width="36" valign="top" style="font-family:system-ui,-apple-system,sans-serif;font-size:14px;font-weight:700;color:#8b5cf6;">1.</td>
+              <td style="font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#a1a1aa;">Click the session link above at your appointment time</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td width="36" valign="top" style="font-family:system-ui,-apple-system,sans-serif;font-size:14px;font-weight:700;color:#8b5cf6;">2.</td>
+              <td style="font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#a1a1aa;">Allow camera and microphone access when prompted</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td width="36" valign="top" style="font-family:system-ui,-apple-system,sans-serif;font-size:14px;font-weight:700;color:#8b5cf6;">3.</td>
+              <td style="font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#a1a1aa;">Accept the recording consent notice</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td width="36" valign="top" style="font-family:system-ui,-apple-system,sans-serif;font-size:14px;font-weight:700;color:#8b5cf6;">4.</td>
+              <td style="font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#a1a1aa;">Your diviner will guide you through the reading</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td width="36" valign="top" style="font-family:system-ui,-apple-system,sans-serif;font-size:14px;font-weight:700;color:#8b5cf6;">5.</td>
+              <td style="font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#a1a1aa;">After the session, you will receive your recording via email</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    ${calendarSection}
+  `;
 
   return sendEmail({
     to: clientEmail,
-    subject: content.subject,
-    html: `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="text-align: center; padding: 24px 0;">
-          <h2 style="color: #7c3aed; margin-bottom: 4px;">${content.headline}</h2>
-          <p style="color: #a78bfa; font-size: 14px; margin-top: 0;">${content.name} &mdash; ${eventDate}</p>
-        </div>
-        <p style="line-height: 1.7;">${content.body}</p>
-        <p style="line-height: 1.7;"><strong>${divinerName}</strong> specializes in this transit and can help you prepare for and navigate the energies ahead with clarity and confidence.</p>
-        <div style="text-align: center; margin: 24px 0;">
-          <a href="${bookingLink}" style="display: inline-block; background: #7c3aed; color: #fff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-            ${content.cta}
-          </a>
-        </div>
-        <p style="color: #999; font-size: 12px; margin-top: 32px; text-align: center;">
-          You are receiving this because you are a client of ${divinerName} on AstrologyPro.
-        </p>
-      </div>
-    `,
+    subject: `How to Join Your Session 📹`,
+    html: emailTemplate({
+      title: "How to Join Your Session &#128249;",
+      preheader: `Step-by-step instructions for your ${serviceName} with ${divinerName}`,
+      content,
+      ctaText: "Open Session Link",
+      ctaUrl: sessionLink,
+      footer: `Need to reschedule? Contact ${divinerName} directly.<br/>AstrologyPro &mdash; Run Your Divination Business`,
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 11. Diviner Weekly Digest (NEW)
+// ---------------------------------------------------------------------------
+
+interface WeeklyDigestParams {
+  divinerEmail: string;
+  divinerName: string;
+  weekLabel: string;
+  revenue: number;
+  revenueTrend: "up" | "down" | "flat";
+  bookings: number;
+  bookingsTrend: "up" | "down" | "flat";
+  newClients: number;
+  newClientsTrend: "up" | "down" | "flat";
+  totalEarnings: number;
+  topService?: string;
+  suggestedAction?: string;
+  dashboardUrl: string;
+}
+
+export async function sendDivinerWeeklyDigest({
+  divinerEmail,
+  divinerName,
+  weekLabel,
+  revenue,
+  revenueTrend,
+  bookings,
+  bookingsTrend,
+  newClients,
+  newClientsTrend,
+  totalEarnings,
+  topService,
+  suggestedAction,
+  dashboardUrl,
+}: WeeklyDigestParams) {
+  const trendArrow = (trend: "up" | "down" | "flat") => {
+    if (trend === "up") return '<span style="color:#22c55e;">&#9650;</span>';
+    if (trend === "down") return '<span style="color:#ef4444;">&#9660;</span>';
+    return '<span style="color:#71717a;">&mdash;</span>';
+  };
+
+  const statCell = (label: string, value: string, trend: "up" | "down" | "flat") =>
+    `<td align="center" style="padding:16px 8px;width:33%;">
+      <p style="margin:0;font-family:system-ui,-apple-system,sans-serif;font-size:13px;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;">${label}</p>
+      <p style="margin:6px 0 4px;font-family:system-ui,-apple-system,sans-serif;font-size:28px;font-weight:700;color:#f4f4f5;">${value}</p>
+      <p style="margin:0;font-family:system-ui,-apple-system,sans-serif;font-size:14px;">${trendArrow(trend)}</p>
+    </td>`;
+
+  const topServiceBlock = topService
+    ? `${sectionHeading("Top Performing Service")}
+       ${infoCard(`<strong style="color:#e4e4e7;">${topService}</strong>`)}`
+    : "";
+
+  const suggestedBlock = suggestedAction
+    ? `${sectionHeading("Suggested Action")}
+       <p style="margin:0;color:#a1a1aa;">${suggestedAction}</p>`
+    : "";
+
+  const content = `
+    <p style="margin:0 0 4px;color:#8b5cf6;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">${weekLabel}</p>
+    <p style="margin:0 0 20px;color:#d4d4d8;">Here is how your practice performed this week, ${divinerName}.</p>
+
+    <!-- Stats grid -->
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#1e1b2e;border:1px solid #2e2548;border-radius:8px;margin:0 0 16px;">
+      <tr>
+        ${statCell("Revenue", `$${revenue.toFixed(0)}`, revenueTrend)}
+        ${statCell("Bookings", String(bookings), bookingsTrend)}
+        ${statCell("New Clients", String(newClients), newClientsTrend)}
+      </tr>
+    </table>
+
+    ${infoCard(`You have earned <strong style="color:#8b5cf6;">$${totalEarnings.toFixed(2)}</strong> total on AstrologyPro.`)}
+
+    ${topServiceBlock}
+    ${suggestedBlock}
+  `;
+
+  return sendEmail({
+    to: divinerEmail,
+    subject: `Your Week in Review 📊 ${weekLabel}`,
+    html: emailTemplate({
+      title: "Your Week in Review &#128202;",
+      preheader: `${weekLabel} — $${revenue.toFixed(0)} revenue, ${bookings} bookings`,
+      content,
+      ctaText: "View Dashboard",
+      ctaUrl: dashboardUrl,
+    }),
   });
 }

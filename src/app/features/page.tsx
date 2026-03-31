@@ -17,9 +17,35 @@ import {
   Shield,
   Check,
 } from "lucide-react";
+import {
+  LandingPageMockup,
+  VideoSessionMockup,
+  BookingFlowMockup,
+  DashboardMockup,
+  NatalChartIllustration,
+  TarotSpreadIllustration,
+  ShareHubMockup,
+  MobilePhoneMockup,
+} from "@/components/marketing/illustrations";
 
 export const metadata: Metadata = {
   title: "Features",
+};
+
+// Map of illustration components by feature title
+const illustrationMap: Record<string, React.ReactNode> = {
+  "Your Branded Landing Page": <LandingPageMockup className="w-full h-auto" />,
+  "HD Video Consultations": <VideoSessionMockup className="w-full h-auto" />,
+  "Smart Booking System": <BookingFlowMockup className="w-full h-auto" />,
+  "Secure Payments": <DashboardMockup className="w-full h-auto" />,
+  "Client Management (CRM)": <DashboardMockup className="w-full h-auto" />,
+  "Professional Astrology Tools": <NatalChartIllustration className="mx-auto w-full max-w-md h-auto" />,
+  "Tarot Reading Tools": <TarotSpreadIllustration className="w-full h-auto" />,
+  "Social Media Marketing": <ShareHubMockup className="w-full h-auto" />,
+  "Affiliate Program": <DashboardMockup className="w-full h-auto" />,
+  "Astrological Event Reminders": <NatalChartIllustration className="mx-auto w-full max-w-md h-auto" />,
+  "Live Streaming": <VideoSessionMockup className="w-full h-auto" />,
+  "Session Recordings": <VideoSessionMockup className="w-full h-auto" />,
 };
 
 const features = [
@@ -228,10 +254,14 @@ export default function FeaturesPage() {
                     </ul>
                   </div>
 
-                  {/* Placeholder Visual */}
+                  {/* Feature Illustration */}
                   <div className="flex-1">
-                    <div className="flex aspect-video w-full items-center justify-center rounded-xl border border-border/50 bg-muted/30">
-                      <Icon className="h-16 w-16 text-muted-foreground/30" />
+                    <div className="w-full overflow-hidden rounded-xl border border-border/50 bg-muted/5">
+                      {illustrationMap[feature.title] ?? (
+                        <div className="flex aspect-video w-full items-center justify-center">
+                          <Icon className="h-16 w-16 text-muted-foreground/30" />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

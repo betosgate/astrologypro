@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createPaymentIntent } from "@/lib/stripe/connect";
 import { PRICING } from "@/lib/constants";
+import {
+  sendBookingConfirmation,
+  sendBookingAccessInstructions,
+} from "@/lib/email";
 
 interface BookingPaymentBody {
   divinerId: string;
@@ -242,6 +246,35 @@ export async function POST(request: NextRequest) {
         .from("bookings")
         .update({ status: "confirmed" })
         .eq("id", booking.id);
+
+      // Send confirmation + access instructions emails immediately
+      const sessionLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/session/${booking.id}`;
+      const calendarLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`${service.name} with ${diviner.display_name}`)}&dates=${startTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}/${endTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}&details=${encodeURIComponent(`Your reading session on AstrologyPro.\n\nJoin: ${sessionLink}`)}`;
+
+      const emailParams = {
+        clientEmail,
+        divinerName: diviner.display_name,
+        serviceName: service.name,
+        dateTime: startTime.toLocaleString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        }),
+        sessionLink,
+        duration: service.duration_minutes,
+      };
+
+      // Fire emails without blocking the response
+      Promise.all([
+        sendBookingConfirmation(emailParams),
+        sendBookingAccessInstructions({
+          ...emailParams,
+          calendarLink,
+        }),
+      ]).catch((err) => console.error("Failed to send booking emails:", err));
     }
 
     // Deduct from gift certificate if used

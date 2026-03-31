@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import Stripe from "stripe";
+import {
+  sendBookingConfirmation,
+  sendBookingAccessInstructions,
+} from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -98,6 +102,74 @@ async function handleSubscriptionDeleted(
   }
 }
 
+async function handlePaymentIntentSucceeded(
+  paymentIntent: Stripe.PaymentIntent
+) {
+  const bookingId = paymentIntent.metadata?.bookingId;
+  const clientEmail = paymentIntent.metadata?.clientEmail;
+  if (!bookingId || !clientEmail) return;
+
+  const supabase = createAdminClient();
+
+  // Mark booking as confirmed
+  await supabase
+    .from("bookings")
+    .update({ status: "confirmed" })
+    .eq("id", bookingId);
+
+  // Fetch booking with related data for the email
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select(
+      "id, scheduled_at, end_at, services(name, duration_minutes), diviners(display_name)"
+    )
+    .eq("id", bookingId)
+    .single();
+
+  if (!booking) return;
+
+  const svc = (booking as Record<string, unknown>).services as {
+    name: string;
+    duration_minutes: number;
+  } | null;
+  const div = (booking as Record<string, unknown>).diviners as {
+    display_name: string;
+  } | null;
+
+  if (!svc || !div) return;
+
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+  const sessionLink = `${appUrl}/session/${bookingId}`;
+  const startTime = new Date(booking.scheduled_at);
+  const endTime = booking.end_at
+    ? new Date(booking.end_at)
+    : new Date(startTime.getTime() + svc.duration_minutes * 60 * 1000);
+
+  const calendarLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`${svc.name} with ${div.display_name}`)}&dates=${startTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}/${endTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}&details=${encodeURIComponent(`Your reading session on AstrologyPro.\n\nJoin: ${sessionLink}`)}`;
+
+  const emailParams = {
+    clientEmail,
+    divinerName: div.display_name,
+    serviceName: svc.name,
+    dateTime: startTime.toLocaleString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }),
+    sessionLink,
+    duration: svc.duration_minutes,
+  };
+
+  await Promise.all([
+    sendBookingConfirmation(emailParams),
+    sendBookingAccessInstructions({ ...emailParams, calendarLink }),
+  ]);
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");
@@ -143,6 +215,11 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.deleted":
         await handleSubscriptionDeleted(
           event.data.object as Stripe.Subscription
+        );
+        break;
+      case "payment_intent.succeeded":
+        await handlePaymentIntentSucceeded(
+          event.data.object as Stripe.PaymentIntent
         );
         break;
       default:
