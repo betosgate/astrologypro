@@ -35,7 +35,7 @@ export default async function SessionPage({ params }: PageProps) {
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, status, duration, daily_room_url, daily_room_name, diviner_id, client_id, services(name, duration_minutes), clients(display_name, email)"
+      "id, scheduled_at, status, duration_minutes, daily_room_url, daily_room_name, diviner_id, client_id, base_price, questionnaire_responses, services(name, duration_minutes), clients(id, full_name, email, birth_date, birth_time, birth_city)"
     )
     .eq("id", bookingId)
     .single();
@@ -63,12 +63,11 @@ export default async function SessionPage({ params }: PageProps) {
     notFound();
   }
 
-  const serviceName =
-    (booking.services as any)?.name ?? "Reading Session";
-  const clientName =
-    (booking.clients as any)?.display_name ?? "Client";
-  const scheduledDuration =
-    (booking.services as any)?.duration_minutes ?? booking.duration ?? 60;
+  const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
+  const client = Array.isArray(booking.clients) ? booking.clients[0] : booking.clients;
+  const serviceName = (service as any)?.name ?? "Reading Session";
+  const clientName = (client as any)?.full_name ?? (client as any)?.email ?? "Client";
+  const scheduledDuration = (service as any)?.duration_minutes ?? booking.duration_minutes ?? 60;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -105,8 +104,17 @@ export default async function SessionPage({ params }: PageProps) {
         role={role}
         serviceName={serviceName}
         clientName={clientName}
+        divinerName={diviner?.display_name ?? "Diviner"}
         scheduledDuration={scheduledDuration}
+        basePrice={Number(booking.base_price)}
+        overageRate={0.50}
         username={username}
+        questionnaire={booking.questionnaire_responses as { focusQuestion?: string; lifeArea?: string; additionalNotes?: string } | undefined}
+        clientBirthData={client ? {
+          date: client.birth_date ?? undefined,
+          time: client.birth_time ?? undefined,
+          city: client.birth_city ?? undefined,
+        } : undefined}
       />
     </div>
   );

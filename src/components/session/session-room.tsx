@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertTriangle,
   CheckCircle,
@@ -11,6 +13,19 @@ import {
   PhoneOff,
   Shield,
   Video,
+  Monitor,
+  User,
+  MessageSquare,
+  FileText,
+  Maximize2,
+  Minimize2,
+  Mic,
+  MicOff,
+  VideoOff,
+  DollarSign,
+  Sparkles,
+  Send,
+  Star,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -20,8 +35,21 @@ interface SessionRoomProps {
   role: "diviner" | "client";
   serviceName: string;
   clientName: string;
-  scheduledDuration: number;
+  divinerName: string;
+  scheduledDuration: number; // minutes
+  basePrice: number;
+  overageRate: number; // per minute
   username: string;
+  questionnaire?: {
+    focusQuestion?: string;
+    lifeArea?: string;
+    additionalNotes?: string;
+  };
+  clientBirthData?: {
+    date?: string;
+    time?: string;
+    city?: string;
+  };
 }
 
 export function SessionRoom({
@@ -30,186 +58,123 @@ export function SessionRoom({
   role,
   serviceName,
   clientName,
+  divinerName,
   scheduledDuration,
+  basePrice,
+  overageRate,
   username,
+  questionnaire,
+  clientBirthData,
 }: SessionRoomProps) {
-  const [hasConsented, setHasConsented] = useState(false);
-  const [sessionActive, setSessionActive] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [isEnding, setIsEnding] = useState(false);
-  const [sessionEnded, setSessionEnded] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [consentGiven, setConsentGiven] = useState(false);
+  const [sessionStarted, setSessionStarted] = useState(false);
+  const [sessionEnded, setSessionEnded] = useState(false);
+  const [elapsedMinutes, setElapsedMinutes] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [sessionNotes, setSessionNotes] = useState("");
+  const [chatMessages, setChatMessages] = useState<{ from: string; text: string; time: string }[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  const [viewMode, setViewMode] = useState<"facecam" | "screenshare">("facecam");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startTimeRef = useRef<number | null>(null);
+  const startTimeRef = useRef<Date | null>(null);
 
-  // Start the elapsed timer
-  const startTimer = useCallback(() => {
-    if (timerRef.current) return;
-    startTimeRef.current = Date.now();
-    setSessionActive(true);
-    timerRef.current = setInterval(() => {
-      if (startTimeRef.current) {
-        setElapsedSeconds(
-          Math.floor((Date.now() - startTimeRef.current) / 1000)
+  // Timer logic
+  useEffect(() => {
+    if (sessionStarted && !sessionEnded) {
+      startTimeRef.current = new Date();
+      timerRef.current = setInterval(() => {
+        if (!startTimeRef.current) return;
+        const elapsed = Math.floor(
+          (new Date().getTime() - startTimeRef.current.getTime()) / 1000
         );
-      }
-    }, 1000);
-  }, []);
-
-  // Stop the timer
-  const stopTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
+        setElapsedMinutes(Math.floor(elapsed / 60));
+        setElapsedSeconds(elapsed % 60);
+      }, 1000);
     }
-    setSessionActive(false);
-  }, []);
-
-  // Clean up on unmount
-  useEffect(() => {
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+      if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, []);
+  }, [sessionStarted, sessionEnded]);
 
-  // Listen to Daily.co iframe messages for participant events
-  useEffect(() => {
-    if (!hasConsented) return;
+  const isOvertime = elapsedMinutes >= scheduledDuration;
+  const overtimeMinutes = isOvertime ? elapsedMinutes - scheduledDuration : 0;
+  const totalCost = basePrice + overtimeMinutes * overageRate;
 
-    function handleMessage(event: MessageEvent) {
-      if (typeof event.data !== "object" || !event.data.action) return;
-
-      const action: string = event.data.action;
-
-      if (
-        action === "joined-meeting" ||
-        action === "participant-joined"
-      ) {
-        startTimer();
-      }
-
-      if (action === "left-meeting") {
-        stopTimer();
-      }
-    }
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [hasConsented, startTimer, stopTimer]);
-
-  // Auto-start timer when iframe loads (fallback)
-  const handleIframeLoad = useCallback(() => {
-    // Give a brief moment for the room to initialize, then start timer
-    setTimeout(() => {
-      if (!sessionActive && !sessionEnded) {
-        startTimer();
-      }
-    }, 3000);
-  }, [sessionActive, sessionEnded, startTimer]);
-
-  // End the session
-  async function handleEndSession() {
-    if (isEnding) return;
-    setIsEnding(true);
-
-    const actualDurationMinutes = elapsedSeconds / 60;
+  const handleEndSession = useCallback(async () => {
+    setSessionEnded(true);
+    if (timerRef.current) clearInterval(timerRef.current);
 
     try {
-      const response = await fetch("/api/daily/end-session", {
+      await fetch("/api/daily/end-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           bookingId,
-          actualDurationMinutes: Math.round(actualDurationMinutes),
+          actualDurationMinutes: elapsedMinutes,
+          sessionNotes,
         }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        toast.error(data.error ?? "Failed to end session");
-        setIsEnding(false);
-        return;
-      }
-
-      stopTimer();
-      setSessionEnded(true);
-
-      if (data.overageMinutes > 0) {
-        toast.info(
-          `Session ran ${data.overageMinutes} minutes over. Overage of $${(data.overageAmount / 100).toFixed(2)} noted.`
-        );
-      } else {
-        toast.success("Session completed successfully.");
-      }
+      toast.success("Session ended. Recording will be available shortly.");
     } catch {
-      toast.error("Failed to end session. Please try again.");
-      setIsEnding(false);
+      toast.error("Failed to save session data. Please contact support.");
     }
-  }
+  }, [bookingId, elapsedMinutes, sessionNotes]);
 
-  // Format elapsed time
-  function formatElapsed(seconds: number): string {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    if (hrs > 0) {
-      return `${hrs}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-    }
-    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-  }
+  const handleSendChat = () => {
+    if (!chatInput.trim()) return;
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        from: role === "diviner" ? divinerName : clientName,
+        text: chatInput,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      },
+    ]);
+    setChatInput("");
+  };
 
-  // Check if session is running overtime
-  const isOvertime = elapsedSeconds > scheduledDuration * 60;
+  const formatTime = (min: number, sec: number) =>
+    `${min.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
 
-  // Consent screen
-  if (!hasConsented) {
+  // Recording consent screen
+  if (!consentGiven) {
     return (
-      <div className="flex flex-1 items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="space-y-6 p-6">
-            <div className="flex flex-col items-center gap-3 text-center">
-              <div className="flex size-14 items-center justify-center rounded-full bg-amber-500/10">
-                <Shield className="size-7 text-amber-500" />
-              </div>
-              <h2 className="text-xl font-semibold">Recording Consent</h2>
-              <p className="text-sm text-muted-foreground">
-                This session will be recorded for your reference. The recording
-                will be available to both the diviner and client after the
-                session ends.
+      <div className="flex min-h-[80vh] items-center justify-center p-4">
+        <Card className="max-w-lg">
+          <CardHeader className="text-center">
+            <Shield className="mx-auto h-12 w-12 text-primary" />
+            <CardTitle className="mt-4 text-xl">Session Recording Consent</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-center">
+            <p className="text-muted-foreground">
+              This session with <strong>{role === "client" ? divinerName : clientName}</strong> will
+              be recorded for your benefit. The recording will be available for
+              you to rewatch and optionally share.
+            </p>
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+              <p className="font-medium text-primary">Session Details</p>
+              <p className="mt-1 text-muted-foreground">
+                {serviceName} &middot; {scheduledDuration} min &middot; ${basePrice.toFixed(2)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                ${overageRate.toFixed(2)}/min after {scheduledDuration} minutes
               </p>
             </div>
-
-            <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-500" />
-                <p className="text-xs text-amber-400">
-                  By clicking &quot;Accept & Join&quot;, you consent to this session
-                  being recorded. Screen sharing by the diviner may also be
-                  captured.
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Video className="size-4" />
-                <span>Video & audio recording</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="size-4" />
-                <span>Scheduled for {scheduledDuration} minutes</span>
-              </div>
-            </div>
-
             <Button
-              className="w-full"
               size="lg"
-              onClick={() => setHasConsented(true)}
+              className="w-full"
+              onClick={() => {
+                setConsentGiven(true);
+                setSessionStarted(true);
+              }}
             >
-              Accept & Join Session
+              <Video className="mr-2 h-4 w-4" />
+              I Consent — Join Session
             </Button>
           </CardContent>
         </Card>
@@ -220,82 +185,272 @@ export function SessionRoom({
   // Session ended screen
   if (sessionEnded) {
     return (
-      <div className="flex flex-1 items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="space-y-6 p-6">
-            <div className="flex flex-col items-center gap-3 text-center">
-              <div className="flex size-14 items-center justify-center rounded-full bg-green-500/10">
-                <CheckCircle className="size-7 text-green-500" />
+      <div className="flex min-h-[80vh] items-center justify-center p-4">
+        <Card className="max-w-lg">
+          <CardHeader className="text-center">
+            <CheckCircle className="mx-auto h-12 w-12 text-green-500" />
+            <CardTitle className="mt-4 text-xl">Session Complete</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-center">
+            <div className="rounded-lg border bg-card p-4">
+              <p className="text-sm text-muted-foreground">Duration</p>
+              <p className="text-2xl font-bold">{formatTime(elapsedMinutes, elapsedSeconds)}</p>
+              {isOvertime && (
+                <p className="text-sm text-amber-400">
+                  +{overtimeMinutes} overtime minutes (${(overtimeMinutes * overageRate).toFixed(2)})
+                </p>
+              )}
+              <Separator className="my-3" />
+              <p className="text-sm text-muted-foreground">Total</p>
+              <p className="text-xl font-bold text-primary">${totalCost.toFixed(2)}</p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Your session recording will be emailed to you shortly. You can also
+              access it from your portal.
+            </p>
+            {role === "client" && (
+              <div className="space-y-2">
+                <Button asChild className="w-full">
+                  <a href="/portal/bookings">View My Bookings</a>
+                </Button>
+                <Button variant="outline" asChild className="w-full">
+                  <a href={`/${username}`}>Book Another Session</a>
+                </Button>
               </div>
-              <h2 className="text-xl font-semibold">Session Complete</h2>
-              <p className="text-sm text-muted-foreground">
-                Your {serviceName} session with {clientName} has ended.
-                {" "}The recording will be available shortly.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Duration: {formatElapsed(elapsedSeconds)}
-              </p>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Button asChild>
-                <a href={`/dashboard/bookings`}>Back to Bookings</a>
+            )}
+            {role === "diviner" && (
+              <Button asChild className="w-full">
+                <a href="/dashboard/bookings">Back to Dashboard</a>
               </Button>
-              <Button variant="outline" asChild>
-                <a href={`/${username}`}>View Profile</a>
-              </Button>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  // Active session with Daily.co iframe
+  // Active session
   return (
-    <div className="relative flex flex-1 flex-col">
-      {/* Timer & Controls Overlay */}
-      <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between bg-gradient-to-b from-black/60 to-transparent px-4 py-3">
-        <div className="flex items-center gap-3">
-          <Badge
-            variant="outline"
-            className={
-              isOvertime
-                ? "border-red-500/30 bg-red-500/10 text-red-400 animate-pulse"
-                : "border-green-500/30 bg-green-500/10 text-green-400"
-            }
-          >
-            <Clock className="mr-1.5 size-3" />
-            {formatElapsed(elapsedSeconds)}
-          </Badge>
-          {isOvertime && (
-            <span className="text-xs text-red-400">
-              Overtime ({Math.floor((elapsedSeconds - scheduledDuration * 60) / 60)} min over)
+    <div className="flex h-[calc(100vh-2rem)] gap-0 overflow-hidden rounded-xl border bg-card">
+      {/* Main video area */}
+      <div className="flex flex-1 flex-col">
+        {/* Top bar */}
+        <div className="flex items-center justify-between border-b px-4 py-2">
+          <div className="flex items-center gap-3">
+            <Badge variant="destructive" className="animate-pulse gap-1">
+              <span className="h-2 w-2 rounded-full bg-white" />
+              REC
+            </Badge>
+            <span className="text-sm font-medium">{serviceName}</span>
+            <span className="text-sm text-muted-foreground">
+              with {role === "diviner" ? clientName : divinerName}
             </span>
+          </div>
+
+          {/* Timer */}
+          <div className={`flex items-center gap-2 rounded-full px-3 py-1 text-sm font-mono font-bold ${
+            isOvertime
+              ? "bg-amber-500/20 text-amber-400"
+              : "bg-primary/10 text-primary"
+          }`}>
+            <Clock className="h-3.5 w-3.5" />
+            {formatTime(elapsedMinutes, elapsedSeconds)}
+            <span className="text-xs font-normal">/ {scheduledDuration}:00</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* View toggle (diviner only) */}
+            {role === "diviner" && (
+              <div className="flex rounded-lg border">
+                <Button
+                  variant={viewMode === "facecam" ? "default" : "ghost"}
+                  size="sm"
+                  className="rounded-r-none"
+                  onClick={() => setViewMode("facecam")}
+                >
+                  <User className="mr-1 h-3.5 w-3.5" />
+                  Face
+                </Button>
+                <Button
+                  variant={viewMode === "screenshare" ? "default" : "ghost"}
+                  size="sm"
+                  className="rounded-l-none"
+                  onClick={() => setViewMode("screenshare")}
+                >
+                  <Monitor className="mr-1 h-3.5 w-3.5" />
+                  Screen
+                </Button>
+              </div>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowSidebar(!showSidebar)}
+            >
+              {showSidebar ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
+
+        {/* Video iframe */}
+        <div className="relative flex-1 bg-black">
+          <iframe
+            ref={iframeRef}
+            src={roomUrl}
+            className="h-full w-full"
+            allow="camera; microphone; display-capture; autoplay; clipboard-write"
+            title="Video Session"
+          />
+
+          {/* Overtime warning overlay */}
+          {isOvertime && (
+            <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-amber-500/90 px-4 py-2 text-sm font-medium text-black shadow-lg">
+              <AlertTriangle className="h-4 w-4" />
+              Overtime: +{overtimeMinutes} min (${(overtimeMinutes * overageRate).toFixed(2)}/min)
+            </div>
           )}
         </div>
 
-        {role === "diviner" && (
+        {/* Bottom controls */}
+        <div className="flex items-center justify-center gap-3 border-t px-4 py-3">
           <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleEndSession}
-            disabled={isEnding}
+            variant={isMuted ? "destructive" : "outline"}
+            size="icon"
+            onClick={() => setIsMuted(!isMuted)}
           >
-            <PhoneOff className="mr-1.5 size-3.5" />
-            {isEnding ? "Ending..." : "End Session"}
+            {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
           </Button>
-        )}
+          <Button
+            variant={isVideoOff ? "destructive" : "outline"}
+            size="icon"
+            onClick={() => setIsVideoOff(!isVideoOff)}
+          >
+            {isVideoOff ? <VideoOff className="h-4 w-4" /> : <Video className="h-4 w-4" />}
+          </Button>
+          {role === "diviner" && (
+            <Button
+              variant="destructive"
+              onClick={handleEndSession}
+              className="gap-2"
+            >
+              <PhoneOff className="h-4 w-4" />
+              End Session
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Daily.co Iframe */}
-      <iframe
-        ref={iframeRef}
-        src={roomUrl}
-        className="flex-1 border-0"
-        allow="camera; microphone; autoplay; display-capture; screen-wake-lock"
-        onLoad={handleIframeLoad}
-        style={{ width: "100%", height: "100%" }}
-      />
+      {/* Sidebar */}
+      {showSidebar && (
+        <div className="flex w-80 flex-col border-l">
+          {/* Billing info */}
+          <div className="border-b p-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Base</span>
+              <span>${basePrice.toFixed(2)} / {scheduledDuration} min</span>
+            </div>
+            {isOvertime && (
+              <div className="mt-1 flex items-center justify-between text-sm">
+                <span className="text-amber-400">Overtime</span>
+                <span className="text-amber-400">
+                  +${(overtimeMinutes * overageRate).toFixed(2)}
+                </span>
+              </div>
+            )}
+            <div className="mt-1 flex items-center justify-between font-medium">
+              <span className="flex items-center gap-1">
+                <DollarSign className="h-3.5 w-3.5 text-primary" />
+                Running Total
+              </span>
+              <span className="text-primary">${totalCost.toFixed(2)}</span>
+            </div>
+          </div>
+
+          {/* Client info (diviner only) */}
+          {role === "diviner" && (
+            <div className="border-b p-3">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
+                <Sparkles className="h-3 w-3" />
+                Client Info
+              </p>
+              <p className="text-sm font-medium">{clientName}</p>
+              {clientBirthData?.date && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Born: {clientBirthData.date}
+                  {clientBirthData.time && ` at ${clientBirthData.time}`}
+                  {clientBirthData.city && ` in ${clientBirthData.city}`}
+                </p>
+              )}
+              {questionnaire?.focusQuestion && (
+                <div className="mt-2 rounded bg-primary/5 p-2 text-xs">
+                  <p className="font-medium text-primary">Focus Question:</p>
+                  <p className="mt-0.5 text-muted-foreground">{questionnaire.focusQuestion}</p>
+                </div>
+              )}
+              {questionnaire?.lifeArea && (
+                <Badge variant="outline" className="mt-1 text-xs">
+                  {questionnaire.lifeArea}
+                </Badge>
+              )}
+            </div>
+          )}
+
+          {/* Session notes (diviner only) */}
+          {role === "diviner" && (
+            <div className="border-b p-3">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
+                <FileText className="h-3 w-3" />
+                Session Notes
+              </p>
+              <Textarea
+                value={sessionNotes}
+                onChange={(e) => setSessionNotes(e.target.value)}
+                placeholder="Private notes about this session..."
+                className="h-24 resize-none text-xs"
+              />
+            </div>
+          )}
+
+          {/* Chat */}
+          <div className="flex flex-1 flex-col">
+            <div className="border-b p-3">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
+                <MessageSquare className="h-3 w-3" />
+                Chat
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-3">
+              {chatMessages.length === 0 && (
+                <p className="text-center text-xs text-muted-foreground">
+                  Send a message if you need to communicate via text during the session.
+                </p>
+              )}
+              {chatMessages.map((msg, i) => (
+                <div key={i} className="mb-2">
+                  <p className="text-xs">
+                    <span className="font-medium text-primary">{msg.from}</span>
+                    <span className="ml-2 text-muted-foreground">{msg.time}</span>
+                  </p>
+                  <p className="text-xs text-foreground">{msg.text}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 border-t p-3">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSendChat()}
+                placeholder="Type a message..."
+                className="flex-1 rounded-md border bg-transparent px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary"
+              />
+              <Button size="icon" variant="ghost" onClick={handleSendChat}>
+                <Send className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
