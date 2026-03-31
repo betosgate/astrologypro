@@ -24,141 +24,225 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Camera,
-  AtSign,
-  Tv,
-  Hash,
-  Globe,
   Megaphone,
   Calendar,
   BarChart3,
   Library,
-  Link2,
   Clock,
   Image as ImageIcon,
   Sparkles,
   Moon,
   Sun,
   Star,
+  Share2,
+  Check,
+  ExternalLink,
+  MessageSquare,
+  Mail,
+  Smartphone,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
-// --- Connected Accounts ---
+// --- Push-to-Share Explanation Tab ---
 
-interface PlatformConfig {
-  name: string;
-  icon: LucideIcon;
-  connected: boolean;
-  handle: string | null;
-  oauthUrl: string | null;
-}
+function ShareSystemTab() {
+  // Placeholder share batches (would come from Supabase in production)
+  const recentBatches = [
+    {
+      id: "1",
+      date: "Mar 31, 2026",
+      caption: "Discover what the stars wrote in your birth chart...",
+      shared: { facebook: true, twitter: true, whatsapp: true, linkedin: false, instagram: false, tiktok: false },
+      token: "abc123",
+    },
+    {
+      id: "2",
+      date: "Mar 24, 2026",
+      caption: "The cards have a message for you today...",
+      shared: { facebook: true, twitter: true, whatsapp: true, linkedin: true, instagram: true, tiktok: false },
+      token: "def456",
+    },
+    {
+      id: "3",
+      date: "Mar 17, 2026",
+      caption: "Your birthday is more than a celebration...",
+      shared: { facebook: true, twitter: true, whatsapp: true, linkedin: true, instagram: true, tiktok: true },
+      token: "ghi789",
+    },
+  ];
 
-const PLATFORM_INSTAGRAM = "Instagram";
-const PLATFORM_TWITTER = "Twitter / X";
-const PLATFORM_YOUTUBE = "YouTube";
-const PLATFORM_TIKTOK = "TikTok";
-const PLATFORM_FACEBOOK = "Facebook";
-
-const platforms: PlatformConfig[] = [
-  {
-    name: PLATFORM_INSTAGRAM,
-    icon: Camera,
-    connected: false,
-    handle: null,
-    oauthUrl: "https://app.ayrshare.com/oauth/instagram",
-  },
-  {
-    name: PLATFORM_TWITTER,
-    icon: AtSign,
-    connected: false,
-    handle: null,
-    oauthUrl: "https://app.ayrshare.com/oauth/twitter",
-  },
-  {
-    name: PLATFORM_YOUTUBE,
-    icon: Tv,
-    connected: false,
-    handle: null,
-    oauthUrl: "https://app.ayrshare.com/oauth/youtube",
-  },
-  {
-    name: PLATFORM_TIKTOK,
-    icon: Hash,
-    connected: false,
-    handle: null,
-    oauthUrl: "https://app.ayrshare.com/oauth/tiktok",
-  },
-  {
-    name: PLATFORM_FACEBOOK,
-    icon: Globe,
-    connected: false,
-    handle: null,
-    oauthUrl: null, // manual posting
-  },
-];
-
-function ConnectedAccountsTab() {
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Connect your social media accounts to schedule and publish posts
-        directly from your dashboard.
-      </p>
+    <div className="space-y-6">
+      {/* How it works */}
+      <Card className="border-violet-500/20 bg-gradient-to-br from-violet-500/5 to-purple-500/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Megaphone className="size-5 text-violet-400" />
+            Push-to-Share Marketing
+          </CardTitle>
+          <CardDescription>
+            No accounts to connect. We send you branded content weekly via email
+            and text. Just tap to share — it takes 30 seconds.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="flex items-start gap-3 rounded-lg border border-border/50 p-3">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-violet-400">
+                <Mail className="size-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">1. We Send Content</p>
+                <p className="text-xs text-muted-foreground">
+                  Every Monday at 10am, you get a branded post with your custom link.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border border-border/50 p-3">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-violet-400">
+                <Share2 className="size-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">2. You Tap Share</p>
+                <p className="text-xs text-muted-foreground">
+                  Open the Share Hub and share to all your platforms with one tap each.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border border-border/50 p-3">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-violet-400">
+                <BarChart3 className="size-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">3. We Track It</p>
+                <p className="text-xs text-muted-foreground">
+                  See which platforms you shared to and track your marketing consistency.
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Notification methods */}
       <div className="grid gap-4 sm:grid-cols-2">
-        {platforms.map((platform) => {
-          const Icon = platform.icon;
-          return (
-            <Card key={platform.name}>
-              <CardContent className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
-                    <Icon className="size-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{platform.name}</p>
-                    {platform.connected ? (
-                      <p className="text-xs text-green-500">
-                        Connected as {platform.handle}
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">
-                        Not connected
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {platform.connected ? (
-                    <Badge
-                      variant="outline"
-                      className="border-green-500/30 bg-green-500/10 text-green-500"
-                    >
-                      Connected
-                    </Badge>
-                  ) : platform.oauthUrl ? (
-                    <Button size="sm" variant="outline" asChild>
-                      <a href={platform.oauthUrl}>
-                        <Link2 className="mr-1.5 size-3.5" />
-                        Connect
-                      </a>
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant="ghost" disabled>
-                      Manual Only
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-blue-500/10">
+              <Mail className="size-5 text-blue-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium">Email Notifications</p>
+              <p className="text-xs text-green-500">Active</p>
+            </div>
+            <Badge
+              variant="outline"
+              className="border-green-500/30 bg-green-500/10 text-green-500"
+            >
+              <Check className="mr-1 size-3" />
+              On
+            </Badge>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-emerald-500/10">
+              <Smartphone className="size-5 text-emerald-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium">SMS Notifications</p>
+              <p className="text-xs text-muted-foreground">
+                Add your phone in Settings to enable
+              </p>
+            </div>
+            <Badge variant="secondary">Off</Badge>
+          </CardContent>
+        </Card>
       </div>
-      <Card className="border-dashed">
-        <CardContent className="p-4">
-          <p className="text-sm text-muted-foreground">
-            <strong>Note:</strong> Facebook personal profiles require manual
-            posting — we will send you a link to share.
-          </p>
+
+      {/* Recent share batches */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Share History</CardTitle>
+          <CardDescription>
+            Your recent content packages and sharing status.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {recentBatches.map((batch) => {
+              const platforms = Object.entries(batch.shared);
+              const sharedCount = platforms.filter(([, v]) => v).length;
+              const total = platforms.length;
+              const percent = Math.round((sharedCount / total) * 100);
+
+              return (
+                <div
+                  key={batch.id}
+                  className="flex items-center gap-4 rounded-lg border border-border/50 p-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-muted-foreground">
+                        {batch.date}
+                      </p>
+                      <Badge
+                        variant={percent === 100 ? "default" : "secondary"}
+                        className="text-[10px]"
+                      >
+                        {percent}%
+                      </Badge>
+                    </div>
+                    <p className="mt-1 truncate text-sm text-foreground/80">
+                      {batch.caption}
+                    </p>
+                    <div className="mt-2 flex gap-1">
+                      {platforms.map(([platform, shared]) => (
+                        <span
+                          key={platform}
+                          className={`inline-block rounded px-1.5 py-0.5 text-[10px] ${
+                            shared
+                              ? "bg-green-500/10 text-green-400"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {platform}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="shrink-0">
+                    {/* Progress ring */}
+                    <div className="relative flex size-12 items-center justify-center">
+                      <svg className="size-12 -rotate-90" viewBox="0 0 36 36">
+                        <path
+                          className="text-muted"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                        />
+                        <path
+                          className={
+                            percent === 100
+                              ? "text-green-500"
+                              : "text-violet-500"
+                          }
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeDasharray={`${percent}, 100`}
+                        />
+                      </svg>
+                      <span className="absolute text-[10px] font-bold">
+                        {sharedCount}/{total}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -173,7 +257,7 @@ const placeholderContent = [
     title: "Mercury Retrograde Alert",
     caption:
       "Mercury retrograde is approaching! Book a session to prepare for this cosmic shift. {link}",
-    platforms: [PLATFORM_INSTAGRAM, PLATFORM_TWITTER, PLATFORM_FACEBOOK],
+    platforms: ["Facebook", "Twitter / X", "WhatsApp"],
     icon: Sparkles,
     color: "text-purple-400",
   },
@@ -182,7 +266,7 @@ const placeholderContent = [
     title: "Full Moon Reading Promo",
     caption:
       "The Full Moon illuminates what is hidden. Discover what the universe has in store for you with a personalized reading. {link}",
-    platforms: [PLATFORM_INSTAGRAM, PLATFORM_FACEBOOK, PLATFORM_TIKTOK],
+    platforms: ["Facebook", "Instagram", "WhatsApp"],
     icon: Moon,
     color: "text-amber-400",
   },
@@ -191,7 +275,7 @@ const placeholderContent = [
     title: "New Client Welcome",
     caption:
       "Welcome to your cosmic journey! As your astrologer, I am here to help you navigate life with celestial wisdom. Book your first session: {link}",
-    platforms: [PLATFORM_INSTAGRAM, PLATFORM_TWITTER],
+    platforms: ["Facebook", "Twitter / X"],
     icon: Star,
     color: "text-cyan-400",
   },
@@ -200,7 +284,7 @@ const placeholderContent = [
     title: "Tarot Tuesday",
     caption:
       "It is Tarot Tuesday! Discover what the cards reveal about your week ahead. Limited slots available. {link}",
-    platforms: [PLATFORM_INSTAGRAM, PLATFORM_TWITTER, PLATFORM_TIKTOK],
+    platforms: ["Facebook", "Twitter / X", "Instagram"],
     icon: Sparkles,
     color: "text-pink-400",
   },
@@ -209,7 +293,7 @@ const placeholderContent = [
     title: "Solar Return Season",
     caption:
       "Birthday coming up? A Solar Return reading reveals the themes and opportunities for your year ahead. Gift yourself cosmic insight. {link}",
-    platforms: [PLATFORM_INSTAGRAM, PLATFORM_FACEBOOK, PLATFORM_YOUTUBE],
+    platforms: ["Facebook", "Instagram", "LinkedIn"],
     icon: Sun,
     color: "text-yellow-400",
   },
@@ -218,7 +302,7 @@ const placeholderContent = [
     title: "Client Testimonial Share",
     caption:
       "Grateful for this beautiful feedback from a client. Every reading is a sacred exchange. Book your session: {link}",
-    platforms: [PLATFORM_INSTAGRAM, PLATFORM_FACEBOOK, PLATFORM_TWITTER],
+    platforms: ["Facebook", "Twitter / X", "WhatsApp"],
     icon: Star,
     color: "text-emerald-400",
   },
@@ -229,14 +313,8 @@ function ContentLibraryTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Pre-made content templates ready to customize and schedule.
+          Content templates we cycle through for your weekly shares. New templates are added regularly.
         </p>
-        <Button size="sm" variant="outline" asChild>
-          <a href="/dashboard/marketing/content">
-            <ImageIcon className="mr-1.5 size-3.5" />
-            Manage Content
-          </a>
-        </Button>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {placeholderContent.map((content) => {
@@ -257,18 +335,12 @@ function ContentLibraryTab() {
                 <p className="text-xs leading-relaxed text-muted-foreground line-clamp-3">
                   {content.caption}
                 </p>
-                <div className="space-y-3">
-                  <div className="flex flex-wrap gap-1">
-                    {content.platforms.map((p) => (
-                      <Badge key={p} variant="secondary" className="text-[10px]">
-                        {p}
-                      </Badge>
-                    ))}
-                  </div>
-                  <Button size="sm" className="w-full">
-                    <Calendar className="mr-1.5 size-3.5" />
-                    Schedule
-                  </Button>
+                <div className="flex flex-wrap gap-1">
+                  {content.platforms.map((p) => (
+                    <Badge key={p} variant="secondary" className="text-[10px]">
+                      {p}
+                    </Badge>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -279,157 +351,129 @@ function ContentLibraryTab() {
   );
 }
 
-// --- Scheduled Posts ---
+// --- Upcoming Shares ---
 
-const placeholderPosts = [
-  {
-    id: "1",
-    date: "2026-04-02 10:00 AM",
-    content: "Mercury retrograde is approaching! Book a session...",
-    platforms: [PLATFORM_INSTAGRAM, PLATFORM_TWITTER],
-    status: "scheduled" as const,
-  },
-  {
-    id: "2",
-    date: "2026-04-05 2:00 PM",
-    content: "The Full Moon illuminates what is hidden...",
-    platforms: [PLATFORM_INSTAGRAM, PLATFORM_FACEBOOK],
-    status: "scheduled" as const,
-  },
-  {
-    id: "3",
-    date: "2026-03-28 9:00 AM",
-    content: "It is Tarot Tuesday! Discover what the cards...",
-    platforms: [PLATFORM_INSTAGRAM, PLATFORM_TWITTER, PLATFORM_TIKTOK],
-    status: "posted" as const,
-  },
-  {
-    id: "4",
-    date: "2026-03-25 12:00 PM",
-    content: "Welcome to your cosmic journey...",
-    platforms: [PLATFORM_INSTAGRAM],
-    status: "failed" as const,
-  },
-];
-
-function ScheduledPostsTab() {
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        View and manage your scheduled social media posts.
-      </p>
-      {placeholderPosts.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Clock className="mb-3 size-8 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              No scheduled posts yet. Head to the Content Library to get
-              started.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Content</TableHead>
-                <TableHead>Platforms</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {placeholderPosts.map((post) => (
-                <TableRow key={post.id}>
-                  <TableCell className="text-sm">{post.date}</TableCell>
-                  <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
-                    {post.content}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {post.platforms.map((p) => (
-                        <Badge
-                          key={p}
-                          variant="secondary"
-                          className="text-[10px]"
-                        >
-                          {p}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        post.status === "posted"
-                          ? "default"
-                          : post.status === "failed"
-                            ? "destructive"
-                            : "secondary"
-                      }
-                    >
-                      {post.status}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
-    </div>
-  );
-}
-
-// --- Analytics ---
-
-function AnalyticsTab() {
-  const placeholderAnalytics = [
-    { platform: PLATFORM_INSTAGRAM, posts: 12, clicks: 342, impressions: 4521 },
-    { platform: PLATFORM_TWITTER, posts: 8, clicks: 156, impressions: 2103 },
-    { platform: PLATFORM_FACEBOOK, posts: 5, clicks: 89, impressions: 1245 },
-    { platform: PLATFORM_TIKTOK, posts: 3, clicks: 67, impressions: 890 },
+function UpcomingSharesTab() {
+  const upcomingBatches = [
+    {
+      id: "1",
+      date: "Apr 7, 2026 at 10:00 AM",
+      status: "scheduled" as const,
+      template: "Random from content library",
+    },
+    {
+      id: "2",
+      date: "Apr 14, 2026 at 10:00 AM",
+      status: "scheduled" as const,
+      template: "Random from content library",
+    },
+    {
+      id: "3",
+      date: "Apr 21, 2026 at 10:00 AM",
+      status: "scheduled" as const,
+      template: "Random from content library",
+    },
   ];
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Track the performance of your social media posts across platforms.
+        Content packages are automatically prepared and sent every Monday at 10:00 AM UTC.
+      </p>
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Delivery Date</TableHead>
+              <TableHead>Content</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {upcomingBatches.map((batch) => (
+              <TableRow key={batch.id}>
+                <TableCell className="text-sm">{batch.date}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {batch.template}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary">
+                    <Clock className="mr-1 size-3" />
+                    {batch.status}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
+      <Card className="border-dashed">
+        <CardContent className="p-4">
+          <p className="text-sm text-muted-foreground">
+            <strong>How it works:</strong> Each Monday, we pick a content template from your library,
+            personalize it with your name and booking link, and send you an email and text with a
+            Share Hub link. Just tap to share everywhere in 30 seconds.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// --- Share Analytics ---
+
+function ShareAnalyticsTab() {
+  const platformStats = [
+    { platform: "Facebook", shares: 12, percentage: 100 },
+    { platform: "Twitter / X", shares: 11, percentage: 92 },
+    { platform: "WhatsApp", shares: 10, percentage: 83 },
+    { platform: "LinkedIn", shares: 8, percentage: 67 },
+    { platform: "Instagram", shares: 7, percentage: 58 },
+    { platform: "TikTok", shares: 5, percentage: 42 },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Track your sharing consistency across platforms.
       </p>
 
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Total Posts</CardDescription>
+            <CardDescription>Content Sent</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">28</p>
+            <p className="text-2xl font-bold">12</p>
+            <p className="text-xs text-muted-foreground">weekly packages</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Total Clicks</CardDescription>
+            <CardDescription>Total Shares</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">654</p>
+            <p className="text-2xl font-bold">53</p>
+            <p className="text-xs text-muted-foreground">across all platforms</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Total Impressions</CardDescription>
+            <CardDescription>Avg. Completion</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">8,759</p>
+            <p className="text-2xl font-bold">73%</p>
+            <p className="text-xs text-muted-foreground">platforms per batch</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Click Rate</CardDescription>
+            <CardDescription>Best Platform</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">7.5%</p>
+            <p className="text-2xl font-bold">Facebook</p>
+            <p className="text-xs text-muted-foreground">100% share rate</p>
           </CardContent>
         </Card>
       </div>
@@ -438,34 +482,29 @@ function AnalyticsTab() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Platform Breakdown</CardTitle>
+          <CardDescription>
+            How consistently you share to each platform.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Platform</TableHead>
-                <TableHead className="text-right">Posts</TableHead>
-                <TableHead className="text-right">Clicks</TableHead>
-                <TableHead className="text-right">Impressions</TableHead>
-                <TableHead className="text-right">Click Rate</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {placeholderAnalytics.map((row) => (
-                <TableRow key={row.platform}>
-                  <TableCell className="font-medium">{row.platform}</TableCell>
-                  <TableCell className="text-right">{row.posts}</TableCell>
-                  <TableCell className="text-right">{row.clicks}</TableCell>
-                  <TableCell className="text-right">
-                    {row.impressions.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {((row.clicks / row.impressions) * 100).toFixed(1)}%
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="space-y-3">
+            {platformStats.map((row) => (
+              <div key={row.platform} className="space-y-1.5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">{row.platform}</span>
+                  <span className="text-muted-foreground">
+                    {row.shares} shares ({row.percentage}%)
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-500 transition-all"
+                    style={{ width: `${row.percentage}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -482,41 +521,41 @@ export default function MarketingPage() {
           Social Media Marketing
         </h1>
         <p className="text-muted-foreground">
-          Connect your accounts, create content, and grow your practice.
+          We send you branded content every week. Tap to share everywhere in 30 seconds.
         </p>
       </div>
 
-      <Tabs defaultValue="accounts">
+      <Tabs defaultValue="sharing">
         <TabsList>
-          <TabsTrigger value="accounts">
-            <Link2 className="mr-1.5 size-3.5" />
-            Connected Accounts
+          <TabsTrigger value="sharing">
+            <Share2 className="mr-1.5 size-3.5" />
+            Push-to-Share
           </TabsTrigger>
           <TabsTrigger value="content">
             <Library className="mr-1.5 size-3.5" />
             Content Library
           </TabsTrigger>
-          <TabsTrigger value="scheduled">
+          <TabsTrigger value="upcoming">
             <Calendar className="mr-1.5 size-3.5" />
-            Scheduled Posts
+            Upcoming
           </TabsTrigger>
           <TabsTrigger value="analytics">
             <BarChart3 className="mr-1.5 size-3.5" />
-            Analytics
+            Share Tracking
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="accounts">
-          <ConnectedAccountsTab />
+        <TabsContent value="sharing">
+          <ShareSystemTab />
         </TabsContent>
         <TabsContent value="content">
           <ContentLibraryTab />
         </TabsContent>
-        <TabsContent value="scheduled">
-          <ScheduledPostsTab />
+        <TabsContent value="upcoming">
+          <UpcomingSharesTab />
         </TabsContent>
         <TabsContent value="analytics">
-          <AnalyticsTab />
+          <ShareAnalyticsTab />
         </TabsContent>
       </Tabs>
     </div>
