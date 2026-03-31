@@ -5,7 +5,7 @@ import { ZodiacWheel, TarotCardOutline, StarField, MoonPhases, ConstellationLine
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden px-4 py-20 sm:px-6 sm:py-24 lg:px-8 lg:py-28">
+    <section className="relative overflow-hidden px-4 py-14 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
       {/* Layered mystical background */}
       <div className="pointer-events-none absolute inset-0">
         {/* Star field across entire hero — gold-tinted */}

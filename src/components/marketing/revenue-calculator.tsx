@@ -57,7 +57,7 @@ export function RevenueCalculator() {
   const animatedRoi = useAnimatedNumber(roiPercentage);
 
   return (
-    <section className="relative px-4 py-14 sm:px-6 lg:px-8">
+    <section className="relative px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-4xl">
         <div className="relative overflow-hidden rounded-3xl border border-[#c9a84c]/15 bg-gradient-to-br from-[#0d1230] via-[#0a0e27] to-[#0d1230] p-8 shadow-2xl sm:p-12">
           {/* Star decorations — gold tinted */}

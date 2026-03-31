@@ -40,7 +40,7 @@ export function DivinerHero({
   return (
     <section
       id="hero"
-      className="relative flex min-h-[70vh] flex-col items-center justify-center overflow-hidden px-4 py-24 md:py-32"
+      className="relative flex min-h-[55vh] flex-col items-center justify-center overflow-hidden px-4 py-14 md:py-20"
     >
       {/* Unique cosmic gradient for hero */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(201,168,76,0.08)_0%,transparent_50%),radial-gradient(ellipse_at_70%_60%,rgba(45,27,78,0.25)_0%,transparent_50%),radial-gradient(ellipse_at_50%_90%,rgba(26,26,78,0.2)_0%,transparent_50%)]" />

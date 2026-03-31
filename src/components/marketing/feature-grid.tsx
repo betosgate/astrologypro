@@ -70,7 +70,7 @@ const features = [
 
 export function FeatureGrid() {
   return (
-    <section className="relative px-4 py-14 sm:px-6 lg:px-8">
+    <section className="relative px-4 py-10 sm:px-6 lg:px-8">
       {/* Subtle star background — gold tinted */}
       <StarField className="pointer-events-none absolute inset-0 h-full w-full text-amber-200/20" />
 

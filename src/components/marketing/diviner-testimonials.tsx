@@ -29,7 +29,7 @@ const testimonials = [
 
 export function DivinerTestimonials() {
   return (
-    <section className="px-4 py-14 sm:px-6 lg:px-8">
+    <section className="px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
         <div className="mb-12 text-center">
           <h2 className="text-3xl font-bold sm:text-4xl">

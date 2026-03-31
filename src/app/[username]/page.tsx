@@ -227,9 +227,9 @@ export default async function DivinerPage({ params }: PageProps) {
 
       {/* ===== 2. ABOUT SECTION ===== */}
       {diviner.bio && (
-        <section id="about" className="py-20 md:py-28">
+        <section id="about" className="py-10 md:py-14">
           <div className="mx-auto max-w-6xl px-4">
-            <h2 className="mb-12 text-center font-display text-3xl font-semibold text-cream md:text-4xl">
+            <h2 className="mb-6 text-center font-display text-3xl font-semibold text-cream md:text-4xl">
               About {diviner.display_name}
             </h2>
 
@@ -298,18 +298,18 @@ export default async function DivinerPage({ params }: PageProps) {
           </div>
 
           {/* Cosmic divider */}
-          <div className="cosmic-divider mx-auto mt-20 max-w-6xl md:mt-28" />
+          <div className="cosmic-divider mx-auto mt-10 max-w-6xl md:mt-14" />
         </section>
       )}
 
       {/* ===== 3. SERVICES SECTION ===== */}
       {services.length > 0 && (
-        <section id="services" className="py-20 md:py-28">
+        <section id="services" className="py-10 md:py-14">
           <div className="mx-auto max-w-6xl px-4">
             <h2 className="mb-2 text-center font-display text-3xl font-semibold text-cream md:text-4xl">
               Services &amp; Offerings
             </h2>
-            <p className="mx-auto mb-12 max-w-md text-center text-sm text-silver/60">
+            <p className="mx-auto mb-6 max-w-md text-center text-sm text-silver/60">
               Choose from a range of readings tailored to your questions
             </p>
 
@@ -334,7 +334,7 @@ export default async function DivinerPage({ params }: PageProps) {
           </div>
 
           {/* Cosmic divider */}
-          <div className="cosmic-divider mx-auto mt-20 max-w-6xl md:mt-28" />
+          <div className="cosmic-divider mx-auto mt-10 max-w-6xl md:mt-14" />
         </section>
       )}
 
@@ -342,7 +342,7 @@ export default async function DivinerPage({ params }: PageProps) {
       <TestimonialSection testimonials={testimonials} />
 
       {/* ===== 5. AVAILABILITY PREVIEW ===== */}
-      <section id="booking" className="py-20 md:py-28">
+      <section id="booking" className="py-10 md:py-14">
         <div className="mx-auto max-w-4xl px-4 text-center">
           <h2 className="mb-2 font-display text-3xl font-semibold text-cream md:text-4xl">
             Next Available
@@ -357,11 +357,11 @@ export default async function DivinerPage({ params }: PageProps) {
         </div>
 
         {/* Cosmic divider */}
-        <div className="cosmic-divider mx-auto mt-20 max-w-6xl md:mt-28" />
+        <div className="cosmic-divider mx-auto mt-10 max-w-6xl md:mt-14" />
       </section>
 
       {/* ===== 6. GIFT A READING ===== */}
-      <section className="py-20 md:py-28">
+      <section className="py-10 md:py-14">
         <div className="mx-auto max-w-2xl px-4">
           <div className="glass-card rounded-2xl border-gold/10 p-10 text-center md:p-14">
             <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-xl bg-gold/10">
@@ -386,7 +386,7 @@ export default async function DivinerPage({ params }: PageProps) {
       </section>
 
       {/* ===== 7. FINAL CTA ===== */}
-      <section className="relative overflow-hidden py-24 md:py-32">
+      <section className="relative overflow-hidden py-12 md:py-16">
         {/* Cosmic gradient background */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_50%,rgba(201,168,76,0.06)_0%,transparent_60%)]" />
 

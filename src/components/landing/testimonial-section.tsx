@@ -38,7 +38,7 @@ export function TestimonialSection({ testimonials }: TestimonialSectionProps) {
   const rest = testimonials.slice(1, 5);
 
   return (
-    <section id="reviews" className="py-20 md:py-28">
+    <section id="reviews" className="py-10 md:py-14">
       <div className="mx-auto max-w-6xl px-4">
         {/* Section heading */}
         <h2 className="mb-2 text-center font-display text-3xl font-semibold text-cream md:text-4xl">
@@ -104,7 +104,7 @@ export function TestimonialSection({ testimonials }: TestimonialSectionProps) {
       </div>
 
       {/* Cosmic divider */}
-      <div className="cosmic-divider mx-auto mt-20 max-w-6xl md:mt-28" />
+      <div className="cosmic-divider mx-auto mt-10 max-w-6xl md:mt-14" />
     </section>
   );
 }

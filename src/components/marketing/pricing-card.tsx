@@ -23,7 +23,7 @@ const included = [
 
 export function PricingCard() {
   return (
-    <section className="relative px-4 py-14 sm:px-6 lg:px-8" id="pricing">
+    <section className="relative px-4 py-10 sm:px-6 lg:px-8" id="pricing">
       {/* Background zodiac wheel — gold tinted */}
       <ZodiacWheel className="pointer-events-none absolute left-1/2 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 text-[#c9a84c]/10" />
 
