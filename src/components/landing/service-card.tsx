@@ -1,14 +1,4 @@
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Clock, ArrowRight } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 
@@ -18,9 +8,10 @@ interface Service {
   slug: string;
   description: string | null;
   duration_minutes: number;
-  price: number;
+  base_price: number;
   category: string;
   is_featured: boolean;
+  [key: string]: unknown;
 }
 
 interface ServiceCardProps {
@@ -29,48 +20,54 @@ interface ServiceCardProps {
 }
 
 export function ServiceCard({ service, username }: ServiceCardProps) {
-  const isLongSession = service.duration_minutes >= 60;
-
   return (
-    <Card className="group relative flex flex-col transition-shadow hover:shadow-md">
+    <div
+      className={`glass-card group relative flex flex-col rounded-xl p-6 transition-all duration-300 hover:border-white/15 hover:shadow-lg ${
+        service.is_featured
+          ? "border-gold/20 shadow-[0_0_20px_rgba(201,168,76,0.08)] hover:shadow-[0_0_30px_rgba(201,168,76,0.15)]"
+          : ""
+      }`}
+    >
+      {/* Popular badge */}
       {service.is_featured && (
-        <div className="absolute -top-2.5 right-4">
-          <Badge className="bg-primary text-primary-foreground shadow-sm">
-            Featured
-          </Badge>
+        <div className="absolute -top-3 right-4">
+          <span className="inline-flex items-center rounded-full border border-gold/40 bg-gold/10 px-3 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold backdrop-blur-sm">
+            Popular
+          </span>
         </div>
       )}
 
-      <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-lg">{service.name}</CardTitle>
-          <Badge
-            variant={isLongSession ? "default" : "outline"}
-            className="shrink-0"
-          >
-            <Clock className="mr-1 size-3" />
-            {service.duration_minutes} min
-          </Badge>
-        </div>
-        {service.description && (
-          <CardDescription className="line-clamp-3">
-            {service.description}
-          </CardDescription>
-        )}
-      </CardHeader>
+      {/* Service name */}
+      <h3 className="mb-2 font-display text-xl font-semibold text-cream">
+        {service.name}
+      </h3>
 
-      <CardContent className="mt-auto">
-        <p className="text-2xl font-bold">{formatCurrency(service.price)}</p>
-      </CardContent>
+      {/* Description */}
+      {service.description && (
+        <p className="mb-4 line-clamp-2 text-sm leading-relaxed text-silver/70">
+          {service.description}
+        </p>
+      )}
 
-      <CardFooter>
-        <Button asChild className="w-full gap-2">
-          <Link href={`/${username}/book/${service.slug}`}>
-            Book Now
-            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-          </Link>
-        </Button>
-      </CardFooter>
-    </Card>
+      {/* Duration + Price row */}
+      <div className="mt-auto flex items-end justify-between pt-4">
+        <span className="inline-flex items-center gap-1 rounded-full border border-gold/20 px-2.5 py-0.5 text-xs text-gold/80">
+          <Clock className="size-3" />
+          {service.duration_minutes} min
+        </span>
+        <span className="font-display text-2xl font-semibold text-gold">
+          {formatCurrency(Number(service.base_price))}
+        </span>
+      </div>
+
+      {/* Book link */}
+      <Link
+        href={`/${username}/book/${service.slug}`}
+        className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-gold/80 transition-colors hover:text-gold"
+      >
+        Book This Reading
+        <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+      </Link>
+    </div>
   );
 }
