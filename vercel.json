@@ -7,6 +7,14 @@
     {
       "path": "/api/cron/weekly-content",
       "schedule": "0 10 * * 1"
+    },
+    {
+      "path": "/api/cron/follow-up-emails",
+      "schedule": "0 */2 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-digest",
+      "schedule": "0 14 * * 1"
     }
   ]
 }

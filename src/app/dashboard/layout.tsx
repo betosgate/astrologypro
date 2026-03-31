@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/dashboard/sidebar";
+import { MobileNav } from "@/components/dashboard/mobile-nav";
 
 export const metadata = {
   title: "Dashboard",
@@ -37,10 +38,11 @@ export default async function DashboardLayout({
         }}
       />
       <main className="lg:pl-64">
-        <div className="container mx-auto max-w-6xl p-4 py-6 lg:p-8">
+        <div className="container mx-auto max-w-6xl p-4 pb-20 py-6 lg:p-8 lg:pb-8">
           {children}
         </div>
       </main>
+      <MobileNav />
     </div>
   );
 }

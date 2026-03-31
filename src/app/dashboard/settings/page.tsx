@@ -27,6 +27,10 @@ import {
   CheckCircle2,
   XCircle,
   ExternalLink,
+  Heart,
+  Plus,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 interface DivinerSettings {
@@ -44,12 +48,33 @@ interface DivinerSettings {
   notification_payout: boolean;
 }
 
+interface DiscountRule {
+  id: string;
+  name: string;
+  type: "session_count" | "package";
+  min_sessions: number | null;
+  discount_percent: number;
+  is_active: boolean;
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<DivinerSettings | null>(null);
+
+  // Loyalty state
+  const [discountRules, setDiscountRules] = useState<DiscountRule[]>([]);
+  const [loyaltyLoading, setLoyaltyLoading] = useState(false);
+  const [showAddRule, setShowAddRule] = useState(false);
+  const [editingRule, setEditingRule] = useState<string | null>(null);
+  const [ruleForm, setRuleForm] = useState({
+    name: "",
+    type: "session_count" as "session_count" | "package",
+    min_sessions: "",
+    discount_percent: "",
+  });
 
   useEffect(() => {
     const calendarStatus = searchParams.get("calendar");
@@ -98,6 +123,17 @@ export default function SettingsPage() {
             data.notification_booking_cancelled ?? true,
           notification_payout: data.notification_payout ?? true,
         });
+
+        // Load discount rules
+        const { data: rules } = await supabase
+          .from("discount_rules")
+          .select("id, name, type, min_sessions, discount_percent, is_active")
+          .eq("diviner_id", data.id)
+          .order("created_at", { ascending: true });
+
+        if (rules) {
+          setDiscountRules(rules);
+        }
       }
       setLoading(false);
     }
@@ -127,6 +163,81 @@ export default function SettingsPage() {
       toast.error("Failed to save settings");
     } else {
       toast.success("Settings saved");
+    }
+  }
+
+  async function handleSaveDiscountRule() {
+    if (!settings) return;
+    if (!ruleForm.name || !ruleForm.discount_percent) {
+      toast.error("Please fill in the rule name and discount percentage");
+      return;
+    }
+    setLoyaltyLoading(true);
+    const supabase = createClient();
+
+    const payload = {
+      diviner_id: settings.id,
+      name: ruleForm.name,
+      type: ruleForm.type,
+      min_sessions: ruleForm.min_sessions
+        ? parseInt(ruleForm.min_sessions)
+        : null,
+      discount_percent: parseFloat(ruleForm.discount_percent),
+      is_active: true,
+    };
+
+    if (editingRule) {
+      const { error } = await supabase
+        .from("discount_rules")
+        .update(payload)
+        .eq("id", editingRule);
+      if (error) {
+        toast.error("Failed to update discount rule");
+      } else {
+        setDiscountRules((prev) =>
+          prev.map((r) =>
+            r.id === editingRule ? { ...r, ...payload } : r
+          )
+        );
+        toast.success("Discount rule updated");
+      }
+    } else {
+      const { data: newRule, error } = await supabase
+        .from("discount_rules")
+        .insert(payload)
+        .select("id, name, type, min_sessions, discount_percent, is_active")
+        .single();
+      if (error || !newRule) {
+        toast.error("Failed to create discount rule");
+      } else {
+        setDiscountRules((prev) => [...prev, newRule]);
+        toast.success("Discount rule created");
+      }
+    }
+
+    setRuleForm({
+      name: "",
+      type: "session_count",
+      min_sessions: "",
+      discount_percent: "",
+    });
+    setShowAddRule(false);
+    setEditingRule(null);
+    setLoyaltyLoading(false);
+  }
+
+  async function handleDeleteRule(ruleId: string) {
+    if (!settings) return;
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("discount_rules")
+      .delete()
+      .eq("id", ruleId);
+    if (error) {
+      toast.error("Failed to delete discount rule");
+    } else {
+      setDiscountRules((prev) => prev.filter((r) => r.id !== ruleId));
+      toast.success("Discount rule deleted");
     }
   }
 
@@ -182,6 +293,10 @@ export default function SettingsPage() {
           <TabsTrigger value="notifications">
             <Bell className="mr-2 size-4" />
             Notifications
+          </TabsTrigger>
+          <TabsTrigger value="loyalty">
+            <Heart className="mr-2 size-4" />
+            Loyalty
           </TabsTrigger>
         </TabsList>
 
@@ -501,6 +616,233 @@ export default function SettingsPage() {
               "Save Notification Settings"
             )}
           </Button>
+        </TabsContent>
+
+        {/* Loyalty Tab */}
+        <TabsContent value="loyalty" className="mt-6 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Loyalty Discounts</CardTitle>
+              <CardDescription>
+                Reward returning clients with automatic discounts based on their
+                session history.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Existing Rules Table */}
+              {discountRules.length > 0 && (
+                <div className="rounded-lg border">
+                  <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 border-b bg-muted/50 px-4 py-2 text-sm font-medium text-muted-foreground">
+                    <span>Name</span>
+                    <span>Type</span>
+                    <span>Min Sessions</span>
+                    <span>Discount</span>
+                    <span>Actions</span>
+                  </div>
+                  {discountRules.map((rule) => (
+                    <div
+                      key={rule.id}
+                      className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 border-b px-4 py-3 last:border-b-0"
+                    >
+                      <span className="font-medium">{rule.name}</span>
+                      <Badge variant="secondary">
+                        {rule.type === "session_count"
+                          ? "Session Count"
+                          : "Package"}
+                      </Badge>
+                      <span className="text-center text-sm">
+                        {rule.min_sessions ?? "N/A"}
+                      </span>
+                      <span className="text-center text-sm font-semibold text-green-600 dark:text-green-400">
+                        {rule.discount_percent}%
+                      </span>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
+                          onClick={() => {
+                            setEditingRule(rule.id);
+                            setRuleForm({
+                              name: rule.name,
+                              type: rule.type,
+                              min_sessions: rule.min_sessions?.toString() ?? "",
+                              discount_percent:
+                                rule.discount_percent.toString(),
+                            });
+                            setShowAddRule(true);
+                          }}
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteRule(rule.id)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {discountRules.length === 0 && !showAddRule && (
+                <p className="text-sm text-muted-foreground">
+                  No discount rules configured yet. Add a rule to automatically
+                  reward loyal clients.
+                </p>
+              )}
+
+              {/* Add / Edit Rule Form */}
+              {showAddRule && (
+                <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+                  <h4 className="font-semibold">
+                    {editingRule ? "Edit Discount Rule" : "Add Discount Rule"}
+                  </h4>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="rule-name">Rule Name</Label>
+                      <Input
+                        id="rule-name"
+                        placeholder="e.g., Loyal Client Discount"
+                        value={ruleForm.name}
+                        onChange={(e) =>
+                          setRuleForm({ ...ruleForm, name: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="rule-type">Type</Label>
+                      <select
+                        id="rule-type"
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        value={ruleForm.type}
+                        onChange={(e) =>
+                          setRuleForm({
+                            ...ruleForm,
+                            type: e.target.value as
+                              | "session_count"
+                              | "package",
+                          })
+                        }
+                      >
+                        <option value="session_count">Session Count</option>
+                        <option value="package">Package Deal</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="rule-min-sessions">
+                        Minimum Sessions
+                      </Label>
+                      <Input
+                        id="rule-min-sessions"
+                        type="number"
+                        min="1"
+                        placeholder="e.g., 5"
+                        value={ruleForm.min_sessions}
+                        onChange={(e) =>
+                          setRuleForm({
+                            ...ruleForm,
+                            min_sessions: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="rule-discount">Discount %</Label>
+                      <Input
+                        id="rule-discount"
+                        type="number"
+                        min="1"
+                        max="100"
+                        step="0.5"
+                        placeholder="e.g., 10"
+                        value={ruleForm.discount_percent}
+                        onChange={(e) =>
+                          setRuleForm({
+                            ...ruleForm,
+                            discount_percent: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleSaveDiscountRule}
+                      disabled={loyaltyLoading}
+                    >
+                      {loyaltyLoading ? (
+                        <>
+                          <Loader2 className="mr-2 size-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : editingRule ? (
+                        "Update Rule"
+                      ) : (
+                        "Save Rule"
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowAddRule(false);
+                        setEditingRule(null);
+                        setRuleForm({
+                          name: "",
+                          type: "session_count",
+                          min_sessions: "",
+                          discount_percent: "",
+                        });
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {!showAddRule && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowAddRule(true);
+                    setEditingRule(null);
+                    setRuleForm({
+                      name: "",
+                      type: "session_count",
+                      min_sessions: "",
+                      discount_percent: "",
+                    });
+                  }}
+                >
+                  <Plus className="mr-2 size-4" />
+                  Add Discount Rule
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>How Loyalty Discounts Work</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <p>
+                <strong>Session Count:</strong> Automatically applies a discount
+                when a client has completed at least the specified number of
+                sessions with you. The highest matching rule is used.
+              </p>
+              <p>
+                <strong>Package Deal:</strong> Create named packages with a set
+                number of sessions and a discount. Clients see the discount
+                applied at checkout.
+              </p>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

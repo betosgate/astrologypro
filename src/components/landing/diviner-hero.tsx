@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ShieldCheck, Star, Clock, Calendar } from "lucide-react";
 
 interface DivinerHeroProps {
   username: string;
@@ -12,6 +12,10 @@ interface DivinerHeroProps {
   specialties: string[];
   youtubeChannelId: string | null;
   facebookLiveUrl: string | null;
+  completedSessions?: number;
+  averageRating?: number | null;
+  reviewCount?: number;
+  openSlotsThisWeek?: number;
 }
 
 export function DivinerHero({
@@ -22,6 +26,10 @@ export function DivinerHero({
   specialties,
   youtubeChannelId,
   facebookLiveUrl,
+  completedSessions = 0,
+  averageRating = null,
+  reviewCount = 0,
+  openSlotsThisWeek,
 }: DivinerHeroProps) {
   const initials = displayName
     .split(" ")
@@ -57,6 +65,38 @@ export function DivinerHero({
             {tagline}
           </p>
         )}
+
+        {/* Trust Signals */}
+        <div className="mb-6 flex flex-wrap items-center justify-center gap-3">
+          <Badge
+            variant="secondary"
+            className="gap-1.5 border-green-500/20 bg-green-500/10 text-green-600 dark:text-green-400"
+          >
+            <ShieldCheck className="size-3.5" />
+            Verified Practitioner
+          </Badge>
+          {completedSessions > 0 && (
+            <Badge variant="secondary" className="gap-1.5">
+              <Calendar className="size-3.5" />
+              {completedSessions} reading{completedSessions !== 1 ? "s" : ""} completed
+            </Badge>
+          )}
+          {averageRating !== null && reviewCount > 0 && (
+            <Badge variant="secondary" className="gap-1.5">
+              <Star className="size-3.5 fill-yellow-400 text-yellow-400" />
+              {averageRating.toFixed(1)} from {reviewCount} review{reviewCount !== 1 ? "s" : ""}
+            </Badge>
+          )}
+          {openSlotsThisWeek !== undefined && openSlotsThisWeek < 5 && (
+            <Badge
+              variant="secondary"
+              className="gap-1.5 border-orange-500/20 bg-orange-500/10 text-orange-600 dark:text-orange-400"
+            >
+              <Clock className="size-3.5" />
+              Limited availability this week
+            </Badge>
+          )}
+        </div>
 
         {/* Specialties */}
         {specialties.length > 0 && (

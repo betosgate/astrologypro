@@ -12,6 +12,7 @@ interface BookingPaymentBody {
   clientPhone?: string;
   questionnaire: Record<string, string | undefined>;
   affiliateCode?: string;
+  giftCode?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -27,6 +28,7 @@ export async function POST(request: NextRequest) {
       clientPhone,
       questionnaire,
       affiliateCode,
+      giftCode,
     } = body;
 
     // Validate required fields
@@ -99,6 +101,65 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // --- Loyalty Discount Check ---
+    let finalPrice = service.price;
+    let loyaltyDiscountPercent = 0;
+    let loyaltyRuleName: string | null = null;
+
+    // Check client's session count with this diviner
+    const { data: clientDiviner } = await supabase
+      .from("client_diviners")
+      .select("total_sessions")
+      .eq("client_id", client.id)
+      .eq("diviner_id", divinerId)
+      .maybeSingle();
+
+    if (clientDiviner && clientDiviner.total_sessions > 0) {
+      // Fetch active discount rules for this diviner
+      const { data: discountRules } = await supabase
+        .from("discount_rules")
+        .select("id, name, type, min_sessions, discount_percent")
+        .eq("diviner_id", divinerId)
+        .eq("is_active", true)
+        .eq("type", "session_count")
+        .lte("min_sessions", clientDiviner.total_sessions)
+        .order("discount_percent", { ascending: false })
+        .limit(1);
+
+      if (discountRules && discountRules.length > 0) {
+        const bestRule = discountRules[0];
+        loyaltyDiscountPercent = bestRule.discount_percent;
+        loyaltyRuleName = bestRule.name;
+        finalPrice = Math.round(
+          service.price * (1 - loyaltyDiscountPercent / 100) * 100
+        ) / 100;
+      }
+    }
+
+    // --- Gift Certificate Check ---
+    let giftDeduction = 0;
+    let giftCertificateId: string | null = null;
+
+    if (giftCode) {
+      const { data: giftCert } = await supabase
+        .from("gift_certificates")
+        .select("id, remaining_amount, diviner_id, expires_at")
+        .eq("code", giftCode)
+        .eq("diviner_id", divinerId)
+        .gt("remaining_amount", 0)
+        .maybeSingle();
+
+      if (giftCert) {
+        const isExpired =
+          giftCert.expires_at && new Date(giftCert.expires_at) < new Date();
+        if (!isExpired) {
+          giftDeduction = Math.min(giftCert.remaining_amount, finalPrice);
+          giftCertificateId = giftCert.id;
+          finalPrice = Math.round((finalPrice - giftDeduction) * 100) / 100;
+        }
+      }
+    }
+
     // Calculate end time
     const startTime = new Date(scheduledAt);
     const endTime = new Date(
@@ -115,7 +176,7 @@ export async function POST(request: NextRequest) {
         scheduled_at: scheduledAt,
         end_at: endTime.toISOString(),
         status: "pending",
-        price: service.price,
+        price: finalPrice,
         questionnaire,
       })
       .select("id")
@@ -145,32 +206,86 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Calculate platform fee
+    // Calculate platform fee on the final price
     const platformFee =
-      (service.price * PRICING.platformFeePercent) / 100;
+      (finalPrice * PRICING.platformFeePercent) / 100;
 
-    // Create Stripe PaymentIntent with destination charge
-    const paymentIntent = await createPaymentIntent({
-      amount: service.price,
-      connectedAccountId: diviner.stripe_account_id,
-      platformFeeAmount: platformFee,
-      metadata: {
-        bookingId: booking.id,
-        divinerId,
-        serviceId,
-        clientEmail,
-      },
-    });
+    let clientSecret: string | null = null;
 
-    // Update booking with payment intent ID
-    await supabase
-      .from("bookings")
-      .update({ stripe_payment_intent_id: paymentIntent.id })
-      .eq("id", booking.id);
+    // Only create a payment intent if there's an amount to charge
+    if (finalPrice > 0) {
+      const paymentIntent = await createPaymentIntent({
+        amount: finalPrice,
+        connectedAccountId: diviner.stripe_account_id,
+        platformFeeAmount: platformFee,
+        metadata: {
+          bookingId: booking.id,
+          divinerId,
+          serviceId,
+          clientEmail,
+          ...(giftCode ? { giftCode } : {}),
+          ...(loyaltyRuleName
+            ? { loyaltyDiscount: `${loyaltyDiscountPercent}%` }
+            : {}),
+        },
+      });
+
+      clientSecret = paymentIntent.client_secret;
+
+      await supabase
+        .from("bookings")
+        .update({ stripe_payment_intent_id: paymentIntent.id })
+        .eq("id", booking.id);
+    } else {
+      // Fully covered by gift certificate — mark booking as confirmed
+      await supabase
+        .from("bookings")
+        .update({ status: "confirmed" })
+        .eq("id", booking.id);
+    }
+
+    // Deduct from gift certificate if used
+    if (giftCertificateId && giftDeduction > 0) {
+      const { data: currentCert } = await supabase
+        .from("gift_certificates")
+        .select("remaining_amount")
+        .eq("id", giftCertificateId)
+        .single();
+
+      if (currentCert) {
+        const newRemaining = Math.max(
+          0,
+          currentCert.remaining_amount - giftDeduction
+        );
+        await supabase
+          .from("gift_certificates")
+          .update({
+            remaining_amount: newRemaining,
+            ...(newRemaining <= 0
+              ? { redeemed_at: new Date().toISOString() }
+              : {}),
+          })
+          .eq("id", giftCertificateId);
+      }
+    }
 
     return NextResponse.json({
-      clientSecret: paymentIntent.client_secret,
+      clientSecret,
       bookingId: booking.id,
+      originalPrice: service.price,
+      finalPrice,
+      ...(loyaltyDiscountPercent > 0
+        ? {
+            loyaltyDiscount: {
+              name: loyaltyRuleName,
+              percent: loyaltyDiscountPercent,
+              saved: Math.round((service.price - finalPrice + giftDeduction) * 100) / 100,
+            },
+          }
+        : {}),
+      ...(giftDeduction > 0
+        ? { giftDeduction: Math.round(giftDeduction * 100) / 100 }
+        : {}),
     });
   } catch (err) {
     console.error("Booking payment error:", err);

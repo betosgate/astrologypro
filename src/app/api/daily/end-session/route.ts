@@ -85,6 +85,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Fetch client_id from booking for follow-up sequences
+    const { data: fullBooking } = await admin
+      .from("bookings")
+      .select("client_id")
+      .eq("id", bookingId)
+      .single();
+
+    if (fullBooking?.client_id) {
+      const now = new Date();
+      const followUps = [
+        {
+          booking_id: bookingId,
+          diviner_id: booking.diviner_id,
+          client_id: fullBooking.client_id,
+          step: 1,
+          scheduled_at: new Date(now.getTime() + 1 * 60 * 60 * 1000).toISOString(), // +1 hour
+          email_type: "recording_ready",
+        },
+        {
+          booking_id: bookingId,
+          diviner_id: booking.diviner_id,
+          client_id: fullBooking.client_id,
+          step: 2,
+          scheduled_at: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(), // +3 days
+          email_type: "reflection",
+        },
+        {
+          booking_id: bookingId,
+          diviner_id: booking.diviner_id,
+          client_id: fullBooking.client_id,
+          step: 3,
+          scheduled_at: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(), // +30 days
+          email_type: "rebooking",
+        },
+      ];
+
+      const { error: followUpError } = await admin
+        .from("follow_up_sequences")
+        .insert(followUps);
+
+      if (followUpError) {
+        console.error("Failed to create follow-up sequences:", followUpError);
+        // Non-blocking: don't fail the session completion
+      }
+    }
+
     return NextResponse.json({
       status: "completed",
       actualDurationMinutes: Math.round(actualDurationMinutes),

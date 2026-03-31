@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { PricingCard } from "@/components/marketing/pricing-card";
+import { ComparisonTable } from "@/components/marketing/comparison-table";
 import { FaqSection } from "@/components/marketing/faq-section";
 import { Button } from "@/components/ui/button";
 
@@ -32,6 +33,9 @@ export default function PricingPage() {
 
         {/* Pricing Card */}
         <PricingCard />
+
+        {/* Cost Comparison */}
+        <ComparisonTable />
 
         {/* FAQ */}
         <FaqSection />

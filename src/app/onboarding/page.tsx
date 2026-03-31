@@ -16,6 +16,21 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ArrowLeft,
   ArrowRight,
   Check,
@@ -27,6 +42,7 @@ import {
   User,
   Calendar,
   Eye,
+  Wand2,
 } from "lucide-react";
 import { DAYS_OF_WEEK } from "@/lib/constants";
 
@@ -71,6 +87,16 @@ export default function OnboardingPage() {
   const [tagline, setTagline] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  // Bio generator
+  const [bioDialogOpen, setBioDialogOpen] = useState(false);
+  const [bioSpecialty, setBioSpecialty] = useState("astrology");
+  const [bioYears, setBioYears] = useState("");
+  const [bioApproach, setBioApproach] = useState("");
+  const [generatedBios, setGeneratedBios] = useState<string[]>([]);
+  const [generatedTaglines, setGeneratedTaglines] = useState<string[]>([]);
+  const [bioGenerating, setBioGenerating] = useState(false);
+  const [bioStep, setBioStep] = useState<"form" | "bios" | "taglines">("form");
 
   // Step 2: Services
   const [serviceTemplates, setServiceTemplates] = useState<ServiceTemplate[]>(
@@ -193,6 +219,50 @@ export default function OnboardingPage() {
     },
     [userId, supabase]
   );
+
+  async function handleGenerateBio() {
+    if (!bioYears || !bioApproach) return;
+    setBioGenerating(true);
+
+    try {
+      const response = await fetch("/api/generate-bio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          specialties: bioSpecialty,
+          yearsExperience: bioYears,
+          approach: bioApproach,
+          name: displayName || "Your Name",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(result.error ?? "Failed to generate bio");
+        return;
+      }
+
+      setGeneratedBios(result.bios);
+      setGeneratedTaglines(result.taglines);
+      setBioStep("bios");
+    } catch {
+      setError("Failed to generate bio. Please try again.");
+    } finally {
+      setBioGenerating(false);
+    }
+  }
+
+  function selectBio(bio: string) {
+    setBio(bio);
+    setBioStep("taglines");
+  }
+
+  function selectTagline(t: string) {
+    setTagline(t);
+    setBioDialogOpen(false);
+    setBioStep("form");
+  }
 
   async function handleProfileSave() {
     if (!userId) return;
@@ -561,6 +631,156 @@ export default function OnboardingPage() {
                     rows={5}
                   />
                 </div>
+
+                {/* Bio Generator */}
+                <Dialog
+                  open={bioDialogOpen}
+                  onOpenChange={(open) => {
+                    setBioDialogOpen(open);
+                    if (!open) setBioStep("form");
+                  }}
+                >
+                  <DialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full gap-2"
+                    >
+                      <Wand2 className="h-4 w-4" />
+                      Need help? Generate a bio &amp; tagline
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-lg">
+                    {bioStep === "form" && (
+                      <>
+                        <DialogHeader>
+                          <DialogTitle>Generate Your Bio</DialogTitle>
+                          <DialogDescription>
+                            Answer a few quick questions and we will create professional bio and tagline options for you.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 pt-2">
+                          <div className="space-y-2">
+                            <Label>What do you specialize in?</Label>
+                            <Select value={bioSpecialty} onValueChange={setBioSpecialty}>
+                              <SelectTrigger className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="astrology">Astrology</SelectItem>
+                                <SelectItem value="tarot">Tarot Reading</SelectItem>
+                                <SelectItem value="both">Both Astrology &amp; Tarot</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>How many years of experience?</Label>
+                            <Select value={bioYears} onValueChange={setBioYears}>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select experience" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1-3">1 - 3 years</SelectItem>
+                                <SelectItem value="3-5">3 - 5 years</SelectItem>
+                                <SelectItem value="5-10">5 - 10 years</SelectItem>
+                                <SelectItem value="10+">10+ years</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>How would you describe your approach?</Label>
+                            <Select value={bioApproach} onValueChange={setBioApproach}>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select approach" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="warm">Warm &amp; Intuitive</SelectItem>
+                                <SelectItem value="professional">Professional &amp; Analytical</SelectItem>
+                                <SelectItem value="spiritual">Spiritual &amp; Sacred</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button
+                            onClick={handleGenerateBio}
+                            disabled={bioGenerating || !bioYears || !bioApproach}
+                            className="w-full"
+                          >
+                            {bioGenerating ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Wand2 className="mr-2 h-4 w-4" />
+                                Generate Options
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </>
+                    )}
+
+                    {bioStep === "bios" && (
+                      <>
+                        <DialogHeader>
+                          <DialogTitle>Choose Your Bio</DialogTitle>
+                          <DialogDescription>
+                            Pick the bio that best represents you. You can edit it after selecting.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-3 pt-2">
+                          {generatedBios.map((b, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => selectBio(b)}
+                              className="w-full rounded-lg border border-border p-3 text-left text-sm leading-relaxed text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-foreground"
+                            >
+                              <span className="mb-1 block text-xs font-semibold text-primary">
+                                Option {i + 1}
+                              </span>
+                              {b}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {bioStep === "taglines" && (
+                      <>
+                        <DialogHeader>
+                          <DialogTitle>Choose Your Tagline</DialogTitle>
+                          <DialogDescription>
+                            Pick a tagline that appears below your name. You can edit it after selecting.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-3 pt-2">
+                          {generatedTaglines.map((t, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => selectTagline(t)}
+                              className="w-full rounded-lg border border-border p-3 text-left text-sm font-medium transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
+                            >
+                              {t}
+                            </button>
+                          ))}
+                          <Button
+                            variant="ghost"
+                            className="w-full"
+                            onClick={() => {
+                              setBioDialogOpen(false);
+                              setBioStep("form");
+                            }}
+                          >
+                            Skip tagline
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </DialogContent>
+                </Dialog>
 
                 <div className="flex justify-end">
                   <Button onClick={handleProfileSave} disabled={loading}>

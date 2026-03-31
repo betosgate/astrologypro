@@ -16,14 +16,31 @@ import {
   DollarSign,
   Users,
   TrendingUp,
+  TrendingDown,
   ArrowRight,
   Sparkles,
   User,
 } from "lucide-react";
+import { ProfileStrength } from "@/components/dashboard/profile-strength";
+import { RevenueChart } from "@/components/dashboard/revenue-chart";
+import { RoiBanner } from "@/components/dashboard/roi-banner";
 
 export const metadata = {
   title: "Dashboard Overview",
 };
+
+function getMonthRange(monthsAgo: number) {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 1);
+  const end = new Date(now.getFullYear(), now.getMonth() - monthsAgo + 1, 1);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+function getMonthAbbr(monthsAgo: number) {
+  const now = new Date();
+  const date = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 1);
+  return date.toLocaleString("en-US", { month: "short" });
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -35,70 +52,203 @@ export default async function DashboardPage() {
 
   const { data: diviner } = await supabase
     .from("diviners")
-    .select("id")
+    .select(
+      "id, display_name, username, avatar_url, bio, tagline, specialties, stripe_account_id, google_calendar_token"
+    )
     .eq("user_id", user.id)
     .single();
 
   if (!diviner) redirect("/onboarding");
 
+  // Current month range
+  const thisMonth = getMonthRange(0);
+  const lastMonth = getMonthRange(1);
+
   // Fetch stats in parallel
-  const [bookingsResult, clientsResult, revenueResult, upcomingResult] =
-    await Promise.all([
-      supabase
-        .from("bookings")
-        .select("id", { count: "exact", head: true })
-        .eq("diviner_id", diviner.id),
-      supabase
-        .from("client_diviners")
-        .select("id", { count: "exact", head: true })
-        .eq("diviner_id", diviner.id),
-      supabase
+  const [
+    thisMonthBookings,
+    lastMonthBookings,
+    thisMonthRevenue,
+    lastMonthRevenue,
+    thisMonthClients,
+    lastMonthClients,
+    upcomingResult,
+    activeServicesResult,
+    approvedTestimonialsResult,
+    // Last 6 months revenue for chart
+    month5Revenue,
+    month4Revenue,
+    month3Revenue,
+    month2Revenue,
+    month1Revenue,
+    month0Revenue,
+  ] = await Promise.all([
+    // This month bookings
+    supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("diviner_id", diviner.id)
+      .gte("created_at", thisMonth.start)
+      .lt("created_at", thisMonth.end),
+    // Last month bookings
+    supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("diviner_id", diviner.id)
+      .gte("created_at", lastMonth.start)
+      .lt("created_at", lastMonth.end),
+    // This month revenue (completed)
+    supabase
+      .from("bookings")
+      .select("amount")
+      .eq("diviner_id", diviner.id)
+      .eq("status", "completed")
+      .gte("created_at", thisMonth.start)
+      .lt("created_at", thisMonth.end),
+    // Last month revenue (completed)
+    supabase
+      .from("bookings")
+      .select("amount")
+      .eq("diviner_id", diviner.id)
+      .eq("status", "completed")
+      .gte("created_at", lastMonth.start)
+      .lt("created_at", lastMonth.end),
+    // This month new clients
+    supabase
+      .from("client_diviners")
+      .select("id", { count: "exact", head: true })
+      .eq("diviner_id", diviner.id)
+      .gte("created_at", thisMonth.start)
+      .lt("created_at", thisMonth.end),
+    // Last month new clients
+    supabase
+      .from("client_diviners")
+      .select("id", { count: "exact", head: true })
+      .eq("diviner_id", diviner.id)
+      .gte("created_at", lastMonth.start)
+      .lt("created_at", lastMonth.end),
+    // Upcoming bookings
+    supabase
+      .from("bookings")
+      .select(
+        "id, scheduled_at, status, amount, services(name), clients(display_name, email)"
+      )
+      .eq("diviner_id", diviner.id)
+      .in("status", ["pending", "confirmed"])
+      .gte("scheduled_at", new Date().toISOString())
+      .order("scheduled_at", { ascending: true })
+      .limit(5),
+    // Active services count
+    supabase
+      .from("services")
+      .select("id", { count: "exact", head: true })
+      .eq("diviner_id", diviner.id)
+      .eq("active", true),
+    // Approved testimonials count
+    supabase
+      .from("testimonials")
+      .select("id", { count: "exact", head: true })
+      .eq("diviner_id", diviner.id)
+      .eq("status", "approved"),
+    // Revenue for months 5..0 (for chart)
+    ...[5, 4, 3, 2, 1, 0].map((m) => {
+      const range = getMonthRange(m);
+      return supabase
         .from("bookings")
         .select("amount")
         .eq("diviner_id", diviner.id)
-        .eq("status", "completed"),
-      supabase
-        .from("bookings")
-        .select(
-          "id, scheduled_at, status, amount, services(name), clients(display_name, email)"
-        )
-        .eq("diviner_id", diviner.id)
-        .in("status", ["pending", "confirmed"])
-        .gte("scheduled_at", new Date().toISOString())
-        .order("scheduled_at", { ascending: true })
-        .limit(5),
-    ]);
+        .eq("status", "completed")
+        .gte("created_at", range.start)
+        .lt("created_at", range.end);
+    }),
+  ]);
 
-  const totalBookings = bookingsResult.count ?? 0;
-  const totalClients = clientsResult.count ?? 0;
-  const totalRevenue =
-    revenueResult.data?.reduce((sum, b) => sum + (b.amount ?? 0), 0) ?? 0;
+  const thisMonthBookingCount = thisMonthBookings.count ?? 0;
+  const lastMonthBookingCount = lastMonthBookings.count ?? 0;
+  const thisMonthRevenueTotal =
+    thisMonthRevenue.data?.reduce((sum, b) => sum + (b.amount ?? 0), 0) ?? 0;
+  const lastMonthRevenueTotal =
+    lastMonthRevenue.data?.reduce((sum, b) => sum + (b.amount ?? 0), 0) ?? 0;
+  const thisMonthClientCount = thisMonthClients.count ?? 0;
+  const lastMonthClientCount = lastMonthClients.count ?? 0;
   const upcomingBookings = upcomingResult.data ?? [];
+
+  // Build chart data
+  const chartResults = [
+    month5Revenue,
+    month4Revenue,
+    month3Revenue,
+    month2Revenue,
+    month1Revenue,
+    month0Revenue,
+  ];
+  const monthlyChartData = chartResults.map((result, index) => ({
+    month: getMonthAbbr(5 - index),
+    revenue:
+      result.data?.reduce((sum, b) => sum + (b.amount ?? 0), 0) ?? 0,
+  }));
+
+  // Comparison helpers
+  function compareStat(current: number, previous: number) {
+    const diff = current - previous;
+    if (diff === 0) return { text: "Same as last month", positive: null };
+    const prefix = diff > 0 ? "+" : "";
+    return {
+      text: `${prefix}${diff} vs last month`,
+      positive: diff > 0,
+    };
+  }
+
+  function compareRevenue(current: number, previous: number) {
+    if (previous === 0 && current === 0)
+      return { text: "No revenue yet", positive: null };
+    if (previous === 0)
+      return { text: "First month with revenue!", positive: true };
+    const pctChange = Math.round(((current - previous) / previous) * 100);
+    const prefix = pctChange >= 0 ? "+" : "";
+    return {
+      text: `${prefix}${pctChange}% vs last month`,
+      positive: pctChange >= 0,
+    };
+  }
+
+  const bookingComparison = compareStat(
+    thisMonthBookingCount,
+    lastMonthBookingCount
+  );
+  const revenueComparison = compareRevenue(
+    thisMonthRevenueTotal,
+    lastMonthRevenueTotal
+  );
+  const clientComparison = compareStat(
+    thisMonthClientCount,
+    lastMonthClientCount
+  );
 
   const stats = [
     {
-      label: "Total Bookings",
-      value: totalBookings,
-      icon: Calendar,
-      description: "All time",
-    },
-    {
-      label: "Total Revenue",
-      value: formatCurrency(totalRevenue / 100),
+      label: "This Month Revenue",
+      value: formatCurrency(thisMonthRevenueTotal / 100),
       icon: DollarSign,
-      description: "Completed sessions",
+      comparison: revenueComparison,
     },
     {
-      label: "Total Clients",
-      value: totalClients,
+      label: "This Month Bookings",
+      value: thisMonthBookingCount,
+      icon: Calendar,
+      comparison: bookingComparison,
+    },
+    {
+      label: "New Clients",
+      value: thisMonthClientCount,
       icon: Users,
-      description: "Unique clients",
+      comparison: clientComparison,
     },
     {
       label: "Upcoming",
       value: upcomingBookings.length,
       icon: TrendingUp,
-      description: "Scheduled sessions",
+      comparison: { text: "Scheduled sessions", positive: null },
     },
   ];
 
@@ -111,10 +261,28 @@ export default async function DashboardPage() {
         </p>
       </div>
 
+      {/* Profile Completion */}
+      <ProfileStrength
+        diviner={{
+          avatar_url: diviner.avatar_url,
+          bio: diviner.bio,
+          tagline: diviner.tagline,
+          specialties: diviner.specialties,
+          stripe_account_id: diviner.stripe_account_id,
+          google_calendar_token: diviner.google_calendar_token,
+        }}
+        activeServicesCount={activeServicesResult.count ?? 0}
+        approvedTestimonialCount={approvedTestimonialsResult.count ?? 0}
+      />
+
+      {/* ROI Banner */}
+      <RoiBanner monthlyRevenue={thisMonthRevenueTotal} />
+
       {/* Stats Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
+          const comparison = stat.comparison;
           return (
             <Card key={stat.label}>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -125,14 +293,41 @@ export default async function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stat.description}
+                <p
+                  className={`flex items-center gap-1 text-xs ${
+                    comparison.positive === true
+                      ? "text-green-500"
+                      : comparison.positive === false
+                        ? "text-red-500"
+                        : "text-muted-foreground"
+                  }`}
+                >
+                  {comparison.positive === true && (
+                    <TrendingUp className="size-3" />
+                  )}
+                  {comparison.positive === false && (
+                    <TrendingDown className="size-3" />
+                  )}
+                  {comparison.text}
                 </p>
               </CardContent>
             </Card>
           );
         })}
       </div>
+
+      {/* Revenue Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Revenue — Last 6 Months</CardTitle>
+          <CardDescription>
+            Monthly revenue from completed sessions
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RevenueChart monthlyData={monthlyChartData} />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Upcoming Bookings */}
@@ -157,7 +352,9 @@ export default async function DashboardPage() {
                   >
                     <div className="space-y-1">
                       <p className="text-sm font-medium">
-                        {booking.clients?.display_name ?? booking.clients?.email ?? "Client"}
+                        {booking.clients?.display_name ??
+                          booking.clients?.email ??
+                          "Client"}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {booking.services?.name} &middot;{" "}

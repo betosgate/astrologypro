@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import { BookingsFilter } from "@/components/dashboard/bookings-filter";
 import { BookingDetailSheet } from "@/components/dashboard/booking-detail-sheet";
+import { SessionPrepSheet } from "@/components/dashboard/session-prep";
 
 export const metadata = {
   title: "Bookings",
@@ -50,7 +51,7 @@ export default async function BookingsPage({
 
   const { data: diviner } = await supabase
     .from("diviners")
-    .select("id")
+    .select("id, username")
     .eq("user_id", user.id)
     .single();
 
@@ -59,7 +60,7 @@ export default async function BookingsPage({
   let query = supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, status, duration, amount, notes, services(name), clients(display_name, email)"
+      "id, scheduled_at, status, duration, amount, notes, questionnaire_responses, client_id, services(name), clients(display_name, email, birth_date, birth_time, birth_city)"
     )
     .eq("diviner_id", diviner.id)
     .order("scheduled_at", { ascending: false });
@@ -69,6 +70,55 @@ export default async function BookingsPage({
   }
 
   const { data: bookings } = await query;
+
+  // For upcoming bookings, fetch previous session counts per client
+  const upcomingBookings = (bookings ?? []).filter((b: any) => {
+    const isUpcoming =
+      (b.status === "pending" || b.status === "confirmed") &&
+      new Date(b.scheduled_at) > new Date();
+    return isUpcoming;
+  });
+
+  // Build a map of client_id -> previous session data for upcoming bookings
+  const clientPrevSessions: Record<
+    string,
+    { count: number; lastDate: string | null; lastNotes: string | null }
+  > = {};
+
+  const uniqueClientIds = [
+    ...new Set(upcomingBookings.map((b: any) => b.client_id).filter(Boolean)),
+  ];
+
+  if (uniqueClientIds.length > 0) {
+    const { data: prevSessions } = await supabase
+      .from("bookings")
+      .select("client_id, scheduled_at, notes")
+      .eq("diviner_id", diviner.id)
+      .eq("status", "completed")
+      .in("client_id", uniqueClientIds)
+      .order("scheduled_at", { ascending: false });
+
+    if (prevSessions) {
+      for (const session of prevSessions) {
+        if (!session.client_id) continue;
+        if (!clientPrevSessions[session.client_id]) {
+          clientPrevSessions[session.client_id] = {
+            count: 0,
+            lastDate: session.scheduled_at,
+            lastNotes: session.notes,
+          };
+        }
+        clientPrevSessions[session.client_id].count++;
+      }
+    }
+  }
+
+  function isUpcoming(booking: any) {
+    return (
+      (booking.status === "pending" || booking.status === "confirmed") &&
+      new Date(booking.scheduled_at) > new Date()
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -107,56 +157,90 @@ export default async function BookingsPage({
                   <TableHead>Duration</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Amount</TableHead>
-                  <TableHead className="w-[60px]">Actions</TableHead>
+                  <TableHead className="w-[120px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {bookings.map((booking: any) => (
-                  <TableRow key={booking.id}>
-                    <TableCell>
-                      {formatDateTime(booking.scheduled_at)}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">
-                          {booking.clients?.display_name ?? "Unknown"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {booking.clients?.email}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>{booking.services?.name ?? "--"}</TableCell>
-                    <TableCell>{booking.duration} min</TableCell>
-                    <TableCell>
-                      <Badge
-                        className={statusColors[booking.status] ?? ""}
-                        variant="outline"
-                      >
-                        {booking.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {formatCurrency((booking.amount ?? 0) / 100)}
-                    </TableCell>
-                    <TableCell>
-                      <BookingDetailSheet
-                        booking={{
-                          id: booking.id,
-                          scheduled_at: booking.scheduled_at,
-                          status: booking.status,
-                          duration: booking.duration,
-                          amount: booking.amount ?? 0,
-                          notes: booking.notes,
-                          client_name:
-                            booking.clients?.display_name ?? "Unknown",
-                          client_email: booking.clients?.email ?? "",
-                          service_name: booking.services?.name ?? "Unknown",
-                        }}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {bookings.map((booking: any) => {
+                  const prev = booking.client_id
+                    ? clientPrevSessions[booking.client_id]
+                    : null;
+
+                  return (
+                    <TableRow key={booking.id}>
+                      <TableCell>
+                        {formatDateTime(booking.scheduled_at)}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">
+                            {booking.clients?.display_name ?? "Unknown"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {booking.clients?.email}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>{booking.services?.name ?? "--"}</TableCell>
+                      <TableCell>{booking.duration} min</TableCell>
+                      <TableCell>
+                        <Badge
+                          className={statusColors[booking.status] ?? ""}
+                          variant="outline"
+                        >
+                          {booking.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {formatCurrency((booking.amount ?? 0) / 100)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <BookingDetailSheet
+                            booking={{
+                              id: booking.id,
+                              scheduled_at: booking.scheduled_at,
+                              status: booking.status,
+                              duration: booking.duration,
+                              amount: booking.amount ?? 0,
+                              notes: booking.notes,
+                              client_name:
+                                booking.clients?.display_name ?? "Unknown",
+                              client_email: booking.clients?.email ?? "",
+                              service_name: booking.services?.name ?? "Unknown",
+                            }}
+                          />
+                          {isUpcoming(booking) && (
+                            <SessionPrepSheet
+                              booking={{
+                                id: booking.id,
+                                scheduled_at: booking.scheduled_at,
+                                status: booking.status,
+                                service_name:
+                                  booking.services?.name ?? "Unknown",
+                                client_name:
+                                  booking.clients?.display_name ?? "Unknown",
+                                client_email: booking.clients?.email ?? "",
+                                birth_date:
+                                  booking.clients?.birth_date ?? null,
+                                birth_time:
+                                  booking.clients?.birth_time ?? null,
+                                birth_city:
+                                  booking.clients?.birth_city ?? null,
+                                questionnaire_responses:
+                                  booking.questionnaire_responses ?? null,
+                                previous_session_count: prev?.count ?? 0,
+                                last_session_date: prev?.lastDate ?? null,
+                                session_notes: prev?.lastNotes ?? null,
+                                username: diviner.username,
+                              }}
+                            />
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
