@@ -59,32 +59,32 @@ export function RevenueCalculator() {
   return (
     <section className="relative px-4 py-24 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-4xl">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-950 via-purple-900 to-indigo-950 p-8 shadow-2xl sm:p-12">
-          {/* Star decorations */}
+        <div className="relative overflow-hidden rounded-3xl border border-[#c9a84c]/15 bg-gradient-to-br from-[#0d1230] via-[#0a0e27] to-[#0d1230] p-8 shadow-2xl sm:p-12">
+          {/* Star decorations — gold tinted */}
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
-            <Star className="absolute left-[10%] top-[15%] size-3 text-purple-300 opacity-20" />
-            <Star className="absolute left-[25%] top-[8%] size-2 text-indigo-300 opacity-15" />
-            <Star className="absolute right-[15%] top-[12%] size-4 text-purple-200 opacity-10" />
-            <Star className="absolute right-[30%] top-[20%] size-2 text-indigo-200 opacity-20" />
-            <Star className="absolute left-[8%] bottom-[20%] size-3 text-purple-300 opacity-15" />
-            <Star className="absolute right-[10%] bottom-[15%] size-2 text-indigo-300 opacity-20" />
-            <Star className="absolute left-[50%] top-[5%] size-3 text-purple-200 opacity-10" />
-            <Star className="absolute right-[45%] bottom-[10%] size-2 text-purple-300 opacity-15" />
+            <Star className="absolute left-[10%] top-[15%] size-3 text-[#c9a84c] opacity-15" />
+            <Star className="absolute left-[25%] top-[8%] size-2 text-[#e2c97e] opacity-10" />
+            <Star className="absolute right-[15%] top-[12%] size-4 text-[#c9a84c] opacity-8" />
+            <Star className="absolute right-[30%] top-[20%] size-2 text-[#e2c97e] opacity-15" />
+            <Star className="absolute left-[8%] bottom-[20%] size-3 text-[#c9a84c] opacity-10" />
+            <Star className="absolute right-[10%] bottom-[15%] size-2 text-[#e2c97e] opacity-15" />
+            <Star className="absolute left-[50%] top-[5%] size-3 text-[#c9a84c] opacity-8" />
+            <Star className="absolute right-[45%] bottom-[10%] size-2 text-[#c9a84c] opacity-10" />
             {/* Gradient orbs */}
-            <div className="absolute -left-20 -top-20 size-60 rounded-full bg-purple-500/10 blur-3xl" />
-            <div className="absolute -bottom-20 -right-20 size-60 rounded-full bg-indigo-500/10 blur-3xl" />
+            <div className="absolute -left-20 -top-20 size-60 rounded-full bg-[#c9a84c]/5 blur-3xl" />
+            <div className="absolute -bottom-20 -right-20 size-60 rounded-full bg-[#c9a84c]/5 blur-3xl" />
           </div>
 
           <div className="relative">
             {/* Heading */}
             <div className="mb-10 text-center">
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-purple-400/20 bg-purple-500/10 px-4 py-1.5 text-sm text-purple-200">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#c9a84c]/20 bg-[#c9a84c]/10 px-4 py-1.5 text-sm text-[#e2c97e]">
                 <TrendingUp className="size-3.5" />
                 Revenue Calculator
               </div>
-              <h2 className="text-3xl font-bold text-white sm:text-4xl">
+              <h2 className="font-display text-3xl font-bold text-[#f5f0e8] sm:text-4xl lg:text-5xl">
                 See What You Could{" "}
-                <span className="bg-gradient-to-r from-purple-300 to-indigo-300 bg-clip-text text-transparent">
+                <span className="gold-text">
                   Earn
                 </span>
               </h2>
@@ -97,11 +97,11 @@ export function RevenueCalculator() {
                 <div className="mb-3 flex items-center justify-between">
                   <label
                     htmlFor="readings-per-week"
-                    className="text-sm font-medium text-purple-100"
+                    className="text-sm font-medium text-[#b8bcd0]"
                   >
                     Readings per week
                   </label>
-                  <span className="rounded-lg bg-purple-500/20 px-3 py-1 text-lg font-bold text-white">
+                  <span className="rounded-lg bg-[#c9a84c]/15 px-3 py-1 text-lg font-bold text-[#e2c97e]">
                     {readingsPerWeek}
                   </span>
                 </div>
@@ -114,9 +114,9 @@ export function RevenueCalculator() {
                   onChange={(e) =>
                     setReadingsPerWeek(Number(e.target.value))
                   }
-                  className="h-2 w-full cursor-pointer appearance-none rounded-full bg-purple-800 accent-purple-400 [&::-webkit-slider-thumb]:size-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-lg"
+                  className="h-2 w-full cursor-pointer appearance-none rounded-full bg-[#131840] accent-[#c9a84c] [&::-webkit-slider-thumb]:size-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#c9a84c] [&::-webkit-slider-thumb]:shadow-lg"
                 />
-                <div className="mt-1 flex justify-between text-xs text-purple-400">
+                <div className="mt-1 flex justify-between text-xs text-[#c9a84c]/50">
                   <span>1</span>
                   <span>15</span>
                   <span>30</span>
@@ -128,11 +128,11 @@ export function RevenueCalculator() {
                 <div className="mb-3 flex items-center justify-between">
                   <label
                     htmlFor="price-per-reading"
-                    className="text-sm font-medium text-purple-100"
+                    className="text-sm font-medium text-[#b8bcd0]"
                   >
                     Average price per reading
                   </label>
-                  <span className="rounded-lg bg-purple-500/20 px-3 py-1 text-lg font-bold text-white">
+                  <span className="rounded-lg bg-[#c9a84c]/15 px-3 py-1 text-lg font-bold text-[#e2c97e]">
                     ${pricePerReading}
                   </span>
                 </div>
@@ -146,9 +146,9 @@ export function RevenueCalculator() {
                   onChange={(e) =>
                     setPricePerReading(Number(e.target.value))
                   }
-                  className="h-2 w-full cursor-pointer appearance-none rounded-full bg-purple-800 accent-purple-400 [&::-webkit-slider-thumb]:size-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-lg"
+                  className="h-2 w-full cursor-pointer appearance-none rounded-full bg-[#131840] accent-[#c9a84c] [&::-webkit-slider-thumb]:size-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#c9a84c] [&::-webkit-slider-thumb]:shadow-lg"
                 />
-                <div className="mt-1 flex justify-between text-xs text-purple-400">
+                <div className="mt-1 flex justify-between text-xs text-[#c9a84c]/50">
                   <span>$50</span>
                   <span>$125</span>
                   <span>$200</span>
@@ -158,52 +158,52 @@ export function RevenueCalculator() {
 
             {/* Results */}
             <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-xl border border-purple-400/10 bg-purple-500/10 p-5 text-center backdrop-blur-sm">
-                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-purple-300">
+              <div className="glass-card rounded-xl p-5 text-center">
+                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-[#c9a84c]/70">
                   Monthly Revenue
                 </p>
-                <p className="text-3xl font-bold text-white">
+                <p className="font-display text-3xl font-bold text-[#e2c97e]">
                   ${animatedMonthly.toLocaleString()}
                 </p>
               </div>
-              <div className="rounded-xl border border-purple-400/10 bg-purple-500/10 p-5 text-center backdrop-blur-sm">
-                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-purple-300">
+              <div className="glass-card rounded-xl p-5 text-center">
+                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-[#c9a84c]/70">
                   Annual Revenue
                 </p>
-                <p className="text-3xl font-bold text-white">
+                <p className="font-display text-3xl font-bold text-[#e2c97e]">
                   ${animatedAnnual.toLocaleString()}
                 </p>
               </div>
-              <div className="rounded-xl border border-green-400/10 bg-green-500/10 p-5 text-center backdrop-blur-sm">
-                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-green-300">
+              <div className="glass-card rounded-xl border-green-400/10 p-5 text-center">
+                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-green-300/70">
                   Monthly Profit
                 </p>
-                <p className="text-3xl font-bold text-green-300">
+                <p className="font-display text-3xl font-bold text-green-300">
                   ${animatedProfit.toLocaleString()}
                 </p>
-                <p className="mt-1 text-xs text-green-400/70">
+                <p className="mt-1 text-xs text-green-400/50">
                   After $149/mo subscription
                 </p>
               </div>
-              <div className="rounded-xl border border-indigo-400/10 bg-indigo-500/10 p-5 text-center backdrop-blur-sm">
-                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-indigo-300">
+              <div className="glass-card rounded-xl p-5 text-center">
+                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-[#c9a84c]/70">
                   ROI
                 </p>
-                <p className="text-3xl font-bold text-indigo-300">
+                <p className="font-display text-3xl font-bold text-[#e2c97e]">
                   {animatedRoi}%
                 </p>
-                <p className="mt-1 text-xs text-indigo-400/70">
+                <p className="mt-1 text-xs text-[#c9a84c]/50">
                   Return on investment
                 </p>
               </div>
             </div>
 
             {/* Break-even callout */}
-            <div className="mb-8 flex items-center justify-center gap-3 rounded-xl border border-yellow-400/20 bg-yellow-500/10 px-6 py-4">
-              <DollarSign className="size-5 shrink-0 text-yellow-300" />
-              <p className="text-sm text-yellow-100">
+            <div className="mb-8 flex items-center justify-center gap-3 rounded-xl border border-[#c9a84c]/20 bg-[#c9a84c]/10 px-6 py-4">
+              <DollarSign className="size-5 shrink-0 text-[#c9a84c]" />
+              <p className="text-sm text-[#f5f0e8]/80">
                 Your subscription pays for itself after just{" "}
-                <span className="font-bold text-yellow-300">
+                <span className="font-bold text-[#c9a84c]">
                   {breakEvenReadings} reading{breakEvenReadings !== 1 ? "s" : ""}
                 </span>{" "}
                 per month
@@ -215,7 +215,7 @@ export function RevenueCalculator() {
               <Button
                 size="lg"
                 asChild
-                className="gap-2 bg-white text-base font-semibold text-purple-900 shadow-lg hover:bg-purple-50"
+                className="gap-2 rounded-full bg-[#c9a84c] px-8 text-base font-semibold text-black shadow-lg shadow-[#c9a84c]/25 hover:bg-[#e2c97e]"
               >
                 <Link href="/get-started">
                   Start Earning Today

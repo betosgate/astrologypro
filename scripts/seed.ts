@@ -71,7 +71,7 @@ async function seedDiviners() {
       display_name: "Mystic Maya",
       bio: "Mystic Maya is a professional astrologer with over 15 years of experience reading natal charts, solar returns, and relationship synastry. Specializing in Western astrology, Maya helps clients understand their cosmic blueprint and navigate life's challenges with clarity and confidence. Every reading is a sacred journey into self-discovery.",
       tagline: "Illuminate Your Path Through the Stars",
-      specialties: ["astrology"],
+      specialties: ["astrology", "tarot"],
       timezone: "America/New_York",
       onboarding_completed: true,
       onboarding_step: 5,
@@ -85,7 +85,7 @@ async function seedDiviners() {
       display_name: "Luna Starweaver",
       bio: "Luna Starweaver is an intuitive tarot reader and spiritual guide who has been reading cards for over a decade. Using both traditional Rider-Waite-Smith and modern decks, Luna creates a safe space for clients to explore their questions about love, career, spirituality, and life purpose. Each reading combines ancient wisdom with practical guidance.",
       tagline: "Let the Cards Reveal Your Truth",
-      specialties: ["tarot"],
+      specialties: ["astrology", "tarot"],
       timezone: "America/Los_Angeles",
       onboarding_completed: true,
       onboarding_step: 5,
@@ -129,22 +129,14 @@ async function seedServices(divinerIds: Record<string, string>) {
   await supabase.from("services").delete().eq("diviner_id", mayaId);
   await supabase.from("services").delete().eq("diviner_id", lunaId);
 
-  // Maya: all 11 astrology + freelance tarot
-  const mayaSlugs = [
-    "natal-chart", "solar-return", "monthly-transit", "saturn-return",
-    "jupiter-return", "weekly-transits", "romantic-relationships",
-    "friendship-relationships", "business-relationships", "horary",
-    "astrology-freelance", "tarot-freelance",
-  ];
-  const mayaFeatured = ["natal-chart", "romantic-relationships", "solar-return", "tarot-freelance"];
+  // Both diviners offer ALL 19 services (astrology AND tarot)
+  const allSlugs = templates.map((t) => t.slug);
 
-  // Luna: all 8 tarot + natal chart + freelance astrology
-  const lunaSlugs = [
-    "3-card-basic", "5-card-complex", "7-card-forecast", "7-card-horseshoe",
-    "10-card-relationship", "10-card-celtic-cross", "12-card-astrological",
-    "tarot-freelance", "natal-chart", "astrology-freelance",
-  ];
-  const lunaFeatured = ["10-card-celtic-cross", "10-card-relationship", "3-card-basic", "natal-chart"];
+  const mayaSlugs = allSlugs;
+  const mayaFeatured = ["natal-chart", "romantic-relationships", "10-card-celtic-cross", "solar-return"];
+
+  const lunaSlugs = allSlugs;
+  const lunaFeatured = ["10-card-celtic-cross", "natal-chart", "3-card-basic", "romantic-relationships"];
 
   const serviceIds: Record<string, Record<string, string>> = { maya: {}, luna: {} };
 
