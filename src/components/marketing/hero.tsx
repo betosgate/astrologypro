@@ -5,7 +5,7 @@ import { ZodiacWheel, TarotCardOutline, StarField, MoonPhases, ConstellationLine
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden px-4 py-32 sm:px-6 sm:py-40 lg:px-8 lg:py-48">
+    <section className="relative overflow-hidden px-4 py-20 sm:px-6 sm:py-24 lg:px-8 lg:py-28">
       {/* Layered mystical background */}
       <div className="pointer-events-none absolute inset-0">
         {/* Star field across entire hero — gold-tinted */}
@@ -81,7 +81,7 @@ export function Hero() {
         </div>
 
         {/* Feature pills with glass-morphism */}
-        <div className="mt-16 flex flex-wrap items-center justify-center gap-3">
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           {[
             { icon: Video, label: "HD Video Sessions" },
             { icon: Calendar, label: "Smart Booking" },

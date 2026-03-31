@@ -70,7 +70,7 @@ const features = [
 
 export function FeatureGrid() {
   return (
-    <section className="relative px-4 py-24 sm:px-6 lg:px-8">
+    <section className="relative px-4 py-14 sm:px-6 lg:px-8">
       {/* Subtle star background — gold tinted */}
       <StarField className="pointer-events-none absolute inset-0 h-full w-full text-amber-200/20" />
 
@@ -90,7 +90,7 @@ export function FeatureGrid() {
             one price, everything included.
           </p>
         </div>
-        <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature) => (
             <div
               key={feature.title}
@@ -108,7 +108,7 @@ export function FeatureGrid() {
         </div>
 
         {/* Zodiac symbols row — gold */}
-        <div className="mt-16 flex items-center justify-center gap-4 text-2xl text-[#c9a84c]/25">
+        <div className="mt-10 flex items-center justify-center gap-4 text-2xl text-[#c9a84c]/25">
           {["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"].map((symbol) => (
             <span key={symbol} className="hidden sm:inline">{symbol}</span>
           ))}
