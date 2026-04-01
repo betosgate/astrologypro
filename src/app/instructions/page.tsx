@@ -185,7 +185,7 @@ const section1Steps: Step[] = [
     description:
       "Click the \"Connect Stripe\" button to link your payment account. Stripe handles all payment processing securely so you never have to touch sensitive card data. Once connected, client payments go directly to your bank account on a rolling basis. The whole setup takes about 5 minutes.",
     screenshot: "The Stripe Connect onboarding screen with the Connect Stripe button and status indicator",
-    image: "24-dashboard-settings.png",
+    image: "38-settings-payments.png",
     icon: CreditCard,
     proTip:
       "Make sure the bank account you connect to Stripe is one you check regularly \u2014 that is where all your session revenue will land.",
@@ -209,7 +209,8 @@ const section1Steps: Step[] = [
     description:
       "Go to Settings \u2192 Phone tab, click \"Get a Dedicated Phone Number\". Clients can call this number to join video sessions or book standalone phone readings.",
     screenshot: "The settings page showing the Phone tab with the Get a Dedicated Phone Number button",
-    image: "24-dashboard-settings.png",
+    
+    image: "19-dashboard-overview.png",
     icon: Phone,
     proTip:
       "Share your dedicated phone number on your landing page and social media so clients know they can reach you by phone too.",
@@ -264,7 +265,8 @@ const section2Steps: Step[] = [
     description:
       "Sessions end automatically when time is up, or you can click \"End Session\" manually. The recording is saved and sent to your client via email so they can rewatch their reading anytime. If the session ran over the allotted time, overtime charges are calculated automatically. The client also receives an email requesting a testimonial about their experience.",
     screenshot: "The session complete screen showing recording saved confirmation, overtime summary, and testimonial request status",
-    image: "20-dashboard-bookings.png",
+    
+    image: "16-landing-testimonials.png",
     icon: Mail,
     proTip:
       "Mention during the session that a recording will be sent \u2014 clients love knowing they can revisit your insights later.",
@@ -348,7 +350,8 @@ const section2Steps: Step[] = [
     description:
       "Your settings panel lets you manage every aspect of your practice. Account settings handle your subscription and billing. Payments shows your Stripe connection status. Calendar lets you connect Google Calendar for automatic two-way sync so bookings appear on your personal calendar. Loyalty settings let you create repeat-client discounts to reward your regulars.",
     screenshot: "The settings page showing tabs for Account, Payments, Calendar, and Loyalty with their respective configuration panels",
-    image: "24-dashboard-settings.png",
+    
+    image: "19-dashboard-overview.png",
     icon: Settings,
     proTip:
       "Connect Google Calendar early \u2014 it prevents double-bookings and keeps your personal and professional schedules in sync.",
@@ -360,7 +363,8 @@ const section2Steps: Step[] = [
     description:
       "Enable phone readings in your settings. Clients call your dedicated number for audio-only readings at $25 for 20 minutes + $0.50/min after. The call is recorded and billed automatically.",
     screenshot: "The settings page showing phone reading configuration with pricing and toggle",
-    image: "24-dashboard-settings.png",
+    
+    image: "19-dashboard-overview.png",
     icon: Phone,
     proTip:
       "Phone readings are great for clients who prefer audio-only or have limited internet. They also expand your reach to clients without webcams.",
@@ -408,7 +412,8 @@ const section2Steps: Step[] = [
     description:
       "Reward repeat clients! Go to Settings \u2192 Loyalty tab. Set rules like \"After 3 sessions, clients get 10% off.\" Discounts apply automatically at checkout.",
     screenshot: "The loyalty settings panel showing discount rules with session threshold and percentage inputs",
-    image: "24-dashboard-settings.png",
+    
+    image: "19-dashboard-overview.png",
     icon: Heart,
     proTip:
       "A small loyalty discount (5\u201310%) pays for itself by encouraging clients to rebook instead of shopping around.",
@@ -420,6 +425,7 @@ const section2Steps: Step[] = [
     description:
       "If you need to refund a client, go to Dashboard \u2192 Bookings, open the booking detail, and click \"Issue Refund.\" The refund is processed through Stripe and the client is notified by email.",
     screenshot: "The booking detail view showing the Issue Refund button and refund confirmation dialog",
+    
     image: "20-dashboard-bookings.png",
     icon: RotateCcw,
     proTip:
@@ -432,7 +438,8 @@ const section2Steps: Step[] = [
     description:
       "Before each session, click \"Prepare\" on your upcoming booking. You will see the client\u2019s birth data, their questions, previous session notes, and smart alerts like upcoming solar returns or Mercury retrograde.",
     screenshot: "The session preparation screen showing client birth data, questions, past notes, and astrological alerts panel",
-    image: "20-dashboard-bookings.png",
+    
+    image: "21-dashboard-clients.png",
     icon: Brain,
     proTip:
       "The smart alerts highlight transits and events that are personally relevant to your client. Use them to provide timely, insightful readings.",
@@ -511,7 +518,7 @@ const section3Steps: Step[] = [
     description:
       "Some diviners offer phone readings. If your diviner has a phone number listed, you can call it to join your scheduled video session by audio, or book a standalone phone reading. Your card on file will be charged after the call.",
     screenshot: "A diviner\u2019s landing page showing the phone number and phone reading booking option",
-    image: "24-dashboard-settings.png",
+    image: "19-dashboard-overview.png",
     icon: Phone,
     proTip:
       "Phone readings are perfect when you are on the go or prefer a more intimate audio-only experience.",
