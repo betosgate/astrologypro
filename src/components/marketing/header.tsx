@@ -34,6 +34,12 @@ export function MarketingHeader() {
             Features
           </Link>
           <Link
+            href="/learn"
+            className="text-[15px] font-medium uppercase tracking-wide text-white/90 transition-colors hover:text-[#ecd396]"
+          >
+            Learn
+          </Link>
+          <Link
             href="/demo"
             className="text-[15px] font-medium uppercase tracking-wide text-white/90 transition-colors hover:text-[#ecd396]"
           >
