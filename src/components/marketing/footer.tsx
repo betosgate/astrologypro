@@ -38,6 +38,7 @@ export function MarketingFooter() {
             <h3 className="text-sm font-semibold text-[#f5f0e8]">Support</h3>
             <ul className="mt-3 space-y-2">
               <li><Link href="/instructions" className="text-sm text-[#b8bcd0]/70 transition-colors hover:text-[#c9a84c]">Getting Started Guide</Link></li>
+              <li><Link href="/refund-policy" className="text-sm text-[#b8bcd0]/70 transition-colors hover:text-[#c9a84c]">Refund Policy</Link></li>
               <li><a href="mailto:support@astrologypro.com" className="text-sm text-[#b8bcd0]/70 transition-colors hover:text-[#c9a84c]">Contact Support</a></li>
             </ul>
           </div>

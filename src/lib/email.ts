@@ -262,6 +262,7 @@ interface BookingConfirmationParams {
   duration?: number;
   sessionLink: string;
   birthData?: string;
+  phoneNumber?: string;
 }
 
 export async function sendBookingConfirmation({
@@ -272,12 +273,18 @@ export async function sendBookingConfirmation({
   duration,
   sessionLink,
   birthData,
+  phoneNumber,
 }: BookingConfirmationParams) {
   const durationText = duration ? `${duration} minutes` : "See details";
 
   const birthSection = birthData
     ? `${sectionHeading("Birth Data on File")}
        ${infoCard(birthData)}`
+    : "";
+
+  const phoneSection = phoneNumber
+    ? `${sectionHeading("Phone Dial-in")}
+       ${infoCard(`Can&#39;t use video? Dial in by phone: <strong style="color:#e4e4e7;">${phoneNumber}</strong>`)}`
     : "";
 
   const content = `
@@ -289,6 +296,8 @@ export async function sendBookingConfirmation({
     ${detailRow("Duration", durationText)}
 
     ${birthSection}
+
+    ${phoneSection}
 
     ${sectionHeading("What to Expect")}
     <p style="margin:0 0 8px;color:#a1a1aa;">Your diviner will guide you through your reading in a private, one-on-one video session. Feel free to ask questions throughout.</p>
@@ -734,6 +743,7 @@ interface BookingAccessInstructionsParams {
   dateTime: string;
   sessionLink: string;
   calendarLink?: string;
+  phoneNumber?: string;
 }
 
 export async function sendBookingAccessInstructions({
@@ -743,10 +753,16 @@ export async function sendBookingAccessInstructions({
   dateTime,
   sessionLink,
   calendarLink,
+  phoneNumber,
 }: BookingAccessInstructionsParams) {
   const calendarSection = calendarLink
     ? `${sectionHeading("Add to Calendar")}
        ${secondaryCta("Add to Google Calendar", calendarLink)}`
+    : "";
+
+  const phoneSection = phoneNumber
+    ? `${sectionHeading("Or Dial In by Phone")}
+       ${infoCard(`Can&#39;t use video? Call your diviner directly at: <strong style="color:#e4e4e7;font-size:18px;">${phoneNumber}</strong><br/><span style="font-size:12px;">Standard phone reading rates apply for standalone calls.</span>`)}`
     : "";
 
   const content = `
@@ -811,6 +827,8 @@ export async function sendBookingAccessInstructions({
     </table>
 
     ${calendarSection}
+
+    ${phoneSection}
   `;
 
   return sendEmail({
@@ -913,6 +931,97 @@ export async function sendDivinerWeeklyDigest({
       content,
       ctaText: "View Dashboard",
       ctaUrl: dashboardUrl,
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 12. Refund Processed
+// ---------------------------------------------------------------------------
+
+interface RefundProcessedParams {
+  clientEmail: string;
+  divinerName: string;
+  amount: number;
+  reason: string;
+}
+
+export async function sendRefundProcessed({
+  clientEmail,
+  divinerName,
+  amount,
+  reason,
+}: RefundProcessedParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">A refund has been issued for your session with <strong style="color:#f4f4f5;">${divinerName}</strong>.</p>
+
+    <!-- Refund amount display -->
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0;background-color:#1e1b2e;border:1px solid #2e2548;border-radius:12px;">
+      <tr>
+        <td align="center" style="padding:28px 20px;">
+          <p style="margin:0;font-family:system-ui,-apple-system,sans-serif;font-size:13px;color:#71717a;text-transform:uppercase;letter-spacing:1px;">Refund Amount</p>
+          <p style="margin:8px 0;font-family:system-ui,-apple-system,sans-serif;font-size:36px;font-weight:700;color:#22c55e;">$${amount.toFixed(2)}</p>
+        </td>
+      </tr>
+    </table>
+
+    ${detailRow("Diviner", divinerName)}
+    ${detailRow("Reason", reason)}
+
+    ${infoCard("Your refund has been submitted and will be processed within <strong style=\"color:#e4e4e7;\">5-10 business days</strong>. Depending on your bank or card issuer, it may take additional time to appear on your statement.")}
+
+    <p style="margin:16px 0 0;color:#a1a1aa;">If you have questions about this refund, please contact your diviner or reach out to us at <a href="mailto:support@astrologypro.com" style="color:#8b5cf6;">support@astrologypro.com</a>.</p>
+  `;
+
+  return sendEmail({
+    to: clientEmail,
+    subject: `Your refund of $${amount.toFixed(2)} has been processed`,
+    html: emailTemplate({
+      title: "Refund Processed",
+      preheader: `Your refund of $${amount.toFixed(2)} from ${divinerName} has been submitted`,
+      content,
+      footer: `<a href="${APP_URL}/refund-policy" style="color:#71717a;text-decoration:underline;">Refund Policy</a><br/>AstrologyPro &mdash; Run Your Divination Business`,
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 13. Phone Session Receipt
+// ---------------------------------------------------------------------------
+
+interface PhoneSessionReceiptParams {
+  clientEmail: string;
+  divinerName: string;
+  duration: number;
+  amount: number;
+}
+
+export async function sendPhoneSessionReceipt({
+  clientEmail,
+  divinerName,
+  duration,
+  amount,
+}: PhoneSessionReceiptParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Thank you for your phone reading with <strong style="color:#f4f4f5;">${divinerName}</strong>. Here is your receipt.</p>
+
+    ${detailRow("Diviner", divinerName)}
+    ${detailRow("Duration", `${duration} minutes`)}
+    ${detailRow("Amount Charged", `$${amount.toFixed(2)}`)}
+
+    ${infoCard(`Your saved payment method has been charged <strong style="color:#e4e4e7;">$${amount.toFixed(2)}</strong> for this phone reading session. The base rate covers the first 20 minutes, with $0.50 per additional minute.`)}
+
+    <p style="margin:16px 0 0;color:#a1a1aa;">Want to book another session? Visit your diviner&#39;s page or call their dedicated number again.</p>
+  `;
+
+  return sendEmail({
+    to: clientEmail,
+    subject: `Phone reading receipt - $${amount.toFixed(2)}`,
+    html: emailTemplate({
+      title: "Phone Reading Receipt",
+      preheader: `$${amount.toFixed(2)} charged for ${duration}-minute reading with ${divinerName}`,
+      content,
+      footer: `<a href="${APP_URL}/refund-policy" style="color:#71717a;text-decoration:underline;">Refund Policy</a><br/>AstrologyPro &mdash; Run Your Divination Business`,
     }),
   });
 }

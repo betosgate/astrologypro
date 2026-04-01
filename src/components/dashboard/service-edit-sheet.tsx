@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -35,6 +35,11 @@ export function ServiceEditSheet({ service }: ServiceEditSheetProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [priceError, setPriceError] = useState<string | null>(null);
+  const [priceLimits, setPriceLimits] = useState<{
+    min: number;
+    max: number;
+  } | null>(null);
   const [form, setForm] = useState({
     name: service.name,
     description: service.description ?? "",
@@ -44,10 +49,57 @@ export function ServiceEditSheet({ service }: ServiceEditSheetProps) {
     featured: service.featured,
   });
 
+  // Fetch the matching service_template to get min/max when opening the sheet
+  useEffect(() => {
+    if (!open) return;
+
+    async function fetchLimits() {
+      const supabase = createClient();
+      const { data: template } = await supabase
+        .from("service_templates")
+        .select("min_price, max_price, base_price")
+        .eq("name", service.name)
+        .maybeSingle();
+
+      if (template) {
+        setPriceLimits({
+          min: template.min_price ?? template.base_price ?? 0,
+          max: template.max_price ?? (template.base_price ?? 0) * 2,
+        });
+      }
+    }
+
+    fetchLimits();
+  }, [open, service.name]);
+
+  function validatePrice(price: number): string | null {
+    if (!priceLimits) return null;
+    if (price < priceLimits.min) {
+      return `Price must be at least $${priceLimits.min.toFixed(2)}`;
+    }
+    if (price > priceLimits.max) {
+      return `Price cannot exceed $${priceLimits.max.toFixed(2)} (200% of base)`;
+    }
+    return null;
+  }
+
+  function handlePriceChange(newPrice: number) {
+    setForm({ ...form, price: newPrice });
+    setPriceError(validatePrice(newPrice));
+  }
+
   async function handleSave() {
+    // Final validation before save
+    const error = validatePrice(form.price);
+    if (error) {
+      setPriceError(error);
+      toast.error(error);
+      return;
+    }
+
     setSaving(true);
     const supabase = createClient();
-    const { error } = await supabase
+    const { error: updateError } = await supabase
       .from("services")
       .update({
         name: form.name,
@@ -61,7 +113,7 @@ export function ServiceEditSheet({ service }: ServiceEditSheetProps) {
 
     setSaving(false);
 
-    if (error) {
+    if (updateError) {
       toast.error("Failed to update service");
       return;
     }
@@ -123,13 +175,22 @@ export function ServiceEditSheet({ service }: ServiceEditSheetProps) {
               <Input
                 id="service-price"
                 type="number"
-                min={0}
+                min={priceLimits?.min ?? 0}
+                max={priceLimits?.max ?? undefined}
                 step={0.01}
                 value={form.price}
-                onChange={(e) =>
-                  setForm({ ...form, price: Number(e.target.value) })
-                }
+                onChange={(e) => handlePriceChange(Number(e.target.value))}
+                className={priceError ? "border-red-500" : ""}
               />
+              {priceError && (
+                <p className="text-xs text-red-500">{priceError}</p>
+              )}
+              {priceLimits && !priceError && (
+                <p className="text-xs text-muted-foreground">
+                  Minimum: ${priceLimits.min.toFixed(2)} | Maximum: $
+                  {priceLimits.max.toFixed(2)} (200% of base)
+                </p>
+              )}
             </div>
           </div>
           <div className="space-y-2">
@@ -157,7 +218,11 @@ export function ServiceEditSheet({ service }: ServiceEditSheetProps) {
           </div>
         </div>
         <SheetFooter>
-          <Button onClick={handleSave} disabled={saving} className="w-full">
+          <Button
+            onClick={handleSave}
+            disabled={saving || !!priceError}
+            className="w-full"
+          >
             {saving ? "Saving..." : "Save Changes"}
           </Button>
         </SheetFooter>

@@ -6,7 +6,11 @@ export const PRICING = {
   setup: 197,
   monthly: 149,
   overagePerMinute: 0.5,
-  platformFeePercent: 10,
+  platformFeePercent: 20,
+  PHONE_READING_BASE_PRICE: 25,
+  PHONE_READING_BASE_MINUTES: 20,
+  PHONE_READING_OVERAGE_RATE: 0.50,
+  PHONE_COST_PER_MINUTE: 0.04,
 } as const;
 
 export const SESSION_DURATIONS = {

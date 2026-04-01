@@ -31,7 +31,9 @@ import {
   Plus,
   Pencil,
   Trash2,
+  Phone,
 } from "lucide-react";
+import { formatCurrency } from "@/lib/format";
 
 interface DivinerSettings {
   id: string;
@@ -46,6 +48,19 @@ interface DivinerSettings {
   notification_booking_confirmed: boolean;
   notification_booking_cancelled: boolean;
   notification_payout: boolean;
+  twilio_phone_number: string | null;
+  twilio_phone_sid: string | null;
+  phone_dialin_enabled: boolean;
+}
+
+interface PhoneSession {
+  id: string;
+  session_type: string;
+  started_at: string | null;
+  duration_seconds: number | null;
+  amount_charged: number | null;
+  platform_cost: number | null;
+  status: string;
 }
 
 interface DiscountRule {
@@ -63,6 +78,10 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<DivinerSettings | null>(null);
+
+  // Phone state
+  const [phoneProvisioning, setPhoneProvisioning] = useState(false);
+  const [phoneSessions, setPhoneSessions] = useState<PhoneSession[]>([]);
 
   // Loyalty state
   const [discountRules, setDiscountRules] = useState<DiscountRule[]>([]);
@@ -101,7 +120,7 @@ export default function SettingsPage() {
       const { data } = await supabase
         .from("diviners")
         .select(
-          "id, subscription_status, stripe_account_id, charges_enabled, payouts_enabled, google_calendar_connected, youtube_channel_id, notification_email, notification_sms, notification_booking_confirmed, notification_booking_cancelled, notification_payout"
+          "id, subscription_status, stripe_account_id, charges_enabled, payouts_enabled, google_calendar_connected, youtube_channel_id, notification_email, notification_sms, notification_booking_confirmed, notification_booking_cancelled, notification_payout, twilio_phone_number, twilio_phone_sid, phone_dialin_enabled"
         )
         .eq("user_id", user.id)
         .single();
@@ -122,6 +141,9 @@ export default function SettingsPage() {
           notification_booking_cancelled:
             data.notification_booking_cancelled ?? true,
           notification_payout: data.notification_payout ?? true,
+          twilio_phone_number: data.twilio_phone_number ?? null,
+          twilio_phone_sid: data.twilio_phone_sid ?? null,
+          phone_dialin_enabled: data.phone_dialin_enabled ?? false,
         });
 
         // Load discount rules
@@ -133,6 +155,18 @@ export default function SettingsPage() {
 
         if (rules) {
           setDiscountRules(rules);
+        }
+
+        // Load phone sessions
+        const { data: sessions } = await supabase
+          .from("phone_sessions")
+          .select("id, session_type, started_at, duration_seconds, amount_charged, platform_cost, status")
+          .eq("diviner_id", data.id)
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+        if (sessions) {
+          setPhoneSessions(sessions);
         }
       }
       setLoading(false);
@@ -293,6 +327,10 @@ export default function SettingsPage() {
           <TabsTrigger value="notifications">
             <Bell className="mr-2 size-4" />
             Notifications
+          </TabsTrigger>
+          <TabsTrigger value="phone">
+            <Phone className="mr-2 size-4" />
+            Phone
           </TabsTrigger>
           <TabsTrigger value="loyalty">
             <Heart className="mr-2 size-4" />
@@ -616,6 +654,253 @@ export default function SettingsPage() {
               "Save Notification Settings"
             )}
           </Button>
+        </TabsContent>
+
+        {/* Phone Tab */}
+        <TabsContent value="phone" className="mt-6 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Dedicated Phone Number</CardTitle>
+              <CardDescription>
+                Get a phone number so clients can dial in for readings.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {settings.twilio_phone_number ? (
+                <>
+                  <div className="flex items-center gap-3 rounded-lg border p-4">
+                    <Phone className="size-5 text-green-500" />
+                    <div className="flex-1">
+                      <p className="text-lg font-semibold">
+                        {settings.twilio_phone_number}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Your dedicated phone number
+                      </p>
+                    </div>
+                    <Badge
+                      variant={
+                        settings.phone_dialin_enabled ? "default" : "secondary"
+                      }
+                    >
+                      {settings.phone_dialin_enabled ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Phone Dial-in</p>
+                      <p className="text-xs text-muted-foreground">
+                        Allow clients to call this number for readings
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.phone_dialin_enabled}
+                      onCheckedChange={async (checked) => {
+                        const supabase = createClient();
+                        const { error } = await supabase
+                          .from("diviners")
+                          .update({ phone_dialin_enabled: !!checked })
+                          .eq("id", settings.id);
+                        if (error) {
+                          toast.error("Failed to update phone dial-in setting");
+                        } else {
+                          setSettings({
+                            ...settings,
+                            phone_dialin_enabled: !!checked,
+                          });
+                          toast.success(
+                            checked
+                              ? "Phone dial-in enabled"
+                              : "Phone dial-in disabled"
+                          );
+                        }
+                      }}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    You do not have a dedicated phone number yet. Provision one
+                    to allow clients to call in for phone readings.
+                  </p>
+                  <Button
+                    onClick={async () => {
+                      setPhoneProvisioning(true);
+                      try {
+                        const res = await fetch(
+                          "/api/twilio/provision-number",
+                          { method: "POST" }
+                        );
+                        const data = await res.json();
+                        if (!res.ok) {
+                          toast.error(
+                            data.error ?? "Failed to provision number"
+                          );
+                          return;
+                        }
+                        setSettings({
+                          ...settings,
+                          twilio_phone_number: data.phoneNumber,
+                          phone_dialin_enabled: true,
+                        });
+                        toast.success(
+                          `Phone number provisioned: ${data.phoneNumber}`
+                        );
+                      } catch {
+                        toast.error("Failed to provision phone number");
+                      } finally {
+                        setPhoneProvisioning(false);
+                      }
+                    }}
+                    disabled={phoneProvisioning}
+                  >
+                    {phoneProvisioning ? (
+                      <>
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                        Provisioning...
+                      </>
+                    ) : (
+                      <>
+                        <Phone className="mr-2 size-4" />
+                        Get a Dedicated Phone Number
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Phone Reading Pricing</CardTitle>
+              <CardDescription>
+                Phone readings are billed at $25.00 for the first 20 minutes,
+                plus $0.50 per additional minute. Platform takes 20%.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Base Price</p>
+                  <p className="text-lg font-bold">$25.00</p>
+                  <p className="text-xs text-muted-foreground">First 20 min</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Overage</p>
+                  <p className="text-lg font-bold">$0.50</p>
+                  <p className="text-xs text-muted-foreground">Per extra min</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">You Earn</p>
+                  <p className="text-lg font-bold">80%</p>
+                  <p className="text-xs text-muted-foreground">Of each call</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {phoneSessions.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Phone Session History</CardTitle>
+                <CardDescription>
+                  Your recent phone sessions and billing.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {/* Summary */}
+                  {(() => {
+                    const completed = phoneSessions.filter(
+                      (s) => s.status === "completed"
+                    );
+                    const totalRevenue = completed.reduce(
+                      (sum, s) => sum + (s.amount_charged ?? 0),
+                      0
+                    );
+                    const totalCost = completed.reduce(
+                      (sum, s) => sum + (s.platform_cost ?? 0),
+                      0
+                    );
+                    return (
+                      <div className="mb-4 grid grid-cols-3 gap-4 text-center">
+                        <div className="rounded-lg border p-3">
+                          <p className="text-xs text-muted-foreground">
+                            Total Calls
+                          </p>
+                          <p className="text-lg font-bold">
+                            {completed.length}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border p-3">
+                          <p className="text-xs text-muted-foreground">
+                            Total Revenue
+                          </p>
+                          <p className="text-lg font-bold">
+                            {formatCurrency(totalRevenue)}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border p-3">
+                          <p className="text-xs text-muted-foreground">
+                            Phone Costs
+                          </p>
+                          <p className="text-lg font-bold">
+                            {formatCurrency(totalCost)}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Session list */}
+                  <div className="rounded-lg border">
+                    {phoneSessions.slice(0, 10).map((session) => (
+                      <div
+                        key={session.id}
+                        className="flex items-center justify-between border-b px-4 py-3 last:border-b-0"
+                      >
+                        <div>
+                          <p className="text-sm font-medium">
+                            {session.session_type === "scheduled_dialin"
+                              ? "Scheduled Dial-in"
+                              : "Phone Reading"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {session.started_at
+                              ? new Date(session.started_at).toLocaleString()
+                              : "Pending"}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium">
+                            {session.duration_seconds
+                              ? `${Math.ceil(session.duration_seconds / 60)} min`
+                              : "--"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {session.amount_charged != null
+                              ? formatCurrency(session.amount_charged)
+                              : "--"}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={
+                            session.status === "completed"
+                              ? "default"
+                              : "secondary"
+                          }
+                        >
+                          {session.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Loyalty Tab */}

@@ -60,7 +60,7 @@ export default async function BookingsPage({
   let query = supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, status, duration, amount, notes, questionnaire_responses, client_id, services(name), clients(display_name, email, birth_date, birth_time, birth_city)"
+      "id, scheduled_at, status, duration, amount, notes, questionnaire_responses, client_id, refund_amount, refunded_at, refund_reason, services(name), clients(display_name, email, birth_date, birth_time, birth_city)"
     )
     .eq("diviner_id", diviner.id)
     .order("scheduled_at", { ascending: false });
@@ -208,6 +208,9 @@ export default async function BookingsPage({
                                 booking.clients?.display_name ?? "Unknown",
                               client_email: booking.clients?.email ?? "",
                               service_name: booking.services?.name ?? "Unknown",
+                              refund_amount: booking.refund_amount ?? null,
+                              refunded_at: booking.refunded_at ?? null,
+                              refund_reason: booking.refund_reason ?? null,
                             }}
                           />
                           {isUpcoming(booking) && (
