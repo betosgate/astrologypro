@@ -27,7 +27,8 @@ interface Service {
   slug: string;
   description: string | null;
   duration_minutes: number;
-  price: number;
+  base_price: number;
+  price?: number;
   category: string;
   requires_birth_data: boolean;
 }
@@ -406,7 +407,7 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
                 <div className="flex items-center justify-between text-lg">
                   <span className="font-semibold">Total</span>
                   <span className="font-bold">
-                    {formatCurrency(service.price)}
+                    {formatCurrency(Number(service.base_price ?? service.price ?? 0))}
                   </span>
                 </div>
               </div>
