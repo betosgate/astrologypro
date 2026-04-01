@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Play, ExternalLink, Star, XCircle } from "lucide-react";
+import { Play, ExternalLink, Star, XCircle, RotateCcw } from "lucide-react";
 import { TestimonialDialog } from "@/components/portal/testimonial-dialog";
 import { CancelBookingButton } from "@/components/portal/cancel-booking-button";
 
@@ -55,7 +55,7 @@ export default async function PortalBookingsPage() {
   const { data: bookings } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, status, amount, share_id, recording_url, services(name), diviners(id, display_name, username)"
+      "id, scheduled_at, status, amount, share_id, recording_url, services(name, slug), diviners(id, display_name, username)"
     )
     .eq("client_id", client.id)
     .order("scheduled_at", { ascending: false });
@@ -177,6 +177,18 @@ export default async function PortalBookingsPage() {
                                   bookingId={booking.id}
                                 />
                               )}
+                            {booking.status === "completed" &&
+                              booking.diviners?.username &&
+                              booking.services?.slug && (
+                                <Button size="sm" variant="outline" asChild>
+                                  <Link
+                                    href={`/${booking.diviners.username}/book/${booking.services.slug}?prefill=true`}
+                                  >
+                                    <RotateCcw className="mr-1 size-3" />
+                                    Book Again
+                                  </Link>
+                                </Button>
+                              )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -248,6 +260,18 @@ export default async function PortalBookingsPage() {
                             serviceType={booking.services?.name ?? "Session"}
                             bookingId={booking.id}
                           />
+                        )}
+                      {booking.status === "completed" &&
+                        booking.diviners?.username &&
+                        booking.services?.slug && (
+                          <Button size="sm" variant="outline" asChild>
+                            <Link
+                              href={`/${booking.diviners.username}/book/${booking.services.slug}?prefill=true`}
+                            >
+                              <RotateCcw className="mr-1 size-3" />
+                              Book Again
+                            </Link>
+                          </Button>
                         )}
                     </div>
                   </div>

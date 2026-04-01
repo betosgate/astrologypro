@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createPaymentIntent } from "@/lib/stripe/connect";
 import { PRICING } from "@/lib/constants";
 import {
   sendBookingConfirmation,
   sendBookingAccessInstructions,
+  sendWelcomeAndBooked,
 } from "@/lib/email";
 
 interface BookingPaymentBody {
@@ -17,6 +19,9 @@ interface BookingPaymentBody {
   questionnaire: Record<string, string | undefined>;
   affiliateCode?: string;
   giftCode?: string;
+  birthLat?: number;
+  birthLng?: number;
+  birthTimezone?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -33,6 +38,9 @@ export async function POST(request: NextRequest) {
       questionnaire,
       affiliateCode,
       giftCode,
+      birthLat,
+      birthLng,
+      birthTimezone,
     } = body;
 
     // Validate required fields
@@ -83,7 +91,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upsert client record by email
+    // --- Auto-create auth user if they don't exist ---
+    const adminSupabase = createAdminClient();
+    let isNewUser = false;
+
+    // Try to create the auth user directly; if they already exist the call
+    // will fail with a "user already registered" error which we handle below.
+    const { error: createUserError } =
+      await adminSupabase.auth.admin.createUser({
+        email: clientEmail,
+        email_confirm: true,
+        user_metadata: {
+          full_name: clientName,
+        },
+      });
+
+    if (createUserError) {
+      // "User already registered" is expected for returning clients
+      if (
+        !createUserError.message
+          ?.toLowerCase()
+          .includes("already registered")
+      ) {
+        console.error("Failed to auto-create auth user:", createUserError);
+      }
+    } else {
+      isNewUser = true;
+    }
+
+    // Upsert client record by email (with birth data from questionnaire)
     const { data: client, error: clientError } = await supabase
       .from("clients")
       .upsert(
@@ -92,6 +128,19 @@ export async function POST(request: NextRequest) {
           full_name: clientName,
           phone: clientPhone ?? null,
           diviner_id: divinerId,
+          ...(questionnaire?.birthDate
+            ? { birth_date: questionnaire.birthDate }
+            : {}),
+          ...(questionnaire?.birthTime
+            ? { birth_time: questionnaire.birthTime }
+            : {}),
+          ...(questionnaire?.birthCity
+            ? { birth_city: questionnaire.birthCity }
+            : {}),
+          ...(birthLat != null && birthLng != null
+            ? { birth_lat: birthLat, birth_lng: birthLng }
+            : {}),
+          ...(birthTimezone ? { birth_timezone: birthTimezone } : {}),
         },
         { onConflict: "email,diviner_id" }
       )
@@ -268,13 +317,59 @@ export async function POST(request: NextRequest) {
       };
 
       // Fire emails without blocking the response
-      Promise.all([
+      const emailPromises: Promise<any>[] = [
         sendBookingConfirmation(emailParams),
         sendBookingAccessInstructions({
           ...emailParams,
           calendarLink,
         }),
-      ]).catch((err) => console.error("Failed to send booking emails:", err));
+      ];
+
+      // Send welcome email for new users with portal access instructions
+      if (isNewUser) {
+        const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/portal`;
+        emailPromises.push(
+          sendWelcomeAndBooked({
+            clientEmail,
+            clientName,
+            divinerName: diviner.display_name,
+            serviceName: service.name,
+            dateTime: startTime.toLocaleString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            }),
+            portalUrl,
+          })
+        );
+      }
+
+      Promise.all(emailPromises).catch((err) =>
+        console.error("Failed to send booking emails:", err)
+      );
+    }
+
+    // Send welcome email for new users on the paid path (outside the $0 block)
+    if (isNewUser && finalPrice > 0) {
+      const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/portal`;
+      sendWelcomeAndBooked({
+        clientEmail,
+        clientName,
+        divinerName: diviner.display_name,
+        serviceName: service.name,
+        dateTime: startTime.toLocaleString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        }),
+        portalUrl,
+      }).catch((err) => console.error("Failed to send welcome email:", err));
     }
 
     // Deduct from gift certificate if used

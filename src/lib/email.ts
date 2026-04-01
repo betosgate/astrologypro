@@ -251,6 +251,62 @@ function starRating(): string {
 }
 
 // ---------------------------------------------------------------------------
+// 0. Welcome + Session Booked (for new auto-created users)
+// ---------------------------------------------------------------------------
+
+interface WelcomeAndBookedParams {
+  clientEmail: string;
+  clientName: string;
+  divinerName: string;
+  serviceName: string;
+  dateTime: string;
+  portalUrl: string;
+}
+
+export async function sendWelcomeAndBooked({
+  clientEmail,
+  clientName,
+  divinerName,
+  serviceName,
+  dateTime,
+  portalUrl,
+}: WelcomeAndBookedParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Welcome to AstrologyPro, ${clientName}!</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">Your session has been booked and an account has been created for you automatically. Here are your details:</p>
+
+    ${detailRow("Service", serviceName)}
+    ${detailRow("Diviner", divinerName)}
+    ${detailRow("Date &amp; Time", dateTime)}
+
+    ${sectionHeading("Access Your Portal")}
+    <p style="margin:0 0 8px;color:#a1a1aa;">You can manage your bookings, view session recordings, and more from your personal portal. No password needed &mdash; just sign in with a magic link sent to this email address.</p>
+
+    ${sectionHeading("What to Expect")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">You will receive a session confirmation email with join details</li>
+      <li style="margin-bottom:6px;">Your diviner will guide you through a private reading</li>
+      <li style="margin-bottom:6px;">After the session, you can access recordings from your portal</li>
+    </ul>
+  `;
+
+  const html = emailTemplate({
+    title: `Welcome to AstrologyPro!`,
+    preheader: `Your ${serviceName} with ${divinerName} is booked. Welcome aboard!`,
+    content,
+    ctaText: "Go to My Portal",
+    ctaUrl: portalUrl,
+  });
+
+  return sendEmail({
+    to: clientEmail,
+    subject: `Welcome to AstrologyPro — Your ${serviceName} is Booked!`,
+    html,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // 1. Booking Confirmation
 // ---------------------------------------------------------------------------
 
@@ -556,6 +612,8 @@ interface ReflectionEmailParams {
   serviceName: string;
   bookingDate: string;
   rebookUrl: string;
+  focusQuestion?: string;
+  sessionSummary?: string;
 }
 
 export async function sendReflectionEmail({
@@ -564,23 +622,51 @@ export async function sendReflectionEmail({
   serviceName,
   bookingDate,
   rebookUrl,
+  focusQuestion,
+  sessionSummary,
 }: ReflectionEmailParams) {
+  const focusQuestionBlock = focusQuestion
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0;">
+  <tr>
+    <td style="border-left:4px solid #8b5cf6;padding:12px 16px;background-color:#1e1b2e;border-radius:0 8px 8px 0;">
+      <p style="margin:0 0 4px;font-family:system-ui,-apple-system,sans-serif;font-size:12px;color:#a78bfa;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">You asked about</p>
+      <p style="margin:0;font-family:system-ui,-apple-system,sans-serif;font-size:15px;color:#e4e4e7;font-style:italic;line-height:1.5;">&ldquo;${focusQuestion}&rdquo;</p>
+    </td>
+  </tr>
+</table>`
+    : "";
+
+  const sessionSummaryBlock = sessionSummary
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0;">
+  <tr>
+    <td style="padding:16px;background-color:#1a1a2e;border:1px solid #2e2548;border-radius:8px;">
+      <p style="margin:0 0 8px;font-family:system-ui,-apple-system,sans-serif;font-size:13px;color:#a78bfa;font-weight:600;">Key themes from your reading</p>
+      <p style="margin:0;font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#c4b5fd;line-height:1.6;font-style:italic;">${sessionSummary}</p>
+    </td>
+  </tr>
+</table>`
+    : "";
+
   const content = `
     <p style="margin:0 0 16px;color:#d4d4d8;">A few days have passed since your <strong style="color:#f4f4f5;">${serviceName}</strong> session with <strong style="color:#f4f4f5;">${divinerName}</strong> on ${bookingDate}.</p>
 
-    ${infoCard("This is a wonderful time to revisit the insights from your reading. Have any of the themes started to manifest in your life? Journaling about your experience can deepen your understanding.")}
+    ${focusQuestionBlock}
 
-    <p style="margin:0;color:#a1a1aa;">If you have new questions or would like to explore further, <strong style="color:#f4f4f5;">${divinerName}</strong> is available for follow-up sessions.</p>
+    ${sessionSummaryBlock}
+
+    ${infoCard("Take some time to journal about the insights from your session. Have any of the themes started to manifest in your life? Reflecting on your experience can deepen your understanding.")}
+
+    <p style="margin:0;color:#a1a1aa;">Want to go deeper? <strong style="color:#f4f4f5;">${divinerName}</strong> is available for follow-up readings.</p>
   `;
 
   return sendEmail({
     to: clientEmail,
-    subject: `Reflecting on your reading with ${divinerName} ✨`,
+    subject: `Reflecting on Your ${serviceName} Reading with ${divinerName} ✨`,
     html: emailTemplate({
-      title: "Reflecting on your reading &#10024;",
+      title: `Reflecting on Your ${serviceName} Reading &#10024;`,
       preheader: `How are the insights from your ${serviceName} session unfolding?`,
       content,
-      ctaText: "Book a Follow-Up",
+      ctaText: "Book a Follow-Up Reading",
       ctaUrl: rebookUrl,
     }),
   });

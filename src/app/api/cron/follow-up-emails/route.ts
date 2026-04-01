@@ -86,12 +86,42 @@ export async function GET(request: NextRequest) {
                 })
               : "your recent session";
             const rebookUrl = `${appUrl}/${divinerUsername}`;
+
+            // Fetch session_notes and questionnaire_responses for personalization
+            let focusQuestion: string | undefined;
+            let sessionSummary: string | undefined;
+
+            const { data: bookingDetails } = await admin
+              .from("bookings")
+              .select("session_notes, questionnaire")
+              .eq("id", followUp.booking_id)
+              .single();
+
+            if (bookingDetails) {
+              // Extract focus question from questionnaire responses
+              const questionnaire = bookingDetails.questionnaire as Record<string, string | undefined> | null;
+              if (questionnaire?.focusQuestion) {
+                focusQuestion = questionnaire.focusQuestion;
+              }
+
+              // Extract key themes from session notes (first 200 chars)
+              if (bookingDetails.session_notes) {
+                const notes = bookingDetails.session_notes as string;
+                sessionSummary =
+                  notes.length > 200
+                    ? notes.slice(0, 200).replace(/\s+\S*$/, "...") // trim at word boundary
+                    : notes;
+              }
+            }
+
             await sendReflectionEmail({
               clientEmail,
               divinerName,
               serviceName,
               bookingDate,
               rebookUrl,
+              focusQuestion,
+              sessionSummary,
             });
             break;
           }

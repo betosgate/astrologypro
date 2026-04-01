@@ -29,7 +29,9 @@ import {
   Calendar,
   FileText,
   ClipboardList,
+  Sparkles,
 } from "lucide-react";
+import { getSessionInsights } from "@/lib/astrology";
 
 interface BookingData {
   id: string;
@@ -63,6 +65,12 @@ const CHECKLIST_ITEMS = [
   { id: "camera", label: "Test camera and microphone" },
   { id: "environment", label: "Set up quiet environment" },
 ];
+
+function getOrdinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
 
 function useCountdown(targetDate: string) {
   const [timeLeft, setTimeLeft] = useState("");
@@ -151,6 +159,11 @@ function PrepContent({ booking }: SessionPrepProps) {
     .join(" | ");
 
   const questionnaire = booking.questionnaire_responses;
+
+  // Compute astrological insights
+  const sessionInsights = booking.birth_date
+    ? getSessionInsights(booking.birth_date, new Date(booking.scheduled_at))
+    : [];
 
   return (
     <div className="flex flex-col gap-5 p-1">
@@ -283,6 +296,69 @@ function PrepContent({ booking }: SessionPrepProps) {
                 <p className="mt-0.5 text-sm">{booking.session_notes}</p>
               </div>
             )}
+          </div>
+        </>
+      )}
+
+      {/* Smart Insights */}
+      {sessionInsights.length > 0 && (
+        <>
+          <Separator />
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Session Insights
+            </p>
+            {sessionInsights.map((insight, idx) => (
+              <div
+                key={idx}
+                className="flex items-start gap-2.5 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3"
+              >
+                <Sparkles className="mt-0.5 size-4 shrink-0 text-amber-400" />
+                <p className="text-sm text-amber-200/90">{insight}</p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Repeat client insight */}
+      {booking.previous_session_count > 0 && (
+        <>
+          <Separator />
+          <div className="flex items-start gap-2.5 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3">
+            <Sparkles className="mt-0.5 size-4 shrink-0 text-purple-400" />
+            <div className="text-sm text-purple-200/90">
+              <p>
+                This is their{" "}
+                <span className="font-semibold">
+                  {getOrdinal(booking.previous_session_count + 1)}
+                </span>{" "}
+                session with you.
+              </p>
+              {booking.session_notes && (
+                <Link
+                  href={`/${booking.username}/clients`}
+                  className="mt-1 inline-block text-xs text-purple-400 underline underline-offset-2 hover:text-purple-300"
+                >
+                  View past session notes
+                </Link>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Focus question highlight */}
+      {questionnaire?.focusQuestion && (
+        <>
+          <Separator />
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary/70">
+              Client's Focus Question
+            </p>
+            <p className="text-sm font-medium text-primary">
+              &ldquo;{questionnaire.focusQuestion}&rdquo;
+            </p>
           </div>
         </>
       )}

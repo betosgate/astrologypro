@@ -16,10 +16,23 @@ import {
   CreditCard,
   Loader2,
   Download,
+  ExternalLink,
+  Mail,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { loadStripe } from "@stripe/stripe-js";
+import {
+  Elements,
+  PaymentElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
+
+const stripePromise = loadStripe(
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
+);
 
 interface Service {
   id: string;
@@ -68,6 +81,80 @@ const INITIAL_INTAKE: IntakeData = {
   lifeArea: "",
 };
 
+// Inner payment form that uses Stripe hooks
+function StripePaymentForm({
+  onSuccess,
+  onError,
+  submitting,
+  setSubmitting,
+}: {
+  onSuccess: () => void;
+  onError: (msg: string) => void;
+  submitting: boolean;
+  setSubmitting: (v: boolean) => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [ready, setReady] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setSubmitting(true);
+    onError("");
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${window.location.origin}/booking/success`,
+      },
+      redirect: "if_required",
+    });
+
+    if (error) {
+      onError(error.message ?? "Payment failed. Please try again.");
+      setSubmitting(false);
+    } else {
+      onSuccess();
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <PaymentElement
+        onReady={() => setReady(true)}
+        options={{
+          layout: "tabs",
+        }}
+      />
+      {!ready && (
+        <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          Loading payment form...
+        </div>
+      )}
+      <Button
+        type="submit"
+        disabled={!stripe || !elements || submitting || !ready}
+        className="w-full gap-2"
+      >
+        {submitting ? (
+          <>
+            <Loader2 className="size-4 animate-spin" />
+            Processing payment...
+          </>
+        ) : (
+          <>
+            <CreditCard className="size-4" />
+            Pay Now
+          </>
+        )}
+      </Button>
+    </form>
+  );
+}
+
 export function BookingWizard({ diviner, service }: BookingWizardProps) {
   const [step, setStep] = useState(0);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
@@ -77,7 +164,56 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
   const [intakeData, setIntakeData] = useState<IntakeData>(INITIAL_INTAKE);
   const [submitting, setSubmitting] = useState(false);
   const [bookingComplete, setBookingComplete] = useState(false);
+  const [bookingId, setBookingId] = useState<string | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [creatingPaymentIntent, setCreatingPaymentIntent] = useState(false);
+  const [prefilled, setPrefilled] = useState(false);
+
+  // Prefill intake data from stored client profile when ?prefill=true
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("prefill") !== "true") return;
+
+    async function prefillFromProfile() {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: client } = await supabase
+          .from("clients")
+          .select(
+            "full_name, email, phone, birth_date, birth_time, birth_city"
+          )
+          .eq("email", user.email)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!client) return;
+
+        setIntakeData((prev) => ({
+          fullName: client.full_name || prev.fullName,
+          email: client.email || user.email || prev.email,
+          phone: client.phone || prev.phone,
+          birthDate: client.birth_date || prev.birthDate,
+          birthTime: client.birth_time || prev.birthTime,
+          birthCity: client.birth_city || prev.birthCity,
+          focusQuestion: prev.focusQuestion,
+          lifeArea: prev.lifeArea,
+        }));
+        setPrefilled(true);
+      } catch {
+        // Silently fail — user can fill in manually
+      }
+    }
+
+    prefillFromProfile();
+  }, []);
 
   // Detect client timezone
   const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -128,12 +264,11 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
     }
   }
 
-  async function handleSubmitBooking() {
-    setSubmitting(true);
+  async function handleCreatePaymentIntent() {
+    setCreatingPaymentIntent(true);
     setError(null);
 
     try {
-      // Check for affiliate code in URL
       const urlParams = new URLSearchParams(window.location.search);
       const affiliateCode = urlParams.get("ref") || undefined;
 
@@ -163,24 +298,41 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
         throw new Error(data.error || "Booking failed");
       }
 
-      const { clientSecret, redirectUrl } = await res.json();
+      const data = await res.json();
 
-      if (redirectUrl) {
-        window.location.href = redirectUrl;
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
         return;
       }
 
-      // If using Stripe Elements, clientSecret would be used here
-      // For now, mark as complete (Stripe Elements integration would go here)
-      if (clientSecret) {
-        // TODO: Integrate Stripe Elements payment form
-        setBookingComplete(true);
+      if (data.clientSecret) {
+        setClientSecret(data.clientSecret);
+        if (data.bookingId) {
+          setBookingId(data.bookingId);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
-      setSubmitting(false);
+      setCreatingPaymentIntent(false);
     }
+  }
+
+  // Create the payment intent when arriving at step 2
+  useEffect(() => {
+    if (step === 2 && !clientSecret && !creatingPaymentIntent) {
+      handleCreatePaymentIntent();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  function handlePaymentSuccess() {
+    setSubmitting(false);
+    setBookingComplete(true);
+  }
+
+  function handlePaymentError(msg: string) {
+    setError(msg || null);
   }
 
   function generateIcsUrl(): string {
@@ -207,6 +359,10 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
     return `data:text/calendar;charset=utf-8,${encodeURIComponent(icsContent)}`;
   }
 
+  const sessionJoinUrl = bookingId
+    ? `/${diviner.username}/session/${bookingId}`
+    : null;
+
   // Confirmation screen
   if (bookingComplete) {
     return (
@@ -216,7 +372,7 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
           <h2 className="mb-2 text-2xl font-bold">Booking Confirmed!</h2>
           <p className="mb-6 text-muted-foreground">
             Your {service.name} reading with {diviner.display_name} has been
-            booked. Check your email for confirmation details.
+            booked.
           </p>
 
           {selectedSlot && (
@@ -232,12 +388,33 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
             </div>
           )}
 
-          <Button asChild variant="outline" className="gap-2">
+          {/* Session Join Link */}
+          {sessionJoinUrl && (
+            <Button
+              asChild
+              className="mb-4 w-full gap-2 bg-amber-600 text-white hover:bg-amber-700"
+              size="lg"
+            >
+              <a href={sessionJoinUrl}>
+                <ExternalLink className="size-4" />
+                Join Your Session
+              </a>
+            </Button>
+          )}
+
+          {/* Add to Calendar */}
+          <Button asChild variant="outline" className="mb-4 w-full gap-2">
             <a href={generateIcsUrl()} download="booking.ics">
               <Download className="size-4" />
               Add to Calendar (.ics)
             </a>
           </Button>
+
+          {/* Email notice */}
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Mail className="size-4" />
+            <span>You will also receive an email with these details.</span>
+          </div>
         </CardContent>
       </Card>
     );
@@ -351,11 +528,19 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
 
           {/* Step 2: Intake Questionnaire */}
           {step === 1 && (
-            <IntakeForm
-              requiresBirthData={service.requires_birth_data}
-              data={intakeData}
-              onChange={setIntakeData}
-            />
+            <>
+              {prefilled && (
+                <div className="mb-4 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-400">
+                  Welcome back! Your details are pre-filled from your last
+                  session. Feel free to update anything before continuing.
+                </div>
+              )}
+              <IntakeForm
+                requiresBirthData={service.requires_birth_data}
+                data={intakeData}
+                onChange={setIntakeData}
+              />
+            </>
           )}
 
           {/* Step 3: Payment & Confirmation */}
@@ -417,6 +602,41 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
                   {error}
                 </div>
               )}
+
+              {/* Stripe Elements Payment Form */}
+              {creatingPaymentIntent && (
+                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  Preparing payment...
+                </div>
+              )}
+
+              {clientSecret && (
+                <Elements
+                  stripe={stripePromise}
+                  options={{
+                    clientSecret,
+                    appearance: {
+                      theme: "night",
+                      variables: {
+                        colorPrimary: "#d4a017",
+                        colorBackground: "#0a0a0a",
+                        colorText: "#fafafa",
+                        colorDanger: "#ef4444",
+                        borderRadius: "8px",
+                        fontFamily: "inherit",
+                      },
+                    },
+                  }}
+                >
+                  <StripePaymentForm
+                    onSuccess={handlePaymentSuccess}
+                    onError={handlePaymentError}
+                    submitting={submitting}
+                    setSubmitting={setSubmitting}
+                  />
+                </Elements>
+              )}
             </div>
           )}
         </CardContent>
@@ -426,7 +646,14 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
       <div className="mt-6 flex items-center justify-between">
         <Button
           variant="outline"
-          onClick={() => setStep((s) => s - 1)}
+          onClick={() => {
+            if (step === 2) {
+              // Reset payment state when going back from payment step
+              setClientSecret(null);
+              setError(null);
+            }
+            setStep((s) => s - 1);
+          }}
           disabled={step === 0}
           className="gap-2"
         >
@@ -434,7 +661,7 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
           Back
         </Button>
 
-        {step < STEPS.length - 1 ? (
+        {step < STEPS.length - 1 && (
           <Button
             onClick={() => setStep((s) => s + 1)}
             disabled={!canProceed()}
@@ -443,25 +670,9 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
             Next
             <ArrowRight className="size-4" />
           </Button>
-        ) : (
-          <Button
-            onClick={handleSubmitBooking}
-            disabled={submitting}
-            className="gap-2"
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <CreditCard className="size-4" />
-                Proceed to Payment
-              </>
-            )}
-          </Button>
         )}
+
+        {/* No "Proceed to Payment" button on step 2 -- the Stripe form handles it */}
       </div>
     </div>
   );

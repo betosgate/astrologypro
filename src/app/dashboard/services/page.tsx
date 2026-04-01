@@ -51,11 +51,14 @@ export default async function ServicesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Services</h1>
-        <p className="text-muted-foreground">
-          Manage the services you offer to clients.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Services</h1>
+          <p className="text-muted-foreground">
+            Manage the services you offer to clients.
+          </p>
+        </div>
+        <ServiceEditSheet mode="create" divinerId={diviner.id} />
       </div>
 
       <Card>

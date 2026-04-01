@@ -24,6 +24,7 @@ import {
 import { ProfileStrength } from "@/components/dashboard/profile-strength";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { RoiBanner } from "@/components/dashboard/roi-banner";
+import { TodaysSessions } from "@/components/dashboard/todays-sessions";
 
 export const metadata = {
   title: "Dashboard Overview",
@@ -64,6 +65,12 @@ export default async function DashboardPage() {
   const thisMonth = getMonthRange(0);
   const lastMonth = getMonthRange(1);
 
+  // Today's date range for the quick-start panel
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
   // Fetch stats in parallel
   const [
     thisMonthBookings,
@@ -75,6 +82,7 @@ export default async function DashboardPage() {
     upcomingResult,
     activeServicesResult,
     approvedTestimonialsResult,
+    todaysSessionsResult,
     // Last 6 months revenue for chart
     month5Revenue,
     month4Revenue,
@@ -100,7 +108,7 @@ export default async function DashboardPage() {
     // This month revenue (completed)
     supabase
       .from("bookings")
-      .select("amount")
+      .select("total_amount")
       .eq("diviner_id", diviner.id)
       .eq("status", "completed")
       .gte("created_at", thisMonth.start)
@@ -108,7 +116,7 @@ export default async function DashboardPage() {
     // Last month revenue (completed)
     supabase
       .from("bookings")
-      .select("amount")
+      .select("total_amount")
       .eq("diviner_id", diviner.id)
       .eq("status", "completed")
       .gte("created_at", lastMonth.start)
@@ -131,7 +139,7 @@ export default async function DashboardPage() {
     supabase
       .from("bookings")
       .select(
-        "id, scheduled_at, status, amount, services(name), clients(display_name, email)"
+        "id, scheduled_at, status, total_amount, services(name), clients(full_name, email)"
       )
       .eq("diviner_id", diviner.id)
       .in("status", ["pending", "confirmed"])
@@ -143,19 +151,30 @@ export default async function DashboardPage() {
       .from("services")
       .select("id", { count: "exact", head: true })
       .eq("diviner_id", diviner.id)
-      .eq("active", true),
+      .eq("is_active", true),
     // Approved testimonials count
     supabase
       .from("testimonials")
       .select("id", { count: "exact", head: true })
       .eq("diviner_id", diviner.id)
       .eq("status", "approved"),
+    // Today's sessions for quick-start panel
+    supabase
+      .from("bookings")
+      .select(
+        "id, scheduled_at, services(name), clients(full_name, email)"
+      )
+      .eq("diviner_id", diviner.id)
+      .in("status", ["pending", "confirmed"])
+      .gte("scheduled_at", todayStart.toISOString())
+      .lte("scheduled_at", todayEnd.toISOString())
+      .order("scheduled_at", { ascending: true }),
     // Revenue for months 5..0 (for chart)
     ...[5, 4, 3, 2, 1, 0].map((m) => {
       const range = getMonthRange(m);
       return supabase
         .from("bookings")
-        .select("amount")
+        .select("total_amount")
         .eq("diviner_id", diviner.id)
         .eq("status", "completed")
         .gte("created_at", range.start)
@@ -166,12 +185,27 @@ export default async function DashboardPage() {
   const thisMonthBookingCount = thisMonthBookings.count ?? 0;
   const lastMonthBookingCount = lastMonthBookings.count ?? 0;
   const thisMonthRevenueTotal =
-    thisMonthRevenue.data?.reduce((sum, b) => sum + (b.amount ?? 0), 0) ?? 0;
+    thisMonthRevenue.data?.reduce((sum, b) => sum + (b.total_amount ?? 0), 0) ?? 0;
   const lastMonthRevenueTotal =
-    lastMonthRevenue.data?.reduce((sum, b) => sum + (b.amount ?? 0), 0) ?? 0;
+    lastMonthRevenue.data?.reduce((sum, b) => sum + (b.total_amount ?? 0), 0) ?? 0;
   const thisMonthClientCount = thisMonthClients.count ?? 0;
   const lastMonthClientCount = lastMonthClients.count ?? 0;
   const upcomingBookings = upcomingResult.data ?? [];
+
+  // Today's sessions for the quick-start panel
+  const todaysSessions = (todaysSessionsResult.data ?? []).map(
+    (booking: any) => ({
+      id: booking.id,
+      scheduled_at: booking.scheduled_at,
+      client_name:
+        booking.clients?.full_name ?? booking.clients?.email ?? "Client",
+      service_name: booking.services?.name ?? "Session",
+    })
+  );
+
+  // Next upcoming session date (for "no sessions today" message)
+  const nextSessionDate =
+    upcomingBookings.length > 0 ? upcomingBookings[0].scheduled_at : null;
 
   // Build chart data
   const chartResults = [
@@ -185,7 +219,7 @@ export default async function DashboardPage() {
   const monthlyChartData = chartResults.map((result, index) => ({
     month: getMonthAbbr(5 - index),
     revenue:
-      result.data?.reduce((sum, b) => sum + (b.amount ?? 0), 0) ?? 0,
+      result.data?.reduce((sum, b) => sum + (b.total_amount ?? 0), 0) ?? 0,
   }));
 
   // Comparison helpers
@@ -260,6 +294,12 @@ export default async function DashboardPage() {
           Welcome back. Here is an overview of your practice.
         </p>
       </div>
+
+      {/* Today's Sessions Quick-Start */}
+      <TodaysSessions
+        sessions={todaysSessions}
+        nextSessionDate={nextSessionDate}
+      />
 
       {/* Profile Completion */}
       <ProfileStrength
@@ -352,7 +392,7 @@ export default async function DashboardPage() {
                   >
                     <div className="space-y-1">
                       <p className="text-sm font-medium">
-                        {booking.clients?.display_name ??
+                        {booking.clients?.full_name ??
                           booking.clients?.email ??
                           "Client"}
                       </p>

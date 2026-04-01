@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CitySearch, type CityResult } from "./city-search";
 
 export interface IntakeData {
   fullName: string;
@@ -18,6 +19,9 @@ export interface IntakeData {
   birthDate: string;
   birthTime: string;
   birthCity: string;
+  birthLat?: number;
+  birthLng?: number;
+  birthTimezone?: string;
   focusQuestion: string;
   lifeArea: string;
 }
@@ -147,11 +151,19 @@ export function IntakeForm({
 
             <div className="space-y-2">
               <Label htmlFor="birthCity">Birth City</Label>
-              <Input
+              <CitySearch
                 id="birthCity"
-                placeholder="e.g., New York, NY"
                 value={data.birthCity}
-                onChange={(e) => update("birthCity", e.target.value)}
+                onTextChange={(text) => update("birthCity", text)}
+                onChange={(result: CityResult) => {
+                  onChange({
+                    ...data,
+                    birthCity: result.city,
+                    birthLat: result.lat,
+                    birthLng: result.lng,
+                    birthTimezone: result.timezone,
+                  });
+                }}
               />
             </div>
           </div>

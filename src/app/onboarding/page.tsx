@@ -79,6 +79,7 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
+  const [divinerId, setDivinerId] = useState<string | null>(null);
   const [username, setUsername] = useState("");
 
   // Step 1: Profile
@@ -135,14 +136,15 @@ export default function OnboardingPage() {
       setUserId(user.id);
       setUsername(user.user_metadata?.username ?? "");
 
-      // Load existing onboarding progress
+      // Load existing onboarding progress — query by user_id, not id
       const { data: diviner } = await supabase
         .from("diviners")
-        .select("onboarding_step, display_name, bio, tagline, avatar_url, stripe_connect_id")
-        .eq("id", user.id)
+        .select("id, onboarding_step, display_name, bio, tagline, avatar_url, stripe_connect_id")
+        .eq("user_id", user.id)
         .single();
 
       if (diviner) {
+        setDivinerId(diviner.id);
         if (diviner.onboarding_step) {
           setCurrentStep(diviner.onboarding_step);
         }
@@ -152,6 +154,8 @@ export default function OnboardingPage() {
         if (diviner.avatar_url) setAvatarPreview(diviner.avatar_url);
         if (diviner.stripe_connect_id) setConnectComplete(true);
       }
+
+      const divId = diviner?.id;
 
       // Load service templates
       const { data: templates } = await supabase
@@ -163,31 +167,35 @@ export default function OnboardingPage() {
         setServiceTemplates(templates);
       }
 
-      // Load existing selected services
-      const { data: existingServices } = await supabase
-        .from("diviner_services")
-        .select("template_id, price")
-        .eq("diviner_id", user.id);
+      // Load existing selected services — use diviner.id, not user.id
+      if (divId) {
+        const { data: existingServices } = await supabase
+          .from("diviner_services")
+          .select("template_id, price")
+          .eq("diviner_id", divId);
 
-      if (existingServices && existingServices.length > 0) {
-        setSelectedServices(existingServices);
+        if (existingServices && existingServices.length > 0) {
+          setSelectedServices(existingServices);
+        }
       }
 
-      // Load existing schedule
-      const { data: existingSlots } = await supabase
-        .from("availability_slots")
-        .select("day_of_week, start_time")
-        .eq("diviner_id", user.id);
+      // Load existing schedule — use diviner.id, not user.id
+      if (divId) {
+        const { data: existingSlots } = await supabase
+          .from("availability_slots")
+          .select("day_of_week, start_time")
+          .eq("diviner_id", divId);
 
-      if (existingSlots && existingSlots.length > 0) {
-        const loaded: WeeklySchedule = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
-        for (const slot of existingSlots) {
-          const hour = parseInt(slot.start_time.split(":")[0], 10);
-          if (!loaded[slot.day_of_week].includes(hour)) {
-            loaded[slot.day_of_week].push(hour);
+        if (existingSlots && existingSlots.length > 0) {
+          const loaded: WeeklySchedule = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+          for (const slot of existingSlots) {
+            const hour = parseInt(slot.start_time.split(":")[0], 10);
+            if (!loaded[slot.day_of_week].includes(hour)) {
+              loaded[slot.day_of_week].push(hour);
+            }
           }
+          setSchedule(loaded);
         }
-        setSchedule(loaded);
       }
     }
 
@@ -211,13 +219,13 @@ export default function OnboardingPage() {
 
   const saveStep = useCallback(
     async (step: number) => {
-      if (!userId) return;
+      if (!divinerId) return;
       await supabase
         .from("diviners")
         .update({ onboarding_step: step })
-        .eq("id", userId);
+        .eq("id", divinerId);
     },
-    [userId, supabase]
+    [divinerId, supabase]
   );
 
   async function handleGenerateBio() {
@@ -300,7 +308,7 @@ export default function OnboardingPage() {
           tagline,
           avatar_url: avatarUrl,
         })
-        .eq("id", userId);
+        .eq("id", divinerId);
 
       if (updateError) {
         setError(updateError.message);
@@ -326,14 +334,14 @@ export default function OnboardingPage() {
       await supabase
         .from("diviner_services")
         .delete()
-        .eq("diviner_id", userId);
+        .eq("diviner_id", divinerId);
 
       if (selectedServices.length > 0) {
         const { error: insertError } = await supabase
           .from("diviner_services")
           .insert(
             selectedServices.map((s) => ({
-              diviner_id: userId,
+              diviner_id: divinerId,
               template_id: s.template_id,
               price: s.price,
             }))
@@ -360,18 +368,18 @@ export default function OnboardingPage() {
     setError("");
 
     try {
-      const { data: diviner } = await supabase
+      const { data: divinerData } = await supabase
         .from("diviners")
         .select("email")
-        .eq("id", userId)
+        .eq("id", divinerId)
         .single();
 
       const response = await fetch("/api/stripe/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: diviner?.email,
-          divinerId: userId,
+          email: divinerData?.email,
+          divinerId: divinerId,
         }),
       });
 
@@ -386,7 +394,7 @@ export default function OnboardingPage() {
       await supabase
         .from("diviners")
         .update({ stripe_connect_id: result.accountId })
-        .eq("id", userId);
+        .eq("id", divinerId);
 
       window.location.href = result.url;
     } catch {
@@ -406,7 +414,7 @@ export default function OnboardingPage() {
       await supabase
         .from("availability_slots")
         .delete()
-        .eq("diviner_id", userId);
+        .eq("diviner_id", divinerId);
 
       const slots: {
         diviner_id: string;
@@ -419,7 +427,7 @@ export default function OnboardingPage() {
         const day = parseInt(dayStr, 10);
         for (const hour of hours) {
           slots.push({
-            diviner_id: userId,
+            diviner_id: divinerId!,
             day_of_week: day,
             start_time: `${hour.toString().padStart(2, "0")}:00`,
             end_time: `${(hour + 1).toString().padStart(2, "0")}:00`,

@@ -137,6 +137,15 @@ export default function LoginPage() {
                     />
                   </div>
 
+                  <div className="flex justify-end">
+                    <Link
+                      href="/reset-password"
+                      className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+
                   {divinerError && (
                     <p className="text-sm text-destructive">{divinerError}</p>
                   )}
