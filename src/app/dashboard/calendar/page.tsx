@@ -16,35 +16,51 @@ export default async function CalendarPage() {
 
   const { data: diviner } = await supabase
     .from("diviners")
-    .select("id, timezone")
+    .select("id")
     .eq("user_id", user.id)
     .single();
 
   if (!diviner) redirect("/onboarding");
 
-  // Fetch availability, overrides, and bookings for the next 2 weeks
-  const now = new Date();
-  const twoWeeksLater = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-
+  // Fetch all relevant data in parallel
   const [slotsResult, overridesResult, bookingsResult] = await Promise.all([
     supabase
       .from("availability_slots")
-      .select("*")
-      .eq("diviner_id", diviner.id)
-      .eq("is_active", true),
+      .select("id, day_of_week, start_time, end_time, is_active")
+      .eq("diviner_id", diviner.id),
     supabase
       .from("availability_overrides")
-      .select("*")
+      .select("id, date, is_available, start_time, end_time")
       .eq("diviner_id", diviner.id)
-      .gte("date", now.toISOString().split("T")[0])
-      .lte("date", twoWeeksLater.toISOString().split("T")[0]),
+      .gte(
+        "date",
+        new Date(
+          Date.now() - 7 * 24 * 60 * 60 * 1000
+        )
+          .toISOString()
+          .split("T")[0]
+      )
+      .lte(
+        "date",
+        new Date(
+          Date.now() + 60 * 24 * 60 * 60 * 1000
+        )
+          .toISOString()
+          .split("T")[0]
+      ),
     supabase
       .from("bookings")
-      .select("id, scheduled_at, duration_minutes, status, services(name), clients(full_name, display_name)")
+      .select(
+        "id, scheduled_at, duration_minutes, status, services(name), clients(display_name, full_name)"
+      )
       .eq("diviner_id", diviner.id)
       .in("status", ["pending", "confirmed", "in_progress"])
-      .gte("scheduled_at", now.toISOString())
-      .lte("scheduled_at", twoWeeksLater.toISOString())
+      .gte(
+        "scheduled_at",
+        new Date(
+          Date.now() - 7 * 24 * 60 * 60 * 1000
+        ).toISOString()
+      )
       .order("scheduled_at", { ascending: true }),
   ]);
 
@@ -53,15 +69,15 @@ export default async function CalendarPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Calendar</h1>
         <p className="text-muted-foreground">
-          Manage your availability and view upcoming bookings
+          Manage your availability, bookings, and time off.
         </p>
       </div>
+
       <CalendarView
         divinerId={diviner.id}
-        timezone={diviner.timezone ?? "America/New_York"}
         availabilitySlots={slotsResult.data ?? []}
         overrides={overridesResult.data ?? []}
-        bookings={(bookingsResult.data ?? []) as any[]}
+        bookings={(bookingsResult.data as any[]) ?? []}
       />
     </div>
   );

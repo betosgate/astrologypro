@@ -9,7 +9,7 @@ ALTER TABLE clients ADD COLUMN IF NOT EXISTS default_payment_method_id VARCHAR(2
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS card_consent_at TIMESTAMPTZ;
 
 -- Phone sessions table
-CREATE TABLE phone_sessions (
+CREATE TABLE IF NOT EXISTS phone_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id UUID REFERENCES bookings(id),
   diviner_id UUID REFERENCES diviners(id) ON DELETE CASCADE NOT NULL,
@@ -29,12 +29,14 @@ CREATE TABLE phone_sessions (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_phone_sessions_diviner ON phone_sessions(diviner_id);
+CREATE INDEX IF NOT EXISTS IF NOT EXISTS idx_phone_sessions_diviner ON phone_sessions(diviner_id);
 ALTER TABLE phone_sessions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "phone_sessions_diviner" ON phone_sessions FOR ALL USING (
+-- POLICY (skip if exists)
+-- CREATE POLICY "phone_sessions_diviner" ON phone_sessions FOR ALL USING (
   diviner_id IN (SELECT id FROM diviners WHERE user_id = auth.uid())
 );
-CREATE POLICY "phone_sessions_client" ON phone_sessions FOR SELECT USING (
+-- POLICY (skip if exists)
+-- CREATE POLICY "phone_sessions_client" ON phone_sessions FOR SELECT USING (
   client_id IN (SELECT id FROM clients WHERE user_id = auth.uid())
 );
 
