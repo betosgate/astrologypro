@@ -1,171 +1,515 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Clock, User, Plus } from "lucide-react";
-
-interface Booking {
-  id: string;
-  scheduled_at: string;
-  duration_minutes: number;
-  status: string;
-  client_name: string;
-  service_name: string;
-}
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ChevronLeft, ChevronRight, X, Plus } from "lucide-react";
 
 interface AvailabilitySlot {
+  id: string;
   day_of_week: number;
   start_time: string;
   end_time: string;
+  is_active: boolean;
 }
 
-interface Override {
+interface AvailabilityOverride {
+  id: string;
   date: string;
   is_available: boolean;
   start_time: string | null;
   end_time: string | null;
 }
 
-interface CalendarViewProps {
-  divinerId?: string;
-  timezone?: string;
-  bookings: Booking[];
-  availabilitySlots: AvailabilitySlot[];
-  overrides: Override[];
+interface Booking {
+  id: string;
+  scheduled_at: string;
+  duration_minutes: number;
+  status: string;
+  services: { name: string } | null;
+  clients: { display_name: string | null; full_name: string | null } | null;
 }
 
+interface CalendarViewProps {
+  divinerId: string;
+  availabilitySlots: AvailabilitySlot[];
+  overrides: AvailabilityOverride[];
+  bookings: Booking[];
+}
+
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const HOURS = Array.from({ length: 16 }, (_, i) => i + 6); // 6am to 9pm
+const HOUR_HEIGHT = 48;
 
-export function CalendarView({ bookings, availabilitySlots, overrides }: CalendarViewProps) {
-  const [weekOffset, setWeekOffset] = useState(0);
-
-  const today = new Date();
-  const startOfWeek = new Date(today);
-  startOfWeek.setDate(today.getDate() - today.getDay() + weekOffset * 7);
-
-  const weekDates = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(startOfWeek);
-    d.setDate(startOfWeek.getDate() + i);
+function getWeekDates(baseDate: Date): Date[] {
+  const start = new Date(baseDate);
+  start.setDate(start.getDate() - start.getDay());
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
     return d;
   });
+}
 
-  function isAvailable(dayOfWeek: number, hour: number) {
-    return availabilitySlots.some(
-      (s) =>
-        s.day_of_week === dayOfWeek &&
-        parseInt(s.start_time) <= hour &&
-        parseInt(s.end_time) > hour
-    );
-  }
+function formatDateStr(d: Date): string {
+  return d.toISOString().split("T")[0];
+}
 
-  function isBlocked(dateStr: string) {
-    return overrides.some((o) => o.date === dateStr && !o.is_available);
-  }
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + (m || 0);
+}
 
-  function getBookingsForSlot(date: Date, hour: number) {
-    return bookings.filter((b) => {
-      const bDate = new Date(b.scheduled_at);
-      return (
-        bDate.toDateString() === date.toDateString() &&
-        bDate.getHours() === hour
+export function CalendarView({
+  divinerId,
+  availabilitySlots,
+  overrides,
+  bookings,
+}: CalendarViewProps) {
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [showAddOverride, setShowAddOverride] = useState(false);
+  const [overrideDate, setOverrideDate] = useState("");
+  const [overrideStart, setOverrideStart] = useState("09:00");
+  const [overrideEnd, setOverrideEnd] = useState("17:00");
+  const [overrideType, setOverrideType] = useState<"block" | "special">(
+    "block"
+  );
+  const [saving, setSaving] = useState(false);
+
+  const baseDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + weekOffset * 7);
+    return d;
+  }, [weekOffset]);
+
+  const weekDates = useMemo(() => getWeekDates(baseDate), [baseDate]);
+
+  // Build blocks for each column
+  const columns = weekDates.map((date) => {
+    const dateStr = formatDateStr(date);
+    const dayOfWeek = date.getDay();
+
+    // Check overrides for this date
+    const dayOverrides = overrides.filter((o) => o.date === dateStr);
+    const isBlockedOff = dayOverrides.some((o) => !o.is_available);
+
+    // Availability blocks (green)
+    const availBlocks: { top: number; height: number; label: string }[] = [];
+    if (!isBlockedOff) {
+      const specialOverride = dayOverrides.find(
+        (o) => o.is_available && o.start_time && o.end_time
       );
-    });
+      if (specialOverride && specialOverride.start_time && specialOverride.end_time) {
+        const startMin = timeToMinutes(specialOverride.start_time);
+        const endMin = timeToMinutes(specialOverride.end_time);
+        availBlocks.push({
+          top: (startMin / 60) * HOUR_HEIGHT,
+          height: ((endMin - startMin) / 60) * HOUR_HEIGHT,
+          label: `${specialOverride.start_time} - ${specialOverride.end_time}`,
+        });
+      } else {
+        const daySlots = availabilitySlots.filter(
+          (s) => s.day_of_week === dayOfWeek && s.is_active
+        );
+        for (const slot of daySlots) {
+          const startMin = timeToMinutes(slot.start_time);
+          const endMin = timeToMinutes(slot.end_time);
+          availBlocks.push({
+            top: (startMin / 60) * HOUR_HEIGHT,
+            height: ((endMin - startMin) / 60) * HOUR_HEIGHT,
+            label: `${slot.start_time} - ${slot.end_time}`,
+          });
+        }
+      }
+    }
+
+    // Override blocks (red)
+    const overrideBlocks: { top: number; height: number }[] = [];
+    if (isBlockedOff) {
+      overrideBlocks.push({ top: 0, height: 24 * HOUR_HEIGHT });
+    }
+
+    // Booking blocks (gold)
+    const bookingBlocks: { top: number; height: number; booking: Booking }[] =
+      [];
+    for (const booking of bookings) {
+      const bookingDate = new Date(booking.scheduled_at);
+      if (formatDateStr(bookingDate) !== dateStr) continue;
+      const startMin =
+        bookingDate.getHours() * 60 + bookingDate.getMinutes();
+      bookingBlocks.push({
+        top: (startMin / 60) * HOUR_HEIGHT,
+        height: (booking.duration_minutes / 60) * HOUR_HEIGHT,
+        booking,
+      });
+    }
+
+    return { date, dateStr, availBlocks, overrideBlocks, bookingBlocks };
+  });
+
+  async function handleAddOverride() {
+    if (!overrideDate) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/availability/${divinerId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "add_override",
+          date: overrideDate,
+          is_available: overrideType === "special",
+          start_time: overrideType === "special" ? overrideStart : undefined,
+          end_time: overrideType === "special" ? overrideEnd : undefined,
+        }),
+      });
+      if (res.ok) {
+        setShowAddOverride(false);
+        window.location.reload();
+      }
+    } finally {
+      setSaving(false);
+    }
   }
 
-  const formatDate = (d: Date) =>
-    d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const weekLabel = `${weekDates[0].toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  })} - ${weekDates[6].toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })}`;
 
   return (
-    <div>
-      {/* Week Navigation */}
-      <div className="mb-4 flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={() => setWeekOffset((w) => w - 1)}>
-          <ChevronLeft className="size-4" />
-        </Button>
-        <span className="text-sm font-medium">
-          {formatDate(weekDates[0])} — {formatDate(weekDates[6])}
-        </span>
-        <Button variant="ghost" size="sm" onClick={() => setWeekOffset((w) => w + 1)}>
-          <ChevronRight className="size-4" />
-        </Button>
-      </div>
-
-      {/* Calendar Grid */}
-      <div className="overflow-x-auto">
-        <div className="grid min-w-[800px] grid-cols-8 gap-px rounded-lg border bg-border">
-          {/* Header */}
-          <div className="bg-background p-2 text-center text-xs font-medium text-muted-foreground" />
-          {weekDates.map((date, i) => {
-            const isToday = date.toDateString() === today.toDateString();
-            return (
-              <div
-                key={i}
-                className={`bg-background p-2 text-center text-xs font-medium ${
-                  isToday ? "text-[#c9a84c]" : "text-muted-foreground"
-                }`}
-              >
-                <div>{DAYS[date.getDay()]}</div>
-                <div className={`text-lg ${isToday ? "font-bold" : ""}`}>{date.getDate()}</div>
-              </div>
-            );
-          })}
-
-          {/* Time rows */}
-          {HOURS.map((hour) => (
-            <>
-              <div key={`label-${hour}`} className="bg-background p-1 text-right text-[10px] text-muted-foreground">
-                {hour > 12 ? hour - 12 : hour}{hour >= 12 ? "pm" : "am"}
-              </div>
-              {weekDates.map((date, dayIdx) => {
-                const dateStr = date.toISOString().split("T")[0];
-                const available = isAvailable(date.getDay(), hour);
-                const blocked = isBlocked(dateStr);
-                const slotBookings = getBookingsForSlot(date, hour);
-
-                return (
-                  <div
-                    key={`${dayIdx}-${hour}`}
-                    className={`relative min-h-[40px] bg-background p-0.5 ${
-                      blocked
-                        ? "bg-red-950/20"
-                        : available
-                        ? "bg-green-950/20"
-                        : ""
-                    }`}
-                  >
-                    {slotBookings.map((b) => (
-                      <div
-                        key={b.id}
-                        className="rounded bg-[#c9a84c]/20 border border-[#c9a84c]/30 px-1 py-0.5 text-[9px] text-[#c9a84c] truncate"
-                        title={`${b.client_name} — ${b.service_name}`}
-                      >
-                        <User className="inline size-2 mr-0.5" />
-                        {b.client_name}
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
-            </>
-          ))}
+    <div className="space-y-4">
+      {/* Week navigation */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setWeekOffset((w) => w - 1)}
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <h2 className="text-lg font-semibold">{weekLabel}</h2>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setWeekOffset((w) => w + 1)}
+          >
+            <ChevronRight className="size-4" />
+          </Button>
+          {weekOffset !== 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setWeekOffset(0)}
+            >
+              Today
+            </Button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setOverrideType("block");
+              setShowAddOverride(true);
+            }}
+          >
+            <X className="mr-1 size-3" />
+            Block Day Off
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setOverrideType("special");
+              setShowAddOverride(true);
+            }}
+          >
+            <Plus className="mr-1 size-3" />
+            Add Special Hours
+          </Button>
         </div>
       </div>
 
       {/* Legend */}
-      <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+      <div className="flex gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
-          <span className="size-3 rounded bg-green-950/30 border border-green-900/30" /> Available
+          <span className="inline-block size-3 rounded bg-green-500/30" />
+          Available
         </span>
         <span className="flex items-center gap-1">
-          <span className="size-3 rounded bg-[#c9a84c]/20 border border-[#c9a84c]/30" /> Booked
+          <span className="inline-block size-3 rounded bg-amber-500/50" />
+          Booked
         </span>
         <span className="flex items-center gap-1">
-          <span className="size-3 rounded bg-red-950/30 border border-red-900/30" /> Blocked
+          <span className="inline-block size-3 rounded bg-red-500/20" />
+          Blocked
         </span>
       </div>
+
+      {/* Calendar grid */}
+      <Card>
+        <CardContent className="overflow-x-auto p-0">
+          <div className="min-w-[700px]">
+            {/* Day headers */}
+            <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b">
+              <div className="border-r p-2" />
+              {columns.map(({ date, dateStr }) => {
+                const isToday = formatDateStr(new Date()) === dateStr;
+                return (
+                  <div
+                    key={dateStr}
+                    className={`border-r p-2 text-center text-sm ${
+                      isToday
+                        ? "bg-primary/10 font-semibold"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    <div>{DAYS[date.getDay()]}</div>
+                    <div className="text-lg">{date.getDate()}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Time grid scrolled to 6am */}
+            <div
+              className="relative overflow-y-auto"
+              style={{ height: 680 }}
+              ref={(el) => {
+                if (el && el.scrollTop === 0) {
+                  el.scrollTop = 6 * HOUR_HEIGHT;
+                }
+              }}
+            >
+              <div
+                className="relative grid grid-cols-[60px_repeat(7,1fr)]"
+                style={{ height: 24 * HOUR_HEIGHT }}
+              >
+                {/* Hour labels */}
+                <div className="relative border-r">
+                  {HOURS.map((h) => (
+                    <div
+                      key={h}
+                      className="absolute w-full border-t pr-2 text-right text-[11px] text-muted-foreground"
+                      style={{ top: h * HOUR_HEIGHT }}
+                    >
+                      {h === 0
+                        ? "12 AM"
+                        : h < 12
+                          ? `${h} AM`
+                          : h === 12
+                            ? "12 PM"
+                            : `${h - 12} PM`}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Day columns */}
+                {columns.map(
+                  ({
+                    dateStr,
+                    availBlocks,
+                    overrideBlocks,
+                    bookingBlocks,
+                  }) => (
+                    <div key={dateStr} className="relative border-r">
+                      {/* Hour gridlines */}
+                      {HOURS.map((h) => (
+                        <div
+                          key={h}
+                          className="absolute w-full border-t border-border/50"
+                          style={{ top: h * HOUR_HEIGHT }}
+                        />
+                      ))}
+
+                      {/* Override blocks (red) */}
+                      {overrideBlocks.map((block, i) => (
+                        <div
+                          key={`ovr-${i}`}
+                          className="absolute inset-x-0 mx-0.5 rounded bg-red-500/10 border border-red-500/20"
+                          style={{ top: block.top, height: block.height }}
+                        >
+                          <span className="p-1 text-[10px] text-red-400">
+                            Blocked
+                          </span>
+                        </div>
+                      ))}
+
+                      {/* Availability blocks (green) */}
+                      {availBlocks.map((block, i) => (
+                        <div
+                          key={`avail-${i}`}
+                          className="absolute inset-x-0 mx-0.5 rounded bg-green-500/15 border border-green-500/20"
+                          style={{ top: block.top, height: block.height }}
+                        >
+                          <span className="p-1 text-[10px] text-green-400">
+                            {block.label}
+                          </span>
+                        </div>
+                      ))}
+
+                      {/* Booking blocks (gold/amber) */}
+                      {bookingBlocks.map((block, i) => (
+                        <button
+                          key={`book-${i}`}
+                          type="button"
+                          className="absolute inset-x-0 mx-1 cursor-pointer overflow-hidden rounded bg-amber-500/20 border border-amber-500/30 text-left transition-colors hover:bg-amber-500/30"
+                          style={{
+                            top: block.top,
+                            height: Math.max(block.height, 20),
+                          }}
+                          onClick={() => setSelectedBooking(block.booking)}
+                        >
+                          <div className="p-1">
+                            <p className="truncate text-[10px] font-medium text-amber-300">
+                              {block.booking.services?.name ?? "Session"}
+                            </p>
+                            <p className="truncate text-[9px] text-amber-300/70">
+                              {block.booking.clients?.display_name ??
+                                block.booking.clients?.full_name ??
+                                "Client"}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Booking detail sheet */}
+      <Sheet
+        open={!!selectedBooking}
+        onOpenChange={() => setSelectedBooking(null)}
+      >
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Booking Details</SheetTitle>
+          </SheetHeader>
+          {selectedBooking && (
+            <div className="mt-6 space-y-4">
+              <div>
+                <Label className="text-muted-foreground">Service</Label>
+                <p className="font-medium">
+                  {selectedBooking.services?.name ?? "Session"}
+                </p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Client</Label>
+                <p className="font-medium">
+                  {selectedBooking.clients?.display_name ??
+                    selectedBooking.clients?.full_name ??
+                    "Unknown"}
+                </p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Scheduled</Label>
+                <p className="font-medium">
+                  {new Date(selectedBooking.scheduled_at).toLocaleString(
+                    "en-US",
+                    {
+                      weekday: "long",
+                      month: "long",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    }
+                  )}
+                </p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Duration</Label>
+                <p className="font-medium">
+                  {selectedBooking.duration_minutes} minutes
+                </p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Status</Label>
+                <Badge variant="outline" className="ml-1">
+                  {selectedBooking.status}
+                </Badge>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Add override sheet */}
+      <Sheet open={showAddOverride} onOpenChange={setShowAddOverride}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>
+              {overrideType === "block"
+                ? "Block Day Off"
+                : "Add Special Hours"}
+            </SheetTitle>
+          </SheetHeader>
+          <div className="mt-6 space-y-4">
+            <div>
+              <Label htmlFor="override-date">Date</Label>
+              <Input
+                id="override-date"
+                type="date"
+                value={overrideDate}
+                onChange={(e) => setOverrideDate(e.target.value)}
+              />
+            </div>
+            {overrideType === "special" && (
+              <>
+                <div>
+                  <Label htmlFor="override-start">Start Time</Label>
+                  <Input
+                    id="override-start"
+                    type="time"
+                    value={overrideStart}
+                    onChange={(e) => setOverrideStart(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="override-end">End Time</Label>
+                  <Input
+                    id="override-end"
+                    type="time"
+                    value={overrideEnd}
+                    onChange={(e) => setOverrideEnd(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
+            <Button
+              className="w-full"
+              disabled={!overrideDate || saving}
+              onClick={handleAddOverride}
+            >
+              {saving
+                ? "Saving..."
+                : overrideType === "block"
+                  ? "Block Day"
+                  : "Save Special Hours"}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
