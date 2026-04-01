@@ -54,6 +54,7 @@ interface Step {
   title: string;
   description: string;
   screenshot: string;
+  image?: string;
   icon: React.ElementType;
   proTip?: string;
 }
@@ -131,6 +132,7 @@ const section1Steps: Step[] = [
     description:
       "Head over to astrologypro.com/get-started and enter your email, choose a password, and pick a username. Your username is important because it becomes your permanent URL \u2014 your clients will visit astrologypro.com/[username] to find you. Once you complete checkout ($197 setup fee + your first month at $149), you will be taken straight to your new dashboard.",
     screenshot: "The get-started signup form with email, password, and username fields plus pricing summary",
+    image: "13-signup-page.png",
     icon: UserPlus,
     proTip:
       "Choose a username that matches your brand name or professional name. It cannot be changed later, so pick wisely!",
@@ -142,6 +144,7 @@ const section1Steps: Step[] = [
     description:
       "Upload a professional photo \u2014 a clear headshot works best. Write your bio to tell potential clients about your background and approach, or save time by clicking the \"Generate Bio\" button to let AI draft one for you. Add a short tagline (one sentence that captures what you do) and select your specialties from the list.",
     screenshot: "The profile editing screen showing photo upload area, bio textarea with AI generate button, tagline input, and specialty checkboxes",
+    image: "23-dashboard-profile.png",
     icon: UserCog,
     proTip:
       "Profiles with a professional photo get significantly more bookings. Natural lighting and a simple background work best.",
@@ -153,6 +156,7 @@ const section1Steps: Step[] = [
     description:
       "AstrologyPro offers 19 consultation types \u2014 11 astrology services and 8 tarot services. Toggle on the ones you want to offer and customize the pricing for each. Mark 3\u20134 services as \"Featured\" so they appear prominently at the top of your landing page. Featured services are the first thing visitors see, so choose your best sellers.",
     screenshot: "The service selection grid showing astrology and tarot service cards with toggle switches, price inputs, and featured star buttons",
+    image: "22-dashboard-services.png",
     icon: Briefcase,
     proTip:
       "Less is more at first. Start with 3\u20134 featured services, then expand once you know what your audience wants most.",
@@ -164,6 +168,7 @@ const section1Steps: Step[] = [
     description:
       "Click the \"Connect Stripe\" button to link your payment account. Stripe handles all payment processing securely so you never have to touch sensitive card data. Once connected, client payments go directly to your bank account on a rolling basis. The whole setup takes about 5 minutes.",
     screenshot: "The Stripe Connect onboarding screen with the Connect Stripe button and status indicator",
+    image: "24-dashboard-settings.png",
     icon: CreditCard,
     proTip:
       "Make sure the bank account you connect to Stripe is one you check regularly \u2014 that is where all your session revenue will land.",
@@ -175,6 +180,7 @@ const section1Steps: Step[] = [
     description:
       "Click each time slot on the weekly calendar to mark when you are available for sessions. You can set different hours for different days \u2014 maybe mornings on weekdays and afternoons on weekends. Need a day off? Just block it out. You can update your availability anytime from your dashboard.",
     screenshot: "The weekly availability editor with clickable time slots for each day of the week",
+    image: "29-onboarding.png",
     icon: Clock,
     proTip:
       "Block off at least 15 minutes between sessions for prep time and notes. Back-to-back readings lead to burnout.",
@@ -186,6 +192,7 @@ const section1Steps: Step[] = [
     description:
       "That is it \u2014 your professional astrology practice is online! Visit astrologypro.com/[username] to see your live landing page. It showcases your profile, featured services, testimonials, and booking calendar all in one place. Share this link everywhere: social media bios, email signatures, business cards, and anywhere you connect with potential clients.",
     screenshot: "A fully set up diviner landing page showing the profile header, featured services grid, testimonials section, and booking button",
+    image: "14-landing-hero.png",
     icon: Globe,
     proTip:
       "Put your AstrologyPro link in every social media bio you have. It should be the easiest link for anyone to find.",
@@ -204,6 +211,7 @@ const section2Steps: Step[] = [
     description:
       "Your dashboard shows all your upcoming and past bookings in one clear view. Confirmed bookings display the session link you will use to join. Before each session, click the \"Prepare\" button to review the client\u2019s intake questionnaire, birth data, and any notes from previous sessions so you walk in fully ready.",
     screenshot: "The bookings dashboard showing a list of upcoming sessions with client names, service types, dates, and Prepare/Join buttons",
+    image: "20-dashboard-bookings.png",
     icon: CalendarCheck,
     proTip:
       "Spend 5 minutes with the Prepare screen before each session. Clients notice when you remember details from their last reading.",
@@ -215,6 +223,7 @@ const section2Steps: Step[] = [
     description:
       "When session time arrives, click \"Join Session\" from your dashboard. Both you and your client will accept the recording consent prompt. Start in \"Face\" mode for direct conversation, then switch to \"Screen\" mode when you want to share charts, cards, or other visuals from your back-office tools. A timer tracks the session length, and you will get an alert when overtime begins. Use the sidebar to jot down session notes in real time.",
     screenshot: "The video session room showing the video feed, face/screen mode toggle, session timer, and notes sidebar",
+    image: "19-dashboard-overview.png",
     icon: Video,
     proTip:
       "Practice switching between Face and Screen mode before your first real session so the transition feels smooth to clients.",
@@ -226,6 +235,7 @@ const section2Steps: Step[] = [
     description:
       "Sessions end automatically when time is up, or you can click \"End Session\" manually. The recording is saved and sent to your client via email so they can rewatch their reading anytime. If the session ran over the allotted time, overtime charges are calculated automatically. The client also receives an email requesting a testimonial about their experience.",
     screenshot: "The session complete screen showing recording saved confirmation, overtime summary, and testimonial request status",
+    image: "19-dashboard-overview.png",
     icon: Mail,
     proTip:
       "Mention during the session that a recording will be sent \u2014 clients love knowing they can revisit your insights later.",
@@ -237,6 +247,7 @@ const section2Steps: Step[] = [
     description:
       "The built-in CRM gives you a complete view of every client: their birth data, full session history, your private notes, and revenue totals. Search and filter to find any client instantly. This is your command center for building lasting relationships with repeat clients and preparing for upcoming sessions.",
     screenshot: "The client CRM list view showing client cards with birth data, session count, total revenue, and expandable notes",
+    image: "21-dashboard-clients.png",
     icon: Users,
     proTip:
       "Add a personal note after every session while it is fresh. Future-you will be grateful when that client books again months later.",
@@ -248,6 +259,7 @@ const section2Steps: Step[] = [
     description:
       "After each session, clients receive an email inviting them to leave a review. All submitted testimonials appear in your dashboard where you can approve, reject, or mark them as \"Featured.\" Featured testimonials are displayed prominently on your landing page \u2014 strong social proof is one of the best ways to convert new visitors into paying clients.",
     screenshot: "The testimonials management panel showing submitted reviews with approve, reject, and feature toggle buttons",
+    image: "25-dashboard-testimonials.png",
     icon: Star,
     proTip:
       "Feature your 3\u20135 best testimonials. A mix of different service types shows visitors the breadth of what you offer.",
@@ -259,6 +271,7 @@ const section2Steps: Step[] = [
     description:
       "Grow your practice through word of mouth by creating affiliates \u2014 people who send clients your way. Set each affiliate\u2019s commission percentage, then give them their unique referral link. When someone books through that link, the referral is tracked automatically. You pay your affiliates directly (we just track everything), and you can mark payments as completed in the dashboard.",
     screenshot: "The affiliate dashboard showing affiliate list with referral links, commission rates, referral counts, and payment status",
+    image: "26-dashboard-affiliates.png",
     icon: Share2,
     proTip:
       "Your happiest clients make the best affiliates. After a great session, ask if they would like to earn commissions by referring friends.",
@@ -270,6 +283,7 @@ const section2Steps: Step[] = [
     description:
       "Every Monday, you will receive branded astrology content ready to share \u2014 images, captions, and hashtags tailored to your practice. Open the link from your email or text message, then tap \"Share Everywhere\" to post to all your connected platforms in about 30 seconds. Prefer to customize? Pick individual platforms and tweak the content. For Instagram and TikTok, download the image and copy the caption to post natively.",
     screenshot: "The social share hub showing a branded content card with Share Everywhere button and individual platform options",
+    image: "27-dashboard-marketing.png",
     icon: Megaphone,
     proTip:
       "Consistency beats perfection. Sharing every Monday keeps you visible in your audience\u2019s feed without burning out on content creation.",
@@ -281,6 +295,7 @@ const section2Steps: Step[] = [
     description:
       "Connect your YouTube channel by going to Dashboard \u2192 Live and pasting your YouTube Channel ID (find it at youtube.com/account_advanced). Whenever you go live on YouTube, the stream automatically appears embedded on your AstrologyPro landing page. Tell your viewers: \"Visit astrologypro.com/[username] to book a private reading!\" It is one of the best ways to convert viewers into paying clients.",
     screenshot: "The live streaming settings page showing the YouTube Channel ID input field and a preview of the embedded stream on the landing page",
+    image: "28-dashboard-live.png",
     icon: Radio,
     proTip:
       "Go live at a consistent time each week. Regularity builds an audience that keeps coming back \u2014 and booking.",
@@ -292,6 +307,7 @@ const section2Steps: Step[] = [
     description:
       "Clients can purchase gift certificates directly from your landing page. They enter the recipient\u2019s name, email, and a personal message, then pay for the session. The recipient receives a beautiful gift certificate email with a unique code they can use to book any of your services. Gift certificates are a great revenue driver, especially around holidays and birthdays.",
     screenshot: "The gift certificate purchase flow showing recipient info form, personal message field, and a preview of the gift certificate email",
+    image: "15-landing-services.png",
     icon: Gift,
     proTip:
       "Promote gift certificates before major holidays (Valentine\u2019s Day, Mother\u2019s Day, birthdays). A short social media post is all it takes.",
@@ -303,6 +319,7 @@ const section2Steps: Step[] = [
     description:
       "Your settings panel lets you manage every aspect of your practice. Account settings handle your subscription and billing. Payments shows your Stripe connection status. Calendar lets you connect Google Calendar for automatic two-way sync so bookings appear on your personal calendar. Loyalty settings let you create repeat-client discounts to reward your regulars.",
     screenshot: "The settings page showing tabs for Account, Payments, Calendar, and Loyalty with their respective configuration panels",
+    image: "24-dashboard-settings.png",
     icon: Settings,
     proTip:
       "Connect Google Calendar early \u2014 it prevents double-bookings and keeps your personal and professional schedules in sync.",
@@ -332,6 +349,7 @@ const section3Steps: Step[] = [
     description:
       "Choose the service you want (astrology reading, tarot session, etc.), pick a date and time from the diviner\u2019s available slots, then fill out the intake questionnaire. For astrology readings, you will enter your birth date, birth time, and birth location. Complete the payment securely via Stripe, and you will receive a confirmation email with your session link.",
     screenshot: "The client booking flow: service selection cards, date/time picker, birth data questionnaire, and Stripe payment form",
+    image: "18-booking-start.png",
     icon: ShoppingCart,
     proTip:
       "If you do not know your exact birth time, check your birth certificate or ask a family member \u2014 it makes a big difference in the accuracy of your reading.",
@@ -343,6 +361,7 @@ const section3Steps: Step[] = [
     description:
       "At your appointment time, click the session link from your confirmation email. You will be asked to accept the recording consent (the session is recorded so you can rewatch later). You will see your diviner on video in real time. When they share their screen, you will see the charts, cards, or other tools they use during your reading. You can also use the text chat if you need to share information during the session.",
     screenshot: "The client\u2019s view of the video session room showing the diviner\u2019s video feed, shared screen with a natal chart, and chat panel",
+    image: "19-dashboard-overview.png",
     icon: PlayCircle,
     proTip:
       "Find a quiet, private space for your session. Good lighting and a stable internet connection will make the experience much better.",
@@ -354,6 +373,7 @@ const section3Steps: Step[] = [
     description:
       "Shortly after your session ends, you will receive an email with a link to your full recording. Watch it anytime to revisit the insights from your reading. You can also share the recording on social media if you would like. You will receive a separate email asking you to leave a testimonial \u2014 your review helps your diviner grow their practice and helps other clients find great readers.",
     screenshot: "The post-session email showing the recording playback link, social share buttons, and testimonial request",
+    image: "16-landing-testimonials.png",
     icon: FileText,
     proTip:
       "Watch the recording again a few weeks later. You will often catch insights that make more sense once time has passed.",
@@ -365,6 +385,7 @@ const section3Steps: Step[] = [
     description:
       "Log in at astrologypro.com/login and select the Client tab. Enter your email and we will send you a magic link \u2014 no password needed! Your portal shows all your upcoming bookings, past sessions with recordings, and your profile. Update your birth data and personal details anytime. Everything is in one place so you never lose track of your readings.",
     screenshot: "The client portal dashboard showing upcoming bookings, past session list with recording links, and profile section",
+    image: "30-portal.png",
     icon: LogIn,
     proTip:
       "Bookmark your portal link for easy access. You can always find your recordings and upcoming sessions there.",
@@ -422,7 +443,19 @@ const faqItems = [
  * Components
  * --------------------------------------------------------------------------- */
 
-function ScreenshotPlaceholder({ label }: { label: string }) {
+function ScreenshotPlaceholder({ label, image }: { label: string; image?: string }) {
+  if (image) {
+    return (
+      <div className="overflow-hidden rounded-lg border border-white/10 shadow-lg">
+        <img
+          src={`/screenshots/${image}`}
+          alt={label}
+          className="w-full"
+          loading="lazy"
+        />
+      </div>
+    );
+  }
   return (
     <div className="flex items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/20 px-6 py-10">
       <div className="flex items-center gap-2 text-center">
@@ -465,7 +498,7 @@ function StepCard({ step }: { step: Step }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <ScreenshotPlaceholder label={step.screenshot} />
+        <ScreenshotPlaceholder label={step.screenshot} image={step.image} />
         {step.proTip && <ProTipCallout text={step.proTip} />}
       </CardContent>
     </Card>
