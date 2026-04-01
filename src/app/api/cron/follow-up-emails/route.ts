@@ -5,6 +5,7 @@ import {
   sendReflectionEmail,
   sendRebookingNudge,
 } from "@/lib/email";
+import { generateReviewToken } from "@/lib/review-token";
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -67,7 +68,8 @@ export async function GET(request: NextRequest) {
         switch (followUp.email_type) {
           case "recording_ready": {
             const recordingUrl = `${appUrl}/portal/recordings/${followUp.booking_id}`;
-            const testimonialLink = `${appUrl}/portal/review/${followUp.booking_id}`;
+            const reviewToken = generateReviewToken(followUp.booking_id);
+            const testimonialLink = `${appUrl}/portal/review/${followUp.booking_id}?token=${reviewToken}`;
             await sendRecordingReady({
               clientEmail,
               divinerName,

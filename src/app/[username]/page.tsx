@@ -10,6 +10,7 @@ import { AvailabilityPreview } from "@/components/landing/availability-preview";
 import { ServiceTabs } from "./service-tabs";
 import { APP_URL } from "@/lib/constants";
 import { Gift, ArrowRight } from "lucide-react";
+import { PageTracker } from "@/components/landing/page-tracker";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -411,6 +412,8 @@ export default async function DivinerPage({ params }: PageProps) {
           </Link>
         </div>
       </section>
+
+      <PageTracker divinerId={diviner.id} path={`/${username}`} />
     </>
   );
 }

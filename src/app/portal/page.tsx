@@ -183,7 +183,7 @@ export default async function PortalDashboardPage() {
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2">
             <Button variant="outline" className="justify-between" asChild>
-              <Link href="/">
+              <Link href="/discover">
                 <span className="flex items-center gap-2">
                   <Search className="size-4" />
                   Find a Diviner

@@ -31,6 +31,12 @@ export function MarketingHeader() {
             Pricing
           </Link>
           <Link
+            href="/discover"
+            className="text-sm text-[#b8bcd0] transition-colors hover:text-[#c9a84c]"
+          >
+            Find a Reader
+          </Link>
+          <Link
             href="/login"
             className="text-sm text-[#b8bcd0] transition-colors hover:text-[#c9a84c]"
           >

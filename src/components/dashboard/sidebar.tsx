@@ -15,6 +15,8 @@ import {
   Radio,
   Users2,
   Megaphone,
+  BarChart3,
+  CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -40,6 +42,8 @@ const navItems = [
   { label: "Bookings", href: "/dashboard/bookings", icon: Calendar },
   { label: "Clients", href: "/dashboard/clients", icon: Users },
   { label: "Testimonials", href: "/dashboard/testimonials", icon: MessageSquare },
+  { label: "Calendar", href: "/dashboard/calendar", icon: CalendarDays },
+  { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { label: "Affiliates", href: "/dashboard/affiliates", icon: Users2 },
   { label: "Live", href: "/dashboard/live", icon: Radio },
   { label: "Marketing", href: "/dashboard/marketing", icon: Megaphone },
