@@ -1,7 +1,6 @@
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { Hero } from "@/components/marketing/hero";
-import { SocialProofBanner } from "@/components/marketing/social-proof-banner";
 import { FeatureGrid } from "@/components/marketing/feature-grid";
 import { RevenueCalculator } from "@/components/marketing/revenue-calculator";
 import { DivinerTestimonials } from "@/components/marketing/diviner-testimonials";
@@ -13,7 +12,6 @@ export default function HomePage() {
       <MarketingHeader />
       <main className="flex-1">
         <Hero />
-        <SocialProofBanner />
         <FeatureGrid />
         <RevenueCalculator />
         <DivinerTestimonials />

@@ -48,8 +48,8 @@ export default function PricingPage() {
               <span className="text-primary">Practice</span>?
             </h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              Join hundreds of practitioners already growing their business
-              with AstrologyPro. Plans start at just $97/mo.
+              Start growing your divination business today with
+              AstrologyPro. Plans start at just $97/mo.
             </p>
             <Button size="lg" className="mt-8 text-base" asChild>
               <Link href="/get-started">Get Started Now</Link>

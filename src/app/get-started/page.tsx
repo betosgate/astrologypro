@@ -222,24 +222,24 @@ export default function GetStartedPage() {
           </div>
         </section>
 
-        {/* ===== SOCIAL PROOF BAR ===== */}
+        {/* ===== TRUST BAR ===== */}
         <section className="border-y border-white/5 bg-white/[0.02]">
           <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-8 px-4 py-5 sm:gap-12">
             <div className="flex items-center gap-2 text-sm text-[#b8bcd0]/70">
-              <Users className="size-4 text-[#c9a84c]" />
-              <span><strong className="text-[#f5f0e8]">200+</strong> practitioners</span>
+              <Shield className="size-4 text-[#22c55e]" />
+              <span className="text-[#22c55e]/80">30-day money-back guarantee</span>
             </div>
             <div className="flex items-center gap-2 text-sm text-[#b8bcd0]/70">
-              <Star className="size-4 fill-[#c9a84c] text-[#c9a84c]" />
-              <span><strong className="text-[#f5f0e8]">4.9/5</strong> average rating</span>
+              <Zap className="size-4 text-[#c9a84c]" />
+              <span>Cancel <strong className="text-[#f5f0e8]">anytime</strong></span>
             </div>
             <div className="flex items-center gap-2 text-sm text-[#b8bcd0]/70">
               <Video className="size-4 text-[#c9a84c]" />
-              <span><strong className="text-[#f5f0e8]">10,000+</strong> sessions hosted</span>
+              <span>HD video sessions <strong className="text-[#f5f0e8]">included</strong></span>
             </div>
             <div className="flex items-center gap-2 text-sm text-[#b8bcd0]/70">
-              <Shield className="size-4 text-[#22c55e]" />
-              <span className="text-[#22c55e]/80">30-day money-back guarantee</span>
+              <Globe className="size-4 text-[#c9a84c]" />
+              <span>Your <strong className="text-[#f5f0e8]">branded page</strong> included</span>
             </div>
           </div>
         </section>
@@ -708,7 +708,7 @@ export default function GetStartedPage() {
               Every day without a professional platform is a day your practice isn&apos;t growing.
             </h2>
             <p className="mt-4 text-[#b8bcd0]/60">
-              Join hundreds of practitioners who turned their gift into a thriving business.
+              Turn your gift into a thriving business — start booking clients this week.
             </p>
             <a
               href="#plans"
