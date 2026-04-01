@@ -36,6 +36,14 @@ import {
   FileText,
   LogIn,
   Eye,
+  Phone,
+  DollarSign,
+  Calendar,
+  Percent,
+  Heart,
+  RotateCcw,
+  Brain,
+  Compass,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -81,7 +89,8 @@ const tocSections: TocItem[] = [
       { id: "step-1-3", label: "Choose Your Services" },
       { id: "step-1-4", label: "Connect Stripe" },
       { id: "step-1-5", label: "Set Your Availability" },
-      { id: "step-1-6", label: "Your Landing Page is Live!" },
+      { id: "step-1-6", label: "Get a Phone Number" },
+      { id: "step-1-7", label: "Your Landing Page is Live!" },
     ],
   },
   {
@@ -99,6 +108,13 @@ const tocSections: TocItem[] = [
       { id: "step-2-8", label: "Live Streaming" },
       { id: "step-2-9", label: "Gift Certificates" },
       { id: "step-2-10", label: "Settings" },
+      { id: "step-2-11", label: "Phone Readings" },
+      { id: "step-2-12", label: "Dashboard Analytics" },
+      { id: "step-2-13", label: "Calendar View" },
+      { id: "step-2-14", label: "Pricing Controls" },
+      { id: "step-2-15", label: "Loyalty Discounts" },
+      { id: "step-2-16", label: "Issuing Refunds" },
+      { id: "step-2-17", label: "Smart Session Prep" },
     ],
   },
   {
@@ -111,6 +127,7 @@ const tocSections: TocItem[] = [
       { id: "step-3-3", label: "Your Session" },
       { id: "step-3-4", label: "After Your Session" },
       { id: "step-3-5", label: "Your Client Portal" },
+      { id: "step-3-6", label: "Phone Readings" },
     ],
   },
   {
@@ -188,6 +205,18 @@ const section1Steps: Step[] = [
   {
     id: "step-1-6",
     number: "1.6",
+    title: "Get a Phone Number",
+    description:
+      "Go to Settings \u2192 Phone tab, click \"Get a Dedicated Phone Number\". Clients can call this number to join video sessions or book standalone phone readings.",
+    screenshot: "The settings page showing the Phone tab with the Get a Dedicated Phone Number button",
+    image: "24-dashboard-settings.png",
+    icon: Phone,
+    proTip:
+      "Share your dedicated phone number on your landing page and social media so clients know they can reach you by phone too.",
+  },
+  {
+    id: "step-1-7",
+    number: "1.7",
     title: "Your Landing Page is Live!",
     description:
       "That is it \u2014 your professional astrology practice is online! Visit astrologypro.com/[username] to see your live landing page. It showcases your profile, featured services, testimonials, and booking calendar all in one place. Share this link everywhere: social media bios, email signatures, business cards, and anywhere you connect with potential clients.",
@@ -324,6 +353,90 @@ const section2Steps: Step[] = [
     proTip:
       "Connect Google Calendar early \u2014 it prevents double-bookings and keeps your personal and professional schedules in sync.",
   },
+  {
+    id: "step-2-11",
+    number: "2.11",
+    title: "Phone Readings",
+    description:
+      "Enable phone readings in your settings. Clients call your dedicated number for audio-only readings at $25 for 20 minutes + $0.50/min after. The call is recorded and billed automatically.",
+    screenshot: "The settings page showing phone reading configuration with pricing and toggle",
+    image: "24-dashboard-settings.png",
+    icon: Phone,
+    proTip:
+      "Phone readings are great for clients who prefer audio-only or have limited internet. They also expand your reach to clients without webcams.",
+  },
+  {
+    id: "step-2-12",
+    number: "2.12",
+    title: "Dashboard Analytics",
+    description:
+      "Track who visits your landing page, where they come from, and your booking conversion rate. Go to Dashboard \u2192 Analytics.",
+    screenshot: "The analytics dashboard showing page views, traffic sources, and conversion rate charts",
+    image: "19-dashboard-overview.png",
+    icon: BarChart3,
+    proTip:
+      "Check your analytics weekly to see which marketing channels drive the most bookings. Double down on what works.",
+  },
+  {
+    id: "step-2-13",
+    number: "2.13",
+    title: "Calendar View",
+    description:
+      "See your entire week at a glance. Dashboard \u2192 Calendar shows your availability, bookings, and blocked days. Click to block days off or add special hours.",
+    screenshot: "The weekly calendar view showing color-coded availability, bookings, and blocked days with click-to-edit functionality",
+    image: "20-dashboard-bookings.png",
+    icon: Calendar,
+    proTip:
+      "Block off vacation days well in advance so clients can plan around your schedule. Last-minute cancellations hurt your reputation.",
+  },
+  {
+    id: "step-2-14",
+    number: "2.14",
+    title: "Pricing Controls",
+    description:
+      "Adjust your pricing from Settings \u2192 Services. You can increase prices up to 200% of the base rate but cannot go below the base price. This protects the value of the platform.",
+    screenshot: "The services settings page showing price sliders with min/max range indicators",
+    image: "22-dashboard-services.png",
+    icon: DollarSign,
+    proTip:
+      "Start at the base price and increase gradually as you build up testimonials and demand. Clients expect to pay more for highly-rated diviners.",
+  },
+  {
+    id: "step-2-15",
+    number: "2.15",
+    title: "Loyalty Discounts",
+    description:
+      "Reward repeat clients! Go to Settings \u2192 Loyalty tab. Set rules like \"After 3 sessions, clients get 10% off.\" Discounts apply automatically at checkout.",
+    screenshot: "The loyalty settings panel showing discount rules with session threshold and percentage inputs",
+    image: "24-dashboard-settings.png",
+    icon: Heart,
+    proTip:
+      "A small loyalty discount (5\u201310%) pays for itself by encouraging clients to rebook instead of shopping around.",
+  },
+  {
+    id: "step-2-16",
+    number: "2.16",
+    title: "Issuing Refunds",
+    description:
+      "If you need to refund a client, go to Dashboard \u2192 Bookings, open the booking detail, and click \"Issue Refund.\" The refund is processed through Stripe and the client is notified by email.",
+    screenshot: "The booking detail view showing the Issue Refund button and refund confirmation dialog",
+    image: "20-dashboard-bookings.png",
+    icon: RotateCcw,
+    proTip:
+      "Handle refund requests quickly and graciously. A fast refund turns a disappointed client into one who may return later.",
+  },
+  {
+    id: "step-2-17",
+    number: "2.17",
+    title: "Smart Session Prep",
+    description:
+      "Before each session, click \"Prepare\" on your upcoming booking. You will see the client\u2019s birth data, their questions, previous session notes, and smart alerts like upcoming solar returns or Mercury retrograde.",
+    screenshot: "The session preparation screen showing client birth data, questions, past notes, and astrological alerts panel",
+    image: "20-dashboard-bookings.png",
+    icon: Brain,
+    proTip:
+      "The smart alerts highlight transits and events that are personally relevant to your client. Use them to provide timely, insightful readings.",
+  },
 ];
 
 /* ---------------------------------------------------------------------------
@@ -336,9 +449,10 @@ const section3Steps: Step[] = [
     number: "3.1",
     title: "Finding a Diviner",
     description:
-      "Visit astrologypro.com/[diviner-username] \u2014 usually shared by the diviner on their social media, website, or directly with you. Browse their services to see what types of readings they offer, read testimonials from past clients, and check their availability to find a time that works.",
-    screenshot: "A diviner\u2019s public landing page as seen by a client, showing profile, services grid, testimonials, and availability section",
-    icon: Search,
+      "Visit astrologypro.com/discover to browse all available diviners. Search by name, filter by specialty (astrology or tarot), and sort by rating or price. You can also visit astrologypro.com/[diviner-username] directly if a diviner has shared their link on social media, their website, or with you personally. Browse their services, read testimonials from past clients, and check their availability to find a time that works.",
+    screenshot: "The discover page showing diviner cards with search bar, specialty filters, and sort options",
+    image: "09-demo-page.png",
+    icon: Compass,
     proTip:
       "Read the testimonials! They will give you a great sense of the diviner\u2019s style and what to expect from your session.",
   },
@@ -390,6 +504,18 @@ const section3Steps: Step[] = [
     proTip:
       "Bookmark your portal link for easy access. You can always find your recordings and upcoming sessions there.",
   },
+  {
+    id: "step-3-6",
+    number: "3.6",
+    title: "Phone Readings",
+    description:
+      "Some diviners offer phone readings. If your diviner has a phone number listed, you can call it to join your scheduled video session by audio, or book a standalone phone reading. Your card on file will be charged after the call.",
+    screenshot: "A diviner\u2019s landing page showing the phone number and phone reading booking option",
+    image: "24-dashboard-settings.png",
+    icon: Phone,
+    proTip:
+      "Phone readings are perfect when you are on the go or prefer a more intimate audio-only experience.",
+  },
 ];
 
 /* ---------------------------------------------------------------------------
@@ -436,6 +562,26 @@ const faqItems = [
     question: "Can clients book without creating an account?",
     answer:
       "Clients do not need to create an account to book. They simply fill out the booking form and pay. They receive a magic link via email to access their portal, recordings, and future bookings.",
+  },
+  {
+    question: "How do I reset my password?",
+    answer:
+      "Click \"Forgot password?\" on the login page. Enter your email and we will send a reset link.",
+  },
+  {
+    question: "How do phone readings work?",
+    answer:
+      "Your diviner will give you their dedicated phone number. Call at your scheduled time. The first 20 minutes cost $25, then $0.50 per additional minute. The call is recorded.",
+  },
+  {
+    question: "How do refunds work?",
+    answer:
+      "Your diviner can issue refunds from their dashboard. Refunds are processed through Stripe and typically appear in 5\u201310 business days.",
+  },
+  {
+    question: "What are loyalty discounts?",
+    answer:
+      "Some diviners offer discounts for repeat clients. These apply automatically when you book.",
   },
 ];
 
@@ -711,7 +857,7 @@ export default function InstructionsPage() {
                   id="for-diviners-setup"
                   number="Section 1"
                   title="Getting Started"
-                  subtitle="Set up your AstrologyPro practice in 6 simple steps. Most diviners are fully up and running within 30 minutes."
+                  subtitle="Set up your AstrologyPro practice in 7 simple steps. Most diviners are fully up and running within 30 minutes."
                   badge="For Diviners"
                 />
                 <Separator className="my-6" />
