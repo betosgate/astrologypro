@@ -264,7 +264,7 @@ const section2Steps: Step[] = [
     description:
       "Sessions end automatically when time is up, or you can click \"End Session\" manually. The recording is saved and sent to your client via email so they can rewatch their reading anytime. If the session ran over the allotted time, overtime charges are calculated automatically. The client also receives an email requesting a testimonial about their experience.",
     screenshot: "The session complete screen showing recording saved confirmation, overtime summary, and testimonial request status",
-    image: "19-dashboard-overview.png",
+    image: "20-dashboard-bookings.png",
     icon: Mail,
     proTip:
       "Mention during the session that a recording will be sent \u2014 clients love knowing they can revisit your insights later.",
@@ -372,7 +372,7 @@ const section2Steps: Step[] = [
     description:
       "Track who visits your landing page, where they come from, and your booking conversion rate. Go to Dashboard \u2192 Analytics.",
     screenshot: "The analytics dashboard showing page views, traffic sources, and conversion rate charts",
-    image: "19-dashboard-overview.png",
+    image: "34-dashboard-analytics.png",
     icon: BarChart3,
     proTip:
       "Check your analytics weekly to see which marketing channels drive the most bookings. Double down on what works.",
@@ -384,7 +384,7 @@ const section2Steps: Step[] = [
     description:
       "See your entire week at a glance. Dashboard \u2192 Calendar shows your availability, bookings, and blocked days. Click to block days off or add special hours.",
     screenshot: "The weekly calendar view showing color-coded availability, bookings, and blocked days with click-to-edit functionality",
-    image: "20-dashboard-bookings.png",
+    image: "35-dashboard-calendar.png",
     icon: Calendar,
     proTip:
       "Block off vacation days well in advance so clients can plan around your schedule. Last-minute cancellations hurt your reputation.",
@@ -451,7 +451,7 @@ const section3Steps: Step[] = [
     description:
       "Visit astrologypro.com/discover to browse all available diviners. Search by name, filter by specialty (astrology or tarot), and sort by rating or price. You can also visit astrologypro.com/[diviner-username] directly if a diviner has shared their link on social media, their website, or with you personally. Browse their services, read testimonials from past clients, and check their availability to find a time that works.",
     screenshot: "The discover page showing diviner cards with search bar, specialty filters, and sort options",
-    image: "09-demo-page.png",
+    image: "31-discover-page.png",
     icon: Compass,
     proTip:
       "Read the testimonials! They will give you a great sense of the diviner\u2019s style and what to expect from your session.",
