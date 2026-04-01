@@ -7,6 +7,7 @@ interface DivinerHeroProps {
   displayName: string;
   tagline: string | null;
   avatarUrl: string | null;
+  coverImageUrl: string | null;
   specialties: string[];
   youtubeChannelId: string | null;
   facebookLiveUrl: string | null;
@@ -21,6 +22,7 @@ export function DivinerHero({
   displayName,
   tagline,
   avatarUrl,
+  coverImageUrl,
   specialties,
   youtubeChannelId,
   facebookLiveUrl,
@@ -60,16 +62,30 @@ export function DivinerHero({
         </div>
       </nav>
 
-      {/* Hero section — horizontal layout */}
+      {/* Hero section — single horizontal band: avatar + text left, cover image right */}
       <section
         id="hero"
-        className="relative overflow-hidden border-b border-white/5 px-4 py-10 md:py-14"
+        className="relative overflow-hidden border-b border-white/5 bg-[#06080f]"
       >
-        {/* Cosmic gradient background */}
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(201,168,76,0.06)_0%,transparent_50%),radial-gradient(ellipse_at_80%_70%,rgba(45,27,78,0.2)_0%,transparent_50%)]" />
+        {/* Cover image — positioned absolute, fills right half on desktop */}
+        <div className="absolute inset-y-0 right-0 w-full md:w-[55%] lg:w-[50%]">
+          <Image
+            src={coverImageUrl || "/images/banners/diviner-banner.png"}
+            alt={displayName}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 55vw"
+            priority
+          />
+          {/* Gradient fade from left (dark) into image */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#06080f] via-[#06080f]/70 to-transparent md:via-[#06080f]/50" />
+          {/* Bottom fade */}
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#06080f] to-transparent" />
+        </div>
 
-        <div className="relative z-10 mx-auto flex max-w-6xl flex-col items-center gap-8 md:flex-row md:items-start md:gap-12">
-          {/* Left: Avatar */}
+        {/* Content — avatar + text on the left side */}
+        <div className="relative z-10 mx-auto flex max-w-6xl items-center gap-6 px-4 py-10 md:gap-8 md:py-14 lg:py-16">
+          {/* Avatar */}
           <div className="shrink-0">
             <div className="relative">
               {/* Orbital ring */}
@@ -79,8 +95,8 @@ export function DivinerHero({
               >
                 <div className="absolute -top-1 left-1/2 size-2 -translate-x-1/2 rounded-full bg-[#c9a84c] shadow-[0_0_8px_rgba(201,168,76,0.6)]" />
               </div>
-              {/* Avatar */}
-              <div className="relative size-28 overflow-hidden rounded-full border-2 border-white/10 shadow-[0_0_30px_rgba(201,168,76,0.12)] md:size-36">
+              {/* Avatar circle */}
+              <div className="relative size-24 overflow-hidden rounded-full border-[3px] border-[#c9a84c]/30 shadow-[0_0_30px_rgba(201,168,76,0.12)] sm:size-28 md:size-32 lg:size-36">
                 {avatarUrl ? (
                   <Image
                     src={avatarUrl}
@@ -99,11 +115,11 @@ export function DivinerHero({
             </div>
           </div>
 
-          {/* Right: Content */}
-          <div className="flex-1 text-center md:text-left">
+          {/* Text content */}
+          <div className="min-w-0 flex-1">
             {/* Live badge */}
             {hasLiveStream && (
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 backdrop-blur-sm">
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 backdrop-blur-sm">
                 <span className="relative flex size-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
                   <span className="relative inline-flex size-2 rounded-full bg-red-500" />
@@ -113,24 +129,24 @@ export function DivinerHero({
             )}
 
             {/* Name */}
-            <h1 className="font-display text-3xl font-bold text-[#f5f0e8] md:text-5xl">
+            <h1 className="font-display text-3xl font-bold text-[#f5f0e8] md:text-4xl lg:text-5xl">
               {displayName}
             </h1>
 
             {/* Tagline */}
             {tagline && (
-              <p className="mt-2 font-display text-base italic text-[#b8bcd0]/80 md:text-lg">
+              <p className="mt-1.5 font-display text-sm italic text-[#b8bcd0]/80 sm:text-base md:text-lg">
                 {tagline}
               </p>
             )}
 
             {/* Specialty pills */}
             {specialties.length > 0 && (
-              <div className="mt-3 flex flex-wrap justify-center gap-2 md:justify-start">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {specialties.map((s) => (
                   <span
                     key={s}
-                    className="rounded-full border border-[#c9a84c]/25 px-3 py-0.5 text-xs capitalize text-[#c9a84c]/80"
+                    className="rounded-full border border-[#c9a84c]/25 bg-[#c9a84c]/5 px-3 py-0.5 text-xs font-medium capitalize text-[#c9a84c]/90"
                   >
                     {s}
                   </span>
@@ -139,7 +155,7 @@ export function DivinerHero({
             )}
 
             {/* Trust signals row */}
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-xs text-[#b8bcd0]/70 md:justify-start">
+            <div className="mt-2.5 flex flex-wrap items-center gap-3 text-xs text-[#b8bcd0]/70">
               <span className="inline-flex items-center gap-1 text-[#22c55e]">
                 <ShieldCheck className="size-3.5" />
                 Verified
@@ -159,7 +175,7 @@ export function DivinerHero({
             </div>
 
             {/* CTA buttons */}
-            <div className="mt-5 flex flex-wrap justify-center gap-3 md:justify-start">
+            <div className="mt-5 flex flex-wrap gap-3">
               <Link
                 href={`/${username}/book/natal-chart`}
                 className="rounded-full bg-[#c9a84c] px-6 py-2.5 text-sm font-semibold text-black shadow-lg shadow-[#c9a84c]/20 transition-colors hover:bg-[#e2c97e]"
@@ -178,7 +194,7 @@ export function DivinerHero({
 
         {/* Live stream embed */}
         {hasLiveStream && (
-          <div className="relative z-10 mx-auto mt-8 max-w-6xl">
+          <div className="relative z-10 mx-auto max-w-6xl px-4 pb-8">
             <div className="overflow-hidden rounded-xl border border-white/10">
               <div className="relative w-full" style={{ paddingBottom: "40%" }}>
                 {youtubeChannelId ? (

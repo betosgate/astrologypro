@@ -19,12 +19,14 @@ interface ServiceTabsProps {
   astroServices: Service[];
   tarotServices: Service[];
   username: string;
+  serviceImages: Record<string, string | null>;
 }
 
 export function ServiceTabs({
   astroServices,
   tarotServices,
   username,
+  serviceImages,
 }: ServiceTabsProps) {
   return (
     <Tabs defaultValue="astrology" className="w-full">
@@ -58,6 +60,7 @@ export function ServiceTabs({
               key={service.id}
               service={service}
               username={username}
+              imageUrl={serviceImages[service.slug]}
             />
           ))}
         </div>
@@ -70,6 +73,7 @@ export function ServiceTabs({
               key={service.id}
               service={service}
               username={username}
+              imageUrl={serviceImages[service.slug]}
             />
           ))}
         </div>

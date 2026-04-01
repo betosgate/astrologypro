@@ -24,9 +24,9 @@ export default function PricingPage() {
               <span className="text-primary">Transparent</span> Pricing
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-              One plan with everything included. No tiers to compare, no
-              features locked behind upgrades. Just everything you need to run
-              your divination business.
+              Three plans, one powerful platform. Pick the services that match
+              your practice — tarot, astrology, or both. Every plan includes
+              the full business toolkit.
             </p>
           </div>
         </section>
@@ -48,8 +48,8 @@ export default function PricingPage() {
               <span className="text-primary">Practice</span>?
             </h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              Join hundreds of astrologers and tarot readers already growing
-              their business with AstrologyPro.
+              Join hundreds of practitioners already growing their business
+              with AstrologyPro. Plans start at just $97/mo.
             </p>
             <Button size="lg" className="mt-8 text-base" asChild>
               <Link href="/get-started">Get Started Now</Link>

@@ -79,7 +79,7 @@ export function ComparisonTable() {
               </p>
             </div>
             <div className="border-l bg-primary/5 px-4 py-4 sm:px-6">
-              <span className="text-lg font-bold text-primary">$149/mo</span>
+              <span className="text-lg font-bold text-primary">From $97/mo</span>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 Everything included, ready to go
               </p>
@@ -103,7 +103,7 @@ export function ComparisonTable() {
         <div className="mt-8 text-center">
           <Button size="lg" asChild className="gap-2 text-base">
             <Link href="/get-started">
-              Get Everything for $149/mo
+              Get Started from $97/mo
               <ArrowRight className="size-4" />
             </Link>
           </Button>

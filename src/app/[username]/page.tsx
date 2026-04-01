@@ -4,6 +4,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DivinerHero } from "@/components/landing/diviner-hero";
 import { ServiceCard } from "@/components/landing/service-card";
+import { getServiceImageUrl } from "@/lib/service-images";
 import { TestimonialSection } from "@/components/landing/testimonial-section";
 import { StickyNav } from "@/components/landing/sticky-nav";
 import { AvailabilityPreview } from "@/components/landing/availability-preview";
@@ -156,6 +157,12 @@ export default async function DivinerPage({ params }: PageProps) {
   const astroServices = services.filter((s) => s.category === "astrology");
   const tarotServices = services.filter((s) => s.category === "tarot");
 
+  // Build slug → image URL map for all services
+  const serviceImages: Record<string, string | null> = {};
+  for (const s of services) {
+    serviceImages[s.slug] = getServiceImageUrl(s.slug);
+  }
+
   // Extract a pull-quote from the bio (first sentence or first 120 chars)
   let pullQuote: string | null = null;
   if (diviner.bio) {
@@ -217,6 +224,7 @@ export default async function DivinerPage({ params }: PageProps) {
         displayName={diviner.display_name}
         tagline={diviner.tagline}
         avatarUrl={diviner.avatar_url}
+        coverImageUrl={diviner.cover_image_url ?? null}
         specialties={diviner.specialties ?? []}
         youtubeChannelId={diviner.youtube_channel_id ?? null}
         facebookLiveUrl={diviner.facebook_live_url ?? null}
@@ -320,6 +328,7 @@ export default async function DivinerPage({ params }: PageProps) {
                 astroServices={astroServices}
                 tarotServices={tarotServices}
                 username={username}
+                serviceImages={serviceImages}
               />
             ) : (
               <div className="grid gap-5 sm:grid-cols-2">
@@ -328,6 +337,7 @@ export default async function DivinerPage({ params }: PageProps) {
                     key={service.id}
                     service={service}
                     username={username}
+                    imageUrl={serviceImages[service.slug]}
                   />
                 ))}
               </div>

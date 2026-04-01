@@ -5,44 +5,44 @@ import { ChevronDown } from "lucide-react";
 
 const faqs = [
   {
-    question: "What's included in the $197 setup fee?",
+    question: "What's the difference between the three plans?",
     answer:
-      "The setup fee covers your account creation, branded landing page setup at astrologypro.com/username, full access to all professional astrology and tarot tools, and personalized onboarding support to get you up and running.",
+      "Every plan includes the same powerful platform — video sessions, booking, CRM, marketing tools, and your branded page. The only difference is the consultation types: The Tarot Reader includes 8 tarot spreads + freelance sessions, The Astrologer includes 11 astrology readings + freelance sessions, and The Oracle includes everything plus dedicated phone readings.",
+  },
+  {
+    question: "Can I upgrade my plan later?",
+    answer:
+      "Absolutely. You can upgrade from a single-specialty plan to The Oracle at any time. We'll prorate the difference so you only pay the delta.",
+  },
+  {
+    question: "What's included in the setup fee?",
+    answer:
+      "The setup fee covers your account creation, branded landing page at astrologypro.com/your-name, full access to professional astrology and tarot back-office tools, all email templates, and personalized onboarding support.",
   },
   {
     question: "Can I cancel anytime?",
     answer:
-      "Yes, you can cancel your subscription at any time. Your account will stay active until the end of your current billing period, and you won't be charged again.",
+      "Yes, you can cancel your subscription at any time. Your account stays active until the end of your current billing period. Plus, we offer a 30-day money-back guarantee — if it's not right for you, we'll refund everything.",
   },
   {
     question: "How do client payments work?",
     answer:
-      "Clients pay through Stripe directly to your connected account when they book a session. We take a small platform fee, and you receive the rest instantly — no waiting for payouts.",
+      "Clients pay through Stripe when they book a session. You receive 80% of every session fee directly to your connected Stripe account — no waiting for payouts, no invoicing. We handle all the payment infrastructure.",
   },
   {
     question: "Do I need my own website?",
     answer:
-      "No. Your astrologypro.com/username page IS your website. It includes everything you need: your bio, services, booking calendar, testimonials, live stream embeds, and more.",
+      "No. Your astrologypro.com/your-name page IS your website. It includes your bio, services, booking calendar, testimonials, live stream embeds, gift certificates, and more. Share one link and you're in business.",
   },
   {
-    question: "What video conferencing do you use?",
+    question: "What video platform do you use?",
     answer:
-      "We use Daily.co for HD video with screen sharing and automatic recording. No additional software is needed — everything runs in the browser for both you and your clients.",
-  },
-  {
-    question: "Can I use my own Stripe or PayPal?",
-    answer:
-      "Yes, you connect your own Stripe account during onboarding so payments go directly to you. PayPal support is coming soon.",
-  },
-  {
-    question: "How do the astrological event reminders work?",
-    answer:
-      "We track your clients' birth data and automatically send email reminders before solar returns, Saturn returns, and other significant transits. You can customize the email templates and choose which events trigger notifications.",
+      "Daily.co powers our HD video sessions with screen sharing and automatic recording. No additional software needed — everything runs in the browser for both you and your clients.",
   },
   {
     question: "Is there a free trial?",
     answer:
-      "We don't offer a free trial, but you can cancel within 30 days for a full refund. This gives you plenty of time to explore the platform and see if it's right for your practice.",
+      "We don't offer a free trial, but we do offer a 30-day money-back guarantee. This gives you plenty of time to explore the platform and start booking clients with zero risk.",
   },
 ];
 
