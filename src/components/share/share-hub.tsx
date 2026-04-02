@@ -34,6 +34,10 @@ interface ShareHubProps {
   divinerName: string;
   divinerUsername: string;
   divinerAvatar: string | null;
+  // Mundane share fields (optional — only present on mundane batches)
+  isMundane?: boolean;
+  shareNumber?: number | null;
+  shareDate?: string | null;
 }
 
 interface PlatformDef {
@@ -154,6 +158,17 @@ function ConfettiOverlay() {
 
 // --- Main component ---
 
+function formatShareDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const d = new Date(Date.UTC(year, month - 1, day));
+  return d.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 export function ShareHub({
   token,
   caption,
@@ -162,6 +177,9 @@ export function ShareHub({
   initialShares,
   divinerName,
   divinerAvatar,
+  isMundane = false,
+  shareNumber = null,
+  shareDate = null,
 }: ShareHubProps) {
   const [shares, setShares] = useState<Record<string, string>>(initialShares);
   const [copied, setCopied] = useState(false);
@@ -331,11 +349,24 @@ export function ShareHub({
             </div>
           )}
           <h1 className="text-2xl font-bold tracking-tight">
-            Your Weekly Content
+            {isMundane && shareNumber
+              ? `Your Share ${shareNumber} of 2`
+              : "Your Weekly Content"}
           </h1>
           <p className="mt-1 text-muted-foreground">
             Ready to share, {divinerName}
           </p>
+
+          {/* Mundane share number badge */}
+          {isMundane && shareNumber && (
+            <div className="mt-3 flex justify-center">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-400 ring-1 ring-amber-500/30">
+                <Sparkles className="size-3" />
+                Share {shareNumber} of 2
+                {shareDate ? ` | ${formatShareDate(shareDate)}` : ""}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Content Preview */}
@@ -349,11 +380,21 @@ export function ShareHub({
               />
             </div>
           )}
+
+          {/* Composited image tip for mundane shares */}
+          {isMundane && imageUrl && imageUrl.includes("/api/mundane/image") && (
+            <div className="border-b border-amber-500/20 bg-amber-500/5 px-4 py-2.5">
+              <p className="text-xs text-amber-400">
+                <strong>Instagram &amp; TikTok:</strong> Click &ldquo;Download Image&rdquo; below — your URL is already embedded in the bottom strip of the image.
+              </p>
+            </div>
+          )}
+
           <CardContent className="p-4">
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
               {caption}
             </p>
-            <div className="mt-3 flex items-center gap-2">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -383,7 +424,25 @@ export function ShareHub({
                   Download Image
                 </Button>
               )}
+              {isMundane && imageUrl && imageUrl.includes("/api/mundane/image") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(imageUrl, "_blank", "noopener,noreferrer")}
+                  className="gap-1.5 text-xs text-amber-400 hover:text-amber-300"
+                >
+                  <ExternalLink className="size-3.5" />
+                  Open Full Image
+                </Button>
+              )}
             </div>
+
+            {/* Other platforms note for mundane shares */}
+            {isMundane && (
+              <p className="mt-3 text-xs text-muted-foreground">
+                <strong className="text-foreground/70">Twitter, Facebook, LinkedIn:</strong> Share the link below — your URL is in the caption.
+              </p>
+            )}
           </CardContent>
         </Card>
 

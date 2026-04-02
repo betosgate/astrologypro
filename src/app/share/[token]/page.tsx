@@ -40,8 +40,14 @@ export async function generateMetadata({
     username: string;
   } | null;
 
+  // Richer metadata for mundane shares
+  const isMundane = !!(batch as Record<string, unknown>).is_mundane;
+  const title = isMundane
+    ? `Mundane Astrology Share - ${diviner?.display_name ?? "AstrologyPro"}`
+    : `Share Content - ${diviner?.display_name ?? "AstrologyPro"}`;
+
   return {
-    title: `Share Content - ${diviner?.display_name ?? "AstrologyPro"}`,
+    title,
     description: "Share your branded content to all social platforms in seconds.",
   };
 }
@@ -61,13 +67,29 @@ export default async function SharePage({ params }: PageProps) {
     avatar_url: string | null;
   } | null;
 
+  // Cast to access new mundane columns (added by migration)
+  const batchRecord = batch as Record<string, unknown>;
+  const isMundane = !!(batchRecord.is_mundane);
+  const shareNumber =
+    typeof batchRecord.share_number === "number"
+      ? (batchRecord.share_number as number)
+      : null;
+  const shareDate =
+    typeof batchRecord.share_date === "string"
+      ? (batchRecord.share_date as string)
+      : null;
+  const imageUrl =
+    typeof batchRecord.image_url === "string"
+      ? (batchRecord.image_url as string)
+      : null;
+
   return (
     <div className="min-h-screen bg-background">
       <ShareHub
-        token={batch.token}
-        caption={batch.caption}
-        imageUrl={batch.image_url}
-        trackingUrl={batch.tracking_url}
+        token={batch.token as string}
+        caption={batch.caption as string}
+        imageUrl={imageUrl}
+        trackingUrl={batch.tracking_url as string}
         initialShares={
           typeof batch.shares === "object" && batch.shares !== null
             ? (batch.shares as Record<string, string>)
@@ -76,6 +98,9 @@ export default async function SharePage({ params }: PageProps) {
         divinerName={diviner?.display_name ?? "Diviner"}
         divinerUsername={diviner?.username ?? ""}
         divinerAvatar={diviner?.avatar_url ?? null}
+        isMundane={isMundane}
+        shareNumber={shareNumber}
+        shareDate={shareDate}
       />
     </div>
   );
