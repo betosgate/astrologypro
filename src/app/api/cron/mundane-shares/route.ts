@@ -207,10 +207,32 @@ export async function GET(request: NextRequest) {
     }> = [];
 
     for (const diviner of diviners) {
-      // --- 7. Build composited image URL ---
-      const compositedUrl = imageStorageUrl
-        ? `${APP_URL}/api/mundane/image?img=${encodeURIComponent(imageStorageUrl)}&user=${encodeURIComponent(diviner.username)}`
-        : null;
+      // --- 7. Generate composited image and upload to Supabase Storage ---
+      // Pre-uploading gives Facebook/LinkedIn a clean static URL for og:image
+      let staticImageUrl: string | null = null;
+      if (imageStorageUrl) {
+        try {
+          const dynamicUrl = `${APP_URL}/api/mundane/image?img=${encodeURIComponent(imageStorageUrl)}&user=${encodeURIComponent(diviner.username)}`;
+          const imgRes = await fetch(dynamicUrl);
+          if (imgRes.ok) {
+            const imgBuffer = await imgRes.arrayBuffer();
+            const imgPath = `shares/${diviner.username}-${shareDate}-${shareNumber}.jpg`;
+            const { error: uploadErr } = await admin.storage
+              .from("mundane-images")
+              .upload(imgPath, imgBuffer, {
+                contentType: "image/jpeg",
+                upsert: true,
+              });
+            if (!uploadErr) {
+              staticImageUrl = `https://wyluvclvtvwptsvvtgkv.supabase.co/storage/v1/object/public/mundane-images/${imgPath}`;
+            }
+          }
+        } catch (imgErr) {
+          console.error(`[Mundane Shares] Image upload failed for ${diviner.username}:`, imgErr);
+        }
+      }
+      const compositedUrl = staticImageUrl
+        ?? (imageStorageUrl ? `${APP_URL}/api/mundane/image?img=${encodeURIComponent(imageStorageUrl)}&user=${encodeURIComponent(diviner.username)}` : null);
 
       // --- 8. Build caption ---
       const caption = `${selectedEvent.event_label}\n\n${content.description}\n\n${content.hashtags}\n\nwww.astrologypro.com/${diviner.username}`;
