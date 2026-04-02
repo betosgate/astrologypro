@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
     }
 
     // --- 4. Select the event for this share number ---
-    const selectedEvents = selectDailyEvents(allEvents, activeEventKeys);
+    const selectedEvents = selectDailyEvents(allEvents, new Set(activeEventKeys));
 
     if (!selectedEvents || selectedEvents.length === 0) {
       return NextResponse.json({
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
 
     if (!existingLog) {
       // Generate content and insert new log entry
-      content = await generateMundaneContent(selectedEvent);
+      content = await generateMundaneContent(selectedEvent.event_label);
 
       const { data: newLog, error: insertLogError } = await admin
         .from("mundane_event_log")
