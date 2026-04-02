@@ -44,6 +44,8 @@ import {
   RotateCcw,
   Brain,
   Compass,
+  Sparkles,
+  Download,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -115,6 +117,7 @@ const tocSections: TocItem[] = [
       { id: "step-2-15", label: "Loyalty Discounts" },
       { id: "step-2-16", label: "Issuing Refunds" },
       { id: "step-2-17", label: "Smart Session Prep" },
+      { id: "step-2-18", label: "Daily Cosmic Content" },
     ],
   },
   {
@@ -438,11 +441,23 @@ const section2Steps: Step[] = [
     description:
       "Before each session, click \"Prepare\" on your upcoming booking. You will see the client\u2019s birth data, their questions, previous session notes, and smart alerts like upcoming solar returns or Mercury retrograde.",
     screenshot: "The session preparation screen showing client birth data, questions, past notes, and astrological alerts panel",
-    
+
     image: "21-dashboard-clients.png",
     icon: Brain,
     proTip:
       "The smart alerts highlight transits and events that are personally relevant to your client. Use them to provide timely, insightful readings.",
+  },
+  {
+    id: "step-2-18",
+    number: "2.18",
+    title: "Daily Cosmic Content (Mundane Shares)",
+    description:
+      "Every day at 10\u202fam and 3\u202fpm UTC, AstrologyPro scans the sky using real-time astronomy calculations and detects significant planetary events \u2014 ingresses, retrogrades, aspects, and lunar phases. For each event, AI generates a polished caption and a branded image with your booking link embedded in the bottom strip. You receive an email and SMS with a link to your Share Hub so you can post within seconds.",
+    screenshot: "The Share Hub showing a branded cosmic content card with a planetary event image, AI-generated caption, and one-click share buttons for each platform",
+    image: "27-dashboard-marketing.png",
+    icon: Sparkles,
+    proTip:
+      "You receive up to two Share Hub links per day \u2014 one in the morning and one in the afternoon. Even sharing just the morning one consistently is enough to stay top-of-mind with your audience.",
   },
 ];
 
@@ -891,6 +906,86 @@ export default function InstructionsPage() {
                   {section2Steps.map((step) => (
                     <StepCard key={step.id} step={step} />
                   ))}
+
+                  {/* --------------------------------------------------------- */}
+                  {/* Step 2.18 detail card — platform-by-platform breakdown    */}
+                  {/* --------------------------------------------------------- */}
+                  <Card className="scroll-mt-24 overflow-hidden border-primary/20">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="size-5 text-primary" />
+                        <h3 className="text-lg font-semibold">How to Share on Each Platform</h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Your Share Hub gives you one-click sharing to six platforms. Here is exactly what happens on each one.
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-5">
+                      {/* Facebook & LinkedIn */}
+                      <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Share2 className="size-4 text-primary shrink-0" />
+                          <span className="text-sm font-semibold">Facebook &amp; LinkedIn \u2014 Auto-pull</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          Click <span className="font-medium text-foreground">Share</span> and the platform automatically pulls the branded image and caption from your Share Hub link. You do not have to copy anything \u2014 just click Share and confirm.
+                        </p>
+                      </div>
+
+                      {/* WhatsApp & Twitter/X */}
+                      <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="size-4 text-primary shrink-0" />
+                          <span className="text-sm font-semibold">WhatsApp &amp; Twitter/X \u2014 Pre-filled</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          When you tap the button, your Share Hub opens the app with the full caption and your tracking link already filled in. Review it, add your own flair if you like, and hit Send or Post.
+                        </p>
+                      </div>
+
+                      {/* Instagram & TikTok */}
+                      <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Download className="size-4 text-primary shrink-0" />
+                          <span className="text-sm font-semibold">Instagram &amp; TikTok \u2014 Download &amp; Post</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          Because Instagram and TikTok do not support direct link sharing, tap <span className="font-medium text-foreground">Download Image</span> to save the branded graphic to your device. Your booking URL is baked into the bottom strip of every image, so followers see it even without clicking a link. Copy the pre-filled caption, open the app, create a new post, attach the image, paste the caption, and publish.
+                        </p>
+                        <ProTipCallout text="Use the caption exactly as written for the first few weeks so you can see what your audience responds to, then start personalising. The AI captions are written in first-person astrologer voice so they already sound like you." />
+                      </div>
+
+                      {/* How content is generated */}
+                      <div className="rounded-lg border border-primary/10 bg-primary/5 p-4 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="size-4 text-primary shrink-0" />
+                          <span className="text-sm font-semibold text-primary">How the content is generated</span>
+                        </div>
+                        <ul className="text-sm text-muted-foreground leading-relaxed space-y-1.5 ml-2">
+                          <li className="flex items-start gap-2">
+                            <ChevronRight className="mt-0.5 size-3 shrink-0 text-primary" />
+                            <span>Twice daily, a background job calculates real planetary positions using an astronomy engine.</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <ChevronRight className="mt-0.5 size-3 shrink-0 text-primary" />
+                            <span>It detects notable events: planetary ingresses (a planet entering a new sign), stations (retrograde or direct), exact aspects between planets, and lunar phase peaks.</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <ChevronRight className="mt-0.5 size-3 shrink-0 text-primary" />
+                            <span>AI writes a branded caption in first-person astrologer voice, tailored to that specific event.</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <ChevronRight className="mt-0.5 size-3 shrink-0 text-primary" />
+                            <span>A composite image is generated with the event name and your unique booking link in the bottom strip.</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <ChevronRight className="mt-0.5 size-3 shrink-0 text-primary" />
+                            <span>You receive an email and SMS with a link to your personal Share Hub. Everything is ready \u2014 just tap and post.</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </section>
 

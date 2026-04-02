@@ -1,32 +1,39 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ShareHub } from "@/components/share/share-hub";
 
-// Cache share pages for 1 hour — content doesn't change after creation
+// Share pages are public read-only content — they never change after creation.
+// force-static: tells Next.js to produce public Cache-Control headers even on
+//   first render, breaking the ISR deadlock where dynamic Supabase fetches
+//   cause "private, no-cache, no-store" which prevents Facebook from scraping.
+// revalidate: ISR background refresh every hour.
+// unstable_cache (on getShareBatch): caches the Supabase query in Next.js
+//   data cache so repeated renders skip the round-trip to the database.
+export const dynamic = "force-static";
 export const revalidate = 3600;
 
 interface PageProps {
   params: Promise<{ token: string }>;
 }
 
-async function getShareBatch(token: string) {
-  const admin = createAdminClient();
+const getShareBatch = unstable_cache(
+  async (token: string) => {
+    const admin = createAdminClient();
 
-  const { data: batch, error } = await admin
-    .from("share_batches")
-    .select(
-      "*, diviners(id, username, display_name, avatar_url)"
-    )
-    .eq("token", token)
-    .single();
+    const { data: batch, error } = await admin
+      .from("share_batches")
+      .select("*, diviners(id, username, display_name, avatar_url)")
+      .eq("token", token)
+      .single();
 
-  if (error || !batch) {
-    return null;
-  }
-
-  return batch;
-}
+    if (error || !batch) return null;
+    return batch;
+  },
+  ["share-batch"],
+  { revalidate: 3600 }
+);
 
 export async function generateMetadata({
   params,

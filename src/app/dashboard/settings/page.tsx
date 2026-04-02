@@ -51,6 +51,8 @@ interface DivinerSettings {
   twilio_phone_number: string | null;
   twilio_phone_sid: string | null;
   phone_dialin_enabled: boolean;
+  phone_mobile: string | null;
+  phone_answer_mode: "mobile" | "browser" | "both";
 }
 
 interface PhoneSession {
@@ -120,7 +122,7 @@ export default function SettingsPage() {
       const { data } = await supabase
         .from("diviners")
         .select(
-          "id, subscription_status, stripe_account_id, charges_enabled, payouts_enabled, google_calendar_connected, youtube_channel_id, notification_email, notification_sms, notification_booking_confirmed, notification_booking_cancelled, notification_payout, twilio_phone_number, twilio_phone_sid, phone_dialin_enabled"
+          "id, subscription_status, stripe_account_id, charges_enabled, payouts_enabled, google_calendar_connected, youtube_channel_id, notification_email, notification_sms, notification_booking_confirmed, notification_booking_cancelled, notification_payout, twilio_phone_number, twilio_phone_sid, phone_dialin_enabled, phone_mobile, phone_answer_mode"
         )
         .eq("user_id", user.id)
         .single();
@@ -144,6 +146,8 @@ export default function SettingsPage() {
           twilio_phone_number: data.twilio_phone_number ?? null,
           twilio_phone_sid: data.twilio_phone_sid ?? null,
           phone_dialin_enabled: data.phone_dialin_enabled ?? false,
+          phone_mobile: data.phone_mobile ?? null,
+          phone_answer_mode: data.phone_answer_mode ?? "both",
         });
 
         // Load discount rules
@@ -771,6 +775,74 @@ export default function SettingsPage() {
               )}
             </CardContent>
           </Card>
+
+          {settings.twilio_phone_number && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Call Answering</CardTitle>
+                <CardDescription>
+                  Choose how you want to receive incoming calls. You can answer in your browser, on your mobile phone, or both at the same time.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Your Mobile Number</label>
+                  <input
+                    type="tel"
+                    placeholder="+1 555-000-0000"
+                    defaultValue={settings.phone_mobile ?? ""}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    id="phone-mobile-input"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    When a client calls, we&apos;ll also ring this number so you never miss a reading.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">How do you want to answer calls?</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["both", "browser", "mobile"] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setSettings({ ...settings, phone_answer_mode: mode })}
+                        className={`rounded-lg border p-3 text-left text-sm transition-colors ${
+                          settings.phone_answer_mode === mode
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-input hover:border-primary/50"
+                        }`}
+                      >
+                        <p className="font-medium capitalize">{mode === "both" ? "Browser + Mobile" : mode === "browser" ? "Browser only" : "Mobile only"}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {mode === "both" ? "Recommended" : mode === "browser" ? "Dashboard widget" : "Ring your phone"}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    const mobileInput = document.getElementById("phone-mobile-input") as HTMLInputElement;
+                    const mobile = mobileInput?.value?.trim() || null;
+                    const supabase = createClient();
+                    const { error } = await supabase
+                      .from("diviners")
+                      .update({ phone_mobile: mobile, phone_answer_mode: settings.phone_answer_mode })
+                      .eq("id", settings.id);
+                    if (error) {
+                      toast.error("Failed to save call settings");
+                    } else {
+                      setSettings({ ...settings, phone_mobile: mobile });
+                      toast.success("Call settings saved");
+                    }
+                  }}
+                >
+                  Save Call Settings
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { MobileNav } from "@/components/dashboard/mobile-nav";
+import { PhoneWidgetLoader } from "@/components/dashboard/phone-widget-loader";
 
 export const metadata = {
   title: "Dashboard",
@@ -43,6 +44,7 @@ export default async function DashboardLayout({
         </div>
       </main>
       <MobileNav />
+      <PhoneWidgetLoader />
     </div>
   );
 }

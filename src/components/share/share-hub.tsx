@@ -107,24 +107,24 @@ const PLATFORMS: PlatformDef[] = [
 function getShareUrl(
   platformId: string,
   caption: string,
-  trackingUrl: string,
+  _trackingUrl: string,
   sharePageUrl: string
 ): string {
-  // Facebook and LinkedIn scrape OG tags from the shared URL.
-  // Use the share page (which has og:image/title) so the preview renders correctly.
-  // Twitter and WhatsApp get the full caption text + tracking URL.
   const encodedSharePage = encodeURIComponent(sharePageUrl);
-  const encodedTrackingUrl = encodeURIComponent(trackingUrl);
   const encodedCaption = encodeURIComponent(caption);
 
   switch (platformId) {
     case "facebook":
-      // Use the Facebook Sharing Debugger URL — forces a fresh OG scrape then redirects to sharer
+      // Facebook reads og:image/title from the shared URL — use share page (not tracking/profile URL)
       return `https://www.facebook.com/sharer/sharer.php?u=${encodedSharePage}`;
-    case "twitter":
-      return `https://twitter.com/intent/tweet?text=${encodedCaption}&url=${encodedTrackingUrl}`;
+    case "twitter": {
+      // Twitter 280-char limit: URL counts as ~23 chars. Truncate caption to 250 to leave room.
+      const twitterCaption = caption.length > 250 ? caption.substring(0, 247) + "…" : caption;
+      return `https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterCaption)}`;
+    }
     case "whatsapp":
-      return `https://wa.me/?text=${encodedCaption}%20${encodedTrackingUrl}`;
+      // Append the share page URL so WhatsApp renders its og:image as the link preview card
+      return `https://wa.me/?text=${encodedCaption}%0A%0A${encodedSharePage}`;
     case "linkedin":
       return `https://www.linkedin.com/sharing/share-offsite/?url=${encodedSharePage}`;
     default:
@@ -392,7 +392,7 @@ export function ShareHub({
           )}
 
           {/* Composited image tip for mundane shares */}
-          {isMundane && imageUrl && imageUrl.includes("/api/mundane/image") && (
+          {isMundane && imageUrl && (
             <div className="border-b border-amber-500/20 bg-amber-500/5 px-4 py-2.5">
               <p className="text-xs text-amber-400">
                 <strong>Instagram &amp; TikTok:</strong> Click &ldquo;Download Image&rdquo; below — your URL is already embedded in the bottom strip of the image.
@@ -434,7 +434,7 @@ export function ShareHub({
                   Download Image
                 </Button>
               )}
-              {isMundane && imageUrl && imageUrl.includes("/api/mundane/image") && (
+              {isMundane && imageUrl && (
                 <Button
                   variant="outline"
                   size="sm"

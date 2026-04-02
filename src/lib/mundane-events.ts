@@ -32,6 +32,12 @@ const ASPECT_LABELS: Record<AspectName, string> = {
   conjunction: 'conjunct', sextile: 'sextile', square: 'square', trine: 'trine', opposition: 'opposite',
 };
 
+// Special display labels for Moon-Sun aspects (New Moon / Full Moon)
+const MOON_SUN_LABELS: Partial<Record<AspectName, string>> = {
+  conjunction: 'New Moon',
+  opposition: 'Full Moon',
+};
+
 /** Build image filename for a planet-sign ingress */
 function ingressImageFile(planet: Planet, sign: Sign): string {
   return `${planet}-in-${sign}.jpg`;
@@ -42,11 +48,18 @@ function retrogradeImageFile(planet: Planet): string {
   return `${planet}-retrograde.jpg`;
 }
 
-/** Build image filename for a planet aspect */
+/** Build image filename for a planet aspect
+ * Verified naming convention against actual bucket files:
+ * - conjunction → conjunction (NOT conjunct)
+ * - opposition  → opposition  (NOT opposite)
+ * - square      → squared
+ * - sextile     → sextile (unchanged)
+ * - trine       → trine (unchanged)
+ */
 function aspectImageFile(p1: Planet, aspect: AspectName, p2: Planet): string {
-  // Try canonical ordering (alphabetical) to match filenames
-  const [a, b] = [p1, p2].sort();
-  return `${a}-${aspect === 'conjunction' ? 'conjunct' : aspect === 'opposition' ? 'opposite' : aspect}-${b}.jpg`;
+  const [a, b] = [p1, p2].sort(); // alphabetical order to match filenames
+  const filename = aspect === 'square' ? 'squared' : aspect;
+  return `${a}-${filename}-${b}.jpg`;
 }
 
 /** Get all mundane events for a given date, sorted by priority */
@@ -97,12 +110,20 @@ export function getMundaneEventsForDate(date: Date): MundaneEvent[] {
   const aspects = findExactAspects(today);
   for (const asp of aspects) {
     const month = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
+    // Special case: Moon-Sun conjunction = New Moon, Moon-Sun opposition = Full Moon
+    const isMoonSunAspect = (asp.planet1 === 'moon' && asp.planet2 === 'sun') ||
+                            (asp.planet1 === 'sun' && asp.planet2 === 'moon');
+    const moonLabel = isMoonSunAspect ? MOON_SUN_LABELS[asp.aspect] : undefined;
+
     events.push({
       event_key: `${asp.planet1}-${asp.aspect}-${asp.planet2}-${month}`,
       event_type: 'aspect',
-      event_label: `${PLANET_LABELS[asp.planet1]} ${ASPECT_LABELS[asp.aspect]} ${PLANET_LABELS[asp.planet2]}`,
+      event_label: moonLabel
+        ?? `${PLANET_LABELS[asp.planet1]} ${ASPECT_LABELS[asp.aspect]} ${PLANET_LABELS[asp.planet2]}`,
       image_filename: aspectImageFile(asp.planet1, asp.aspect, asp.planet2),
-      priority: 3,
+      // New Moon / Full Moon are high-priority events — bump to priority 1
+      priority: moonLabel ? 1 : 3,
     });
   }
 

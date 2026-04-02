@@ -553,7 +553,176 @@ async function seedTestimonials(
 }
 
 // ---------------------------------------------------------------------------
-// 8. Affiliates
+// 8. Share Batches (Mundane + Regular)
+// ---------------------------------------------------------------------------
+async function seedShareBatches(divinerIds: Record<string, string>) {
+  log("Seeding share batches (mundane + regular)...");
+
+  const mayaId = divinerIds["mystic-maya"];
+  const lunaId = divinerIds["luna-readings"];
+
+  // Delete existing share_batches for these diviners
+  await supabase.from("share_batches").delete().eq("diviner_id", mayaId);
+  await supabase.from("share_batches").delete().eq("diviner_id", lunaId);
+
+  const STORAGE_BASE =
+    "https://bkstnlbwsrmhnebgmhxk.supabase.co/storage/v1/object/public/share-images/uranus-sextile-neptune.jpg";
+
+  // Helper: date string relative to today (negative = past)
+  function dateOffset(days: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10); // YYYY-MM-DD
+  }
+
+  function sentAtOffset(days: number, hour = 10): string {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    d.setHours(hour, 0, 0, 0);
+    return d.toISOString();
+  }
+
+  // Random 32-char hex token
+  function makeToken(): string {
+    return Array.from({ length: 32 }, () =>
+      Math.floor(Math.random() * 16).toString(16)
+    ).join("");
+  }
+
+  const batches = [
+    // ---- Mystic Maya — mundane shares ----
+    {
+      diviner_id: mayaId,
+      token: makeToken(),
+      caption:
+        "Uranus sextile Neptune is exact today and I can feel it in every reading I do right now \u2014 this aspect blurs the line between the practical and the mystical in the most beautiful way. If you\u2019ve been sensing a pull toward spiritual reinvention or unexpected breakthroughs in long-standing patterns, you\u2019re right on time. This energy favors healers, creatives, and anyone ready to trust their intuition over logic. Book a natal chart reading with me this week and let\u2019s see exactly how this transit is activating your chart. \u2728\n\n#UranusNeptune #MundaneAstrology #CosmicWeather #AstrologyReading #MysticMaya",
+      image_url: STORAGE_BASE,
+      tracking_url: `https://astrologypro.com/share/${makeToken()}`,
+      sent_via_email: true,
+      sent_via_sms: true,
+      sent_at: sentAtOffset(-20, 10),
+      shares: JSON.stringify({
+        facebook: { shared_at: sentAtOffset(-20, 10), clicks: 14 },
+        twitter: { shared_at: sentAtOffset(-20, 11), clicks: 8 },
+        instagram: { downloaded_at: sentAtOffset(-20, 10) },
+      }),
+      share_date: dateOffset(-20),
+      is_mundane: true,
+      share_number: 1,
+    },
+    {
+      diviner_id: mayaId,
+      token: makeToken(),
+      caption:
+        "Mercury stations retrograde in Aries this afternoon and already my inbox is full of \u201cwhat does this mean for me?\u201d \u2014 which is exactly why I love this work. In Aries, Mercury retrograde isn\u2019t just about tech glitches and travel delays; it\u2019s asking us to rethink the stories we tell about who we are and where we\u2019re headed. Old decisions come up for review, and that\u2019s a gift if you use it well. Drop a comment with your Sun or Rising sign and I\u2019ll share one thing to watch for over the next three weeks. \ud83d\udd04\n\n#MercuryRetrograde #MercuryInAries #AstrologyAlert #MysticMaya #RetrogradeSeason",
+      image_url: STORAGE_BASE,
+      tracking_url: `https://astrologypro.com/share/${makeToken()}`,
+      sent_via_email: true,
+      sent_via_sms: true,
+      sent_at: sentAtOffset(-14, 15),
+      shares: JSON.stringify({
+        facebook: { shared_at: sentAtOffset(-14, 15), clicks: 22 },
+        whatsapp: { shared_at: sentAtOffset(-14, 16), clicks: 5 },
+      }),
+      share_date: dateOffset(-14),
+      is_mundane: true,
+      share_number: 2,
+    },
+    {
+      diviner_id: mayaId,
+      token: makeToken(),
+      caption:
+        "Mars enters Capricorn today and the energy shifts immediately \u2014 from scattered sparks to a slow, strategic burn. This is one of the most productive placements for Mars: disciplined, ambitious, and willing to do the unglamorous work that actually gets results. If you\u2019ve been waiting for the right moment to launch something, restructure your schedule, or just stop procrastinating on a big goal, the cosmos just handed you the best possible fuel. \ud83d\udd25\n\n#MarsInCapricorn #MarsIngress #AstrologyNow #CosmicEnergy #MysticMaya",
+      image_url: STORAGE_BASE,
+      tracking_url: `https://astrologypro.com/share/${makeToken()}`,
+      sent_via_email: true,
+      sent_via_sms: false,
+      sent_at: sentAtOffset(-7, 10),
+      shares: JSON.stringify({
+        instagram: { downloaded_at: sentAtOffset(-7, 10) },
+        tiktok: { downloaded_at: sentAtOffset(-7, 11) },
+        linkedin: { shared_at: sentAtOffset(-7, 12), clicks: 9 },
+      }),
+      share_date: dateOffset(-7),
+      is_mundane: true,
+      share_number: 1,
+    },
+    // ---- Mystic Maya — regular (non-mundane) share ----
+    {
+      diviner_id: mayaId,
+      token: makeToken(),
+      caption:
+        "Three things I check before every astrology reading \u2014 the client\u2019s current Saturn transit, their progressed Moon sign, and any planets within 2\u00b0 of an angle. These three alone tell me more about where someone is in their life journey than almost anything else. If you\u2019re curious what your chart is showing right now, I have a few spots open this week for natal chart and transit readings. Link in bio or DM me \u2018reading\u2019 to get started. \u2b50\n\n#AstrologyTips #NatalChart #SaturnReturn #AstrologyReading #MysticMaya",
+      image_url: STORAGE_BASE,
+      tracking_url: `https://astrologypro.com/share/${makeToken()}`,
+      sent_via_email: true,
+      sent_via_sms: false,
+      sent_at: sentAtOffset(-3, 10),
+      shares: JSON.stringify({
+        facebook: { shared_at: sentAtOffset(-3, 10), clicks: 31 },
+        instagram: { downloaded_at: sentAtOffset(-3, 10) },
+      }),
+      share_date: dateOffset(-3),
+      is_mundane: false,
+      share_number: 1,
+    },
+    // ---- Luna Readings — mundane share ----
+    {
+      diviner_id: lunaId,
+      token: makeToken(),
+      caption:
+        "Uranus sextile Neptune is exact right now and I\u2019ve never had so many clients come to me feeling like their entire sense of self is quietly dissolving and reforming at the same time \u2014 and honestly? That\u2019s exactly what this aspect does. It softens the hard edges between what we thought we wanted and what the soul actually needs. My cards have been pulling in a very watery, visionary direction all week and it feels like confirmation. If you\u2019ve been putting off that reading, this is your nudge. \ud83c\udf19\n\n#UranusNeptune #TarotAndAstrology #CosmicWeather #LunaReadings #SpiritualGuidance",
+      image_url: STORAGE_BASE,
+      tracking_url: `https://astrologypro.com/share/${makeToken()}`,
+      sent_via_email: true,
+      sent_via_sms: true,
+      sent_at: sentAtOffset(-20, 10),
+      shares: JSON.stringify({
+        facebook: { shared_at: sentAtOffset(-20, 10), clicks: 17 },
+        instagram: { downloaded_at: sentAtOffset(-20, 10) },
+        whatsapp: { shared_at: sentAtOffset(-20, 12), clicks: 3 },
+      }),
+      share_date: dateOffset(-20),
+      is_mundane: true,
+      share_number: 1,
+    },
+    // ---- Luna Readings — regular (non-mundane) share ----
+    {
+      diviner_id: lunaId,
+      token: makeToken(),
+      caption:
+        "Something I notice with the Full Moon in Libra every year \u2014 clients come in asking about relationships, but the real question is almost always about self-worth. The cards almost never lie about this. The 6 of Cups, the 2 of Cups, the Lovers reversed \u2014 they all point inward before they point outward. I have a few Celtic Cross spots available this week if you want to dig into what this Full Moon is illuminating for you personally. \ud83c\udf52\n\n#FullMoonInLibra #TarotReading #CelticCross #LunaReadings #MoonTarot",
+      image_url: STORAGE_BASE,
+      tracking_url: `https://astrologypro.com/share/${makeToken()}`,
+      sent_via_email: true,
+      sent_via_sms: true,
+      sent_at: sentAtOffset(-10, 10),
+      shares: JSON.stringify({
+        facebook: { shared_at: sentAtOffset(-10, 10), clicks: 19 },
+        twitter: { shared_at: sentAtOffset(-10, 11), clicks: 7 },
+        instagram: { downloaded_at: sentAtOffset(-10, 10) },
+      }),
+      share_date: dateOffset(-10),
+      is_mundane: false,
+      share_number: 1,
+    },
+  ];
+
+  // Insert one at a time so a token collision (ultra-rare) fails gracefully
+  let count = 0;
+  for (const batch of batches) {
+    const { error } = await supabase.from("share_batches").insert(batch);
+    if (error) {
+      log(`  WARNING: share_batch insert failed (${error.message}) — skipping`);
+    } else {
+      count++;
+    }
+  }
+  log(`  Created ${count}/${batches.length} share batches`);
+}
+
+// ---------------------------------------------------------------------------
+// 9. Affiliates
 // ---------------------------------------------------------------------------
 async function seedAffiliates(divinerIds: Record<string, string>) {
   log("Creating affiliates...");
@@ -609,6 +778,7 @@ async function main() {
     await seedClientDiviners(clientIds, divinerIds);
     await seedBookings(divinerIds, clientIds, serviceIds);
     await seedTestimonials(divinerIds, clientIds);
+    await seedShareBatches(divinerIds);
     await seedAffiliates(divinerIds);
 
     console.log("\n==============================================");

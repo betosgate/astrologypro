@@ -4,7 +4,7 @@ import { sendEmail } from "@/lib/email";
 import { sendSMS } from "@/lib/sms";
 import { APP_URL } from "@/lib/constants";
 import { getMundaneEventsForDate, selectDailyEvents } from "@/lib/mundane-events";
-import { generateMundaneContent } from "@/lib/mundane-content";
+import { generateMundaneContent, EventType } from "@/lib/mundane-content";
 
 function generateToken(): string {
   const chars =
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
 
     if (!existingLog) {
       // Generate content and insert new log entry
-      content = await generateMundaneContent(selectedEvent.event_label);
+      content = await generateMundaneContent(selectedEvent.event_label, selectedEvent.event_type as EventType);
 
       const { data: newLog, error: insertLogError } = await admin
         .from("mundane_event_log")
@@ -235,7 +235,11 @@ export async function GET(request: NextRequest) {
         ?? (imageStorageUrl ? `${APP_URL}/api/mundane/image?img=${encodeURIComponent(imageStorageUrl)}&user=${encodeURIComponent(diviner.username)}` : null);
 
       // --- 8. Build caption ---
-      const caption = `${selectedEvent.event_label}\n\n${content.description}\n\n${content.hashtags}\n\nwww.astrologypro.com/${diviner.username}`;
+      const EVENT_EMOJI: Record<string, string> = {
+        ingress: '✨', retrograde: '🔄', direct: '⬆️', aspect: '⚡',
+      };
+      const emoji = EVENT_EMOJI[selectedEvent.event_type] ?? '🌟';
+      const caption = `${emoji} ${selectedEvent.event_label}\n\n${content.description}\n\n${content.hashtags}\n\n🔮 Book a reading: https://astrologypro.com/${diviner.username}`;
 
       // --- 9. Build tracking URL ---
       const trackingUrl = `${APP_URL}/${diviner.username}`;
