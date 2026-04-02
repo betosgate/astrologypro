@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
+import { existsSync, writeFileSync } from "fs";
 import { GEIST_BOLD_B64 } from "@/lib/geist-bold-b64";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Font embedded at build time as a base64 constant — no filesystem access needed.
-// This ensures the Geist Bold TTF is always available in the Vercel Lambda, where
-// readFileSync on node_modules paths is unreliable (file not included in bundle trace).
-const FONT_B64 = GEIST_BOLD_B64;
+// Write Geist Bold to /tmp once per cold start so Pango can load it.
+// Pango reads font files from disk; embedding base64 in SVG @font-face does not
+// work on Vercel's librsvg build. /tmp is always writable in Lambda environments.
+const FONT_TMP_PATH = "/tmp/geist-bold.ttf";
+try {
+  if (!existsSync(FONT_TMP_PATH)) {
+    writeFileSync(FONT_TMP_PATH, Buffer.from(GEIST_BOLD_B64, "base64"));
+  }
+} catch {
+  // Non-Lambda environment (dev Windows) — Pango will fall back to a system font.
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -25,10 +33,7 @@ export async function GET(request: NextRequest) {
     // Fetch base image
     const imageRes = await fetch(imageUrl);
     if (!imageRes.ok) {
-      return NextResponse.json(
-        { error: "Failed to fetch image" },
-        { status: 502 }
-      );
+      return NextResponse.json({ error: "Failed to fetch image" }, { status: 502 });
     }
     const imageBuffer = Buffer.from(await imageRes.arrayBuffer());
 
@@ -37,48 +42,63 @@ export async function GET(request: NextRequest) {
     const width = meta.width ?? 1080;
     const height = meta.height ?? 1080;
 
-    const textY = Math.floor(height * 0.875);
-    const fontSize = Math.floor(width * 0.038);
     const urlText = `astrologypro.com/${username}`;
+    // Target font size ~4% of image width; DPI controls Pango text size.
+    // At 72 DPI, Pango renders at ~1pt = 1px. We want ~fontSize px = width * 0.04pt at 72dpi.
+    const targetPx = Math.max(20, Math.floor(width * 0.04));
+    // Pango pt size → at 72dpi, 1pt = 1px
+    const fontPt = targetPx;
+    const stripH = Math.floor(targetPx * 2.2);
+    const stripTop = height - stripH;
 
-    // Embed Geist font via base64 @font-face so librsvg renders text without
-    // needing system fonts on Vercel's Lambda environment.
-    const fontFaceBlock = FONT_B64
-      ? `<defs><style>@font-face{font-family:'Geist';src:url('data:font/truetype;base64,${FONT_B64}');font-weight:bold;}</style></defs>`
-      : "";
+    // Pango markup: white bold text, specified font size, custom fontfile if available
+    const fontFamily = existsSync(FONT_TMP_PATH) ? "Geist" : "sans-serif";
+    const pangoMarkup = `<span font_family="${fontFamily}" font_size="${fontPt * 1024}" weight="bold" foreground="white">${urlText}</span>`;
 
-    const fontFamily = FONT_B64 ? "Geist, sans-serif" : "sans-serif";
+    const fontfile = existsSync(FONT_TMP_PATH) ? FONT_TMP_PATH : undefined;
 
-    // Two-pass render: black shadow layer then white text layer for legibility
-    const svgOverlay = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      ${fontFaceBlock}
-      <text
-        x="${width / 2}"
-        y="${textY}"
-        text-anchor="middle"
-        dominant-baseline="central"
-        font-family="${fontFamily}"
-        font-size="${fontSize}"
-        font-weight="bold"
-        stroke="black"
-        stroke-width="${Math.ceil(fontSize * 0.18)}"
-        stroke-linejoin="round"
-        fill="black"
-      >${urlText}</text>
-      <text
-        x="${width / 2}"
-        y="${textY}"
-        text-anchor="middle"
-        dominant-baseline="central"
-        font-family="${fontFamily}"
-        font-size="${fontSize}"
-        font-weight="bold"
-        fill="white"
-      >${urlText}</text>
-    </svg>`;
+    // Render text to a transparent RGBA buffer using Pango
+    const textMeta = await sharp({
+      text: { text: pangoMarkup, fontfile, dpi: 72, rgba: true },
+    }).metadata();
+
+    const textW = textMeta.width ?? Math.floor(width * 0.7);
+    const textH = textMeta.height ?? targetPx;
+
+    const textBuf = await sharp({
+      text: { text: pangoMarkup, fontfile, dpi: 72, rgba: true },
+    })
+      .png()
+      .toBuffer();
+
+    // Center text horizontally, vertically center within the strip
+    const textLeft = Math.max(0, Math.floor((width - textW) / 2));
+    const textTop = stripTop + Math.max(0, Math.floor((stripH - textH) / 2));
 
     const composited = await sharp(imageBuffer)
-      .composite([{ input: Buffer.from(svgOverlay) as unknown as Buffer, top: 0, left: 0 }])
+      .composite([
+        // Semi-transparent dark strip behind text for legibility on any background
+        {
+          input: {
+            create: {
+              width,
+              height: stripH,
+              channels: 4,
+              background: { r: 0, g: 0, b: 0, alpha: 0.55 },
+            },
+          },
+          top: stripTop,
+          left: 0,
+          blend: "over",
+        },
+        // White text centered in the strip
+        {
+          input: textBuf,
+          top: textTop,
+          left: textLeft,
+          blend: "over",
+        },
+      ])
       .jpeg({ quality: 88 })
       .toBuffer();
 
@@ -90,9 +110,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     console.error("[MundaneImage] Compositing error:", err);
-    return NextResponse.json(
-      { error: "Image processing failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Image processing failed" }, { status: 500 });
   }
 }
