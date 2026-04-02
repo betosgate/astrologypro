@@ -137,11 +137,14 @@ export async function GET(request: NextRequest) {
         .insert({
           event_key: selectedEvent.event_key,
           event_label: selectedEvent.event_label,
-          event_type: selectedEvent.event_type ?? null,
-          description: content.description,
+          event_type: selectedEvent.event_type,
+          image_filename: selectedEvent.image_filename,
+          image_storage_url: `https://wyluvclvtvwptsvvtgkv.supabase.co/storage/v1/object/public/mundane-images/${encodeURIComponent(selectedEvent.image_filename)}`,
+          content_short: content.description,
           hashtags: content.hashtags,
           active: true,
           sent_count: 0,
+          event_start_date: shareDate,
         })
         .select()
         .single();
@@ -157,7 +160,7 @@ export async function GET(request: NextRequest) {
       // Reuse existing log entry (active or inactive — aspects may repeat)
       mundaneEventId = existingLog.id as string;
       content = {
-        description: existingLog.description as string,
+        description: existingLog.content_short as string,
         hashtags: existingLog.hashtags as string,
       };
       imageStorageUrl = existingLog.image_storage_url as string | null ?? null;
@@ -410,8 +413,10 @@ export async function GET(request: NextRequest) {
       results,
     });
   } catch (err) {
-    console.error("[Mundane Shares] Error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const msg = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    console.error("[Mundane Shares] Uncaught error:", msg, stack);
+    return NextResponse.json({ error: "Internal server error", detail: msg }, { status: 500 });
   }
 }
 

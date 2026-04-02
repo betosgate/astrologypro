@@ -24,7 +24,9 @@ if (fs.existsSync(envPath)) {
     const v = t
       .slice(idx + 1)
       .trim()
-      .replace(/^["']|["']$/g, "");
+      .replace(/^["']|["']$/g, "")
+      .replace(/\\n$/, "")
+      .trim();
     if (!process.env[k]) process.env[k] = v;
   }
 }
@@ -78,25 +80,23 @@ async function main() {
 
   // Create bucket (409 = already exists, that's fine)
   console.log("🪣 Creating/verifying storage bucket...");
-  const bucketRes = await supabaseStorageRequest(
-    "POST",
-    "/bucket",
-    Buffer.from(
-      JSON.stringify({
-        id: BUCKET,
-        name: BUCKET,
-        public: true,
-        file_size_limit: 10485760,
-      })
-    )
-  );
+  const bucketRes = await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${SERVICE_KEY}`,
+      apikey: SERVICE_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ id: BUCKET, name: BUCKET, public: true, file_size_limit: 10485760 }),
+  });
   if (bucketRes.ok) {
     console.log("  ✓ Bucket created");
   } else if (bucketRes.status === 409) {
     console.log("  ✓ Bucket already exists");
   } else {
     const t = await bucketRes.text();
-    console.error(`  ❌ Bucket error: ${t}`);
+    // Don't abort — maybe it exists under a different check
+    console.log(`  ⚠️  Bucket response (${bucketRes.status}): ${t.slice(0,80)}`);
   }
 
   let uploaded = 0;
