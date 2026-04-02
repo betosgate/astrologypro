@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Ensure the Geist Bold TTF is bundled with the image-compositing Lambda.
+  // readFileSync on a non-imported file is not auto-traced by Next.js bundler,
+  // so without this the font file is absent at runtime on Vercel and text is blank.
+  outputFileTracingIncludes: {
+    "/api/mundane/image": [
+      "./node_modules/geist/dist/fonts/geist-sans/Geist-Bold.ttf",
+    ],
+  },
   async headers() {
     return [
       {
