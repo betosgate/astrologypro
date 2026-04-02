@@ -1111,3 +1111,95 @@ export async function sendPhoneSessionReceipt({
     }),
   });
 }
+
+// ---------------------------------------------------------------------------
+// 14. Guest Booking Invite — sent when booking confirmed and guest has email
+// ---------------------------------------------------------------------------
+
+interface GuestBookingInviteParams {
+  guestEmail: string;
+  guestName: string;
+  clientName: string;
+  divinerName: string;
+  serviceName: string;
+  sessionDate: string;
+  divinerLandingUrl: string;
+}
+
+export async function sendGuestBookingInvite({
+  guestEmail,
+  guestName,
+  clientName,
+  divinerName,
+  serviceName,
+  sessionDate,
+  divinerLandingUrl,
+}: GuestBookingInviteParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hello ${guestName},</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;"><strong style="color:#f4f4f5;">${clientName}</strong> has invited you to join their <strong style="color:#f4f4f5;">${serviceName}</strong> session with <strong style="color:#f4f4f5;">${divinerName}</strong> on <strong style="color:#f4f4f5;">${sessionDate}</strong>.</p>
+
+    ${infoCard(`We will send you the video room link shortly before the session starts. No account needed &mdash; just click the link when you receive it.`)}
+
+    <p style="margin:16px 0 0;color:#a1a1aa;">Curious about <strong style="color:#f4f4f5;">${divinerName}</strong>? You can learn more at <a href="${divinerLandingUrl}" style="color:#8b5cf6;text-decoration:underline;">${divinerLandingUrl}</a>.</p>
+  `;
+
+  return sendEmail({
+    to: guestEmail,
+    subject: `You've been invited to a reading with ${divinerName}`,
+    html: emailTemplate({
+      title: `You've been invited to a reading &#10024;`,
+      preheader: `${clientName} has invited you to join a ${serviceName} session with ${divinerName}`,
+      content,
+      footer: `If you weren&rsquo;t expecting this invitation, you can safely ignore this email.<br/>AstrologyPro &mdash; Run Your Divination Business`,
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 15. Guest Room Link — sent when diviner creates the video room
+// ---------------------------------------------------------------------------
+
+interface GuestRoomLinkParams {
+  guestEmail: string;
+  guestName: string;
+  divinerName: string;
+  serviceName: string;
+  sessionDate: string;
+  roomUrl: string;
+}
+
+export async function sendGuestRoomLink({
+  guestEmail,
+  guestName,
+  divinerName,
+  serviceName,
+  sessionDate,
+  roomUrl,
+}: GuestRoomLinkParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hello ${guestName},</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">Your <strong style="color:#f4f4f5;">${serviceName}</strong> session with <strong style="color:#f4f4f5;">${divinerName}</strong> is ready.</p>
+
+    ${detailRow("Session", serviceName)}
+    ${detailRow("Diviner", divinerName)}
+    ${detailRow("Date &amp; Time", sessionDate)}
+
+    <p style="margin:16px 0 8px;color:#a1a1aa;">Click below to join the video call. You may be asked to enable your camera and microphone.</p>
+  `;
+
+  return sendEmail({
+    to: guestEmail,
+    subject: `Your reading is starting — here's your join link`,
+    html: emailTemplate({
+      title: "Your reading is starting &#10024;",
+      preheader: `Join your ${serviceName} session with ${divinerName} now`,
+      content,
+      ctaText: "Join Session Now",
+      ctaUrl: roomUrl,
+      footer: `AstrologyPro &mdash; Run Your Divination Business`,
+    }),
+  });
+}

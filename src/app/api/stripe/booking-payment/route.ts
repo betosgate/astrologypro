@@ -7,6 +7,7 @@ import {
   sendBookingConfirmation,
   sendBookingAccessInstructions,
   sendWelcomeAndBooked,
+  sendGuestBookingInvite,
 } from "@/lib/email";
 
 interface BookingPaymentBody {
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
     // Fetch diviner with their Stripe Connect account
     const { data: diviner } = await supabase
       .from("diviners")
-      .select("id, stripe_account_id, display_name")
+      .select("id, stripe_account_id, display_name, slug")
       .eq("id", divinerId)
       .eq("is_active", true)
       .single();
@@ -369,6 +370,27 @@ export async function POST(request: NextRequest) {
         }),
         portalUrl,
       }).catch((err) => console.error("Failed to send welcome email:", err));
+    }
+
+    // Guest invite email
+    const secondPersonEmail = questionnaire?.secondPersonEmail as string | undefined;
+    const secondPersonName = questionnaire?.secondPersonName as string | undefined;
+    const secondPersonAttending = questionnaire?.secondPersonAttending as string | undefined;
+
+    if (secondPersonEmail && (secondPersonAttending === "yes" || secondPersonAttending === "maybe")) {
+      const sessionDateStr = new Date(scheduledAt).toLocaleDateString("en-US", {
+        weekday: "long", year: "numeric", month: "long", day: "numeric",
+        hour: "numeric", minute: "2-digit", timeZoneName: "short",
+      });
+      await sendGuestBookingInvite({
+        guestEmail: secondPersonEmail,
+        guestName: secondPersonName || "Guest",
+        clientName,
+        divinerName: diviner.display_name,
+        serviceName: service.name,
+        sessionDate: sessionDateStr,
+        divinerLandingUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://astrologypro.com"}/${(diviner as Record<string, string>).slug || ""}`,
+      }).catch((err) => console.error("Failed to send guest invite:", err));
     }
 
     // Deduct from gift certificate if used
