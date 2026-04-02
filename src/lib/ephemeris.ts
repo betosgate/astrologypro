@@ -43,6 +43,10 @@ const BODY_MAP: Record<Planet, Astronomy.Body> = {
 
 /** Get ecliptic longitude for a planet on a date (0–360°) */
 export function getEclipticLongitude(planet: Planet, date: Date): number {
+  if (planet === 'sun') {
+    // EclipticLongitude() is heliocentric — use SunPosition() for geocentric Sun longitude
+    return Astronomy.SunPosition(date).elon;
+  }
   const body = BODY_MAP[planet];
   return Astronomy.EclipticLongitude(body, date);
 }
