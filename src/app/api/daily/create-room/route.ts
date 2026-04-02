@@ -84,6 +84,7 @@ export async function POST(request: NextRequest) {
           enable_knocking: false,
           start_video_off: false,
           start_audio_off: false,
+          sip: { sip_mode: "dial-in" },
         },
       }),
     });

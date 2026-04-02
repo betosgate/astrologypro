@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 
       // Standalone call -- client has card on file
       if (client.stripe_customer_id && client.default_payment_method_id && client.card_consent_at) {
-        const { data: phoneSession } = await supabase
+        await supabase
           .from("phone_sessions")
           .insert({
             diviner_id: diviner.id,
@@ -97,9 +97,22 @@ export async function POST(request: NextRequest) {
             session_type: "standalone",
             started_at: now,
             status: "active",
-          })
-          .select("id")
-          .single();
+          });
+
+        // Trigger diviner notification (don't await — client must hear hold music immediately)
+        const notifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/voice/notify`;
+        fetch(notifyUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.CRON_SECRET}`,
+          },
+          body: JSON.stringify({
+            diviner_id: diviner.id,
+            queue_name: `diviner-${diviner.id}`,
+            client_call_sid: callSid,
+          }),
+        }).catch(() => {}); // silent fail — client is already in queue
 
         return twimlResponse(`
           <Response>
@@ -109,7 +122,7 @@ export async function POST(request: NextRequest) {
               plus fifty cents per additional minute. This call will be recorded.
               Please hold while we connect you to your diviner.
             </Say>
-            <Enqueue waitUrl="/api/twilio/voice/wait-music">
+            <Enqueue waitUrl="${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/voice/wait-music">
               diviner-${diviner.id}
             </Enqueue>
           </Response>
