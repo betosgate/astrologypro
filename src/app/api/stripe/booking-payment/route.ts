@@ -16,12 +16,9 @@ interface BookingPaymentBody {
   clientEmail: string;
   clientName: string;
   clientPhone?: string;
-  questionnaire: Record<string, string | undefined>;
+  questionnaire: Record<string, string | number | undefined>;
   affiliateCode?: string;
   giftCode?: string;
-  birthLat?: number;
-  birthLng?: number;
-  birthTimezone?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -38,10 +35,12 @@ export async function POST(request: NextRequest) {
       questionnaire,
       affiliateCode,
       giftCode,
-      birthLat,
-      birthLng,
-      birthTimezone,
     } = body;
+
+    // Extract birth geo from questionnaire (sent inline by the wizard)
+    const birthLat = questionnaire?.birthLat as number | undefined;
+    const birthLng = questionnaire?.birthLng as number | undefined;
+    const birthTimezone = questionnaire?.birthTimezone as string | undefined;
 
     // Validate required fields
     if (!divinerId || !serviceId || !scheduledAt || !clientEmail || !clientName) {

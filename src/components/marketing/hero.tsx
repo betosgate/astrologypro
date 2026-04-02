@@ -74,7 +74,7 @@ export function Hero() {
       {/* Layer — center mystical image — aligned near top, right below nav */}
       <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2">
         <Image
-          src="/images/home/gemini_generated_image_su.png"
+          src="/images/home/changeimage.png"
           alt=""
           width={1128}
           height={738}

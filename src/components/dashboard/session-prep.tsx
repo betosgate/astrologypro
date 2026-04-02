@@ -43,11 +43,7 @@ interface BookingData {
   birth_date: string | null;
   birth_time: string | null;
   birth_city: string | null;
-  questionnaire_responses: {
-    focusQuestion?: string;
-    lifeArea?: string;
-    additionalNotes?: string;
-  } | null;
+  questionnaire_responses: Record<string, string | undefined> | null;
   previous_session_count: number;
   last_session_date: string | null;
   session_notes: string | null;
@@ -225,47 +221,111 @@ function PrepContent({ booking }: SessionPrepProps) {
       )}
 
       {/* Questionnaire */}
-      {questionnaire &&
-        (questionnaire.focusQuestion ||
-          questionnaire.lifeArea ||
-          questionnaire.additionalNotes) && (
-          <>
-            <Separator />
-            <div className="space-y-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Questionnaire Responses
-              </p>
-              {questionnaire.focusQuestion && (
-                <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
-                  <p className="text-xs font-medium text-primary">
-                    Focus Question
+      {questionnaire && (
+        <>
+          {/* Focus question + life area */}
+          {(questionnaire.focusQuestion || questionnaire.lifeArea) && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Client's Questions
+                </p>
+                {questionnaire.focusQuestion && (
+                  <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
+                    <p className="text-xs font-medium text-primary">
+                      Focus Question
+                    </p>
+                    <p className="mt-1 text-sm">{questionnaire.focusQuestion}</p>
+                  </div>
+                )}
+                {questionnaire.lifeArea && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      Life area:
+                    </span>
+                    <Badge variant="secondary">{questionnaire.lifeArea}</Badge>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Second person (relationship readings) */}
+          {questionnaire.secondPersonName && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Second Person
+                </p>
+                <div className="rounded-md bg-muted p-2.5 space-y-1 text-sm">
+                  <p>
+                    <span className="text-muted-foreground">Name: </span>
+                    {questionnaire.secondPersonName}
                   </p>
-                  <p className="mt-1 text-sm">
-                    {questionnaire.focusQuestion}
-                  </p>
+                  {questionnaire.secondPersonAttending && (
+                    <p>
+                      <span className="text-muted-foreground">Joining call: </span>
+                      {questionnaire.secondPersonAttending === "yes"
+                        ? "Yes"
+                        : questionnaire.secondPersonAttending === "no"
+                          ? "No"
+                          : "Maybe"}
+                    </p>
+                  )}
+                  {questionnaire.secondPersonBirthDate && (
+                    <p>
+                      <span className="text-muted-foreground">Birth: </span>
+                      {[
+                        questionnaire.secondPersonBirthDate,
+                        questionnaire.secondPersonBirthTime,
+                        questionnaire.secondPersonBirthCity,
+                      ]
+                        .filter(Boolean)
+                        .join(" | ")}
+                    </p>
+                  )}
                 </div>
-              )}
-              {questionnaire.lifeArea && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    Life area:
-                  </span>
-                  <Badge variant="secondary">{questionnaire.lifeArea}</Badge>
-                </div>
-              )}
-              {questionnaire.additionalNotes && (
-                <div>
-                  <p className="text-xs text-muted-foreground">
-                    Additional notes
+              </div>
+            </>
+          )}
+
+          {/* Service-specific extras */}
+          {(() => {
+            const SKIP_KEYS = new Set([
+              "focusQuestion", "lifeArea", "birthDate", "birthTime", "birthCity",
+              "birthLat", "birthLng", "birthTimezone",
+              "secondPersonName", "secondPersonAttending",
+              "secondPersonBirthDate", "secondPersonBirthTime", "secondPersonBirthCity",
+              "secondPersonBirthLat", "secondPersonBirthLng", "secondPersonBirthTimezone",
+              "additionalNotes",
+            ]);
+            const extras = Object.entries(questionnaire).filter(
+              ([k, v]) => !SKIP_KEYS.has(k) && !k.endsWith("Lat") && !k.endsWith("Lng") && !k.endsWith("Timezone") && v
+            );
+            if (!extras.length) return null;
+            return (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Reading Details
                   </p>
-                  <p className="mt-0.5 text-sm">
-                    {questionnaire.additionalNotes}
-                  </p>
+                  {extras.map(([key, val]) => (
+                    <div key={key} className="rounded-md bg-muted p-2.5">
+                      <p className="text-xs text-muted-foreground capitalize">
+                        {key.replace(/([A-Z])/g, " $1").trim()}
+                      </p>
+                      <p className="mt-0.5 text-sm">{val}</p>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
-          </>
-        )}
+              </>
+            );
+          })()}
+        </>
+      )}
 
       {/* Previous sessions */}
       {booking.previous_session_count > 0 && (
@@ -344,21 +404,6 @@ function PrepContent({ booking }: SessionPrepProps) {
                 </Link>
               )}
             </div>
-          </div>
-        </>
-      )}
-
-      {/* Focus question highlight */}
-      {questionnaire?.focusQuestion && (
-        <>
-          <Separator />
-          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary/70">
-              Client's Focus Question
-            </p>
-            <p className="text-sm font-medium text-primary">
-              &ldquo;{questionnaire.focusQuestion}&rdquo;
-            </p>
           </div>
         </>
       )}

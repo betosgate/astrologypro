@@ -79,6 +79,12 @@ const INITIAL_INTAKE: IntakeData = {
   birthCity: "",
   focusQuestion: "",
   lifeArea: "",
+  secondPersonName: "",
+  secondPersonAttending: "",
+  secondPersonBirthDate: "",
+  secondPersonBirthTime: "",
+  secondPersonBirthCity: "",
+  extras: {},
 };
 
 // Inner payment form that uses Stripe hooks
@@ -197,14 +203,13 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
         if (!client) return;
 
         setIntakeData((prev) => ({
+          ...prev,
           fullName: client.full_name || prev.fullName,
           email: client.email || user.email || prev.email,
           phone: client.phone || prev.phone,
           birthDate: client.birth_date || prev.birthDate,
           birthTime: client.birth_time || prev.birthTime,
           birthCity: client.birth_city || prev.birthCity,
-          focusQuestion: prev.focusQuestion,
-          lifeArea: prev.lifeArea,
         }));
         setPrefilled(true);
       } catch {
@@ -288,6 +293,18 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
             birthDate: intakeData.birthDate || undefined,
             birthTime: intakeData.birthTime || undefined,
             birthCity: intakeData.birthCity || undefined,
+            birthLat: intakeData.birthLat,
+            birthLng: intakeData.birthLng,
+            birthTimezone: intakeData.birthTimezone,
+            secondPersonName: intakeData.secondPersonName || undefined,
+            secondPersonAttending: intakeData.secondPersonAttending || undefined,
+            secondPersonBirthDate: intakeData.secondPersonBirthDate || undefined,
+            secondPersonBirthTime: intakeData.secondPersonBirthTime || undefined,
+            secondPersonBirthCity: intakeData.secondPersonBirthCity || undefined,
+            secondPersonBirthLat: intakeData.secondPersonBirthLat,
+            secondPersonBirthLng: intakeData.secondPersonBirthLng,
+            secondPersonBirthTimezone: intakeData.secondPersonBirthTimezone,
+            ...intakeData.extras,
           },
           affiliateCode,
         }),
@@ -537,6 +554,8 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
               )}
               <IntakeForm
                 requiresBirthData={service.requires_birth_data}
+                serviceSlug={service.slug}
+                serviceCategory={service.category}
                 data={intakeData}
                 onChange={setIntakeData}
               />
