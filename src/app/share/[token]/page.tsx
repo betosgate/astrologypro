@@ -40,15 +40,49 @@ export async function generateMetadata({
     username: string;
   } | null;
 
-  // Richer metadata for mundane shares
-  const isMundane = !!(batch as Record<string, unknown>).is_mundane;
-  const title = isMundane
-    ? `Mundane Astrology Share - ${diviner?.display_name ?? "AstrologyPro"}`
+  const batchRecord = batch as Record<string, unknown>;
+  const isMundane = !!(batchRecord.is_mundane);
+  const imageUrl = typeof batchRecord.image_url === "string" ? batchRecord.image_url : null;
+  const caption = typeof batch.caption === "string" ? batch.caption : "";
+
+  // Extract event label (first line) and description (second paragraph) from caption
+  const captionLines = caption.split("\n\n");
+  const eventLabel = captionLines[0]?.trim() ?? "";
+  const eventDescription = captionLines[1]?.trim() ?? "";
+
+  const title = isMundane && eventLabel
+    ? `${eventLabel} — ${diviner?.display_name ?? "AstrologyPro"}`
     : `Share Content - ${diviner?.display_name ?? "AstrologyPro"}`;
+
+  const description = eventDescription || "Daily mundane astrology insights for your social media.";
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+  const sharePageUrl = `${appUrl}/share/${token}`;
 
   return {
     title,
-    description: "Share your branded content to all social platforms in seconds.",
+    description,
+    openGraph: {
+      title,
+      description,
+      url: sharePageUrl,
+      siteName: "AstrologyPro",
+      type: "website",
+      ...(imageUrl ? {
+        images: [{
+          url: imageUrl,
+          width: 1080,
+          height: 1080,
+          alt: eventLabel || title,
+        }],
+      } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      ...(imageUrl ? { images: [imageUrl] } : {}),
+    },
   };
 }
 

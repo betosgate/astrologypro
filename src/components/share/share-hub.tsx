@@ -107,20 +107,25 @@ const PLATFORMS: PlatformDef[] = [
 function getShareUrl(
   platformId: string,
   caption: string,
-  trackingUrl: string
+  trackingUrl: string,
+  sharePageUrl: string
 ): string {
-  const encodedUrl = encodeURIComponent(trackingUrl);
+  // Facebook and LinkedIn scrape OG tags from the shared URL.
+  // Use the share page (which has og:image/title) so the preview renders correctly.
+  // Twitter and WhatsApp get the full caption text + tracking URL.
+  const encodedSharePage = encodeURIComponent(sharePageUrl);
+  const encodedTrackingUrl = encodeURIComponent(trackingUrl);
   const encodedCaption = encodeURIComponent(caption);
 
   switch (platformId) {
     case "facebook":
-      return `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedCaption}`;
+      return `https://www.facebook.com/sharer/sharer.php?u=${encodedSharePage}`;
     case "twitter":
-      return `https://twitter.com/intent/tweet?text=${encodedCaption}&url=${encodedUrl}`;
+      return `https://twitter.com/intent/tweet?text=${encodedCaption}&url=${encodedTrackingUrl}`;
     case "whatsapp":
-      return `https://wa.me/?text=${encodedCaption}%20${encodedUrl}`;
+      return `https://wa.me/?text=${encodedCaption}%20${encodedTrackingUrl}`;
     case "linkedin":
-      return `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
+      return `https://www.linkedin.com/sharing/share-offsite/?url=${encodedSharePage}`;
     default:
       return "#";
   }
@@ -189,6 +194,10 @@ export function ShareHub({
   const [showConfetti, setShowConfetti] = useState(false);
   const confettiShown = useRef(false);
 
+  const sharePageUrl = typeof window !== "undefined"
+    ? window.location.href
+    : `https://astrologypro.com/share/${token}`;
+
   const sharedCount = Object.keys(shares).length;
   const totalPlatforms = PLATFORMS.length;
   const allDone = sharedCount >= totalPlatforms;
@@ -235,7 +244,7 @@ export function ShareHub({
   const handleShareClick = useCallback(
     (platform: PlatformDef) => {
       if (platform.type === "share") {
-        const url = getShareUrl(platform.id, caption, trackingUrl);
+        const url = getShareUrl(platform.id, caption, trackingUrl, sharePageUrl);
         window.open(url, "_blank", "noopener,noreferrer,width=600,height=500");
       }
       trackShare(platform.id);
@@ -289,7 +298,7 @@ export function ShareHub({
       setWizardWaiting(true);
 
       if (platform.type === "share") {
-        const url = getShareUrl(platform.id, caption, trackingUrl);
+        const url = getShareUrl(platform.id, caption, trackingUrl, sharePageUrl);
         window.open(url, "_blank", "noopener,noreferrer,width=600,height=500");
       }
 
