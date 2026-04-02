@@ -4,7 +4,7 @@
  * Detects: sign ingresses, retrograde stations, direct stations, exact aspects.
  */
 
-import Astronomy from 'astronomy-engine';
+import * as Astronomy from 'astronomy-engine';
 
 export const SIGNS = [
   'aries','taurus','gemini','cancer','leo','virgo',
