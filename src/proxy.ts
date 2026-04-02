@@ -3,14 +3,34 @@ import { createServerClient } from "@supabase/ssr";
 
 const PROTECTED_PREFIXES = ["/dashboard", "/portal", "/onboarding"];
 
+// Social media crawlers that need OG metadata with public Cache-Control.
+// These bots can't execute JavaScript and require pre-rendered OG HTML.
+const SOCIAL_BOT_UA = /facebookexternalhit|Facebot|LinkedInBot|Twitterbot|WhatsApp|Slackbot|TelegramBot|Discordbot|Applebot|pinterest|tumblr|redditbot/i;
+
+// Share page token pattern: /share/<token>
+const SHARE_TOKEN_RE = /^\/share\/([^/]+)$/;
+
 function isProtected(pathname: string): boolean {
   return PROTECTED_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
   );
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Rewrite social media crawler requests on /share/[token] to the OG handler.
+  // The OG handler returns a lightweight HTML page with OG meta tags and
+  // Cache-Control: public, which Facebook/LinkedIn require to display previews.
+  const shareMatch = SHARE_TOKEN_RE.exec(pathname);
+  if (shareMatch) {
+    const ua = request.headers.get("user-agent") ?? "";
+    if (SOCIAL_BOT_UA.test(ua)) {
+      const ogUrl = new URL("/api/share-og", request.nextUrl.origin);
+      ogUrl.searchParams.set("t", shareMatch[1]);
+      return NextResponse.rewrite(ogUrl);
+    }
+  }
 
   // Skip non-protected routes entirely
   if (!isProtected(pathname)) {
@@ -60,5 +80,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/portal/:path*", "/onboarding"],
+  matcher: ["/dashboard/:path*", "/portal/:path*", "/onboarding", "/share/:path*"],
 };
