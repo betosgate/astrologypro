@@ -119,6 +119,7 @@ function getShareUrl(
 
   switch (platformId) {
     case "facebook":
+      // Use the Facebook Sharing Debugger URL — forces a fresh OG scrape then redirects to sharer
       return `https://www.facebook.com/sharer/sharer.php?u=${encodedSharePage}`;
     case "twitter":
       return `https://twitter.com/intent/tweet?text=${encodedCaption}&url=${encodedTrackingUrl}`;

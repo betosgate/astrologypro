@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ShareHub } from "@/components/share/share-hub";
 
+// Cache share pages for 1 hour — content doesn't change after creation
+export const revalidate = 3600;
+
 interface PageProps {
   params: Promise<{ token: string }>;
 }

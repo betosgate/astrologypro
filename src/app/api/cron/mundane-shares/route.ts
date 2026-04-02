@@ -262,6 +262,9 @@ export async function GET(request: NextRequest) {
         diviner_username: diviner.username,
       });
 
+      // Pre-warm the share page cache so Facebook's scraper gets a fast response
+      fetch(shareUrl, { headers: { "User-Agent": "AstrologyPro-CacheWarm/1.0" } }).catch(() => {});
+
       if (insertError) {
         console.error(
           `[Mundane Shares] Failed to create batch for ${diviner.username}:`,
