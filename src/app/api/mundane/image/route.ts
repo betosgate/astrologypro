@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
+import { GEIST_BOLD_B64 } from "@/lib/geist-bold-b64";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+// Font embedded at build time as a base64 constant — no filesystem access needed.
+// This ensures the Geist Bold TTF is always available in the Vercel Lambda, where
+// readFileSync on node_modules paths is unreliable (file not included in bundle trace).
+const FONT_B64 = GEIST_BOLD_B64;
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -31,37 +37,44 @@ export async function GET(request: NextRequest) {
     const width = meta.width ?? 1080;
     const height = meta.height ?? 1080;
 
-    // Calculate text position — center of the bottom 25% strip
     const textY = Math.floor(height * 0.875);
     const fontSize = Math.floor(width * 0.038);
-    const url = `www.astrologypro.com/${username}`;
+    const urlText = `astrologypro.com/${username}`;
 
-    // SVG text overlay — white text with black stroke for legibility over any background
+    // Embed Geist font via base64 @font-face so librsvg renders text without
+    // needing system fonts on Vercel's Lambda environment.
+    const fontFaceBlock = FONT_B64
+      ? `<defs><style>@font-face{font-family:'Geist';src:url('data:font/truetype;base64,${FONT_B64}');font-weight:bold;}</style></defs>`
+      : "";
+
+    const fontFamily = FONT_B64 ? "Geist, sans-serif" : "sans-serif";
+
+    // Two-pass render: black shadow layer then white text layer for legibility
     const svgOverlay = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      ${fontFaceBlock}
       <text
         x="${width / 2}"
         y="${textY}"
         text-anchor="middle"
         dominant-baseline="central"
-        font-family="Arial, Helvetica, sans-serif"
+        font-family="${fontFamily}"
         font-size="${fontSize}"
         font-weight="bold"
         stroke="black"
-        stroke-width="${Math.floor(fontSize * 0.15)}"
+        stroke-width="${Math.ceil(fontSize * 0.18)}"
         stroke-linejoin="round"
-        paint-order="stroke"
         fill="black"
-      >${url}</text>
+      >${urlText}</text>
       <text
         x="${width / 2}"
         y="${textY}"
         text-anchor="middle"
         dominant-baseline="central"
-        font-family="Arial, Helvetica, sans-serif"
+        font-family="${fontFamily}"
         font-size="${fontSize}"
         font-weight="bold"
         fill="white"
-      >${url}</text>
+      >${urlText}</text>
     </svg>`;
 
     const composited = await sharp(imageBuffer)
