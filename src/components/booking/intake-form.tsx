@@ -41,6 +41,7 @@ export interface IntakeData {
   // Second person fields (relationship readings)
   secondPersonName: string;
   secondPersonAttending: string;
+  secondPersonEmail: string;
   secondPersonBirthDate: string;
   secondPersonBirthTime: string;
   secondPersonBirthCity: string;
@@ -462,6 +463,24 @@ export function IntakeForm({
               </SelectContent>
             </Select>
           </div>
+
+          {(data.secondPersonAttending === "yes" || data.secondPersonAttending === "maybe") && (
+            <div className="space-y-2">
+              <Label htmlFor="secondPersonEmail">
+                Their Email Address{" "}
+                <span className="text-xs text-muted-foreground font-normal">
+                  (optional — we'll send them a video join link)
+                </span>
+              </Label>
+              <Input
+                id="secondPersonEmail"
+                type="email"
+                placeholder="their@email.com"
+                value={data.secondPersonEmail}
+                onChange={(e) => onChange({ ...data, secondPersonEmail: e.target.value })}
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="secondPersonName">Their Full Name *</Label>

@@ -41,10 +41,18 @@ const RELATIONSHIP_SLUGS = new Set([
   "friendship-compatibility-reading",
   "business-relationship-reading",
   "10-card-relationship-spread",
+  "synastry-reading",
+  "composite-chart-reading",
+  "partnership-reading",
+  "love-compatibility-reading",
+  "relationship-compatibility-reading",
+  "couples-reading",
 ]);
 
-export function isRelationshipService(slug: string): boolean {
-  return RELATIONSHIP_SLUGS.has(slug);
+export function isRelationshipService(slug: string, category?: string): boolean {
+  if (RELATIONSHIP_SLUGS.has(slug)) return true;
+  if (category && /relationship|compatibility|synastry|partnership|couples/i.test(category)) return true;
+  return false;
 }
 
 // ---------------------------------------------------------------------------

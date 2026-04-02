@@ -259,33 +259,72 @@ function PrepContent({ booking }: SessionPrepProps) {
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Second Person
                 </p>
-                <div className="rounded-md bg-muted p-2.5 space-y-1 text-sm">
-                  <p>
-                    <span className="text-muted-foreground">Name: </span>
-                    {questionnaire.secondPersonName}
-                  </p>
-                  {questionnaire.secondPersonAttending && (
-                    <p>
-                      <span className="text-muted-foreground">Joining call: </span>
-                      {questionnaire.secondPersonAttending === "yes"
-                        ? "Yes"
-                        : questionnaire.secondPersonAttending === "no"
-                          ? "No"
-                          : "Maybe"}
-                    </p>
+
+                {/* Attendance badge */}
+                <div className="flex flex-col gap-1.5">
+                  {questionnaire.secondPersonAttending === "yes" ? (
+                    <span className="rounded-full bg-green-500/20 text-green-400 text-xs px-2 py-0.5 font-medium w-fit">Guest Attending</span>
+                  ) : questionnaire.secondPersonAttending === "maybe" ? (
+                    <span className="rounded-full bg-amber-500/20 text-amber-400 text-xs px-2 py-0.5 font-medium w-fit">Guest May Attend</span>
+                  ) : (
+                    <span className="rounded-full bg-white/10 text-muted-foreground text-xs px-2 py-0.5 font-medium w-fit">Chart Only</span>
                   )}
-                  {questionnaire.secondPersonBirthDate && (
-                    <p>
-                      <span className="text-muted-foreground">Birth: </span>
-                      {[
-                        questionnaire.secondPersonBirthDate,
-                        questionnaire.secondPersonBirthTime,
-                        questionnaire.secondPersonBirthCity,
-                      ]
-                        .filter(Boolean)
-                        .join(" | ")}
-                    </p>
+                  {questionnaire.secondPersonEmail && (
+                    <p className="text-xs text-muted-foreground">Guest notified at: {questionnaire.secondPersonEmail}</p>
                   )}
+                </div>
+
+                {/* Two-column birth data layout */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Primary person */}
+                  <div className="rounded-md bg-muted p-2.5 space-y-1 text-sm">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Primary: {questionnaire.firstName || booking.client_name}
+                    </p>
+                    {booking.birth_date && (
+                      <p className="text-xs">
+                        <span className="text-muted-foreground">DOB: </span>
+                        {booking.birth_date}
+                      </p>
+                    )}
+                    {booking.birth_time && (
+                      <p className="text-xs">
+                        <span className="text-muted-foreground">Time: </span>
+                        {booking.birth_time}
+                      </p>
+                    )}
+                    {booking.birth_city && (
+                      <p className="text-xs">
+                        <span className="text-muted-foreground">City: </span>
+                        {booking.birth_city}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Subject / second person */}
+                  <div className="rounded-md bg-muted p-2.5 space-y-1 text-sm">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Subject: {questionnaire.secondPersonName}
+                    </p>
+                    {questionnaire.secondPersonBirthDate && (
+                      <p className="text-xs">
+                        <span className="text-muted-foreground">DOB: </span>
+                        {questionnaire.secondPersonBirthDate}
+                      </p>
+                    )}
+                    {questionnaire.secondPersonBirthTime && (
+                      <p className="text-xs">
+                        <span className="text-muted-foreground">Time: </span>
+                        {questionnaire.secondPersonBirthTime}
+                      </p>
+                    )}
+                    {questionnaire.secondPersonBirthCity && (
+                      <p className="text-xs">
+                        <span className="text-muted-foreground">City: </span>
+                        {questionnaire.secondPersonBirthCity}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </>
@@ -296,7 +335,7 @@ function PrepContent({ booking }: SessionPrepProps) {
             const SKIP_KEYS = new Set([
               "focusQuestion", "lifeArea", "birthDate", "birthTime", "birthCity",
               "birthLat", "birthLng", "birthTimezone",
-              "secondPersonName", "secondPersonAttending",
+              "secondPersonName", "secondPersonAttending", "secondPersonEmail",
               "secondPersonBirthDate", "secondPersonBirthTime", "secondPersonBirthCity",
               "secondPersonBirthLat", "secondPersonBirthLng", "secondPersonBirthTimezone",
               "additionalNotes",
