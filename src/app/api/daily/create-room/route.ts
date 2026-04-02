@@ -128,8 +128,8 @@ export async function POST(request: NextRequest) {
           weekday: "long", year: "numeric", month: "long", day: "numeric",
           hour: "numeric", minute: "2-digit", timeZoneName: "short",
         });
-        const svc = bookingDetails?.services as { name: string } | null;
-        const div = bookingDetails?.diviners as { display_name: string } | null;
+        const svc = bookingDetails?.services as unknown as { name: string } | null;
+        const div = bookingDetails?.diviners as unknown as { display_name: string } | null;
         await sendGuestRoomLink({
           guestEmail,
           guestName: questionnaire.secondPersonName || "Guest",
