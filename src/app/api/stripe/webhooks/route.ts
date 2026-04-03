@@ -5,12 +5,88 @@ import Stripe from "stripe";
 import {
   sendBookingConfirmation,
   sendBookingAccessInstructions,
+  sendGiftCertificateToRecipient,
+  sendGiftCertificateConfirmation,
 } from "@/lib/email";
 import { createCalendarEvent } from "@/lib/google-calendar";
 
 export const runtime = "nodejs";
 
+async function handleGiftCheckoutCompleted(
+  session: Stripe.Checkout.Session
+) {
+  const meta = session.metadata ?? {};
+  if (meta.type !== "gift_certificate") return;
+
+  const supabase = createAdminClient();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+
+  const code = meta.code;
+  const amount = parseFloat(meta.amount ?? "0");
+
+  if (!code || !amount) {
+    console.error("[Webhook] Gift checkout missing code or amount", meta);
+    return;
+  }
+
+  // Idempotency guard — don't double-insert if webhook fires twice
+  const { data: existing } = await supabase
+    .from("gift_certificates")
+    .select("id")
+    .eq("code", code)
+    .maybeSingle();
+
+  if (!existing) {
+    const { error } = await supabase.from("gift_certificates").insert({
+      diviner_id: meta.diviner_id,
+      code,
+      purchaser_name: meta.purchaser_name,
+      purchaser_email: meta.purchaser_email,
+      recipient_name: meta.recipient_name || null,
+      recipient_email: meta.recipient_email || null,
+      amount,
+      remaining_amount: amount,
+      message: meta.message || null,
+      // Store the Checkout session ID so /api/gift/confirm can look this up
+      stripe_payment_intent_id: session.id,
+    });
+
+    if (error) {
+      console.error("[Webhook] Failed to insert gift certificate:", error);
+      return;
+    }
+  }
+
+  // Send emails (idempotent — SES deduplication window is 24h)
+  const redeemUrl = `${appUrl}/gift/${code}`;
+
+  if (meta.recipient_email) {
+    await sendGiftCertificateToRecipient({
+      recipientEmail: meta.recipient_email,
+      purchaserName: meta.purchaser_name,
+      divinerName: meta.diviner_name,
+      amount,
+      code,
+      message: meta.message || undefined,
+      redeemUrl,
+    });
+  }
+
+  await sendGiftCertificateConfirmation({
+    purchaserEmail: meta.purchaser_email,
+    recipientName: meta.recipient_name || undefined,
+    divinerName: meta.diviner_name,
+    amount,
+    code,
+  });
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  // Route gift certificate checkouts to their own handler
+  if (session.metadata?.type === "gift_certificate") {
+    return handleGiftCheckoutCompleted(session);
+  }
+
   const supabase = createAdminClient();
   const userId = session.metadata?.userId;
   const subscriptionId =

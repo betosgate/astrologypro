@@ -240,7 +240,7 @@ export default function AffiliatesPage() {
         .eq("affiliate_id", markPaidDialog.id)
         .eq("status", "earned");
 
-      toast.success(`Marked ${formatCurrency(unpaidAmount / 100)} as paid`);
+      toast.success(`Marked ${formatCurrency(unpaidAmount)} as paid`);
       await loadAffiliates(divinerId);
     }
 
@@ -395,7 +395,7 @@ export default function AffiliatesPage() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
-              {formatCurrency(totalEarned / 100)}
+              {formatCurrency(totalEarned)}
             </p>
           </CardContent>
         </Card>
@@ -406,10 +406,10 @@ export default function AffiliatesPage() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
-              {formatCurrency(totalPaid / 100)}
+              {formatCurrency(totalPaid)}
             </p>
             <p className="text-xs text-muted-foreground">
-              {formatCurrency((totalEarned - totalPaid) / 100)} outstanding
+              {formatCurrency(totalEarned - totalPaid)} outstanding
             </p>
           </CardContent>
         </Card>
@@ -472,10 +472,10 @@ export default function AffiliatesPage() {
                         </TableCell>
                         <TableCell>{affiliate.total_referrals}</TableCell>
                         <TableCell>
-                          {formatCurrency(affiliate.total_earned / 100)}
+                          {formatCurrency(affiliate.total_earned)}
                         </TableCell>
                         <TableCell>
-                          {formatCurrency(affiliate.total_paid / 100)}
+                          {formatCurrency(affiliate.total_paid)}
                         </TableCell>
                         <TableCell>
                           <Badge
@@ -571,19 +571,18 @@ export default function AffiliatesPage() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Total Earned</span>
                 <span>
-                  {formatCurrency(markPaidDialog.total_earned / 100)}
+                  {formatCurrency(markPaidDialog.total_earned)}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Already Paid</span>
-                <span>{formatCurrency(markPaidDialog.total_paid / 100)}</span>
+                <span>{formatCurrency(markPaidDialog.total_paid)}</span>
               </div>
               <div className="flex justify-between border-t pt-2 font-medium">
                 <span>Amount to Pay</span>
                 <span className="text-green-600">
                   {formatCurrency(
-                    (markPaidDialog.total_earned - markPaidDialog.total_paid) /
-                      100
+                    markPaidDialog.total_earned - markPaidDialog.total_paid
                   )}
                 </span>
               </div>

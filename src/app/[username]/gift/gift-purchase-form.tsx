@@ -76,8 +76,13 @@ export function GiftPurchaseForm({
         return;
       }
 
-      toast.success("Gift certificate purchased successfully!");
-      router.push(`/gift/${data.code}`);
+      // Redirect to Stripe Checkout to collect payment
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      toast.error("Failed to start checkout. Please try again.");
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {

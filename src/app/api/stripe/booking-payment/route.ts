@@ -273,7 +273,7 @@ export async function POST(request: NextRequest) {
       const { data: affiliate } = await adminSupabase
         .from("affiliates")
         .select("id")
-        .eq("code", affiliateCode)
+        .eq("referral_code", affiliateCode)
         .single();
 
       if (affiliate) {

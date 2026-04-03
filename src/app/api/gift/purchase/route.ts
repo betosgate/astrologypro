@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
-import {
-  sendGiftCertificateToRecipient,
-  sendGiftCertificateConfirmation,
-} from "@/lib/email";
+import { PRICING } from "@/lib/constants";
 
 function generateGiftCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -74,7 +71,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate unique code
+    // Pre-generate a unique code — stored in Checkout metadata so the
+    // webhook can create the cert record after payment succeeds.
     let code = generateGiftCode();
     let codeExists = true;
     let attempts = 0;
@@ -92,77 +90,58 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create Stripe PaymentIntent for the gift certificate
-    let paymentIntentId: string | null = null;
-    if (diviner.stripe_account_id) {
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(amount * 100),
-        currency: "usd",
-        metadata: {
-          type: "gift_certificate",
-          divinerId: diviner.id,
-          purchaserEmail,
-          giftCode: code,
-        },
-        automatic_payment_methods: { enabled: true },
-      });
-      paymentIntentId = paymentIntent.id;
-    }
+    // Build Checkout session params — Connect transfer when available
+    const amountCents = Math.round(amount * 100);
+    const platformFeeCents = Math.round(
+      amountCents * (PRICING.platformFeePercent / 100)
+    );
 
-    // Create gift certificate record
-    const { data: certificate, error: insertError } = await admin
-      .from("gift_certificates")
-      .insert({
-        diviner_id: divinerId,
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      customer_email: purchaserEmail,
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: `Gift Certificate — Reading with ${diviner.display_name}`,
+              description: recipientName
+                ? `For ${recipientName}`
+                : "Redeemable for any session",
+            },
+            unit_amount: amountCents,
+          },
+          quantity: 1,
+        },
+      ],
+      // Embed the pre-generated code so the webhook can create the cert
+      metadata: {
+        type: "gift_certificate",
         code,
+        diviner_id: divinerId,
+        diviner_name: diviner.display_name,
+        diviner_username: diviner.username,
         purchaser_name: purchaserName,
         purchaser_email: purchaserEmail,
-        recipient_name: recipientName ?? null,
-        recipient_email: recipientEmail ?? null,
-        amount,
-        remaining_amount: amount,
-        message: message ?? null,
-        stripe_payment_intent_id: paymentIntentId,
-      })
-      .select("id, code")
-      .single();
-
-    if (insertError || !certificate) {
-      console.error("Failed to create gift certificate:", insertError);
-      return NextResponse.json(
-        { error: "Failed to create gift certificate" },
-        { status: 500 }
-      );
-    }
-
-    // Send emails
-    const redeemUrl = `${appUrl}/gift/${code}`;
-
-    if (recipientEmail) {
-      await sendGiftCertificateToRecipient({
-        recipientEmail,
-        purchaserName,
-        divinerName: diviner.display_name,
-        amount,
-        code,
-        message,
-        redeemUrl,
-      });
-    }
-
-    await sendGiftCertificateConfirmation({
-      purchaserEmail,
-      recipientName,
-      divinerName: diviner.display_name,
-      amount,
-      code,
+        recipient_name: recipientName ?? "",
+        recipient_email: recipientEmail ?? "",
+        message: message ?? "",
+        amount: String(amount),
+      },
+      // After payment, redirect through our confirm route which redirects to /gift/{code}
+      success_url: `${appUrl}/api/gift/confirm?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/${diviner.username}/gift`,
+      ...(diviner.stripe_account_id
+        ? {
+            payment_intent_data: {
+              application_fee_amount: platformFeeCents,
+              transfer_data: { destination: diviner.stripe_account_id },
+            },
+          }
+        : {}),
     });
 
-    return NextResponse.json({
-      success: true,
-      code: certificate.code,
-      certificateId: certificate.id,
-    });
+    return NextResponse.json({ url: session.url });
   } catch (err) {
     console.error("Gift purchase error:", err);
     return NextResponse.json(
