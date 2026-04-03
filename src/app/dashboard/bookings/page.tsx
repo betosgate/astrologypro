@@ -35,12 +35,15 @@ const statusColors: Record<string, string> = {
   no_show: "bg-gray-500/10 text-gray-500 border-gray-500/20",
 };
 
+const PAGE_SIZE = 50;
+
 export default async function BookingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; page?: string }>;
 }) {
-  const { status } = await searchParams;
+  const { status, page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam ?? "1", 10));
 
   const supabase = await createClient();
   const {
@@ -60,16 +63,19 @@ export default async function BookingsPage({
   let query = supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, status, duration, amount, notes, questionnaire_responses, client_id, refund_amount, refunded_at, refund_reason, services(name), clients(display_name, email, birth_date, birth_time, birth_city)"
+      "id, scheduled_at, status, duration, amount, notes, questionnaire_responses, client_id, refund_amount, refunded_at, refund_reason, services(name), clients(display_name, email, birth_date, birth_time, birth_city)",
+      { count: "exact" }
     )
     .eq("diviner_id", diviner.id)
-    .order("scheduled_at", { ascending: false });
+    .order("scheduled_at", { ascending: false })
+    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
   if (status && status !== "all") {
     query = query.eq("status", status);
   }
 
-  const { data: bookings } = await query;
+  const { data: bookings, count: totalCount } = await query;
+  const totalPages = Math.ceil((totalCount ?? 0) / PAGE_SIZE);
 
   // For upcoming bookings, fetch previous session counts per client
   const upcomingBookings = (bookings ?? []).filter((b: any) => {
@@ -249,6 +255,32 @@ export default async function BookingsPage({
           )}
         </CardContent>
       </Card>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, totalCount ?? 0)} of {totalCount} bookings
+          </span>
+          <div className="flex gap-2">
+            {page > 1 && (
+              <a
+                href={`?${new URLSearchParams({ ...(status ? { status } : {}), page: String(page - 1) }).toString()}`}
+                className="rounded border px-3 py-1 hover:bg-muted"
+              >
+                Previous
+              </a>
+            )}
+            {page < totalPages && (
+              <a
+                href={`?${new URLSearchParams({ ...(status ? { status } : {}), page: String(page + 1) }).toString()}`}
+                className="rounded border px-3 py-1 hover:bg-muted"
+              >
+                Next
+              </a>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
