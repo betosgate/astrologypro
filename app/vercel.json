@@ -1,0 +1,28 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/event-reminders",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-content",
+      "schedule": "0 10 * * 1"
+    },
+    {
+      "path": "/api/cron/follow-up-emails",
+      "schedule": "0 */2 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-digest",
+      "schedule": "0 14 * * 1"
+    },
+    {
+      "path": "/api/cron/mundane-shares?n=1",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/mundane-shares?n=2",
+      "schedule": "0 21 * * *"
+    }
+  ]
+}

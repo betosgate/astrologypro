@@ -1,0 +1,175 @@
+<!doctype html>
+<html>
+  <head>
+    <title>AstrologyPro | Official Site</title>
+    <meta charset="UTF-8">
+    <meta name="description" content="The #1 Platform for Professional Diviners">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+    
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Poppins:100,100italic,200,200italic,300,300italic,regular,italic,500,500italic,600,600italic,700,700italic,800,800italic,900,900italic&amp;subset=devanagari,latin,latin-ext">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    
+    <style type="text/css">
+      @charset "UTF-8";
+      /** Reset and Base Styles */
+      html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td, article, aside, canvas, details, embed, figure, figcaption, footer, header, menu, nav, output, ruby, section, summary, time, mark, audio, video, input, textarea {
+        margin: 0; padding: 0; border: 0; font: inherit; font-size: 100%; vertical-align: baseline;
+      }
+      article, aside, details, figcaption, figure, footer, header, menu, nav, section, time { display: block; }
+      body { line-height: 1; color: #f5ecd3; background: #100101; font-family: Poppins, sans-serif; overflow-x: hidden; width: 1920px; margin: 0 auto; min-height: 1074px; }
+      a { color: inherit; text-decoration: none; }
+      ol, ul { list-style: none; }
+      html { box-sizing: border-box; }
+      *, *:after, *:before { box-sizing: inherit; }
+      .group:before, .group:after { content: " "; display: table; }
+      .group:after { clear: both; }
+      .group { zoom: 1; }
+      
+      /* Main Background Layers */
+      .layer-1-holder { height: 1074px; left: 50%; position: absolute; top: 0; width: 1920px; background: #100101; margin-left: -960px; z-index: 0; }
+      .layer, .layer-2, .layer-3 { left: 0; position: absolute; top: 0; }
+      .layer-78-holder { height: 1074px; left: 50%; position: absolute; top: 0; width: 1920px; background: url(images/layer_78.png) no-repeat center top; margin-left: -960px; z-index: 1; }
+      .layer-23 { left: 50%; position: absolute; top: 633px; margin-left: -960px; }
+      .gemini_generated_image_sureamsureamsure { left: 50%; position: absolute; top: 118px; margin-left: -168px; }
+      .layer-66 { left: 50%; position: absolute; top: 70px; margin-left: -947px; }
+      .col { left: 50%; min-height: 1074px; padding: 0 35px 137px; position: absolute; top: 0; width: 1771px; background: url(images/layer_59.png) no-repeat center top; margin-left: -811px; z-index: 5; }
+      
+      /* Logos and Branding */
+      .png-logo-1 { left: 50%; position: absolute; top: 32px; margin-left: -906px; z-index: 50; }
+
+      /* Top Navigation Bar */
+      .group-1 { left: 50%; position: absolute; top: 62px; width: 1585px; z-index: 20; margin-left: -808px; }
+      .layer-49-holder { height: 77px; left: 203px; margin: 0 auto; position: relative; width: 1179px; z-index: 22; background: url(images/layer_49.png) no-repeat; }
+      .row { left: 50%; min-height: 77px; padding: 19px 50px 20px 92px; position: absolute; top: 0; width: 1179px; background: url(images/layer_76.png) no-repeat; margin-left: -589.5px; display: flex; align-items: center; }
+      .nav { flex: 1; margin-top: 2px; }
+      .nav-list { display: flex; gap: 40px; }
+      .nav-item { font-size: 16px; font-weight: 500; text-transform: uppercase; white-space: nowrap; color: #fff; }
+      .nav-item:hover { color: #ecd396; }
+      .nav-right-group { display: flex; align-items: center; gap: 20px; margin-left: auto; }
+      .btn-get-started { height: 38px; line-height: 38px; width: 147px; background: url(images/layer_11.jpg) no-repeat; color: #000; font-size: 14px; font-weight: 700; text-align: center; text-transform: uppercase; cursor: pointer; border-radius: 2px; }
+      .btn-login { font-size: 14px; font-weight: 700; text-transform: uppercase; cursor: pointer; color: #fff; }
+
+      /* Hero Content - Adjusted for Space */
+      .text-3 { margin: 130px 0 0 28px; font-size: 20px; font-weight: 500; color: #fff; opacity: 0.8; }
+      .shadow { display: block; margin: -100px 0 0; }
+      .group-2 { margin: -150px 30px 0; }
+      .text-4, .text-5 { display: block; margin: 10px 0 0; }
+      .text-6 { margin: 30px 0 0 31px; width: 888px; line-height: 1.4; font-size: 24px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+
+      .group-7 { margin: 40px 31px 0; display: flex; gap: 20px; }
+      .cta-btn { width: 332px; height: 69px; line-height: 69px; text-align: center; font-size: 24px; font-weight: 700; cursor: pointer; border-radius: 4px; transition: transform 0.2s; }
+      .cta-btn:hover { transform: translateY(-2px); }
+      .cta-red { background: linear-gradient(180deg, #f20f0f -11%, #b70101 88%); color: #fff; box-shadow: 0 4px 15px rgba(242, 15, 15, 0.4); }
+      .cta-white { background: linear-gradient(180deg, #dde0e2 -36%, #ffffff 6%, #747576 114%); color: #000; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+
+      /* Features Strip - Unified Positioning */
+      .group-29 { margin: 150px 0 0; position: relative; width: 1553px; height: 180px; z-index: 100; }
+      
+      .feature-item { position: absolute; top: 0; width: 250px; display: flex; flex-direction: column; align-items: center; }
+      .feature-box { width: 250px; height: 62px; display: flex; align-items: center; justify-content: center; position: relative; border-radius: 2px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+      .feature-icon { width: 64px; height: 64px; margin-bottom: 20px; object-fit: contain; filter: brightness(0) invert(1); } /* White Icons */
+      .feature-label { color: #120809; font-size: 18px; font-weight: 700; text-align: center; width: 100%; border-radius: 2px; }
+      
+      /* Positioning each feature precisely */
+      .f1 { left: 50%; margin-left: -776px; }
+      .f2 { left: 50%; margin-left: -516px; }
+      .f3 { left: 50%; margin-left: -256px; }
+      .f4 { left: 50%; margin-left: 4px; }
+      .f5 { left: 50%; margin-left: 264px; }
+      .f6 { left: 50%; margin-left: 524px; }
+
+      .box-gold { background: linear-gradient(180deg, #f8d275, #cd912f); }
+      .box-white { background: linear-gradient(180deg, #dde0e2, #ffffff 6%, #747576); }
+    </style>
+  </head>
+  <body>
+    <div class="layer-1-holder">
+      <img class="layer" src="images/2151038292_1.png" alt="" width="739" height="1074">
+      <img class="layer-2" src="images/1405.png" alt="" width="983" height="408">
+      <img class="layer-3" src="images/1405_1.png" alt="" width="1920" height="1074">
+    </div>
+    
+    <div class="layer-78-holder">
+      <img class="layer-23" src="images/layer_23.png" alt="" width="596" height="219">
+      <img class="gemini_generated_image_sureamsureamsure" src="images/changeimage.png" alt="" width="1128" height="738">
+      <img class="layer-66" src="images/layer_66.png" alt="" width="1885" height="808">
+      
+      <div class="col">
+        <img class="png-logo-1" src="images/png_logo_1.png" alt="" width="501" height="231">
+
+        <div class="group-1">
+          <div class="layer-49-holder">
+            <div class="row">
+              <nav class="nav">
+                <ul class="nav-list">
+                  <li><a href="/features" class="nav-item">Features</a></li>
+                  <li><a href="/demo" class="nav-item">See Demo</a></li>
+                  <li><a href="/features" class="nav-item">Pricing</a></li>
+                  <li><a href="/discover" class="nav-item">Find a Reader</a></li>
+                </ul>
+              </nav>
+              <div class="nav-right-group">
+                <a href="/login" class="btn-login">Log In</a>
+                <img src="images/user_9131521.png" alt="" width="20">
+                <div class="btn-get-started" onclick="window.location.href='/get-started'">Get Started</div>
+              </div>
+            </div>
+          </div>
+          
+          <p class="text-3">The #1 Platform for Professional Diviners</p>
+          <img class="shadow" src="images/shadow.jpg" alt="" width="430" height="294">
+          
+          <div class="group-2">
+            <img class="text-4" src="images/run_your_divination.png" alt="Run Your Divination" width="1078" height="70">
+            <img class="text-5" src="images/business_online.png" alt="Business Online" width="779" height="67">
+          </div>
+          
+          <p class="text-6">Get your own branded page, booking system, video sessions with screen sharing, client management, and marketing tools. Everything an astrologer or tarot reader needs in one platform.</p>
+          
+          <div class="group-7 match-height group">
+            <div class="cta-btn cta-red" onclick="window.location.href='/get-started'">Start Your Practice</div>
+            <div class="cta-btn cta-white" onclick="window.location.href='/features'">See All Features</div>
+          </div>
+        </div>
+
+        <div class="group-29">
+          <!-- Feature 1 -->
+          <div class="feature-item f1" onclick="window.location.href='/features'">
+            <img src="images/HD-Video-Sessions.png" class="feature-icon" alt="">
+            <div class="feature-box box-gold"><p class="feature-label">HD Video Sessions</p></div>
+          </div>
+          <!-- Feature 2 -->
+          <div class="feature-item f2" onclick="window.location.href='/demo'">
+            <img src="images/Smart-Booking.png" class="feature-icon" alt="">
+            <div class="feature-box box-white"><p class="feature-label">Smart Booking</p></div>
+          </div>
+          <!-- Feature 3 -->
+          <div class="feature-item f3" onclick="window.location.href='/features'">
+            <img src="images/Chart-Calculations.png" class="feature-icon" alt="">
+            <div class="feature-box box-gold"><p class="feature-label">Chart Calculations</p></div>
+          </div>
+          <!-- Feature 4 -->
+          <div class="feature-item f4" onclick="window.location.href='/features'">
+            <img src="images/Tarot-Spreads.png" class="feature-icon" alt="">
+            <div class="feature-box box-white"><p class="feature-label">Tarot Spreads</p></div>
+          </div>
+          <!-- Feature 5 -->
+          <div class="feature-item f5" onclick="window.location.href='/features'">
+            <img src="images/Marketing-Tools.png" class="feature-icon" alt="">
+            <div class="feature-box box-gold"><p class="feature-label">Marketing Tools</p></div>
+          </div>
+          <!-- Feature 6 -->
+          <div class="feature-item f6" onclick="window.location.href='/discover'">
+            <img src="images/Client-Reviews.png" class="feature-icon" alt="">
+            <div class="feature-box box-white"><p class="feature-label">Client Reviews</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <script>
+      (function(factory){if(typeof define==='function'&&define.amd){define(['jquery'],factory)}else if(typeof module!=='undefined'&&module.exports){module.exports=factory(require('jquery'))}else{factory(jQuery)}}(function($){var _rows=function(elements){var tolerance=1,$elements=$(elements),lastTop=null,rows=[];$elements.each(function(){var $that=$(this),top=$that.offset().top,lastRow=rows.length>0?rows[rows.length-1]:null;if(lastRow===null){rows.push($that)}else{if(Math.floor(Math.abs(lastTop-top))<=tolerance){rows[rows.length-1]=lastRow.add($that)}else{rows.push($that)}}lastTop=top});return rows};var matchHeight=$.fn.matchHeight=function(options){matchHeight._groups.push({elements:this,options:options});matchHeight._apply(this,options);return this};matchHeight._groups=[];matchHeight._apply=function(elements,options){var $elements=$(elements),rows=[$elements];if(options&&options.byRow){rows=_rows($elements)} $.each(rows,function(key,row){var $row=$(row),targetHeight=0;$row.each(function(){$(this).css('height','');if($(this).outerHeight()>targetHeight){targetHeight=$(this).outerHeight()}});$row.css('height',targetHeight+'px')});return this};$(function(){$('.match-height > *').matchHeight()})}));
+    </script>
+  </body>
+</html>
