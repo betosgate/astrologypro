@@ -459,6 +459,11 @@ export default function OnboardingPage() {
     Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York"
   );
   const [specialties, setSpecialties] = useState<string[]>([]);
+  const [phone, setPhone] = useState("");
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
+  const [youtubeChannelId, setYoutubeChannelId] = useState("");
+  const [facebookLiveUrl, setFacebookLiveUrl] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
@@ -512,7 +517,7 @@ export default function OnboardingPage() {
       // Load existing onboarding progress — query by user_id, not id
       const { data: diviner } = await supabase
         .from("diviners")
-        .select("id, onboarding_step, display_name, bio, tagline, avatar_url, stripe_connect_id, timezone, specialties")
+        .select("id, onboarding_step, display_name, bio, tagline, avatar_url, cover_image_url, stripe_connect_id, timezone, specialties, phone, youtube_channel_id, facebook_live_url")
         .eq("user_id", user.id)
         .single();
 
@@ -530,8 +535,12 @@ export default function OnboardingPage() {
         if (diviner.bio) setBio(diviner.bio);
         if (diviner.tagline) setTagline(diviner.tagline);
         if (diviner.avatar_url) setAvatarPreview(diviner.avatar_url);
+        if (diviner.cover_image_url) setCoverImagePreview(diviner.cover_image_url);
         if (diviner.timezone) setTimezone(diviner.timezone);
         if (diviner.specialties?.length) setSpecialties(diviner.specialties);
+        if (diviner.phone) setPhone(diviner.phone);
+        if (diviner.youtube_channel_id) setYoutubeChannelId(diviner.youtube_channel_id);
+        if (diviner.facebook_live_url) setFacebookLiveUrl(diviner.facebook_live_url);
         if (diviner.stripe_connect_id) setConnectComplete(true);
       }
 
@@ -680,6 +689,28 @@ export default function OnboardingPage() {
         avatarUrl = publicUrl;
       }
 
+      let coverUrl = coverImagePreview;
+
+      if (coverImageFile) {
+        const fileExt = coverImageFile.name.split(".").pop();
+        const filePath = `covers/${userId}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("avatars")
+          .upload(filePath, coverImageFile, { upsert: true });
+
+        if (uploadError) {
+          setError("Failed to upload cover image: " + uploadError.message);
+          return;
+        }
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("avatars").getPublicUrl(filePath);
+
+        coverUrl = publicUrl;
+      }
+
       const { error: updateError } = await supabase
         .from("diviners")
         .update({
@@ -687,8 +718,12 @@ export default function OnboardingPage() {
           bio,
           tagline,
           avatar_url: avatarUrl,
+          cover_image_url: coverUrl,
           timezone,
           specialties,
+          phone: phone || null,
+          youtube_channel_id: youtubeChannelId || null,
+          facebook_live_url: facebookLiveUrl || null,
         })
         .eq("id", divinerId);
 
@@ -875,6 +910,13 @@ export default function OnboardingPage() {
     setAvatarPreview(URL.createObjectURL(file));
   }
 
+  function handleCoverImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCoverImageFile(file);
+    setCoverImagePreview(URL.createObjectURL(file));
+  }
+
   function formatHour(hour: number): string {
     if (hour === 0) return "12 AM";
     if (hour < 12) return `${hour} AM`;
@@ -1021,6 +1063,72 @@ export default function OnboardingPage() {
                   <Label>Specialties</Label>
                   <SpecialtiesInput value={specialties} onChange={setSpecialties} />
                   <p className="text-xs text-muted-foreground">Pick all that apply — shown on your public profile</p>
+                </div>
+
+                {/* Cover Image */}
+                <div className="space-y-2">
+                  <Label>Cover / Banner Image</Label>
+                  <div className="space-y-2">
+                    {coverImagePreview && (
+                      <img
+                        src={coverImagePreview}
+                        alt="Cover preview"
+                        className="h-24 w-full rounded-md object-cover"
+                      />
+                    )}
+                    <Label htmlFor="cover-image" className="cursor-pointer">
+                      <div className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent">
+                        <Upload className="h-4 w-4" />
+                        {coverImagePreview ? "Change Cover" : "Upload Cover"}
+                      </div>
+                    </Label>
+                    <input
+                      id="cover-image"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleCoverImageChange}
+                      className="hidden"
+                    />
+                    <p className="text-xs text-muted-foreground">Shown at the top of your profile page. Recommended: 1200×400px.</p>
+                  </div>
+                </div>
+
+                {/* Phone */}
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="+1 555 000 0000"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    autoComplete="tel"
+                  />
+                  <p className="text-xs text-muted-foreground">For SMS booking notifications. Never shown publicly.</p>
+                </div>
+
+                {/* Social Links */}
+                <div className="space-y-3">
+                  <Label>Social / Live Streams <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-24 shrink-0 text-xs text-muted-foreground">YouTube ID</span>
+                      <Input
+                        placeholder="UCxxxxxxxxxxxxxxxx"
+                        value={youtubeChannelId}
+                        onChange={(e) => setYoutubeChannelId(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-24 shrink-0 text-xs text-muted-foreground">Facebook Live</span>
+                      <Input
+                        placeholder="https://facebook.com/yourpage"
+                        value={facebookLiveUrl}
+                        onChange={(e) => setFacebookLiveUrl(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Embed live streams on your profile page for clients to watch</p>
                 </div>
 
                 <div className="space-y-2">
