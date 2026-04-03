@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -50,14 +51,49 @@ const availablePlatforms: PlatformOption[] = [
 ];
 
 export default function ContentManagementPage() {
+  const [title, setTitle] = useState("");
   const [caption, setCaption] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Simulate variable substitution for preview
   const previewCaption = caption
     .replace(/\{username\}/g, "CosmicReader")
     .replace(/\{link\}/g, "https://astrologypro.com/cosmicreader");
+
+  async function handleSave() {
+    if (!title.trim()) {
+      toast.error("Title is required");
+      return;
+    }
+    if (!caption.trim()) {
+      toast.error("Caption is required");
+      return;
+    }
+    setSaving(true);
+    const res = await fetch("/api/marketing/content", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: title.trim(),
+        captionTemplate: caption.trim(),
+        platforms: selectedPlatforms,
+        category: "custom",
+      }),
+    });
+    setSaving(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      toast.error(body.error ?? "Failed to save content");
+      return;
+    }
+    toast.success("Content saved to library");
+    setTitle("");
+    setCaption("");
+    setSelectedPlatforms([]);
+    setShowPreview(false);
+  }
 
   function togglePlatform(platformId: string) {
     setSelectedPlatforms((prev) =>
@@ -95,6 +131,17 @@ export default function ContentManagementPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Title */}
+            <div className="space-y-2">
+              <Label htmlFor="content-title">Title</Label>
+              <Input
+                id="content-title"
+                placeholder="e.g. Mercury Retrograde Awareness Post"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+
             {/* File Upload */}
             <div className="space-y-2">
               <Label>Media</Label>
@@ -163,7 +210,9 @@ export default function ContentManagementPage() {
             </div>
 
             <div className="flex gap-2 pt-2">
-              <Button className="flex-1">Save to Library</Button>
+              <Button className="flex-1" onClick={handleSave} disabled={saving}>
+                {saving ? "Saving…" : "Save to Library"}
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => setShowPreview(!showPreview)}

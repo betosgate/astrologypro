@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { divinerId, contentId, platforms, scheduledAt } =
+    const { divinerId, contentId, platforms, scheduledAt, caption, imageUrl } =
       await request.json();
 
     if (!divinerId || !platforms || !Array.isArray(platforms)) {
@@ -41,6 +41,8 @@ export async function POST(request: NextRequest) {
         diviner_id: divinerId,
         content_id: contentId ?? null,
         platforms,
+        caption: caption ?? null,
+        image_url: imageUrl ?? null,
         scheduled_at: scheduledAt ?? new Date().toISOString(),
         status: scheduledAt ? "scheduled" : "pending",
       })
@@ -55,19 +57,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // In production, this would call the Ayrshare API:
-    // const ayrshareRes = await fetch("https://app.ayrshare.com/api/post", {
-    //   method: "POST",
-    //   headers: {
-    //     Authorization: `Bearer ${process.env.AYRSHARE_API_KEY}`,
-    //     "Content-Type": "application/json",
-    //   },
-    //   body: JSON.stringify({
-    //     post: caption,
-    //     platforms,
-    //     scheduleDate: scheduledAt,
-    //   }),
-    // });
+    // Call Ayrshare API if key is configured
+    const ayrshareKey = process.env.AYRSHARE_API_KEY;
+    if (ayrshareKey && caption) {
+      try {
+        const ayrshareBody: Record<string, unknown> = {
+          post: caption,
+          platforms,
+        };
+        if (scheduledAt) ayrshareBody.scheduleDate = scheduledAt;
+        if (imageUrl) ayrshareBody.mediaUrls = [imageUrl];
+
+        const ayrshareRes = await fetch("https://app.ayrshare.com/api/post", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${ayrshareKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(ayrshareBody),
+        });
+
+        const ayrshareData = await ayrshareRes.json();
+
+        if (ayrshareRes.ok && ayrshareData.id) {
+          // Update record with Ayrshare post ID and mark published
+          await supabase
+            .from("scheduled_posts")
+            .update({
+              ayrshare_post_id: ayrshareData.id,
+              status: scheduledAt ? "scheduled" : "published",
+            })
+            .eq("id", post.id);
+        } else {
+          console.error("[Social] Ayrshare error:", ayrshareData);
+          await supabase
+            .from("scheduled_posts")
+            .update({
+              status: "failed",
+              error_message: ayrshareData.message ?? "Ayrshare API error",
+            })
+            .eq("id", post.id);
+        }
+      } catch (ayrshareErr) {
+        console.error("[Social] Ayrshare fetch error:", ayrshareErr);
+      }
+    }
 
     return NextResponse.json({ success: true, post });
   } catch (err) {

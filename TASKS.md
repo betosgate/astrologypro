@@ -1,7 +1,7 @@
 # AstrologyPro — Daily Task Board
 
 > **Workflow:** Update this file each session. Check off items as you go. Push at end of day.
-> **Last updated:** 2026-04-03 (session 5)
+> **Last updated:** 2026-04-03 (session 6)
 
 ---
 
@@ -33,7 +33,12 @@
 | Email notifications | 🟡 AWS SES wired; DNS records added; awaiting SES verification (~72h) |
 | Vercel env vars | ✅ All 16 vars pushed to production (Supabase, Stripe, SES, app URL) |
 | Phone readings (Twilio) | 🔴 Stub only — credentials misconfigured in prod |
-| Marketing automation | 🔴 Forms exist; nothing posts |
+| Marketing automation | 🔴 Crons fire; social POST is a stub (Ayrshare key needed) |
+| Currency bugs (global sweep) | ✅ All `/100` division bugs fixed across 10 files |
+| Affiliate detail page | ✅ Fixed wrong column names + `/100` bugs |
+| Services feature (3 files) | ✅ Fixed all column names (duration_minutes, base_price, is_featured, is_active) |
+| Gift purchase flow | ✅ Redesigned — Stripe Checkout → webhook creates cert |
+| Build errors (Turbopack) | ✅ Fixed playwright scan, tsconfig exclude, turbopack config |
 
 ---
 
@@ -114,6 +119,32 @@ ALTER TABLE diviners
 ---
 
 ## ✅ Completed
+
+### 2026-04-03 — Global currency bug sweep + affiliate detail fix (session 5–6)
+
+| Fix | Detail |
+|---|---|
+| `affiliates/[affiliateId]/page.tsx` | Wrong columns (`client_name`, `booking_date`, `amount`, `commission`) → joined `bookings→services→clients` via `commission_amount`; removed all `/100` on totals |
+| `dashboard/clients/page.tsx` | `total_spent / 100` removed — `client_diviners.total_spent` is `DECIMAL(10,2)` dollars |
+| `dashboard/page.tsx` | `thisMonthRevenueTotal / 100` removed — `bookings.total_amount` is `DECIMAL(10,2)` dollars |
+| `components/dashboard/revenue-chart.tsx` | `data.revenue / 100` removed from chart tooltip |
+| `components/dashboard/roi-banner.tsx` | `monthlyRevenue / 100` removed; comment corrected to say "in dollars" |
+| `api/cron/weekly-digest/route.ts` | `thisWeekRevenue / 100` and `totalRevenue / 100` removed from email subject + body |
+| Build: `next.config.ts` | `serverExternalPackages` + `turbopack: {}` to silence warnings; removed unsupported webpack config |
+| Build: `tsconfig.json` | Added `_app-legacy`, `tests`, `playwright.config.ts` to exclude |
+| Build: `app/` renamed | Legacy `app/` directory was scanned by Turbopack as App Router source; renamed to `_app-legacy/` |
+| Build: TypeScript fixes | `diviner_id` doesn't exist on revenueResult → moved to `topDiviners.data`; twilio dead-code non-null assertions |
+| `service-toggles.tsx` | `active` → `is_active`, `featured` → `is_featured` |
+| `service-edit-sheet.tsx` | Full interface + DB column rename (duration_minutes, base_price, is_featured, category); templates use `base_price` |
+| `dashboard/services/page.tsx` | All column names corrected (duration_minutes, base_price, is_featured, is_active) |
+| `affiliate/[code]/page.tsx` | Select uses `commission_amount`; removed `/100`; joined bookings for display |
+| `api/stripe/booking-payment/route.ts` | `referral_code` lookup fix; commission insert with correct columns; affiliate totals increment |
+| `gift/purchase/route.ts` | Redesigned: Stripe Checkout → webhook creates cert (was creating cert before payment) |
+| `api/gift/confirm/route.ts` | New polling redirect endpoint — waits for webhook to fire, then redirects to `/gift/{code}` |
+| `api/stripe/webhooks/route.ts` | Added `handleGiftCheckoutCompleted` for `checkout.session.completed` with `type=gift_certificate` |
+| `gift/pending/page.tsx` | New client-side poller with `<Suspense>` for `useSearchParams` prerender fix |
+
+---
 
 ### 2026-04-03 — Column bug sweep + Vercel deploy (session 4)
 
