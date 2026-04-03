@@ -102,6 +102,22 @@ async function handleSubscriptionDeleted(
   }
 }
 
+async function handleAccountUpdated(account: Stripe.Account) {
+  const supabase = createAdminClient();
+
+  const { error } = await supabase
+    .from("diviners")
+    .update({
+      charges_enabled: account.charges_enabled,
+      payouts_enabled: account.payouts_enabled,
+    })
+    .eq("stripe_account_id", account.id);
+
+  if (error) {
+    console.error("Failed to update Connect account status:", error);
+  }
+}
+
 async function handlePaymentIntentSucceeded(
   paymentIntent: Stripe.PaymentIntent
 ) {
@@ -121,7 +137,7 @@ async function handlePaymentIntentSucceeded(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, end_at, services(name, duration_minutes), diviners(display_name)"
+      "id, scheduled_at, duration_minutes, services(name, duration_minutes), diviners(display_name)"
     )
     .eq("id", bookingId)
     .single();
@@ -142,9 +158,8 @@ async function handlePaymentIntentSucceeded(
     process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
   const sessionLink = `${appUrl}/session/${bookingId}`;
   const startTime = new Date(booking.scheduled_at);
-  const endTime = booking.end_at
-    ? new Date(booking.end_at)
-    : new Date(startTime.getTime() + svc.duration_minutes * 60 * 1000);
+  const durationMins = booking.duration_minutes ?? svc.duration_minutes;
+  const endTime = new Date(startTime.getTime() + durationMins * 60 * 1000);
 
   const calendarLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`${svc.name} with ${div.display_name}`)}&dates=${startTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}/${endTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}&details=${encodeURIComponent(`Your reading session on AstrologyPro.\n\nJoin: ${sessionLink}`)}`;
 
@@ -221,6 +236,9 @@ export async function POST(request: NextRequest) {
         await handlePaymentIntentSucceeded(
           event.data.object as Stripe.PaymentIntent
         );
+        break;
+      case "account.updated":
+        await handleAccountUpdated(event.data.object as Stripe.Account);
         break;
       default:
         break;

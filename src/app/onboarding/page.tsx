@@ -517,7 +517,7 @@ export default function OnboardingPage() {
       // Load existing onboarding progress — query by user_id, not id
       const { data: diviner } = await supabase
         .from("diviners")
-        .select("id, onboarding_step, display_name, bio, tagline, avatar_url, cover_image_url, stripe_connect_id, timezone, specialties, phone, youtube_channel_id, facebook_live_url")
+        .select("id, onboarding_step, display_name, bio, tagline, avatar_url, cover_image_url, stripe_account_id, timezone, specialties, phone, youtube_channel_id, facebook_live_url")
         .eq("user_id", user.id)
         .single();
 
@@ -541,7 +541,7 @@ export default function OnboardingPage() {
         if (diviner.phone) setPhone(diviner.phone);
         if (diviner.youtube_channel_id) setYoutubeChannelId(diviner.youtube_channel_id);
         if (diviner.facebook_live_url) setFacebookLiveUrl(diviner.facebook_live_url);
-        if (diviner.stripe_connect_id) setConnectComplete(true);
+        if (diviner.stripe_account_id) setConnectComplete(true);
       }
 
       const divId = diviner?.id;
@@ -810,7 +810,7 @@ export default function OnboardingPage() {
       // Save the connect account ID
       await supabase
         .from("diviners")
-        .update({ stripe_connect_id: result.accountId })
+        .update({ stripe_account_id: result.accountId })
         .eq("id", divinerId);
 
       window.location.href = result.url;

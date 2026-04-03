@@ -89,19 +89,31 @@ async function getDivinerStats(divinerId: string) {
   endOfWeek.setDate(now.getDate() + (7 - now.getDay()));
   endOfWeek.setHours(23, 59, 59, 999);
 
-  const { count: openSlots } = await supabase
+  // availability_slots stores weekly recurring templates (day_of_week + TIME, not TIMESTAMP).
+  // Count active slot patterns for days remaining this week, then subtract confirmed bookings.
+  const todayDow = now.getDay(); // 0 = Sunday
+  const { count: slotPatterns } = await supabase
     .from("availability_slots")
     .select("*", { count: "exact", head: true })
     .eq("diviner_id", divinerId)
-    .eq("is_booked", false)
-    .gte("start_time", now.toISOString())
-    .lte("start_time", endOfWeek.toISOString());
+    .eq("is_active", true)
+    .gte("day_of_week", todayDow);
+
+  const { count: bookedThisWeek } = await supabase
+    .from("bookings")
+    .select("*", { count: "exact", head: true })
+    .eq("diviner_id", divinerId)
+    .in("status", ["confirmed", "in_progress"])
+    .gte("scheduled_at", now.toISOString())
+    .lte("scheduled_at", endOfWeek.toISOString());
+
+  const openSlots = Math.max(0, (slotPatterns ?? 0) - (bookedThisWeek ?? 0));
 
   return {
     completedSessions: completedSessions ?? 0,
     averageRating,
     reviewCount,
-    openSlotsThisWeek: openSlots ?? undefined,
+    openSlotsThisWeek: slotPatterns !== null ? openSlots : undefined,
   };
 }
 

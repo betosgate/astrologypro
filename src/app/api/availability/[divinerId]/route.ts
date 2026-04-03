@@ -51,11 +51,12 @@ export async function GET(
       );
     }
 
-    // Fetch weekly availability slots
+    // Fetch weekly availability slots (active only)
     const { data: weeklySlots } = await supabase
       .from("availability_slots")
       .select("day_of_week, start_time, end_time")
-      .eq("diviner_id", divinerId);
+      .eq("diviner_id", divinerId)
+      .eq("is_active", true);
 
     // Fetch overrides for the given date
     const { data: overrides } = await supabase
@@ -70,7 +71,7 @@ export async function GET(
 
     const { data: bookings } = await supabase
       .from("bookings")
-      .select("scheduled_at, end_at")
+      .select("scheduled_at, duration_minutes")
       .eq("diviner_id", divinerId)
       .gte("scheduled_at", dayStart)
       .lte("scheduled_at", dayEnd)
@@ -85,7 +86,9 @@ export async function GET(
       })),
       bookedSlots: (bookings ?? []).map((b) => ({
         start: b.scheduled_at,
-        end: b.end_at,
+        end: new Date(
+          new Date(b.scheduled_at).getTime() + b.duration_minutes * 60_000
+        ).toISOString(),
       })),
       overrides: (overrides ?? []).map((o) => ({
         date: o.date,
