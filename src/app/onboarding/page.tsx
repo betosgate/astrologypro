@@ -86,6 +86,9 @@ export default function OnboardingPage() {
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [tagline, setTagline] = useState("");
+  const [timezone, setTimezone] = useState(
+    Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York"
+  );
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
@@ -139,7 +142,7 @@ export default function OnboardingPage() {
       // Load existing onboarding progress — query by user_id, not id
       const { data: diviner } = await supabase
         .from("diviners")
-        .select("id, onboarding_step, display_name, bio, tagline, avatar_url, stripe_connect_id")
+        .select("id, onboarding_step, display_name, bio, tagline, avatar_url, stripe_connect_id, timezone")
         .eq("user_id", user.id)
         .single();
 
@@ -148,10 +151,16 @@ export default function OnboardingPage() {
         if (diviner.onboarding_step) {
           setCurrentStep(diviner.onboarding_step);
         }
-        if (diviner.display_name) setDisplayName(diviner.display_name);
+        // Pre-populate display_name from signup name if not yet set in DB
+        if (diviner.display_name) {
+          setDisplayName(diviner.display_name);
+        } else if (user.user_metadata?.name) {
+          setDisplayName(user.user_metadata.name);
+        }
         if (diviner.bio) setBio(diviner.bio);
         if (diviner.tagline) setTagline(diviner.tagline);
         if (diviner.avatar_url) setAvatarPreview(diviner.avatar_url);
+        if (diviner.timezone) setTimezone(diviner.timezone);
         if (diviner.stripe_connect_id) setConnectComplete(true);
       }
 
@@ -307,6 +316,7 @@ export default function OnboardingPage() {
           bio,
           tagline,
           avatar_url: avatarUrl,
+          timezone,
         })
         .eq("id", divinerId);
 
@@ -627,6 +637,37 @@ export default function OnboardingPage() {
                     value={tagline}
                     onChange={(e) => setTagline(e.target.value)}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="timezone">Your Timezone</Label>
+                  <Select value={timezone} onValueChange={setTimezone}>
+                    <SelectTrigger id="timezone" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Pacific/Honolulu">Hawaii (HST, UTC−10)</SelectItem>
+                      <SelectItem value="America/Anchorage">Alaska (AKST, UTC−9)</SelectItem>
+                      <SelectItem value="America/Los_Angeles">Pacific (PST/PDT, UTC−8/7)</SelectItem>
+                      <SelectItem value="America/Denver">Mountain (MST/MDT, UTC−7/6)</SelectItem>
+                      <SelectItem value="America/Phoenix">Arizona (MST, UTC−7)</SelectItem>
+                      <SelectItem value="America/Chicago">Central (CST/CDT, UTC−6/5)</SelectItem>
+                      <SelectItem value="America/New_York">Eastern (EST/EDT, UTC−5/4)</SelectItem>
+                      <SelectItem value="America/Halifax">Atlantic (AST/ADT, UTC−4/3)</SelectItem>
+                      <SelectItem value="America/Sao_Paulo">Brazil (BRT, UTC−3)</SelectItem>
+                      <SelectItem value="Europe/London">London (GMT/BST, UTC+0/1)</SelectItem>
+                      <SelectItem value="Europe/Paris">Central Europe (CET/CEST, UTC+1/2)</SelectItem>
+                      <SelectItem value="Europe/Athens">Eastern Europe (EET, UTC+2/3)</SelectItem>
+                      <SelectItem value="Asia/Dubai">Gulf (GST, UTC+4)</SelectItem>
+                      <SelectItem value="Asia/Kolkata">India (IST, UTC+5:30)</SelectItem>
+                      <SelectItem value="Asia/Bangkok">Southeast Asia (ICT, UTC+7)</SelectItem>
+                      <SelectItem value="Asia/Singapore">Singapore/Hong Kong (SGT, UTC+8)</SelectItem>
+                      <SelectItem value="Asia/Tokyo">Japan/Korea (JST, UTC+9)</SelectItem>
+                      <SelectItem value="Australia/Sydney">Sydney (AEST/AEDT, UTC+10/11)</SelectItem>
+                      <SelectItem value="Pacific/Auckland">New Zealand (NZST, UTC+12/13)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Used for your availability calendar</p>
                 </div>
 
                 <div className="space-y-2">
