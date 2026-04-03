@@ -10,6 +10,9 @@ export async function GET() {
     STRIPE_PRICE_TAROT_MONTHLY: process.env.STRIPE_PRICE_TAROT_MONTHLY || "MISSING",
     STRIPE_PRICE_BOTH_SETUP: process.env.STRIPE_PRICE_BOTH_SETUP || "MISSING",
     STRIPE_PRICE_BOTH_MONTHLY: process.env.STRIPE_PRICE_BOTH_MONTHLY || "MISSING",
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || "MISSING",
+    APP_URL_COMPUTED: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}`,
+    SUCCESS_URL_COMPUTED: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/onboarding?session_id={CHECKOUT_SESSION_ID}`,
   });
 }
 
