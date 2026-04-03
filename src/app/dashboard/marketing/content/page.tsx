@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import {
   Card,
@@ -56,11 +56,24 @@ export default function ContentManagementPage() {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [divinerUsername, setDivinerUsername] = useState("yourname");
+  const [appUrl, setAppUrl] = useState("https://astrologypro.com");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Simulate variable substitution for preview
+  useEffect(() => {
+    fetch("/api/diviners/me")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.username) setDivinerUsername(data.username);
+        if (data?.appUrl) setAppUrl(data.appUrl);
+      })
+      .catch(() => {});
+  }, []);
+
   const previewCaption = caption
-    .replace(/\{username\}/g, "CosmicReader")
-    .replace(/\{link\}/g, "https://astrologypro.com/cosmicreader");
+    .replace(/\{username\}/g, divinerUsername)
+    .replace(/\{link\}/g, `${appUrl}/${divinerUsername}`);
 
   async function handleSave() {
     if (!title.trim()) {
@@ -145,17 +158,39 @@ export default function ContentManagementPage() {
             {/* File Upload */}
             <div className="space-y-2">
               <Label>Media</Label>
-              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                <ImageIcon className="mb-2 size-8 text-muted-foreground" />
-                <p className="text-sm font-medium">
-                  Drop an image or video here
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  PNG, JPG, MP4 up to 50MB
-                </p>
-                <Button variant="outline" size="sm" className="mt-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/gif,video/mp4"
+                className="hidden"
+                onChange={(e) => setMediaFile(e.target.files?.[0] ?? null)}
+              />
+              <div
+                className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center cursor-pointer hover:bg-muted/30 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {mediaFile ? (
+                  <>
+                    <ImageIcon className="mb-2 size-8 text-primary" />
+                    <p className="text-sm font-medium">{mediaFile.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(mediaFile.size / 1024 / 1024).toFixed(1)} MB
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <ImageIcon className="mb-2 size-8 text-muted-foreground" />
+                    <p className="text-sm font-medium">
+                      Drop an image or video here
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      PNG, JPG, MP4 up to 50MB
+                    </p>
+                  </>
+                )}
+                <Button variant="outline" size="sm" className="mt-3" type="button">
                   <Upload className="mr-1.5 size-3.5" />
-                  Choose File
+                  {mediaFile ? "Change File" : "Choose File"}
                 </Button>
               </div>
             </div>
@@ -240,7 +275,7 @@ export default function ContentManagementPage() {
                   <div className="mb-3 flex items-center gap-2">
                     <div className="size-8 rounded-full bg-muted" />
                     <div>
-                      <p className="text-sm font-medium">CosmicReader</p>
+                      <p className="text-sm font-medium">{divinerUsername}</p>
                       <p className="text-xs text-muted-foreground">Just now</p>
                     </div>
                   </div>

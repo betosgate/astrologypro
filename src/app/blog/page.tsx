@@ -140,10 +140,13 @@ export default function BlogPage() {
                       </p>
 
                       {/* Notify pill */}
-                      <div className="mt-5 inline-flex items-center gap-1.5 text-xs text-[#c9a84c]/60">
+                      <a
+                        href="#subscribe"
+                        className="mt-5 inline-flex items-center gap-1.5 text-xs text-[#c9a84c]/60 hover:text-[#c9a84c] transition-colors"
+                      >
                         <span className="inline-block size-1 rounded-full bg-[#c9a84c]/60" />
                         Notify me when published
-                      </div>
+                      </a>
                     </div>
                   </article>
                 ))}
@@ -152,7 +155,7 @@ export default function BlogPage() {
           </section>
 
           {/* Email Subscribe */}
-          <section className="border-t border-white/[0.06] px-4 py-20 sm:px-6 lg:px-8">
+          <section id="subscribe" className="border-t border-white/[0.06] px-4 py-20 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-xl text-center">
               <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-full border border-[#c9a84c]/20 bg-[#c9a84c]/10">
                 {/* Envelope icon inline */}
