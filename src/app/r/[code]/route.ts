@@ -20,11 +20,8 @@ export async function GET(
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Increment clicks count
-  await supabase
-    .from("tracking_links")
-    .update({ clicks: (link.clicks ?? 0) + 1 })
-    .eq("id", link.id);
+  // Increment clicks atomically via RPC to avoid race conditions
+  await supabase.rpc("increment_tracking_link_clicks", { link_id: link.id });
 
   // Redirect to destination
   return NextResponse.redirect(link.destination_url);

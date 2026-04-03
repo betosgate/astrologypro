@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import { PRICING } from "@/lib/constants";
-import { sendPhoneSessionReceipt } from "@/lib/email";
+import { sendPhoneSessionReceipt, sendPhonePaymentFailed } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       const { data: client } = await supabase
         .from("clients")
         .select(
-          "stripe_customer_id, default_payment_method_id, email, display_name"
+          "stripe_customer_id, default_payment_method_id, email, full_name"
         )
         .eq("id", session.client_id)
         .single();
@@ -149,7 +149,26 @@ export async function POST(request: NextRequest) {
             .update({ status: "failed" })
             .eq("id", session.id);
 
-          // TODO: Queue email to client with manual payment link
+          // Notify client that payment failed
+          if (client.email) {
+            const { data: divinerForEmail } = await supabase
+              .from("diviners")
+              .select("username, display_name")
+              .eq("id", session.diviner_id)
+              .single();
+
+            await sendPhonePaymentFailed({
+              clientEmail: client.email,
+              divinerName: divinerForEmail?.display_name ?? "Your Diviner",
+              duration: durationMinutes,
+              amount: amountCharged,
+              divinerPageUrl: divinerForEmail?.username
+                ? `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/${divinerForEmail.username}`
+                : `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}`,
+            }).catch((err) =>
+              console.error("[Twilio Status] Failed to send payment-failed email:", err)
+            );
+          }
         }
       }
     }

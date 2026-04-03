@@ -1123,7 +1123,54 @@ export async function sendPhoneSessionReceipt({
 }
 
 // ---------------------------------------------------------------------------
-// 14. Guest Booking Invite — sent when booking confirmed and guest has email
+// 14. Phone Payment Failed — sent when card-on-file charge fails after call
+// ---------------------------------------------------------------------------
+
+interface PhonePaymentFailedParams {
+  clientEmail: string;
+  divinerName: string;
+  duration: number;
+  amount: number;
+  divinerPageUrl: string;
+}
+
+export async function sendPhonePaymentFailed({
+  clientEmail,
+  divinerName,
+  duration,
+  amount,
+  divinerPageUrl,
+}: PhonePaymentFailedParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">We were unable to charge your saved payment method for your recent phone reading with <strong style="color:#f4f4f5;">${divinerName}</strong>.</p>
+
+    ${detailRow("Diviner", divinerName)}
+    ${detailRow("Duration", `${duration} minutes`)}
+    ${detailRow("Amount Due", `$${amount.toFixed(2)}`)}
+
+    ${infoCard(`Please book a new session and complete payment, or contact <strong style="color:#e4e4e7;">${divinerName}</strong> directly to arrange payment for this reading.`)}
+
+    <div style="text-align:center;margin:28px 0;">
+      <a href="${divinerPageUrl}" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-weight:600;border-radius:8px;text-decoration:none;">Visit ${divinerName}'s Page</a>
+    </div>
+
+    <p style="margin:16px 0 0;color:#a1a1aa;">If you believe this is an error, please contact us at <a href="mailto:support@astrologypro.com" style="color:#8b5cf6;">support@astrologypro.com</a>.</p>
+  `;
+
+  return sendEmail({
+    to: clientEmail,
+    subject: `Action required: payment of $${amount.toFixed(2)} could not be processed`,
+    html: emailTemplate({
+      title: "Payment Unsuccessful",
+      preheader: `Payment of $${amount.toFixed(2)} for your ${duration}-minute reading with ${divinerName} could not be processed.`,
+      content,
+      footer: `AstrologyPro &mdash; Run Your Divination Business`,
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 15. Guest Booking Invite — sent when booking confirmed and guest has email
 // ---------------------------------------------------------------------------
 
 interface GuestBookingInviteParams {
