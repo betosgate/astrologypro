@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     // Fetch the booking to get scheduled time and verify ownership
     const { data: booking, error: bookingError } = await admin
       .from("bookings")
-      .select("id, scheduled_at, diviner_id, client_id, status, questionnaire")
+      .select("id, scheduled_at, diviner_id, client_id, status, questionnaire_responses")
       .eq("id", bookingId)
       .single();
 
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const questionnaire = ((booking as Record<string, unknown>).questionnaire ?? {}) as Record<string, string>;
+    const questionnaire = ((booking as Record<string, unknown>).questionnaire_responses ?? {}) as Record<string, string>;
     const hasGuest = questionnaire.secondPersonAttending === "yes" || questionnaire.secondPersonAttending === "maybe";
 
     // Calculate expiration: scheduled time + duration + 30 min buffer

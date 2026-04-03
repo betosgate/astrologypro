@@ -27,7 +27,7 @@ export async function POST() {
     // Fetch the diviner record
     const { data: diviner, error: divinerError } = await supabase
       .from("diviners")
-      .select("id, display_name, email, onboarding_complete")
+      .select("id, display_name, onboarding_completed")
       .eq("user_id", user.id)
       .single();
 
@@ -38,12 +38,12 @@ export async function POST() {
     // Mark onboarding complete (best-effort — column may not exist in all envs)
     await supabase
       .from("diviners")
-      .update({ onboarding_complete: true })
+      .update({ onboarding_completed: true })
       .eq("id", diviner.id);
 
     // Only send the welcome email once
-    if (!diviner.onboarding_complete) {
-      const recipientEmail: string = diviner.email ?? user.email ?? "";
+    if (!diviner.onboarding_completed) {
+      const recipientEmail: string = user.email ?? "";
       const recipientName: string = diviner.display_name ?? "there";
 
       if (recipientEmail) {

@@ -29,14 +29,14 @@ export async function POST(request: NextRequest) {
     if (bookingId) {
       const { data: booking } = await admin
         .from("bookings")
-        .select("client_id, clients(display_name, full_name)")
+        .select("client_id, clients(full_name)")
         .eq("id", bookingId)
         .single();
 
       if (booking) {
         clientId = booking.client_id;
         const client = booking.clients as any;
-        clientName = client?.display_name ?? client?.full_name ?? null;
+        clientName = client?.full_name ?? null;
       }
     }
 

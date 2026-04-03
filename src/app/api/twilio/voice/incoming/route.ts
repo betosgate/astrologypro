@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     // 2. Look up client by From phone number
     const { data: client } = await supabase
       .from("clients")
-      .select("id, stripe_customer_id, default_payment_method_id, card_consent_at")
+      .select("id")
       .eq("phone", from)
       .maybeSingle();
 
@@ -85,8 +85,8 @@ export async function POST(request: NextRequest) {
         `);
       }
 
-      // Standalone call -- client has card on file
-      if (client.stripe_customer_id && client.default_payment_method_id && client.card_consent_at) {
+      // Standalone call -- card-on-file billing not yet implemented
+      if (false) { // TODO: re-enable when stripe_customer_id / default_payment_method_id added to clients
         await supabase
           .from("phone_sessions")
           .insert({

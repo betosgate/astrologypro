@@ -30,7 +30,7 @@ const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
   confirmed: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   completed: "bg-green-500/10 text-green-500 border-green-500/20",
-  cancelled: "bg-red-500/10 text-red-500 border-red-500/20",
+  canceled: "bg-red-500/10 text-red-500 border-red-500/20",
   in_progress: "bg-purple-500/10 text-purple-500 border-purple-500/20",
   no_show: "bg-gray-500/10 text-gray-500 border-gray-500/20",
 };
@@ -63,7 +63,7 @@ export default async function BookingsPage({
   let query = supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, status, duration, amount, notes, questionnaire_responses, client_id, refund_amount, refunded_at, refund_reason, services(name), clients(display_name, email, birth_date, birth_time, birth_city)",
+      "id, scheduled_at, status, duration_minutes, base_price, notes, session_notes, questionnaire_responses, client_id, refund_amount, refunded_at, refund_reason, services(name), clients(full_name, email, birth_date, birth_time, birth_city)",
       { count: "exact" }
     )
     .eq("diviner_id", diviner.id)
@@ -180,7 +180,7 @@ export default async function BookingsPage({
                       <TableCell>
                         <div>
                           <p className="font-medium">
-                            {booking.clients?.display_name ?? "Unknown"}
+                            {booking.clients?.full_name ?? "Unknown"}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {booking.clients?.email}
@@ -188,7 +188,7 @@ export default async function BookingsPage({
                         </div>
                       </TableCell>
                       <TableCell>{booking.services?.name ?? "--"}</TableCell>
-                      <TableCell>{booking.duration} min</TableCell>
+                      <TableCell>{booking.duration_minutes} min</TableCell>
                       <TableCell>
                         <Badge
                           className={statusColors[booking.status] ?? ""}
@@ -198,7 +198,7 @@ export default async function BookingsPage({
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {formatCurrency((booking.amount ?? 0) / 100)}
+                        {formatCurrency(booking.base_price ?? 0)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
@@ -207,11 +207,12 @@ export default async function BookingsPage({
                               id: booking.id,
                               scheduled_at: booking.scheduled_at,
                               status: booking.status,
-                              duration: booking.duration,
-                              amount: booking.amount ?? 0,
+                              duration: booking.duration_minutes,
+                              amount: booking.base_price ?? 0,
                               notes: booking.notes,
+                              session_notes: booking.session_notes ?? null,
                               client_name:
-                                booking.clients?.display_name ?? "Unknown",
+                                booking.clients?.full_name ?? "Unknown",
                               client_email: booking.clients?.email ?? "",
                               service_name: booking.services?.name ?? "Unknown",
                               refund_amount: booking.refund_amount ?? null,
@@ -228,7 +229,7 @@ export default async function BookingsPage({
                                 service_name:
                                   booking.services?.name ?? "Unknown",
                                 client_name:
-                                  booking.clients?.display_name ?? "Unknown",
+                                  booking.clients?.full_name ?? "Unknown",
                                 client_email: booking.clients?.email ?? "",
                                 birth_date:
                                   booking.clients?.birth_date ?? null,

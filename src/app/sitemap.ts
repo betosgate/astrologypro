@@ -33,11 +33,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   // Hub / index pages
   const hubPages: MetadataRoute.Sitemap = [
+    '/blog',
+    '/discover',
     '/learn',
     '/tarot',
     '/tarot/spreads',
     '/guides',
     '/glossary',
+    '/zodiac',
   ].map((route) => ({
     url: `${BASE_URL}${route}`,
     lastModified: now,

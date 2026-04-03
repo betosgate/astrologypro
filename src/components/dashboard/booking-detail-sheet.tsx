@@ -14,14 +14,14 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Eye, Loader2, RotateCcw, CheckCircle2 } from "lucide-react";
+import { Eye, Loader2, RotateCcw, CheckCircle2, NotebookPen } from "lucide-react";
 import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
   confirmed: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   completed: "bg-green-500/10 text-green-500 border-green-500/20",
-  cancelled: "bg-red-500/10 text-red-500 border-red-500/20",
+  canceled: "bg-red-500/10 text-red-500 border-red-500/20",
   "in_progress": "bg-purple-500/10 text-purple-500 border-purple-500/20",
   no_show: "bg-gray-500/10 text-gray-500 border-gray-500/20",
 };
@@ -34,6 +34,7 @@ interface BookingDetailProps {
     duration: number;
     amount: number;
     notes: string | null;
+    session_notes?: string | null;
     client_name: string;
     client_email: string;
     service_name: string;
@@ -50,6 +51,30 @@ export function BookingDetailSheet({ booking }: BookingDetailProps) {
   const [refundReason, setRefundReason] = useState("");
   const [refunding, setRefunding] = useState(false);
   const [refunded, setRefunded] = useState(!!booking.refunded_at);
+  const [sessionNotes, setSessionNotes] = useState(booking.session_notes ?? "");
+  const [savingNotes, setSavingNotes] = useState(false);
+
+  async function handleSaveNotes() {
+    setSavingNotes(true);
+    try {
+      const res = await fetch("/api/bookings/session-notes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: booking.id, sessionNotes }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error ?? "Failed to save notes");
+        return;
+      }
+      toast.success("Session notes saved");
+      router.refresh();
+    } catch {
+      toast.error("Failed to save notes");
+    } finally {
+      setSavingNotes(false);
+    }
+  }
 
   async function handleRefund() {
     if (!refundReason.trim()) {
@@ -140,13 +165,46 @@ export function BookingDetailSheet({ booking }: BookingDetailProps) {
             <div>
               <p className="text-xs text-muted-foreground">Amount</p>
               <p className="text-sm font-medium">
-                {formatCurrency(booking.amount / 100)}
+                {formatCurrency(booking.amount)}
               </p>
             </div>
             {booking.notes && (
               <div>
-                <p className="text-xs text-muted-foreground">Notes</p>
+                <p className="text-xs text-muted-foreground">Booking Notes</p>
                 <p className="text-sm">{booking.notes}</p>
+              </div>
+            )}
+
+            {/* Session Notes — only for completed bookings */}
+            {booking.status === "completed" && (
+              <div className="space-y-2">
+                <Label htmlFor="session-notes" className="flex items-center gap-1.5">
+                  <NotebookPen className="size-3.5" />
+                  Session Notes
+                  <span className="text-xs font-normal text-muted-foreground">(private)</span>
+                </Label>
+                <Textarea
+                  id="session-notes"
+                  rows={4}
+                  placeholder="Add notes about this session — themes covered, follow-up topics, key insights…"
+                  value={sessionNotes}
+                  onChange={(e) => setSessionNotes(e.target.value)}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleSaveNotes}
+                  disabled={savingNotes}
+                >
+                  {savingNotes ? (
+                    <>
+                      <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                      Saving…
+                    </>
+                  ) : (
+                    "Save Notes"
+                  )}
+                </Button>
               </div>
             )}
 
@@ -192,7 +250,7 @@ export function BookingDetailSheet({ booking }: BookingDetailProps) {
                 <h4 className="text-sm font-semibold">Confirm Refund</h4>
                 <p className="text-xs text-muted-foreground">
                   You are about to refund{" "}
-                  <strong>{formatCurrency(booking.amount / 100)}</strong> to{" "}
+                  <strong>{formatCurrency(booking.amount)}</strong> to{" "}
                   {booking.client_name}. This action cannot be undone.
                 </p>
                 <div className="space-y-2">

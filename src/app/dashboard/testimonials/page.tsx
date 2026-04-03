@@ -65,7 +65,7 @@ export default async function TestimonialsPage() {
 
   const { data: testimonials } = await supabase
     .from("testimonials")
-    .select("id, rating, text, service_type, status, featured, created_at, clients(display_name, email)")
+    .select("id, rating, text, service_type, status, featured, created_at, clients(full_name, email)")
     .eq("diviner_id", diviner.id)
     .order("created_at", { ascending: false });
 
@@ -120,7 +120,7 @@ export default async function TestimonialsPage() {
                     {testimonials.map((testimonial: any) => (
                       <TableRow key={testimonial.id}>
                         <TableCell className="font-medium">
-                          {testimonial.clients?.display_name ??
+                          {testimonial.clients?.full_name ??
                             testimonial.clients?.email ??
                             "Unknown"}
                         </TableCell>
@@ -168,7 +168,7 @@ export default async function TestimonialsPage() {
                   >
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium">
-                        {testimonial.clients?.display_name ??
+                        {testimonial.clients?.full_name ??
                           testimonial.clients?.email ??
                           "Unknown"}
                       </p>

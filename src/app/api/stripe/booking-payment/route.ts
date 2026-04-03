@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     // Fetch the service
     const { data: service } = await supabase
       .from("services")
-      .select("id, name, price, duration_minutes")
+      .select("id, name, base_price, duration_minutes")
       .eq("id", serviceId)
       .eq("diviner_id", divinerId)
       .eq("is_active", true)
@@ -95,9 +95,8 @@ export async function POST(request: NextRequest) {
     const adminSupabase = createAdminClient();
     let isNewUser = false;
 
-    // Try to create the auth user directly; if they already exist the call
-    // will fail with a "user already registered" error which we handle below.
-    const { error: createUserError } =
+    // Try to create the auth user; capture the new user's ID if created.
+    const { data: createUserData, error: createUserError } =
       await adminSupabase.auth.admin.createUser({
         email: clientEmail,
         email_confirm: true,
@@ -105,6 +104,8 @@ export async function POST(request: NextRequest) {
           full_name: clientName,
         },
       });
+
+    let clientAuthUserId: string | undefined;
 
     if (createUserError) {
       // "User already registered" is expected for returning clients
@@ -115,19 +116,34 @@ export async function POST(request: NextRequest) {
       ) {
         console.error("Failed to auto-create auth user:", createUserError);
       }
+      // Look up their existing client record to get user_id
+      const { data: existingClientRecord } = await adminSupabase
+        .from("clients")
+        .select("user_id")
+        .eq("email", clientEmail)
+        .maybeSingle();
+      clientAuthUserId = existingClientRecord?.user_id ?? undefined;
     } else {
       isNewUser = true;
+      clientAuthUserId = createUserData.user.id;
     }
 
-    // Upsert client record by email (with birth data from questionnaire)
-    const { data: client, error: clientError } = await supabase
+    if (!clientAuthUserId) {
+      return NextResponse.json(
+        { error: "Could not resolve client user account" },
+        { status: 500 }
+      );
+    }
+
+    // Upsert client record keyed on user_id
+    const { data: client, error: clientError } = await adminSupabase
       .from("clients")
       .upsert(
         {
+          user_id: clientAuthUserId,
           email: clientEmail,
           full_name: clientName,
           phone: clientPhone ?? null,
-          diviner_id: divinerId,
           ...(questionnaire?.birthDate
             ? { birth_date: questionnaire.birthDate }
             : {}),
@@ -142,20 +158,29 @@ export async function POST(request: NextRequest) {
             : {}),
           ...(birthTimezone ? { birth_timezone: birthTimezone } : {}),
         },
-        { onConflict: "email,diviner_id" }
+        { onConflict: "user_id" }
       )
       .select("id")
       .single();
 
     if (clientError || !client) {
+      console.error("Failed to upsert client:", clientError);
       return NextResponse.json(
         { error: "Failed to create client record" },
         { status: 500 }
       );
     }
 
+    // Ensure the client-diviner relationship exists
+    await adminSupabase
+      .from("client_diviners")
+      .upsert(
+        { client_id: client.id, diviner_id: divinerId },
+        { onConflict: "client_id,diviner_id" }
+      );
+
     // --- Loyalty Discount Check ---
-    let finalPrice = service.price;
+    let finalPrice = service.base_price;
     let loyaltyDiscountPercent = 0;
     let loyaltyRuleName: string | null = null;
 
@@ -184,7 +209,7 @@ export async function POST(request: NextRequest) {
         loyaltyDiscountPercent = bestRule.discount_percent;
         loyaltyRuleName = bestRule.name;
         finalPrice = Math.round(
-          service.price * (1 - loyaltyDiscountPercent / 100) * 100
+          service.base_price * (1 - loyaltyDiscountPercent / 100) * 100
         ) / 100;
       }
     }
@@ -220,17 +245,18 @@ export async function POST(request: NextRequest) {
     );
 
     // Create booking record with pending status
-    const { data: booking, error: bookingError } = await supabase
+    // Use admin client — guest bookers have no session so RLS would block the insert
+    const { data: booking, error: bookingError } = await adminSupabase
       .from("bookings")
       .insert({
         diviner_id: divinerId,
         client_id: client.id,
         service_id: serviceId,
         scheduled_at: scheduledAt,
-        end_at: endTime.toISOString(),
+        duration_minutes: service.duration_minutes,
         status: "pending",
-        price: finalPrice,
-        questionnaire,
+        base_price: finalPrice,
+        questionnaire_responses: questionnaire,
       })
       .select("id")
       .single();
@@ -244,14 +270,14 @@ export async function POST(request: NextRequest) {
 
     // Handle affiliate tracking
     if (affiliateCode) {
-      const { data: affiliate } = await supabase
+      const { data: affiliate } = await adminSupabase
         .from("affiliates")
         .select("id")
         .eq("code", affiliateCode)
         .single();
 
       if (affiliate) {
-        await supabase.from("affiliate_referrals").insert({
+        await adminSupabase.from("affiliate_referrals").insert({
           affiliate_id: affiliate.id,
           booking_id: booking.id,
           diviner_id: divinerId,
@@ -285,13 +311,13 @@ export async function POST(request: NextRequest) {
 
       clientSecret = paymentIntent.client_secret;
 
-      await supabase
+      await adminSupabase
         .from("bookings")
         .update({ stripe_payment_intent_id: paymentIntent.id })
         .eq("id", booking.id);
     } else {
       // Fully covered by gift certificate — mark booking as confirmed
-      await supabase
+      await adminSupabase
         .from("bookings")
         .update({ status: "confirmed" })
         .eq("id", booking.id);
@@ -395,7 +421,7 @@ export async function POST(request: NextRequest) {
 
     // Deduct from gift certificate if used
     if (giftCertificateId && giftDeduction > 0) {
-      const { data: currentCert } = await supabase
+      const { data: currentCert } = await adminSupabase
         .from("gift_certificates")
         .select("remaining_amount")
         .eq("id", giftCertificateId)
@@ -406,7 +432,7 @@ export async function POST(request: NextRequest) {
           0,
           currentCert.remaining_amount - giftDeduction
         );
-        await supabase
+        await adminSupabase
           .from("gift_certificates")
           .update({
             remaining_amount: newRemaining,
@@ -421,14 +447,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       clientSecret,
       bookingId: booking.id,
-      originalPrice: service.price,
+      originalPrice: service.base_price,
       finalPrice,
       ...(loyaltyDiscountPercent > 0
         ? {
             loyaltyDiscount: {
               name: loyaltyRuleName,
               percent: loyaltyDiscountPercent,
-              saved: Math.round((service.price - finalPrice + giftDeduction) * 100) / 100,
+              saved: Math.round((service.base_price - finalPrice + giftDeduction) * 100) / 100,
             },
           }
         : {}),

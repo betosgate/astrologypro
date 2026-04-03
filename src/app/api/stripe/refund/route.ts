@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     const { data: booking, error: bookingError } = await admin
       .from("bookings")
       .select(
-        "id, diviner_id, client_id, amount, stripe_payment_intent_id, status, refunded_at, clients(email, display_name)"
+        "id, diviner_id, client_id, base_price, stripe_payment_intent_id, status, refunded_at, clients(email, full_name)"
       )
       .eq("id", bookingId)
       .single();
@@ -84,10 +84,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Issue the refund via Stripe
-    const refundAmount = booking.amount; // full refund in cents
+    // base_price is stored as dollars; Stripe expects cents
+    const refundAmountDollars = booking.base_price as number;
+    const refundAmountCents = Math.round(refundAmountDollars * 100);
     const refund = await stripe.refunds.create({
       payment_intent: booking.stripe_payment_intent_id,
-      amount: refundAmount,
+      amount: refundAmountCents,
       reason: "requested_by_customer",
       metadata: {
         booking_id: bookingId,
@@ -96,12 +98,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Update booking record
+    // Update booking record — store amount in dollars to match base_price
     const now = new Date().toISOString();
     await admin
       .from("bookings")
       .update({
-        refund_amount: refundAmount / 100, // store as dollars
+        refund_amount: refundAmountDollars,
         refunded_at: now,
         refund_reason: reason ?? "Diviner-issued refund",
       })
@@ -113,7 +115,7 @@ export async function POST(request: NextRequest) {
       await sendRefundProcessed({
         clientEmail: clientData.email,
         divinerName: diviner.display_name ?? "Your Diviner",
-        amount: refundAmount / 100,
+        amount: refundAmountDollars,
         reason: reason ?? "Refund issued by your diviner",
       }).catch((err) =>
         console.error("[Refund] Failed to send refund email:", err)
@@ -123,7 +125,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       refundId: refund.id,
-      amount: refundAmount / 100,
+      amount: refundAmountDollars,
     });
   } catch (error) {
     console.error("[Stripe Refund] Error:", error);

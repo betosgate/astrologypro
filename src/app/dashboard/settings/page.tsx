@@ -38,6 +38,8 @@ import { formatCurrency } from "@/lib/format";
 interface DivinerSettings {
   id: string;
   subscription_status: string | null;
+  plan_id: string | null;
+  stripe_subscription_id: string | null;
   stripe_account_id: string | null;
   charges_enabled: boolean;
   payouts_enabled: boolean;
@@ -72,6 +74,53 @@ interface DiscountRule {
   min_sessions: number | null;
   discount_percent: number;
   is_active: boolean;
+}
+
+function UpgradeToBothButton() {
+  const router = useRouter();
+  const [upgrading, setUpgrading] = useState(false);
+
+  async function handleUpgrade() {
+    if (
+      !confirm(
+        "Upgrade to The Oracle plan? Your monthly rate will change from $97 to $147 with proration. This gives you all 20 services + phone readings."
+      )
+    )
+      return;
+
+    setUpgrading(true);
+    try {
+      const res = await fetch("/api/stripe/upgrade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPlanId: "both" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Upgrade failed");
+        return;
+      }
+      toast.success("Upgraded to The Oracle plan!");
+      router.refresh();
+    } catch {
+      toast.error("Upgrade failed. Please try again.");
+    } finally {
+      setUpgrading(false);
+    }
+  }
+
+  return (
+    <Button size="sm" variant="outline" onClick={handleUpgrade} disabled={upgrading}>
+      {upgrading ? (
+        <>
+          <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+          Upgrading…
+        </>
+      ) : (
+        "Upgrade to Oracle"
+      )}
+    </Button>
+  );
 }
 
 export default function SettingsPage() {
@@ -122,7 +171,7 @@ export default function SettingsPage() {
       const { data } = await supabase
         .from("diviners")
         .select(
-          "id, subscription_status, stripe_account_id, charges_enabled, payouts_enabled, google_calendar_connected, youtube_channel_id, notification_email, notification_sms, notification_booking_confirmed, notification_booking_cancelled, notification_payout, twilio_phone_number, twilio_phone_sid, phone_dialin_enabled, phone_mobile, phone_answer_mode"
+          "id, subscription_status, plan_id, stripe_subscription_id, stripe_account_id, charges_enabled, payouts_enabled, google_calendar_connected, youtube_channel_id, notification_email, notification_sms, notification_booking_confirmed, notification_booking_cancelled, notification_payout, twilio_phone_number, twilio_phone_sid, phone_dialin_enabled, phone_mobile, phone_answer_mode"
         )
         .eq("user_id", user.id)
         .single();
@@ -131,6 +180,8 @@ export default function SettingsPage() {
         setSettings({
           id: data.id,
           subscription_status: data.subscription_status ?? null,
+          plan_id: data.plan_id ?? null,
+          stripe_subscription_id: data.stripe_subscription_id ?? null,
           stripe_account_id: data.stripe_account_id ?? null,
           charges_enabled: data.charges_enabled ?? false,
           payouts_enabled: data.payouts_enabled ?? false,
@@ -369,6 +420,27 @@ export default function SettingsPage() {
                   {settings.subscription_status ?? "No subscription"}
                 </Badge>
               </div>
+              {settings.plan_id && (
+                <>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Current Plan</p>
+                      <p className="text-xs text-muted-foreground capitalize">
+                        {settings.plan_id === "both"
+                          ? "The Oracle (both)"
+                          : settings.plan_id === "tarot"
+                          ? "The Tarot Reader"
+                          : "The Astrologer"}
+                      </p>
+                    </div>
+                    {settings.plan_id !== "both" &&
+                      settings.subscription_status === "active" && (
+                        <UpgradeToBothButton />
+                      )}
+                  </div>
+                </>
+              )}
               <Separator />
               {settings.subscription_status === "active" && (
                 <Button

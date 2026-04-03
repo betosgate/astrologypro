@@ -50,7 +50,7 @@ export default async function ClientsPage({
   const { data: clientRelations } = await supabase
     .from("client_diviners")
     .select(
-      "id, client_id, total_sessions, total_spent, last_session_at, clients(id, display_name, email, birth_date)"
+      "id, client_id, total_sessions, total_spent, last_session_at, clients(id, full_name, email, birth_date)"
     )
     .eq("diviner_id", diviner.id)
     .order("last_session_at", { ascending: false });
@@ -60,7 +60,7 @@ export default async function ClientsPage({
   if (q) {
     const query = q.toLowerCase();
     clients = clients.filter((c: any) => {
-      const name = c.clients?.display_name?.toLowerCase() ?? "";
+      const name = c.clients?.full_name?.toLowerCase() ?? "";
       const email = c.clients?.email?.toLowerCase() ?? "";
       return name.includes(query) || email.includes(query);
     });
@@ -112,7 +112,7 @@ export default async function ClientsPage({
                   return (
                     <TableRow key={relation.id}>
                       <TableCell className="font-medium">
-                        {client?.display_name ?? "Unknown"}
+                        {client?.full_name ?? "Unknown"}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {client?.email ?? "--"}
@@ -134,7 +134,7 @@ export default async function ClientsPage({
                       <TableCell>
                         <ClientDetailSheet
                           clientId={client?.id}
-                          clientName={client?.display_name ?? "Client"}
+                          clientName={client?.full_name ?? "Client"}
                           divinerId={diviner.id}
                         />
                       </TableCell>

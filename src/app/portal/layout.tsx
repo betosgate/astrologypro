@@ -22,7 +22,7 @@ export default async function PortalLayout({
   // Try to fetch existing client record
   let { data: client } = await supabase
     .from("clients")
-    .select("id, display_name, email")
+    .select("id, full_name, email")
     .eq("user_id", user.id)
     .single();
 
@@ -33,9 +33,9 @@ export default async function PortalLayout({
       .insert({
         user_id: user.id,
         email: user.email!,
-        display_name: user.email!.split("@")[0],
+        full_name: user.email!.split("@")[0],
       })
-      .select("id, display_name, email")
+      .select("id, full_name, email")
       .single();
 
     client = newClient;

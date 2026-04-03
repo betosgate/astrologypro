@@ -511,7 +511,7 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
                         </div>
                       ) : timeSlots.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
-                          No available times on this date.
+                          No available times on this date. Try selecting a different day.
                         </p>
                       ) : (
                         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -620,7 +620,16 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
 
               {error && (
                 <div className="rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
-                  {error}
+                  <p>{error}</p>
+                  {!clientSecret && !creatingPaymentIntent && (
+                    <button
+                      type="button"
+                      onClick={handleCreatePaymentIntent}
+                      className="mt-2 underline hover:no-underline"
+                    >
+                      Try again
+                    </button>
+                  )}
                 </div>
               )}
 

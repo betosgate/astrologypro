@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     // Fetch booking with service info
     const { data: booking, error: bookingError } = await admin
       .from("bookings")
-      .select("id, diviner_id, amount, duration, services(duration_minutes)")
+      .select("id, diviner_id, base_price, duration_minutes, services(duration_minutes)")
       .eq("id", bookingId)
       .single();
 
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     // Calculate overage
     const scheduledDuration =
-      (booking.services as any)?.duration_minutes ?? booking.duration ?? 60;
+      (booking.services as any)?.duration_minutes ?? booking.duration_minutes ?? 60;
     const overageMinutes = Math.max(
       0,
       actualDurationMinutes - scheduledDuration
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     const overageAmount = Math.round(
       overageMinutes * PRICING.overagePerMinute * 100
     ); // in cents
-    const totalAmount = (booking.amount ?? 0) + overageAmount;
+    const totalAmount = Math.round((booking.base_price ?? 0) * 100) + overageAmount;
 
     // Update booking to completed
     const { error: updateError } = await admin

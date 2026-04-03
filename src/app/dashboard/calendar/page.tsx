@@ -51,7 +51,7 @@ export default async function CalendarPage() {
     supabase
       .from("bookings")
       .select(
-        "id, scheduled_at, duration_minutes, status, services(name), clients(display_name, full_name)"
+        "id, scheduled_at, duration_minutes, status, services(name), clients(full_name)"
       )
       .eq("diviner_id", diviner.id)
       .in("status", ["pending", "confirmed", "in_progress"])

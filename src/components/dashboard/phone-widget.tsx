@@ -86,7 +86,11 @@ export default function PhoneWidget() {
         });
 
         device.on("error", () => {
-          if (!destroyed) setState("unavailable");
+          if (!destroyed) {
+            setState("unavailable");
+            try { device.destroy(); } catch { /* ignore */ }
+            deviceRef.current = null;
+          }
         });
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

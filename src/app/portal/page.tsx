@@ -27,7 +27,7 @@ export default async function PortalDashboardPage() {
 
   const { data: client } = await supabase
     .from("clients")
-    .select("id, display_name")
+    .select("id, full_name")
     .eq("user_id", user.id)
     .single();
 
@@ -69,7 +69,7 @@ export default async function PortalDashboardPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
-          Welcome back, {client.display_name}
+          Welcome back, {client.full_name}
         </h1>
         <p className="text-muted-foreground">
           Here is what is happening with your sessions.

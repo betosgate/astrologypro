@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const { data: pendingFollowUps, error } = await admin
       .from("follow_up_sequences")
       .select(
-        "id, booking_id, diviner_id, client_id, step, email_type, bookings(id, service_id, scheduled_at, services(name, slug)), clients(email, display_name, full_name), diviners(display_name, username)"
+        "id, booking_id, diviner_id, client_id, step, email_type, bookings(id, service_id, scheduled_at, services(name, slug)), clients(email, full_name), diviners(display_name, username)"
       )
       .is("sent_at", null)
       .lte("scheduled_at", new Date().toISOString())
@@ -95,13 +95,13 @@ export async function GET(request: NextRequest) {
 
             const { data: bookingDetails } = await admin
               .from("bookings")
-              .select("session_notes, questionnaire")
+              .select("session_notes, questionnaire_responses")
               .eq("id", followUp.booking_id)
               .single();
 
             if (bookingDetails) {
               // Extract focus question from questionnaire responses
-              const questionnaire = bookingDetails.questionnaire as Record<string, string | undefined> | null;
+              const questionnaire = bookingDetails.questionnaire_responses as Record<string, string | undefined> | null;
               if (questionnaire?.focusQuestion) {
                 focusQuestion = questionnaire.focusQuestion;
               }

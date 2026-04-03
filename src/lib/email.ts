@@ -1,6 +1,26 @@
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+
+const FROM_ADDRESS =
+  process.env.AWS_SES_FROM_ADDRESS ??
+  "AstrologyPro <noreply@divineinfinitebeing.com>";
+
+function getSESClient() {
+  const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SES_SECRET_ACCESS_KEY;
+  const region = process.env.AWS_SES_REGION ?? "us-east-1";
+
+  if (!accessKeyId || !secretAccessKey) {
+    return null;
+  }
+
+  return new SESClient({
+    region,
+    credentials: { accessKeyId, secretAccessKey },
+  });
+}
 
 interface SendEmailParams {
   to: string;
@@ -9,34 +29,24 @@ interface SendEmailParams {
 }
 
 export async function sendEmail({ to, subject, html }: SendEmailParams) {
-  // Placeholder: log instead of sending in development
-  if (!RESEND_API_KEY || RESEND_API_KEY === "re_placeholder") {
-    console.log("[Email] Would send email:", { to, subject, html });
+  const ses = getSESClient();
+
+  if (!ses) {
+    console.log("[Email] AWS SES not configured — logging instead:", { to, subject });
     return { success: true, id: "dev-placeholder" };
   }
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      "Content-Type": "application/json",
+  const command = new SendEmailCommand({
+    Source: FROM_ADDRESS,
+    Destination: { ToAddresses: [to] },
+    Message: {
+      Subject: { Data: subject, Charset: "UTF-8" },
+      Body: { Html: { Data: html, Charset: "UTF-8" } },
     },
-    body: JSON.stringify({
-      from: "AstrologyPro <noreply@astrologypro.com>",
-      to,
-      subject,
-      html,
-    }),
   });
 
-  if (!res.ok) {
-    const error = await res.text();
-    console.error("[Email] Failed to send:", error);
-    throw new Error(`Failed to send email: ${error}`);
-  }
-
-  const data = await res.json();
-  return { success: true, id: data.id };
+  const result = await ses.send(command);
+  return { success: true, id: result.MessageId ?? "" };
 }
 
 // ---------------------------------------------------------------------------

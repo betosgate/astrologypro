@@ -66,7 +66,7 @@ export default function PortalProfilePage() {
         .single();
 
       if (client) {
-        setDisplayName(client.display_name ?? "");
+        setDisplayName(client.full_name ?? "");
         setEmail(client.email ?? user.email ?? "");
         setPhone(client.phone ?? "");
         setBirthDate(client.birth_date ?? "");
@@ -99,7 +99,7 @@ export default function PortalProfilePage() {
       const { error: updateError } = await supabase
         .from("clients")
         .update({
-          display_name: displayName,
+          full_name: displayName,
           phone: phone || null,
           birth_date: birthDate || null,
           birth_time: birthTime || null,

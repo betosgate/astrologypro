@@ -32,7 +32,7 @@ const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
   confirmed: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   completed: "bg-green-500/10 text-green-500 border-green-500/20",
-  cancelled: "bg-red-500/10 text-red-500 border-red-500/20",
+  canceled: "bg-red-500/10 text-red-500 border-red-500/20",
   in_progress: "bg-purple-500/10 text-purple-500 border-purple-500/20",
   no_show: "bg-gray-500/10 text-gray-500 border-gray-500/20",
 };
@@ -56,7 +56,7 @@ export default async function PortalBookingsPage() {
   const { data: bookings } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, status, amount, share_id, recording_url, services(name, slug), diviners(id, display_name, username)"
+      "id, scheduled_at, status, base_price, recording_share_id, recording_url, services(name, slug), diviners(id, display_name, username)"
     )
     .eq("client_id", client.id)
     .order("scheduled_at", { ascending: false });
@@ -133,7 +133,7 @@ export default async function PortalBookingsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {formatCurrency((booking.amount ?? 0) / 100)}
+                          {formatCurrency(booking.base_price ?? 0)}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -161,10 +161,10 @@ export default async function PortalBookingsPage() {
                               )}
                             {booking.status === "completed" &&
                               booking.recording_url &&
-                              booking.share_id && (
+                              booking.recording_share_id && (
                                 <Button size="sm" variant="outline" asChild>
                                   <Link
-                                    href={`/session/${booking.share_id}/recording`}
+                                    href={`/session/${booking.recording_share_id}/recording`}
                                   >
                                     <Play className="mr-1 size-3" />
                                     Watch
@@ -226,7 +226,7 @@ export default async function PortalBookingsPage() {
                         with {booking.diviners?.display_name ?? "Unknown"}
                       </p>
                       <p>{formatDateTime(booking.scheduled_at)}</p>
-                      <p>{formatCurrency((booking.amount ?? 0) / 100)}</p>
+                      <p>{formatCurrency(booking.base_price ?? 0)}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       {booking.status === "confirmed" &&
@@ -253,10 +253,10 @@ export default async function PortalBookingsPage() {
                       )}
                       {booking.status === "completed" &&
                         booking.recording_url &&
-                        booking.share_id && (
+                        booking.recording_share_id && (
                           <Button size="sm" variant="outline" asChild>
                             <Link
-                              href={`/session/${booking.share_id}/recording`}
+                              href={`/session/${booking.recording_share_id}/recording`}
                             >
                               <Play className="mr-1 size-3" />
                               Watch

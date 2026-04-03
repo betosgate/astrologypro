@@ -36,7 +36,7 @@ interface Booking {
   duration_minutes: number;
   status: string;
   services: { name: string } | null;
-  clients: { display_name: string | null; full_name: string | null } | null;
+  clients: { full_name: string | null } | null;
 }
 
 interface CalendarViewProps {
@@ -381,9 +381,7 @@ export function CalendarView({
                               {block.booking.services?.name ?? "Session"}
                             </p>
                             <p className="truncate text-[9px] text-amber-300/70">
-                              {block.booking.clients?.display_name ??
-                                block.booking.clients?.full_name ??
-                                "Client"}
+                              {block.booking.clients?.full_name ?? "Client"}
                             </p>
                           </div>
                         </button>
@@ -417,9 +415,7 @@ export function CalendarView({
               <div>
                 <Label className="text-muted-foreground">Client</Label>
                 <p className="font-medium">
-                  {selectedBooking.clients?.display_name ??
-                    selectedBooking.clients?.full_name ??
-                    "Unknown"}
+                  {selectedBooking.clients?.full_name ?? "Unknown"}
                 </p>
               </div>
               <div>

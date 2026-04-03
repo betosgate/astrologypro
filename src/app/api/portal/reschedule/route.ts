@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { rescheduleRequestEmail } from "@/lib/email-templates";
 
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
     // Find the client record for this user
     const { data: client, error: clientError } = await supabase
       .from("clients")
-      .select("id, name, email")
+      .select("id, full_name, email")
       .eq("user_id", user.id)
       .single();
 
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
       .select(
-        "id, status, notes, services(name), diviners(id, display_name, email)"
+        "id, status, notes, services(name), diviners(id, user_id, display_name)"
       )
       .eq("id", bookingId)
       .eq("client_id", client.id)
@@ -85,8 +86,9 @@ export async function POST(req: NextRequest) {
       ? `${existingNotes}\n\n${rescheduleNote}`
       : rescheduleNote;
 
-    // Update the booking notes (status stays as-is)
-    const { error: updateError } = await supabase
+    // Update the booking notes (status stays as-is) — use admin client to bypass RLS
+    const adminSupabase = createAdminClient();
+    const { error: updateError } = await adminSupabase
       .from("bookings")
       .update({ notes: updatedNotes })
       .eq("id", bookingId);
@@ -100,23 +102,30 @@ export async function POST(req: NextRequest) {
 
     // Send email to the diviner
     const diviner = (booking as any).diviners;
-    const divinerEmail: string | undefined = diviner?.email;
     const divinerName: string = diviner?.display_name ?? "Diviner";
     const serviceName: string = (booking as any).services?.name ?? "Session";
-    const clientName: string = client.name ?? user.email ?? "Your client";
+    const clientName: string = client.full_name ?? user.email ?? "Your client";
 
-    if (divinerEmail) {
-      const { subject, html } = rescheduleRequestEmail({
-        divinerName,
-        clientName,
-        serviceName,
-        preferredDate,
-        timePreference,
-        notes: notes ?? "",
-        dashboardUrl: `${APP_URL}/dashboard/bookings`,
-      });
+    // Look up diviner's email from auth (diviners table has no email column)
+    if (diviner?.user_id) {
+      const { data: { user: divinerAuthUser } } = await adminSupabase.auth.admin.getUserById(
+        diviner.user_id
+      );
+      const divinerEmail = divinerAuthUser?.email;
 
-      await sendEmail({ to: divinerEmail, subject, html });
+      if (divinerEmail) {
+        const { subject, html } = rescheduleRequestEmail({
+          divinerName,
+          clientName,
+          serviceName,
+          preferredDate,
+          timePreference,
+          notes: notes ?? "",
+          dashboardUrl: `${APP_URL}/dashboard/bookings`,
+        });
+
+        await sendEmail({ to: divinerEmail, subject, html });
+      }
     }
 
     return NextResponse.json({ success: true });

@@ -75,7 +75,7 @@ export async function GET(request: Request) {
         // This week bookings
         supabase
           .from("bookings")
-          .select("id, amount, status, services(name)", { count: "exact" })
+          .select("id, base_price, status, services(name)", { count: "exact" })
           .eq("diviner_id", diviner.id)
           .gte("created_at", thisWeekISO)
           .lte("created_at", nowISO),
@@ -89,7 +89,7 @@ export async function GET(request: Request) {
         // This week completed
         supabase
           .from("bookings")
-          .select("id, amount", { count: "exact" })
+          .select("id, base_price", { count: "exact" })
           .eq("diviner_id", diviner.id)
           .eq("status", "completed")
           .gte("created_at", thisWeekISO)
@@ -119,7 +119,7 @@ export async function GET(request: Request) {
         // All time revenue
         supabase
           .from("bookings")
-          .select("amount")
+          .select("base_price")
           .eq("diviner_id", diviner.id)
           .eq("status", "completed"),
         // Tracking link clicks this week
@@ -131,7 +131,7 @@ export async function GET(request: Request) {
 
       const thisWeekRevenue =
         thisWeekCompleted.data?.reduce(
-          (sum, b) => sum + (b.amount ?? 0),
+          (sum, b) => sum + (b.base_price ?? 0),
           0
         ) ?? 0;
       const thisWeekBookingCount = thisWeekBookings.count ?? 0;
@@ -143,7 +143,7 @@ export async function GET(request: Request) {
 
       const totalRevenue =
         allTimeRevenue.data?.reduce(
-          (sum, b) => sum + (b.amount ?? 0),
+          (sum, b) => sum + (b.base_price ?? 0),
           0
         ) ?? 0;
 

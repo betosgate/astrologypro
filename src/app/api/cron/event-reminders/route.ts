@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     const { data: clientDiviners, error } = await admin
       .from("client_diviners")
       .select(
-        "client_id, diviner_id, clients(id, email, display_name, birth_date), diviners(id, display_name, username)"
+        "client_id, diviner_id, clients(id, email, full_name, birth_date), diviners(id, display_name, username)"
       )
       .not("clients.birth_date", "is", null);
 

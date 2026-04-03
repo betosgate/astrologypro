@@ -3,15 +3,6 @@ import { createCheckoutSession } from "@/lib/stripe/billing";
 import { PLANS, type PlanId } from "@/lib/plans";
 import { APP_URL } from "@/lib/constants";
 
-export async function GET() {
-  return NextResponse.json({
-    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.slice(0, 12) + "..." : "MISSING",
-    STRIPE_PRICE_TAROT_SETUP: process.env.STRIPE_PRICE_TAROT_SETUP || "MISSING",
-    STRIPE_PRICE_TAROT_MONTHLY: process.env.STRIPE_PRICE_TAROT_MONTHLY || "MISSING",
-    STRIPE_PRICE_BOTH_SETUP: process.env.STRIPE_PRICE_BOTH_SETUP || "MISSING",
-    STRIPE_PRICE_BOTH_MONTHLY: process.env.STRIPE_PRICE_BOTH_MONTHLY || "MISSING",
-  });
-}
 
 export async function POST(request: NextRequest) {
   try {
