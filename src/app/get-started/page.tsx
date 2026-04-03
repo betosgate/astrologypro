@@ -85,9 +85,28 @@ export default function GetStartedPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [usernameEdited, setUsernameEdited] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  function nameToUsername(fullName: string): string {
+    return fullName
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, "")   // strip non-alphanumeric except spaces/hyphens
+      .replace(/\s+/g, "-")            // spaces → hyphens
+      .replace(/-{2,}/g, "-")          // collapse multiple hyphens
+      .replace(/^-|-$/g, "")           // strip leading/trailing hyphens
+      .slice(0, 30);
+  }
+
+  function handleNameChange(value: string) {
+    setName(value);
+    if (!usernameEdited) {
+      setUsername(nameToUsername(value));
+    }
+  }
 
   function selectPlan(planId: PlanId) {
     setSelectedPlan(planId);
@@ -565,7 +584,7 @@ export default function GetStartedPage() {
                       type="text"
                       placeholder="Maya Starweaver"
                       value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      onChange={(e) => handleNameChange(e.target.value)}
                       required
                       autoComplete="name"
                       className="border-white/10 bg-white/[0.04] text-[#f5f0e8] placeholder:text-[#b8bcd0]/30"
@@ -608,18 +627,19 @@ export default function GetStartedPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="username" className="text-[#b8bcd0]/80">
-                      Choose Your URL
+                      Your URL
                     </Label>
                     <Input
                       id="username"
                       type="text"
-                      placeholder="mystic-maya"
+                      placeholder="maya-starweaver"
                       value={username}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        setUsernameEdited(true);
                         setUsername(
                           e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
-                        )
-                      }
+                        );
+                      }}
                       required
                       autoComplete="username"
                       className="border-white/10 bg-white/[0.04] text-[#f5f0e8] placeholder:text-[#b8bcd0]/30"
