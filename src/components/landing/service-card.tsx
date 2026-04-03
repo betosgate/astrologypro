@@ -1,7 +1,11 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Clock, Star, ArrowRight } from "lucide-react";
+import { Clock, Star, ArrowRight, ChevronDown } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
+import { getWhatToExpect } from "@/lib/what-to-expect";
 
 interface Service {
   id: string;
@@ -22,6 +26,9 @@ interface ServiceCardProps {
 }
 
 export function ServiceCard({ service, username, imageUrl }: ServiceCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  const bullets = getWhatToExpect(service.category, service.slug);
+
   return (
     <div
       className={`glass-card group relative overflow-hidden rounded-xl transition-all duration-300 hover:border-white/15 hover:shadow-lg ${
@@ -102,6 +109,35 @@ export function ServiceCard({ service, username, imageUrl }: ServiceCardProps) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* What to Expect — collapsible */}
+      <div className="border-t border-white/[0.06] px-5 pb-1">
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex w-full items-center justify-between py-3 text-[12px] font-medium uppercase tracking-wider text-silver/50 transition-colors hover:text-silver/80"
+          aria-expanded={expanded}
+        >
+          What to Expect
+          <ChevronDown
+            className={`size-3.5 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+          />
+        </button>
+
+        {expanded && (
+          <ul className="mb-3 space-y-1.5">
+            {bullets.map((bullet) => (
+              <li
+                key={bullet}
+                className="flex items-start gap-2 text-[12px] leading-relaxed text-silver/60"
+              >
+                <span className="mt-1.5 size-1 shrink-0 rounded-full bg-gold/40" />
+                {bullet}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

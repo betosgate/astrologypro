@@ -158,6 +158,42 @@ export function Hero() {
           </Link>
         </div>
 
+        {/* M6 — 30-Day Money-Back Guarantee */}
+        <div className="mt-5 flex items-center justify-center gap-2 md:justify-start">
+          <svg className="size-4 shrink-0 text-[#e2c97e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.955 11.955 0 003 10.5c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.25-8.25-3.286z" />
+          </svg>
+          <span
+            className="text-sm font-medium"
+            style={{ color: "#e2c97e", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}
+          >
+            30-Day Money-Back Guarantee — Try risk-free
+          </span>
+        </div>
+
+        {/* M4 — Aggregate Social Proof Stats */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3 md:justify-start">
+          {[
+            { value: "1,200+", label: "Sessions Booked" },
+            { value: "340+",   label: "Diviners" },
+            { value: "4.9★",   label: "Average Rating" },
+            { value: "98%",    label: "Client Satisfaction" },
+          ].map(({ value, label }) => (
+            <div
+              key={label}
+              className="flex items-center gap-2 rounded-full px-4 py-2"
+              style={{
+                background: "rgba(201,168,76,0.08)",
+                border: "1px solid rgba(201,168,76,0.25)",
+                backdropFilter: "blur(8px)",
+              }}
+            >
+              <span className="text-base font-bold" style={{ color: "#e2c97e" }}>{value}</span>
+              <span className="text-sm" style={{ color: "rgba(255,255,255,0.65)" }}>{label}</span>
+            </div>
+          ))}
+        </div>
+
         {/* Feature strip */}
         <div className="mt-16 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6 lg:gap-5">
           {features.map(({ icon, label, href, gold }) => (

@@ -39,12 +39,11 @@ export default async function ReviewPage({ params, searchParams }: PageProps) {
   const diviner = booking.diviners as any;
   const service = booking.services as any;
 
-  // Check if already reviewed
+  // Check if already reviewed — scoped to this specific booking
   const { data: existingReview } = await admin
     .from("testimonials")
     .select("id")
-    .eq("diviner_id", booking.diviner_id)
-    .eq("service_type", service?.name ?? "")
+    .eq("booking_id", bookingId)
     .limit(1);
 
   const alreadyReviewed = (existingReview?.length ?? 0) > 0;

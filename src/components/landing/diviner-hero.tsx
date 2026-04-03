@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ShieldCheck, Star, Calendar, Sparkles } from "lucide-react";
+import { ShieldCheck, Star, Calendar, Sparkles, Zap } from "lucide-react";
 
 interface DivinerHeroProps {
   username: string;
@@ -15,6 +15,7 @@ interface DivinerHeroProps {
   averageRating?: number | null;
   reviewCount?: number;
   openSlotsThisWeek?: number;
+  isVerified?: boolean;
 }
 
 export function DivinerHero({
@@ -29,6 +30,8 @@ export function DivinerHero({
   completedSessions = 0,
   averageRating = null,
   reviewCount = 0,
+  openSlotsThisWeek,
+  isVerified = true,
 }: DivinerHeroProps) {
   const initials = displayName
     .split(" ")
@@ -38,6 +41,22 @@ export function DivinerHero({
     .toUpperCase();
 
   const hasLiveStream = !!youtubeChannelId || !!facebookLiveUrl;
+
+  // Urgency: low slot warning when fewer than 5 slots remain
+  const lowSlots =
+    openSlotsThisWeek !== undefined && openSlotsThisWeek < 5;
+
+  // Next-available label derived from slot count
+  const nextAvailableLabel =
+    openSlotsThisWeek === 0
+      ? null
+      : openSlotsThisWeek !== undefined && openSlotsThisWeek <= 2
+        ? "Next available: today"
+        : openSlotsThisWeek !== undefined && openSlotsThisWeek <= 5
+          ? "Next available: tomorrow"
+          : openSlotsThisWeek !== undefined
+            ? "Next available: this week"
+            : null;
 
   return (
     <>
@@ -53,7 +72,7 @@ export function DivinerHero({
             <a href="#services" className="text-[#b8bcd0]/70 transition-colors hover:text-[#c9a84c]">Services</a>
             <a href="#reviews" className="text-[#b8bcd0]/70 transition-colors hover:text-[#c9a84c]">Reviews</a>
             <Link
-              href={`/${username}/book/natal-chart`}
+              href={`/${username}/book`}
               className="rounded-full bg-[#c9a84c] px-3 py-1 text-xs font-semibold text-black transition-colors hover:bg-[#e2c97e]"
             >
               Book Now
@@ -156,10 +175,12 @@ export function DivinerHero({
 
             {/* Trust signals row */}
             <div className="mt-2.5 flex flex-wrap items-center gap-3 text-xs text-[#b8bcd0]/70">
-              <span className="inline-flex items-center gap-1 text-[#22c55e]">
-                <ShieldCheck className="size-3.5" />
-                Verified
-              </span>
+              {isVerified && (
+                <span className="inline-flex items-center gap-1 text-[#22c55e]">
+                  <ShieldCheck className="size-3.5" />
+                  Verified
+                </span>
+              )}
               {completedSessions > 0 && (
                 <span className="inline-flex items-center gap-1">
                   <Calendar className="size-3" />
@@ -174,10 +195,32 @@ export function DivinerHero({
               )}
             </div>
 
+            {/* Urgency signals */}
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              {/* Low slots warning */}
+              {lowSlots && openSlotsThisWeek !== undefined && openSlotsThisWeek > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-400">
+                  <Zap className="size-3 fill-amber-400" />
+                  Only {openSlotsThisWeek} slot{openSlotsThisWeek !== 1 ? "s" : ""} left this week
+                </span>
+              )}
+              {openSlotsThisWeek === 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-red-400">
+                  Fully booked this week
+                </span>
+              )}
+              {/* Next available indicator */}
+              {nextAvailableLabel && (
+                <span className="text-[11px] text-[#b8bcd0]/50">
+                  {nextAvailableLabel}
+                </span>
+              )}
+            </div>
+
             {/* CTA buttons */}
             <div className="mt-5 flex flex-wrap gap-3">
               <Link
-                href={`/${username}/book/natal-chart`}
+                href={`/${username}/book`}
                 className="rounded-full bg-[#c9a84c] px-6 py-2.5 text-sm font-semibold text-black shadow-lg shadow-[#c9a84c]/20 transition-colors hover:bg-[#e2c97e]"
               >
                 Book a Reading

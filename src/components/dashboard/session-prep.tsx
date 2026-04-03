@@ -216,6 +216,17 @@ function PrepContent({ booking }: SessionPrepProps) {
                 )}
               </Button>
             </div>
+            {questionnaire?.birthTimezone && (
+              <p className="text-xs text-muted-foreground px-0.5">
+                Timezone: {questionnaire.birthTimezone}
+              </p>
+            )}
+            {questionnaire?.birthTimeAccuracy && (
+              <p className="text-xs text-muted-foreground px-0.5">
+                Time accuracy:{" "}
+                {({"exact": "Exact (birth certificate)", "close": "Close estimate (±15 min)", "approximate": "Approximate (±1–2 hrs)", "guess": "Best guess (family memory)"} as Record<string, string>)[questionnaire.birthTimeAccuracy] ?? questionnaire.birthTimeAccuracy}
+              </p>
+            )}
           </div>
         </>
       )}

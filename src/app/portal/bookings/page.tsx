@@ -22,6 +22,7 @@ import {
 import { Play, ExternalLink, Star, XCircle, RotateCcw } from "lucide-react";
 import { TestimonialDialog } from "@/components/portal/testimonial-dialog";
 import { CancelBookingButton } from "@/components/portal/cancel-booking-button";
+import { RescheduleSheet } from "@/components/portal/reschedule-sheet";
 
 export const metadata = {
   title: "My Bookings",
@@ -150,6 +151,11 @@ export default async function PortalBookingsPage() {
                                       </Link>
                                     </Button>
                                   )}
+                                  <RescheduleSheet
+                                    bookingId={booking.id}
+                                    serviceName={booking.services?.name ?? "Session"}
+                                    divinerName={booking.diviners?.display_name ?? "Diviner"}
+                                  />
                                   <CancelBookingButton bookingId={booking.id} />
                                 </>
                               )}
@@ -234,6 +240,14 @@ export default async function PortalBookingsPage() {
                             </Link>
                           </Button>
                         )}
+                      {(booking.status === "confirmed" ||
+                        booking.status === "pending") && (
+                        <RescheduleSheet
+                          bookingId={booking.id}
+                          serviceName={booking.services?.name ?? "Session"}
+                          divinerName={booking.diviners?.display_name ?? "Diviner"}
+                        />
+                      )}
                       {booking.status === "pending" && (
                         <CancelBookingButton bookingId={booking.id} />
                       )}

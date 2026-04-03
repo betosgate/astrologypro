@@ -213,6 +213,7 @@ export default async function DivinerPage({ params }: PageProps) {
       {/* Sticky navigation */}
       <StickyNav
         displayName={diviner.display_name}
+        username={username}
         hasBio={!!diviner.bio}
         hasServices={services.length > 0}
         hasTestimonials={testimonials.length > 0}
@@ -232,6 +233,7 @@ export default async function DivinerPage({ params }: PageProps) {
         averageRating={stats.averageRating}
         reviewCount={stats.reviewCount}
         openSlotsThisWeek={stats.openSlotsThisWeek}
+        isVerified={!!(diviner as Record<string, unknown>).verified || !!(diviner as Record<string, unknown>).badge_verified}
       />
 
       {/* ===== 2. ABOUT SECTION ===== */}
@@ -300,6 +302,30 @@ export default async function DivinerPage({ params }: PageProps) {
                     <p className="text-sm leading-relaxed text-silver/70">
                       {diviner.approach}
                     </p>
+                  </div>
+                )}
+
+                {/* Credentials & Certifications */}
+                {(diviner as Record<string, unknown>).credentials && (
+                  <div className="glass-card rounded-xl p-5">
+                    <h3 className="mb-3 text-sm font-medium uppercase tracking-wider text-silver/50">
+                      Credentials &amp; Certifications
+                    </h3>
+                    <ul className="space-y-2">
+                      {String((diviner as Record<string, unknown>).credentials)
+                        .split("\n")
+                        .map((line) => line.trim())
+                        .filter(Boolean)
+                        .map((line) => (
+                          <li
+                            key={line}
+                            className="flex items-start gap-2 text-sm text-cream/80"
+                          >
+                            <span className="mt-1.5 size-1 shrink-0 rounded-full bg-gold/50" />
+                            {line}
+                          </li>
+                        ))}
+                    </ul>
                   </div>
                 )}
               </div>

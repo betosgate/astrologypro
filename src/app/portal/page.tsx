@@ -38,7 +38,7 @@ export default async function PortalDashboardPage() {
     supabase
       .from("bookings")
       .select(
-        "id, scheduled_at, status, share_id, services(name), diviners(display_name, username)"
+        "id, scheduled_at, status, recording_share_id, services(name), diviners(display_name, username)"
       )
       .eq("client_id", client.id)
       .in("status", ["pending", "confirmed"])
@@ -48,7 +48,7 @@ export default async function PortalDashboardPage() {
     supabase
       .from("bookings")
       .select(
-        "id, scheduled_at, share_id, recording_url, services(name), diviners(display_name)"
+        "id, scheduled_at, recording_share_id, recording_url, services(name), diviners(display_name)"
       )
       .eq("client_id", client.id)
       .eq("status", "completed")
@@ -162,7 +162,7 @@ export default async function PortalDashboardPage() {
                       </p>
                     </div>
                     <Button size="sm" variant="outline" asChild>
-                      <Link href={`/session/${recording.share_id}/recording`}>
+                      <Link href={`/session/${recording.recording_share_id}/recording`}>
                         <Play className="mr-1 size-3" />
                         Watch
                       </Link>

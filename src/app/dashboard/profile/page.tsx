@@ -28,6 +28,7 @@ interface DivinerProfile {
   tagline: string | null;
   specialties: string[];
   avatar_url: string | null;
+  credentials: string | null;
 }
 
 export default function ProfilePage() {
@@ -48,7 +49,7 @@ export default function ProfilePage() {
       const { data } = await supabase
         .from("diviners")
         .select(
-          "id, display_name, username, bio, tagline, specialties, avatar_url"
+          "id, display_name, username, bio, tagline, specialties, avatar_url, credentials"
         )
         .eq("user_id", user.id)
         .single();
@@ -57,6 +58,7 @@ export default function ProfilePage() {
         setProfile({
           ...data,
           specialties: data.specialties ?? [],
+          credentials: data.credentials ?? null,
         });
       }
       setLoading(false);
@@ -118,6 +120,7 @@ export default function ProfilePage() {
         bio: profile.bio || null,
         tagline: profile.tagline || null,
         specialties: profile.specialties,
+        credentials: profile.credentials || null,
       })
       .eq("id", profile.id);
 
@@ -262,6 +265,23 @@ export default function ProfilePage() {
                   placeholder="Tell clients about your background and approach..."
                   rows={5}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="credentials">Credentials &amp; Certifications</Label>
+                <Textarea
+                  id="credentials"
+                  value={profile.credentials ?? ""}
+                  onChange={(e) =>
+                    setProfile({ ...profile, credentials: e.target.value })
+                  }
+                  placeholder={
+                    "One certification per line, e.g.:\nCertified Vedic Astrologer — ACVA 2019\nTarot Certification — Biddy Tarot 2020"
+                  }
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter one credential per line. These will appear on your public profile.
+                </p>
               </div>
               <div className="space-y-3">
                 <Label>Specialties</Label>

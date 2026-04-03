@@ -52,6 +52,12 @@ export function MarketingHeader() {
             Pricing
           </Link>
           <Link
+            href="/blog"
+            className="text-[15px] font-medium uppercase tracking-wide text-white/90 transition-colors hover:text-[#ecd396]"
+          >
+            Blog
+          </Link>
+          <Link
             href="/discover"
             className="text-[15px] font-medium uppercase tracking-wide text-white/90 transition-colors hover:text-[#ecd396]"
           >

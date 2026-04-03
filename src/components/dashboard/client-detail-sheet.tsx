@@ -33,6 +33,12 @@ interface SessionWithNotes {
   services: { name: string }[] | null;
 }
 
+interface ClientBirthData {
+  birth_date: string | null;
+  birth_time: string | null;
+  birth_city: string | null;
+}
+
 export function ClientDetailSheet({
   clientId,
   clientName,
@@ -41,6 +47,7 @@ export function ClientDetailSheet({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sessions, setSessions] = useState<SessionWithNotes[]>([]);
+  const [birthData, setBirthData] = useState<ClientBirthData | null>(null);
   const [generalNotes, setGeneralNotes] = useState("");
   const [notesSearch, setNotesSearch] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
@@ -53,7 +60,7 @@ export function ClientDetailSheet({
       const supabase = createClient();
 
       // Fetch sessions with notes and general notes in parallel
-      const [sessionsResult, clientDivinerResult] = await Promise.all([
+      const [sessionsResult, clientDivinerResult, clientResult] = await Promise.all([
         supabase
           .from("bookings")
           .select(
@@ -69,10 +76,16 @@ export function ClientDetailSheet({
           .eq("client_id", clientId)
           .eq("diviner_id", divinerId)
           .maybeSingle(),
+        supabase
+          .from("clients")
+          .select("birth_date, birth_time, birth_city")
+          .eq("id", clientId)
+          .maybeSingle(),
       ]);
 
       setSessions(sessionsResult.data ?? []);
       setGeneralNotes(clientDivinerResult.data?.notes ?? "");
+      setBirthData(clientResult.data ?? null);
       setLoading(false);
     }
     loadData();
@@ -165,6 +178,33 @@ export function ClientDetailSheet({
                   </div>
                 )}
               </div>
+
+              {/* Birth Data */}
+              {birthData && (birthData.birth_date || birthData.birth_time || birthData.birth_city) && (
+                <div>
+                  <h3 className="text-sm font-medium mb-2">Birth Data</h3>
+                  <div className="rounded-lg border p-3 space-y-1 text-sm">
+                    {birthData.birth_date && (
+                      <p>
+                        <span className="text-muted-foreground text-xs">Date: </span>
+                        {birthData.birth_date}
+                      </p>
+                    )}
+                    {birthData.birth_time && (
+                      <p>
+                        <span className="text-muted-foreground text-xs">Time: </span>
+                        {birthData.birth_time === "unknown" ? "Unknown" : birthData.birth_time}
+                      </p>
+                    )}
+                    {birthData.birth_city && (
+                      <p>
+                        <span className="text-muted-foreground text-xs">City: </span>
+                        {birthData.birth_city}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* General Notes */}
               <div>

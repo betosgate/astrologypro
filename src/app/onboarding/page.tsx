@@ -1171,7 +1171,15 @@ export default function OnboardingPage() {
 
                 <div className="flex justify-center">
                   <Button
-                    onClick={() => router.push("/dashboard")}
+                    onClick={async () => {
+                      // Fire-and-forget: mark onboarding complete + send welcome email
+                      try {
+                        await fetch("/api/onboarding/complete", { method: "POST" });
+                      } catch {
+                        // Non-blocking — proceed to dashboard even if this fails
+                      }
+                      router.push("/dashboard");
+                    }}
                     size="lg"
                   >
                     Go to Dashboard

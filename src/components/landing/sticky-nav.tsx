@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 
 interface StickyNavProps {
   displayName: string;
+  username: string;
   hasBio: boolean;
   hasServices: boolean;
   hasTestimonials: boolean;
@@ -18,6 +20,7 @@ const sections = [
 
 export function StickyNav({
   displayName,
+  username,
   hasBio,
   hasServices,
   hasTestimonials,
@@ -96,7 +99,7 @@ export function StickyNav({
             {displayName}
           </span>
 
-          {/* Section links */}
+          {/* Section links + Book Now */}
           <div className="flex items-center gap-1">
             {filteredSections.map((section) => (
               <a
@@ -115,6 +118,14 @@ export function StickyNav({
                 )}
               </a>
             ))}
+
+            {/* Book Now CTA — always visible in sticky nav */}
+            <Link
+              href={`/${username}/book`}
+              className="ml-3 inline-flex h-7 items-center rounded-full bg-gold px-4 text-xs font-semibold text-cosmos-900 shadow-[0_0_12px_rgba(201,168,76,0.25)] transition-all hover:bg-gold-light hover:shadow-[0_0_18px_rgba(201,168,76,0.35)]"
+            >
+              Book Now
+            </Link>
           </div>
         </div>
       </div>

@@ -36,6 +36,7 @@ export interface IntakeData {
   birthLat?: number;
   birthLng?: number;
   birthTimezone?: string;
+  birthTimeAccuracy?: string;
   focusQuestion: string;
   lifeArea: string;
   // Second person fields (relationship readings)
@@ -424,6 +425,26 @@ export function IntakeForm({
               />
             </div>
           </div>
+
+          {data.birthTime && data.birthTime !== "unknown" && (
+            <div className="space-y-2">
+              <Label htmlFor="birthTimeAccuracy">How accurate is your birth time?</Label>
+              <Select
+                value={data.birthTimeAccuracy ?? ""}
+                onValueChange={(val) => update("birthTimeAccuracy", val)}
+              >
+                <SelectTrigger id="birthTimeAccuracy" className="w-full">
+                  <SelectValue placeholder="Select accuracy..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="exact">Exact — from birth certificate or hospital record</SelectItem>
+                  <SelectItem value="close">Close estimate — within 15 minutes</SelectItem>
+                  <SelectItem value="approximate">Approximate — within 1–2 hours</SelectItem>
+                  <SelectItem value="guess">Best guess — family memory only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </Section>
       )}
 

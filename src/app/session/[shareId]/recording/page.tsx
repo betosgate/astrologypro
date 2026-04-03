@@ -76,7 +76,7 @@ export default async function RecordingPage({ params }: PageProps) {
     .eq("recording_share_id", shareId)
     .single();
 
-  if (!booking || !booking.recording_url) {
+  if (!booking) {
     notFound();
   }
 
@@ -87,6 +87,38 @@ export default async function RecordingPage({ params }: PageProps) {
   const shareUrl = `${APP_URL}/session/${shareId}/recording`;
   const shareTitle = `${serviceName} with ${divinerName}`;
   const shareDescription = `Watch my ${serviceName} reading with ${divinerName} on AstrologyPro.`;
+
+  // Recording not yet processed
+  if (!booking.recording_url) {
+    return (
+      <div className="min-h-screen bg-[#06080f]">
+        <div className="pointer-events-none fixed inset-0">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(88,28,135,0.15)_0%,transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_80%,rgba(201,168,76,0.08)_0%,transparent_50%)]" />
+        </div>
+        <div className="relative mx-auto max-w-lg px-4 py-24 text-center">
+          <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-full border border-[#c9a84c]/20 bg-[#c9a84c]/10">
+            <Sparkles className="size-8 text-[#c9a84c]" />
+          </div>
+          <h1 className="font-display text-2xl font-semibold text-[#f5f0e8]">
+            Recording Not Yet Available
+          </h1>
+          <p className="mt-3 text-[#b8bcd0]/70">
+            Your {serviceName} recording with {divinerName} is still being
+            processed. Please check back in a few minutes.
+          </p>
+          {divinerUsername && (
+            <a
+              href={`/${divinerUsername}`}
+              className="mt-8 inline-block rounded-full border border-[#c9a84c]/30 px-6 py-2.5 text-sm font-semibold text-[#c9a84c] transition-all hover:border-[#c9a84c] hover:bg-[#c9a84c]/10"
+            >
+              Book Another Reading
+            </a>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

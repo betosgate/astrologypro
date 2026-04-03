@@ -17,6 +17,10 @@ import {
   Megaphone,
   BarChart3,
   CalendarDays,
+  Gift,
+  Tag,
+  Mail,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -48,6 +52,10 @@ const navItems = [
   { label: "Live", href: "/dashboard/live", icon: Radio },
   { label: "Marketing", href: "/dashboard/marketing", icon: Megaphone },
   { label: "Services", href: "/dashboard/services", icon: Sparkles },
+  { label: "Gift Certificates", href: "/dashboard/gift-certificates", icon: Gift },
+  { label: "Discounts", href: "/dashboard/discounts", icon: Tag },
+  { label: "Follow-ups", href: "/dashboard/follow-ups", icon: Mail },
+  { label: "Intake Builder", href: "/dashboard/intake-builder", icon: ClipboardList },
   { label: "Profile", href: "/dashboard/profile", icon: User },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
