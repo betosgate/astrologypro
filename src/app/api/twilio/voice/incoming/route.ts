@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
         await supabase
           .from("phone_sessions")
           .insert({
-            diviner_id: diviner.id,
-            client_id: client.id,
+            diviner_id: diviner!.id,
+            client_id: client!.id,
             caller_phone: from,
             twilio_call_sid: callSid,
             session_type: "standalone",
@@ -108,8 +108,8 @@ export async function POST(request: NextRequest) {
             "Authorization": `Bearer ${process.env.CRON_SECRET}`,
           },
           body: JSON.stringify({
-            diviner_id: diviner.id,
-            queue_name: `diviner-${diviner.id}`,
+            diviner_id: diviner!.id,
+            queue_name: `diviner-${diviner!.id}`,
             client_call_sid: callSid,
           }),
         }).catch(() => {}); // silent fail — client is already in queue
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
               Please hold while we connect you to your diviner.
             </Say>
             <Enqueue waitUrl="${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/voice/wait-music">
-              diviner-${diviner.id}
+              diviner-${diviner!.id}
             </Enqueue>
           </Response>
         `);

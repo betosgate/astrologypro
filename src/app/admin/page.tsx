@@ -110,17 +110,8 @@ export default async function AdminPage() {
 
   const pageViewCount = pageViewsMonth.count ?? 0;
 
-  // Aggregate top diviners by revenue
+  // Aggregate top diviners by revenue from topDiviners query
   const divinerRevMap: Record<string, { revenue: number; bookings: number }> = {};
-  for (const b of revenueResult.data ?? []) {
-    if (!b.diviner_id) continue;
-    const key = b.diviner_id as string;
-    if (!divinerRevMap[key]) divinerRevMap[key] = { revenue: 0, bookings: 0 };
-    divinerRevMap[key].revenue += b.total_amount ?? b.base_price ?? 0;
-    divinerRevMap[key].bookings += 1;
-  }
-
-  // Also include diviner_id from topDiviners
   for (const b of (topDiviners.data ?? []) as Array<{
     diviner_id: string;
     base_price: number | null;
@@ -129,6 +120,8 @@ export default async function AdminPage() {
     const key = b.diviner_id;
     if (!key) continue;
     if (!divinerRevMap[key]) divinerRevMap[key] = { revenue: 0, bookings: 0 };
+    divinerRevMap[key].revenue += b.total_amount ?? b.base_price ?? 0;
+    divinerRevMap[key].bookings += 1;
   }
 
   const topDivinerIds = Object.entries(divinerRevMap)

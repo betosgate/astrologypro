@@ -46,3 +46,5 @@ next-env.d.ts
 
 # Duplicate project copy — must not be tracked or Next.js will use it as app dir
 /app/
+# Legacy project copy (not part of the active build)
+_app-legacy/

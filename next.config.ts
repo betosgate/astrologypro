@@ -2,6 +2,12 @@ import type { NextConfig } from "next";
 
 // build: 2026-04-03T09:30Z
 const nextConfig: NextConfig = {
+  // Exclude playwright and electron from the server bundle — they are dev-only
+  // test dependencies and should never be bundled into the Next.js server.
+  serverExternalPackages: ["playwright-core", "playwright", "electron", "chromium-bidi"],
+  // Empty turbopack config silences the "webpack config ignored" warning
+  turbopack: {},
+
   // Ensure the Geist Bold TTF is bundled with the image-compositing Lambda.
   // readFileSync on a non-imported file is not auto-traced by Next.js bundler,
   // so without this the font file is absent at runtime on Vercel and text is blank.
