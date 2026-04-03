@@ -88,7 +88,16 @@ export default function LiveStreamPage() {
     );
   }
 
-  if (!settings) return null;
+  if (!settings) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+        <Info className="size-8 text-destructive" />
+        <p className="font-medium">Could not load live stream settings</p>
+        <p className="text-sm text-muted-foreground">Please refresh the page or try again later.</p>
+        <button onClick={() => window.location.reload()} className="rounded-md border px-4 py-2 text-sm hover:bg-muted">Reload</button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -354,7 +354,16 @@ export default function SettingsPage() {
     );
   }
 
-  if (!settings) return null;
+  if (!settings) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+        <XCircle className="size-8 text-destructive" />
+        <p className="font-medium">Could not load settings</p>
+        <p className="text-sm text-muted-foreground">Please refresh the page or try again later.</p>
+        <Button variant="outline" onClick={() => window.location.reload()}>Reload</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

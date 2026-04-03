@@ -152,7 +152,16 @@ export default function ProfilePage() {
     );
   }
 
-  if (!profile) return null;
+  if (!profile) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+        <Loader2 className="size-8 text-destructive" />
+        <p className="font-medium">Could not load profile</p>
+        <p className="text-sm text-muted-foreground">Please refresh the page or try again later.</p>
+        <button onClick={() => window.location.reload()} className="rounded-md border px-4 py-2 text-sm hover:bg-muted">Reload</button>
+      </div>
+    );
+  }
 
   const initials = profile.display_name
     .split(" ")

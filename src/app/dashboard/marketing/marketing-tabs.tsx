@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -39,6 +40,8 @@ import {
   Moon,
   Sun,
   Sparkles,
+  Loader2,
+  Plus,
 } from "lucide-react";
 
 // ---- Types ----------------------------------------------------------------
@@ -364,80 +367,96 @@ function ShareSystemTab({
 
 // ---- ContentLibraryTab -----------------------------------------------------
 
-const placeholderContent = [
-  {
-    id: "1",
-    title: "Mercury Retrograde Alert",
-    caption:
-      "Mercury retrograde is approaching! Book a session to prepare for this cosmic shift. {link}",
-    platforms: ["Facebook", "Twitter / X", "WhatsApp"],
-    icon: Sparkles,
-    color: "text-purple-400",
-  },
-  {
-    id: "2",
-    title: "Full Moon Reading Promo",
-    caption:
-      "The Full Moon illuminates what is hidden. Discover what the universe has in store for you with a personalized reading. {link}",
-    platforms: ["Facebook", "Instagram", "WhatsApp"],
-    icon: Moon,
-    color: "text-amber-400",
-  },
-  {
-    id: "3",
-    title: "New Client Welcome",
-    caption:
-      "Welcome to your cosmic journey! As your astrologer, I am here to help you navigate life with celestial wisdom. Book your first session: {link}",
-    platforms: ["Facebook", "Twitter / X"],
-    icon: Star,
-    color: "text-cyan-400",
-  },
-  {
-    id: "4",
-    title: "Tarot Tuesday",
-    caption:
-      "It is Tarot Tuesday! Discover what the cards reveal about your week ahead. Limited slots available. {link}",
-    platforms: ["Facebook", "Twitter / X", "Instagram"],
-    icon: Sparkles,
-    color: "text-pink-400",
-  },
-  {
-    id: "5",
-    title: "Solar Return Season",
-    caption:
-      "Birthday coming up? A Solar Return reading reveals the themes and opportunities for your year ahead. Gift yourself cosmic insight. {link}",
-    platforms: ["Facebook", "Instagram", "LinkedIn"],
-    icon: Sun,
-    color: "text-yellow-400",
-  },
-  {
-    id: "6",
-    title: "Client Testimonial Share",
-    caption:
-      "Grateful for this beautiful feedback from a client. Every reading is a sacred exchange. Book your session: {link}",
-    platforms: ["Facebook", "Twitter / X", "WhatsApp"],
-    icon: Star,
-    color: "text-emerald-400",
-  },
-];
+interface ContentItem {
+  id: string;
+  title: string;
+  caption_template: string;
+  platforms: string[] | null;
+  category: string | null;
+  created_at: string;
+}
 
 function ContentLibraryTab() {
+  const [items, setItems] = useState<ContentItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/marketing/content")
+      .then((r) => r.ok ? r.json() : { data: [] })
+      .then((json) => setItems(json.data ?? []))
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const iconForCategory = (cat: string | null) => {
+    if (cat === "moon") return Moon;
+    if (cat === "sun" || cat === "solar") return Sun;
+    if (cat === "testimonial") return Star;
+    return Sparkles;
+  };
+
+  const colorForCategory = (cat: string | null) => {
+    if (cat === "moon") return "text-amber-400";
+    if (cat === "sun" || cat === "solar") return "text-yellow-400";
+    if (cat === "testimonial") return "text-emerald-400";
+    return "text-purple-400";
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Your saved content templates will appear here. Create your first one to get started.
+        </p>
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Library className="mb-3 size-8 text-muted-foreground" />
+            <p className="text-sm font-medium">No content yet</p>
+            <p className="text-xs text-muted-foreground mb-4">
+              Add captions and templates you want to reuse for social posts.
+            </p>
+            <Button asChild size="sm">
+              <Link href="/dashboard/marketing/content">
+                <Plus className="mr-1.5 size-3.5" />
+                Create Content
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Content templates we cycle through for your share batches. New templates
-        are added regularly based on cosmic events.
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {items.length} saved template{items.length !== 1 ? "s" : ""}
+        </p>
+        <Button asChild size="sm" variant="outline">
+          <Link href="/dashboard/marketing/content">
+            <Plus className="mr-1.5 size-3.5" />
+            Add Content
+          </Link>
+        </Button>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {placeholderContent.map((content) => {
-          const Icon = content.icon;
+        {items.map((content) => {
+          const Icon = iconForCategory(content.category);
+          const color = colorForCategory(content.category);
           return (
             <Card key={content.id} className="flex flex-col">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
-                  <div
-                    className={`flex size-10 items-center justify-center rounded-lg bg-muted ${content.color}`}
-                  >
+                  <div className={`flex size-10 items-center justify-center rounded-lg bg-muted ${color}`}>
                     <Icon className="size-5" />
                   </div>
                 </div>
@@ -445,15 +464,17 @@ function ContentLibraryTab() {
               </CardHeader>
               <CardContent className="flex flex-1 flex-col justify-between gap-3">
                 <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">
-                  {content.caption}
+                  {content.caption_template}
                 </p>
-                <div className="flex flex-wrap gap-1">
-                  {content.platforms.map((p) => (
-                    <Badge key={p} variant="secondary" className="text-[10px]">
-                      {p}
-                    </Badge>
-                  ))}
-                </div>
+                {content.platforms && content.platforms.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {content.platforms.map((p) => (
+                      <Badge key={p} variant="secondary" className="text-[10px]">
+                        {p}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           );
