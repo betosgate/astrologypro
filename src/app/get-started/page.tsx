@@ -8,6 +8,7 @@ import { MarketingFooter } from "@/components/marketing/footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { PLANS, PLAN_ORDER, SHARED_FEATURES, type PlanId } from "@/lib/plans";
 import {
   Loader2,
@@ -162,7 +163,7 @@ export default function GetStartedPage() {
       const checkout = await response.json();
 
       if (!response.ok || !checkout.url) {
-        setError(checkout.error ?? "Failed to create checkout session.");
+        setError(checkout.error ?? "Failed to create checkout session. Please try again.");
         return;
       }
 
@@ -554,9 +555,8 @@ export default function GetStartedPage() {
                     <Label htmlFor="password" className="text-[#b8bcd0]/80">
                       Password
                     </Label>
-                    <Input
+                    <PasswordInput
                       id="password"
-                      type="password"
                       placeholder="At least 8 characters"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -564,6 +564,7 @@ export default function GetStartedPage() {
                       minLength={8}
                       autoComplete="new-password"
                       className="border-white/10 bg-white/[0.04] text-[#f5f0e8] placeholder:text-[#b8bcd0]/30"
+                      showStrength
                     />
                   </div>
 
@@ -571,9 +572,8 @@ export default function GetStartedPage() {
                     <Label htmlFor="confirm-password" className="text-[#b8bcd0]/80">
                       Confirm Password
                     </Label>
-                    <Input
+                    <PasswordInput
                       id="confirm-password"
-                      type="password"
                       placeholder="Confirm your password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
@@ -581,6 +581,7 @@ export default function GetStartedPage() {
                       minLength={8}
                       autoComplete="new-password"
                       className="border-white/10 bg-white/[0.04] text-[#f5f0e8] placeholder:text-[#b8bcd0]/30"
+                      confirmValue={password}
                     />
                   </div>
 

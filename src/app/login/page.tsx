@@ -9,6 +9,7 @@ import { MarketingFooter } from "@/components/marketing/footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import {
   Card,
   CardContent,
@@ -126,9 +127,8 @@ export default function LoginPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="diviner-password">Password</Label>
-                    <Input
+                    <PasswordInput
                       id="diviner-password"
-                      type="password"
                       placeholder="Your password"
                       value={divinerPassword}
                       onChange={(e) => setDivinerPassword(e.target.value)}
