@@ -54,9 +54,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url: session.url });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error("Stripe checkout error:", msg);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const detail = (error as any)?.raw ?? (error as any)?.code ?? "";
+    console.error("Stripe checkout error:", msg, detail);
     return NextResponse.json(
-      { error: msg },
+      { error: msg, detail },
       { status: 500 }
     );
   }
