@@ -1,7 +1,7 @@
 # AstrologyPro — Daily Task Board
 
 > **Workflow:** Update this file each session. Check off items as you go. Push at end of day.
-> **Last updated:** 2026-04-03 (session 4)
+> **Last updated:** 2026-04-03 (session 5)
 
 ---
 
@@ -106,10 +106,10 @@ ALTER TABLE diviners
 ## 🟢 Backlog / Ideas
 
 - ~~Admin analytics dashboard~~ ✅ Built at `/admin` — KPI cards, top diviners by revenue, recently joined, recent bookings; protected by `ADMIN_EMAILS` env var
-- Reviews & ratings UI improvements
-- Gift readings public page
+- ~~Reviews & ratings UI improvements~~ ✅ Featured star badge, rating summary header, `booking_id` dedup, `featured` column fix
+- ~~Gift readings public page~~ ✅ Fixed — payment now collected via Stripe Checkout before cert is created; webhook creates cert + sends emails; `/gift/pending` polling fallback
+- ~~Referral tracking improvements~~ ✅ Fixed — affiliate `referral_code` column bug (was `.eq("code",...)`) + affiliate currency `/100` bug in dashboard
 - Mobile app (React Native)
-- Referral tracking improvements
 
 ---
 
