@@ -37,7 +37,7 @@ export function RevenueChart({ monthlyData }: RevenueChartProps) {
               {/* Tooltip */}
               {isHovered && (
                 <div className="absolute -top-8 z-10 rounded-md bg-popover px-2 py-1 text-xs font-medium text-popover-foreground shadow-md border">
-                  {formatCurrency(data.revenue / 100)}
+                  {formatCurrency(data.revenue)}
                 </div>
               )}
 

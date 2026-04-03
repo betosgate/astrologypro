@@ -4,7 +4,7 @@ import { TrendingUp, Rocket, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface RoiBannerProps {
-  monthlyRevenue: number; // in cents
+  monthlyRevenue: number; // in dollars
   subscriptionCost?: number; // in dollars, default 149
 }
 
@@ -12,7 +12,7 @@ export function RoiBanner({
   monthlyRevenue,
   subscriptionCost = 149,
 }: RoiBannerProps) {
-  const revenueInDollars = monthlyRevenue / 100;
+  const revenueInDollars = monthlyRevenue;
   const roi = Math.round((revenueInDollars / subscriptionCost) * 10) / 10;
 
   if (revenueInDollars === 0) {

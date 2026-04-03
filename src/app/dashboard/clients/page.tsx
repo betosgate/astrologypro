@@ -124,7 +124,7 @@ export default async function ClientsPage({
                       </TableCell>
                       <TableCell>{relation.total_sessions ?? 0}</TableCell>
                       <TableCell>
-                        {formatCurrency((relation.total_spent ?? 0) / 100)}
+                        {formatCurrency(relation.total_spent ?? 0)}
                       </TableCell>
                       <TableCell>
                         {relation.last_session_at

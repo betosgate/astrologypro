@@ -263,7 +263,7 @@ export default async function DashboardPage() {
   const stats = [
     {
       label: "This Month Revenue",
-      value: formatCurrency(thisMonthRevenueTotal / 100),
+      value: formatCurrency(thisMonthRevenueTotal),
       icon: DollarSign,
       comparison: revenueComparison,
     },

@@ -46,13 +46,15 @@ interface Affiliate {
 
 interface Referral {
   id: string;
-  client_name: string | null;
-  booking_date: string | null;
-  service_name: string | null;
-  amount: number;
-  commission: number;
+  commission_amount: number;
   status: string; // pending | earned | paid
   created_at: string;
+  bookings: {
+    scheduled_at: string;
+    base_price: number;
+    services: { name: string } | null;
+    clients: { full_name: string } | null;
+  } | null;
 }
 
 export default function AffiliateDetailPage({
@@ -83,12 +85,12 @@ export default function AffiliateDetailPage({
       const { data: refs } = await supabase
         .from("affiliate_referrals")
         .select(
-          "id, client_name, booking_date, service_name, amount, commission, status, created_at"
+          "id, commission_amount, status, created_at, bookings(scheduled_at, base_price, services(name), clients(full_name))"
         )
         .eq("affiliate_id", affiliateId)
         .order("created_at", { ascending: false });
 
-      if (refs) setReferrals(refs);
+      if (refs) setReferrals(refs as unknown as Referral[]);
     }
     setLoading(false);
   }, [affiliateId]);
@@ -198,7 +200,7 @@ export default function AffiliateDetailPage({
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
-              {formatCurrency(affiliate.total_earned / 100)}
+              {formatCurrency(affiliate.total_earned)}
             </p>
           </CardContent>
         </Card>
@@ -209,7 +211,7 @@ export default function AffiliateDetailPage({
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
-              {formatCurrency(affiliate.total_paid / 100)}
+              {formatCurrency(affiliate.total_paid)}
             </p>
           </CardContent>
         </Card>
@@ -220,7 +222,7 @@ export default function AffiliateDetailPage({
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-amber-600">
-              {formatCurrency(outstanding / 100)}
+              {formatCurrency(outstanding)}
             </p>
           </CardContent>
         </Card>
@@ -253,24 +255,28 @@ export default function AffiliateDetailPage({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {referrals.map((referral) => (
+                  {referrals.map((referral) => {
+                    const booking = referral.bookings;
+                    return (
                     <TableRow key={referral.id}>
                       <TableCell className="font-medium">
-                        {referral.client_name ?? "Unknown"}
+                        {booking?.clients?.full_name ?? "Unknown"}
                       </TableCell>
                       <TableCell>
-                        {referral.booking_date
-                          ? formatDate(referral.booking_date)
+                        {booking?.scheduled_at
+                          ? formatDate(booking.scheduled_at)
+                          : formatDate(referral.created_at)}
+                      </TableCell>
+                      <TableCell>
+                        {booking?.services?.name ?? "--"}
+                      </TableCell>
+                      <TableCell>
+                        {booking?.base_price != null
+                          ? formatCurrency(booking.base_price)
                           : "--"}
                       </TableCell>
                       <TableCell>
-                        {referral.service_name ?? "--"}
-                      </TableCell>
-                      <TableCell>
-                        {formatCurrency(referral.amount / 100)}
-                      </TableCell>
-                      <TableCell>
-                        {formatCurrency(referral.commission / 100)}
+                        {formatCurrency(Number(referral.commission_amount ?? 0))}
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -286,7 +292,8 @@ export default function AffiliateDetailPage({
                         </Badge>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  );
+                  })}
                 </TableBody>
               </Table>
             </div>

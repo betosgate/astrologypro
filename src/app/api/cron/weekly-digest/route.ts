@@ -214,7 +214,7 @@ export async function GET(request: Request) {
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
               <tr>
                 <td style="padding: 12px; background: #27272a; border-radius: 8px; text-align: center; width: 25%;">
-                  <div style="font-size: 24px; font-weight: bold; color: #fff;">${formatCurrency(thisWeekRevenue / 100)}</div>
+                  <div style="font-size: 24px; font-weight: bold; color: #fff;">${formatCurrency(thisWeekRevenue)}</div>
                   <div style="font-size: 11px; color: #a1a1aa; margin-top: 4px;">Revenue</div>
                   <div style="font-size: 11px; margin-top: 2px;">${trendArrow(thisWeekRevenue, 0)}</div>
                 </td>
@@ -242,7 +242,7 @@ export async function GET(request: Request) {
             <!-- Running total -->
             <div style="background: #27272a; border-radius: 8px; padding: 16px; margin-bottom: 16px; text-align: center;">
               <p style="margin: 0; font-size: 13px; color: #a1a1aa;">Total earned on AstrologyPro</p>
-              <p style="margin: 4px 0 0; font-size: 28px; font-weight: bold; color: #7c3aed;">${formatCurrency(totalRevenue / 100)}</p>
+              <p style="margin: 4px 0 0; font-size: 28px; font-weight: bold; color: #7c3aed;">${formatCurrency(totalRevenue)}</p>
             </div>
 
             ${
@@ -285,7 +285,7 @@ export async function GET(request: Request) {
 
       await sendEmail({
         to: email,
-        subject: `Your Week in Review — ${formatCurrency(thisWeekRevenue / 100)} earned`,
+        subject: `Your Week in Review — ${formatCurrency(thisWeekRevenue)} earned`,
         html,
       });
 
