@@ -21,6 +21,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const setupEnvKey = PLANS[planId as PlanId].setupEnvKey;
+    const monthlyEnvKey = PLANS[planId as PlanId].monthlyEnvKey;
+    const setupPriceId = process.env[setupEnvKey];
+    const monthlyPriceId = process.env[monthlyEnvKey];
+
+    if (!setupPriceId || !monthlyPriceId) {
+      return NextResponse.json(
+        { error: `Stripe prices not configured. Missing: ${!setupPriceId ? setupEnvKey : ""} ${!monthlyPriceId ? monthlyEnvKey : ""}`.trim() },
+        { status: 500 }
+      );
+    }
+
     const session = await createCheckoutSession({
       email,
       userId,
