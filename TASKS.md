@@ -120,6 +120,29 @@ ALTER TABLE diviners
 
 ## ✅ Completed
 
+### 2026-04-03 — Bug sweep + missing migrations + Ayrshare wiring (session 7)
+
+| Fix | Detail |
+|---|---|
+| `twilio/voice/status` — `display_name` bug | Clients table has `full_name`; was silently selecting null |
+| `twilio/voice/status` — TODO resolved | Added `sendPhonePaymentFailed` email when card-on-file charge fails; fetches diviner username for CTA |
+| `email.ts` — new function | `sendPhonePaymentFailed` (template 14): notifies client with amount + diviner link |
+| `r/[code]/route.ts` — race condition | Replaced read-then-write click increment with atomic `increment_tracking_link_clicks()` RPC |
+| Migration 20260403000007 | `blog_subscribers` table — was missing; `/api/blog/subscribe` was silently soft-failing every call |
+| Migration 20260403000008 | `increment_tracking_link_clicks()` RPC function for atomic click counting |
+| `scheduled_posts` migration | Table was missing from schema; `POST /api/social/post` would fail at runtime |
+| Ayrshare integration | `/api/social/post` now calls Ayrshare when `AYRSHARE_API_KEY` is set; stores post ID or error |
+| `POST /api/marketing/content` | New route to save custom content to `marketing_content` |
+| Content management page | Added Title field; wired "Save to Library" to API (was dead no-op button) |
+| Build verified ✅ | All 221 routes compile clean across all sessions |
+
+**3 migrations to apply in Supabase SQL editor:**
+- `20260403000006_scheduled_posts.sql`
+- `20260403000007_blog_subscribers.sql`
+- `20260403000008_tracking_rpc.sql`
+
+---
+
 ### 2026-04-03 — Global currency bug sweep + affiliate detail fix (session 5–6)
 
 | Fix | Detail |
