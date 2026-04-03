@@ -59,11 +59,11 @@ export default async function AffiliatePortalPage({ params }: PageProps) {
     .eq("id", affiliate.diviner_id)
     .single();
 
-  // Get referrals for this affiliate
+  // Get referrals for this affiliate — join bookings to surface service + price
   const { data: referrals } = await supabase
     .from("affiliate_referrals")
     .select(
-      "id, client_name, booking_date, service_name, amount, commission, status, created_at"
+      "id, commission_amount, status, created_at, bookings(scheduled_at, base_price, services(name))"
     )
     .eq("affiliate_id", affiliate.id)
     .order("created_at", { ascending: false });
@@ -86,7 +86,7 @@ export default async function AffiliatePortalPage({ params }: PageProps) {
   (referrals ?? []).forEach((ref) => {
     const date = new Date(ref.created_at);
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-    monthlyEarnings[key] = (monthlyEarnings[key] ?? 0) + ref.commission;
+    monthlyEarnings[key] = (monthlyEarnings[key] ?? 0) + Number(ref.commission_amount ?? 0);
   });
   const monthlyEntries = Object.entries(monthlyEarnings).sort(
     (a, b) => b[0].localeCompare(a[0])
@@ -139,7 +139,7 @@ export default async function AffiliatePortalPage({ params }: PageProps) {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
-              {formatCurrency(affiliate.total_earned / 100)}
+              {formatCurrency(Number(affiliate.total_earned))}
             </p>
           </CardContent>
         </Card>
@@ -152,11 +152,11 @@ export default async function AffiliatePortalPage({ params }: PageProps) {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
-              {formatCurrency(affiliate.total_paid / 100)}
+              {formatCurrency(Number(affiliate.total_paid))}
             </p>
             {outstanding > 0 && (
               <p className="text-xs text-amber-600">
-                {formatCurrency(outstanding / 100)} pending payout
+                {formatCurrency(outstanding)} pending payout
               </p>
             )}
           </CardContent>
@@ -256,7 +256,7 @@ export default async function AffiliatePortalPage({ params }: PageProps) {
                     <TableRow key={month}>
                       <TableCell className="font-medium">{label}</TableCell>
                       <TableCell className="text-right">
-                        {formatCurrency(earned / 100)}
+                        {formatCurrency(earned)}
                       </TableCell>
                     </TableRow>
                   );
@@ -294,37 +294,38 @@ export default async function AffiliatePortalPage({ params }: PageProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {referrals.map((referral) => (
-                    <TableRow key={referral.id}>
-                      <TableCell>
-                        {referral.booking_date
-                          ? formatDate(referral.booking_date)
-                          : formatDate(referral.created_at)}
-                      </TableCell>
-                      <TableCell>
-                        {referral.service_name ?? "--"}
-                      </TableCell>
-                      <TableCell>
-                        {formatCurrency(referral.amount / 100)}
-                      </TableCell>
-                      <TableCell>
-                        {formatCurrency(referral.commission / 100)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            referral.status === "paid"
-                              ? "default"
-                              : referral.status === "earned"
-                                ? "secondary"
-                                : "outline"
-                          }
-                        >
-                          {referral.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {referrals.map((referral) => {
+                    const booking = referral.bookings as unknown as { scheduled_at: string; base_price: number; services: { name: string } | null } | null;
+                    const svcName = booking?.services?.name ?? "--";
+                    const bookingDate = booking?.scheduled_at ?? referral.created_at;
+                    return (
+                      <TableRow key={referral.id}>
+                        <TableCell>{formatDate(bookingDate)}</TableCell>
+                        <TableCell>{svcName}</TableCell>
+                        <TableCell>
+                          {booking?.base_price != null
+                            ? formatCurrency(booking.base_price)
+                            : "--"}
+                        </TableCell>
+                        <TableCell>
+                          {formatCurrency(Number(referral.commission_amount ?? 0))}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              referral.status === "paid"
+                                ? "default"
+                                : referral.status === "earned"
+                                  ? "secondary"
+                                  : "outline"
+                            }
+                          >
+                            {referral.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

@@ -30,20 +30,17 @@ interface ServiceData {
   id: string;
   name: string;
   description: string | null;
-  duration: number;
-  price: number;
-  overage_rate: number | null;
-  featured: boolean;
+  duration_minutes: number;
+  base_price: number;
+  is_featured: boolean;
 }
 
 interface ServiceTemplate {
   id: string;
   name: string;
   description: string;
-  default_price: number;
   duration_minutes: number;
-  min_price?: number;
-  max_price?: number;
+  category: string;
   base_price?: number;
 }
 
@@ -60,6 +57,7 @@ const EMPTY_FORM = {
   price: 0,
   overage_rate: 0,
   featured: false,
+  category: "",
 };
 
 export function ServiceEditSheet({
@@ -82,10 +80,11 @@ export function ServiceEditSheet({
       ? {
           name: service.name,
           description: service.description ?? "",
-          duration: service.duration,
-          price: service.price / 100,
-          overage_rate: (service.overage_rate ?? 0) / 100,
-          featured: service.featured,
+          duration: service.duration_minutes,
+          price: service.base_price,
+          overage_rate: 0,
+          featured: service.is_featured,
+          category: "",
         }
       : { ...EMPTY_FORM }
   );
@@ -110,14 +109,14 @@ export function ServiceEditSheet({
         // Edit mode: fetch price limits from matching template
         const { data: template } = await supabase
           .from("service_templates")
-          .select("min_price, max_price, base_price")
+          .select("base_price")
           .eq("name", service.name)
           .maybeSingle();
 
         if (template) {
           setPriceLimits({
-            min: template.min_price ?? template.base_price ?? 0,
-            max: template.max_price ?? (template.base_price ?? 0) * 2,
+            min: (template.base_price ?? 0) * 0.5,
+            max: (template.base_price ?? 0) * 2,
           });
         }
       }
@@ -135,15 +134,16 @@ export function ServiceEditSheet({
       name: template.name,
       description: template.description ?? "",
       duration: template.duration_minutes,
-      price: template.default_price / 100,
+      price: template.base_price ?? 0,
       overage_rate: 0,
       featured: false,
+      category: template.category,
     });
 
     // Set price limits from template
     setPriceLimits({
-      min: (template.min_price ?? template.base_price ?? template.default_price) / 100,
-      max: (template.max_price ?? (template.base_price ?? template.default_price) * 2) / 100,
+      min: (template.base_price ?? 0) * 0.5,
+      max: (template.base_price ?? 0) * 2,
     });
     setPriceError(null);
   }
@@ -199,14 +199,12 @@ export function ServiceEditSheet({
         name: form.name,
         slug,
         description: form.description || null,
-        duration: form.duration,
         duration_minutes: form.duration,
-        price: Math.round(form.price * 100),
-        base_price: Math.round(form.price * 100),
-        overage_rate: Math.round(form.overage_rate * 100),
-        featured: form.featured,
-        active: true,
+        base_price: form.price,
+        overage_rate: form.overage_rate,
+        is_featured: form.featured,
         is_active: true,
+        category: form.category || "astrology",
       });
 
       setSaving(false);
@@ -228,10 +226,10 @@ export function ServiceEditSheet({
         .update({
           name: form.name,
           description: form.description || null,
-          duration: form.duration,
-          price: Math.round(form.price * 100),
-          overage_rate: Math.round(form.overage_rate * 100),
-          featured: form.featured,
+          duration_minutes: form.duration,
+          base_price: form.price,
+          overage_rate: form.overage_rate,
+          is_featured: form.featured,
         })
         .eq("id", service!.id);
 

@@ -272,16 +272,30 @@ export async function POST(request: NextRequest) {
     if (affiliateCode) {
       const { data: affiliate } = await adminSupabase
         .from("affiliates")
-        .select("id")
+        .select("id, commission_percent, total_referrals, total_earned")
         .eq("referral_code", affiliateCode)
-        .single();
+        .eq("is_active", true)
+        .maybeSingle();
 
       if (affiliate) {
+        const commissionAmount =
+          Math.round(finalPrice * (affiliate.commission_percent / 100) * 100) / 100;
+
         await adminSupabase.from("affiliate_referrals").insert({
           affiliate_id: affiliate.id,
           booking_id: booking.id,
-          diviner_id: divinerId,
+          commission_amount: commissionAmount,
+          status: "pending",
         });
+
+        // Increment referral count and earned total
+        await adminSupabase
+          .from("affiliates")
+          .update({
+            total_referrals: (affiliate.total_referrals ?? 0) + 1,
+            total_earned: Number(affiliate.total_earned ?? 0) + commissionAmount,
+          })
+          .eq("id", affiliate.id);
       }
     }
 

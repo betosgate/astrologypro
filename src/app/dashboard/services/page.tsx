@@ -100,20 +100,20 @@ export default async function ServicesPage() {
                         <span className="text-muted-foreground">--</span>
                       )}
                     </TableCell>
-                    <TableCell>{service.duration} min</TableCell>
+                    <TableCell>{service.duration_minutes} min</TableCell>
                     <TableCell>
-                      {formatCurrency(service.price / 100)}
+                      {formatCurrency(service.base_price)}
                     </TableCell>
                     <TableCell>
                       <FeaturedToggle
                         serviceId={service.id}
-                        featured={service.featured ?? false}
+                        featured={service.is_featured ?? false}
                       />
                     </TableCell>
                     <TableCell>
                       <ActiveToggle
                         serviceId={service.id}
-                        active={service.active ?? true}
+                        active={service.is_active ?? true}
                       />
                     </TableCell>
                     <TableCell>
@@ -122,10 +122,9 @@ export default async function ServicesPage() {
                           id: service.id,
                           name: service.name,
                           description: service.description,
-                          duration: service.duration,
-                          price: service.price,
-                          overage_rate: service.overage_rate,
-                          featured: service.featured ?? false,
+                          duration_minutes: service.duration_minutes,
+                          base_price: service.base_price,
+                          is_featured: service.is_featured ?? false,
                         }}
                       />
                     </TableCell>

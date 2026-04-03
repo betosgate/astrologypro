@@ -18,7 +18,7 @@ export function ActiveToggle({
     const supabase = createClient();
     const { error } = await supabase
       .from("services")
-      .update({ active: checked })
+      .update({ is_active: checked })
       .eq("id", serviceId);
 
     if (error) {
@@ -45,7 +45,7 @@ export function FeaturedToggle({
     const supabase = createClient();
     const { error } = await supabase
       .from("services")
-      .update({ featured: checked })
+      .update({ is_featured: checked })
       .eq("id", serviceId);
 
     if (error) {
