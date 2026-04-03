@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -214,7 +215,8 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
         }));
         setPrefilled(true);
       } catch {
-        // Silently fail — user can fill in manually
+        // Non-critical — user can fill in manually
+        console.warn("[BookingWizard] Could not prefill from profile");
       }
     }
 
@@ -241,9 +243,11 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
           setTimeSlots(slots);
         } else {
           setTimeSlots([]);
+          toast.error("Could not load available times. Please try again.");
         }
       } catch {
         setTimeSlots([]);
+        toast.error("Could not load available times. Please check your connection.");
       } finally {
         setLoadingSlots(false);
       }

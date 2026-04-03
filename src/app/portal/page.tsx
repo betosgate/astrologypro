@@ -53,6 +53,7 @@ export default async function PortalDashboardPage() {
       .eq("client_id", client.id)
       .eq("status", "completed")
       .not("recording_url", "is", null)
+      .not("recording_share_id", "is", null)
       .order("scheduled_at", { ascending: false })
       .limit(3),
   ]);

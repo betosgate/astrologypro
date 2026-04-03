@@ -289,13 +289,12 @@ async function handlePaymentIntentSucceeded(
       clientEmail: clientRecord?.email ?? clientEmail,
       clientName: clientRecord?.full_name ?? undefined,
     })
-      .then(({ eventId }) => {
+      .then(({ eventId }) =>
         supabase
           .from("bookings")
           .update({ google_calendar_event_id: eventId })
           .eq("id", bookingId)
-          .then(() => {});
-      })
+      )
       .catch((err) =>
         console.error("[Webhook] Failed to create Google Calendar event:", err)
       );
