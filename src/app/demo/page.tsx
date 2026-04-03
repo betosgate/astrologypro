@@ -35,10 +35,22 @@ import {
   MobilePhoneMockup,
 } from "@/components/marketing/illustrations";
 
-export const metadata = {
-  title: "See Demo - AstrologyPro",
+export const metadata: Metadata = {
+  title: "See It in Action - Live Demo | AstrologyPro",
   description:
-    "See exactly what you get with AstrologyPro before signing up. Interactive demo of the platform for astrologers and tarot readers.",
+    "Explore a live demo of what your AstrologyPro page looks like — booking flow, video sessions, client portal, and more.",
+  openGraph: {
+    title: "See AstrologyPro in Action | Live Demo",
+    description:
+      "Explore a live demo of what your branded astrology page looks like — booking flow, video sessions, client portal, and more.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "See AstrologyPro in Action | Live Demo",
+    description:
+      "Explore a live demo of what your branded astrology page looks like — booking flow, video sessions, client portal, and more.",
+  },
 };
 
 function DemoAnnotation({
@@ -642,24 +654,6 @@ function ClientPortalTab() {
     </div>
   );
 }
-
-export const metadata: Metadata = {
-  title: "See It in Action - Live Demo | AstrologyPro",
-  description:
-    "Explore a live demo of what your AstrologyPro page looks like — booking flow, video sessions, client portal, and more.",
-  openGraph: {
-    title: "See AstrologyPro in Action | Live Demo",
-    description:
-      "Explore a live demo of what your branded astrology page looks like — booking flow, video sessions, client portal, and more.",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "See AstrologyPro in Action | Live Demo",
-    description:
-      "Explore a live demo of what your branded astrology page looks like — booking flow, video sessions, client portal, and more.",
-  },
-};
 
 export default function DemoPage() {
   return (
