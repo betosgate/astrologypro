@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     // 2. Look up client by From phone number
     const { data: client } = await supabase
       .from("clients")
-      .select("id")
+      .select("id, stripe_customer_id, default_payment_method_id")
       .eq("phone", from)
       .maybeSingle();
 
@@ -85,13 +85,13 @@ export async function POST(request: NextRequest) {
         `);
       }
 
-      // Standalone call -- card-on-file billing not yet implemented
-      if (false) { // TODO: re-enable when stripe_customer_id / default_payment_method_id added to clients
+      // Standalone call -- card-on-file billing
+      if (client.stripe_customer_id && client.default_payment_method_id) {
         await supabase
           .from("phone_sessions")
           .insert({
-            diviner_id: diviner!.id,
-            client_id: client!.id,
+            diviner_id: diviner.id,
+            client_id: client.id,
             caller_phone: from,
             twilio_call_sid: callSid,
             session_type: "standalone",
@@ -108,11 +108,11 @@ export async function POST(request: NextRequest) {
             "Authorization": `Bearer ${process.env.CRON_SECRET}`,
           },
           body: JSON.stringify({
-            diviner_id: diviner!.id,
-            queue_name: `diviner-${diviner!.id}`,
+            diviner_id: diviner.id,
+            queue_name: `diviner-${diviner.id}`,
             client_call_sid: callSid,
           }),
-        }).catch(() => {}); // silent fail — client is already in queue
+        }).catch(() => {}); // fire-and-forget — client is already in queue
 
         return twimlResponse(`
           <Response>
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
               Please hold while we connect you to your diviner.
             </Say>
             <Enqueue waitUrl="${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/voice/wait-music">
-              diviner-${diviner!.id}
+              diviner-${diviner.id}
             </Enqueue>
           </Response>
         `);
