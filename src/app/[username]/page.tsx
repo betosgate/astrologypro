@@ -49,9 +49,10 @@ async function getTestimonials(divinerId: string) {
 
   const { data: testimonials } = await supabase
     .from("testimonials")
-    .select("*")
+    .select("id, client_name, rating, text, service_type, featured")
     .eq("diviner_id", divinerId)
     .eq("status", "approved")
+    .order("featured", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(9);
 
@@ -394,7 +395,11 @@ export default async function DivinerPage({ params }: PageProps) {
       )}
 
       {/* ===== 4. TESTIMONIALS ===== */}
-      <TestimonialSection testimonials={testimonials} />
+      <TestimonialSection
+        testimonials={testimonials}
+        averageRating={stats.averageRating}
+        reviewCount={stats.reviewCount}
+      />
 
       {/* ===== 5. AVAILABILITY PREVIEW ===== */}
       <section id="booking" className="py-10 md:py-14">

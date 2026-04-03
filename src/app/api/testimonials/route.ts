@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
       diviner_id: divinerId,
       client_id: clientId,
       client_name: clientName ?? "Anonymous",
+      booking_id: bookingId ?? null,
       rating,
       text,
       service_type: serviceName ?? null,

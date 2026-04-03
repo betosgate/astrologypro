@@ -429,7 +429,9 @@ interface ServiceTemplate {
   id: string;
   name: string;
   description: string;
-  default_price: number;
+  category: string;
+  slug: string;
+  base_price: number;
   duration_minutes: number;
 }
 
@@ -747,26 +749,48 @@ export default function OnboardingPage() {
     setError("");
 
     try {
-      // Delete existing services and insert new ones
-      await supabase
-        .from("diviner_services")
-        .delete()
-        .eq("diviner_id", divinerId);
+      // Save selection cache to diviner_services
+      await supabase.from("diviner_services").delete().eq("diviner_id", divinerId);
 
       if (selectedServices.length > 0) {
-        const { error: insertError } = await supabase
-          .from("diviner_services")
-          .insert(
-            selectedServices.map((s) => ({
-              diviner_id: divinerId,
-              template_id: s.template_id,
-              price: s.price,
-            }))
-          );
+        await supabase.from("diviner_services").insert(
+          selectedServices.map((s) => ({
+            diviner_id: divinerId,
+            template_id: s.template_id,
+            price: s.price,
+          }))
+        );
 
-        if (insertError) {
-          setError(insertError.message);
-          return;
+        // Also upsert into the live services table so they're immediately available
+        const templateIds = selectedServices.map((s) => s.template_id);
+        const { data: templates } = await supabase
+          .from("service_templates")
+          .select("id, name, description, category, slug, duration_minutes")
+          .in("id", templateIds);
+
+        if (templates && templates.length > 0) {
+          const serviceRows = templates.map((t) => {
+            const sel = selectedServices.find((s) => s.template_id === t.id)!;
+            return {
+              diviner_id: divinerId,
+              category: t.category,
+              name: t.name,
+              slug: t.slug,
+              description: t.description ?? null,
+              duration_minutes: t.duration_minutes,
+              base_price: sel.price,
+              is_active: true,
+            };
+          });
+
+          const { error: svcError } = await supabase
+            .from("services")
+            .upsert(serviceRows, { onConflict: "diviner_id,slug", ignoreDuplicates: false });
+
+          if (svcError) {
+            setError(svcError.message);
+            return;
+          }
         }
       }
 
@@ -785,17 +809,13 @@ export default function OnboardingPage() {
     setError("");
 
     try {
-      const { data: divinerData } = await supabase
-        .from("diviners")
-        .select("email")
-        .eq("id", divinerId)
-        .single();
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
 
       const response = await fetch("/api/stripe/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: divinerData?.email,
+          email: currentUser?.email,
           divinerId: divinerId,
         }),
       });
@@ -1351,7 +1371,7 @@ export default function OnboardingPage() {
                               onCheckedChange={() =>
                                 toggleService(
                                   template.id,
-                                  template.default_price
+                                  template.base_price
                                 )
                               }
                               className="mt-0.5"
