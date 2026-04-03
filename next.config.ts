@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-// build: 2026-04-03T08:00Z
+// build: 2026-04-03T09:00Z
 const nextConfig: NextConfig = {
   // Ensure the Geist Bold TTF is bundled with the image-compositing Lambda.
   // readFileSync on a non-imported file is not auto-traced by Next.js bundler,
