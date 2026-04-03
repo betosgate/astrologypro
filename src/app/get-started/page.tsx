@@ -81,6 +81,7 @@ export default function GetStartedPage() {
 
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("both");
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [username, setUsername] = useState("");
@@ -94,8 +95,11 @@ export default function GetStartedPage() {
   }
 
   function validateForm(): string | null {
-    if (!email || !password || !confirmPassword || !username) {
+    if (!name || !email || !password || !confirmPassword || !username) {
       return "All fields are required.";
+    }
+    if (name.trim().length < 2) {
+      return "Please enter your full name.";
     }
     if (password.length < 8) {
       return "Password must be at least 8 characters.";
@@ -133,6 +137,7 @@ export default function GetStartedPage() {
         password,
         options: {
           data: {
+            name: name.trim(),
             username,
             role: "diviner",
             plan: selectedPlan,
@@ -547,6 +552,22 @@ export default function GetStartedPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       autoComplete="email"
+                      className="border-white/10 bg-white/[0.04] text-[#f5f0e8] placeholder:text-[#b8bcd0]/30"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="text-[#b8bcd0]/80">
+                      Full Name
+                    </Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="Maya Starweaver"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      autoComplete="name"
                       className="border-white/10 bg-white/[0.04] text-[#f5f0e8] placeholder:text-[#b8bcd0]/30"
                     />
                   </div>
