@@ -9,6 +9,18 @@ export const metadata: Metadata = {
   title: 'Built for Professional Diviners | AstrologyPro',
   description:
     'AstrologyPro gives astrologers and tarot readers everything they need: branded pages, video sessions, booking, payments, CRM, and marketing tools — all in one platform.',
+  openGraph: {
+    title: 'Built for Professional Diviners | AstrologyPro',
+    description:
+      'Stop juggling 5+ tools. AstrologyPro replaces your booking, payments, video, CRM, and marketing with one platform built for divination professionals.',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Built for Professional Diviners | AstrologyPro',
+    description:
+      'Stop juggling 5+ tools. AstrologyPro replaces your booking, payments, video, CRM, and marketing with one platform built for divination professionals.',
+  },
 }
 
 const painPoints = [

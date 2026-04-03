@@ -120,6 +120,7 @@ export async function generateMetadata({
     diviner.tagline ??
     `Book an astrology or tarot reading with ${diviner.display_name}`;
 
+  const ogImage = diviner.cover_image_url || diviner.avatar_url;
   return {
     title,
     description,
@@ -128,14 +129,19 @@ export async function generateMetadata({
       description,
       url: `${APP_URL}/${username}`,
       type: "profile",
-      ...(diviner.avatar_url && {
-        images: [{ url: diviner.avatar_url, width: 400, height: 400 }],
+      ...(ogImage && {
+        images: [
+          diviner.cover_image_url
+            ? { url: diviner.cover_image_url, width: 1200, height: 400 }
+            : { url: diviner.avatar_url!, width: 400, height: 400 },
+        ],
       }),
     },
     twitter: {
-      card: "summary",
+      card: ogImage ? "summary_large_image" : "summary",
       title,
       description,
+      ...(ogImage && { images: [ogImage] }),
     },
   };
 }

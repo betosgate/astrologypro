@@ -9,6 +9,20 @@ import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Pricing",
+  description:
+    "Simple, transparent pricing for astrologers and tarot readers. Choose Tarot, Astrology, or Both — every plan includes the full business toolkit.",
+  openGraph: {
+    title: "Pricing | AstrologyPro",
+    description:
+      "Flat monthly pricing with no commissions. Tarot, Astrology, or Both plans — all include booking, video, CRM, and marketing tools.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Pricing | AstrologyPro",
+    description:
+      "Flat monthly pricing with no commissions. Tarot, Astrology, or Both plans — all include booking, video, CRM, and marketing tools.",
+  },
 };
 
 export default function PricingPage() {

@@ -11,6 +11,18 @@ export const metadata = {
   title: "Find a Reader - AstrologyPro",
   description:
     "Browse our community of verified astrologers and tarot readers. Book a personal reading today.",
+  openGraph: {
+    title: "Find an Astrologer or Tarot Reader | AstrologyPro",
+    description:
+      "Browse verified astrologers and tarot readers. Book a natal chart reading, compatibility report, tarot spread, and more.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Find an Astrologer or Tarot Reader | AstrologyPro",
+    description:
+      "Browse verified astrologers and tarot readers. Book a natal chart reading, compatibility report, tarot spread, and more.",
+  },
 };
 
 interface DivinerCard {

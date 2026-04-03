@@ -30,6 +30,20 @@ import {
 
 export const metadata: Metadata = {
   title: "Features",
+  description:
+    "Explore everything AstrologyPro offers — branded landing pages, HD video sessions, smart booking, secure payments, CRM, live streaming, and marketing automation.",
+  openGraph: {
+    title: "Features | AstrologyPro",
+    description:
+      "Your branded page, video sessions, booking system, payments, CRM, and marketing tools — everything an astrologer or tarot reader needs in one platform.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Features | AstrologyPro",
+    description:
+      "Your branded page, video sessions, booking system, payments, CRM, and marketing tools — everything an astrologer or tarot reader needs in one platform.",
+  },
 };
 
 // Map of illustration components by feature title

@@ -7,6 +7,18 @@ export const metadata: Metadata = {
   title: "Blog - Astrology Insights & Business Tips | AstrologyPro",
   description:
     "Expert advice on running a profitable astrology and tarot practice — pricing, client growth, planetary insights, and more.",
+  openGraph: {
+    title: "Blog - Astrology Insights & Business Tips | AstrologyPro",
+    description:
+      "Expert advice on running a profitable astrology and tarot practice — pricing, client growth, planetary insights, and more.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Blog - Astrology Insights & Business Tips | AstrologyPro",
+    description:
+      "Expert advice on running a profitable astrology and tarot practice — pricing, client growth, planetary insights, and more.",
+  },
 };
 
 const COMING_POSTS = [

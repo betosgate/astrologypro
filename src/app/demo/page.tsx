@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
@@ -641,6 +642,24 @@ function ClientPortalTab() {
     </div>
   );
 }
+
+export const metadata: Metadata = {
+  title: "See It in Action - Live Demo | AstrologyPro",
+  description:
+    "Explore a live demo of what your AstrologyPro page looks like — booking flow, video sessions, client portal, and more.",
+  openGraph: {
+    title: "See AstrologyPro in Action | Live Demo",
+    description:
+      "Explore a live demo of what your branded astrology page looks like — booking flow, video sessions, client portal, and more.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "See AstrologyPro in Action | Live Demo",
+    description:
+      "Explore a live demo of what your branded astrology page looks like — booking flow, video sessions, client portal, and more.",
+  },
+};
 
 export default function DemoPage() {
   return (
