@@ -20,6 +20,7 @@ import {
   ArrowRight,
   Sparkles,
   User,
+  ExternalLink,
 } from "lucide-react";
 import { ProfileStrength } from "@/components/dashboard/profile-strength";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
@@ -286,13 +287,25 @@ export default async function DashboardPage() {
     },
   ];
 
+  const profileUrl = `astrologypro.com/${diviner.username}`;
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back. Here is an overview of your practice.
-        </p>
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back. Here is an overview of your practice.
+          </p>
+        </div>
+        <Link
+          href={`/${diviner.username}`}
+          target="_blank"
+          className="flex items-center gap-1.5 rounded-lg border bg-muted/40 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <ExternalLink className="size-3.5" />
+          {profileUrl}
+        </Link>
       </div>
 
       {/* Today's Sessions Quick-Start */}
@@ -448,6 +461,15 @@ export default async function DashboardPage() {
                   <span className="flex items-center gap-2">
                     <Sparkles className="size-4" />
                     Manage Services
+                  </span>
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+              <Button variant="outline" className="justify-between" asChild>
+                <Link href={`/${diviner.username}`} target="_blank">
+                  <span className="flex items-center gap-2">
+                    <ExternalLink className="size-4" />
+                    View Live Profile
                   </span>
                   <ArrowRight className="size-4" />
                 </Link>
