@@ -1,6 +1,5 @@
 import type { NextConfig } from "next";
 
-// Cache bust: 2026-04-03
 const nextConfig: NextConfig = {
   // Ensure the Geist Bold TTF is bundled with the image-compositing Lambda.
   // readFileSync on a non-imported file is not auto-traced by Next.js bundler,
