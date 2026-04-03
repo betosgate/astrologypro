@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -43,8 +45,375 @@ import {
   Calendar,
   Eye,
   Wand2,
+  ChevronDown,
+  X,
+  Plus,
+  Search,
 } from "lucide-react";
 import { DAYS_OF_WEEK } from "@/lib/constants";
+
+// ─── Timezone data ────────────────────────────────────────────────────────────
+const TIMEZONES: { zone: string; label: string }[] = [
+  { zone: "Pacific/Honolulu", label: "Hawaii (HST, UTC−10)" },
+  { zone: "America/Anchorage", label: "Alaska (AKST/AKDT, UTC−9/8)" },
+  { zone: "America/Los_Angeles", label: "Pacific — Los Angeles (PST/PDT)" },
+  { zone: "America/Vancouver", label: "Pacific — Vancouver (PST/PDT)" },
+  { zone: "America/Denver", label: "Mountain — Denver (MST/MDT)" },
+  { zone: "America/Edmonton", label: "Mountain — Edmonton (MST/MDT)" },
+  { zone: "America/Phoenix", label: "Arizona — Phoenix (MST, no DST)" },
+  { zone: "America/Chicago", label: "Central — Chicago (CST/CDT)" },
+  { zone: "America/Winnipeg", label: "Central — Winnipeg (CST/CDT)" },
+  { zone: "America/Mexico_City", label: "Mexico — Mexico City (CST/CDT)" },
+  { zone: "America/New_York", label: "Eastern — New York (EST/EDT)" },
+  { zone: "America/Toronto", label: "Eastern — Toronto (EST/EDT)" },
+  { zone: "America/Halifax", label: "Atlantic — Halifax (AST/ADT)" },
+  { zone: "America/St_Johns", label: "Newfoundland — St. John's (NST/NDT)" },
+  { zone: "America/Sao_Paulo", label: "Brazil — São Paulo (BRT/BRST)" },
+  { zone: "America/Argentina/Buenos_Aires", label: "Argentina — Buenos Aires (ART)" },
+  { zone: "America/Santiago", label: "Chile — Santiago (CLT/CLST)" },
+  { zone: "America/Bogota", label: "Colombia — Bogotá (COT)" },
+  { zone: "America/Lima", label: "Peru — Lima (PET)" },
+  { zone: "America/Caracas", label: "Venezuela — Caracas (VET)" },
+  { zone: "Europe/London", label: "London (GMT/BST)" },
+  { zone: "Europe/Dublin", label: "Dublin (GMT/IST)" },
+  { zone: "Europe/Lisbon", label: "Lisbon (WET/WEST)" },
+  { zone: "Europe/Paris", label: "Central Europe — Paris (CET/CEST)" },
+  { zone: "Europe/Berlin", label: "Central Europe — Berlin (CET/CEST)" },
+  { zone: "Europe/Rome", label: "Central Europe — Rome (CET/CEST)" },
+  { zone: "Europe/Madrid", label: "Central Europe — Madrid (CET/CEST)" },
+  { zone: "Europe/Amsterdam", label: "Central Europe — Amsterdam (CET/CEST)" },
+  { zone: "Europe/Stockholm", label: "Central Europe — Stockholm (CET/CEST)" },
+  { zone: "Europe/Warsaw", label: "Central Europe — Warsaw (CET/CEST)" },
+  { zone: "Europe/Helsinki", label: "Eastern Europe — Helsinki (EET/EEST)" },
+  { zone: "Europe/Athens", label: "Eastern Europe — Athens (EET/EEST)" },
+  { zone: "Europe/Bucharest", label: "Eastern Europe — Bucharest (EET/EEST)" },
+  { zone: "Europe/Kyiv", label: "Eastern Europe — Kyiv (EET/EEST)" },
+  { zone: "Europe/Istanbul", label: "Turkey — Istanbul (TRT, UTC+3)" },
+  { zone: "Europe/Moscow", label: "Russia — Moscow (MSK, UTC+3)" },
+  { zone: "Africa/Casablanca", label: "Morocco — Casablanca (WET/WEST)" },
+  { zone: "Africa/Lagos", label: "Nigeria — Lagos (WAT, UTC+1)" },
+  { zone: "Africa/Cairo", label: "Egypt — Cairo (EET, UTC+2)" },
+  { zone: "Africa/Johannesburg", label: "South Africa — Johannesburg (SAST, UTC+2)" },
+  { zone: "Africa/Nairobi", label: "Kenya — Nairobi (EAT, UTC+3)" },
+  { zone: "Asia/Riyadh", label: "Saudi Arabia — Riyadh (AST, UTC+3)" },
+  { zone: "Asia/Dubai", label: "UAE — Dubai (GST, UTC+4)" },
+  { zone: "Asia/Tehran", label: "Iran — Tehran (IRST, UTC+3:30)" },
+  { zone: "Asia/Kabul", label: "Afghanistan — Kabul (AFT, UTC+4:30)" },
+  { zone: "Asia/Karachi", label: "Pakistan — Karachi (PKT, UTC+5)" },
+  { zone: "Asia/Kolkata", label: "India — Mumbai/Delhi (IST, UTC+5:30)" },
+  { zone: "Asia/Kathmandu", label: "Nepal — Kathmandu (NPT, UTC+5:45)" },
+  { zone: "Asia/Dhaka", label: "Bangladesh — Dhaka (BST, UTC+6)" },
+  { zone: "Asia/Yangon", label: "Myanmar — Yangon (MMT, UTC+6:30)" },
+  { zone: "Asia/Bangkok", label: "Thailand — Bangkok (ICT, UTC+7)" },
+  { zone: "Asia/Jakarta", label: "Indonesia — Jakarta (WIB, UTC+7)" },
+  { zone: "Asia/Singapore", label: "Singapore (SGT, UTC+8)" },
+  { zone: "Asia/Hong_Kong", label: "Hong Kong (HKT, UTC+8)" },
+  { zone: "Asia/Shanghai", label: "China — Shanghai (CST, UTC+8)" },
+  { zone: "Asia/Taipei", label: "Taiwan — Taipei (CST, UTC+8)" },
+  { zone: "Asia/Manila", label: "Philippines — Manila (PST, UTC+8)" },
+  { zone: "Asia/Seoul", label: "South Korea — Seoul (KST, UTC+9)" },
+  { zone: "Asia/Tokyo", label: "Japan — Tokyo (JST, UTC+9)" },
+  { zone: "Australia/Perth", label: "Australia — Perth (AWST, UTC+8)" },
+  { zone: "Australia/Darwin", label: "Australia — Darwin (ACST, UTC+9:30)" },
+  { zone: "Australia/Brisbane", label: "Australia — Brisbane (AEST, UTC+10)" },
+  { zone: "Australia/Adelaide", label: "Australia — Adelaide (ACST/ACDT)" },
+  { zone: "Australia/Sydney", label: "Australia — Sydney (AEST/AEDT)" },
+  { zone: "Australia/Melbourne", label: "Australia — Melbourne (AEST/AEDT)" },
+  { zone: "Pacific/Auckland", label: "New Zealand — Auckland (NZST/NZDT)" },
+  { zone: "Pacific/Fiji", label: "Fiji (FJT, UTC+12)" },
+  { zone: "Pacific/Guam", label: "Guam (ChST, UTC+10)" },
+];
+
+// ─── Specialty options ────────────────────────────────────────────────────────
+const SPECIALTY_OPTIONS = [
+  "Natal Chart Reading",
+  "Solar Return",
+  "Saturn Return",
+  "Jupiter Return",
+  "Transit Forecasting",
+  "Synastry & Compatibility",
+  "Composite Chart",
+  "Electional Astrology",
+  "Horary Astrology",
+  "Medical Astrology",
+  "Vedic / Jyotish Astrology",
+  "Hellenistic Astrology",
+  "Evolutionary Astrology",
+  "Financial & Career Astrology",
+  "Mundane Astrology",
+  "Asteroids & Fixed Stars",
+  "3-Card Tarot Reading",
+  "Celtic Cross Tarot",
+  "Relationship Tarot",
+  "Career & Finance Tarot",
+  "Past Life Tarot",
+  "Oracle Card Reading",
+  "Numerology",
+  "Human Design",
+  "Gene Keys",
+  "I Ching",
+  "Runes",
+  "Palmistry",
+  "Dream Interpretation",
+];
+
+// ─── TimezoneCombobox ─────────────────────────────────────────────────────────
+function TimezoneCombobox({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [customMode, setCustomMode] = useState(false);
+  const [customVal, setCustomVal] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const filtered = TIMEZONES.filter(
+    (t) =>
+      t.label.toLowerCase().includes(search.toLowerCase()) ||
+      t.zone.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const displayLabel =
+    TIMEZONES.find((t) => t.zone === value)?.label ?? value;
+
+  // Close on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+      >
+        <span className={value ? "text-foreground" : "text-muted-foreground"}>
+          {value ? displayLabel : "Select timezone…"}
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md">
+          <div className="flex items-center border-b px-3">
+            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <input
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search timezone…"
+              className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
+            />
+          </div>
+          <div className="max-h-56 overflow-y-auto">
+            {filtered.length === 0 && (
+              <p className="px-3 py-4 text-center text-sm text-muted-foreground">No results</p>
+            )}
+            {filtered.map((t) => (
+              <button
+                key={t.zone}
+                type="button"
+                onClick={() => { onChange(t.zone); setOpen(false); setSearch(""); }}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground ${value === t.zone ? "bg-accent/50" : ""}`}
+              >
+                {value === t.zone && <Check className="h-4 w-4 shrink-0" />}
+                <span className={value === t.zone ? "" : "pl-6"}>{t.label}</span>
+              </button>
+            ))}
+            <div className="border-t">
+              {customMode ? (
+                <div className="flex gap-2 p-2">
+                  <input
+                    autoFocus
+                    value={customVal}
+                    onChange={(e) => setCustomVal(e.target.value)}
+                    placeholder="e.g. Asia/Kathmandu"
+                    className="flex-1 rounded border border-input bg-background px-2 py-1 text-sm outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && customVal.trim()) {
+                        onChange(customVal.trim());
+                        setOpen(false);
+                        setCustomMode(false);
+                        setCustomVal("");
+                        setSearch("");
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => {
+                      if (customVal.trim()) {
+                        onChange(customVal.trim());
+                        setOpen(false);
+                        setCustomMode(false);
+                        setCustomVal("");
+                        setSearch("");
+                      }
+                    }}
+                  >
+                    Set
+                  </Button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setCustomMode(true)}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                >
+                  <Plus className="h-4 w-4" />
+                  Other / Custom IANA zone…
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── SpecialtiesInput ─────────────────────────────────────────────────────────
+function SpecialtiesInput({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [customVal, setCustomVal] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const filteredOptions = SPECIALTY_OPTIONS.filter(
+    (s) =>
+      s.toLowerCase().includes(search.toLowerCase()) &&
+      !value.includes(s)
+  );
+
+  function toggle(specialty: string) {
+    if (value.includes(specialty)) {
+      onChange(value.filter((s) => s !== specialty));
+    } else {
+      onChange([...value, specialty]);
+    }
+  }
+
+  function addCustom() {
+    const trimmed = customVal.trim();
+    if (trimmed && !value.includes(trimmed)) {
+      onChange([...value, trimmed]);
+    }
+    setCustomVal("");
+  }
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="space-y-2">
+      {/* Selected badges */}
+      {value.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {value.map((s) => (
+            <Badge key={s} variant="secondary" className="gap-1 pr-1">
+              {s}
+              <button
+                type="button"
+                onClick={() => toggle(s)}
+                className="ml-0.5 rounded-full hover:text-destructive"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      {/* Dropdown trigger */}
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <span className="text-muted-foreground">
+            {value.length === 0 ? "Add specialties…" : "Add more…"}
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+        </button>
+
+        {open && (
+          <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md">
+            <div className="flex items-center border-b px-3">
+              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+              <input
+                autoFocus
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search specialties…"
+                className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
+              />
+            </div>
+            <div className="max-h-56 overflow-y-auto">
+              {filteredOptions.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => { toggle(s); setSearch(""); }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+                >
+                  <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  {s}
+                </button>
+              ))}
+              {filteredOptions.length === 0 && search && (
+                <p className="px-3 py-2 text-sm text-muted-foreground">
+                  No preset match — add &ldquo;{search}&rdquo; below
+                </p>
+              )}
+              <div className="border-t p-2">
+                <div className="flex gap-2">
+                  <input
+                    value={customVal}
+                    onChange={(e) => setCustomVal(e.target.value)}
+                    placeholder="Add custom specialty…"
+                    className="flex-1 rounded border border-input bg-background px-2 py-1 text-sm outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { addCustom(); }
+                    }}
+                  />
+                  <Button type="button" size="sm" onClick={addCustom} disabled={!customVal.trim()}>
+                    Add
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const STEPS = [
   { label: "Profile", icon: User },
@@ -89,6 +458,7 @@ export default function OnboardingPage() {
   const [timezone, setTimezone] = useState(
     Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York"
   );
+  const [specialties, setSpecialties] = useState<string[]>([]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
@@ -142,7 +512,7 @@ export default function OnboardingPage() {
       // Load existing onboarding progress — query by user_id, not id
       const { data: diviner } = await supabase
         .from("diviners")
-        .select("id, onboarding_step, display_name, bio, tagline, avatar_url, stripe_connect_id, timezone")
+        .select("id, onboarding_step, display_name, bio, tagline, avatar_url, stripe_connect_id, timezone, specialties")
         .eq("user_id", user.id)
         .single();
 
@@ -161,6 +531,7 @@ export default function OnboardingPage() {
         if (diviner.tagline) setTagline(diviner.tagline);
         if (diviner.avatar_url) setAvatarPreview(diviner.avatar_url);
         if (diviner.timezone) setTimezone(diviner.timezone);
+        if (diviner.specialties?.length) setSpecialties(diviner.specialties);
         if (diviner.stripe_connect_id) setConnectComplete(true);
       }
 
@@ -317,6 +688,7 @@ export default function OnboardingPage() {
           tagline,
           avatar_url: avatarUrl,
           timezone,
+          specialties,
         })
         .eq("id", divinerId);
 
@@ -640,34 +1012,15 @@ export default function OnboardingPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="timezone">Your Timezone</Label>
-                  <Select value={timezone} onValueChange={setTimezone}>
-                    <SelectTrigger id="timezone" className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pacific/Honolulu">Hawaii (HST, UTC−10)</SelectItem>
-                      <SelectItem value="America/Anchorage">Alaska (AKST, UTC−9)</SelectItem>
-                      <SelectItem value="America/Los_Angeles">Pacific (PST/PDT, UTC−8/7)</SelectItem>
-                      <SelectItem value="America/Denver">Mountain (MST/MDT, UTC−7/6)</SelectItem>
-                      <SelectItem value="America/Phoenix">Arizona (MST, UTC−7)</SelectItem>
-                      <SelectItem value="America/Chicago">Central (CST/CDT, UTC−6/5)</SelectItem>
-                      <SelectItem value="America/New_York">Eastern (EST/EDT, UTC−5/4)</SelectItem>
-                      <SelectItem value="America/Halifax">Atlantic (AST/ADT, UTC−4/3)</SelectItem>
-                      <SelectItem value="America/Sao_Paulo">Brazil (BRT, UTC−3)</SelectItem>
-                      <SelectItem value="Europe/London">London (GMT/BST, UTC+0/1)</SelectItem>
-                      <SelectItem value="Europe/Paris">Central Europe (CET/CEST, UTC+1/2)</SelectItem>
-                      <SelectItem value="Europe/Athens">Eastern Europe (EET, UTC+2/3)</SelectItem>
-                      <SelectItem value="Asia/Dubai">Gulf (GST, UTC+4)</SelectItem>
-                      <SelectItem value="Asia/Kolkata">India (IST, UTC+5:30)</SelectItem>
-                      <SelectItem value="Asia/Bangkok">Southeast Asia (ICT, UTC+7)</SelectItem>
-                      <SelectItem value="Asia/Singapore">Singapore/Hong Kong (SGT, UTC+8)</SelectItem>
-                      <SelectItem value="Asia/Tokyo">Japan/Korea (JST, UTC+9)</SelectItem>
-                      <SelectItem value="Australia/Sydney">Sydney (AEST/AEDT, UTC+10/11)</SelectItem>
-                      <SelectItem value="Pacific/Auckland">New Zealand (NZST, UTC+12/13)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">Used for your availability calendar</p>
+                  <Label>Your Timezone</Label>
+                  <TimezoneCombobox value={timezone} onChange={setTimezone} />
+                  <p className="text-xs text-muted-foreground">Auto-detected from your browser — change if needed</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Specialties</Label>
+                  <SpecialtiesInput value={specialties} onChange={setSpecialties} />
+                  <p className="text-xs text-muted-foreground">Pick all that apply — shown on your public profile</p>
                 </div>
 
                 <div className="space-y-2">
