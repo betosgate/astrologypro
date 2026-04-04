@@ -84,6 +84,7 @@ const NAV_GROUPS = [
       { label: "Decan Journals", href: "/admin/decan-journals", icon: BookOpen },
       { label: "Decan Media", href: "/admin/decan-media", icon: Film },
       { label: "Quarters", href: "/admin/quarters", icon: Grid2X2 },
+      { label: "Horoscope Toolkit", href: "/admin/horoscope", icon: Star },
     ],
   },
   {
@@ -118,7 +119,6 @@ const NAV_GROUPS = [
       { label: "Broadcasting", href: "/admin/broadcasting", icon: Radio },
       { label: "Tarot", href: "/admin/tarot", icon: Shuffle },
       { label: "Rituals", href: "/admin/rituals", icon: Flame },
-      { label: "Horoscope Toolkit", href: "/admin/horoscope", icon: Star },
     ],
   },
 ];
