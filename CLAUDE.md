@@ -81,3 +81,37 @@ Before planning, always verify:
 - Hardcoded AWS credentials exist in NestJS config — do not add more env values in code
 - Typo in route: `/affiate-dashboard` (one `f`) — match this exactly, do not "fix" it in new code without a dedicated refactor story
 - Two AuthService files in Angular — do not create a third; story E1-S3 will consolidate
+
+---
+
+## Engineering Quality Standards (Hard Laws)
+
+These apply to every project, every feature, every PR. Non-negotiable.
+
+### 1 — Consistency Is a Hard Law
+- One design system, one token system, one interaction pattern library. Zero special-case components without a documented product reason.
+- APIs must have an OpenAPI contract as the source of truth. Schemas must be explicit.
+- Error responses must follow a single standard shape (RFC 9457 / Problem Details). No inventing a new error shape per endpoint.
+
+### 2 — Accessibility and Performance Are Release Criteria
+- UI must meet WCAG 2.2 from the start — not after QA complains.
+- Performance is measured with real-user budgets. Core Web Vitals — **LCP, INP, CLS** — must be within budget before a page is considered done.
+- A page that is beautiful but slow, jumpy, or broken on keyboard/mobile is not shippable.
+
+### 3 — Security and Authorization Are Designed In, Not Bolted On
+- Every endpoint is a possible breach point. Enforce authentication, tenant scoping, object-level authorization, field-level exposure control, rate limits, and secure session handling by default.
+- OWASP API Security Top 10 #1 is Broken Object Level Authorization. If the UI hides an action but the API still allows it, it is not secure.
+- Use OWASP ASVS as the baseline for verifying security controls.
+
+### 4 — Instrument Everything — See Truth, Not Guesses
+- Every user-facing flow must be traceable end-to-end with correlated logs, metrics, and traces (OpenTelemetry standard).
+- Monitor the four golden signals: **latency, traffic, errors, saturation**.
+- Set SLOs for what users actually feel — response time, success rate, availability.
+- If you cannot identify what broke, who is affected, and where latency started within minutes, the architecture is not mature.
+
+### 5 — Every Change Must Be Testable, Reversible, and Measurable
+- Keep API changes backward-compatible when possible.
+- Database migrations must be additive first — never destructive without a rollback plan.
+- Every release must have a kill-switch or rollback path.
+- Measure delivery quality (DORA: change failure rate, MTTR) — not just speed.
+- Fast shipping that repeatedly breaks production is not senior engineering.
