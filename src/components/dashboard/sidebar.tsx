@@ -179,10 +179,18 @@ export function Sidebar({ diviner }: SidebarProps) {
                   </p>
                 </div>
               </div>
+              <Link
+                href="/account"
+                className="mt-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                onClick={() => setMobileOpen(false)}
+              >
+                <User className="size-4" />
+                My Account
+              </Link>
               <Button
                 variant="ghost"
                 size="sm"
-                className="mt-3 w-full justify-start text-muted-foreground"
+                className="mt-1 w-full justify-start text-muted-foreground"
                 onClick={handleLogout}
               >
                 <LogOut className="mr-2 size-4" />
@@ -231,10 +239,17 @@ export function Sidebar({ diviner }: SidebarProps) {
               </p>
             </div>
           </div>
+          <Link
+            href="/account"
+            className="mt-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <User className="size-4" />
+            My Account
+          </Link>
           <Button
             variant="ghost"
             size="sm"
-            className="mt-3 w-full justify-start text-muted-foreground"
+            className="mt-1 w-full justify-start text-muted-foreground"
             onClick={handleLogout}
           >
             <LogOut className="mr-2 size-4" />

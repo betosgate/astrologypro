@@ -4,7 +4,7 @@ import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, ArrowRight } from "lucide-react";
+import { Star, ArrowRight, BadgeCheck } from "lucide-react";
 import { DiscoverFilters } from "./discover-filters";
 
 export const metadata = {
@@ -36,6 +36,7 @@ interface DivinerCard {
   averageRating: number | null;
   reviewCount: number;
   startingPrice: number | null;
+  is_certified: boolean;
 }
 
 async function getActiveDiviners(): Promise<DivinerCard[]> {
@@ -43,7 +44,7 @@ async function getActiveDiviners(): Promise<DivinerCard[]> {
 
   const { data: diviners } = await admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, specialties")
+    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
     .eq("is_active", true)
     .eq("onboarding_completed", true);
 
@@ -97,6 +98,7 @@ async function getActiveDiviners(): Promise<DivinerCard[]> {
         startingPrice: priceResult.data?.[0]
           ? Number(priceResult.data[0].base_price)
           : null,
+        is_certified: !!(diviner as Record<string, unknown>).is_certified,
       };
     })
   );
@@ -195,9 +197,20 @@ function DivinerCardComponent({
           </div>
         )}
         <div className="flex-1">
-          <h3 className="font-semibold text-[#f5f0e8]">
-            {diviner.display_name}
-          </h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className="font-semibold text-[#f5f0e8]">
+              {diviner.display_name}
+            </h3>
+            {diviner.is_certified && (
+              <span
+                title="Divine Infinite Being Certified"
+                className="inline-flex items-center gap-1 rounded-full bg-[#c9a84c]/15 px-1.5 py-0.5 text-[10px] font-semibold text-[#c9a84c]"
+              >
+                <BadgeCheck className="size-3" />
+                DIB Certified
+              </span>
+            )}
+          </div>
           {diviner.tagline && (
             <p className="mt-0.5 line-clamp-2 text-sm text-[#b8bcd0]/60">
               {diviner.tagline}

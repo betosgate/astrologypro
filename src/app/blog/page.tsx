@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { BlogSubscribeForm } from "./subscribe-form";
+import { createAdminClient } from "@/lib/supabase/admin";
+import Link from "next/link";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Blog - Astrology Insights & Business Tips | AstrologyPro",
@@ -56,7 +60,24 @@ const COMING_POSTS = [
   },
 ];
 
-export default function BlogPage() {
+export default async function BlogPage() {
+  const admin = createAdminClient();
+  const { data: livePosts } = await admin
+    .from("blog_posts")
+    .select("id, title, slug, category, excerpt, image_url, published_at")
+    .eq("is_published", true)
+    .order("published_at", { ascending: false });
+
+  const hasLivePosts = livePosts && livePosts.length > 0;
+
+  const CATEGORY_COLOR: Record<string, string> = {
+    Business: "border-[#c9a84c]/30 bg-[#c9a84c]/10 text-[#c9a84c]",
+    Astrology: "border-purple-500/30 bg-purple-500/10 text-purple-400",
+    Tarot: "border-rose-500/30 bg-rose-500/10 text-rose-400",
+    Spirituality: "border-sky-500/30 bg-sky-500/10 text-sky-400",
+    General: "border-white/20 bg-white/5 text-white/60",
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-[#06080f]">
       {/* Cosmic background layers */}
@@ -100,56 +121,72 @@ export default function BlogPage() {
             </div>
           </section>
 
-          {/* Coming Soon Posts */}
+          {/* Posts — live from DB or coming soon fallback */}
           <section className="px-4 pb-20 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-5xl">
               <h2 className="mb-10 text-center text-sm font-semibold uppercase tracking-widest text-[#b8bcd0]/50">
-                First Articles — Coming April &amp; May 2026
+                {hasLivePosts ? "Latest Articles" : "First Articles — Coming April & May 2026"}
               </h2>
 
               <div className="grid gap-6 sm:grid-cols-2">
-                {COMING_POSTS.map((post) => (
-                  <article
-                    key={post.title}
-                    className="group relative overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 transition-all hover:border-[#c9a84c]/20 hover:bg-white/[0.04]"
-                  >
-                    {/* Subtle hover glow */}
-                    <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100">
-                      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(201,168,76,0.05)_0%,transparent_70%)]" />
-                    </div>
-
-                    <div className="relative">
-                      {/* Category + date row */}
-                      <div className="mb-4 flex items-center gap-3">
-                        <span
-                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${post.categoryColor}`}
-                        >
-                          {post.category}
-                        </span>
-                        <span className="text-xs text-[#b8bcd0]/40">
-                          {post.publishDate}
-                        </span>
-                      </div>
-
-                      <h3 className="text-lg font-semibold leading-snug text-[#f5f0e8]">
-                        {post.title}
-                      </h3>
-
-                      <p className="mt-3 text-sm leading-relaxed text-[#b8bcd0]/65">
-                        {post.description}
-                      </p>
-
-                      {/* Notify pill */}
-                      <a
-                        href="#subscribe"
-                        className="mt-5 inline-flex items-center gap-1.5 text-xs text-[#c9a84c]/60 hover:text-[#c9a84c] transition-colors"
+                {hasLivePosts
+                  ? livePosts!.map((post) => (
+                      <Link key={post.id} href={`/blog/${post.slug}`} className="group">
+                        <article className="relative h-full overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 transition-all hover:border-[#c9a84c]/20 hover:bg-white/[0.04]">
+                          <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100">
+                            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(201,168,76,0.05)_0%,transparent_70%)]" />
+                          </div>
+                          <div className="relative">
+                            {post.image_url && (
+                              <img src={post.image_url} alt={post.title} className="mb-4 w-full rounded-lg object-cover aspect-video" />
+                            )}
+                            <div className="mb-4 flex items-center gap-3">
+                              <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_COLOR[post.category] ?? CATEGORY_COLOR.General}`}>
+                                {post.category}
+                              </span>
+                              {post.published_at && (
+                                <span className="text-xs text-[#b8bcd0]/40">
+                                  {new Date(post.published_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                </span>
+                              )}
+                            </div>
+                            <h3 className="text-lg font-semibold leading-snug text-[#f5f0e8] group-hover:text-[#c9a84c] transition-colors">
+                              {post.title}
+                            </h3>
+                            {post.excerpt && (
+                              <p className="mt-3 text-sm leading-relaxed text-[#b8bcd0]/65">{post.excerpt}</p>
+                            )}
+                            <span className="mt-5 inline-flex items-center gap-1.5 text-xs text-[#c9a84c]/60 group-hover:text-[#c9a84c] transition-colors">
+                              Read article →
+                            </span>
+                          </div>
+                        </article>
+                      </Link>
+                    ))
+                  : COMING_POSTS.map((post) => (
+                      <article
+                        key={post.title}
+                        className="group relative overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 transition-all hover:border-[#c9a84c]/20 hover:bg-white/[0.04]"
                       >
-                        <span className="inline-block size-1 rounded-full bg-[#c9a84c]/60" />
-                        Notify me when published
-                      </a>
-                    </div>
-                  </article>
-                ))}
+                        <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100">
+                          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(201,168,76,0.05)_0%,transparent_70%)]" />
+                        </div>
+                        <div className="relative">
+                          <div className="mb-4 flex items-center gap-3">
+                            <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${post.categoryColor}`}>
+                              {post.category}
+                            </span>
+                            <span className="text-xs text-[#b8bcd0]/40">{post.publishDate}</span>
+                          </div>
+                          <h3 className="text-lg font-semibold leading-snug text-[#f5f0e8]">{post.title}</h3>
+                          <p className="mt-3 text-sm leading-relaxed text-[#b8bcd0]/65">{post.description}</p>
+                          <a href="#subscribe" className="mt-5 inline-flex items-center gap-1.5 text-xs text-[#c9a84c]/60 hover:text-[#c9a84c] transition-colors">
+                            <span className="inline-block size-1 rounded-full bg-[#c9a84c]/60" />
+                            Notify me when published
+                          </a>
+                        </div>
+                      </article>
+                    ))}
               </div>
             </div>
           </section>

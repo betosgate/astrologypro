@@ -23,6 +23,30 @@
     {
       "path": "/api/cron/mundane-shares?n=2",
       "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/cron/no-show-refunds",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/release-holds",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/charge-confirmed-sessions",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/monthly-transits",
+      "schedule": "0 6 1 * *"
+    },
+    {
+      "path": "/api/cron/decan-unlock",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/social-advocacy-post",
+      "schedule": "0 12 * * *"
     }
   ]
 }

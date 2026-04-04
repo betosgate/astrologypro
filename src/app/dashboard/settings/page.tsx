@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -43,6 +43,8 @@ interface DivinerSettings {
   stripe_account_id: string | null;
   charges_enabled: boolean;
   payouts_enabled: boolean;
+  paypal_onboarded: boolean;
+  paypal_merchant_id: string | null;
   google_calendar_connected: boolean;
   youtube_channel_id: string | null;
   notification_email: boolean;
@@ -123,7 +125,7 @@ function UpgradeToBothButton() {
   );
 }
 
-export default function SettingsPage() {
+function SettingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -158,6 +160,16 @@ export default function SettingsPage() {
       );
       router.replace("/dashboard/settings", { scroll: false });
     }
+
+    const paypalStatus = searchParams.get("paypal");
+    if (paypalStatus === "connected") {
+      toast.success("PayPal account connected successfully!");
+      router.replace("/dashboard/settings", { scroll: false });
+    } else if (paypalStatus === "error") {
+      const reason = searchParams.get("reason");
+      toast.error(`Failed to connect PayPal${reason ? `: ${reason}` : ""}`);
+      router.replace("/dashboard/settings", { scroll: false });
+    }
   }, [searchParams, router]);
 
   useEffect(() => {
@@ -171,7 +183,7 @@ export default function SettingsPage() {
       const { data } = await supabase
         .from("diviners")
         .select(
-          "id, subscription_status, plan_id, stripe_subscription_id, stripe_account_id, charges_enabled, payouts_enabled, google_calendar_connected, youtube_channel_id, notification_email, notification_sms, notification_booking_confirmed, notification_booking_cancelled, notification_payout, twilio_phone_number, twilio_phone_sid, phone_dialin_enabled, phone_mobile, phone_answer_mode"
+          "id, subscription_status, plan_id, stripe_subscription_id, stripe_account_id, charges_enabled, payouts_enabled, paypal_onboarded, paypal_merchant_id, google_calendar_connected, youtube_channel_id, notification_email, notification_sms, notification_booking_confirmed, notification_booking_cancelled, notification_payout, twilio_phone_number, twilio_phone_sid, phone_dialin_enabled, phone_mobile, phone_answer_mode"
         )
         .eq("user_id", user.id)
         .single();
@@ -185,6 +197,8 @@ export default function SettingsPage() {
           stripe_account_id: data.stripe_account_id ?? null,
           charges_enabled: data.charges_enabled ?? false,
           payouts_enabled: data.payouts_enabled ?? false,
+          paypal_onboarded: data.paypal_onboarded ?? false,
+          paypal_merchant_id: data.paypal_merchant_id ?? null,
           google_calendar_connected: data.google_calendar_connected ?? false,
           youtube_channel_id: data.youtube_channel_id ?? null,
           notification_email: data.notification_email ?? true,
@@ -518,6 +532,69 @@ export default function SettingsPage() {
                   Account ID: {settings.stripe_account_id}
                 </p>
               )}
+            </CardContent>
+          </Card>
+
+          {/* PayPal Connect */}
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle>PayPal</CardTitle>
+              <CardDescription>
+                Accept PayPal payments from clients.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3 rounded-lg border p-4">
+                {settings.paypal_onboarded ? (
+                  <CheckCircle2 className="size-5 text-green-500" />
+                ) : (
+                  <XCircle className="size-5 text-muted-foreground" />
+                )}
+                <div className="flex-1">
+                  <p className="text-sm font-medium">PayPal Account</p>
+                  <p className="text-xs text-muted-foreground">
+                    {settings.paypal_onboarded ? "Connected" : "Not connected"}
+                  </p>
+                </div>
+                {settings.paypal_onboarded && (
+                  <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">
+                    Connected
+                  </Badge>
+                )}
+              </div>
+              {settings.paypal_merchant_id && (
+                <p className="text-xs text-muted-foreground">
+                  Merchant ID: {settings.paypal_merchant_id}
+                </p>
+              )}
+              {settings.paypal_onboarded ? (
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch("/api/paypal/disconnect", { method: "POST" });
+                      if (res.ok) {
+                        setSettings({ ...settings, paypal_onboarded: false, paypal_merchant_id: null });
+                        toast.success("PayPal disconnected");
+                      } else {
+                        toast.error("Failed to disconnect PayPal");
+                      }
+                    } catch {
+                      toast.error("Failed to disconnect PayPal");
+                    }
+                  }}
+                >
+                  Disconnect PayPal
+                </Button>
+              ) : (
+                <Button onClick={() => { window.location.href = "/api/paypal/connect"; }}>
+                  <ExternalLink className="mr-2 size-4" />
+                  Connect PayPal Account
+                </Button>
+              )}
+              <p className="text-sm text-muted-foreground">
+                Connect your PayPal business account to accept PayPal payments from clients.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1284,5 +1361,13 @@ export default function SettingsPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense>
+      <SettingsContent />
+    </Suspense>
   );
 }

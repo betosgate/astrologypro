@@ -1,7 +1,7 @@
 # AstrologyPro — Daily Task Board
 
 > **Workflow:** Update this file each session. Check off items as you go. Push at end of day.
-> **Last updated:** 2026-04-03 (session 8)
+> **Last updated:** 2026-04-03 (session 10)
 > **Migrations:** All applied via `scripts/run-migration.js` — no manual SQL editor needed.
 
 ---
@@ -46,6 +46,17 @@
 | Phone billing (standalone calls) | ✅ Done — `if(false)` replaced with real card-on-file check |
 | Missing FK indexes (13 columns) | ✅ Done — migration 000009 applied |
 | Clients: stripe billing columns | ✅ Done — migration 000010 applied |
+| New roles (social_advo, trainee, community) | ✅ Done — migrations 000011 + 000012 applied |
+| Login page (4 tabs) | ✅ Done — Diviner, Client, Trainee, Member tabs |
+| Advocate portal + sub-pages | ✅ Done — /advocate, /referrals, /earnings, /content, /profile |
+| Community portal + sub-pages | ✅ Done — /community, /sessions, /resources, /profile |
+| Trainee portal + sub-pages | ✅ Done — /trainee, /sessions, /progress, /resources, /profile |
+| Auth callback: community member provisioning | ✅ Done — creates community_members row on first magic link login |
+| /api/community/request-access | ✅ Done — sends magic link via Supabase admin |
+| /api/trainees/validate-invite | ✅ Done — validates diviner's trainee_invite_code |
+| diviners.trainee_invite_code column | ✅ Done — migration 000012 applied |
+| Admin user management (search, notes, block, logins) | ✅ Done — unified list, search/filter, detail sheet, login history, block/unblock |
+| Email: single template base (email-base.ts) | ✅ Done — buildEmailHtml + 12 helpers; email.ts + email-templates.ts refactored |
 | Email notifications (AWS SES) | 🟡 Wired; DNS added; awaiting SES domain verification |
 | Phone readings end-to-end | 🟡 Code complete; blocked on Twilio credentials in Vercel |
 | Social auto-posting (Ayrshare) | 🟡 Code complete; needs `AYRSHARE_API_KEY` in Vercel |
@@ -91,6 +102,68 @@
 - CMS-driven blog (replace hardcoded coming-soon posts)
 - Diviner discovery page improvements (filters, search)
 - Client-facing cancellation with automatic refund trigger
+
+---
+
+## ✅ Completed This Session (session 11 — 2026-04-03)
+
+| Fix | Detail |
+|---|---|
+| `email-base.ts` | New single source of truth for all HTML emails — `buildEmailHtml` + 12 helpers |
+| `email.ts` refactored | Removed private `emailTemplate()` + 5 helpers; now imports from `email-base.ts`; all 17 calls renamed |
+| `email-templates.ts` refactored | `welcomeDivinerEmail` + `rescheduleRequestEmail` now use `buildEmailHtml` + `numberedSteps` |
+| Migration 000013 | `admin_user_notes`, `user_login_logs`, `user_blocks` tables with service_role-only RLS |
+| Auth callback: login logging | Every login captured to `user_login_logs` — IP, User-Agent, Cloudflare city/country |
+| `/api/admin/users/[userId]/notes` | GET + POST — fetch/add admin notes on any user |
+| `/api/admin/users/[userId]/notes/[noteId]` | DELETE — remove individual note |
+| `/api/admin/users/[userId]/block` | POST — ban via Supabase Auth + record in user_blocks |
+| `/api/admin/users/[userId]/unblock` | POST — lift ban + close block record |
+| `/api/admin/users/[userId]/logins` | GET — login history (IP, browser, OS, city, country) |
+| `UserManagementClient` component | Unified user list with search (name/email/phone/role) + role filter dropdown + actions menu |
+| `UserDetailSheet` component | 3-tab sheet: Info (+ block/unblock button), Notes (add/delete), Login History |
+| `/admin/users` page | Rewritten — fetches all users + ban status server-side, passes to `UserManagementClient` |
+
+---
+
+## ✅ Completed This Session (session 10 — 2026-04-03)
+
+| Fix | Detail |
+|---|---|
+| `/join` hub page | Central signup page listing all 6 role paths with cards |
+| `/auth/reset` route | Was missing — password reset emails redirected to 404. Now exchanges code → `/update-password` |
+| `/account` page + layout | My Account: shows all active portals, profile info, change password, sign out |
+| `ChangePasswordForm` component | Re-authenticates with current password then calls `updateUser({ password })` |
+| `/switch` page | Multi-role portal picker — shown when user has 2+ portals |
+| `src/lib/user-roles.ts` | `getUserPortals()` — checks all 5 role tables in parallel |
+| `src/components/shared/portal-switcher.tsx` | Compact header links to other portals when user has multiple roles |
+| `/admin/users` page | Tabbed view of all 5 user types + invite user dialog |
+| `InviteUserForm` component | Admin modal: email + role → POST `/api/admin/invite-user` |
+| `/api/admin/invite-user` | Admin-only: calls `inviteUserByEmail` with role metadata + redirect |
+| Admin layout nav | Added Analytics + Users nav links |
+| Auth callback: multi-role routing | Detects all portals, routes to `/switch` when 2+ exist |
+| Auth callback: admin invite flow | Invited users routed to the right join/onboarding page |
+| All portal layouts: role switcher | advocate, community, trainee, portal layouts updated |
+| Dashboard sidebar: Account link | "My Account" added to both desktop and mobile sidebar |
+| Join pages: invited flow | `/join/advocate` and `/join/trainee` handle `?invited=true` — skip email/password for pre-authed users |
+| `SignOutButton` export | Added alias export from portal/logout-button.tsx |
+
+---
+
+## ✅ Completed This Session (session 9 — 2026-04-03)
+
+| Fix | Detail |
+|---|---|
+| Migration 000011 applied | `social_advocates`, `community_members`, `trainees` tables + RLS |
+| Migration 000012 applied | `diviners.trainee_invite_code` column for mentor invite system |
+| Login page: 4 tabs | Added Trainee (password) and Member (magic link) tabs to existing Diviner/Client login |
+| Advocate portal | `/advocate` layout + dashboard + referrals + earnings + content + profile pages |
+| Community portal | `/community` layout + dashboard + sessions + resources + profile pages |
+| Trainee portal | `/trainee` layout + dashboard + sessions + progress + resources + profile pages |
+| Auth callback: community provisioning | On magic link click, creates `community_members` row if `pending_membership` in metadata |
+| `/api/community/request-access` | POST: sends magic link with membership type in user metadata |
+| `/api/trainees/validate-invite` | GET: validates `trainee_invite_code` against diviners table |
+| `/join/advocate`, `/join/community`, `/join/trainee` | All 3 signup pages created (previous session) |
+| `src/types/user.ts` | `UserRole` type + `ROLE_DESTINATIONS` + `getRoleDestination()` |
 
 ---
 

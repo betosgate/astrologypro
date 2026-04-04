@@ -55,7 +55,7 @@ export default async function DashboardPage() {
   const { data: diviner } = await supabase
     .from("diviners")
     .select(
-      "id, display_name, username, avatar_url, bio, tagline, specialties, stripe_account_id, google_calendar_token"
+      "id, display_name, username, avatar_url, bio, tagline, specialties, stripe_account_id, google_calendar_token, is_certified"
     )
     .eq("user_id", user.id)
     .single();
@@ -288,9 +288,28 @@ export default async function DashboardPage() {
   ];
 
   const profileUrl = `astrologypro.com/${diviner.username}`;
+  const isCertified = !!(diviner as Record<string, unknown>).is_certified;
 
   return (
     <div className="space-y-8">
+      {/* Certified badge CTA — subtle banner for non-certified diviners */}
+      {!isCertified && (
+        <div className="flex items-center justify-between rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm">
+          <div className="flex items-center gap-2 text-amber-600">
+            <Sparkles className="size-4 shrink-0" />
+            <span>
+              <span className="font-medium">Get certified</span> — earn your Divine Infinite Being Certified badge and stand out on the discover page.
+            </span>
+          </div>
+          <Link
+            href="/dashboard/settings"
+            className="ml-4 shrink-0 text-xs font-medium text-amber-500 hover:text-amber-400 underline underline-offset-2"
+          >
+            Learn more
+          </Link>
+        </div>
+      )}
+
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>

@@ -410,6 +410,56 @@ Some readers create a new moon altar and place their drawn cards on it for the f
       { question: 'How long do new moon intentions take to manifest?', answer: 'Some intentions manifest within a single lunar cycle (roughly 29 days), while others unfold over months or even years. The monthly practice builds momentum — each cycle adds energy to your intention. Trust the timing and focus on taking consistent small steps.' },
     ],
   },
+  {
+    slug: 'horseshoe-spread',
+    name: 'Horseshoe Spread',
+    cardCount: 7,
+    difficulty: 'Intermediate',
+    purpose: 'A balanced seven-card layout that maps the arc of a situation — past, present, hidden influences, obstacles, external environment, guidance, and the likely outcome.',
+    bestFor: [
+      'Situations that have been unfolding over time',
+      'Understanding both visible and hidden factors',
+      'Questions where you want a directional answer with context',
+      'Career, relationship, and personal growth decisions',
+    ],
+    overview: `The Horseshoe Spread is one of the oldest and most trusted seven-card layouts in tarot. Its arc shape — like an upturned horseshoe — represents the flow of energy from past to future, while the central positions reveal what is most hidden and most in need of attention right now.
+
+Unlike the Celtic Cross, which dives deep into a single question, the Horseshoe Spread offers a panoramic view. It is particularly effective when you want to understand the full arc of a situation without getting lost in too much detail. The seven positions cover every essential dimension: where you have been, where you are, what is hidden, what blocks you, what surrounds you, what guidance is available, and where you are headed.
+
+The Horseshoe has been used for generations because it strikes the perfect balance between scope and simplicity. Advanced readers use it as their go-to spread for clients who come with a broad life question rather than a specific dilemma.`,
+    positions: [
+      { number: 1, name: 'The Past', meaning: 'Events, circumstances, or patterns from the past that are still shaping the present.' },
+      { number: 2, name: 'The Present', meaning: 'Where you stand right now — the current energy and circumstances.' },
+      { number: 3, name: 'Hidden Influences', meaning: 'Unseen forces, subconscious patterns, or factors operating beneath the surface.' },
+      { number: 4, name: 'The Obstacle', meaning: 'The primary challenge, blockage, or thing you must overcome or accept.' },
+      { number: 5, name: 'External Environment', meaning: 'The people around you, social context, and external forces at play.' },
+      { number: 6, name: 'Guidance', meaning: 'Advice from the cards — what action, attitude, or awareness would serve you best.' },
+      { number: 7, name: 'The Likely Outcome', meaning: 'The probable result if you continue on your current trajectory.' },
+    ],
+    howToRead: `Lay the cards in an arc from left to right, with card 3 (Hidden Influences) at the apex — the highest point of the horseshoe. Cards 1 and 7 anchor the two ends, representing past and outcome.
+
+Begin with the temporal story: read Card 1 (Past) → Card 2 (Present) → Card 7 (Outcome) as a narrative thread. This gives you the skeleton of the situation. Then layer in the context: Card 3 reveals what is operating below the surface, Card 4 names the obstacle, and Card 5 maps the external environment.
+
+Finally, read Card 6 (Guidance) as your call to action. This card answers the question: given everything you now understand about your situation, what is the wisest next move? Sometimes it echoes another card in the spread; when it does, that theme carries special weight.
+
+Look for elemental or suit patterns. If most cards are Cups, the emotional dimension dominates. If Wands predominate, energy and ambition are central. These patterns refine your interpretation far beyond what any single card can offer.`,
+    tips: [
+      'Use the Past-Present-Outcome arc (cards 1, 2, 7) as your spine before adding the other cards.',
+      'Card 3 (Hidden Influences) is often the most revealing — do not skip over it quickly.',
+      'If Card 4 (Obstacle) and Card 6 (Guidance) are thematically linked, that tension is the core of your reading.',
+      'Note whether the majority of cards face the same direction — this can indicate flow or resistance.',
+      'The Horseshoe works beautifully for monthly reviews and annual check-ins as well as specific questions.',
+      'If the Outcome card feels unwelcome, re-read the Guidance card — it holds the key to shifting direction.',
+    ],
+    variations: `A five-card simplified Horseshoe omits positions 3 and 5, keeping Past, Present, Obstacle, Guidance, and Outcome for quicker readings. An expanded nine-card version adds a "Soul Lesson" card below position 3 and a "Clarifier" card beside position 7.
+
+Some traditions lay the Horseshoe face-down and flip cards one at a time, allowing each revelation to sit before the next is turned. This slows the reading and deepens contemplation.`,
+    faqs: [
+      { question: 'How is the Horseshoe different from the Celtic Cross?', answer: 'The Horseshoe is broader and faster — it gives you a panoramic view of the situation in seven cards rather than a deep-dive in ten. It works better for open-ended questions, while the Celtic Cross excels when you have a specific, complex dilemma to examine.' },
+      { question: 'Can I use the Horseshoe Spread for relationship questions?', answer: 'Absolutely. For relationship readings, the External Environment card (position 5) often reveals how others perceive the relationship, while Hidden Influences (position 3) may surface unspoken feelings or patterns. The Guidance card (position 6) becomes especially valuable as a concrete suggestion for moving forward.' },
+      { question: 'What does it mean if the Outcome card is very positive but the Obstacle card is strong?', answer: 'This is a hopeful reading — the potential outcome is achievable, but you will need to work through a real challenge to get there. Pay close attention to the Guidance card (position 6) for the specific action that will help you navigate the obstacle successfully.' },
+    ],
+  },
 ]
 
 export default tarotSpreads

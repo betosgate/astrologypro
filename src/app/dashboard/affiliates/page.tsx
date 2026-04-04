@@ -71,6 +71,8 @@ export default function AffiliatesPage() {
   const [loading, setLoading] = useState(true);
   const [divinerId, setDivinerId] = useState<string | null>(null);
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
+  const [agreementSigned, setAgreementSigned] = useState(true);
+  const [signingAgreement, setSigningAgreement] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingAffiliate, setEditingAffiliate] = useState<Affiliate | null>(
     null
@@ -108,12 +110,13 @@ export default function AffiliatesPage() {
 
       const { data: diviner } = await supabase
         .from("diviners")
-        .select("id")
+        .select("id, affiliate_agreement_signed")
         .eq("user_id", user.id)
         .single();
 
       if (diviner) {
         setDivinerId(diviner.id);
+        setAgreementSigned(diviner.affiliate_agreement_signed ?? false);
         await loadAffiliates(diviner.id);
       }
       setLoading(false);
@@ -248,6 +251,18 @@ export default function AffiliatesPage() {
     setMarkPaidDialog(null);
   }
 
+  async function handleSignAgreement() {
+    setSigningAgreement(true);
+    const res = await fetch("/api/dashboard/affiliate-agreement", { method: "POST" });
+    if (res.ok) {
+      setAgreementSigned(true);
+      toast.success("Affiliate agreement signed");
+    } else {
+      toast.error("Failed to sign agreement");
+    }
+    setSigningAgreement(false);
+  }
+
   function copyReferralCode(code: string) {
     navigator.clipboard.writeText(code);
     toast.success("Referral code copied");
@@ -358,6 +373,36 @@ export default function AffiliatesPage() {
           </SheetContent>
         </Sheet>
       </div>
+
+      {/* Affiliate Agreement Banner */}
+      {!agreementSigned && (
+        <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+          <CardContent className="flex flex-col gap-4 py-5 sm:flex-row sm:items-start">
+            <div className="flex-1 space-y-1">
+              <p className="font-semibold text-amber-900 dark:text-amber-100">Affiliate Agreement Required</p>
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                By managing affiliates on AstrologyPro, you agree to our affiliate program terms: you are responsible
+                for recruiting compliant affiliates, commissions are paid monthly for verified referrals, and you must
+                not misrepresent the platform in any affiliate marketing materials.
+              </p>
+            </div>
+            <Button
+              onClick={handleSignAgreement}
+              disabled={signingAgreement}
+              className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {signingAgreement ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Signing…
+                </>
+              ) : (
+                "I Agree & Sign"
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

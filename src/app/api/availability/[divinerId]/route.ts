@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getAvailableSlots } from "@/lib/availability";
 
 export async function GET(
@@ -36,6 +37,7 @@ export async function GET(
 
   try {
     const supabase = await createClient();
+    const admin = createAdminClient();
 
     // Fetch diviner timezone
     const { data: diviner } = await supabase
@@ -77,6 +79,30 @@ export async function GET(
       .lte("scheduled_at", dayEnd)
       .in("status", ["pending", "confirmed", "in_progress"]);
 
+    // Also treat active holds as booked (prevents race-condition double-booking)
+    const { data: holds } = await admin
+      .from("booking_holds")
+      .select("scheduled_at, duration_minutes")
+      .eq("diviner_id", divinerId)
+      .gt("expires_at", new Date().toISOString())
+      .gte("scheduled_at", dayStart)
+      .lte("scheduled_at", dayEnd);
+
+    const allBlockedSlots = [
+      ...(bookings ?? []).map((b) => ({
+        start: b.scheduled_at,
+        end: new Date(
+          new Date(b.scheduled_at).getTime() + b.duration_minutes * 60_000
+        ).toISOString(),
+      })),
+      ...(holds ?? []).map((h) => ({
+        start: h.scheduled_at,
+        end: new Date(
+          new Date(h.scheduled_at).getTime() + (h.duration_minutes ?? 60) * 60_000
+        ).toISOString(),
+      })),
+    ];
+
     const slots = getAvailableSlots({
       date,
       weeklySlots: (weeklySlots ?? []).map((s) => ({
@@ -84,12 +110,7 @@ export async function GET(
         startTime: s.start_time,
         endTime: s.end_time,
       })),
-      bookedSlots: (bookings ?? []).map((b) => ({
-        start: b.scheduled_at,
-        end: new Date(
-          new Date(b.scheduled_at).getTime() + b.duration_minutes * 60_000
-        ).toISOString(),
-      })),
+      bookedSlots: allBlockedSlots,
       overrides: (overrides ?? []).map((o) => ({
         date: o.date,
         isAvailable: o.is_available,

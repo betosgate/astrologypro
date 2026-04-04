@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { DivinerHero } from "@/components/landing/diviner-hero";
 import { ServiceCard } from "@/components/landing/service-card";
 import { getServiceImageUrl } from "@/lib/service-images";
@@ -10,7 +11,7 @@ import { StickyNav } from "@/components/landing/sticky-nav";
 import { AvailabilityPreview } from "@/components/landing/availability-preview";
 import { ServiceTabs } from "./service-tabs";
 import { APP_URL } from "@/lib/constants";
-import { Gift, ArrowRight } from "lucide-react";
+import { Gift, ArrowRight, ShieldAlert } from "lucide-react";
 import { PageTracker } from "@/components/landing/page-tracker";
 
 interface PageProps {
@@ -57,6 +58,15 @@ async function getTestimonials(divinerId: string) {
     .limit(9);
 
   return testimonials ?? [];
+}
+
+async function getPolicies() {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("platform_policies")
+    .select("type, title, content")
+    .order("type", { ascending: true });
+  return data ?? [];
 }
 
 async function getDivinerStats(divinerId: string) {
@@ -167,10 +177,11 @@ export default async function DivinerPage({ params }: PageProps) {
     notFound();
   }
 
-  const [services, testimonials, stats] = await Promise.all([
+  const [services, testimonials, stats, policies] = await Promise.all([
     getServices(diviner.id),
     getTestimonials(diviner.id),
     getDivinerStats(diviner.id),
+    getPolicies(),
   ]);
 
   const astroServices = services.filter((s) => s.category === "astrology");
@@ -253,6 +264,7 @@ export default async function DivinerPage({ params }: PageProps) {
         reviewCount={stats.reviewCount}
         openSlotsThisWeek={stats.openSlotsThisWeek}
         isVerified={!!(diviner as Record<string, unknown>).verified || !!(diviner as Record<string, unknown>).badge_verified}
+        isCertified={!!(diviner as Record<string, unknown>).is_certified}
       />
 
       {/* ===== 2. ABOUT SECTION ===== */}
@@ -445,7 +457,34 @@ export default async function DivinerPage({ params }: PageProps) {
         </div>
       </section>
 
-      {/* ===== 7. FINAL CTA ===== */}
+      {/* ===== 7. POLICIES ===== */}
+      {policies.length > 0 && (
+        <section className="py-10 md:py-14">
+          <div className="mx-auto max-w-4xl px-4">
+            <div className="mb-6 flex items-center gap-2">
+              <ShieldAlert className="size-4 text-silver/40" />
+              <h2 className="font-display text-xl font-semibold text-cream/80">
+                Booking &amp; Refund Policies
+              </h2>
+            </div>
+            <div className="space-y-4">
+              {policies.map((policy) => (
+                <div key={policy.type} className="glass-card rounded-xl p-5">
+                  <h3 className="mb-2 text-sm font-semibold text-cream/90">
+                    {policy.title}
+                  </h3>
+                  <p className="text-[13px] leading-relaxed text-silver/60">
+                    {policy.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="cosmic-divider mx-auto mt-10 max-w-6xl md:mt-14" />
+        </section>
+      )}
+
+      {/* ===== 8. FINAL CTA ===== */}
       <section className="relative overflow-hidden py-12 md:py-16">
         {/* Cosmic gradient background */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_50%,rgba(201,168,76,0.06)_0%,transparent_60%)]" />

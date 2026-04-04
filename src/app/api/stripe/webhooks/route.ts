@@ -81,10 +81,65 @@ async function handleGiftCheckoutCompleted(
   });
 }
 
+async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session) {
+  const supabase = createAdminClient();
+  const userId = session.metadata?.userId;
+  const membershipType = session.metadata?.membershipType;
+  const planType = session.metadata?.planType ?? "individual";
+  const subscriptionId =
+    typeof session.subscription === "string"
+      ? session.subscription
+      : (session.subscription as any)?.id;
+
+  if (!userId || !membershipType) return;
+
+  const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId);
+  const email = authUser?.email ?? "";
+  const fullName = (authUser?.user_metadata?.full_name ?? authUser?.user_metadata?.name ?? null) as string | null;
+
+  const { data: member } = await supabase
+    .from("community_members")
+    .upsert(
+      {
+        user_id: userId,
+        email,
+        full_name: fullName,
+        membership_type: membershipType,
+        membership_status: "active",
+        plan_type: planType,
+        stripe_subscription_id: subscriptionId ?? null,
+        joined_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" }
+    )
+    .select("id")
+    .single();
+
+  // Provision mystery school student record on enrollment
+  if (membershipType === "mystery_school") {
+    await supabase
+      .from("mystery_school_students")
+      .upsert(
+        {
+          user_id: userId,
+          community_member_id: member?.id ?? null,
+          enrolled_at: new Date().toISOString(),
+          training_status: "foundation",
+        },
+        { onConflict: "user_id" }
+      );
+  }
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Route gift certificate checkouts to their own handler
   if (session.metadata?.type === "gift_certificate") {
     return handleGiftCheckoutCompleted(session);
+  }
+
+  // Route community subscription checkouts
+  if (session.metadata?.type === "community") {
+    return handleCommunityCheckoutCompleted(session);
   }
 
   const supabase = createAdminClient();
@@ -181,14 +236,17 @@ async function handleSubscriptionDeleted(
 ) {
   const supabase = createAdminClient();
 
-  const { error } = await supabase
+  // Diviner subscription cancelled
+  await supabase
     .from("diviners")
     .update({ subscription_status: "cancelled", is_active: false })
     .eq("stripe_subscription_id", subscription.id);
 
-  if (error) {
-    console.error("Failed to deactivate diviner on subscription deleted:", error);
-  }
+  // Community membership cancelled
+  await supabase
+    .from("community_members")
+    .update({ membership_status: "cancelled" })
+    .eq("stripe_subscription_id", subscription.id);
 }
 
 async function handleAccountUpdated(account: Stripe.Account) {

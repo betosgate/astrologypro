@@ -1,4 +1,12 @@
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+import {
+  buildEmailHtml,
+  detailRow,
+  infoCard,
+  secondaryCta,
+  sectionHeading,
+  starRating,
+} from "./email-base";
 
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
@@ -49,216 +57,6 @@ export async function sendEmail({ to, subject, html }: SendEmailParams) {
   return { success: true, id: result.MessageId ?? "" };
 }
 
-// ---------------------------------------------------------------------------
-// Base HTML email template
-// ---------------------------------------------------------------------------
-
-interface EmailTemplateParams {
-  title: string;
-  preheader: string;
-  content: string;
-  ctaText?: string;
-  ctaUrl?: string;
-  footer?: string;
-}
-
-function emailTemplate({
-  title,
-  preheader,
-  content,
-  ctaText,
-  ctaUrl,
-  footer,
-}: EmailTemplateParams): string {
-  const ctaBlock =
-    ctaText && ctaUrl
-      ? `<!--[if mso]>
-<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${ctaUrl}" style="height:50px;v-text-anchor:middle;width:220px;" arcsize="16%" strokecolor="#8b5cf6" fillcolor="#8b5cf6">
-<w:anchorlock/>
-<center style="color:#ffffff;font-family:sans-serif;font-size:16px;font-weight:bold;">
-${ctaText}
-</center>
-</v:roundrect>
-<![endif]-->
-<!--[if !mso]><!-->
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:24px auto 0;">
-  <tr>
-    <td align="center" style="border-radius:8px;background-color:#8b5cf6;">
-      <a href="${ctaUrl}" target="_blank" style="display:inline-block;padding:14px 32px;font-family:system-ui,-apple-system,sans-serif;font-size:16px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">
-        ${ctaText}
-      </a>
-    </td>
-  </tr>
-</table>
-<!--<![endif]-->`
-      : "";
-
-  const footerText =
-    footer ??
-    "AstrologyPro &mdash; Run Your Divination Business";
-
-  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="color-scheme" content="dark" />
-<meta name="supported-color-schemes" content="dark" />
-<title>${title}</title>
-<!--[if !mso]><!-->
-<style>
-  @media only screen and (max-width: 620px) {
-    .email-container { width: 100% !important; padding: 12px !important; }
-    .content-cell { padding: 24px 16px !important; }
-  }
-</style>
-<!--<![endif]-->
-</head>
-<body style="margin:0;padding:0;background-color:#0a0a0a;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
-<!-- Preheader (hidden preview text) -->
-<div style="display:none;font-size:1px;color:#0a0a0a;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
-  ${preheader}
-</div>
-
-<!-- Outer wrapper -->
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#0a0a0a;">
-  <tr>
-    <td align="center" style="padding:32px 16px;">
-
-      <!-- Email container -->
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" class="email-container" style="max-width:600px;width:100%;">
-
-        <!-- Logo / Header -->
-        <tr>
-          <td align="center" style="padding:0 0 24px;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-              <tr>
-                <td style="font-family:system-ui,-apple-system,sans-serif;font-size:28px;font-weight:700;color:#8b5cf6;letter-spacing:-0.5px;">
-                  &#10024; AstrologyPro
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-        <!-- Content card -->
-        <tr>
-          <td>
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#18181b;border-radius:12px;border:1px solid #27272a;">
-              <tr>
-                <td class="content-cell" style="padding:40px 32px;">
-
-                  <!-- Title -->
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-                    <tr>
-                      <td style="font-family:system-ui,-apple-system,sans-serif;font-size:24px;font-weight:700;color:#f4f4f5;padding-bottom:16px;">
-                        ${title}
-                      </td>
-                    </tr>
-                  </table>
-
-                  <!-- Body content -->
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-                    <tr>
-                      <td style="font-family:system-ui,-apple-system,sans-serif;font-size:15px;line-height:1.7;color:#a1a1aa;">
-                        ${content}
-                      </td>
-                    </tr>
-                  </table>
-
-                  <!-- CTA Button -->
-                  ${ctaBlock}
-
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-        <!-- Footer -->
-        <tr>
-          <td style="padding:24px 0 0;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-              <tr>
-                <td align="center" style="font-family:system-ui,-apple-system,sans-serif;font-size:13px;color:#52525b;line-height:1.6;">
-                  ${footerText}
-                  <br />
-                  <a href="${APP_URL}/unsubscribe" style="color:#71717a;text-decoration:underline;">Unsubscribe</a>
-                  &nbsp;&middot;&nbsp;
-                  <a href="${APP_URL}/privacy" style="color:#71717a;text-decoration:underline;">Privacy Policy</a>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-      </table>
-      <!-- /Email container -->
-
-    </td>
-  </tr>
-</table>
-</body>
-</html>`;
-}
-
-// ---------------------------------------------------------------------------
-// Helper: render a detail row inside the content area
-// ---------------------------------------------------------------------------
-
-function detailRow(label: string, value: string): string {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:4px;">
-  <tr>
-    <td width="140" style="font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#71717a;padding:6px 0;">${label}</td>
-    <td style="font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#f4f4f5;font-weight:600;padding:6px 0;">${value}</td>
-  </tr>
-</table>`;
-}
-
-// Helper: secondary CTA (outline style)
-function secondaryCta(text: string, url: string): string {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:16px auto 0;">
-  <tr>
-    <td align="center" style="border-radius:8px;border:1px solid #8b5cf6;">
-      <a href="${url}" target="_blank" style="display:inline-block;padding:12px 28px;font-family:system-ui,-apple-system,sans-serif;font-size:14px;font-weight:600;color:#8b5cf6;text-decoration:none;border-radius:8px;">
-        ${text}
-      </a>
-    </td>
-  </tr>
-</table>`;
-}
-
-// Helper: section heading inside content
-function sectionHeading(text: string): string {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:24px;margin-bottom:8px;">
-  <tr>
-    <td style="font-family:system-ui,-apple-system,sans-serif;font-size:16px;font-weight:700;color:#e4e4e7;">${text}</td>
-  </tr>
-</table>`;
-}
-
-// Helper: info card (highlight box)
-function infoCard(inner: string): string {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0;background-color:#1e1b2e;border:1px solid #2e2548;border-radius:8px;">
-  <tr>
-    <td style="padding:20px;font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#c4b5fd;line-height:1.6;">
-      ${inner}
-    </td>
-  </tr>
-</table>`;
-}
-
-// Helper: star rating display
-function starRating(): string {
-  const stars = Array.from(
-    { length: 5 },
-    () =>
-      `<td style="font-size:28px;padding:0 4px;color:#8b5cf6;">&#9733;</td>`
-  ).join("");
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:16px auto;">
-  <tr>${stars}</tr>
-</table>`;
-}
 
 // ---------------------------------------------------------------------------
 // 0. Welcome + Session Booked (for new auto-created users)
@@ -301,7 +99,7 @@ export async function sendWelcomeAndBooked({
     </ul>
   `;
 
-  const html = emailTemplate({
+  const html = buildEmailHtml({
     title: `Welcome to AstrologyPro!`,
     preheader: `Your ${serviceName} with ${divinerName} is booked. Welcome aboard!`,
     content,
@@ -380,7 +178,7 @@ export async function sendBookingConfirmation({
   return sendEmail({
     to: clientEmail,
     subject: `Your reading is confirmed! ✨ ${serviceName} with ${divinerName}`,
-    html: emailTemplate({
+    html: buildEmailHtml({
       title: "Your reading is confirmed! &#10024;",
       preheader: `${serviceName} with ${divinerName} on ${dateTime}`,
       content,
@@ -441,7 +239,7 @@ export async function sendSessionRecording({
   return sendEmail({
     to: clientEmail,
     subject: `Your session recording is ready 🎬`,
-    html: emailTemplate({
+    html: buildEmailHtml({
       title: "Your session recording is ready &#127916;",
       preheader: `Watch your session with ${divinerName}`,
       content,
@@ -481,7 +279,7 @@ export async function sendTestimonialRequest({
   return sendEmail({
     to: clientEmail,
     subject: `How was your reading with ${divinerName}? ⭐`,
-    html: emailTemplate({
+    html: buildEmailHtml({
       title: `How was your reading with ${divinerName}? &#11088;`,
       preheader: `Share your experience with ${divinerName}`,
       content,
@@ -562,7 +360,7 @@ export async function sendEventReminder({
   return sendEmail({
     to: clientEmail,
     subject: ec.subject,
-    html: emailTemplate({
+    html: buildEmailHtml({
       title: ec.headline,
       preheader: `${ec.name} on ${eventDate} — book a reading with ${divinerName}`,
       content,
@@ -602,7 +400,7 @@ export async function sendRecordingReady({
   return sendEmail({
     to: clientEmail,
     subject: `Your session recording with ${divinerName} is ready!`,
-    html: emailTemplate({
+    html: buildEmailHtml({
       title: "Your recording is ready!",
       preheader: `Watch your session with ${divinerName}`,
       content,
@@ -672,7 +470,7 @@ export async function sendReflectionEmail({
   return sendEmail({
     to: clientEmail,
     subject: `Reflecting on Your ${serviceName} Reading with ${divinerName} ✨`,
-    html: emailTemplate({
+    html: buildEmailHtml({
       title: `Reflecting on Your ${serviceName} Reading &#10024;`,
       preheader: `How are the insights from your ${serviceName} session unfolding?`,
       content,
@@ -708,7 +506,7 @@ export async function sendRebookingNudge({
   return sendEmail({
     to: clientEmail,
     subject: `It's been a month since your reading 🌙`,
-    html: emailTemplate({
+    html: buildEmailHtml({
       title: "It's been a month since your reading &#127769;",
       preheader: `${divinerName} has openings this week`,
       content,
@@ -777,7 +575,7 @@ export async function sendGiftCertificateToRecipient({
   return sendEmail({
     to: recipientEmail,
     subject: `You've been gifted a reading! 🎁`,
-    html: emailTemplate({
+    html: buildEmailHtml({
       title: "You've been gifted a reading! &#127873;",
       preheader: `${purchaserName} sent you a $${amount.toFixed(2)} gift for a reading with ${divinerName}`,
       content,
@@ -820,7 +618,7 @@ export async function sendGiftCertificateConfirmation({
   return sendEmail({
     to: purchaserEmail,
     subject: `Your gift has been sent! 🎁`,
-    html: emailTemplate({
+    html: buildEmailHtml({
       title: "Your gift has been sent! &#127873;",
       preheader: `Gift certificate confirmed — $${amount.toFixed(2)} for ${divinerName}`,
       content,
@@ -930,7 +728,7 @@ export async function sendBookingAccessInstructions({
   return sendEmail({
     to: clientEmail,
     subject: `How to Join Your Session 📹`,
-    html: emailTemplate({
+    html: buildEmailHtml({
       title: "How to Join Your Session &#128249;",
       preheader: `Step-by-step instructions for your ${serviceName} with ${divinerName}`,
       content,
@@ -1021,7 +819,7 @@ export async function sendDivinerWeeklyDigest({
   return sendEmail({
     to: divinerEmail,
     subject: `Your Week in Review 📊 ${weekLabel}`,
-    html: emailTemplate({
+    html: buildEmailHtml({
       title: "Your Week in Review &#128202;",
       preheader: `${weekLabel} — $${revenue.toFixed(0)} revenue, ${bookings} bookings`,
       content,
@@ -1072,7 +870,7 @@ export async function sendRefundProcessed({
   return sendEmail({
     to: clientEmail,
     subject: `Your refund of $${amount.toFixed(2)} has been processed`,
-    html: emailTemplate({
+    html: buildEmailHtml({
       title: "Refund Processed",
       preheader: `Your refund of $${amount.toFixed(2)} from ${divinerName} has been submitted`,
       content,
@@ -1113,7 +911,7 @@ export async function sendPhoneSessionReceipt({
   return sendEmail({
     to: clientEmail,
     subject: `Phone reading receipt - $${amount.toFixed(2)}`,
-    html: emailTemplate({
+    html: buildEmailHtml({
       title: "Phone Reading Receipt",
       preheader: `$${amount.toFixed(2)} charged for ${duration}-minute reading with ${divinerName}`,
       content,
@@ -1160,7 +958,7 @@ export async function sendPhonePaymentFailed({
   return sendEmail({
     to: clientEmail,
     subject: `Action required: payment of $${amount.toFixed(2)} could not be processed`,
-    html: emailTemplate({
+    html: buildEmailHtml({
       title: "Payment Unsuccessful",
       preheader: `Payment of $${amount.toFixed(2)} for your ${duration}-minute reading with ${divinerName} could not be processed.`,
       content,
@@ -1205,7 +1003,7 @@ export async function sendGuestBookingInvite({
   return sendEmail({
     to: guestEmail,
     subject: `You've been invited to a reading with ${divinerName}`,
-    html: emailTemplate({
+    html: buildEmailHtml({
       title: `You've been invited to a reading &#10024;`,
       preheader: `${clientName} has invited you to join a ${serviceName} session with ${divinerName}`,
       content,
@@ -1250,13 +1048,56 @@ export async function sendGuestRoomLink({
   return sendEmail({
     to: guestEmail,
     subject: `Your reading is starting — here's your join link`,
-    html: emailTemplate({
+    html: buildEmailHtml({
       title: "Your reading is starting &#10024;",
       preheader: `Join your ${serviceName} session with ${divinerName} now`,
       content,
       ctaText: "Join Session Now",
       ctaUrl: roomUrl,
       footer: `AstrologyPro &mdash; Run Your Divination Business`,
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Mystery School graduation congratulations
+// ---------------------------------------------------------------------------
+
+export async function sendMysterySchoolGraduation({
+  to,
+  name,
+}: {
+  to: string;
+  name: string;
+}) {
+  const decansUrl = `${APP_URL}/community/decans`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">
+      Congratulations, ${name}! You have completed all 36 decan rituals of the Mystery School
+      and officially graduated.
+    </p>
+    <p style="margin:0 0 24px;color:#a1a1aa;">
+      This is a significant milestone. You have walked the full wheel of the year, worked with
+      every decan energy, and committed to the practice week after week. The work you've done
+      here is yours to carry forward.
+    </p>
+    <p style="margin:0 0 24px;color:#a1a1aa;">
+      Your graduation is now recorded. Watch for announcements about what comes next in your
+      journey as a Mystery School graduate.
+    </p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: "You have graduated from the Mystery School 🌟",
+    html: buildEmailHtml({
+      title: `Congratulations, ${name} — Mystery School Graduate`,
+      preheader: "You completed all 36 decan rituals. You have graduated.",
+      content,
+      ctaText: "View Your Decan Journey",
+      ctaUrl: decansUrl,
+      footer: `AstrologyPro &mdash; Divine Infinite Being`,
     }),
   });
 }

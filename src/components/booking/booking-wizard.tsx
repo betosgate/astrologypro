@@ -19,6 +19,7 @@ import {
   Download,
   ExternalLink,
   Mail,
+  ShieldAlert,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { format } from "date-fns";
@@ -95,11 +96,13 @@ function StripePaymentForm({
   onError,
   submitting,
   setSubmitting,
+  policyAcknowledged,
 }: {
   onSuccess: () => void;
   onError: (msg: string) => void;
   submitting: boolean;
   setSubmitting: (v: boolean) => void;
+  policyAcknowledged: boolean;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -144,7 +147,7 @@ function StripePaymentForm({
       )}
       <Button
         type="submit"
-        disabled={!stripe || !elements || submitting || !ready}
+        disabled={!stripe || !elements || submitting || !ready || !policyAcknowledged}
         className="w-full gap-2"
       >
         {submitting ? (
@@ -170,7 +173,14 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [intakeData, setIntakeData] = useState<IntakeData>(INITIAL_INTAKE);
+  const [policyAcknowledged, setPolicyAcknowledged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Stable session token for slot holds (persists for the lifetime of this wizard)
+  const [sessionToken] = useState(() =>
+    typeof crypto !== "undefined"
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2)
+  );
   const [bookingComplete, setBookingComplete] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -313,6 +323,7 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
             ...intakeData.extras,
           },
           affiliateCode,
+          policyAcknowledgedAt: policyAcknowledged ? new Date().toISOString() : undefined,
         }),
       });
 
@@ -622,6 +633,32 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
                 </div>
               </div>
 
+              {/* Policy acknowledgement */}
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+                <input
+                  type="checkbox"
+                  checked={policyAcknowledged}
+                  onChange={(e) => setPolicyAcknowledged(e.target.checked)}
+                  className="mt-0.5 size-4 shrink-0 accent-amber-500"
+                />
+                <span className="text-sm text-muted-foreground leading-relaxed">
+                  <ShieldAlert className="mb-0.5 mr-1 inline size-3.5 text-amber-500" />
+                  I understand that{" "}
+                  <strong className="text-foreground">50% of my payment is retained as a no-show fee</strong>{" "}
+                  if I do not attend without prior notice, and that cancellations within 24 hours are non-refundable.{" "}
+                  <a
+                    href="#policies"
+                    className="underline underline-offset-2 text-amber-500 hover:text-amber-400"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      document.getElementById("policies")?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                  >
+                    View full policy
+                  </a>
+                </span>
+              </label>
+
               {error && (
                 <div className="rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
                   <p>{error}</p>
@@ -668,6 +705,7 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
                     onError={handlePaymentError}
                     submitting={submitting}
                     setSubmitting={setSubmitting}
+                    policyAcknowledged={policyAcknowledged}
                   />
                 </Elements>
               )}
@@ -685,6 +723,13 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
               // Reset payment state when going back from payment step
               setClientSecret(null);
               setError(null);
+              setPolicyAcknowledged(false);
+              // Release the slot hold so others can book
+              fetch("/api/availability/hold", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sessionToken }),
+              }).catch(() => {});
             }
             setStep((s) => s - 1);
           }}
@@ -697,7 +742,31 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
 
         {step < STEPS.length - 1 && (
           <Button
-            onClick={() => setStep((s) => s + 1)}
+            onClick={async () => {
+              // When advancing to the payment step, try to place a hold on the slot
+              if (step === 1 && selectedSlot) {
+                try {
+                  const res = await fetch("/api/availability/hold", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      divinerId: diviner.id,
+                      scheduledAt: selectedSlot.start,
+                      durationMinutes: service.duration_minutes,
+                      sessionToken,
+                    }),
+                  });
+                  if (!res.ok) {
+                    const data = await res.json();
+                    toast.error(data.error ?? "This slot is no longer available. Please go back and choose a different time.");
+                    return; // block advancing
+                  }
+                } catch {
+                  // Non-critical — proceed anyway; the booking insert will catch duplicates
+                }
+              }
+              setStep((s) => s + 1);
+            }}
             disabled={!canProceed()}
             className="gap-2"
           >

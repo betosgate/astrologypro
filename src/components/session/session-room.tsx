@@ -193,6 +193,12 @@ export function SessionRoom({
               onClick={() => {
                 setConsentGiven(true);
                 setSessionStarted(true);
+                // Record join for no-show tracking (fire-and-forget)
+                fetch("/api/daily/participant-joined", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ bookingId, role }),
+                }).catch(() => {});
               }}
             >
               <Video className="mr-2 h-4 w-4" />

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ShieldCheck, Star, Calendar, Sparkles, Zap } from "lucide-react";
+import { ShieldCheck, Star, Calendar, Sparkles, Zap, BadgeCheck } from "lucide-react";
 
 interface DivinerHeroProps {
   username: string;
@@ -16,6 +16,7 @@ interface DivinerHeroProps {
   reviewCount?: number;
   openSlotsThisWeek?: number;
   isVerified?: boolean;
+  isCertified?: boolean;
 }
 
 export function DivinerHero({
@@ -32,6 +33,7 @@ export function DivinerHero({
   reviewCount = 0,
   openSlotsThisWeek,
   isVerified = true,
+  isCertified = false,
 }: DivinerHeroProps) {
   const initials = displayName
     .split(" ")
@@ -175,6 +177,12 @@ export function DivinerHero({
 
             {/* Trust signals row */}
             <div className="mt-2.5 flex flex-wrap items-center gap-3 text-xs text-[#b8bcd0]/70">
+              {isCertified && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#c9a84c]/15 px-2 py-0.5 text-[#c9a84c] font-semibold">
+                  <BadgeCheck className="size-3.5" />
+                  DIB Certified
+                </span>
+              )}
               {isVerified && (
                 <span className="inline-flex items-center gap-1 text-[#22c55e]">
                   <ShieldCheck className="size-3.5" />

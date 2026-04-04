@@ -20,6 +20,7 @@ interface BookingPaymentBody {
   questionnaire: Record<string, string | number | undefined>;
   affiliateCode?: string;
   giftCode?: string;
+  policyAcknowledgedAt?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -36,6 +37,7 @@ export async function POST(request: NextRequest) {
       questionnaire,
       affiliateCode,
       giftCode,
+      policyAcknowledgedAt,
     } = body;
 
     // Extract birth geo from questionnaire (sent inline by the wizard)
@@ -257,6 +259,7 @@ export async function POST(request: NextRequest) {
         status: "pending",
         base_price: finalPrice,
         questionnaire_responses: questionnaire,
+        ...(policyAcknowledgedAt ? { policy_acknowledged_at: policyAcknowledgedAt } : {}),
       })
       .select("id")
       .single();

@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Users, BookOpen, DollarSign, Eye, TrendingUp } from "lucide-react";
+import { Users, BookOpen, DollarSign, Eye, TrendingUp, GraduationCap, Star, School } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 
 export const metadata = { title: "Admin — AstrologyPro" };
@@ -39,6 +39,10 @@ export default async function AdminPage() {
     recentDiviners,
     topDiviners,
     recentBookings,
+    communityMembersResult,
+    mysteryStudentsResult,
+    traineesResult,
+    traineeGraduatedResult,
   ] = await Promise.all([
     // Total diviners
     admin
@@ -95,6 +99,28 @@ export default async function AdminPage() {
       )
       .order("created_at", { ascending: false })
       .limit(10),
+
+    // Community members by type
+    admin
+      .from("community_members")
+      .select("membership_type, membership_status"),
+
+    // Mystery school students by training_status
+    admin
+      .from("mystery_school_students")
+      .select("training_status"),
+
+    // Active trainees
+    admin
+      .from("mystery_school_students")
+      .select("id", { count: "exact", head: true })
+      .eq("training_status", "decans"),
+
+    // Graduated mystery school students
+    admin
+      .from("mystery_school_students")
+      .select("id", { count: "exact", head: true })
+      .eq("training_status", "graduated"),
   ]);
 
   const totalDiviners = divinerCount.count ?? 0;
@@ -128,6 +154,18 @@ export default async function AdminPage() {
     .sort((a, b) => b[1].revenue - a[1].revenue)
     .slice(0, 5)
     .map(([id, stats]) => ({ id, ...stats }));
+
+  // Community stats
+  const communityRows = (communityMembersResult.data ?? []) as Array<{ membership_type: string; membership_status: string }>;
+  const activeMembers = communityRows.filter((m) => m.membership_status === "active").length;
+  const perennialMembers = communityRows.filter((m) => m.membership_type === "perennial_mandalism" && m.membership_status === "active").length;
+  const mysteryMembersTotal = communityRows.filter((m) => m.membership_type === "mystery_school" && m.membership_status === "active").length;
+
+  // Mystery school training breakdown
+  const msRows = (mysteryStudentsResult.data ?? []) as Array<{ training_status: string }>;
+  const msFoundation = msRows.filter((s) => s.training_status === "foundation").length;
+  const msDecans = traineesResult.count ?? 0;
+  const msGraduated = traineeGraduatedResult.count ?? 0;
 
   // Fetch names for top diviners
   let topDivinerDetails: Array<{
@@ -252,6 +290,63 @@ export default async function AdminPage() {
             <p className="text-xs text-muted-foreground">bookings completed</p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Community & Mystery School */}
+      <div>
+        <h2 className="text-lg font-semibold mb-3">Community & Mystery School</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Members</CardTitle>
+              <Users className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{activeMembers}</div>
+              <p className="text-xs text-muted-foreground">active subscriptions</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Perennial Mandalism</CardTitle>
+              <Star className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{perennialMembers}</div>
+              <p className="text-xs text-muted-foreground">active members</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Mystery School</CardTitle>
+              <School className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{mysteryMembersTotal}</div>
+              <p className="text-xs text-muted-foreground">active members</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">In Training</CardTitle>
+              <BookOpen className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{msFoundation + msDecans}</div>
+              <p className="text-xs text-muted-foreground">{msFoundation} foundation · {msDecans} decans</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Graduates</CardTitle>
+              <GraduationCap className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{msGraduated}</div>
+              <p className="text-xs text-muted-foreground">Priest / Priestess</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
