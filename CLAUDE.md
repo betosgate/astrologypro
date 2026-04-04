@@ -115,3 +115,31 @@ These apply to every project, every feature, every PR. Non-negotiable.
 - Every release must have a kill-switch or rollback path.
 - Measure delivery quality (DORA: change failure rate, MTTR) — not just speed.
 - Fast shipping that repeatedly breaks production is not senior engineering.
+
+### 6 — Testing Discipline
+- Every feature requires unit + integration + contract tests. Critical user flows require E2E coverage.
+- No merging code that drops test coverage on touched paths.
+- Contract tests between services must catch breaking changes before they reach production.
+
+### 7 — Data and Migration Discipline
+- Schema changes must be backward-safe — additive first, never destructive in the same deploy.
+- No direct DB changes in production without a migration script and rollback plan.
+- All data mutations must be auditable — who changed what, when, and why.
+
+### 8 — CI/CD and Release Discipline
+- Branch protection on main/master — no direct pushes, mandatory PR review.
+- Every PR must deploy to a preview environment before merge.
+- Every release must have a documented rollback plan and feature flag where applicable.
+- Broken CI blocks merge — no bypassing checks.
+
+### 9 — Documentation Discipline
+- Architectural decisions must be recorded in ADRs (Architecture Decision Records).
+- Every API must have up-to-date OpenAPI/Swagger docs.
+- Every production system must have a runbook and setup doc.
+- Every module must have a declared owner.
+
+### 10 — Cost and Dependency Discipline
+- Track infrastructure cost per service — no surprise bills.
+- Audit package dependencies regularly — no abandoned or high-risk packages without justification.
+- Assess third-party risk before adding any new external dependency.
+- Maintain an upgrade cadence — no dependency more than 2 major versions behind without a documented reason.
