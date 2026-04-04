@@ -77,7 +77,9 @@ export default function LoginPage() {
       }
 
       const role = data.user?.user_metadata?.role as string | undefined;
-      router.push(resolveDestination(role));
+      // Hard navigation — bypasses Next.js router cache which can serve
+      // a stale server-component redirect from before the session was set.
+      window.location.href = resolveDestination(role);
     } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {

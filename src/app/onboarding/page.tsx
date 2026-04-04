@@ -608,6 +608,13 @@ export default function OnboardingPage() {
     }
   }, []);
 
+  // Keep URL in sync with current step so each step has a unique, shareable URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    params.set("step", String(currentStep));
+    router.replace(`/onboarding?${params.toString()}`, { scroll: false });
+  }, [currentStep, router]);
+
   const saveStep = useCallback(
     async (step: number) => {
       if (!divinerId) return;
