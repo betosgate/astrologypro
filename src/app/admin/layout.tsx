@@ -52,6 +52,15 @@ export default async function AdminLayout({
               <a href="/admin/payments" className="rounded px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">Payments</a>
               <a href="/admin/training/analytics" className="rounded px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">Training Analytics</a>
               <a href="/admin/blog" className="rounded px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">Blog</a>
+              <a href="/admin/roles" className="rounded px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">Roles</a>
+              <a href="/admin/broadcasting" className="rounded px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">Broadcasting</a>
+              <a href="/admin/videos" className="rounded px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">Videos</a>
+              <a href="/admin/orders" className="rounded px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">Orders</a>
+              <a href="/admin/reports" className="rounded px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">Reports</a>
+              <a href="/admin/quarters" className="rounded px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">Quarters</a>
+              <a href="/admin/class-config" className="rounded px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">Class Config</a>
+              <a href="/admin/general-content" className="rounded px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">General Content</a>
+              <a href="/admin/perennial-content" className="rounded px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">Perennial Content</a>
             </nav>
           </div>
           <a href="/dashboard" className="text-xs text-muted-foreground hover:text-foreground">
