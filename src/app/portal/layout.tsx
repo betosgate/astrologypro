@@ -4,6 +4,7 @@ import { getUserPortals } from "@/lib/user-roles";
 import { PortalSwitcher } from "@/components/shared/portal-switcher";
 import Link from "next/link";
 import { PortalLogoutButton } from "@/components/portal/logout-button";
+import { RouteTracker } from "@/components/shared/route-tracker";
 
 export const metadata = {
   title: "Client Portal",
@@ -53,6 +54,7 @@ export default async function PortalLayout({
 
   return (
     <div className="min-h-screen bg-background">
+      <RouteTracker href="/portal" />
       <header className="sticky top-0 z-40 border-b bg-background">
         <div className="container mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <div className="flex items-center gap-6">

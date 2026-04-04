@@ -956,9 +956,21 @@ export default function OnboardingPage() {
               <Sparkles className="h-5 w-5 text-primary" />
               <span className="font-semibold">AstrologyPro Setup</span>
             </div>
-            <span className="text-sm text-muted-foreground">
-              Step {currentStep} of {STEPS.length}
-            </span>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground">
+                Step {currentStep} of {STEPS.length}
+              </span>
+              <button
+                type="button"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  router.push("/login");
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Sign out
+              </button>
+            </div>
           </div>
 
           {/* Progress track */}
@@ -1694,18 +1706,28 @@ export default function OnboardingPage() {
                 <div className="flex justify-center">
                   <Button
                     onClick={async () => {
-                      // Fire-and-forget: mark onboarding complete + send welcome email
+                      setLoading(true);
+                      setError("");
                       try {
-                        await fetch("/api/onboarding/complete", { method: "POST" });
+                        const res = await fetch("/api/onboarding/complete", { method: "POST" });
+                        if (!res.ok) {
+                          const body = await res.json().catch(() => ({}));
+                          setError(body.error ?? "Failed to complete onboarding. Please try again.");
+                          return;
+                        }
                       } catch {
-                        // Non-blocking — proceed to dashboard even if this fails
+                        setError("Network error. Please try again.");
+                        return;
+                      } finally {
+                        setLoading(false);
                       }
                       router.push("/dashboard");
                     }}
+                    disabled={loading}
                     size="lg"
                   >
+                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
                     Go to Dashboard
-                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
               </CardContent>

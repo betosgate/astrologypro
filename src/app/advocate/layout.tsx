@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserPortals } from "@/lib/user-roles";
 import { PortalSwitcher } from "@/components/shared/portal-switcher";
 import Link from "next/link";
+import { RouteTracker } from "@/components/shared/route-tracker";
 
 export const metadata = { title: "Advocate Portal - AstrologyPro" };
 
@@ -33,6 +34,7 @@ export default async function AdvocateLayout({ children }: { children: React.Rea
 
   return (
     <div className="min-h-screen bg-background">
+      <RouteTracker href="/advocate" />
       <header className="sticky top-0 z-40 border-b bg-background">
         <div className="container mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <div className="flex items-center gap-6">

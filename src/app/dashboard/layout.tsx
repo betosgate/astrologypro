@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { MobileNav } from "@/components/dashboard/mobile-nav";
 import { PhoneWidgetLoader } from "@/components/dashboard/phone-widget-loader";
+import { RouteTracker } from "@/components/shared/route-tracker";
 
 export const metadata = {
   title: "Dashboard",
@@ -31,6 +32,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-background">
+      <RouteTracker href="/dashboard" />
       <Sidebar
         diviner={{
           display_name: diviner.display_name,

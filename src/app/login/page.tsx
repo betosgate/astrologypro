@@ -13,128 +13,93 @@ import { PasswordInput } from "@/components/ui/password-input";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Sparkles, Mail } from "lucide-react";
 import { APP_URL } from "@/lib/constants";
 import { getRoleDestination } from "@/types/user";
+
+const PORTAL_BASES = ["/dashboard", "/portal", "/community", "/trainee", "/advocate"];
+
+/**
+ * Resolve where to send the user after a successful password login.
+ *
+ * Priority:
+ * 1. If localStorage has a last-used portal route → return to it.
+ * 2. Otherwise use the role from user metadata (set at signup) to pick the
+ *    primary portal destination.
+ */
+function resolveDestination(role: string | undefined): string {
+  try {
+    const last = localStorage.getItem("ap_last_route");
+    if (last && PORTAL_BASES.some((base) => last === base || last.startsWith(base + "/"))) {
+      return last;
+    }
+  } catch {
+    // localStorage unavailable (private browsing)
+  }
+  return getRoleDestination(role);
+}
 
 export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  // Diviner tab state
-  const [divinerEmail, setDivinerEmail] = useState("");
-  const [divinerPassword, setDivinerPassword] = useState("");
-  const [divinerLoading, setDivinerLoading] = useState(false);
-  const [divinerError, setDivinerError] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  // Client tab state
-  const [clientEmail, setClientEmail] = useState("");
-  const [clientLoading, setClientLoading] = useState(false);
-  const [clientError, setClientError] = useState("");
-  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  // Magic link fallback state
+  const [showMagicLink, setShowMagicLink] = useState(false);
+  const [magicEmail, setMagicEmail] = useState("");
+  const [magicLoading, setMagicLoading] = useState(false);
+  const [magicError, setMagicError] = useState("");
+  const [magicSent, setMagicSent] = useState(false);
 
-  // Trainee tab state
-  const [traineeEmail, setTraineeEmail] = useState("");
-  const [traineePassword, setTraineePassword] = useState("");
-  const [traineeLoading, setTraineeLoading] = useState(false);
-  const [traineeError, setTraineeError] = useState("");
-
-  // Member tab state (community: perennial_mandalism + mystery_school)
-  const [memberEmail, setMemberEmail] = useState("");
-  const [memberLoading, setMemberLoading] = useState(false);
-  const [memberError, setMemberError] = useState("");
-  const [memberLinkSent, setMemberLinkSent] = useState(false);
-
-  async function handleDivinerLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    setDivinerError("");
-    setDivinerLoading(true);
+    setError("");
+    setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: divinerEmail,
-        password: divinerPassword,
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      if (error) {
-        setDivinerError(error.message);
+      if (signInError) {
+        setError(signInError.message);
         return;
       }
 
-      router.push("/dashboard");
-    } catch {
-      setDivinerError("An unexpected error occurred. Please try again.");
-    } finally {
-      setDivinerLoading(false);
-    }
-  }
-
-  async function handleTraineeLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setTraineeError("");
-    setTraineeLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: traineeEmail,
-        password: traineePassword,
-      });
-      if (error) { setTraineeError(error.message); return; }
       const role = data.user?.user_metadata?.role as string | undefined;
-      router.push(getRoleDestination(role));
+      router.push(resolveDestination(role));
     } catch {
-      setTraineeError("An unexpected error occurred. Please try again.");
+      setError("An unexpected error occurred. Please try again.");
     } finally {
-      setTraineeLoading(false);
+      setLoading(false);
     }
   }
 
-  async function handleMemberLogin(e: React.FormEvent) {
+  async function handleMagicLink(e: React.FormEvent) {
     e.preventDefault();
-    setMemberError("");
-    setMemberLoading(true);
+    setMagicError("");
+    setMagicLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: memberEmail,
-        options: { emailRedirectTo: `${APP_URL}/auth/callback?next=/community` },
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: magicEmail,
+        options: { emailRedirectTo: `${APP_URL}/auth/callback` },
       });
-      if (error) { setMemberError(error.message); return; }
-      setMemberLinkSent(true);
+      if (otpError) { setMagicError(otpError.message); return; }
+      setMagicSent(true);
     } catch {
-      setMemberError("An unexpected error occurred. Please try again.");
+      setMagicError("An unexpected error occurred. Please try again.");
     } finally {
-      setMemberLoading(false);
-    }
-  }
-
-  async function handleClientLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setClientError("");
-    setClientLoading(true);
-
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: clientEmail,
-        options: {
-          emailRedirectTo: `${APP_URL}/auth/callback?next=/portal`,
-        },
-      });
-
-      if (error) {
-        setClientError(error.message);
-        return;
-      }
-
-      setMagicLinkSent(true);
-    } catch {
-      setClientError("An unexpected error occurred. Please try again.");
-    } finally {
-      setClientLoading(false);
+      setMagicLoading(false);
     }
   }
 
@@ -149,253 +114,113 @@ export default function LoginPage() {
               <Sparkles className="h-6 w-6 text-primary" />
             </div>
             <CardTitle className="text-2xl">Welcome Back</CardTitle>
-            <CardDescription>
-              Sign in to your AstrologyPro account
-            </CardDescription>
+            <CardDescription>Sign in to your AstrologyPro account</CardDescription>
           </CardHeader>
 
           <CardContent>
-            <Tabs defaultValue="diviner" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="diviner">Diviner</TabsTrigger>
-                <TabsTrigger value="client">Client</TabsTrigger>
-                <TabsTrigger value="trainee">Trainee</TabsTrigger>
-                <TabsTrigger value="member">Member</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="diviner" className="mt-4">
-                <form onSubmit={handleDivinerLogin} className="space-y-4">
+            {showMagicLink ? (
+              magicSent ? (
+                <div className="space-y-4 text-center">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                    <Mail className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">Check your email</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      We sent a sign-in link to{" "}
+                      <span className="font-medium text-foreground">{magicEmail}</span>.
+                      Click it to sign in.
+                    </p>
+                  </div>
+                  <Button variant="outline" onClick={() => { setMagicSent(false); setShowMagicLink(false); }} className="w-full">
+                    Back to sign in
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleMagicLink} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="diviner-email">Email</Label>
+                    <Label htmlFor="magic-email">Email</Label>
                     <Input
-                      id="diviner-email"
+                      id="magic-email"
                       type="email"
                       placeholder="you@example.com"
-                      value={divinerEmail}
-                      onChange={(e) => setDivinerEmail(e.target.value)}
+                      value={magicEmail}
+                      onChange={(e) => setMagicEmail(e.target.value)}
                       required
                       autoComplete="email"
+                      autoFocus
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="diviner-password">Password</Label>
-                    <PasswordInput
-                      id="diviner-password"
-                      placeholder="Your password"
-                      value={divinerPassword}
-                      onChange={(e) => setDivinerPassword(e.target.value)}
-                      required
-                      autoComplete="current-password"
-                    />
-                  </div>
-
-                  <div className="flex justify-end">
-                    <Link
-                      href="/reset-password"
-                      className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-                    >
-                      Forgot password?
-                    </Link>
-                  </div>
-
-                  {divinerError && (
-                    <p className="text-sm text-destructive">{divinerError}</p>
-                  )}
-
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={divinerLoading}
+                  <p className="text-sm text-muted-foreground">
+                    We&apos;ll email you a secure link — no password needed.
+                  </p>
+                  {magicError && <p className="text-sm text-destructive">{magicError}</p>}
+                  <Button type="submit" className="w-full" disabled={magicLoading}>
+                    {magicLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending...</> : "Send Sign-in Link"}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setShowMagicLink(false)}
+                    className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    {divinerLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Signing in...
-                      </>
-                    ) : (
-                      "Sign In"
-                    )}
-                  </Button>
-
-                  <p className="text-center text-sm text-muted-foreground">
-                    New diviner?{" "}
-                    <Link
-                      href="/get-started"
-                      className="font-medium text-primary underline-offset-4 hover:underline"
-                    >
-                      Get started here
-                    </Link>
-                  </p>
+                    Back to password sign in
+                  </button>
                 </form>
-              </TabsContent>
+              )
+            ) : (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <PasswordInput
+                    id="password"
+                    placeholder="Your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                  />
+                </div>
 
-              <TabsContent value="client" className="mt-4">
-                {magicLinkSent ? (
-                  <div className="space-y-4 text-center">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                      <Mail className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold">
-                        Check your email
-                      </h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        We sent a magic link to{" "}
-                        <span className="font-medium text-foreground">
-                          {clientEmail}
-                        </span>
-                        . Click the link in your email to sign in.
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      onClick={() => setMagicLinkSent(false)}
-                      className="w-full"
-                    >
-                      Use a different email
-                    </Button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleClientLogin} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="client-email">Email</Label>
-                      <Input
-                        id="client-email"
-                        type="email"
-                        placeholder="you@example.com"
-                        value={clientEmail}
-                        onChange={(e) => setClientEmail(e.target.value)}
-                        required
-                        autoComplete="email"
-                      />
-                    </div>
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => { setShowMagicLink(true); setMagicEmail(email); }}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    No password? Sign in with email link
+                  </button>
+                  <Link
+                    href="/reset-password"
+                    className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
 
-                    <p className="text-sm text-muted-foreground">
-                      No password needed. We&apos;ll email you a secure magic
-                      link to sign in instantly.
-                    </p>
+                {error && <p className="text-sm text-destructive">{error}</p>}
 
-                    {clientError && (
-                      <p className="text-sm text-destructive">{clientError}</p>
-                    )}
-
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={clientLoading}
-                    >
-                      {clientLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Sending link...
-                        </>
-                      ) : (
-                        "Send Magic Link"
-                      )}
-                    </Button>
-                  </form>
-                )}
-              </TabsContent>
-
-              <TabsContent value="trainee" className="mt-4">
-                <form onSubmit={handleTraineeLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="trainee-email">Email</Label>
-                    <Input
-                      id="trainee-email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={traineeEmail}
-                      onChange={(e) => setTraineeEmail(e.target.value)}
-                      required
-                      autoComplete="email"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="trainee-password">Password</Label>
-                    <PasswordInput
-                      id="trainee-password"
-                      placeholder="Your password"
-                      value={traineePassword}
-                      onChange={(e) => setTraineePassword(e.target.value)}
-                      required
-                      autoComplete="current-password"
-                    />
-                  </div>
-                  {traineeError && (
-                    <p className="text-sm text-destructive">{traineeError}</p>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Signing in...</>
+                  ) : (
+                    "Sign In"
                   )}
-                  <Button type="submit" className="w-full" disabled={traineeLoading}>
-                    {traineeLoading ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Signing in...</>
-                    ) : (
-                      "Sign In"
-                    )}
-                  </Button>
-                  <p className="text-center text-sm text-muted-foreground">
-                    New trainee?{" "}
-                    <Link href="/join/trainee" className="font-medium text-primary underline-offset-4 hover:underline">
-                      Join here
-                    </Link>
-                  </p>
-                </form>
-              </TabsContent>
-
-              <TabsContent value="member" className="mt-4">
-                {memberLinkSent ? (
-                  <div className="space-y-4 text-center">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                      <Mail className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold">Check your email</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        We sent a magic link to{" "}
-                        <span className="font-medium text-foreground">{memberEmail}</span>
-                        . Click the link to sign in to your membership.
-                      </p>
-                    </div>
-                    <Button variant="outline" onClick={() => setMemberLinkSent(false)} className="w-full">
-                      Use a different email
-                    </Button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleMemberLogin} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="member-email">Email</Label>
-                      <Input
-                        id="member-email"
-                        type="email"
-                        placeholder="you@example.com"
-                        value={memberEmail}
-                        onChange={(e) => setMemberEmail(e.target.value)}
-                        required
-                        autoComplete="email"
-                      />
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      For Perennial Mandalism and Mystery School members. We&apos;ll send a magic link to your inbox.
-                    </p>
-                    {memberError && (
-                      <p className="text-sm text-destructive">{memberError}</p>
-                    )}
-                    <Button type="submit" className="w-full" disabled={memberLoading}>
-                      {memberLoading ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending link...</>
-                      ) : (
-                        "Send Magic Link"
-                      )}
-                    </Button>
-                    <p className="text-center text-sm text-muted-foreground">
-                      Not a member?{" "}
-                      <Link href="/join/community" className="font-medium text-primary underline-offset-4 hover:underline">
-                        Join the community
-                      </Link>
-                    </p>
-                  </form>
-                )}
-              </TabsContent>
-            </Tabs>
+                </Button>
+              </form>
+            )}
           </CardContent>
 
           <CardFooter className="flex justify-center">
