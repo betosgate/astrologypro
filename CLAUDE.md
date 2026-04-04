@@ -143,3 +143,60 @@ These apply to every project, every feature, every PR. Non-negotiable.
 - Audit package dependencies regularly — no abandoned or high-risk packages without justification.
 - Assess third-party risk before adding any new external dependency.
 - Maintain an upgrade cadence — no dependency more than 2 major versions behind without a documented reason.
+
+### 11 — Validate at the Edge, Not Only in Forms
+- Client validation is for UX only. Server validation is mandatory for every input: query params, headers, JSON bodies, and uploads.
+- Never build SQL by concatenating user input.
+- Sanitize all raw HTML output. Add CSP and security headers to every response.
+- Never trust anything from the client — validate and reject at the server boundary.
+
+### 12 — Cookie/Session Discipline, Not Token Chaos
+- In Next.js, env vars are server-only unless prefixed `NEXT_PUBLIC_`. Public vars are inlined into the client bundle — secrets must never go there.
+- Default to secure cookie-based sessions via the server for browser apps.
+- Enforce SameSite/CSRF protection on all state-changing requests.
+- HTTPS everywhere, no exceptions.
+
+### 13 — Authorization Is Data-Level, Not UI-Level
+- Every endpoint that reads or mutates an object must check route, object, function, and field/property access.
+- Tenant scoping must live in the query/API layer — not only in frontend hiding.
+- If the UI hides an action but the API still allows it, the system is not secure.
+- Broken object-level authorization is the top API risk (OWASP #1) — enforce it at every query.
+
+### 14 — Make the API Contract the Law
+- Every API must be described in OpenAPI. The spec is the source of truth.
+- Standardize errors with RFC 9457 Problem Details. Return proper status codes (`429` for throttle, `422` for validation, etc.).
+- Never leak stack traces or internal details in error response bodies.
+- Next.js Route Handlers in the `app` directory are a valid API/BFF layer — use them correctly.
+
+### 15 — Design Database Indexes from UI Behavior, Not After Launch
+- Model real search, filter, and sort combinations first — then index for those patterns.
+- Use multicolumn indexes, expression indexes, and the right index type (B-tree, GIN, etc.) per use case.
+- For full-text search in PostgreSQL, use `tsvector`/`tsquery` — not `ILIKE` on large tables.
+- Never throw generic indexes everywhere and call it done.
+
+### 16 — Lock Down Sort, Search, and Pagination Rules
+- Every paginated query must have a deterministic `ORDER BY` ending with a unique tie-breaker (e.g. `id`).
+- `LIMIT/OFFSET` without a constrained order is unpredictable — never ship it.
+- For deep or high-traffic lists, switch to cursor/keyset pagination — `OFFSET` skips rows and degrades at scale.
+
+### 17 — Server-First Rendering Is the Default in Next.js
+- Keep read-heavy, SEO-sensitive, and above-the-fold data on Server Components.
+- Push only interactive islands to Client Components — not entire pages.
+- Use `loading.tsx` and Suspense streaming so the route shell appears immediately while slower sections arrive progressively.
+- Never make a page fully client-rendered by default — justify it if you do.
+
+### 18 — Use TanStack Query Where It Actually Adds Value
+- Use it for client-side server state, background refetching, optimistic updates, and paginated/infinite interactions.
+- Do not wrap simple first-load page data in client queries out of habit — prefer server fetching first.
+- Hydrate only where client caching or mutation workflows truly matter.
+
+### 19 — Define Cache and Invalidation Deliberately
+- Every route/query must be classified: static, revalidated, user-scoped, or uncached.
+- The team must know exactly who owns cache invalidation for each data source.
+- Never fetch the same data once on the server and again on the client unless that duplication is intentional and documented.
+
+### 20 — Measure Real Performance and Real Query Behavior
+- Core Web Vitals (LCP, INP, CLS) are hard release criteria — not aspirational.
+- Inspect slow DB paths with `EXPLAIN ANALYZE` before shipping any query touching large tables.
+- Use PostgreSQL `auto_explain` in production to log slow query plans automatically.
+- If you cannot explain why a query is slow, you are not ready to ship it.
