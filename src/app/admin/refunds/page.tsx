@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/format";
 import { RefreshCw, AlertCircle } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 type RefundRow = {
   id: string;
@@ -33,12 +34,19 @@ export default function AdminRefundsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "refunded" | "no_show">("all");
   const [search, setSearch] = useState("");
+  const [createdFrom, setCreatedFrom] = useState("");
+  const [createdTo, setCreatedTo] = useState("");
   const [refunding, setRefunding] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function load() {
+  async function load(overrides?: { createdFrom?: string; createdTo?: string }) {
     setLoading(true);
-    const res = await fetch("/api/admin/refunds");
+    const params = new URLSearchParams();
+    const cf = overrides?.createdFrom ?? createdFrom;
+    const ct = overrides?.createdTo ?? createdTo;
+    if (cf) params.set("created_from", cf);
+    if (ct) params.set("created_to", ct);
+    const res = await fetch(`/api/admin/refunds?${params}`);
     if (res.ok) {
       const data = await res.json();
       setRows(data.rows ?? []);
@@ -95,7 +103,7 @@ export default function AdminRefundsPage() {
             Review and issue refunds for bookings
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+        <Button variant="outline" size="sm" onClick={() => load()} disabled={loading}>
           <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
           Refresh
         </Button>
@@ -108,25 +116,39 @@ export default function AdminRefundsPage() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex gap-1">
-          {(["all", "pending", "refunded", "no_show"] as const).map((f) => (
-            <Button
-              key={f}
-              variant={filter === f ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilter(f)}
-            >
-              {f === "no_show" ? "No-Show" : f.charAt(0).toUpperCase() + f.slice(1)}
-            </Button>
-          ))}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex gap-1">
+            {(["all", "pending", "refunded", "no_show"] as const).map((f) => (
+              <Button
+                key={f}
+                variant={filter === f ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilter(f)}
+              >
+                {f === "no_show" ? "No-Show" : f.charAt(0).toUpperCase() + f.slice(1)}
+              </Button>
+            ))}
+          </div>
+          <Input
+            placeholder="Search client or diviner…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-xs"
+          />
         </div>
-        <Input
-          placeholder="Search client or diviner…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
-        />
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs">Booking date from</Label>
+            <Input type="date" value={createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} className="w-40" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Booking date to</Label>
+            <Input type="date" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} className="w-40" />
+          </div>
+          <Button size="sm" onClick={() => load()}>Search</Button>
+          <Button size="sm" variant="outline" onClick={() => { setCreatedFrom(""); setCreatedTo(""); load({ createdFrom: "", createdTo: "" }); }}>Reset</Button>
+        </div>
       </div>
 
       <Card>

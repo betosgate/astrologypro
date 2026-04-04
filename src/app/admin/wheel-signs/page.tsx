@@ -1,7 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -18,25 +18,74 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Eye } from "lucide-react";
 
-export const metadata = { title: "Wheel Signs — Admin" };
-export const dynamic = "force-dynamic";
+type WheelSign = {
+  id: string;
+  title: string;
+  start_date: string | null;
+  end_date: string | null;
+  priority: number | null;
+  is_active: boolean;
+  theme_image: string | null;
+  icon_image: string | null;
+  created_at: string | null;
+};
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+type DecanInfo = {
+  id: string;
+  sign_name: string;
+  planet: string | null;
+  tarot_name: string | null;
+  decan: number | null;
+  is_active: boolean;
+};
 
-export default async function AdminWheelSignsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email || !ADMIN_EMAILS.includes(user.email.toLowerCase())) redirect("/dashboard");
+export default function AdminWheelSignsPage() {
+  const [signs, setSigns] = useState<WheelSign[]>([]);
+  const [decans, setDecans] = useState<DecanInfo[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const admin = createAdminClient();
-  const [signsResult, decansResult] = await Promise.all([
-    admin.from("wheel_signs").select("id, title, start_date, end_date, priority, is_active").order("priority", { ascending: true }),
-    admin.from("astro_decan_info").select("id, sign_name, planet, tarot_name, decan, is_active").order("created_at", { ascending: false }).limit(100),
-  ]);
+  // Filters
+  const [search, setSearch] = useState("");
+  const [startFrom, setStartFrom] = useState("");
+  const [startTo, setStartTo] = useState("");
 
-  const signs = signsResult.data ?? [];
-  const decans = decansResult.data ?? [];
+  // Preview
+  const [previewSign, setPreviewSign] = useState<WheelSign | null>(null);
+
+  async function loadSigns(q?: { search?: string; startFrom?: string; startTo?: string }) {
+    const params = new URLSearchParams();
+    const s = q?.search ?? search;
+    const sf = q?.startFrom ?? startFrom;
+    const st = q?.startTo ?? startTo;
+    if (s) params.set("search", s);
+    if (sf) params.set("start_date_from", sf);
+    if (st) params.set("start_date_to", st);
+    const res = await fetch(`/api/admin/wheel-signs?${params}`);
+    if (res.ok) setSigns(await res.json());
+  }
+
+  async function loadDecans() {
+    const res = await fetch("/api/admin/astro-decans");
+    if (res.ok) setDecans(await res.json());
+  }
+
+  async function loadAll() {
+    setLoading(true);
+    await Promise.all([loadSigns(), loadDecans()]);
+    setLoading(false);
+  }
+
+  useEffect(() => { loadAll(); }, []);
+
+  function handleSearch() { loadSigns(); }
+  function handleReset() {
+    setSearch(""); setStartFrom(""); setStartTo("");
+    loadSigns({ search: "", startFrom: "", startTo: "" });
+  }
 
   return (
     <div className="space-y-8">
@@ -44,6 +93,26 @@ export default async function AdminWheelSignsPage() {
         <h1 className="text-2xl font-bold tracking-tight">Wheel Signs</h1>
         <p className="text-muted-foreground">Manage astrological wheel signs and decan info</p>
       </div>
+
+      {/* Preview modal */}
+      {previewSign && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setPreviewSign(null)}>
+          <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <CardHeader><CardTitle>Wheel Sign Preview</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div><span className="font-medium">Title:</span> {previewSign.title}</div>
+              <div><span className="font-medium">Start Date:</span> {previewSign.start_date ?? "—"}</div>
+              <div><span className="font-medium">End Date:</span> {previewSign.end_date ?? "—"}</div>
+              <div><span className="font-medium">Priority:</span> {previewSign.priority ?? "—"}</div>
+              <div><span className="font-medium">Status:</span> <Badge variant="outline" className={previewSign.is_active ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"}>{previewSign.is_active ? "Active" : "Inactive"}</Badge></div>
+              {previewSign.theme_image && <div><span className="font-medium">Theme Image:</span> <a href={previewSign.theme_image} target="_blank" rel="noreferrer" className="text-blue-500 text-xs break-all hover:underline">{previewSign.theme_image}</a></div>}
+              {previewSign.icon_image && <div><span className="font-medium">Icon Image:</span> <a href={previewSign.icon_image} target="_blank" rel="noreferrer" className="text-blue-500 text-xs break-all hover:underline">{previewSign.icon_image}</a></div>}
+              {previewSign.created_at && <div><span className="font-medium">Created:</span> {new Date(previewSign.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>}
+              <Button size="sm" className="mt-2" onClick={() => setPreviewSign(null)}>Close</Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Wheel Signs */}
       <Card>
@@ -53,9 +122,31 @@ export default async function AdminWheelSignsPage() {
             <Link href="/admin/wheel-signs/new">New Sign</Link>
           </Button>
         </CardHeader>
-        <CardContent>
-          {signs.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">No wheel signs yet.</p>
+        <CardContent className="space-y-4">
+          {/* Filters */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1 sm:col-span-2 lg:col-span-2">
+              <Label className="text-xs">Search sign name</Label>
+              <Input placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearch()} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Start date from</Label>
+              <Input type="date" value={startFrom} onChange={(e) => setStartFrom(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Start date to</Label>
+              <Input type="date" value={startTo} onChange={(e) => setStartTo(e.target.value)} />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleSearch}>Search</Button>
+            <Button size="sm" variant="outline" onClick={handleReset}>Reset</Button>
+          </div>
+
+          {loading ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
+          ) : signs.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">No wheel signs found.</p>
           ) : (
             <Table>
               <TableHeader>
@@ -81,9 +172,12 @@ export default async function AdminWheelSignsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Link href={`/admin/wheel-signs/${s.id}/edit`} className="text-sm text-blue-500 hover:underline">
-                        Edit
-                      </Link>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => setPreviewSign(s)}><Eye className="size-3.5" /></Button>
+                        <Link href={`/admin/wheel-signs/${s.id}/edit`} className="text-sm text-blue-500 hover:underline px-2">
+                          Edit
+                        </Link>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

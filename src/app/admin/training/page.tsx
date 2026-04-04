@@ -159,15 +159,34 @@ export default function TrainingPage() {
       {/* Quiz preview modal */}
       {previewQuiz && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setPreviewQuiz(null)}>
-          <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+          <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <CardHeader><CardTitle>Quiz Preview</CardTitle></CardHeader>
-            <CardContent className="space-y-2 text-sm">
+            <CardContent className="space-y-3 text-sm">
               <div><span className="font-medium">Title:</span> {previewQuiz.title}</div>
               <div><span className="font-medium">Lesson:</span> {lessonMap[previewQuiz.lesson_id] ?? "—"}</div>
               <div><span className="font-medium">Pass Score:</span> {previewQuiz.pass_score != null ? `${previewQuiz.pass_score}%` : "—"}</div>
-              <div><span className="font-medium">Questions:</span> {Array.isArray(previewQuiz.questions) ? previewQuiz.questions.length : "—"}</div>
               <div><span className="font-medium">Status:</span> <Badge variant={previewQuiz.is_active ? "default" : "outline"}>{previewQuiz.is_active ? "Active" : "Inactive"}</Badge></div>
               <div><span className="font-medium">Created:</span> {fmt(previewQuiz.created_at)}</div>
+              {Array.isArray(previewQuiz.questions) && previewQuiz.questions.length > 0 && (
+                <div className="space-y-3 pt-1">
+                  <p className="font-medium">Questions ({previewQuiz.questions.length}):</p>
+                  {(previewQuiz.questions as Array<{ question?: string; text?: string; answers?: Array<{ text: string; is_correct?: boolean; correct?: boolean }> }>).map((q, qi) => (
+                    <div key={qi} className="rounded-md border p-3 space-y-1.5">
+                      <p className="font-medium text-sm">Q{qi + 1}: {q.question ?? q.text ?? "—"}</p>
+                      {Array.isArray(q.answers) && q.answers.length > 0 && (
+                        <ul className="space-y-1 pl-2">
+                          {q.answers.map((a, ai) => (
+                            <li key={ai} className={`text-xs flex items-center gap-1.5 ${(a.is_correct || a.correct) ? "text-green-600 font-medium" : "text-muted-foreground"}`}>
+                              <span>{(a.is_correct || a.correct) ? "✓" : "○"}</span>
+                              <span>{a.text}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
               <Button size="sm" className="mt-2" onClick={() => setPreviewQuiz(null)}>Close</Button>
             </CardContent>
           </Card>

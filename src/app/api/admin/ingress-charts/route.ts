@@ -11,22 +11,30 @@ async function requireAdmin() {
   return user;
 }
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   const user = await requireAdmin();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const sp = req.nextUrl.searchParams;
   const page = Math.max(1, parseInt(sp.get("page") ?? "1", 10));
+  const createdFrom = sp.get("created_from") ?? "";
+  const createdTo = sp.get("created_to") ?? "";
   const limit = 20;
   const offset = (page - 1) * limit;
 
   const admin = createAdminClient();
-  const { data, error, count } = await admin
+  let query = admin
     .from("ingress_charts")
     .select("id, title, ingress_type, importance, is_published, is_social_advo, validity_start, validity_end, location_name, author_name, created_at", { count: "exact" })
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
+  if (createdFrom) query = query.gte("created_at", createdFrom);
+  if (createdTo) query = query.lte("created_at", createdTo + "T23:59:59");
+
+  const { data, error, count } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ charts: data ?? [], total: count ?? 0, page, hasMore: offset + limit < (count ?? 0) });
 }

@@ -11,17 +11,27 @@ async function requireAdmin() {
   return user;
 }
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(req: NextRequest) {
   const user = await requireAdmin();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const sp = req.nextUrl.searchParams;
+  const createdFrom = sp.get("created_from") ?? "";
+  const createdTo = sp.get("created_to") ?? "";
+
   const admin = createAdminClient();
-  const { data, error } = await admin
+  let query = admin
     .from("decan_media")
     .select("*")
     .order("sign", { ascending: true })
     .order("decan", { ascending: true });
 
+  if (createdFrom) query = query.gte("created_at", createdFrom);
+  if (createdTo) query = query.lte("created_at", createdTo + "T23:59:59");
+
+  const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data ?? []);
 }

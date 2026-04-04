@@ -11,15 +11,25 @@ async function requireAdmin() {
   return user;
 }
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(req: NextRequest) {
   const user = await requireAdmin();
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  const sp = req.nextUrl.searchParams;
+  const search = sp.get("search")?.trim() ?? "";
+  const startFrom = sp.get("start_date_from") ?? "";
+  const startTo = sp.get("start_date_to") ?? "";
+
   const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("wheel_signs")
-    .select("*")
-    .order("priority", { ascending: true });
+  let query = admin.from("wheel_signs").select("*").order("priority", { ascending: true });
+
+  if (search) query = query.ilike("title", `%${search}%`);
+  if (startFrom) query = query.gte("start_date", startFrom);
+  if (startTo) query = query.lte("start_date", startTo);
+
+  const { data, error } = await query;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);

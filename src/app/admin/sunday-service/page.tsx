@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Radio, Tv } from "lucide-react";
+import { Plus, Trash2, Radio, Tv, Eye } from "lucide-react";
 
 type Session = {
   id: string;
@@ -36,6 +36,8 @@ const EMPTY_FORM = {
   live_starts_at: "",
 };
 
+const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric" });
+
 export default function AdminSundayServicePage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,12 +45,25 @@ export default function AdminSundayServicePage() {
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createdFrom, setCreatedFrom] = useState("");
+  const [createdTo, setCreatedTo] = useState("");
+  const [previewSession, setPreviewSession] = useState<Session | null>(null);
 
-  useEffect(() => {
-    fetch("/api/admin/sunday-service")
+  function loadSessions(overrides?: { createdFrom?: string; createdTo?: string }) {
+    const params = new URLSearchParams();
+    const cf = overrides?.createdFrom ?? createdFrom;
+    const ct = overrides?.createdTo ?? createdTo;
+    if (cf) params.set("created_from", cf);
+    if (ct) params.set("created_to", ct);
+    setLoading(true);
+    fetch(`/api/admin/sunday-service?${params}`)
       .then((r) => r.json())
       .then((d) => setSessions(Array.isArray(d) ? d : []))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    loadSessions();
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -117,6 +132,25 @@ export default function AdminSundayServicePage() {
 
   return (
     <div className="space-y-6">
+      {/* Preview modal */}
+      {previewSession && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setPreviewSession(null)}>
+          <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <CardHeader><CardTitle>Session Preview</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div><span className="font-medium">Title:</span> {previewSession.title}</div>
+              {previewSession.description && <div><span className="font-medium">Description:</span> {previewSession.description}</div>}
+              <div><span className="font-medium">Video URL:</span> <a href={previewSession.video_url} target="_blank" rel="noreferrer" className="text-blue-500 text-xs break-all hover:underline">{previewSession.video_url}</a></div>
+              {previewSession.thumbnail_url && <div><span className="font-medium">Thumbnail:</span> <a href={previewSession.thumbnail_url} target="_blank" rel="noreferrer" className="text-blue-500 text-xs break-all hover:underline">{previewSession.thumbnail_url}</a></div>}
+              <div><span className="font-medium">Date:</span> {fmtDate(previewSession.recorded_at)}</div>
+              <div><span className="font-medium">Live:</span> <Badge variant={previewSession.is_live ? "destructive" : "outline"}>{previewSession.is_live ? "LIVE" : "Archived"}</Badge></div>
+              {previewSession.live_starts_at && <div><span className="font-medium">Live Starts At:</span> {fmtDate(previewSession.live_starts_at)}</div>}
+              <Button size="sm" className="mt-2" onClick={() => setPreviewSession(null)}>Close</Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Sunday Service</h1>
@@ -206,6 +240,20 @@ export default function AdminSundayServicePage() {
         </Card>
       )}
 
+      {/* Date filters */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Date from</Label>
+          <Input type="date" value={createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} className="w-40" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Date to</Label>
+          <Input type="date" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} className="w-40" />
+        </div>
+        <Button size="sm" onClick={() => loadSessions()}>Search</Button>
+        <Button size="sm" variant="outline" onClick={() => { setCreatedFrom(""); setCreatedTo(""); loadSessions({ createdFrom: "", createdTo: "" }); }}>Reset</Button>
+      </div>
+
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : sessions.length === 0 ? (
@@ -233,6 +281,9 @@ export default function AdminSundayServicePage() {
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => setPreviewSession(s)}>
+                      <Eye className="size-4" />
+                    </Button>
                     <Button
                       size="sm"
                       variant={s.is_live ? "destructive" : "outline"}

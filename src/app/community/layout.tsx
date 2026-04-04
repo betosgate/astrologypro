@@ -33,6 +33,7 @@ export default async function CommunityLayout({ children }: { children: React.Re
       { label: "Family", href: "/community/family" },
       { label: "Charts", href: "/community/charts" },
       { label: "Transits", href: "/community/transits" },
+      { label: "Rituals", href: "/community/rituals" },
     ] : []),
     ...(isMysterySchool ? [
       { label: "Training", href: "/community/training" },

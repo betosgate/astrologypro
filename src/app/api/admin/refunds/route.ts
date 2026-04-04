@@ -20,17 +20,24 @@ async function assertAdmin() {
   return user;
 }
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/admin/refunds
  * Returns all bookings that have a Stripe payment intent, ordered by scheduled_at DESC.
+ * Supports ?created_from=YYYY-MM-DD&created_to=YYYY-MM-DD date filters on scheduled_at.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   const user = await assertAdmin();
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  const sp = request.nextUrl.searchParams;
+  const createdFrom = sp.get("created_from") ?? "";
+  const createdTo = sp.get("created_to") ?? "";
+
   const admin = createAdminClient();
 
-  const { data: rows, error } = await admin
+  let query = admin
     .from("bookings")
     .select(
       "id, scheduled_at, base_price, refund_amount, refunded_at, refund_reason, status, no_show_type, stripe_payment_intent_id, clients(full_name, email), diviners(display_name)"
@@ -38,6 +45,11 @@ export async function GET() {
     .not("stripe_payment_intent_id", "is", null)
     .order("scheduled_at", { ascending: false })
     .limit(500);
+
+  if (createdFrom) query = query.gte("scheduled_at", createdFrom);
+  if (createdTo) query = query.lte("scheduled_at", createdTo + "T23:59:59");
+
+  const { data: rows, error } = await query;
 
   if (error) {
     console.error("[Admin Refunds] GET error:", error);

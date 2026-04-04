@@ -1,0 +1,371 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Flame, AlertCircle, Loader2, ChevronRight, X } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+
+// ─────────────────────────────────────────────
+// Preset options matching Angular implementation
+// ─────────────────────────────────────────────
+const PRESET_OPTIONS = [
+  {
+    name: "Standard Banishing Ritual of the Pentagram",
+    tags: ["Banishing_Ritual"],
+  },
+  {
+    name: "Standard Invocation Ritual of the Pentagram",
+    tags: ["Invocation_Ritual"],
+  },
+  {
+    name: "Divine Infinite Being Invocation Ritual of the Pentagram",
+    tags: ["Core_Invocation_Ritual"],
+  },
+  {
+    name: "Planetary Zodiacal Invocation Ritual of the Pentagram",
+    tags: null, // custom — opens configurator
+  },
+] as const;
+
+const PLANETS = [
+  "Sun", "Moon", "Mercury", "Venus", "Mars",
+  "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto",
+];
+
+const ZODIAC_SIGNS = [
+  "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+  "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces",
+];
+
+type RitualMode = "invocation" | "banishing";
+
+function buildCustomTags(
+  mode: RitualMode,
+  planets: string[],
+  zodiacs: string[]
+): string[] {
+  const tags = new Set<string>(["Ritual_Opening"]);
+
+  if (mode === "invocation") {
+    for (const p of planets) {
+      tags.add(`${p}_Gate_Invocation_Ritual`);
+      tags.add(`${p}_Invocation_Ritual`);
+    }
+    for (const z of zodiacs) {
+      tags.add(`${z}_Gate_Invocation_Ritual`);
+      tags.add(`${z}_Invocation_Ritual`);
+    }
+  } else {
+    // banishing — zodiac disabled per Angular
+    for (const p of planets) {
+      tags.add(`${p}_Gate_Banishing_Ritual`);
+    }
+  }
+
+  tags.add("Ritual_Closing");
+  return Array.from(tags);
+}
+
+type Step = "choose" | "custom";
+
+export default function CreateRitualPage() {
+  const router = useRouter();
+  const [step, setStep] = useState<Step>("choose");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Custom configurator state
+  const [mode, setMode] = useState<RitualMode>("invocation");
+  const [selectedPlanets, setSelectedPlanets] = useState<string[]>([]);
+  const [selectedZodiacs, setSelectedZodiacs] = useState<string[]>([]);
+
+  function toggleItem(
+    item: string,
+    list: string[],
+    setter: React.Dispatch<React.SetStateAction<string[]>>
+  ) {
+    setter((prev) =>
+      prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item]
+    );
+  }
+
+  async function submitPreset(name: string, tags: string[]) {
+    setSaving(true);
+    setError(null);
+    const res = await fetch("/api/community/rituals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ritual_name: name, ritual_tags: tags }),
+    });
+    if (!res.ok) {
+      const body = await res.json();
+      setError(body.error ?? "Failed to create ritual");
+      setSaving(false);
+      return;
+    }
+    const { ritual } = await res.json();
+    router.push(`/community/rituals/${ritual.id}`);
+  }
+
+  async function submitCustom() {
+    setError(null);
+
+    // Validation matching Angular rules
+    if (mode === "banishing" && selectedPlanets.length === 0) {
+      setError("Banishing ritual requires at least one planet.");
+      return;
+    }
+    if (mode === "invocation" && selectedPlanets.length === 0 && selectedZodiacs.length === 0) {
+      setError("Invocation ritual requires at least one planet or zodiac sign.");
+      return;
+    }
+
+    const tags = buildCustomTags(mode, selectedPlanets, selectedZodiacs);
+    const ritualName = "Planetary Zodiacal Invocation Ritual of the Pentagram";
+
+    setSaving(true);
+    const res = await fetch("/api/community/rituals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ritual_name: ritualName, ritual_tags: tags }),
+    });
+    if (!res.ok) {
+      const body = await res.json();
+      setError(body.error ?? "Failed to create ritual");
+      setSaving(false);
+      return;
+    }
+    const { ritual } = await res.json();
+    router.push(`/community/rituals/${ritual.id}`);
+  }
+
+  // ── Step: Choose preset or custom ──────────────────────────────────────────
+  if (step === "choose") {
+    return (
+      <div className="space-y-6 max-w-2xl">
+        <div>
+          <Link
+            href="/community/rituals"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            ← My Rituals
+          </Link>
+          <div className="flex items-center gap-2 mt-2">
+            <Flame className="size-5 text-muted-foreground" />
+            <h1 className="text-2xl font-bold tracking-tight">Create a Ritual</h1>
+          </div>
+          <p className="text-muted-foreground mt-1">
+            Choose a preset ritual or configure a custom planetary invocation.
+          </p>
+        </div>
+
+        {error && (
+          <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <AlertCircle className="size-4 shrink-0" />
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {PRESET_OPTIONS.map((option) => (
+            <Card
+              key={option.name}
+              className="cursor-pointer transition-colors hover:border-primary/40"
+              onClick={() => {
+                if (!saving) {
+                  if (option.tags === null) {
+                    setStep("custom");
+                  } else {
+                    submitPreset(option.name, [...option.tags]);
+                  }
+                }
+              }}
+            >
+              <CardContent className="flex items-center justify-between gap-4 py-4">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-sm">{option.name}</p>
+                  {option.tags ? (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {option.tags.map((t) => (
+                        <Badge key={t} variant="secondary" className="text-[10px] px-1.5 py-0.5">
+                          {t.replace(/_/g, " ")}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Configure planets and zodiac signs
+                    </p>
+                  )}
+                </div>
+                {saving && option.tags !== null ? (
+                  <Loader2 className="size-4 animate-spin shrink-0 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Step: Custom configurator ───────────────────────────────────────────────
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <button
+          type="button"
+          className="text-sm text-muted-foreground hover:text-foreground"
+          onClick={() => { setStep("choose"); setError(null); }}
+        >
+          ← Back to Ritual Options
+        </button>
+        <div className="flex items-center gap-2 mt-2">
+          <Flame className="size-5 text-muted-foreground" />
+          <h1 className="text-2xl font-bold tracking-tight">Configure Your Ritual</h1>
+        </div>
+        <p className="text-muted-foreground mt-1">
+          Planetary Zodiacal Invocation / Banishing Ritual
+        </p>
+      </div>
+
+      {error && (
+        <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <AlertCircle className="size-4 shrink-0" />
+          <span>{error}</span>
+          <button type="button" onClick={() => setError(null)} className="ml-auto shrink-0">
+            <X className="size-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Mode selector */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Ritual Mode</CardTitle>
+        </CardHeader>
+        <CardContent className="flex gap-3">
+          {(["invocation", "banishing"] as RitualMode[]).map((m) => (
+            <Button
+              key={m}
+              size="sm"
+              variant={mode === m ? "default" : "outline"}
+              onClick={() => {
+                setMode(m);
+                if (m === "banishing") setSelectedZodiacs([]);
+              }}
+            >
+              {m.charAt(0).toUpperCase() + m.slice(1)}
+            </Button>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Planets */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Planets</CardTitle>
+          <CardDescription>Select one or more planets for your ritual.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-y-3 gap-x-4 sm:grid-cols-3">
+            {PLANETS.map((planet) => (
+              <div key={planet} className="flex items-center gap-2">
+                <Checkbox
+                  id={`planet-${planet}`}
+                  checked={selectedPlanets.includes(planet)}
+                  onCheckedChange={() => toggleItem(planet, selectedPlanets, setSelectedPlanets)}
+                />
+                <Label htmlFor={`planet-${planet}`} className="cursor-pointer text-sm">
+                  {planet}
+                </Label>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Zodiac Signs — disabled in banishing mode */}
+      <Card className={mode === "banishing" ? "opacity-40 pointer-events-none" : ""}>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            Zodiac Signs
+            {mode === "banishing" && (
+              <Badge variant="secondary" className="text-xs">Disabled in banishing mode</Badge>
+            )}
+          </CardTitle>
+          <CardDescription>
+            {mode === "invocation"
+              ? "Select zodiac signs to include in your invocation."
+              : "Zodiac selection is disabled for banishing rituals."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-y-3 gap-x-4 sm:grid-cols-3">
+            {ZODIAC_SIGNS.map((sign) => (
+              <div key={sign} className="flex items-center gap-2">
+                <Checkbox
+                  id={`zodiac-${sign}`}
+                  checked={selectedZodiacs.includes(sign)}
+                  disabled={mode === "banishing"}
+                  onCheckedChange={() => toggleItem(sign, selectedZodiacs, setSelectedZodiacs)}
+                />
+                <Label
+                  htmlFor={`zodiac-${sign}`}
+                  className={`text-sm ${mode === "banishing" ? "cursor-default" : "cursor-pointer"}`}
+                >
+                  {sign}
+                </Label>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Preview of generated tags */}
+      {(selectedPlanets.length > 0 || selectedZodiacs.length > 0) && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">Preview — Ritual Tags</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-1.5">
+              {buildCustomTags(mode, selectedPlanets, selectedZodiacs).map((tag) => (
+                <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0.5">
+                  {tag.replace(/_/g, " ")}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="flex gap-3">
+        <Button onClick={submitCustom} disabled={saving}>
+          {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
+          Begin the Ritual
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => { setStep("choose"); setError(null); }}
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}

@@ -70,10 +70,19 @@ export default function AdminIngressChartsPage() {
   const [form, setForm] = useState<FormState>({ ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createdFrom, setCreatedFrom] = useState("");
+  const [createdTo, setCreatedTo] = useState("");
+  const [previewChart, setPreviewChart] = useState<IngressChart | null>(null);
 
-  async function loadCharts(p: number, replace: boolean) {
+  async function loadCharts(p: number, replace: boolean, overrides?: { createdFrom?: string; createdTo?: string }) {
     setLoading(true);
-    const res = await fetch(`/api/admin/ingress-charts?page=${p}`);
+    const params = new URLSearchParams();
+    params.set("page", String(p));
+    const cf = overrides?.createdFrom ?? createdFrom;
+    const ct = overrides?.createdTo ?? createdTo;
+    if (cf) params.set("created_from", cf);
+    if (ct) params.set("created_to", ct);
+    const res = await fetch(`/api/admin/ingress-charts?${params}`);
     if (res.ok) {
       const json = await res.json();
       setCharts((prev) => replace ? json.charts : [...prev, ...json.charts]);
@@ -200,6 +209,28 @@ export default function AdminIngressChartsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Preview modal */}
+      {previewChart && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setPreviewChart(null)}>
+          <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <CardHeader><CardTitle>Chart Preview</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div><span className="font-medium">Title:</span> {previewChart.title}</div>
+              {previewChart.ingress_type && <div><span className="font-medium">Ingress Type:</span> {previewChart.ingress_type}</div>}
+              {previewChart.importance && <div><span className="font-medium">Importance:</span> {previewChart.importance}</div>}
+              {previewChart.location_name && <div><span className="font-medium">Location:</span> {previewChart.location_name}</div>}
+              {previewChart.validity_start && <div><span className="font-medium">Validity Start:</span> {formatDate(previewChart.validity_start)}</div>}
+              {previewChart.validity_end && <div><span className="font-medium">Validity End:</span> {formatDate(previewChart.validity_end)}</div>}
+              {previewChart.author_name && <div><span className="font-medium">Author:</span> {previewChart.author_name}</div>}
+              <div><span className="font-medium">Status:</span> <Badge variant={previewChart.is_published ? "default" : "outline"}>{previewChart.is_published ? "Published" : "Draft"}</Badge></div>
+              <div><span className="font-medium">Social Advo:</span> {previewChart.is_social_advo ? "Yes" : "No"}</div>
+              <div><span className="font-medium">Created:</span> {formatDate(previewChart.created_at)}</div>
+              <Button size="sm" className="mt-2" onClick={() => setPreviewChart(null)}>Close</Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Ingress Charts</h1>
@@ -328,6 +359,20 @@ export default function AdminIngressChartsPage() {
         </Card>
       )}
 
+      {/* Date filters */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Created from</Label>
+          <Input type="date" value={createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} className="w-40" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Created to</Label>
+          <Input type="date" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} className="w-40" />
+        </div>
+        <Button size="sm" onClick={() => loadCharts(1, true)}>Search</Button>
+        <Button size="sm" variant="outline" onClick={() => { setCreatedFrom(""); setCreatedTo(""); loadCharts(1, true, { createdFrom: "", createdTo: "" }); }}>Reset</Button>
+      </div>
+
       {loading && charts.length === 0 ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : charts.length === 0 ? (
@@ -367,6 +412,9 @@ export default function AdminIngressChartsPage() {
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => setPreviewChart(chart)}>
+                      <Eye className="size-4" />
+                    </Button>
                     <Button size="sm" variant="outline" onClick={() => togglePublish(chart)}>
                       {chart.is_published ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                       {chart.is_published ? "Unpublish" : "Publish"}
