@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .split(",")
   .map((e) => e.trim())
@@ -16,18 +18,26 @@ async function getAdminUser() {
 }
 
 // GET /api/admin/training/categories — list all
-export async function GET() {
+export async function GET(req: NextRequest) {
   const user = await getAdminUser();
   if (!user?.email || !ADMIN_EMAILS.includes(user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const sp = req.nextUrl.searchParams;
+  const createdFrom = sp.get("created_from");
+  const createdTo = sp.get("created_to");
+
   const admin = createAdminClient();
-  const { data, error } = await admin
+  let query = admin
     .from("training_categories")
     .select("id, name, description, priority, is_active, created_at")
     .order("priority", { ascending: true });
 
+  if (createdFrom) query = query.gte("created_at", createdFrom);
+  if (createdTo) query = query.lte("created_at", createdTo + "T23:59:59");
+
+  const { data, error } = await query;
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

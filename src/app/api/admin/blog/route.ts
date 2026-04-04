@@ -13,16 +13,24 @@ async function requireAdmin() {
   return user;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const user = await requireAdmin();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const sp = req.nextUrl.searchParams;
+  const createdFrom = sp.get("created_from");
+  const createdTo = sp.get("created_to");
+
   const admin = createAdminClient();
-  const { data, error } = await admin
+  let query = admin
     .from("blog_posts")
     .select("id, title, slug, category, excerpt, image_url, is_published, published_at, created_at")
     .order("created_at", { ascending: false });
 
+  if (createdFrom) query = query.gte("created_at", createdFrom);
+  if (createdTo) query = query.lte("created_at", createdTo + "T23:59:59");
+
+  const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data ?? []);
 }

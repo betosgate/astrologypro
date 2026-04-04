@@ -21,9 +21,11 @@ export async function GET(req: NextRequest) {
   const page = Math.max(1, parseInt(sp.get("page") ?? "1", 10));
   const limit = 25;
   const offset = (page - 1) * limit;
+  const paymentFrom = sp.get("payment_from");
+  const paymentTo = sp.get("payment_to");
 
   const admin = createAdminClient();
-  const { data, error, count } = await admin
+  let query = admin
     .from("bookings")
     .select(
       "id, client_name, client_email, service_name, scheduled_at, amount_charged, stripe_payment_id, status, created_at, diviner_id",
@@ -32,6 +34,11 @@ export async function GET(req: NextRequest) {
     .not("amount_charged", "is", null)
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
+
+  if (paymentFrom) query = query.gte("created_at", paymentFrom);
+  if (paymentTo) query = query.lte("created_at", paymentTo + "T23:59:59");
+
+  const { data, error, count } = await query;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

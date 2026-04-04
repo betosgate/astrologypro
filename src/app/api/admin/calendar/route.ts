@@ -11,16 +11,28 @@ async function requireAdmin() {
   return user;
 }
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(req: NextRequest) {
   const user = await requireAdmin();
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  const sp = req.nextUrl.searchParams;
+  const startFrom = sp.get("start_date_from");
+  const startTo = sp.get("start_date_to");
+  const category = sp.get("category");
+
   const admin = createAdminClient();
-  const { data, error } = await admin
+  let query = admin
     .from("calendar_events")
     .select("*")
     .order("start_at", { ascending: false });
 
+  if (startFrom) query = query.gte("start_at", startFrom);
+  if (startTo) query = query.lte("start_at", startTo + "T23:59:59");
+  if (category) query = query.ilike("category", `%${category}%`);
+
+  const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { CreditCard } from "lucide-react";
 
 type Payment = {
@@ -34,11 +36,23 @@ export default function AdminPaymentsPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
 
+  // Date range filters
+  const [paymentFrom, setPaymentFrom] = useState("");
+  const [paymentTo, setPaymentTo] = useState("");
+
   async function load(p: number) {
     setLoading(true);
-    const res = await fetch(`/api/admin/payments?page=${p}`);
+    const params = new URLSearchParams();
+    params.set("page", String(p));
+    if (paymentFrom) params.set("payment_from", paymentFrom);
+    if (paymentTo) params.set("payment_to", paymentTo);
+    const res = await fetch(`/api/admin/payments?${params}`);
     if (res.ok) setData(await res.json());
     setLoading(false);
+  }
+
+  function resetFilters() {
+    setPaymentFrom(""); setPaymentTo("");
   }
 
   useEffect(() => { load(page); }, [page]);
@@ -51,6 +65,26 @@ export default function AdminPaymentsPage() {
           All completed booking payments. {data ? `${data.total} total.` : ""}
         </p>
       </div>
+
+      {/* Date range filters */}
+      <Card>
+        <CardContent className="pt-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1">
+              <Label className="text-xs">Payment from</Label>
+              <Input type="date" value={paymentFrom} onChange={(e) => setPaymentFrom(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Payment to</Label>
+              <Input type="date" value={paymentTo} onChange={(e) => setPaymentTo(e.target.value)} />
+            </div>
+          </div>
+          <div className="mt-3 flex gap-2">
+            <Button size="sm" onClick={() => { setPage(1); load(1); }}>Search</Button>
+            <Button size="sm" variant="outline" onClick={() => { resetFilters(); setTimeout(() => load(1), 0); }}>Reset</Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>

@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Pencil, FileText } from "lucide-react";
+import { Plus, Trash2, Pencil, FileText, Eye } from "lucide-react";
 
 const CATEGORIES = ["Business", "Astrology", "Tarot", "Spirituality", "General"];
 
@@ -49,12 +49,27 @@ export default function AdminBlogPage() {
   const [form, setForm] = useState<FormState>({ ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewPost, setPreviewPost] = useState<Post | null>(null);
+
+  // Filters
+  const [createdFrom, setCreatedFrom] = useState("");
+  const [createdTo, setCreatedTo] = useState("");
+
+  const fmt = (d: string | null) =>
+    d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
 
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/admin/blog");
+    const params = new URLSearchParams();
+    if (createdFrom) params.set("created_from", createdFrom);
+    if (createdTo) params.set("created_to", createdTo);
+    const res = await fetch(`/api/admin/blog?${params}`);
     if (res.ok) setPosts(await res.json());
     setLoading(false);
+  }
+
+  function resetFilters() {
+    setCreatedFrom(""); setCreatedTo("");
   }
 
   useEffect(() => { load(); }, []);
@@ -142,6 +157,44 @@ export default function AdminBlogPage() {
         </Button>
       </div>
 
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1">
+              <Label className="text-xs">Created from</Label>
+              <Input type="date" value={createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Created to</Label>
+              <Input type="date" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} />
+            </div>
+          </div>
+          <div className="mt-3 flex gap-2">
+            <Button size="sm" onClick={load}>Search</Button>
+            <Button size="sm" variant="outline" onClick={() => { resetFilters(); setTimeout(load, 0); }}>Reset</Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Preview modal */}
+      {previewPost && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setPreviewPost(null)}>
+          <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <CardHeader><CardTitle>Post Preview</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div><span className="font-medium">Title:</span> {previewPost.title}</div>
+              <div><span className="font-medium">Category:</span> <Badge variant="secondary" className="text-xs">{previewPost.category}</Badge></div>
+              {previewPost.excerpt && <div><span className="font-medium">Excerpt:</span> {previewPost.excerpt}</div>}
+              <div><span className="font-medium">Status:</span> {previewPost.is_published ? <Badge variant="default" className="text-xs">Published</Badge> : <Badge variant="outline" className="text-xs">Draft</Badge>}</div>
+              {previewPost.published_at && <div><span className="font-medium">Published at:</span> {fmt(previewPost.published_at)}</div>}
+              <div><span className="font-medium">Created:</span> {fmt(previewPost.created_at)}</div>
+              <Button size="sm" className="mt-2" onClick={() => setPreviewPost(null)}>Close</Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {showForm && (
         <Card>
           <CardHeader>
@@ -227,6 +280,9 @@ export default function AdminBlogPage() {
                     {post.excerpt && <p className="text-sm text-muted-foreground">{post.excerpt}</p>}
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => setPreviewPost(post)}>
+                      <Eye className="size-4" />
+                    </Button>
                     <Button size="sm" variant="outline" onClick={() => togglePublish(post)}>
                       {post.is_published ? "Unpublish" : "Publish"}
                     </Button>

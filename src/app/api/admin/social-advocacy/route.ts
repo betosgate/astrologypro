@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const dynamic = "force-dynamic";
+
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim());
 
 async function requireAdmin() {
@@ -11,16 +13,28 @@ async function requireAdmin() {
   return user;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const user = await requireAdmin();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const sp = req.nextUrl.searchParams;
+  const createdFrom = sp.get("created_from");
+  const createdTo = sp.get("created_to");
+  const updatedFrom = sp.get("updated_from");
+  const updatedTo = sp.get("updated_to");
+
   const admin = createAdminClient();
-  const { data, error } = await admin
+  let query = admin
     .from("social_advocacy")
     .select("*")
     .order("created_at", { ascending: false });
 
+  if (createdFrom) query = query.gte("created_at", createdFrom);
+  if (createdTo) query = query.lte("created_at", createdTo + "T23:59:59");
+  if (updatedFrom) query = query.gte("updated_at", updatedFrom);
+  if (updatedTo) query = query.lte("updated_at", updatedTo + "T23:59:59");
+
+  const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data ?? []);
 }
