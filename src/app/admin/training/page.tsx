@@ -68,10 +68,12 @@ export default function TrainingPage() {
   const [previewLesson, setPreviewLesson] = useState<Lesson | null>(null);
   const [previewQuiz, setPreviewQuiz] = useState<Quiz | null>(null);
 
-  async function loadCategories() {
+  async function loadCategories(overrides?: { catCreatedFrom?: string; catCreatedTo?: string }) {
+    const cf = overrides?.catCreatedFrom ?? catCreatedFrom;
+    const ct = overrides?.catCreatedTo ?? catCreatedTo;
     const params = new URLSearchParams();
-    if (catCreatedFrom) params.set("created_from", catCreatedFrom);
-    if (catCreatedTo) params.set("created_to", catCreatedTo);
+    if (cf) params.set("created_from", cf);
+    if (ct) params.set("created_to", ct);
     const res = await fetch(`/api/admin/training/categories?${params}`);
     if (res.ok) {
       const json = await res.json();
@@ -79,10 +81,12 @@ export default function TrainingPage() {
     }
   }
 
-  async function loadLessons() {
+  async function loadLessons(overrides?: { lesCreatedFrom?: string; lesCreatedTo?: string }) {
+    const cf = overrides?.lesCreatedFrom ?? lesCreatedFrom;
+    const ct = overrides?.lesCreatedTo ?? lesCreatedTo;
     const params = new URLSearchParams();
-    if (lesCreatedFrom) params.set("created_from", lesCreatedFrom);
-    if (lesCreatedTo) params.set("created_to", lesCreatedTo);
+    if (cf) params.set("created_from", cf);
+    if (ct) params.set("created_to", ct);
     const res = await fetch(`/api/admin/training/lessons?${params}`);
     if (res.ok) {
       const json = await res.json();
@@ -219,8 +223,8 @@ export default function TrainingPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={loadCategories}>Search</Button>
-            <Button size="sm" variant="outline" onClick={() => { setCatCreatedFrom(""); setCatCreatedTo(""); setTimeout(loadCategories, 0); }}>Reset</Button>
+            <Button size="sm" onClick={() => loadCategories()}>Search</Button>
+            <Button size="sm" variant="outline" onClick={() => { setCatCreatedFrom(""); setCatCreatedTo(""); loadCategories({ catCreatedFrom: "", catCreatedTo: "" }); }}>Reset</Button>
           </div>
 
           {categories.length === 0 ? (
@@ -291,8 +295,8 @@ export default function TrainingPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={loadLessons}>Search</Button>
-            <Button size="sm" variant="outline" onClick={() => { setLesCreatedFrom(""); setLesCreatedTo(""); setTimeout(loadLessons, 0); }}>Reset</Button>
+            <Button size="sm" onClick={() => loadLessons()}>Search</Button>
+            <Button size="sm" variant="outline" onClick={() => { setLesCreatedFrom(""); setLesCreatedTo(""); loadLessons({ lesCreatedFrom: "", lesCreatedTo: "" }); }}>Reset</Button>
           </div>
 
           {lessons.length === 0 ? (

@@ -53,12 +53,15 @@ export default function AdminCalendarPage() {
   const [startTo, setStartTo] = useState("");
   const [category, setCategory] = useState("");
 
-  async function load() {
+  async function load(overrides?: { startFrom?: string; startTo?: string; category?: string }) {
     setLoading(true);
+    const sf = overrides?.startFrom ?? startFrom;
+    const st = overrides?.startTo ?? startTo;
+    const cat = overrides?.category ?? category;
     const params = new URLSearchParams();
-    if (startFrom) params.set("start_date_from", startFrom);
-    if (startTo) params.set("start_date_to", startTo);
-    if (category) params.set("category", category);
+    if (sf) params.set("start_date_from", sf);
+    if (st) params.set("start_date_to", st);
+    if (cat) params.set("category", cat);
     const res = await fetch(`/api/admin/calendar?${params}`);
     if (res.ok) setEvents(await res.json());
     setLoading(false);
@@ -100,8 +103,8 @@ export default function AdminCalendarPage() {
             </div>
           </div>
           <div className="mt-3 flex gap-2">
-            <Button size="sm" onClick={load}>Search</Button>
-            <Button size="sm" variant="outline" onClick={() => { resetFilters(); setTimeout(load, 0); }}>Reset</Button>
+            <Button size="sm" onClick={() => load()}>Search</Button>
+            <Button size="sm" variant="outline" onClick={() => { resetFilters(); load({ startFrom: "", startTo: "", category: "" }); }}>Reset</Button>
           </div>
         </CardContent>
       </Card>

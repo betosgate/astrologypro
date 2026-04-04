@@ -47,13 +47,17 @@ export default function AdminBroadcastingPage() {
   const [updatedFrom, setUpdatedFrom] = useState("");
   const [updatedTo, setUpdatedTo] = useState("");
 
-  async function load() {
+  async function load(overrides?: { search?: string; status?: string; updatedFrom?: string; updatedTo?: string }) {
     setLoading(true);
+    const s = overrides?.search ?? search;
+    const st = overrides?.status ?? statusFilter;
+    const uf = overrides?.updatedFrom ?? updatedFrom;
+    const ut = overrides?.updatedTo ?? updatedTo;
     const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    if (statusFilter) params.set("status", statusFilter);
-    if (updatedFrom) params.set("updated_from", updatedFrom);
-    if (updatedTo) params.set("updated_to", updatedTo);
+    if (s) params.set("search", s);
+    if (st) params.set("status", st);
+    if (uf) params.set("updated_from", uf);
+    if (ut) params.set("updated_to", ut);
     const res = await fetch(`/api/admin/broadcasting?${params}`);
     if (res.ok) {
       const json = await res.json();
@@ -158,8 +162,8 @@ export default function AdminBroadcastingPage() {
             </div>
           </div>
           <div className="mt-3 flex gap-2">
-            <Button size="sm" onClick={load}>Search</Button>
-            <Button size="sm" variant="outline" onClick={() => { setSearch(""); setStatusFilter(""); setUpdatedFrom(""); setUpdatedTo(""); setTimeout(load, 0); }}>Reset</Button>
+            <Button size="sm" onClick={() => load()}>Search</Button>
+            <Button size="sm" variant="outline" onClick={() => { setSearch(""); setStatusFilter(""); setUpdatedFrom(""); setUpdatedTo(""); load({ search: "", status: "", updatedFrom: "", updatedTo: "" }); }}>Reset</Button>
           </div>
         </CardContent>
       </Card>

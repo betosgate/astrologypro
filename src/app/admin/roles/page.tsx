@@ -54,15 +54,21 @@ export default function AdminRolesPage() {
   const [updatedFrom, setUpdatedFrom] = useState("");
   const [updatedTo, setUpdatedTo] = useState("");
 
-  async function load() {
+  async function load(overrides?: { search?: string; statusFilter?: string; createdFrom?: string; createdTo?: string; updatedFrom?: string; updatedTo?: string }) {
     setLoading(true);
+    const s = overrides?.search ?? search;
+    const sf = overrides?.statusFilter ?? statusFilter;
+    const cf = overrides?.createdFrom ?? createdFrom;
+    const ct = overrides?.createdTo ?? createdTo;
+    const uf = overrides?.updatedFrom ?? updatedFrom;
+    const ut = overrides?.updatedTo ?? updatedTo;
     const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    if (statusFilter) params.set("status", statusFilter);
-    if (createdFrom) params.set("created_from", createdFrom);
-    if (createdTo) params.set("created_to", createdTo);
-    if (updatedFrom) params.set("updated_from", updatedFrom);
-    if (updatedTo) params.set("updated_to", updatedTo);
+    if (s) params.set("search", s);
+    if (sf) params.set("status", sf);
+    if (cf) params.set("created_from", cf);
+    if (ct) params.set("created_to", ct);
+    if (uf) params.set("updated_from", uf);
+    if (ut) params.set("updated_to", ut);
     const res = await fetch(`/api/admin/roles?${params}`);
     if (res.ok) {
       const json = await res.json();
@@ -203,8 +209,8 @@ export default function AdminRolesPage() {
             </div>
           </div>
           <div className="mt-3 flex gap-2">
-            <Button size="sm" onClick={load}>Search</Button>
-            <Button size="sm" variant="outline" onClick={() => { resetFilters(); setTimeout(load, 0); }}>Reset</Button>
+            <Button size="sm" onClick={() => load()}>Search</Button>
+            <Button size="sm" variant="outline" onClick={() => { resetFilters(); load({ search: "", statusFilter: "", createdFrom: "", createdTo: "", updatedFrom: "", updatedTo: "" }); }}>Reset</Button>
           </div>
         </CardContent>
       </Card>

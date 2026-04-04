@@ -58,11 +58,13 @@ export default function AdminBlogPage() {
   const fmt = (d: string | null) =>
     d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
 
-  async function load() {
+  async function load(overrides?: { createdFrom?: string; createdTo?: string }) {
     setLoading(true);
+    const cf = overrides?.createdFrom ?? createdFrom;
+    const ct = overrides?.createdTo ?? createdTo;
     const params = new URLSearchParams();
-    if (createdFrom) params.set("created_from", createdFrom);
-    if (createdTo) params.set("created_to", createdTo);
+    if (cf) params.set("created_from", cf);
+    if (ct) params.set("created_to", ct);
     const res = await fetch(`/api/admin/blog?${params}`);
     if (res.ok) setPosts(await res.json());
     setLoading(false);
@@ -171,8 +173,8 @@ export default function AdminBlogPage() {
             </div>
           </div>
           <div className="mt-3 flex gap-2">
-            <Button size="sm" onClick={load}>Search</Button>
-            <Button size="sm" variant="outline" onClick={() => { resetFilters(); setTimeout(load, 0); }}>Reset</Button>
+            <Button size="sm" onClick={() => load()}>Search</Button>
+            <Button size="sm" variant="outline" onClick={() => { resetFilters(); load({ createdFrom: "", createdTo: "" }); }}>Reset</Button>
           </div>
         </CardContent>
       </Card>

@@ -43,13 +43,17 @@ export default function AdminSpiritualWisdomPage() {
 
   const fmt = (d: string) => d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
 
-  async function load() {
+  async function load(overrides?: { createdFrom?: string; createdTo?: string; updatedFrom?: string; updatedTo?: string }) {
     setLoading(true);
+    const cf = overrides?.createdFrom ?? createdFrom;
+    const ct = overrides?.createdTo ?? createdTo;
+    const uf = overrides?.updatedFrom ?? updatedFrom;
+    const ut = overrides?.updatedTo ?? updatedTo;
     const params = new URLSearchParams();
-    if (createdFrom) params.set("created_from", createdFrom);
-    if (createdTo) params.set("created_to", createdTo);
-    if (updatedFrom) params.set("updated_from", updatedFrom);
-    if (updatedTo) params.set("updated_to", updatedTo);
+    if (cf) params.set("created_from", cf);
+    if (ct) params.set("created_to", ct);
+    if (uf) params.set("updated_from", uf);
+    if (ut) params.set("updated_to", ut);
     const res = await fetch(`/api/admin/spiritual-wisdom?${params}`);
     if (res.ok) setItems(await res.json());
     setLoading(false);
@@ -122,8 +126,8 @@ export default function AdminSpiritualWisdomPage() {
             </div>
           </div>
           <div className="mt-3 flex gap-2">
-            <Button size="sm" onClick={load}>Search</Button>
-            <Button size="sm" variant="outline" onClick={() => { resetFilters(); setTimeout(load, 0); }}>Reset</Button>
+            <Button size="sm" onClick={() => load()}>Search</Button>
+            <Button size="sm" variant="outline" onClick={() => { resetFilters(); load({ createdFrom: "", createdTo: "", updatedFrom: "", updatedTo: "" }); }}>Reset</Button>
           </div>
         </CardContent>
       </Card>

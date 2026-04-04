@@ -48,11 +48,13 @@ export default function AdminWebinarsPage() {
   const [createdFrom, setCreatedFrom] = useState("");
   const [createdTo, setCreatedTo] = useState("");
 
-  async function load() {
+  async function load(overrides?: { createdFrom?: string; createdTo?: string }) {
     setLoading(true);
+    const cf = overrides?.createdFrom ?? createdFrom;
+    const ct = overrides?.createdTo ?? createdTo;
     const params = new URLSearchParams();
-    if (createdFrom) params.set("created_from", createdFrom);
-    if (createdTo) params.set("created_to", createdTo);
+    if (cf) params.set("created_from", cf);
+    if (ct) params.set("created_to", ct);
     const res = await fetch(`/api/admin/webinars?${params}`);
     if (res.ok) setWebinars(await res.json());
     setLoading(false);
@@ -90,8 +92,8 @@ export default function AdminWebinarsPage() {
             </div>
           </div>
           <div className="mt-3 flex gap-2">
-            <Button size="sm" onClick={load}>Search</Button>
-            <Button size="sm" variant="outline" onClick={() => { resetFilters(); setTimeout(load, 0); }}>Reset</Button>
+            <Button size="sm" onClick={() => load()}>Search</Button>
+            <Button size="sm" variant="outline" onClick={() => { resetFilters(); load({ createdFrom: "", createdTo: "" }); }}>Reset</Button>
           </div>
         </CardContent>
       </Card>
