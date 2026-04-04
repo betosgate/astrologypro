@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import {
@@ -52,13 +53,14 @@ export default async function DashboardPage() {
 
   if (!user) redirect("/login");
 
-  const { data: diviner } = await supabase
+  const admin = createAdminClient();
+  const { data: diviner } = await admin
     .from("diviners")
     .select(
       "id, display_name, username, avatar_url, bio, tagline, specialties, stripe_account_id, google_calendar_token, is_certified"
     )
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!diviner) redirect("/onboarding");
 

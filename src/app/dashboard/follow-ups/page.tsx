@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { formatDate, formatDateTime } from "@/lib/format";
 import {
@@ -47,17 +48,18 @@ const stepLabels: Record<number, string> = {
 
 export default async function FollowUpsPage() {
   const supabase = await createClient();
+  const admin = createAdminClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
 
-  const { data: diviner } = await supabase
+  const { data: diviner } = await admin
     .from("diviners")
     .select("id")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!diviner) redirect("/onboarding");
 

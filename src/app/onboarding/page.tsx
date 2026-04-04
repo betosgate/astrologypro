@@ -1711,7 +1711,14 @@ export default function OnboardingPage() {
                   </div>
                 )}
 
-                <div className="flex justify-center">
+                <div className="flex items-center justify-between pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentStep(4)}
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back
+                  </Button>
                   <Button
                     onClick={async () => {
                       setLoading(true);

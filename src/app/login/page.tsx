@@ -22,17 +22,18 @@ import { Loader2, Sparkles, Mail } from "lucide-react";
 import { APP_URL } from "@/lib/constants";
 import { getRoleDestination } from "@/types/user";
 
-const PORTAL_BASES = ["/dashboard", "/portal", "/community", "/trainee", "/advocate"];
+const PORTAL_BASES = ["/dashboard", "/portal", "/community", "/trainee", "/advocate", "/admin"];
 
 /**
  * Resolve where to send the user after a successful password login.
  *
  * Priority:
- * 1. If localStorage has a last-used portal route → return to it.
- * 2. Otherwise use the role from user metadata (set at signup) to pick the
- *    primary portal destination.
+ * 1. localStorage last-used portal → return to it (remembers last dashboard).
+ * 2. No last route + user is admin → /admin takes precedence.
+ * 3. Fallback → role metadata destination.
  */
-function resolveDestination(role: string | undefined): string {
+async function resolveDestination(role: string | undefined): Promise<string> {
+  // 1. Last-used portal
   try {
     const last = localStorage.getItem("ap_last_route");
     if (last && PORTAL_BASES.some((base) => last === base || last.startsWith(base + "/"))) {
@@ -41,6 +42,19 @@ function resolveDestination(role: string | undefined): string {
   } catch {
     // localStorage unavailable (private browsing)
   }
+
+  // 2. Check admin status server-side (fast env-var lookup)
+  try {
+    const res = await fetch("/api/auth/is-admin");
+    if (res.ok) {
+      const { isAdmin } = await res.json();
+      if (isAdmin) return "/admin";
+    }
+  } catch {
+    // ignore — fall through to role-based
+  }
+
+  // 3. Role-based fallback
   return getRoleDestination(role);
 }
 
@@ -79,7 +93,7 @@ export default function LoginPage() {
       const role = data.user?.user_metadata?.role as string | undefined;
       // Hard navigation — bypasses Next.js router cache which can serve
       // a stale server-component redirect from before the session was set.
-      window.location.href = resolveDestination(role);
+      window.location.href = await resolveDestination(role);
     } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {

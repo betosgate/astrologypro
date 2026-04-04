@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import {
   Card,
@@ -14,17 +15,18 @@ export const metadata = {
 
 export default async function IntakeBuilderPage() {
   const supabase = await createClient();
+  const admin = createAdminClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
 
-  const { data: diviner } = await supabase
+  const { data: diviner } = await admin
     .from("diviners")
     .select("id")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!diviner) redirect("/onboarding");
 

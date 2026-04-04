@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { MobileNav } from "@/components/dashboard/mobile-nav";
 import { PhoneWidgetLoader } from "@/components/dashboard/phone-widget-loader";
@@ -21,11 +22,19 @@ export default async function DashboardLayout({
 
   if (!user) redirect("/login");
 
-  const { data: diviner } = await supabase
+  // Use admin client for the data fetch — auth is already verified above.
+  // This bypasses any RLS/session-cookie timing issue that could cause
+  // a false-negative and loop the user back to /onboarding.
+  const admin = createAdminClient();
+  const { data: diviner, error: divinerError } = await admin
     .from("diviners")
     .select("id, display_name, username, avatar_url, bio, tagline, onboarding_completed")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
+
+  if (divinerError) {
+    console.error("[dashboard/layout] diviner fetch error:", divinerError);
+  }
 
   if (!diviner) redirect("/onboarding");
   if (!diviner.onboarding_completed) redirect("/onboarding");

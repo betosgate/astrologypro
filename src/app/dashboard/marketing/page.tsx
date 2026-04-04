@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import {
   Card,
@@ -175,6 +176,7 @@ function TodaySharesBanner({ todayBatches }: { todayBatches: ShareBatch[] }) {
 
 export default async function MarketingPage() {
   const supabase = await createClient();
+  const admin = createAdminClient();
 
   const {
     data: { user },
@@ -182,11 +184,11 @@ export default async function MarketingPage() {
 
   if (!user) redirect("/login");
 
-  const { data: diviner } = await supabase
+  const { data: diviner } = await admin
     .from("diviners")
     .select("id, phone, share_notifications_enabled")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!diviner) redirect("/onboarding");
 
