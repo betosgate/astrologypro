@@ -100,3 +100,41 @@ Users with multiple roles are redirected to `/switch` on login to select their p
 - `community_members` rows use `membership_status = 'active'`
 - Diviners, advocates, and trainees have `onboarding_completed = true`
 - To re-seed (idempotent): `node scripts/seed-test-users.js`
+
+---
+
+## Legacy System — Old Angular App (divine-infinite-being-angular-ui)
+
+These accounts exist in **MongoDB `divine_infinity`** + **AWS Cognito dev pool** (`us-east-1_E7eKADUs4`).
+Use them to log into the old Angular backoffice at `http://localhost:4200`.
+
+**Username field = email address. Password for all: `TestAccess123!`**
+
+| Role | Email (username) | Password |
+|---|---|---|
+| Admin | `admindivine@yopmail.com` | `TestAccess123!` |
+| Diviner (Astrologer) | `arnab.atrotest@yopmail.com` | `TestAccess123!` |
+| Diviner (Tarot) | `ctestamelia@yopmail.com` | `TestAccess123!` |
+| Client (Customer) | `beto@betoparedes.com` | `TestAccess123!` |
+| Client + Social Advocate | `sankettest2@yopmail.com` | `TestAccess123!` |
+| Social Advocate | `socialadvo@yopmail.com` | `TestAccess123!` |
+| Perennial Mandalism | `test.data@yopmail.com` | `TestAccess123!` |
+
+**To reset passwords back to `TestAccess123!` at any time:**
+```bash
+export LEGACY_AWS_ACCESS_KEY=<key from KEYS.md>
+export LEGACY_AWS_SECRET_KEY=<secret from KEYS.md>
+node scripts/provision-legacy-test-users.js
+```
+
+**To review all legacy users (MongoDB read-only):**
+```bash
+export LEGACY_MONGO_URI=<uri from KEYS.md>
+node scripts/review-legacy-users.js           # summary + sample
+node scripts/review-legacy-users.js --csv > legacy-users.csv  # full export
+```
+
+**Infrastructure:**
+- MongoDB: `divine_infinity` (dev) / `divine_infinity_prod` (prod)
+- Cognito dev pool: `us-east-1_E7eKADUs4` · Client ID: `6r66m8j7pog0d14nd4m84adbhu`
+- NestJS API local: `http://localhost:3522`
