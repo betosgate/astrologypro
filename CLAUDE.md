@@ -200,3 +200,66 @@ These apply to every project, every feature, every PR. Non-negotiable.
 - Inspect slow DB paths with `EXPLAIN ANALYZE` before shipping any query touching large tables.
 - Use PostgreSQL `auto_explain` in production to log slow query plans automatically.
 - If you cannot explain why a query is slow, you are not ready to ship it.
+
+### 21 — CSRF and Secret Boundary
+- Protect every state-changing route against CSRF when using cookie/session auth.
+- Never use `GET` for mutations.
+- Secrets are server-only in Next.js. Only `NEXT_PUBLIC_` vars are exposed to the browser — they are inlined into the client bundle. No exceptions.
+
+### 22 — Object-Level and Field-Level Authorization
+- Hiding buttons in the UI is not security.
+- Every endpoint receiving an object ID must enforce object-level access.
+- Responses and mutations must also enforce property-level access — clients must not read or write fields they should not touch.
+
+### 23 — File Uploads Are a Dedicated Attack Surface
+- Allowlist file types — never blacklist.
+- Cap file size and count per request.
+- Scan or quarantine files before processing.
+- Store uploads safely — never treat them as "just another form field."
+
+### 24 — Rate Limiting and Retry-Safe Writes
+- Add per-user/IP/API-key rate limits to every public and authenticated endpoint.
+- Return `429` with `Retry-After` when limits are hit — never silently drop.
+- Design retry-prone writes safely: `PUT` and `DELETE` are idempotent by spec; use `Idempotency-Key` headers for retry-prone `POST`/`PATCH` flows (orders, payments, webhooks).
+
+### 25 — Contract-First API and Standard Errors
+- Keep every API described in OpenAPI. The spec is the source of truth, not the code.
+- Standardize error payloads with RFC 9457 Problem Details — never invent a new error shape per endpoint.
+- Return semantically correct status codes (`422` validation, `429` throttle, `404` not found, `403` forbidden).
+
+### 26 — Deterministic Sort and Pagination Rules
+- Every paginated query must have a deterministic `ORDER BY` ending with a unique tie-breaker (e.g. `id`).
+- `LIMIT/OFFSET` without constrained ordering gives unpredictable subsets — never ship it.
+- For deep or high-traffic lists, use cursor/keyset pagination — `OFFSET` skips rows and degrades at scale.
+
+### 27 — Real Search Strategy, Not Random Indexing
+- Design indexes based on actual UI behavior: multicolumn B-tree for filter+sort patterns, GIN + `tsvector`/`tsquery` for full-text, `pg_trgm` for fuzzy matching.
+- Indexes improve reads but add write/storage overhead — add them intentionally, not defensively.
+- Never throw generic indexes everywhere and call it done.
+
+### 28 — Explicit Cache Ownership and Invalidation
+- Every route/query must be intentionally classified: static, revalidated, dynamic, or uncached.
+- The team must know who owns cache invalidation for each data source.
+- Unclassified caching leads to stale data bugs and double-fetching — define it upfront.
+
+### 29 — Server-First App Router Data Flow
+- Read-heavy, SEO-sensitive, and above-the-fold data stays on the server by default.
+- Use Route Handlers for server-side API/BFF needs. Fetch in parallel where possible.
+- Use `loading.js` and Suspense streaming so the shell appears immediately — never block the whole page on one slow query.
+- Never make a page fully client-rendered by default — justify it explicitly.
+
+### 30 — TanStack Query Rules, Not TanStack Everywhere
+- Use it where it excels: client-side server state, mutations, optimistic UI, infinite lists, background refetching.
+- Always set `staleTime`, retry behavior, and `maxPages` deliberately — v5 treats cached data as stale by default.
+- Do not wrap simple first-load page data in client queries out of habit — prefer server fetching first.
+
+### 31 — Observability and Web Vitals as Release Gates
+- Instrument traces, metrics, and logs with OpenTelemetry on every user-facing flow.
+- LCP, INP, and CLS are hard release gates — not a feeling or a future concern.
+- Set SLOs for response time, success rate, and availability. Alert against them.
+
+### 32 — Formal Verification Checklist
+- Do not leave security and quality standards as "team wisdom" — encode them as PR checks and release gates.
+- Use OWASP ASVS as the security-control baseline.
+- Use OWASP WSTG as the testing guide for verifying controls.
+- Every release must pass a documented checklist, not just a thumbs-up.
