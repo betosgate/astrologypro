@@ -44,6 +44,7 @@ import {
   ChevronDown,
   ChevronRight,
   LayoutGrid,
+  Star,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -117,6 +118,7 @@ const NAV_GROUPS = [
       { label: "Broadcasting", href: "/admin/broadcasting", icon: Radio },
       { label: "Tarot", href: "/admin/tarot", icon: Shuffle },
       { label: "Rituals", href: "/admin/rituals", icon: Flame },
+      { label: "Horoscope Toolkit", href: "/admin/horoscope", icon: Star },
     ],
   },
 ];
