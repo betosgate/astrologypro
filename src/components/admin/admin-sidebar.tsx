@@ -1,0 +1,343 @@
+"use client";
+
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import {
+  LayoutDashboard,
+  Users,
+  Shield,
+  Share2,
+  FileText,
+  Video,
+  Monitor,
+  Sparkles,
+  Layers,
+  Leaf,
+  CircleDot,
+  CalendarDays,
+  Navigation,
+  BookOpen,
+  Film,
+  Grid2X2,
+  Eye,
+  Hexagon,
+  Sun,
+  Package,
+  CreditCard,
+  RefreshCcw,
+  ShoppingBag,
+  BarChart3,
+  Radio,
+  Shuffle,
+  Flame,
+  Settings2,
+  TrendingUp,
+  GraduationCap,
+  LogOut,
+  Menu,
+  ChevronDown,
+  ChevronRight,
+  LayoutGrid,
+} from "lucide-react";
+
+// ─── Nav structure ─────────────────────────────────────────────────────────────
+
+const NAV_GROUPS = [
+  {
+    label: "Overview",
+    items: [
+      { label: "Analytics", href: "/admin", icon: LayoutDashboard, exact: true },
+    ],
+  },
+  {
+    label: "People",
+    items: [
+      { label: "Users", href: "/admin/users", icon: Users },
+      { label: "Roles", href: "/admin/roles", icon: Shield },
+      { label: "Social Advocacy", href: "/admin/social-advocacy", icon: Share2 },
+    ],
+  },
+  {
+    label: "Content",
+    items: [
+      { label: "Blog", href: "/admin/blog", icon: FileText },
+      { label: "Videos", href: "/admin/videos", icon: Video },
+      { label: "Webinars", href: "/admin/webinars", icon: Monitor },
+      { label: "Spiritual Wisdom", href: "/admin/spiritual-wisdom", icon: Sparkles },
+      { label: "General Content", href: "/admin/general-content", icon: Layers },
+      { label: "Perennial Content", href: "/admin/perennial-content", icon: Leaf },
+    ],
+  },
+  {
+    label: "Astrology",
+    items: [
+      { label: "Wheel Signs", href: "/admin/wheel-signs", icon: CircleDot },
+      { label: "Calendar", href: "/admin/calendar", icon: CalendarDays },
+      { label: "Ingress Charts", href: "/admin/ingress-charts", icon: Navigation },
+      { label: "Decan Journals", href: "/admin/decan-journals", icon: BookOpen },
+      { label: "Decan Media", href: "/admin/decan-media", icon: Film },
+      { label: "Quarters", href: "/admin/quarters", icon: Grid2X2 },
+    ],
+  },
+  {
+    label: "Programs",
+    items: [
+      { label: "Mystery School", href: "/admin/mystery-school", icon: Eye },
+      { label: "Mandalism", href: "/admin/mandalism", icon: Hexagon },
+      { label: "Sunday Service", href: "/admin/sunday-service", icon: Sun },
+    ],
+  },
+  {
+    label: "Training",
+    items: [
+      { label: "Training", href: "/admin/training", icon: GraduationCap },
+      { label: "Training Analytics", href: "/admin/training/analytics", icon: TrendingUp },
+      { label: "Class Config", href: "/admin/class-config", icon: Settings2 },
+    ],
+  },
+  {
+    label: "Commerce",
+    items: [
+      { label: "Packages", href: "/admin/packages", icon: Package },
+      { label: "Payments", href: "/admin/payments", icon: CreditCard },
+      { label: "Refunds", href: "/admin/refunds", icon: RefreshCcw },
+      { label: "Orders", href: "/admin/orders", icon: ShoppingBag },
+      { label: "Reports", href: "/admin/reports", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Tools",
+    items: [
+      { label: "Broadcasting", href: "/admin/broadcasting", icon: Radio },
+      { label: "Tarot", href: "/admin/tarot", icon: Shuffle },
+      { label: "Rituals", href: "/admin/rituals", icon: Flame },
+    ],
+  },
+];
+
+// ─── Single nav item ────────────────────────────────────────────────────────────
+
+function NavItem({
+  item,
+  isActive,
+  onClick,
+}: {
+  item: { label: string; href: string; icon: React.ElementType };
+  isActive: boolean;
+  onClick?: () => void;
+}) {
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+        isActive
+          ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+      )}
+    >
+      <Icon
+        className={cn(
+          "size-4 shrink-0",
+          isActive ? "text-amber-500" : ""
+        )}
+      />
+      {item.label}
+    </Link>
+  );
+}
+
+// ─── Collapsible group ──────────────────────────────────────────────────────────
+
+function NavGroup({
+  group,
+  pathname,
+  onClick,
+}: {
+  group: (typeof NAV_GROUPS)[number];
+  pathname: string;
+  onClick?: () => void;
+}) {
+  const hasActive = group.items.some((item) =>
+    "exact" in item && item.exact
+      ? pathname === item.href
+      : pathname === item.href || pathname.startsWith(item.href + "/")
+  );
+
+  const [open, setOpen] = useState(hasActive || group.label === "Overview");
+
+  const isActive = (item: (typeof group.items)[number]) => {
+    if ("exact" in item && item.exact) return pathname === item.href;
+    return pathname === item.href || pathname.startsWith(item.href + "/");
+  };
+
+  // "Overview" group — no collapse header, always show
+  if (group.label === "Overview") {
+    return (
+      <div className="space-y-0.5">
+        {group.items.map((item) => (
+          <NavItem
+            key={item.href}
+            item={item}
+            isActive={isActive(item)}
+            onClick={onClick}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          "flex w-full items-center justify-between rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors",
+          hasActive
+            ? "text-amber-600 dark:text-amber-400"
+            : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        {group.label}
+        {open ? (
+          <ChevronDown className="size-3.5" />
+        ) : (
+          <ChevronRight className="size-3.5" />
+        )}
+      </button>
+      {open && (
+        <div className="mt-0.5 space-y-0.5 pl-1">
+          {group.items.map((item) => (
+            <NavItem
+              key={item.href}
+              item={item}
+              isActive={isActive(item)}
+              onClick={onClick}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Sidebar content (shared between desktop and mobile sheet) ──────────────────
+
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Logo */}
+      <div className="flex h-14 shrink-0 items-center border-b px-4 gap-2.5">
+        <Image
+          src="/images/home/png_logo_1.png"
+          alt="AstrologyPro"
+          width={32}
+          height={32}
+          className="rounded object-contain"
+          style={{ height: "auto" }}
+        />
+        <div className="flex flex-col leading-none">
+          <span className="text-sm font-bold tracking-tight">AstrologyPro</span>
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-amber-500">
+            Admin
+          </span>
+        </div>
+      </div>
+
+      {/* Nav groups */}
+      <nav className="flex-1 space-y-3 overflow-y-auto p-3">
+        {NAV_GROUPS.map((group) => (
+          <NavGroup
+            key={group.label}
+            group={group}
+            pathname={pathname}
+            onClick={onNavigate}
+          />
+        ))}
+      </nav>
+
+      {/* Footer */}
+      <div className="shrink-0 space-y-1 border-t p-3">
+        <Link
+          href="/dashboard"
+          onClick={onNavigate}
+          className="flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
+          <LayoutGrid className="size-4" />
+          Diviner Dashboard
+        </Link>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start text-muted-foreground hover:text-foreground px-3"
+          onClick={handleLogout}
+        >
+          <LogOut className="mr-2.5 size-4" />
+          Log out
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Exported sidebar ───────────────────────────────────────────────────────────
+
+export function AdminSidebar() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  return (
+    <>
+      {/* Mobile top bar */}
+      <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b bg-background px-4 lg:hidden">
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Menu className="size-5" />
+              <span className="sr-only">Open menu</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-64 p-0">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Admin navigation</SheetTitle>
+            </SheetHeader>
+            <SidebarContent onNavigate={() => setMobileOpen(false)} />
+          </SheetContent>
+        </Sheet>
+        <Image
+          src="/images/home/png_logo_1.png"
+          alt="AstrologyPro"
+          width={24}
+          height={24}
+          className="rounded object-contain"
+          style={{ height: "auto" }}
+        />
+        <span className="text-sm font-bold">AstrologyPro</span>
+        <span className="text-xs font-semibold uppercase tracking-widest text-amber-500">
+          Admin
+        </span>
+      </header>
+
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-60 lg:flex-col border-r bg-background">
+        <SidebarContent />
+      </aside>
+    </>
+  );
+}

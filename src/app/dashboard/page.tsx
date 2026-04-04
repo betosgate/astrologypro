@@ -62,7 +62,7 @@ export default async function DashboardPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!diviner) redirect("/onboarding");
+  if (!diviner) redirect("/admin");
 
   // Current month range
   const thisMonth = getMonthRange(0);

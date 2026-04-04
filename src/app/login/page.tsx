@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
@@ -20,46 +19,28 @@ import {
 } from "@/components/ui/card";
 import { Loader2, Sparkles, Mail } from "lucide-react";
 import { APP_URL } from "@/lib/constants";
-import { getRoleDestination } from "@/types/user";
 
 const PORTAL_BASES = ["/dashboard", "/portal", "/community", "/trainee", "/advocate", "/admin"];
 
 /**
  * Resolve where to send the user after a successful password login.
- *
- * Priority:
- * 1. localStorage last-used portal → return to it (remembers last dashboard).
- * 2. No last route + user is admin → /admin takes precedence.
- * 3. Fallback → role metadata destination.
+ * Delegates entirely to the server — reads DB last_portal_url, admin flag,
+ * onboarding state, and role. Immune to stale client JS bundles.
  */
-async function resolveDestination(role: string | undefined): Promise<string> {
-  // 1. Last-used portal
+async function resolveDestination(): Promise<string> {
   try {
-    const last = localStorage.getItem("ap_last_route");
-    if (last && PORTAL_BASES.some((base) => last === base || last.startsWith(base + "/"))) {
-      return last;
-    }
-  } catch {
-    // localStorage unavailable (private browsing)
-  }
-
-  // 2. Check admin status server-side (fast env-var lookup)
-  try {
-    const res = await fetch("/api/auth/is-admin");
+    const res = await fetch("/api/auth/post-login-redirect");
     if (res.ok) {
-      const { isAdmin } = await res.json();
-      if (isAdmin) return "/admin";
+      const { destination } = await res.json();
+      if (destination) return destination;
     }
   } catch {
-    // ignore — fall through to role-based
+    // ignore — fall through to safe default
   }
-
-  // 3. Role-based fallback
-  return getRoleDestination(role);
+  return "/dashboard";
 }
 
 export default function LoginPage() {
-  const router = useRouter();
   const supabase = createClient();
 
   const [email, setEmail] = useState("");
@@ -90,10 +71,22 @@ export default function LoginPage() {
         return;
       }
 
-      const role = data.user?.user_metadata?.role as string | undefined;
+      // If middleware redirected here from a protected route (e.g. session expired
+      // while on /dashboard), honour that redirect param so the user lands back
+      // where they were. Validate it against known portal bases to prevent open redirect.
+      const params = new URLSearchParams(window.location.search);
+      const redirectParam = params.get("redirect") ?? "";
+      const isTrustedRedirect =
+        redirectParam &&
+        PORTAL_BASES.some(
+          (base) => redirectParam === base || redirectParam.startsWith(base + "/")
+        );
+
       // Hard navigation — bypasses Next.js router cache which can serve
       // a stale server-component redirect from before the session was set.
-      window.location.href = await resolveDestination(role);
+      window.location.href = isTrustedRedirect
+        ? redirectParam
+        : await resolveDestination();
     } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {

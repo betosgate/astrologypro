@@ -22,7 +22,7 @@ export default async function CalendarPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!diviner) redirect("/onboarding");
+  if (!diviner) redirect("/admin");
 
   // Fetch all relevant data in parallel
   const [slotsResult, overridesResult, bookingsResult] = await Promise.all([

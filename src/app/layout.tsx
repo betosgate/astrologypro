@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Cormorant_Garamond } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -106,6 +107,19 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} dark`}
     >
       <body className="cosmic-bg noise-overlay min-h-screen bg-background font-sans text-foreground antialiased">
+        {/* Global page-transition progress bar — amber to match brand */}
+        <NextTopLoader
+          color="#f59e0b"
+          initialPosition={0.12}
+          crawlSpeed={180}
+          height={3}
+          crawl
+          showSpinner={false}
+          easing="ease"
+          speed={300}
+          shadow="0 0 10px #f59e0b, 0 0 5px #d97706"
+          zIndex={9999}
+        />
         <TooltipProvider>
           {children}
         </TooltipProvider>

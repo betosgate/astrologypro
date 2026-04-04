@@ -63,7 +63,7 @@ export default async function TestimonialsPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!diviner) redirect("/onboarding");
+  if (!diviner) redirect("/admin");
 
   const { data: testimonials } = await supabase
     .from("testimonials")

@@ -4,15 +4,20 @@ import { createClient } from "@/lib/supabase/server";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
 
+async function getAdminEmail(): Promise<string | null> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email || !ADMIN_EMAILS.includes(user.email)) return null;
+  return user.email;
+}
+
+/** DELETE /api/admin/users/[userId]/notes/[noteId] — any admin can delete */
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ userId: string; noteId: string }> }
 ) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email || !ADMIN_EMAILS.includes(user.email)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const adminEmail = await getAdminEmail();
+  if (!adminEmail) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { userId, noteId } = await params;
   const admin = createAdminClient();
@@ -25,4 +30,42 @@ export async function DELETE(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
+}
+
+/** PATCH /api/admin/users/[userId]/notes/[noteId] — only the creator can edit */
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ userId: string; noteId: string }> }
+) {
+  const adminEmail = await getAdminEmail();
+  if (!adminEmail) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const { userId, noteId } = await params;
+  const { note } = await req.json();
+  if (!note?.trim()) return NextResponse.json({ error: "Note text is required" }, { status: 400 });
+
+  const admin = createAdminClient();
+
+  // Verify the note belongs to this user AND was created by this admin
+  const { data: existing } = await admin
+    .from("admin_user_notes")
+    .select("id, created_by")
+    .eq("id", noteId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!existing) return NextResponse.json({ error: "Note not found" }, { status: 404 });
+  if (existing.created_by !== adminEmail) {
+    return NextResponse.json({ error: "You can only edit your own notes" }, { status: 403 });
+  }
+
+  const { data, error } = await admin
+    .from("admin_user_notes")
+    .update({ note: note.trim() })
+    .eq("id", noteId)
+    .select("id, note, role, created_by, created_at")
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ note: data });
 }

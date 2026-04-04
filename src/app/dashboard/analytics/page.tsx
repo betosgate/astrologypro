@@ -29,7 +29,7 @@ export default async function AnalyticsPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!diviner) redirect("/onboarding");
+  if (!diviner) redirect("/admin");
 
   const now = new Date();
   const todayStart = new Date(

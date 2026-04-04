@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { welcomeDivinerEmail } from "@/lib/email-templates";
 
@@ -27,12 +28,17 @@ export async function POST() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Use the admin client for all DB work here — the user is authenticated
+    // (verified above) but RLS may block UPDATE on diviners if the policy is
+    // not set up for service-role writes. Admin client bypasses RLS entirely.
+    const admin = createAdminClient();
+
     // Fetch the diviner record
-    const { data: diviner } = await supabase
+    const { data: diviner } = await admin
       .from("diviners")
       .select("id, display_name, onboarding_completed")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     const isFirstTime = !diviner?.onboarding_completed;
 
@@ -45,7 +51,7 @@ export async function POST() {
       const displayName =
         (user.user_metadata?.name as string | undefined) ?? username;
 
-      const { error: upsertError } = await supabase.from("diviners").upsert(
+      const { error: upsertError } = await admin.from("diviners").upsert(
         {
           user_id: user.id,
           username,
@@ -64,8 +70,8 @@ export async function POST() {
       return NextResponse.json({ success: true });
     }
 
-    // Mark onboarding complete
-    const { error: updateError } = await supabase
+    // Mark onboarding complete (admin client — bypasses RLS)
+    const { error: updateError } = await admin
       .from("diviners")
       .update({ onboarding_completed: true })
       .eq("id", diviner.id);

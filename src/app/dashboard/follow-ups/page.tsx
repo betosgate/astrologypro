@@ -61,7 +61,7 @@ export default async function FollowUpsPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!diviner) redirect("/onboarding");
+  if (!diviner) redirect("/admin");
 
   const { data: sequences } = await supabase
     .from("follow_up_sequences")

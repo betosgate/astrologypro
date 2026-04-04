@@ -70,8 +70,9 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/login";
+    // Build a clean login URL — do NOT clone request.nextUrl because that
+    // carries the original query params (e.g. ?step=5) into the login URL.
+    const loginUrl = new URL("/login", request.nextUrl.origin);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }

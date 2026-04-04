@@ -190,7 +190,7 @@ export default async function MarketingPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!diviner) redirect("/onboarding");
+  if (!diviner) redirect("/admin");
 
   // Fetch last 10 share batches for this diviner (own batches only, not affiliates)
   const { data: rawBatches } = await supabase

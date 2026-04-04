@@ -521,7 +521,7 @@ export default function OnboardingPage() {
         .from("diviners")
         .select("id, onboarding_step, display_name, bio, tagline, avatar_url, cover_image_url, stripe_account_id, timezone, specialties, phone, youtube_channel_id, facebook_live_url")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (diviner) {
         setDivinerId(diviner.id);
@@ -1736,7 +1736,9 @@ export default function OnboardingPage() {
                       } finally {
                         setLoading(false);
                       }
-                      router.push("/dashboard");
+                      // Hard navigation — bypasses Next.js router cache so the
+                      // dashboard layout sees the freshly updated onboarding_completed flag.
+                      window.location.href = "/dashboard";
                     }}
                     disabled={loading}
                     size="lg"

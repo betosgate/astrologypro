@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   Card,
@@ -15,7 +16,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Users, BookOpen, DollarSign, Eye, TrendingUp, GraduationCap, Star, School } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Users,
+  BookOpen,
+  DollarSign,
+  Eye,
+  TrendingUp,
+  GraduationCap,
+  Star,
+  School,
+  Megaphone,
+  UserCheck,
+  ArrowRight,
+} from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 
 export const metadata = { title: "Admin — AstrologyPro" };
@@ -32,6 +46,7 @@ export default async function AdminPage() {
   const [
     divinerCount,
     activeDivinerCount,
+    divinersNew30d,
     totalBookings,
     completedBookings,
     revenueResult,
@@ -43,6 +58,17 @@ export default async function AdminPage() {
     mysteryStudentsResult,
     traineesResult,
     traineeGraduatedResult,
+    // Role KPI extras
+    clientsTotal,
+    clientsNew30d,
+    advocatesTotal,
+    advocatesActive,
+    advocatesNew30d,
+    communityNew30d,
+    mysteryNew30d,
+    traineesTotal,
+    traineesActiveCount,
+    traineesNew30d,
   ] = await Promise.all([
     // Total diviners
     admin
@@ -54,6 +80,12 @@ export default async function AdminPage() {
       .from("diviners")
       .select("id", { count: "exact", head: true })
       .eq("subscription_status", "active"),
+
+    // Diviners joined last 30 days
+    admin
+      .from("diviners")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", thirtyDaysAgoISO),
 
     // Total bookings all-time
     admin
@@ -110,7 +142,7 @@ export default async function AdminPage() {
       .from("mystery_school_students")
       .select("training_status"),
 
-    // Active trainees
+    // Active trainees (decans)
     admin
       .from("mystery_school_students")
       .select("id", { count: "exact", head: true })
@@ -121,6 +153,18 @@ export default async function AdminPage() {
       .from("mystery_school_students")
       .select("id", { count: "exact", head: true })
       .eq("training_status", "graduated"),
+
+    // ── Role KPI extras ────────────────────────────────────────────────────
+    admin.from("clients").select("id", { count: "exact", head: true }),
+    admin.from("clients").select("id", { count: "exact", head: true }).gte("created_at", thirtyDaysAgoISO),
+    admin.from("social_advocates").select("id", { count: "exact", head: true }),
+    admin.from("social_advocates").select("id", { count: "exact", head: true }).eq("is_active", true),
+    admin.from("social_advocates").select("id", { count: "exact", head: true }).gte("created_at", thirtyDaysAgoISO),
+    admin.from("community_members").select("id", { count: "exact", head: true }).eq("membership_type", "perennial_mandalism").gte("joined_at", thirtyDaysAgoISO),
+    admin.from("community_members").select("id", { count: "exact", head: true }).eq("membership_type", "mystery_school").gte("joined_at", thirtyDaysAgoISO),
+    admin.from("trainees").select("id", { count: "exact", head: true }),
+    admin.from("trainees").select("id", { count: "exact", head: true }).eq("training_status", "active"),
+    admin.from("trainees").select("id", { count: "exact", head: true }).gte("created_at", thirtyDaysAgoISO),
   ]);
 
   const totalDiviners = divinerCount.count ?? 0;
@@ -196,6 +240,70 @@ export default async function AdminPage() {
       };
     });
   }
+
+  // ── Role KPI data ─────────────────────────────────────────────────────────
+  const roleKpis = [
+    {
+      key:          "diviner",
+      label:        "Diviners",
+      icon:         <Star className="size-4" />,
+      color:        "text-amber-500",
+      total:        divinerCount.count ?? 0,
+      active:       activeDivinerCount.count ?? 0,
+      newThisMonth: divinersNew30d.count ?? 0,
+      href:         "/admin/users?role=diviner",
+    },
+    {
+      key:          "client",
+      label:        "Clients",
+      icon:         <Users className="size-4" />,
+      color:        "text-blue-500",
+      total:        clientsTotal.count ?? 0,
+      active:       clientsTotal.count ?? 0,
+      newThisMonth: clientsNew30d.count ?? 0,
+      href:         "/admin/users?role=client",
+    },
+    {
+      key:          "advocate",
+      label:        "Advocates",
+      icon:         <Megaphone className="size-4" />,
+      color:        "text-purple-500",
+      total:        advocatesTotal.count ?? 0,
+      active:       advocatesActive.count ?? 0,
+      newThisMonth: advocatesNew30d.count ?? 0,
+      href:         "/admin/users?role=advocate",
+    },
+    {
+      key:          "perennial",
+      label:        "Perennial",
+      icon:         <BookOpen className="size-4" />,
+      color:        "text-emerald-500",
+      total:        communityRows.filter((m) => m.membership_type === "perennial_mandalism").length,
+      active:       perennialMembers,
+      newThisMonth: communityNew30d.count ?? 0,
+      href:         "/admin/users?role=community",
+    },
+    {
+      key:          "mystery",
+      label:        "Mystery School",
+      icon:         <UserCheck className="size-4" />,
+      color:        "text-violet-500",
+      total:        communityRows.filter((m) => m.membership_type === "mystery_school").length,
+      active:       mysteryMembersTotal,
+      newThisMonth: mysteryNew30d.count ?? 0,
+      href:         "/admin/users?role=community",
+    },
+    {
+      key:          "trainee",
+      label:        "Trainees",
+      icon:         <GraduationCap className="size-4" />,
+      color:        "text-rose-500",
+      total:        traineesTotal.count ?? 0,
+      active:       traineesActiveCount.count ?? 0,
+      newThisMonth: traineesNew30d.count ?? 0,
+      href:         "/admin/users?role=trainee",
+    },
+  ];
 
   const planLabel: Record<string, string> = {
     tarot: "Tarot",
@@ -290,6 +398,49 @@ export default async function AdminPage() {
             <p className="text-xs text-muted-foreground">bookings completed</p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Users by Role */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold">Users by Role</h2>
+          <Button variant="ghost" size="sm" asChild className="text-xs text-muted-foreground gap-1">
+            <Link href="/admin/roles">
+              Full breakdown <ArrowRight className="size-3.5" />
+            </Link>
+          </Button>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {roleKpis.map((r) => (
+            <Link key={r.key} href={r.href} className="group">
+              <Card className="transition-colors hover:border-border/80 hover:bg-muted/30">
+                <CardContent className="pt-4 pb-3 px-4 space-y-2">
+                  {/* Icon + label */}
+                  <div className="flex items-center gap-1.5">
+                    <span className={r.color}>{r.icon}</span>
+                    <span className="text-xs font-medium text-muted-foreground">{r.label}</span>
+                  </div>
+                  {/* Total */}
+                  <p className="text-2xl font-bold leading-none">{r.total.toLocaleString()}</p>
+                  {/* Active + new */}
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span className="text-emerald-500 font-medium">{r.active.toLocaleString()} active</span>
+                    <span className="text-amber-500 font-medium">+{r.newThisMonth} / 30d</span>
+                  </div>
+                  {/* Active bar */}
+                  {r.total > 0 && (
+                    <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-emerald-500"
+                        style={{ width: `${Math.round((r.active / r.total) * 100)}%` }}
+                      />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* Community & Mystery School */}

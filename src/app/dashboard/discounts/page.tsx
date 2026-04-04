@@ -40,7 +40,7 @@ export default async function DiscountsPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!diviner) redirect("/onboarding");
+  if (!diviner) redirect("/admin");
 
   const { data: rules } = await supabase
     .from("discount_rules")

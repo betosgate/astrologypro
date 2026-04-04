@@ -46,7 +46,7 @@ export default async function ClientsPage({
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!diviner) redirect("/onboarding");
+  if (!diviner) redirect("/admin");
 
   // Fetch client relationships with aggregated booking data
   const { data: clientRelations } = await supabase

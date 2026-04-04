@@ -57,7 +57,7 @@ export default async function GiftCertificatesPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!diviner) redirect("/onboarding");
+  if (!diviner) redirect("/admin");
 
   const { data: certs } = await supabase
     .from("gift_certificates")

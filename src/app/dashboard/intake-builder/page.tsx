@@ -28,7 +28,7 @@ export default async function IntakeBuilderPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!diviner) redirect("/onboarding");
+  if (!diviner) redirect("/admin");
 
   // Fetch all services for this diviner
   const { data: services } = await supabase

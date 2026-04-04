@@ -1,341 +1,317 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import Link from "next/link";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Star,
+  Users,
+  UserCheck,
+  Megaphone,
+  BookOpen,
+  GraduationCap,
+  ArrowRight,
+  TrendingUp,
+} from "lucide-react";
 
-type Role = {
-  id: string;
-  role_name: string;
-  slug: string;
+export const metadata = { title: "Roles — Admin" };
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface RoleStats {
+  key: string;
+  label: string;
   description: string;
-  priority: number;
-  status: "active" | "inactive";
-  created_at: string;
-  updated_at: string;
-};
-
-type FormState = {
-  role_name: string;
-  slug: string;
-  description: string;
-  priority: number;
-  status: "active" | "inactive";
-};
-
-const EMPTY_FORM: FormState = { role_name: "", slug: "", description: "", priority: 0, status: "active" };
-
-function toSlug(name: string) {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+  icon: React.ReactNode;
+  color: string;
+  total: number;
+  active: number;
+  inactive: number;
+  newThisMonth: number;
+  usersHref: string;
 }
 
-export default function AdminRolesPage() {
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [count, setCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [previewRole, setPreviewRole] = useState<Role | null>(null);
-  const [form, setForm] = useState<FormState>({ ...EMPTY_FORM });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+// ─── Data fetch ───────────────────────────────────────────────────────────────
 
-  // Filters
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [createdFrom, setCreatedFrom] = useState("");
-  const [createdTo, setCreatedTo] = useState("");
-  const [updatedFrom, setUpdatedFrom] = useState("");
-  const [updatedTo, setUpdatedTo] = useState("");
+async function getRoleStats(): Promise<RoleStats[]> {
+  const admin = createAdminClient();
 
-  async function load(overrides?: { search?: string; statusFilter?: string; createdFrom?: string; createdTo?: string; updatedFrom?: string; updatedTo?: string }) {
-    setLoading(true);
-    const s = overrides?.search ?? search;
-    const sf = overrides?.statusFilter ?? statusFilter;
-    const cf = overrides?.createdFrom ?? createdFrom;
-    const ct = overrides?.createdTo ?? createdTo;
-    const uf = overrides?.updatedFrom ?? updatedFrom;
-    const ut = overrides?.updatedTo ?? updatedTo;
-    const params = new URLSearchParams();
-    if (s) params.set("search", s);
-    if (sf) params.set("status", sf);
-    if (cf) params.set("created_from", cf);
-    if (ct) params.set("created_to", ct);
-    if (uf) params.set("updated_from", uf);
-    if (ut) params.set("updated_to", ut);
-    const res = await fetch(`/api/admin/roles?${params}`);
-    if (res.ok) {
-      const json = await res.json();
-      setRoles(json.data ?? []);
-      setCount(json.count ?? 0);
-    }
-    setLoading(false);
-  }
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const cutoff = thirtyDaysAgo.toISOString();
 
-  useEffect(() => { load(); }, []);
+  const [
+    divinersRes,
+    divinersActiveRes,
+    divinersNewRes,
+    clientsRes,
+    clientsNewRes,
+    advocatesRes,
+    advocatesActiveRes,
+    advocatesNewRes,
+    perennialRes,
+    perennialActiveRes,
+    perennialNewRes,
+    mysteryRes,
+    mysteryActiveRes,
+    mysteryNewRes,
+    traineesRes,
+    traineesActiveRes,
+    traineesNewRes,
+  ] = await Promise.all([
+    // Diviners — total
+    admin.from("diviners").select("id", { count: "exact", head: true }),
+    // Diviners — active
+    admin.from("diviners").select("id", { count: "exact", head: true }).eq("is_active", true),
+    // Diviners — new last 30 days
+    admin.from("diviners").select("id", { count: "exact", head: true }).gte("created_at", cutoff),
 
-  function handleRoleNameChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const role_name = e.target.value;
-    setForm((f) => ({ ...f, role_name, slug: editId ? f.slug : toSlug(role_name) }));
-  }
+    // Clients — total
+    admin.from("clients").select("id", { count: "exact", head: true }),
+    // Clients — new last 30 days
+    admin.from("clients").select("id", { count: "exact", head: true }).gte("created_at", cutoff),
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
-    const url = editId ? `/api/admin/roles/${editId}` : "/api/admin/roles";
-    const res = await fetch(url, {
-      method: editId ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    if (!res.ok) {
-      const d = await res.json();
-      setError(d.error ?? "Failed");
-    } else {
-      await load();
-      setShowForm(false);
-      setEditId(null);
-      setForm({ ...EMPTY_FORM });
-    }
-    setSaving(false);
-  }
+    // Social Advocates — total
+    admin.from("social_advocates").select("id", { count: "exact", head: true }),
+    // Social Advocates — active
+    admin.from("social_advocates").select("id", { count: "exact", head: true }).eq("is_active", true),
+    // Social Advocates — new last 30 days
+    admin.from("social_advocates").select("id", { count: "exact", head: true }).gte("created_at", cutoff),
 
-  async function openEdit(id: string) {
-    const res = await fetch(`/api/admin/roles/${id}`);
-    if (!res.ok) return;
-    const role = await res.json();
-    setEditId(id);
-    setForm({ role_name: role.role_name, slug: role.slug, description: role.description, priority: role.priority, status: role.status });
-    setShowForm(true);
-  }
+    // Community Perennial — total
+    admin.from("community_members").select("id", { count: "exact", head: true }).eq("membership_type", "perennial_mandalism"),
+    // Community Perennial — active
+    admin.from("community_members").select("id", { count: "exact", head: true }).eq("membership_type", "perennial_mandalism").eq("membership_status", "active"),
+    // Community Perennial — new last 30 days
+    admin.from("community_members").select("id", { count: "exact", head: true }).eq("membership_type", "perennial_mandalism").gte("joined_at", cutoff),
 
-  async function toggleStatus(role: Role) {
-    await fetch(`/api/admin/roles/${role.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: role.status === "active" ? "inactive" : "active" }),
-    });
-    setRoles((prev) => prev.map((r) => r.id === role.id ? { ...r, status: r.status === "active" ? "inactive" : "active" } : r));
-  }
+    // Community Mystery — total
+    admin.from("community_members").select("id", { count: "exact", head: true }).eq("membership_type", "mystery_school"),
+    // Community Mystery — active
+    admin.from("community_members").select("id", { count: "exact", head: true }).eq("membership_type", "mystery_school").eq("membership_status", "active"),
+    // Community Mystery — new last 30 days
+    admin.from("community_members").select("id", { count: "exact", head: true }).eq("membership_type", "mystery_school").gte("joined_at", cutoff),
 
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this role?")) return;
-    await fetch(`/api/admin/roles/${id}`, { method: "DELETE" });
-    setRoles((prev) => prev.filter((r) => r.id !== id));
-    setCount((c) => c - 1);
-    setSelected((s) => { const n = new Set(s); n.delete(id); return n; });
-  }
+    // Trainees — total
+    admin.from("trainees").select("id", { count: "exact", head: true }),
+    // Trainees — active
+    admin.from("trainees").select("id", { count: "exact", head: true }).eq("training_status", "active"),
+    // Trainees — new last 30 days
+    admin.from("trainees").select("id", { count: "exact", head: true }).gte("created_at", cutoff),
+  ]);
 
-  async function bulkDelete() {
-    if (!confirm(`Delete ${selected.size} selected role(s)?`)) return;
-    await Promise.all([...selected].map((id) => fetch(`/api/admin/roles/${id}`, { method: "DELETE" })));
-    setSelected(new Set());
-    await load();
-  }
+  const divinersTotal   = divinersRes.count ?? 0;
+  const divinersActive  = divinersActiveRes.count ?? 0;
+  const clientsTotal    = clientsRes.count ?? 0;
+  const advocatesTotal  = advocatesRes.count ?? 0;
+  const advocatesActive = advocatesActiveRes.count ?? 0;
+  const perennialTotal  = perennialRes.count ?? 0;
+  const perennialActive = perennialActiveRes.count ?? 0;
+  const mysteryTotal    = mysteryRes.count ?? 0;
+  const mysteryActive   = mysteryActiveRes.count ?? 0;
+  const traineesTotal   = traineesRes.count ?? 0;
+  const traineesActive  = traineesActiveRes.count ?? 0;
 
-  async function bulkStatus(status: "active" | "inactive") {
-    await Promise.all([...selected].map((id) =>
-      fetch(`/api/admin/roles/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) })
-    ));
-    setSelected(new Set());
-    await load();
-  }
+  return [
+    {
+      key: "diviner",
+      label: "Diviners",
+      description: "Certified and active astrologers & tarot readers offering readings on the platform.",
+      icon: <Star className="size-5" />,
+      color: "text-amber-500",
+      total:        divinersTotal,
+      active:       divinersActive,
+      inactive:     divinersTotal - divinersActive,
+      newThisMonth: divinersNewRes.count ?? 0,
+      usersHref:    "/admin/users?role=diviner",
+    },
+    {
+      key: "client",
+      label: "Clients",
+      description: "Registered users who book and attend reading sessions.",
+      icon: <Users className="size-5" />,
+      color: "text-blue-500",
+      total:        clientsTotal,
+      active:       clientsTotal, // clients have no is_active flag
+      inactive:     0,
+      newThisMonth: clientsNewRes.count ?? 0,
+      usersHref:    "/admin/users?role=client",
+    },
+    {
+      key: "advocate",
+      label: "Social Advocates",
+      description: "Referral partners who promote the platform and earn from referred signups.",
+      icon: <Megaphone className="size-5" />,
+      color: "text-purple-500",
+      total:        advocatesTotal,
+      active:       advocatesActive,
+      inactive:     advocatesTotal - advocatesActive,
+      newThisMonth: advocatesNewRes.count ?? 0,
+      usersHref:    "/admin/users?role=advocate",
+    },
+    {
+      key: "perennial",
+      label: "Perennial Mandalism",
+      description: "Community members enrolled in the Perennial Mandalism subscription program.",
+      icon: <BookOpen className="size-5" />,
+      color: "text-emerald-500",
+      total:        perennialTotal,
+      active:       perennialActive,
+      inactive:     perennialTotal - perennialActive,
+      newThisMonth: perennialNewRes.count ?? 0,
+      usersHref:    "/admin/users?role=community",
+    },
+    {
+      key: "mystery",
+      label: "Mystery School",
+      description: "Community members enrolled in the Mystery School subscription program.",
+      icon: <UserCheck className="size-5" />,
+      color: "text-violet-500",
+      total:        mysteryTotal,
+      active:       mysteryActive,
+      inactive:     mysteryTotal - mysteryActive,
+      newThisMonth: mysteryNewRes.count ?? 0,
+      usersHref:    "/admin/users?role=community",
+    },
+    {
+      key: "trainee",
+      label: "Trainees",
+      description: "Users enrolled in divination training courses and apprenticeships.",
+      icon: <GraduationCap className="size-5" />,
+      color: "text-rose-500",
+      total:        traineesTotal,
+      active:       traineesActive,
+      inactive:     traineesTotal - traineesActive,
+      newThisMonth: traineesNewRes.count ?? 0,
+      usersHref:    "/admin/users?role=trainee",
+    },
+  ];
+}
 
-  function toggleSelect(id: string) {
-    setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  }
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
-  function toggleSelectAll() {
-    if (selected.size === roles.length) setSelected(new Set());
-    else setSelected(new Set(roles.map((r) => r.id)));
-  }
+export default async function AdminRolesPage() {
+  const roles = await getRoleStats();
 
-  function resetFilters() {
-    setSearch(""); setStatusFilter(""); setCreatedFrom(""); setCreatedTo(""); setUpdatedFrom(""); setUpdatedTo("");
-  }
-
-  const fmt = (d: string) => d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
+  const totalUsers     = roles.reduce((s, r) => s + r.total, 0);
+  const totalNewMonth  = roles.reduce((s, r) => s + r.newThisMonth, 0);
+  const totalActive    = roles.reduce((s, r) => s + r.active, 0);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Role Management</h1>
-          <p className="text-muted-foreground">{count} total · {roles.filter((r) => r.status === "active").length} active</p>
+          <h1 className="text-2xl font-bold tracking-tight">Roles Overview</h1>
+          <p className="text-sm text-muted-foreground">
+            All system roles and their current user counts.
+          </p>
         </div>
-        <Button size="sm" onClick={() => { setEditId(null); setForm({ ...EMPTY_FORM }); setShowForm(true); }}>
-          <Plus className="mr-1.5 size-4" /> New Role
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/admin/users">
+            <Users className="mr-1.5 size-4" />
+            View All Users
+          </Link>
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1">
-              <Label className="text-xs">Search role name</Label>
-              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Role name..." />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Status</Label>
-              <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="">All</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Created from</Label>
-              <Input type="date" value={createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Created to</Label>
-              <Input type="date" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Updated from</Label>
-              <Input type="date" value={updatedFrom} onChange={(e) => setUpdatedFrom(e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Updated to</Label>
-              <Input type="date" value={updatedTo} onChange={(e) => setUpdatedTo(e.target.value)} />
-            </div>
-          </div>
-          <div className="mt-3 flex gap-2">
-            <Button size="sm" onClick={() => load()}>Search</Button>
-            <Button size="sm" variant="outline" onClick={() => { resetFilters(); load({ search: "", statusFilter: "", createdFrom: "", createdTo: "", updatedFrom: "", updatedTo: "" }); }}>Reset</Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Bulk actions */}
-      {selected.size > 0 && (
-        <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-4 py-2 text-sm">
-          <span className="font-medium">{selected.size} selected</span>
-          <Button size="sm" variant="outline" onClick={() => bulkStatus("active")}>Set Active</Button>
-          <Button size="sm" variant="outline" onClick={() => bulkStatus("inactive")}>Set Inactive</Button>
-          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={bulkDelete}>Delete Selected</Button>
-          <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
-        </div>
-      )}
-
-      {/* Form */}
-      {showForm && (
+      {/* Summary strip */}
+      <div className="grid grid-cols-3 gap-4">
         <Card>
-          <CardHeader><CardTitle className="text-base">{editId ? "Edit Role" : "New Role"}</CardTitle></CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>Role Name *</Label>
-                  <Input value={form.role_name} onChange={handleRoleNameChange} required />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Slug *</Label>
-                  <Input value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} required placeholder="role_slug" />
-                </div>
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label>Description *</Label>
-                  <Textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} required rows={3} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Priority</Label>
-                  <Input type="number" value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: Number(e.target.value) }))} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Status</Label>
-                  <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as "active" | "inactive" }))}>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-              </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
-              <div className="flex gap-2">
-                <Button type="submit" size="sm" disabled={saving}>{saving ? "Saving…" : editId ? "Update" : "Create"}</Button>
-                <Button type="button" variant="ghost" size="sm" onClick={() => { setShowForm(false); setEditId(null); }}>Cancel</Button>
-              </div>
-            </form>
+          <CardContent className="pt-4 pb-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Users</p>
+            <p className="text-3xl font-bold mt-1">{totalUsers.toLocaleString()}</p>
           </CardContent>
         </Card>
-      )}
+        <Card>
+          <CardContent className="pt-4 pb-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Active</p>
+            <p className="text-3xl font-bold mt-1">{totalActive.toLocaleString()}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="size-3.5 text-emerald-500" />
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">New (30d)</p>
+            </div>
+            <p className="text-3xl font-bold mt-1">{totalNewMonth.toLocaleString()}</p>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Preview modal */}
-      {previewRole && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setPreviewRole(null)}>
-          <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <CardHeader><CardTitle>Role Preview</CardTitle></CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div><span className="font-medium">Name:</span> {previewRole.role_name}</div>
-              <div><span className="font-medium">Slug:</span> <code className="text-xs bg-muted px-1 rounded">{previewRole.slug}</code></div>
-              <div><span className="font-medium">Description:</span> {previewRole.description}</div>
-              <div><span className="font-medium">Priority:</span> {previewRole.priority}</div>
-              <div><span className="font-medium">Status:</span> <Badge variant={previewRole.status === "active" ? "default" : "outline"}>{previewRole.status}</Badge></div>
-              <div><span className="font-medium">Created:</span> {fmt(previewRole.created_at)}</div>
-              <div><span className="font-medium">Updated:</span> {fmt(previewRole.updated_at)}</div>
-              <Button size="sm" className="mt-2" onClick={() => setPreviewRole(null)}>Close</Button>
+      {/* Role cards */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {roles.map((role) => (
+          <Card key={role.key} className="flex flex-col">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <span className={role.color}>{role.icon}</span>
+                {role.label}
+                <Badge variant="secondary" className="ml-auto text-xs">
+                  {role.total.toLocaleString()}
+                </Badge>
+              </CardTitle>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {role.description}
+              </p>
+            </CardHeader>
+
+            <CardContent className="flex-1 space-y-3">
+              {/* Stat row */}
+              <div className="grid grid-cols-3 gap-2 rounded-lg bg-muted/40 p-3">
+                <div className="text-center">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total</p>
+                  <p className="text-lg font-bold">{role.total.toLocaleString()}</p>
+                </div>
+                <div className="text-center border-x border-border/50">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Active</p>
+                  <p className="text-lg font-bold text-emerald-500">{role.active.toLocaleString()}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">New 30d</p>
+                  <p className="text-lg font-bold text-amber-500">{role.newThisMonth.toLocaleString()}</p>
+                </div>
+              </div>
+
+              {/* Active bar */}
+              {role.total > 0 && (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Active rate</span>
+                    <span>{Math.round((role.active / role.total) * 100)}%</span>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-emerald-500 transition-all"
+                      style={{ width: `${Math.round((role.active / role.total) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {role.inactive > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {role.inactive.toLocaleString()} inactive
+                </p>
+              )}
+
+              {/* CTA */}
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="w-full justify-between mt-auto text-xs"
+              >
+                <Link href={role.usersHref}>
+                  View {role.label}
+                  <ArrowRight className="size-3.5" />
+                </Link>
+              </Button>
             </CardContent>
           </Card>
-        </div>
-      )}
-
-      {/* List */}
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : roles.length === 0 ? (
-        <Card><CardContent className="py-12 text-center"><p className="text-sm text-muted-foreground">No roles found.</p></CardContent></Card>
-      ) : (
-        <div className="rounded-md border">
-          <table className="w-full text-sm">
-            <thead className="border-b bg-muted/50">
-              <tr>
-                <th className="px-3 py-2 text-left w-8">
-                  <input type="checkbox" checked={selected.size === roles.length && roles.length > 0} onChange={toggleSelectAll} className="size-4" />
-                </th>
-                <th className="px-3 py-2 text-left font-medium">Role Name</th>
-                <th className="px-3 py-2 text-left font-medium">Slug</th>
-                <th className="px-3 py-2 text-left font-medium">Priority</th>
-                <th className="px-3 py-2 text-left font-medium">Status</th>
-                <th className="px-3 py-2 text-left font-medium">Created</th>
-                <th className="px-3 py-2 text-left font-medium">Updated</th>
-                <th className="px-3 py-2 text-left font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {roles.map((role) => (
-                <tr key={role.id} className="border-b last:border-0 hover:bg-muted/30">
-                  <td className="px-3 py-2">
-                    <input type="checkbox" checked={selected.has(role.id)} onChange={() => toggleSelect(role.id)} className="size-4" />
-                  </td>
-                  <td className="px-3 py-2 font-medium">{role.role_name}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{role.slug}</td>
-                  <td className="px-3 py-2">{role.priority}</td>
-                  <td className="px-3 py-2">
-                    <Badge variant={role.status === "active" ? "default" : "outline"} className="text-xs">{role.status}</Badge>
-                  </td>
-                  <td className="px-3 py-2 text-muted-foreground">{fmt(role.created_at)}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{fmt(role.updated_at)}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => setPreviewRole(role)}><Eye className="size-3.5" /></Button>
-                      <Button size="sm" variant="ghost" onClick={() => toggleStatus(role)}>{role.status === "active" ? "Deactivate" : "Activate"}</Button>
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(role.id)}><Pencil className="size-3.5" /></Button>
-                      <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleDelete(role.id)}><Trash2 className="size-3.5" /></Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 }

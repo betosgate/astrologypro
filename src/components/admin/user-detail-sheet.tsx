@@ -25,6 +25,9 @@ import {
 import {
   Loader2,
   Trash2,
+  Pencil,
+  Check,
+  X,
   ShieldOff,
   ShieldCheck,
   Monitor,
@@ -51,6 +54,7 @@ interface LoginLog {
   user_agent: string | null;
   city: string | null;
   country: string | null;
+  login_method: string | null;
   created_at: string;
 }
 
@@ -99,6 +103,12 @@ export function UserDetailSheet({ user, open, onClose, onUserChanged }: Props) {
   const [newNote, setNewNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [deletingNote, setDeletingNote] = useState<string | null>(null);
+  // Edit state
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteText, setEditingNoteText] = useState("");
+  const [savingEditNote, setSavingEditNote] = useState(false);
+  // Current admin email (to determine edit ownership)
+  const [currentAdminEmail, setCurrentAdminEmail] = useState<string | null>(null);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [blockReason, setBlockReason] = useState("");
   const [blockLoading, setBlockLoading] = useState(false);
@@ -128,6 +138,15 @@ export function UserDetailSheet({ user, open, onClose, onUserChanged }: Props) {
     }
   }, [user]);
 
+  // Fetch the current admin's email so we know which notes they can edit
+  useEffect(() => {
+    if (currentAdminEmail) return; // already fetched
+    fetch("/api/auth/me")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.email) setCurrentAdminEmail(d.email); })
+      .catch(() => {});
+  }, [currentAdminEmail]);
+
   useEffect(() => {
     if (open && user) {
       fetchNotes();
@@ -137,6 +156,8 @@ export function UserDetailSheet({ user, open, onClose, onUserChanged }: Props) {
       setNotes([]);
       setLogins([]);
       setNewNote("");
+      setEditingNoteId(null);
+      setEditingNoteText("");
     }
   }, [open, user, fetchNotes, fetchLogins]);
 
@@ -173,6 +194,28 @@ export function UserDetailSheet({ user, open, onClose, onUserChanged }: Props) {
       toast.error("Failed to delete note");
     } finally {
       setDeletingNote(null);
+    }
+  }
+
+  async function handleSaveEdit(noteId: string) {
+    if (!editingNoteText.trim() || !user) return;
+    setSavingEditNote(true);
+    try {
+      const res = await fetch(`/api/admin/users/${user.userId}/notes/${noteId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: editingNoteText }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      setNotes((prev) => prev.map((n) => (n.id === noteId ? data.note : n)));
+      setEditingNoteId(null);
+      setEditingNoteText("");
+      toast.success("Note updated");
+    } catch {
+      toast.error("Failed to update note");
+    } finally {
+      setSavingEditNote(false);
     }
   }
 
@@ -341,23 +384,83 @@ export function UserDetailSheet({ user, open, onClose, onUserChanged }: Props) {
                 <p className="text-sm text-muted-foreground text-center py-8">No notes yet</p>
               ) : (
                 <div className="space-y-3">
-                  {notes.map((n) => (
-                    <div key={n.id} className="rounded-lg border p-3 text-sm space-y-1.5 group">
-                      <p className="text-foreground leading-relaxed">{n.note}</p>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{n.created_by} · {dateTime(n.created_at)}</span>
-                        <button
-                          onClick={() => handleDeleteNote(n.id)}
-                          disabled={deletingNote === n.id}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80"
-                        >
-                          {deletingNote === n.id
-                            ? <Loader2 className="size-3.5 animate-spin" />
-                            : <Trash2 className="size-3.5" />}
-                        </button>
+                  {notes.map((n) => {
+                    const isOwner = currentAdminEmail && n.created_by === currentAdminEmail;
+                    const isEditing = editingNoteId === n.id;
+                    return (
+                      <div key={n.id} className="rounded-lg border p-3 text-sm space-y-2 group">
+                        {/* Note body — editable if in edit mode */}
+                        {isEditing ? (
+                          <Textarea
+                            value={editingNoteText}
+                            onChange={(e) => setEditingNoteText(e.target.value)}
+                            rows={3}
+                            className="resize-none text-sm"
+                            autoFocus
+                          />
+                        ) : (
+                          <p className="text-foreground leading-relaxed">{n.note}</p>
+                        )}
+
+                        {/* Footer: who added + controls */}
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <User className="size-3" />
+                            {n.created_by}
+                            <span className="opacity-50">·</span>
+                            {dateTime(n.created_at)}
+                          </span>
+
+                          <div className="flex items-center gap-1">
+                            {isEditing ? (
+                              <>
+                                <button
+                                  onClick={() => handleSaveEdit(n.id)}
+                                  disabled={savingEditNote || !editingNoteText.trim()}
+                                  className="flex items-center gap-1 text-green-500 hover:text-green-400 disabled:opacity-40 transition-colors"
+                                  title="Save"
+                                >
+                                  {savingEditNote ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+                                  <span>Save</span>
+                                </button>
+                                <button
+                                  onClick={() => { setEditingNoteId(null); setEditingNoteText(""); }}
+                                  className="text-muted-foreground hover:text-foreground transition-colors ml-1"
+                                  title="Cancel"
+                                >
+                                  <X className="size-3.5" />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                {/* Edit button — only for your own notes */}
+                                {isOwner && (
+                                  <button
+                                    onClick={() => { setEditingNoteId(n.id); setEditingNoteText(n.note); }}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                                    title="Edit note"
+                                  >
+                                    <Pencil className="size-3.5" />
+                                  </button>
+                                )}
+                                {/* Delete button — any admin */}
+                                <button
+                                  onClick={() => handleDeleteNote(n.id)}
+                                  disabled={deletingNote === n.id}
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80 ml-1"
+                                  title="Delete note"
+                                >
+                                  {deletingNote === n.id
+                                    ? <Loader2 className="size-3.5 animate-spin" />
+                                    : <Trash2 className="size-3.5" />}
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </TabsContent>
@@ -375,9 +478,25 @@ export function UserDetailSheet({ user, open, onClose, onUserChanged }: Props) {
                   {logins.map((l) => (
                     <div key={l.id} className="rounded-lg border p-3 text-sm space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
-                          <Clock className="size-3" />
-                          {dateTime(l.created_at)}
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+                            <Clock className="size-3" />
+                            {dateTime(l.created_at)}
+                          </div>
+                          {l.login_method && (
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] h-4 px-1.5 capitalize ${
+                                l.login_method === "password"
+                                  ? "border-blue-500/40 text-blue-600 dark:text-blue-400"
+                                  : l.login_method === "magic_link"
+                                  ? "border-amber-500/40 text-amber-600 dark:text-amber-400"
+                                  : "border-muted-foreground/30 text-muted-foreground"
+                              }`}
+                            >
+                              {l.login_method === "magic_link" ? "Magic Link" : l.login_method}
+                            </Badge>
+                          )}
                         </div>
                         {(l.city || l.country) && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">

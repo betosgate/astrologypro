@@ -13,7 +13,7 @@ function getClientIp(req: NextRequest): string {
   );
 }
 
-async function logLogin(userId: string, req: NextRequest) {
+async function logLogin(userId: string, req: NextRequest, method = "magic_link") {
   try {
     const admin = createAdminClient();
     await admin.from("user_login_logs").insert({
@@ -22,6 +22,7 @@ async function logLogin(userId: string, req: NextRequest) {
       user_agent: req.headers.get("user-agent") ?? null,
       city: req.headers.get("cf-ipcity") ?? null,
       country: req.headers.get("cf-ipcountry") ?? null,
+      login_method: method,
     });
   } catch {
     // non-blocking

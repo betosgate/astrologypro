@@ -60,7 +60,7 @@ export default async function BookingsPage({
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!diviner) redirect("/onboarding");
+  if (!diviner) redirect("/admin");
 
   let query = supabase
     .from("bookings")

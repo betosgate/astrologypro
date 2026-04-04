@@ -19,7 +19,7 @@ export async function GET(
 
   const { data, error } = await admin
     .from("user_login_logs")
-    .select("id, ip, user_agent, city, country, created_at")
+    .select("id, ip, user_agent, city, country, login_method, created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(50);

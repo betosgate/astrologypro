@@ -43,7 +43,7 @@ export default async function ServicesPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!diviner) redirect("/onboarding");
+  if (!diviner) redirect("/admin");
 
   const { data: services } = await supabase
     .from("services")
