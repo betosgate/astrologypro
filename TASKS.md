@@ -1,7 +1,7 @@
 # AstrologyPro — Daily Task Board
 
 > **Workflow:** Update this file each session. Check off items as you go. Push at end of day.
-> **Last updated:** 2026-04-03 (session 10)
+> **Last updated:** 2026-04-04 (session 12 — full Angular port)
 > **Migrations:** All applied via `scripts/run-migration.js` — no manual SQL editor needed.
 
 ---
@@ -34,29 +34,40 @@
 | Build errors (Turbopack) | ✅ Done |
 | Favicon set (all sizes + PWA manifest) | ✅ Done — SVG + 7 PNG sizes + site.webmanifest |
 | Security: debug endpoint removed | ✅ Done — was leaking Stripe key prefix publicly |
-| Security: Stripe debug GET removed | ✅ Done |
 | Marketing subscribe → DB persist | ✅ Done — was console.log only |
 | Content Library tab | ✅ Done — now fetches real saved content from DB |
-| Marketing content page file upload | ✅ Done — file input wired; real username in preview |
-| Settings/Profile/Live blank screen fix | ✅ Done — `return null` → proper error + Reload button |
-| Blog "Notify me" pill | ✅ Done — now links to #subscribe section |
-| Portal null recording link | ✅ Done — query now filters `recording_share_id IS NOT NULL` |
-| Booking wizard: slot fetch error | ✅ Done — shows toast instead of silent empty list |
-| Stripe webhook: Google Cal promise | ✅ Done — orphaned `.then()` fixed |
-| Phone billing (standalone calls) | ✅ Done — `if(false)` replaced with real card-on-file check |
-| Missing FK indexes (13 columns) | ✅ Done — migration 000009 applied |
-| Clients: stripe billing columns | ✅ Done — migration 000010 applied |
-| New roles (social_advo, trainee, community) | ✅ Done — migrations 000011 + 000012 applied |
-| Login page (4 tabs) | ✅ Done — Diviner, Client, Trainee, Member tabs |
-| Advocate portal + sub-pages | ✅ Done — /advocate, /referrals, /earnings, /content, /profile |
-| Community portal + sub-pages | ✅ Done — /community, /sessions, /resources, /profile |
-| Trainee portal + sub-pages | ✅ Done — /trainee, /sessions, /progress, /resources, /profile |
-| Auth callback: community member provisioning | ✅ Done — creates community_members row on first magic link login |
-| /api/community/request-access | ✅ Done — sends magic link via Supabase admin |
-| /api/trainees/validate-invite | ✅ Done — validates diviner's trainee_invite_code |
-| diviners.trainee_invite_code column | ✅ Done — migration 000012 applied |
-| Admin user management (search, notes, block, logins) | ✅ Done — unified list, search/filter, detail sheet, login history, block/unblock |
-| Email: single template base (email-base.ts) | ✅ Done — buildEmailHtml + 12 helpers; email.ts + email-templates.ts refactored |
+| Settings/Profile/Live blank screen fix | ✅ Done |
+| Admin user management | ✅ Done — search, notes, block/unblock, login history |
+| Email: single template base | ✅ Done — buildEmailHtml + 12 helpers |
+| Training school (Sprint 2) | ✅ Done — categories, lessons, quizzes, admin CRUD |
+| Trainee portal | ✅ Done — dashboard, progress, sessions, resources, training, certificate |
+| Training analytics admin | ✅ Done — trainee counts by status, lesson completion, quiz pass rates |
+| Community portal — Perennial Mandalism | ✅ Done — family, charts, transits, library, resources, sunday service |
+| Community portal — Mystery School | ✅ Done — foundation 12-week training, decan calendar, ritual performer, scry + journal |
+| Community portal — Ingress Charts | ✅ Done — list + detail pages |
+| Community portal — Horoscope calculator | ✅ Done — proxies to AstrologyAPI |
+| Mystery School auto-graduation | ✅ Done — triggers on 36th decan completion + graduation email |
+| Join pages (all roles) | ✅ Done — /join, /join/advocate, /join/community, /join/trainee |
+| Admin: blog CRUD | ✅ Done — create/edit/publish/unpublish/delete |
+| Blog: live posts from DB | ✅ Done — /blog/[slug] page; listing switches from static to live automatically |
+| Admin: payments history | ✅ Done — paginated table from bookings |
+| Admin: social advocacy CRUD | ✅ Done |
+| Admin: spiritual wisdom CRUD | ✅ Done |
+| Admin: decan journals CRUD | ✅ Done |
+| Admin: decan media CRUD | ✅ Done |
+| Admin: ingress charts CRUD | ✅ Done |
+| Affiliate agreement e-sign | ✅ Done — banner on /dashboard/affiliates; POST /api/dashboard/affiliate-agreement |
+| Social advocacy auto-post cron | ✅ Done — posts to Ayrshare by frequency; registered in vercel.json |
+| E3-S5 graduation CTA | ✅ Done — banner on trainee dashboard for graduated status; links to Tabby via env var |
+| PayPal Connect | ✅ Done — OAuth connect/callback/disconnect + settings UI |
+| Card-on-file billing cron | ✅ Done — charges 24h after confirmed session |
+| Decan unlock cron | ✅ Done — runs daily, provisions student_decan_progress rows |
+| Monthly transits cron | ✅ Done — runs 1st of month |
+| No-show auto-refund cron | ✅ Done |
+| Booking hold release cron | ✅ Done |
+| Certified badge (discover page) | ✅ Done — is_certified column + BadgeCheck icon |
+| Policy acknowledgement at checkout | ✅ Done — checkbox + policyAcknowledgedAt saved |
+| Policy display on diviner profile | ✅ Done |
 | Email notifications (AWS SES) | 🟡 Wired; DNS added; awaiting SES domain verification |
 | Phone readings end-to-end | 🟡 Code complete; blocked on Twilio credentials in Vercel |
 | Social auto-posting (Ayrshare) | 🟡 Code complete; needs `AYRSHARE_API_KEY` in Vercel |
@@ -71,8 +82,14 @@
 |---|---|---|
 | A1 | **Twilio credentials** | Fix invalid keys in Vercel → phone readings return 20101 error on every load |
 | A2 | **Stripe Connect webhook** | Stripe Dashboard → Webhooks → add `account.updated` event |
-| A3 | **Ayrshare API key** | Vercel env vars → add `AYRSHARE_API_KEY` to activate social auto-posting |
-| A4 | **OG social image** | Design a 1200×630 branded card and save to `/public/images/home/og-card.jpg` |
+| A3 | **AYRSHARE_API_KEY** | Vercel env vars → activates social auto-posting cron |
+| A4 | **OG social image** | Design a 1200×630 branded card → `/public/images/home/og-card.jpg` |
+| A5 | **NEXT_PUBLIC_TABBY_USERNAME** | Vercel env vars → set to Tabby's AstrologyPro username → activates graduation CTA |
+| A6 | **Tabby's Google Calendar** | Connect via `/api/calendar/connect` → unblocks E3-S5 consultation booking |
+| A7 | **Stripe product IDs** | Vercel env vars → `STRIPE_PRICE_COMMUNITY_INDIVIDUAL`, `STRIPE_PRICE_COMMUNITY_FAMILY`, `STRIPE_PRICE_MYSTERY_ENROLLMENT`, `STRIPE_PRICE_MYSTERY_MONTHLY` |
+| A8 | **Foundation week content** | Admin → /admin/mystery-school → add 12 weeks (title, content, audio URL, Beto photo URL) |
+| A9 | **Decan ritual steps** | Admin → /admin/mystery-school/decans → seed ritual steps for all 36 decans |
+| A10 | **Holy book PDFs** | Upload to Supabase Storage → add URLs via admin /community/library |
 
 ---
 
@@ -80,9 +97,7 @@
 
 | # | Task | Notes |
 |---|---|---|
-| H1 | **Stripe: save `stripe_customer_id` on clients** | When a client books and pays, store their Stripe customer ID on `clients.stripe_customer_id` so phone billing can look it up. Currently the column exists but is never populated. |
-| H2 | **Stripe: save `default_payment_method_id` on clients** | Same — save the payment method from the booking payment intent to enable card-on-file phone readings. |
-| H3 | **OG image path update** | Once OG card is designed, update `layout.tsx` `OG_IMAGE` constant from `run_your_divination.png` to new card |
+| H1 | **OG image path update** | Once OG card is designed, update `layout.tsx` `OG_IMAGE` constant |
 
 ---
 
@@ -91,17 +106,94 @@
 | # | Task | Notes |
 |---|---|---|
 | N1 | **Phone readings — full E2E test** | Once Twilio creds fixed: test inbound call → queue → diviner answers → billing |
-| N2 | **Ayrshare — full E2E test** | Once API key added: test social post creation from marketing dashboard |
-| N3 | **SES domain verification** | Monitor DNS propagation for `divineinfinitebeing.com`; test email delivery once verified |
+| N2 | **Ayrshare — full E2E test** | Once API key added: test social post creation + cron auto-posting |
+| N3 | **SES domain verification** | Monitor DNS propagation; test email delivery once verified |
+| N4 | **Community Stripe products** | Create products in Stripe Dashboard → set env vars (A7 above) |
 
 ---
 
 ## 🟢 Backlog / Ideas
 
 - Mobile app (React Native)
-- CMS-driven blog (replace hardcoded coming-soon posts)
 - Diviner discovery page improvements (filters, search)
-- Client-facing cancellation with automatic refund trigger
+- Client-facing self-serve cancellation with auto-refund
+- Angular bundle optimisation (E10-S3)
+- Angular duplicate AuthService cleanup (E1-S3)
+- Angular TypeScript model interfaces (E1-S4)
+
+---
+
+## ✅ Completed This Session (session 12 — 2026-04-04 — Full Angular Port)
+
+### Migrations applied (migrations 13–18)
+
+| Migration | What |
+|---|---|
+| 000013 `new_roles` | social_advocates, community_members, trainees tables + RLS |
+| 000014–020 | certified_badge, platform_policies, booking_policy_acknowledged, no_show_tracking, booking_holds, admin_content_tables, community_stripe |
+| 20260404–001 | trainee_lesson_progress |
+| 20260404–002 | quiz_generation_drafts |
+| 20260404–003 | confirmed_billing (card-on-file) |
+| 20260404–004 | family_members |
+| 20260404–005 | relationship_charts |
+| 20260404–006 | monthly_transits |
+| 20260404–007 | sunday_service |
+| 20260404–008 | mystery_school (students, foundation_weeks, student_foundation_progress) |
+| 20260404–009 | decan_system (decans, decan_rituals, student_decan_progress, scry_journals, mundane_journals) |
+| 20260404–010 | paypal_connect |
+| 20260404–011 | ingress_charts |
+| 20260404–012 | social_advocacy |
+| 20260404–013 | spiritual_wisdom |
+| 20260404–014 | decan_journals |
+| 20260404–015 | decan_media |
+| 20260404–016 | affiliate_agreement (diviners.affiliate_agreement_signed + signed_at) |
+| 20260404–017 | social_advocacy.last_posted_at |
+| 20260404–018 | blog_posts + RLS |
+
+### Sprint 1–8 features ported from Angular
+
+| Feature | Files |
+|---|---|
+| E9-S2: Certified badge | discover page BadgeCheck icon + is_certified fetch |
+| E2-S5: Policy acknowledgement checkbox | booking-wizard.tsx |
+| E7-S3: Policy display on diviner profile | [username]/page.tsx |
+| E6-S1: Booking hold/conflict detection | api/availability/hold, cron/release-holds |
+| E2-S3: No-show auto-refund cron | cron/no-show-refunds |
+| E3-S4: Graduation certificate (print PDF) | trainee/certificate/page.tsx + print-button |
+| E3-S1/S2/S6: Training school full stack | training categories/lessons/quizzes + admin CRUD + video player + quiz lightbox |
+| E8-S2: Training analytics admin | admin/training/analytics/page.tsx |
+| E3-S3: AI quiz generation (PPTX → Claude → review) | admin/training/quiz-generate, api/admin/quiz-generate, api/admin/quiz-drafts |
+| E2-S4: Card-on-file billing cron | cron/charge-confirmed-sessions |
+| E4-S1: Community signup + Stripe checkout | join/community, api/community/checkout |
+| E4-S2: Family unit management + birth data | community/family, api/community/family |
+| E4-S3: Natal chart generation | api/community/generate-natal, community/charts |
+| E4-S4: Relationship charts | api/community/relationship-charts |
+| E4-S5: Monthly transits cron | cron/monthly-transits, community/transits |
+| E4-S6: Content library | community/library |
+| E4-S7: Sunday Service | community/sunday-service, api/community/sunday-service |
+| E5-S1: Mystery School enrollment | join/community (mystery_school type), api/community/checkout |
+| E5-S2: Foundation 12-week training | community/training, api/mystery-school/foundation, complete-week |
+| E5-S3: Decan calendar + unlock logic | community/decans, api/mystery-school/decans, cron/decan-unlock |
+| E5-S4: Ritual performer | community/decans/[id], api/mystery-school/decan/[id]/ritual-complete |
+| E5-S5: Scry + mundane journal | api/mystery-school/decan/[id]/scry + journal |
+| E5-S6: Graduation → Priest/Priestess | ritual-complete route auto-triggers graduation email at 36th decan |
+| E7-S1: PayPal Connect | api/paypal/connect + callback + disconnect |
+| E7-S2: Affiliate agreement e-sign | dashboard/affiliates banner + api/dashboard/affiliate-agreement |
+| E9-S3: Ayrshare social auto-post cron | cron/social-advocacy-post + vercel.json |
+| E3-S5: Post-graduation Tabby CTA (partial) | Graduation banner on trainee/page.tsx; awaits NEXT_PUBLIC_TABBY_USERNAME env var |
+| Community ingress charts | community/ingress-charts + [id], api/community/ingress-charts |
+| Community horoscope calculator | community/horoscope, api/community/horoscope |
+| Admin: payments history | admin/payments, api/admin/payments |
+| Admin: social advocacy CRUD | admin/social-advocacy, api/admin/social-advocacy |
+| Admin: spiritual wisdom CRUD | admin/spiritual-wisdom, api/admin/spiritual-wisdom |
+| Admin: decan journals CRUD | admin/decan-journals, api/admin/decan-journals |
+| Admin: decan media CRUD | admin/decan-media, api/admin/decan-media |
+| Admin: ingress charts CRUD | admin/ingress-charts, api/admin/ingress-charts |
+| Admin: blog CRUD | admin/blog, api/admin/blog |
+| Blog: live posts from DB | blog/[slug]/page.tsx; blog/page.tsx reads from blog_posts table |
+| Admin nav | All new modules added to admin/layout.tsx |
+| E8-S1: Admin analytics | admin/page.tsx (was already comprehensive — verified complete) |
+| E6-S2: Google Calendar two-way sync | google-calendar.ts createCalendarEvent wired in Stripe webhook |
 
 ---
 
