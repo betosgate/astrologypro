@@ -956,20 +956,21 @@ export default function OnboardingPage() {
               <Sparkles className="h-5 w-5 text-primary" />
               <span className="font-semibold">AstrologyPro Setup</span>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground">
                 Step {currentStep} of {STEPS.length}
               </span>
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={async () => {
                   await supabase.auth.signOut();
                   router.push("/login");
                 }}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 Sign out
-              </button>
+              </Button>
             </div>
           </div>
 
