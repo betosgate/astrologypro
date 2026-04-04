@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AstrologyPro
 
-## Getting Started
+Next.js + Supabase platform for professional diviners — readings, scheduling, community, training, and mystery school.
 
-First, run the development server:
+---
+
+## Documentation
+
+| Doc | Description |
+|---|---|
+| [TASKS.md](./TASKS.md) | Sprint backlog, completed work, Beto action items |
+| [CLAUDE.md](./CLAUDE.md) | AI assistant rules and project context |
+| [docs/test-users.md](./docs/test-users.md) | All test user credentials (44 users, all roles) |
+| [docs/scrum/README.md](./docs/scrum/README.md) | Scrum index |
+| [docs/scrum/01_app_audit.md](./docs/scrum/01_app_audit.md) | App audit |
+| [docs/scrum/02_role_feature_map.md](./docs/scrum/02_role_feature_map.md) | Role → feature mapping |
+| [docs/scrum/03_module_inventory.md](./docs/scrum/03_module_inventory.md) | Module inventory |
+| [docs/scrum/04_product_backlog.md](./docs/scrum/04_product_backlog.md) | Product backlog |
+| [docs/scrum/05_sprint_plan.md](./docs/scrum/05_sprint_plan.md) | Sprint plan |
+| [docs/scrum/06_api_reference.md](./docs/scrum/06_api_reference.md) | API reference |
+
+---
+
+## Tech Stack
+
+- **Framework:** Next.js 14 (App Router)
+- **Database:** Supabase (PostgreSQL + Auth + Storage)
+- **Payments:** Stripe Connect
+- **Styling:** Tailwind CSS + shadcn/ui
+- **Deployment:** Vercel
+
+---
+
+## User Roles
+
+| Role | Portal | Table |
+|---|---|---|
+| `diviner` | `/dashboard` | `diviners` |
+| `client` | `/portal` | `clients` |
+| `social_advo` | `/advocate` | `social_advocates` |
+| `perennial_mandalism` | `/community` | `community_members` |
+| `mystery_school` | `/community` | `community_members` |
+| `trainee` | `/trainee` | `trainees` |
+
+Multi-role users are redirected to `/switch` on login.
+
+---
+
+## Local Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Copy `.env.local.example` to `.env.local` and fill in:
 
-## Learn More
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+ADMIN_EMAILS=
+```
 
-To learn more about Next.js, take a look at the following resources:
+### Database Migrations
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+SUPABASE_ACCESS_TOKEN=sbp_xxx node scripts/run-migration.js supabase/migrations/<file>.sql
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Seed Test Users
 
-## Deploy on Vercel
+```bash
+node scripts/seed-test-users.js
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Creates 44 test users (30 single-role + 14 multi-role). See [docs/test-users.md](./docs/test-users.md) for all credentials.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Admin Access
+
+Add your email to the `ADMIN_EMAILS` env var (comma-separated). Admin panel at `/admin`.
