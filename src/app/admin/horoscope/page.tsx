@@ -154,41 +154,104 @@ function buildAiPrompts(data: any, tab: string) {
   const prompts: { key: string; system: string; user: string; json: unknown[] }[] = [];
 
   if (tab === "western_horoscope_v2" || ["jupiter_return_v2", "saturn_return_v2", "mars_return_v2", "uranus_return_v2"].includes(tab)) {
-    prompts.push({ key: "western_horoscope_ascendant_midheaven_vertex", system: "give response only in json format as a whole , nothing else answer as astrologer not AI BOT", user: `Generate western chart details only on ascendant, midheaven, vertex based on given json with minimum 3 sentences on each interpretation (mention significance of degree) with a number as index named index. Response format should be [{"ascendant":"interpretation"},{"midheaven":"interpretation"},{"vertex":"interpretation"}]. Response should not start with 'json' ever and must be within an array`, json: [{ ascendant: data.ascendant, midheaven: data.midheaven, vertex: data.vertex, houses: data.houses, aspects: data.aspects, planets: data.planets }] });
-    prompts.push({ key: "western_horoscope_aspects", system: "give response only in json format as a whole, answer as astrologer not AI BOT", user: `Generate western chart details only on aspects based on given json with minimum 3 sentences on each interpretation. Object format: {"title":"heading","interpretation":"Details","orb":data}. Response should not start with 'json' and must be within an array`, json: data.aspects });
-    prompts.push({ key: "western_horoscope_houses", system: "give response only in json format as a whole, answer as astrologer not AI BOT", user: `Generate western chart details only on houses based on given json with minimum 3 sentences on each interpretation. Response must be in proper json format in an array`, json: data.houses });
-    prompts.push({ key: "western_horoscope_lilith", system: "give response only in json format as a whole, answer as astrologer not AI BOT", user: `Generate western chart details only on lilith based on given json with minimum 3 sentences on each interpretation. Json must have only one index called interpretation and that will be string not object. Response must be within an array`, json: [data.lilith] });
-    prompts.push({ key: "western_horoscope_planets", system: "give response only in json format as a whole, answer as astrologer not AI BOT", user: `Generate western chart details only on planets based on given json with minimum 10 unique sentences on each planet. Object format: {"name":"planet name","interpretation":"detailed interpretation"}. Response must be within an array`, json: data.planets });
-    prompts.push({ key: "dharma_karma", system: "give response only in json format as a whole, answer as astrologer not AI BOT", user: `Keeping western astrology in mind, provide dharma and karma details based on the planet, aspect and house info. Response must be json format: {"dharma":"paragraph","karma":"paragraph"} with minimum 3 sentences each`, json: [{ planet: data.planets, aspect: data.aspects, house: data.houses }] });
+    // Exact prompts ported from Angular westernhoroscop-v2.component.ts → stringModifier()
+    prompts.push({
+      key: "western_horoscope_ascendant_midheaven_vertex",
+      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation.response should not start with string 'json'  ever  and must be with in  an array  ",
+      user: "Generate western chart details only on ascendant,midheaven,vertex based on given json with minimum 3 sentences on each interpretations(for each ascendant ,midheaven , vertex) (mention significance of degree (upto 2 desimal points) for each) with a numnber as index named index  of  ascendant,midheaven,vertex in as much as detail possible , only interpretation in json index in lowest level of indexes  please and don't miss a single ascendant,midheaven,vertex there are many please be careful and response should not start with string 'json'  ever but in proper json format and with in  an array of object format should be \n[\n  {\"ascendant\":\"interpretation\"},\n  {\"midheaven\":\"interpretation\"},\n  {\"vertex\":\"interpretation\"}\n].Double check that response should not start with string 'json'  ever  and must be with in  an array ",
+      json: [{ ascendant: data.ascendant, midheaven: data.midheaven, vertex: data.vertex, houses: data.houses, aspects: data.aspects, planets: data.planets }],
+    });
+    prompts.push({
+      key: "western_horoscope_aspects",
+      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
+      user: "Generate western chart details only on aspects based on given json with minimum 3 sentences on each interpretation with a numnber as index  of  aspect in as much as detail possible , only interpretation in json index in lowest level of indexes  please and don't miss a single aspect there are many please be careful object format in json  should be {\"title\":\"Title or heading of the interpretation \",\"interpretation\":\"Details Interpretation\", \"orb\":data} , response should not start with string 'json'  ever  and must be with in  an array ",
+      json: data.aspects,
+    });
+    prompts.push({
+      key: "western_horoscope_houses",
+      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
+      user: "Generate western chart details only on houses based on given json with minimum 3 sentences on each interpretation with a numnber as index  of  houses in as much as detail possible , only interpretation in json index in lowest level of indexes  please and don't miss a single houses there are many please be careful and response should not start with string 'json'  ever but in proper json format in an array ",
+      json: data.houses,
+    });
+    prompts.push({
+      key: "western_horoscope_lilith",
+      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
+      user: "Generate western chart details only on lilith based on given json with minimum 3 sentences on each interpretation with a numnber as index  of  lilith in as much as detail possible , only interpretation in json index in lowest level of indexes  please and don't miss a single lilith there are many please be careful and response should not start with string 'json'  ever but in proper json format in an array and json must have only one index called interpretation and that will be string not object.response should not start with string 'json'  ever  and must be with in  an array",
+      json: [data.lilith],
+    });
+    prompts.push({
+      key: "western_horoscope_planets",
+      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that planet and under that interpretation ",
+      user: "Generate western chart details only on planets based on given json with minimum 10 unique sentences on each planet and its significance with each of house position , full degree, norm degree , speed , sign in as much as detail possible(5 sentences for each of house position , full degree, norm degree , speed , sign all should be with in interpretation not in other index for sure ) . don't miss a single planet there are many please be careful  and response should not start with string 'json'  ever but in proper json format in an array and object in json will be name and interpretation(each of them must have 3 sentences at least) only (nothing else) where both will be string only not object",
+      json: data.planets,
+    });
+    prompts.push({
+      key: "dharma_karma",
+      system: "give response only in json format as a whole , nothing else answer as astrologer not AI BOT",
+      user: "Keeping western astrology in mind and keeping this as main source info I need to know details of dharma and karma karma as paragraph you have planet , aspect and house info given in json response must be in json format as {dharma:data,karma:data} ,response should not start with string 'json' key  ever  and must be a valid json format here data is dynamic data form bot and must be a paragraph with 3 sentences for both dharma and karma make it real for me I don't need theory context in response you must add context of planet , aspect and house if any and keep these rules in mind mainly : In Western astrology, we can interpret Karma and Dharma by analyzing various planetary placements and aspects. Saturn, as the Karmic Significator, reveals areas of life where karmic lessons, restrictions, and responsibilities may arise, with its house and sign placement providing clues to these areas, and aspects to other planets revealing specific challenges and opportunities for growth. The South Node and the 12th House offer insights into past life tendencies and ingrained patterns that need to be released, with the South Node indicating these tendencies through its sign and house placement, and the 12th House, linked to the subconscious, potentially revealing karmic debts or unresolved issues. Conversely, the North Node and 9th House point toward the soul's evolutionary path and the direction of growth, with the North Node indicating this direction through its sign and house placement, and the 9th House, representing higher learning and philosophy, providing clues about the individual's Dharma and potential paths to meaning and purpose. Jupiter, as a Dharmic Indicator, highlights areas of potential expansion, wisdom, and fulfillment of Dharma through its house and sign placement, while aspects to other planets can reveal opportunities for growth and alignment with the soul's purpose. The Sun and Moon placements also contribute to understanding Karma and Dharma; the Sun represents the core identity and conscious will, offering insights into karmic lessons and how one can shine their light, while the Moon reflects emotional needs and subconscious patterns, potentially connected to past life influences and karmic themes. Finally, analyzing aspects and chart dynamics, specifically challenging aspects (squares, oppositions) and harmonious aspects (trines, sextiles), helps identify potential karmic blockages or areas of conflict, and opportunities for growth, integration, and fulfillment of Dharma. Double check that Response should not start with string 'json'  ever  and must be a valid json format",
+      json: [{ planet: data.planets, aspect: data.aspects, house: data.houses }],
+    });
   }
 
   if (tab === "solar_return_v2") {
-    prompts.push({ key: "solar_return", system: "give response only in json format, answer as astrologer not AI BOT", user: `Generate solar return analysis based on the given data. Include insights on the solar return chart details, planets, house cusps, and aspects. Minimum 3 sentences per section. Response in json array format with {title, interpretation} objects`, json: [data] });
+    // Ported from Angular saturn-return-v2 (same structure used for solar return AI calls)
+    prompts.push({
+      key: "solar_return_details",
+      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
+      user: "Generate solar return details based on given json with minimum 3 sentences on each interpretation with a number as index of details in as much detail as possible, only interpretation in json index in lowest level of indexes please and don't miss a single detail. Response should not start with string 'json' ever but in proper json format in an array with objects {\"title\":\"...\",\"interpretation\":\"...\"}",
+      json: [{ details: data.solar_return_details, planets: data.solar_return_planets, cusps: data.solar_return_cusps, aspects: data.solar_return_aspects }],
+    });
   }
 
-  if (tab === "tropical_transits_weekly_v2") {
-    prompts.push({ key: "tropical_transits_weekly", system: "give response only in json format, answer as astrologer not AI BOT", user: `Generate weekly transit interpretation based on the given transit data. Provide insights on major planetary movements and their effects. Minimum 3 sentences per transit. Response as json array with {title, interpretation} objects`, json: [data] });
-  }
-
-  if (tab === "tropical_transits_monthly_v3") {
-    prompts.push({ key: "tropical_transits_monthly", system: "give response only in json format, answer as astrologer not AI BOT", user: `Generate monthly transit interpretation based on the given data. Provide comprehensive insights on major planetary movements, lunar cycles, and their combined effects. Minimum 3 sentences per section. Response as json array with {title, interpretation} objects`, json: [data] });
+  if (tab === "tropical_transits_weekly_v2" || tab === "tropical_transits_monthly_v3") {
+    // Ported from Angular tropical-transits-v2 component
+    const label = tab === "tropical_transits_weekly_v2" ? "weekly" : "monthly";
+    prompts.push({
+      key: tab === "tropical_transits_weekly_v2" ? "tropical_transits_weekly" : "tropical_transits_monthly",
+      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
+      user: `Generate ${label} transit interpretation based on given json with minimum 3 sentences on each transit interpretation. Don't miss a single transit. Response should not start with string 'json' ever but in proper json format in an array with objects {"title":"...","interpretation":"..."} covering all major planetary movements and their effects`,
+      json: [data],
+    });
   }
 
   if (["romantic_forecast_report_tropical_v2", "friendship_report_tropical_v2", "business_partner_v2"].includes(tab)) {
+    // Ported from Angular romantic-forcast-report-v2 / friendship / business-partner components
     const context = tab === "romantic_forecast_report_tropical_v2" ? "romantic" : tab === "friendship_report_tropical_v2" ? "friendship" : "business";
-    prompts.push({ key: "synastry_horoscope", system: "give response only in json format, answer as astrologer not AI BOT", user: `Generate ${context} relationship synastry analysis based on the given data. Include compatibility insights, major aspects between the two charts, and relationship dynamics. Minimum 3 sentences per section. Response as {data:[{title,data}]} format`, json: [data] });
-    prompts.push({ key: "composite_horoscope", system: "give response only in json format, answer as astrologer not AI BOT", user: `Generate ${context} composite chart analysis. Describe the energy of the relationship as a single entity. Minimum 3 sentences per section. Response as {data:[{title,data}]} format`, json: [data] });
+    prompts.push({
+      key: "synastry_horoscope",
+      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
+      user: `Generate ${context} relationship synastry chart details based on given json with minimum 3 sentences on each interpretation. Include compatibility insights, major aspects between the two charts, and relationship dynamics. Response in format {\"data\":[{\"title\":\"...\",\"data\":\"...\"}]} as a valid json object. Do not start with 'json' string`,
+      json: [data],
+    });
+    prompts.push({
+      key: "composite_horoscope",
+      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
+      user: `Generate ${context} composite chart analysis based on given json. Describe the energy of the relationship as a single entity with minimum 3 sentences per section. Include key composite themes, strengths, and challenges. Response in format {\"data\":[{\"title\":\"...\",\"data\":\"...\"}]} as valid json. Do not start with 'json' string`,
+      json: [data],
+    });
   }
 
   if (tab === "horary_chart_v2") {
-    prompts.push({ key: "horary_chart_question", system: "give response only in json format, answer as astrologer not AI BOT", user: `Generate horary chart interpretation for the given question based on the astrological data. Include timing, planetary significators, and recommendations. Format: {"planet":{},"astrological_considerations":{},"recommendations":{},"alternative_timings":{},"data":{"recomendation_on_date_and_timeline":{"title":"","data":""},"house":[{"title":"","data":""}],"planet":[{"title":"","data":""}],"summary":{"recommendation_on_date_and_timeline":[{"timeline_title":"","timeline_data":""}]}}}`, json: [data] });
+    // Ported from Angular horary component — exact format matches Angular's horary_chart_question call
+    prompts.push({
+      key: "horary_chart_question",
+      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
+      user: `Generate horary chart interpretation for the given question based on the astrological data. Include timing, planetary significators, and recommendations. Response must follow this exact json structure: {\"planet\":{},\"astrological_considerations\":{},\"recommendations\":{},\"alternative_timings\":{},\"data\":{\"recomendation_on_date_and_timeline\":{\"title\":\"\",\"data\":\"\"},\"house\":[{\"title\":\"\",\"data\":\"\"}],\"planet\":[{\"title\":\"\",\"data\":\"\"}],\"summary\":{\"recommendation_on_date_and_timeline\":[{\"timeline_title\":\"\",\"timeline_data\":\"\"}]}}}. Do not start response with string 'json' ever`,
+      json: [data],
+    });
   }
 
   const returnTabMap: Record<string, string> = { "jupiter_return_v2": "jupiter_return_v2", "saturn_return_v2": "saturn_return_v2", "mars_return_v2": "mars_return_v2", "uranus_return_v2": "uranus_return_v2" };
   if (returnTabMap[tab]) {
+    // Ported from Angular jupiter/saturn/mars/uranus-return-v2 components
     const planet = tab.split("_")[0];
     const returnDate = data?.returnDate ?? "calculated";
-    prompts.push({ key: returnTabMap[tab], system: "give response only in json format as a whole, nothing else answer as astrologer not AI BOT", user: `My birth details match the data given. My next ${planet} return date is ${returnDate}. I want to know about ${planet} return — career, relationships, personal growth, health. House system: whole sign. Format: {"chart_data":{},"title_and_interpretation":{"title":"...","interpretation":{"General":"...","Career":"...","Relationships":"...","Personal Growth":"...","Health":"..."}}}. All interpretations minimum 3 sentences. Response must not start with 'json' and be valid JSON`, json: [data] });
+    prompts.push({
+      key: returnTabMap[tab],
+      system: "give response only in json format as a whole , nothing else answer as astrologer not AI BOT",
+      user: `My birth details match the data given. My next ${planet} return date is ${returnDate}. I want to know about ${planet} return — career, relationships, personal growth, health. House system: whole sign. Response must follow this exact json format: {\"chart_data\":{},\"title_and_interpretation\":{\"title\":\"...\",\"interpretation\":{\"General\":\"...\",\"Career\":\"...\",\"Relationships\":\"...\",\"Personal Growth\":\"...\",\"Health\":\"...\"}}}. All interpretation fields minimum 3 sentences. Response must not start with 'json' string and must be valid json`,
+      json: [data],
+    });
   }
 
   return prompts;
@@ -1365,18 +1428,18 @@ export default function AdminHoroscopePage() {
         const natalData = await callCompute("western_horoscope", birth1 as unknown as Record<string, unknown>);
         collected.natal_chart_data = natalData;
 
-        addProgress("Generating natal wheel…");
-        try {
-          const w = await callCompute("natal_wheel_chart", birth1 as unknown as Record<string, unknown>);
-          if (w?.chart_url) setNatalSvg(w.chart_url);
-        } catch { /* non-fatal */ }
-
-        addProgress("Generating alt natal wheel…");
-        try {
-          const freeResp = await callNatalWheel(freeWheelBody(form.person1) as unknown as Record<string, unknown>);
-          const svg = freeResp?.results?.output;
-          if (svg) { setNatalSvg((prev) => prev ?? svg); setShowChartBtn(true); }
-        } catch { /* non-fatal */ }
+        // Fetch both natal wheels in parallel — matching Angular's imgFetch + newNatalImagFetch
+        addProgress("Generating natal wheels…");
+        await Promise.allSettled([
+          // Wheel 1: AstrologyAPI natal_wheel_chart → chart_url (PNG)
+          callCompute("natal_wheel_chart", birth1 as unknown as Record<string, unknown>)
+            .then((w) => { if (w?.chart_url) { setNatalSvg(w.chart_url); setShowChartBtn(true); } })
+            .catch(() => { /* non-fatal */ }),
+          // Wheel 2: FreeAstrologyAPI via NestJS → SVG/URL
+          callNatalWheel(freeWheelBody(form.person1) as unknown as Record<string, unknown>)
+            .then((freeResp) => { const svg = freeResp?.results?.output; if (svg) { setNatalSvgTransit(svg); setShowChartBtn(true); } })
+            .catch(() => { /* non-fatal */ }),
+        ]);
 
         // Tab-specific data
         if (currentTab.slug === "solar_return_v2") {
@@ -1533,27 +1596,36 @@ export default function AdminHoroscopePage() {
   const isSolarReturn = currentSlug === "solar_return_v2";
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] lg:h-screen overflow-hidden">
+    <div className="h-[calc(100vh-3.5rem)] lg:h-screen overflow-hidden flex flex-col">
       {chartModal && <ChartImageModal src={chartModal} open={!!chartModal} onClose={() => setChartModal(null)} />}
 
-      {/* Left nav */}
-      <aside className="hidden md:flex flex-col w-56 shrink-0 border-r bg-muted/20 overflow-y-auto">
-        <div className="px-4 py-3 border-b">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Astro Toolkit</p>
-        </div>
-        <nav className="p-2 space-y-0.5">
+      {/* Horizontal tab bar */}
+      <div className="shrink-0 border-b bg-background px-4 pt-3 pb-0">
+        <div
+          className="flex gap-1 overflow-x-auto pb-3"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = tab.slug === currentSlug;
             return (
-              <button key={tab.slug} onClick={() => setTab(tab.slug)} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left transition-colors", active ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
-                <Icon className={cn("size-3.5 shrink-0", active ? "text-amber-500" : "")} />
-                <span className="leading-tight">{tab.label}</span>
+              <button
+                key={tab.slug}
+                onClick={() => setTab(tab.slug)}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap shrink-0 transition-all",
+                  active
+                    ? "bg-amber-500 text-white font-medium shadow-sm"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                )}
+              >
+                <Icon className="size-3.5 shrink-0" />
+                {tab.label}
               </button>
             );
           })}
-        </nav>
-      </aside>
+        </div>
+      </div>
 
       {/* Main panel */}
       <div className="flex-1 overflow-y-auto result-scroll-container" onScroll={(e) => setShowScrollTop((e.currentTarget.scrollTop) > 400)}>
@@ -1566,13 +1638,6 @@ export default function AdminHoroscopePage() {
               <h1 className="text-xl font-bold tracking-tight">{currentTab.label}</h1>
             </div>
             <p className="text-sm text-muted-foreground">{currentTab.description}</p>
-          </div>
-
-          {/* Mobile select */}
-          <div className="md:hidden">
-            <select value={currentSlug} onChange={(e) => setTab(e.target.value)} className="w-full h-9 rounded-md border bg-background px-3 text-sm">
-              {TABS.map((t) => <option key={t.slug} value={t.slug}>{t.label}</option>)}
-            </select>
           </div>
 
           {/* Form */}
@@ -1664,8 +1729,8 @@ export default function AdminHoroscopePage() {
                 <NatalChartsRow
                   svg1={natalSvg}
                   svg2={natalSvgTransit}
-                  label1={isTwoPersonAiTab ? "Person 1 Natal Wheel" : "Natal Wheel Chart"}
-                  label2={isTwoPersonAiTab ? "Person 2 Natal Wheel" : "Transit / Alt Natal Wheel"}
+                  label1={isTwoPersonAiTab ? "Person 1 Natal Wheel" : "Natal Wheel Chart (AstrologyAPI)"}
+                  label2={isTwoPersonAiTab ? "Person 2 Natal Wheel" : "Natal Wheel Chart (FreeAstrology)"}
                   onExpandImg={(src) => setChartModal(src)}
                 />
               </div>

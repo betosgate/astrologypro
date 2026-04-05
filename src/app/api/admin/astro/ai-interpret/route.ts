@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { callAstroAiApi, AstroAiBody } from "@/lib/astrology-api";
 
 export const dynamic = "force-dynamic";
+// AI Lambda calls can take 30-60 s — extend serverless timeout accordingly
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
