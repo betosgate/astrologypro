@@ -27,15 +27,17 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const createdFrom = sp.get("created_from");
   const createdTo = sp.get("created_to");
+  const categoryId = sp.get("category_id");
 
   const admin = createAdminClient();
   let query = admin
     .from("training_lessons")
     .select(
-      "id, category_id, title, description, video_url, duration_mins, priority, is_active, created_at"
+      "id, category_id, title, description, video_url, duration_mins, priority, previous_lesson_id, is_active, created_at"
     )
     .order("priority", { ascending: true });
 
+  if (categoryId) query = query.eq("category_id", categoryId);
   if (createdFrom) query = query.gte("created_at", createdFrom);
   if (createdTo) query = query.lte("created_at", createdTo + "T23:59:59");
 
@@ -63,6 +65,7 @@ export async function POST(req: NextRequest) {
     duration_mins?: number | null;
     category_id?: string;
     priority?: number;
+    previous_lesson_id?: string | null;
     is_active?: boolean;
   };
   try {
@@ -80,6 +83,7 @@ export async function POST(req: NextRequest) {
     duration_mins,
     category_id,
     priority,
+    previous_lesson_id,
     is_active,
   } = body;
 
@@ -105,6 +109,7 @@ export async function POST(req: NextRequest) {
       duration_mins: duration_mins ?? null,
       category_id,
       priority: priority ?? 0,
+      previous_lesson_id: previous_lesson_id ?? null,
       is_active: is_active ?? true,
     })
     .select()

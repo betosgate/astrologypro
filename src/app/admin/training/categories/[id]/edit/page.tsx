@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { TrainingNotes } from "@/components/admin/training-notes";
 
 type Program = { id: string; name: string };
 
@@ -276,6 +277,8 @@ export default function EditCategoryPage() {
           </form>
         </CardContent>
       </Card>
+
+      <TrainingNotes entityType="category" entityId={id} />
     </div>
   );
 }

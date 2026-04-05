@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { TrainingNotes } from "@/components/admin/training-notes";
 
 type Role = { id: string; role_name: string; slug: string; description: string };
 
@@ -295,6 +296,8 @@ export default function EditProgramPage() {
           </form>
         </CardContent>
       </Card>
+
+      <TrainingNotes entityType="program" entityId={id} />
     </div>
   );
 }
