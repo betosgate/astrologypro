@@ -121,9 +121,15 @@ export async function callAstroAiApi(
     }
   }
 
+  // Lambda Function URL requires an Origin header — without it, it returns 403 Forbidden.
+  // Angular sends this automatically as a browser app; we must add it explicitly server-side.
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://www.backofficeportal.divineinfinitebeing.com";
   const res = await fetch(aiUrl, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Origin": origin,
+    },
     body: JSON.stringify(enriched),
   });
 
