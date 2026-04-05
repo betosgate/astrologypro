@@ -19,7 +19,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Loader2, ChevronDown, ChevronRight, Star, Sun, Moon,
+  Loader2, ChevronDown, ChevronRight, ChevronLeft, Star, Sun, Moon,
   Calendar as CalendarIcon, Heart, Users, Briefcase, Eye, Zap,
   Sparkles, CircleDot, Clock, MapPin, Printer, ArrowUp, RotateCcw,
   X,
@@ -1305,6 +1305,109 @@ function CityAutocomplete({ value, onChange, label = "Place of Birth", disabled 
   );
 }
 
+// ─── Tab Bar (horizontal scrollable with arrow buttons) ──────────────────────
+
+function TabBar({ currentSlug, onSelect }: { currentSlug: string; onSelect: (slug: string) => void }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateArrows = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    updateArrows();
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", updateArrows, { passive: true });
+    const ro = new ResizeObserver(updateArrows);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", updateArrows); ro.disconnect(); };
+  }, [updateArrows]);
+
+  // Scroll active tab into view when slug changes
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const activeBtn = el.querySelector<HTMLButtonElement>("[data-active='true']");
+    activeBtn?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+  }, [currentSlug]);
+
+  function scroll(dir: "left" | "right") {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir === "left" ? -240 : 240, behavior: "smooth" });
+  }
+
+  return (
+    <div className="shrink-0 border-b bg-background">
+      <div className="flex items-center gap-1 px-2 py-2">
+        {/* Left arrow */}
+        <button
+          onClick={() => scroll("left")}
+          disabled={!canScrollLeft}
+          className={cn(
+            "shrink-0 flex items-center justify-center size-7 rounded-full border transition-all",
+            canScrollLeft
+              ? "bg-background text-foreground hover:bg-muted border-border"
+              : "opacity-25 cursor-not-allowed border-transparent"
+          )}
+          aria-label="Scroll tabs left"
+        >
+          <ChevronLeft className="size-4" />
+        </button>
+
+        {/* Scrollable pill row */}
+        <div
+          ref={scrollRef}
+          className="flex flex-1 gap-1 overflow-x-auto"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const active = tab.slug === currentSlug;
+            return (
+              <button
+                key={tab.slug}
+                data-active={active}
+                onClick={() => onSelect(tab.slug)}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap shrink-0 transition-all",
+                  active
+                    ? "bg-amber-500 text-white font-medium shadow-sm"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                )}
+              >
+                <Icon className="size-3.5 shrink-0" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Right arrow */}
+        <button
+          onClick={() => scroll("right")}
+          disabled={!canScrollRight}
+          className={cn(
+            "shrink-0 flex items-center justify-center size-7 rounded-full border transition-all",
+            canScrollRight
+              ? "bg-background text-foreground hover:bg-muted border-border"
+              : "opacity-25 cursor-not-allowed border-transparent"
+          )}
+          aria-label="Scroll tabs right"
+        >
+          <ChevronRight className="size-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── BirthBlock ───────────────────────────────────────────────────────────────
 
 function BirthBlock({ title, value, onChange, disabled }: { title?: string; value: BirthInput; onChange: (v: BirthInput) => void; disabled?: boolean }) {
@@ -1599,33 +1702,8 @@ export default function AdminHoroscopePage() {
     <div className="h-[calc(100vh-3.5rem)] lg:h-screen overflow-hidden flex flex-col">
       {chartModal && <ChartImageModal src={chartModal} open={!!chartModal} onClose={() => setChartModal(null)} />}
 
-      {/* Horizontal tab bar */}
-      <div className="shrink-0 border-b bg-background px-4 pt-3 pb-0">
-        <div
-          className="flex gap-1 overflow-x-auto pb-3"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-        >
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            const active = tab.slug === currentSlug;
-            return (
-              <button
-                key={tab.slug}
-                onClick={() => setTab(tab.slug)}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap shrink-0 transition-all",
-                  active
-                    ? "bg-amber-500 text-white font-medium shadow-sm"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-                )}
-              >
-                <Icon className="size-3.5 shrink-0" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {/* Horizontal tab bar with scroll arrows */}
+      <TabBar currentSlug={currentSlug} onSelect={setTab} />
 
       {/* Main panel */}
       <div className="flex-1 overflow-y-auto result-scroll-container" onScroll={(e) => setShowScrollTop((e.currentTarget.scrollTop) > 400)}>
