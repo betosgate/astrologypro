@@ -44,6 +44,121 @@ const ASPECT_SYMBOLS: Record<string, string> = {
 
 const PLANET_ORDER = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Node", "Part of Fortune", "Chiron"];
 
+// ─── AWS S3 planet + aspect images (matching Angular's three.service.ts URLs) ──
+
+const PLANET_IMAGES: Record<string, string> = {
+  Sun: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_png/sun+(1).png",
+  Moon: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_png/moon+(2).png",
+  Mercury: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_png/mercury+(1).png",
+  Venus: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_png/vinus.png",
+  Mars: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_png/marse.png",
+  Jupiter: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_png/jupitor.png",
+  Saturn: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_png/satarn.png",
+  Uranus: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_png/urenus.png",
+  Neptune: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_png/neptune+(1).png",
+  Pluto: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_png/pluto+(1).png",
+};
+
+// Planet sign images + aspect images — exact URLs from Angular's astroHeaderModifierPipe
+// Maps each word in an aspect title (planet OR aspect type) to its S3 sign image
+const ASTRO_HEADER_IMAGES: Record<string, string> = {
+  // Planets (planet_singn/ folder — exact filenames from astroHeaderModifierPipe)
+  Sun:        "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/sun+(2).png",
+  Moon:       "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/moon+(3).png",
+  Mercury:    "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/mercury+(2).png",
+  Venus:      "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/vinus_sign.png",
+  Mars:       "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/mars+(2).png",
+  Jupiter:    "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/jupiton_sign.png",
+  Saturn:     "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/satarn+(1).png",
+  Uranus:     "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/urenus_sign.png",
+  Neptune:    "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/neptune_sign.png",
+  Pluto:      "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/pluto_sign.png",
+  // Aspect types (connection_singn/ folder — exact filenames from astroHeaderModifierPipe)
+  Conjunction: "https://all-frontend-assets.s3.us-east-1.amazonaws.com/divine_astro_assates/connection_singn/conjuction_sign.png",
+  Conjunct:    "https://all-frontend-assets.s3.us-east-1.amazonaws.com/divine_astro_assates/connection_singn/conjuction_sign.png",
+  Opposition: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/opposit.png",
+  Square:     "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/squar.png",
+  Trine:      "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/trine.png",
+  Sextile:    "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/sextile.png",
+};
+
+// Keep ASPECT_IMAGES alias for table column aspect-type icon (same URLs as above)
+const ASPECT_IMAGES: Record<string, string> = {
+  Conjunction: ASTRO_HEADER_IMAGES.Conjunction,
+  Opposition:  ASTRO_HEADER_IMAGES.Opposition,
+  Square:      ASTRO_HEADER_IMAGES.Square,
+  Trine:       ASTRO_HEADER_IMAGES.Trine,
+  Sextile:     ASTRO_HEADER_IMAGES.Sextile,
+};
+
+// ─── Word association keyword maps (ported from Angular's AI-generated keyword logic) ─
+
+const PLANET_KEYWORDS: Record<string, string[]> = {
+  Sun: ["identity", "ego", "vitality", "purpose", "willpower", "consciousness", "leadership", "creativity", "authority", "radiance"],
+  Moon: ["emotions", "intuition", "nurturing", "subconscious", "cycles", "receptivity", "instinct", "memory", "home", "comfort"],
+  Mercury: ["communication", "intellect", "analysis", "logic", "adaptability", "learning", "expression", "curiosity", "wit", "thought"],
+  Venus: ["love", "beauty", "harmony", "values", "pleasure", "relationships", "aesthetics", "attraction", "grace", "affection"],
+  Mars: ["action", "drive", "ambition", "energy", "courage", "desire", "assertiveness", "passion", "competition", "force"],
+  Jupiter: ["expansion", "wisdom", "abundance", "optimism", "growth", "philosophy", "opportunity", "fortune", "benevolence", "faith"],
+  Saturn: ["discipline", "structure", "karma", "responsibility", "limitation", "mastery", "perseverance", "authority", "endurance", "time"],
+  Uranus: ["innovation", "rebellion", "awakening", "freedom", "disruption", "originality", "breakthrough", "revolution", "insight", "change"],
+  Neptune: ["spirituality", "dreams", "illusion", "compassion", "mysticism", "transcendence", "sensitivity", "fantasy", "inspiration", "dissolution"],
+  Pluto: ["transformation", "power", "regeneration", "depth", "shadow", "rebirth", "evolution", "intensity", "obsession", "renewal"],
+  Node: ["destiny", "karma", "life path", "growth", "soul mission", "connection", "evolution", "purpose", "collective", "direction"],
+  Chiron: ["healing", "wounds", "wisdom", "mentorship", "pain", "wholeness", "integration", "teaching", "vulnerability", "breakthrough"],
+};
+
+const ASPECT_KEYWORDS: Record<string, string[]> = {
+  Conjunction: ["fusion", "intensification", "merging", "unity", "amplification", "focus", "new beginning", "power", "initiation", "strength"],
+  Opposition: ["tension", "balance", "awareness", "polarity", "integration", "projection", "challenge", "contrast", "opposition", "reflection"],
+  Square: ["challenge", "conflict", "dynamic", "pressure", "friction", "growth", "obstacle", "crisis", "motivation", "breakthrough"],
+  Trine: ["harmony", "flow", "ease", "talent", "natural ability", "grace", "gift", "support", "opportunity", "alignment"],
+  Sextile: ["opportunity", "cooperation", "potential", "synergy", "support", "effort", "productivity", "skill", "resource", "connection"],
+};
+
+// ─── Aspect title parser (mirrors Angular's astroHeaderModifierPipe split logic) ──
+
+const ASPECT_TYPE_WORDS = ["Conjunction", "Conjunct", "Opposition", "Square", "Trine", "Sextile"];
+
+function parseAspectTitle(title?: string): { p1: string; aspectType: string; p2: string } {
+  if (!title) return { p1: "", aspectType: "", p2: "" };
+  const parts = title.split(/\s+/);
+  const idx = parts.findIndex((p) => ASPECT_TYPE_WORDS.some((at) => at.toLowerCase() === p.toLowerCase()));
+  if (idx < 0) return { p1: parts[0] ?? "", aspectType: parts[1] ?? "", p2: parts.slice(2).join(" ") };
+  // Normalise "Conjunct" → "Conjunction" for image lookup
+  const rawType = parts[idx];
+  const aspectType = rawType.toLowerCase() === "conjunct" ? "Conjunction" : rawType;
+  return {
+    p1: parts.slice(0, idx).join(" "),
+    aspectType,
+    p2: parts.slice(idx + 1).join(" "),
+  };
+}
+
+// Renders "PLANET [sign_img] ASPECT [aspect_img] PLANET [sign_img]"
+// — exact visual equivalent of Angular's astroHeaderModifierPipe
+function AstroHeaderParts({ title }: { title?: string }) {
+  const { p1, aspectType, p2 } = parseAspectTitle(title);
+  const terms = [p1, aspectType, p2].filter(Boolean);
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      {terms.map((term, i) => {
+        const img = ASTRO_HEADER_IMAGES[term];
+        return (
+          <span key={i} className="flex items-center gap-1.5">
+            <span className="text-xs font-bold uppercase tracking-widest text-foreground">{term}</span>
+            {img && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={img} alt={term} className="size-5 object-contain shrink-0" />
+            )}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Tab definitions ─────────────────────────────────────────────────────────
 
 type TabType = "single" | "two-person";
@@ -147,8 +262,50 @@ async function callNatalWheel(body: Record<string, unknown>) {
   if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? r.statusText); }
   return r.json();
 }
+async function callDecanLookup(signs: string, planet: string) {
+  const r = await fetch("/api/admin/astro/decan-lookup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signs, planet }) });
+  if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? r.statusText); }
+  return r.json() as Promise<{ results: DecanRow[] }>;
+}
+
+interface DecanRow {
+  id?: number;
+  sign_name: string;
+  planet: string;
+  decan: number;           // 1 | 2 | 3
+  greek_daemon: string;
+  tarot_name: string;
+  description?: string;
+  is_active?: boolean;
+}
+
+interface DecanAi {
+  short_format: string;
+  long_format: string;
+}
+
+interface DecanSection {
+  planetAi: DecanAi | null;
+  daemonAi: DecanAi | null;
+  tarotAi:  DecanAi | null;
+  loading:  boolean;
+  error?:   string;
+}
 
 // ─── AI prompt builders ───────────────────────────────────────────────────────
+
+// Matches Angular's getMonthName(month: number) helper
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+function getMonthName(m: number): string { return MONTH_NAMES[(m ?? 1) - 1] ?? String(m); }
+
+// Matches Angular's convertTo12HourFormat(hour, min) helper
+function convertTo12HourFormat(hour: number, min: number): string {
+  const h = Number(hour ?? 0);
+  const m = Number(min ?? 0);
+  const period = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${period}`;
+}
 
 function buildAiPrompts(data: any, tab: string) {
   const prompts: { key: string; system: string; user: string; json: unknown[] }[] = [];
@@ -194,7 +351,8 @@ function buildAiPrompts(data: any, tab: string) {
   }
 
   if (tab === "solar_return_v2") {
-    // Ported from Angular saturn-return-v2 (same structure used for solar return AI calls)
+    // Ported from Angular solar-return-v2 component — 1 AI section only
+    // NOTE: solar_return_planet_report and solar_return_aspects_report come from AstrologyAPI (callCompute), NOT AI Lambda
     prompts.push({
       key: "solar_return_details",
       system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
@@ -203,54 +361,138 @@ function buildAiPrompts(data: any, tab: string) {
     });
   }
 
-  if (tab === "tropical_transits_weekly_v2" || tab === "tropical_transits_monthly_v3") {
-    // Ported from Angular tropical-transits-v2 component
-    const label = tab === "tropical_transits_weekly_v2" ? "weekly" : "monthly";
-    prompts.push({
-      key: tab === "tropical_transits_weekly_v2" ? "tropical_transits_weekly" : "tropical_transits_monthly",
-      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
-      user: `Generate ${label} transit interpretation based on given json with minimum 3 sentences on each transit interpretation. Don't miss a single transit. Response should not start with string 'json' ever but in proper json format in an array with objects {"title":"...","interpretation":"..."} covering all major planetary movements and their effects`,
-      json: [data],
-    });
+  if (tab === "tropical_transits_weekly_v2") {
+    // Ported from Angular tropical-transits-v2 component — exact stringModifier prompts
+    const isFuture = !!data.is_future_transit;
+    const transitData = data.transit_data;
+    const sys = "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation";
+    if (isFuture) {
+      // Future week: Angular sends transit_relation and uses the week-date prompt
+      const futureDate = data.future_transit_date ?? ""; // "YYYY-MM-DD"
+      const [fy, fm, fd] = futureDate.split("-");
+      prompts.push({
+        key: "tropical_transits_weekly",
+        system: "give response only in valid json format as a whole, nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
+        user: `For the week containing ${fd} ${fm} ${fy}, provide the Tropical Transits Weekly Relation for a person born on ${data.month}/${data.day}/${data.year} at ${data.hour}:${String(data.min ?? 0).padStart(2, "0")} in their birth city, with the result validated against the provided JSON data , formatted as { "aspecttitle": "value", "interpretation": "value" } inside an array,all transit data needs to be there  in same  order  in your resopense, where aspecttitle is the aspect title and interpretation is a 8 sentence paragraph, with each interpretation containing at least three sentences; ensure the response is valid JSON without the word 'json', ensuring the interpretation is properly parsed and formatted on the frontend..`,
+        json: [transitData?.transit_relation ?? transitData],
+      });
+    } else {
+      // Current week: Angular sends full data
+      prompts.push({
+        key: "tropical_transits_weekly",
+        system: sys,
+        user: `Generate  weekly transit details based on given json with minimum 5 sentences on each interpretation as interpretation  with a number as index named index  of  weekly transit details details in as much as detail possible , only interpretation in json index in lowest level of indexes  please and don't miss a single weekly transit details there are many please be careful and response should not start with string 'json'  ever but in proper json format and with in  an array of object format should be [\n{\n"title":\n"interpretation"\n\n}\n\n] we need multiple unique titles for sure with different interpretation`,
+        json: [transitData],
+      });
+    }
+  }
+
+  if (tab === "tropical_transits_monthly_v3") {
+    // Ported from Angular tropical-transits-v2 component — exact stringModifier prompts
+    const isFuture = !!data.is_future_transit;
+    const transitData = data.transit_data;
+    const lunarData = data.lunar_metrics;
+    const sys = "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation";
+    if (isFuture) {
+      // Future month: Angular sends unique_transits and uses the month-date prompt
+      const futureDate = data.future_transit_date ?? ""; // "YYYY-MM"
+      const [fy, fm] = futureDate.split("-");
+      prompts.push({
+        key: "tropical_transits_monthly",
+        system: sys,
+        user: `for the month  ${fm} ${fy} as a date give me Tropical Transits Monthly Relation in above format for a person whose dob is ${data.month}/${data.day}/${data.year} at ${data.hour}:${String(data.min ?? 0).padStart(2, "0")} and place their birth city must be validated and accurate and response should be craeted on basis of given json data. Follow the asked format strictly no other index expected that asked indexes , both aspecttitle and  interpretation must be text in specific aspecttitle will be header and interpretation will be paragraph of 5 sentences atleast  response format must be as exact :  {{aspecttitle:value},{interpretation:value}  create multiple records on each date and type with unique aspecttitle please not just one and detail as much as possible and again response format must be as exact :  {aspecttitle:value},{interpretation:value}.response should not start with string 'json'  ever  and must be a valid json format`,
+        json: [transitData?.unique_transits ?? transitData],
+      });
+      // Future lunar metrics
+      prompts.push({
+        key: "lunar_metrics",
+        system: sys,
+        user: `for the Month  ${fm} ${fy} as a date give me Lunar Metrics as Month ,Moon Day,Moon Illumination,Moon Phase,Moon Sign in a format for a person whose dob is ${data.month}/${data.day}/${data.year} at ${data.hour}:${String(data.min ?? 0).padStart(2, "0")} and place their birth city response should be craeted on basis of given json data, and  accurate as format must be  {month:value with unit} , {moonday:value with unit},{moon_illumination:value with unit},{moonphase:value with unit},{moonsign:value} , {moon_sign_interpretation:value} ,{moon_phase_interpretation:value} , {moon_age_interpretation:value} ,{moon_day_interpretation:value},{moon_illumination_interpretation:value} where moonsigninterpretation , moonphaseinterpretation , moonageinterpretation ,moondayinterpretation ,moonilluminationinterpretation values must be paragraph having atleast 5 sentences each these response must come from calculation and should be validated with astrology calculations and in interpretation value if there is any number round to nearest integer if it's a decimal,  response should not start with string 'json'  ever  and  must be a valid json format. `,
+        json: [{ transit_relation: transitData?.unique_transits, lunar_matrics: lunarData }],
+      });
+    } else {
+      // Current month: Angular sends full data
+      prompts.push({
+        key: "tropical_transits_monthly",
+        system: sys,
+        user: `Generate  monthly transit details based on given json with minimum 5 sentences on each interpretation as interpretation  with a number as index named index  of  monthly transit details details in as much as detail possible , only interpretation in json index in lowest level of indexes  please and don't miss a single monthly transit details there are many please be careful and response should not start with string 'json'  ever but in proper json format and with in  an array ofresult must be validated and accurate as format must be  [\n{\n"title":\n"interpretation"\n\n}\n\n]   we need multiple unique titles for sure with different interpretation. Don't add Natal word before any title and response should not start with string 'json'  ever  and must be a valid json format`,
+        json: [transitData],
+      });
+      // Current lunar metrics
+      prompts.push({
+        key: "lunar_metrics",
+        system: sys,
+        user: `Generate  lunar return details based on given json with minimum 5 sentences on each interpretation as interpretation  with a numnber as index named index  of  lunar return details in as much as detail possible , only interpretation in json index in lowest level of indexes  please and don't miss a single lunar return details there are many please be careful and response should not start with string 'json'  ever but in proper json format and with in  an array of object format should be{"title":"Title or heading of the interpretation ","interpretation":"Details Interpretation" } , response should not start with string 'json'  ever  and must be with in  an array. make sure each interpretation has more than 5 sentences  `,
+        json: [lunarData],
+      });
+    }
   }
 
   if (["romantic_forecast_report_tropical_v2", "friendship_report_tropical_v2", "business_partner_v2"].includes(tab)) {
-    // Ported from Angular romantic-forcast-report-v2 / friendship / business-partner components
-    const context = tab === "romantic_forecast_report_tropical_v2" ? "romantic" : tab === "friendship_report_tropical_v2" ? "friendship" : "business";
-    prompts.push({
-      key: "synastry_horoscope",
-      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
-      user: `Generate ${context} relationship synastry chart details based on given json with minimum 3 sentences on each interpretation. Include compatibility insights, major aspects between the two charts, and relationship dynamics. Response in format {\"data\":[{\"title\":\"...\",\"data\":\"...\"}]} as a valid json object. Do not start with 'json' string`,
-      json: [data],
-    });
-    prompts.push({
-      key: "composite_horoscope",
-      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
-      user: `Generate ${context} composite chart analysis based on given json. Describe the energy of the relationship as a single entity with minimum 3 sentences per section. Include key composite themes, strengths, and challenges. Response in format {\"data\":[{\"title\":\"...\",\"data\":\"...\"}]} as valid json. Do not start with 'json' string`,
-      json: [data],
-    });
+    // Exact prompts ported from Angular romantic-forcast-report-v2.component.ts → stringModifiear()
+    // Angular interpolates birth dates into each prompt; we do the same here using stored person birth data
+    const p1 = data.person1_birth ?? {};
+    const p2 = data.person2_birth ?? {};
+    const personaCity = data.persona_city ?? "";
+    const partnerCity = data.partner_city ?? "";
+    const context = tab === "romantic_forecast_report_tropical_v2" ? "love" : tab === "friendship_report_tropical_v2" ? "friendship" : "business partnership";
+    const relationshipContext = tab === "romantic_forecast_report_tropical_v2" ? "love relationship partner" : tab === "friendship_report_tropical_v2" ? "friendship partner" : "business partner";
+    const sys = "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation inportant aspects of assessing the potential for a To conduct a detailed synastry chart analysis, you will need precise birth data from both parties, including the exact birth time, date, and location, to accurately calculate their astrological charts. Start by examining the aspects between each person's personal planets (Sun, Moon, Venus, Mars) and the other's outer planets (Jupiter, Saturn, Uranus, Neptune, Pluto) to uncover dynamics of attraction, compatibility, and potential friction points. Assess the house overlays by noting where each individual's planets land in the other's astrological houses, which sheds light on the influence they exert over various life areas of their partner. Analyze the interactions between each person's Ascendant (self-expression) and Descendant (partnership qualities) to gauge core compatibility and relational dynamics. Additionally, explore the North and South Nodes to delve into themes of karmic connections or shared life purposes. Utilizing advanced astrology software or reliable online resources can facilitate this complex analysis, while reference books from respected astrologers can provide deeper interpretive frameworks. For a nuanced understanding, especially in complicated synastry situations, consulting with a professional astrologer is advisable.";
+
+    // Birth info string — matches Angular interpolation pattern
+    const b1Str = `I was born on ${getMonthName(p1.month)} ${p1.day}, ${p1.year},  ${p1.hour}:${String(p1.min ?? 0).padStart(2, "0")} in  ${personaCity}  'lat:${p1.lat},lon:${p1.lon},tzone:${p1.tzone}'.`;
+    const b2Str = `my ${relationshipContext} was born on  ${getMonthName(p2.month)} ${p2.day}, ${p2.year} ${p2.hour}:${String(p2.min ?? 0).padStart(2, "0")} at ${partnerCity}   'lat:${p2.lat},lon:${p2.lon},tzone:${p2.tzone}'`;
+    const suffix = ` in {data:[{title:data}]}  exact this format where each data must be atleast 3 sentences with astrological logic with relevance to my question only for each aspect , planet and house on relevant blocks and why you are saying these add an astrologica reason like aspect (with type), house position of planet on each title and data  with astrological data relevant to my data , each title will be heading and data will be context in detail for the title make sure you calculate before response astro analysis must accurate should not change with same data.summery will be mostly generic and recomendtion equal mix of generic and astrological data dont repet that what you have already mentioned in other indexes these could be shorter make sure number content / data on Astrological_aspect is always much more than summery and recomendation to add more here is my birth chart data in json format , try to reffer and mention in your response  `;
+
+    // JSON shapes — synastry uses synastry result; davison/major/etc use self+partner structure
+    const synJson = [data.synastry ?? data];
+    const selfPartnerJson = [{ mydetails: { ...p1 }, fiend_details: { ...p2 } }];
+
+    prompts.push({ key: "synastry_horoscope",             system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our synastry chart of this partnership${suffix}`, json: synJson });
+    prompts.push({ key: "composite_horoscope",            system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our composite chart of this partnership${suffix}`, json: synJson });
+    prompts.push({ key: "davison_relationship",           system: sys, user: `${b1Str.replace("I was born on", `I was born on `)} ${b2Str.replace(`my ${relationshipContext} was born on  `, `my ${relationshipContext} was born on  `)} I have added birth chart details of mine and my ${relationshipContext} both now calculate Aspect and Conjunction of this partnership${suffix.replace("atleast 3 sentences", "atleast 5 sentences")}`, json: selfPartnerJson });
+    prompts.push({ key: "major_aspects_and_connections",  system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our davison relation ship chart of this partnership${suffix}`, json: selfPartnerJson });
+    prompts.push({ key: "compatibility_score_or_summary", system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate compatibility score or summery of this partnership${suffix}`, json: selfPartnerJson });
+    prompts.push({ key: "elemental_balance",              system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate elemental balance of this partnership${suffix}`, json: selfPartnerJson });
+    prompts.push({ key: "timing_and_transits",            system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate timing and transit of this partnership${suffix}`, json: selfPartnerJson });
+    if (tab === "business_partner_v2") {
+      prompts.push({ key: "professional_alignment_and_goals", system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate professional alignment and goals of this partnership${suffix}`, json: selfPartnerJson });
+    } else {
+      prompts.push({ key: "karmic_and_soulmate_indicators", system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate Karmic and Soulmate Indicators of this partnership${suffix}`, json: selfPartnerJson });
+    }
   }
 
   if (tab === "horary_chart_v2") {
-    // Ported from Angular horary component — exact format matches Angular's horary_chart_question call
+    // Exact prompt ported from Angular horary-chart-v2.component.ts → stringModifier()
+    // Angular uses this.currentdate = moment().format('MM/DD/YYYY') for the FUTURE rule
+    const currentDate = new Date().toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }); // MM/DD/YYYY
+    const b = data; // combinedData contains birth1 fields (day, month, year, hour, min, lat, lon, tzone)
+    const city = data.city ?? "";
+    const question = data.question ?? "";
+    const natalChartData = data.horary_chart_data ?? data;
     prompts.push({
       key: "horary_chart_question",
-      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
-      user: `Generate horary chart interpretation for the given question based on the astrological data. Include timing, planetary significators, and recommendations. Response must follow this exact json structure: {\"planet\":{},\"astrological_considerations\":{},\"recommendations\":{},\"alternative_timings\":{},\"data\":{\"recomendation_on_date_and_timeline\":{\"title\":\"\",\"data\":\"\"},\"house\":[{\"title\":\"\",\"data\":\"\"}],\"planet\":[{\"title\":\"\",\"data\":\"\"}],\"summary\":{\"recommendation_on_date_and_timeline\":[{\"timeline_title\":\"\",\"timeline_data\":\"\"}]}}}. Do not start response with string 'json' ever`,
-      json: [data],
+      system: "give response only in json format as a whole , nothing else answer as astrologer not AI BOT user data index related to astrology as data under that aspect and under that interpretation",
+      user: `I was born on ${getMonthName(b.month)} ${b.day}, ${b.year} time ${b.hour}:${String(b.min ?? 0).padStart(2, "0")}, in ${city} ,'lat:${b.lat},lon:${b.lon},tzone:${b.tzone}'. ${question}. I'm providing you with my birth chart data in a separate JSON object. You MUST use this data to generate a personalized astrological analysis in the following JSON format:{data:{astrological_aspect:{aspect:[{title:data}],planet:[{title:data}],house:[{title:data}]},summary:{answer:[{title:data}],recommendation:[{title:data}],recommendation_on_date_and_timeline:[{timeline_title:timeline_data}]}}}\n\nexample format to follow :\n{\n \"data\": {\n \"astrological_aspect\": {\n \"aspect\": [\n {\n \"title\": \"Mars Trine Jupiter (Transit to Natal)\",\n \"data\": \"Between January 10th and February 15th, 2025, transiting Mars in Sagittarius forms a trine aspect to your natal Jupiter in the 12th house. This harmonious alignment amplifies your ambition, optimism, and drive to pursue your goals, particularly those related to spirituality, intuition, or humanitarian causes. It supports taking decisive action and expanding your vision, bringing opportunities for growth and success in these areas.\"\n }\n ],\n \"planet\": [\n {\n \"title\": \"Transiting Mars\",\n \"data\": \"Between January 10th and February 15th, 2025, Mars transits through Sagittarius and forms a harmonious trine to your natal Jupiter in the 12th house.\"\n }\n ],\n \"house\": [\n {\n \"title\": \"12th House (Transit Activation)\",\n \"data\": \"Between January 10th and February 15th, 2025, your 12th house is activated.\"\n }\n ]\n },\n \"summary\": {\n \"answer\": [\n {\n \"title\": \"Optimal Time\",\n \"data\": \"Based on your birth chart data, the optimal time is between January 10th and February 15th, 2025.\"\n }\n ],\n \"recommendation\": [\n {\n \"title\": \"Focus on 12th House Themes\",\n \"data\": \"Given the emphasis on your 12th house, consider incorporating themes related to spirituality.\"\n }\n ],\n \"recommendation_on_date_and_timeline\": [\n {\n \"timeline_title\": \"Between January 10th and February 15th, 2025\",\n \"timeline_data\": \"This period is particularly auspicious.\"\n }\n ]\n }\n }\n}\nI need you to strictly adhere to these rules:\n\n1.Personalized Interpretations ONLY: Absolutely NO generic explanations of planets, aspects, or houses. Every interpretation in the data fields must be derived from and specific to MY birth chart data and reasoning with timeline_data you suggested. No general info expected.\n\n2.FUTURE Justified Timelines: The timeline_data must identify a favorable future date range that begins strictly after ${currentDate}. Within this recommended time period, you MUST also pinpoint multiple specific, highly auspicious dates for taking action. You must structure this recommendation by first presenting the single "Top Choice Date," followed by a list of "Other Favorable Dates." For both the overall date range and each specific date, you MUST provide a detailed astrological justification, explaining exactly which transits to MY birth chart make these times significant.\n3.Data Richness: Each data field needs at least three full sentences of detailed, personalized interpretation.\n4.Accurate Titles: Use concise labels for each title (e.g., 'Sun Conjunct Moon', 'Mars in Aries').\n5.Complete Data: Ensure ALL objects have both title and data fields.\n6.For all recommended dates and timelines, format dates as <span class=\"timedata\">date</span> only.\n7.Response should not start with string 'json' ever and must be valid json format.`,
+      json: [natalChartData],
     });
   }
 
   const returnTabMap: Record<string, string> = { "jupiter_return_v2": "jupiter_return_v2", "saturn_return_v2": "saturn_return_v2", "mars_return_v2": "mars_return_v2", "uranus_return_v2": "uranus_return_v2" };
   if (returnTabMap[tab]) {
-    // Ported from Angular jupiter/saturn/mars/uranus-return-v2 components
+    // Exact prompt ported from Angular jupiter-return-v2.component.ts → stringModifier()
+    // Mars/Saturn/Uranus returns use same structure (ported individually)
     const planet = tab.split("_")[0];
+    const planetCap = planet.charAt(0).toUpperCase() + planet.slice(1);
     const returnDate = data?.returnDate ?? "calculated";
+    // Angular: value.year, getMonthName(value.month), value.day, convertTo12HourFormat(value.hour, value.min), city
+    const city = data.city ?? data.birthplace ?? "";
+    const natalData = data.planet_return_data ?? data;
     prompts.push({
       key: returnTabMap[tab],
-      system: "give response only in json format as a whole , nothing else answer as astrologer not AI BOT",
-      user: `My birth details match the data given. My next ${planet} return date is ${returnDate}. I want to know about ${planet} return — career, relationships, personal growth, health. House system: whole sign. Response must follow this exact json format: {\"chart_data\":{},\"title_and_interpretation\":{\"title\":\"...\",\"interpretation\":{\"General\":\"...\",\"Career\":\"...\",\"Relationships\":\"...\",\"Personal Growth\":\"...\",\"Health\":\"...\"}}}. All interpretation fields minimum 3 sentences. Response must not start with 'json' string and must be valid json`,
-      json: [data],
+      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT  ",
+      user: `My Bday is ${data.year} ${getMonthName(data.month)} ${data.day} , time ${convertTo12HourFormat(data.hour, data.min)}  , at  ${city}   and according to the astrological logic and  aspects my next ${planet} return date is ${returnDate},  I want to know about ${planet} return,  interested on career, relationships and others.house system should be whole sign give me chart data first and then detailed content as title and inter pretation in json format but nothing else and should not start with string 'json' and each interpretations of each title . example response format should be {\n  \"chart_data\": {\n    \"date_of_birth\": \"{data}\",\n    \"time_of_birth\": \"{data}\",\n    \"place_of_birth\": \"{data}\",\n   \"exact_position_details_of_${planet}_at_time_of_birth \": \"{data}\",\n    \"house_system\": \"Whole Sign\",\n    \"Positions\": {\n      \"Sun\": \"{data}\",\n      \"Moon\": \"{data}\",\n      \"Mercury\": \"{data}\",\n      \"Venus\": \"{data}\",\n      \"Mars\": \"{data}\",\n      \"${planetCap}\": \"{data}\",\n      \"Saturn\": \"{data}\",\n      \"Uranus\": \"{data}\",\n      \"Neptune\": \"{data}\",\n      \"Pluto\": \"{data}\",\n      \"North_Node\": \"{data}\",\n      \"South_Node\": \"{data}\",\n      \"Ascendant\": \"{data}\"\n    }\n  },\n  \"title_and_interpretation\": {\n    \"title\": \" Upcoming ${planetCap} Return Analysis for {data}\",\n    \"interpretation\": {\n      \"General\": \"{data_10}.\",\n      \"Career\": \"data.\",\n      \"Relationships\": \"data.\",\n      \"Personal Growth\": \"{data_10}.\",\n      \"Health\": \"{data}\",\n  \"Family\": \"{data}\",\n  \"Social\": \"{data}\",\n  \"Spiritual\": \"{data_10}\"\n  }\n  }\n}\n  take json as example structure do not copy content please and replace data with proper detailed related response like real  positions of stars.every intepretation after the title should be with detailed reasoning related to stars/planets and their positions of house keeping significance of ${planet} in mind and mention both positive and negetives stuffs  with reasoning and interpretation must be very specific as astrologer not general and should sound very confident on observations and keeping age of mine with 3 sentences on each tpoic is must keeping all other plantets positions in calculation too is most important . all {data} and {date_data} should be populated with real calculated info . remember all date time data should be in usa date and time format always whereever we have date / time format  {month–day–year order (e.g. July 9, 2024)} and each date must be exactly perfect after multiple cross check .make sure for each position data is with atleast degrees with house number and impact of the position mentioned  , verify everything as of data from several websites multiple times. All {data_10} must be fulfilled with atleast 3 sentences.Response should not start with string 'json'  ever  and must be a valid json format`,
+      json: [natalData],
     });
   }
 
@@ -258,23 +500,70 @@ function buildAiPrompts(data: any, tab: string) {
 }
 
 // ─── Show More Modal ──────────────────────────────────────────────────────────
+// aspectTitle: when set, renders the Angular-style icon header + word-association chips
+// inside the modal (mirrors Angular's showMoreModal with pictorialData image section)
 
-function ShowMoreModal({ title, content, loading, open, onClose }: {
+function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, promptType, planetEntries }: {
   title: string; content: string; loading: boolean; open: boolean; onClose: () => void;
+  aspectTitle?: string;
+  promptType?: "planet" | "house" | "aspect" | "generic";
+  planetEntries?: { planet: string; items: string[] }[];
 }) {
+  const isAspect = promptType === "aspect" || !!aspectTitle;
+  const { p1, aspectType, p2 } = isAspect ? parseAspectTitle(aspectTitle ?? title) : { p1: "", aspectType: "", p2: "" };
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-base font-bold capitalize">{title.replace(/_/g, " ")}</DialogTitle>
+          {isAspect ? (
+            /* Aspect modal header: Angular astroHeaderModifierPipe icon row */
+            <div className="pb-1">
+              <AstroHeaderParts title={aspectTitle ?? title} />
+            </div>
+          ) : (
+            <DialogTitle className="text-base font-bold capitalize">{title.replace(/_/g, " ")}</DialogTitle>
+          )}
         </DialogHeader>
+
         {loading ? (
           <div className="flex items-center gap-3 py-8 justify-center text-muted-foreground">
             <Loader2 className="size-5 animate-spin text-amber-500" />
             <span className="text-sm">Loading extended interpretation…</span>
           </div>
         ) : (
-          <div className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{content}</div>
+          <div className="space-y-4">
+            {/* Planet type: numbered paragraphs per planet — Angular showMoreModal keyvalue pattern */}
+            {promptType === "planet" && planetEntries && planetEntries.length > 0 ? (
+              <div className="space-y-5">
+                {planetEntries.map(({ planet, items }) => (
+                  <div key={planet} className="space-y-2">
+                    <p className="text-sm font-bold capitalize text-amber-700">{planet}</p>
+                    <ol className="space-y-2 list-none">
+                      {items.map((item, idx) => (
+                        <li key={idx} className="text-sm leading-relaxed text-foreground">
+                          <span className="font-semibold text-muted-foreground mr-2">{idx + 1}.</span>{item}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* house / aspect / generic: plain paragraph */
+              <div className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{content}</div>
+            )}
+
+            {/* Word association chips inside modal — matching Angular's pictorial section */}
+            {isAspect && p1 && p2 && (
+              <div className="rounded-lg border overflow-hidden">
+                <div className="px-3 py-2 bg-muted/40 border-b">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Word Association</p>
+                </div>
+                <WordAssociationChips aspecting={p1} type={aspectType} aspected={p2} />
+              </div>
+            )}
+          </div>
         )}
       </DialogContent>
     </Dialog>
@@ -303,12 +592,62 @@ function ChartImageModal({ src, open, onClose }: { src: string; open: boolean; o
 
 // ─── Planet Symbol ────────────────────────────────────────────────────────────
 
-function PlanetSymbol({ name }: { name: string }) {
+function PlanetSymbol({ name, showImage = true }: { name: string; showImage?: boolean }) {
+  const imgSrc = PLANET_IMAGES[name];
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className="text-amber-500 font-semibold text-base leading-none" aria-hidden>{PLANET_SYMBOLS[name] ?? "✦"}</span>
+      {showImage && imgSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={imgSrc} alt={name} className="size-5 object-contain shrink-0" />
+      ) : (
+        <span className="text-amber-500 font-semibold text-base leading-none shrink-0" aria-hidden>{PLANET_SYMBOLS[name] ?? "✦"}</span>
+      )}
       <span>{name}</span>
     </span>
+  );
+}
+
+// ─── Word Association Chips (replaces Angular's Three.js 3D sphere keyword arrays) ──
+// The card header already renders "PLANET [img] ASPECT [img] PLANET [img]" via AstroHeaderParts.
+// This panel only renders the 3-column keyword chips — no duplicate icon header.
+
+function WordAssociationChips({ aspecting, type, aspected }: { aspecting: string; type: string; aspected: string }) {
+  const p1keys = (PLANET_KEYWORDS[aspecting] ?? []).slice(0, 6);
+  const typeKeys = (ASPECT_KEYWORDS[type] ?? []).slice(0, 5);
+  const p2keys = (PLANET_KEYWORDS[aspected] ?? []).slice(0, 6);
+
+  if (!p1keys.length && !typeKeys.length && !p2keys.length) return null;
+
+  return (
+    <div className="px-4 py-3 bg-muted/10 border-t">
+      {/* Three keyword columns — mirrors Angular's 3-sphere text arrays */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-600 text-center">{aspecting}</p>
+          <div className="flex flex-wrap gap-1 justify-center">
+            {p1keys.map((kw) => (
+              <span key={kw} className="px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-medium border border-amber-400/20">{kw}</span>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-purple-500 text-center">{type}</p>
+          <div className="flex flex-wrap gap-1 justify-center">
+            {typeKeys.map((kw) => (
+              <span key={kw} className="px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-400 text-[10px] font-medium border border-purple-400/20">{kw}</span>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-600 text-center">{aspected}</p>
+          <div className="flex flex-wrap gap-1 justify-center">
+            {p2keys.map((kw) => (
+              <span key={kw} className="px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-medium border border-amber-400/20">{kw}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -402,35 +741,352 @@ function SectionError({ title }: { title: string }) {
 // ─── Show More hook ───────────────────────────────────────────────────────────
 
 function useShowMore() {
-  const [modal, setModal] = useState<{ title: string; content: string; loading: boolean } | null>(null);
+  const [modal, setModal] = useState<{
+    title: string;
+    content: string;
+    loading: boolean;
+    aspectTitle?: string;
+    // promptType determines how the response is rendered:
+    //   "aspect"  → {interpretation:"text"} → plain paragraph (Angular showMoreModalAsecdent)
+    //   "planet"  → {PlanetName:{1:"...",2:"...",...}} → numbered paragraphs per planet (Angular showMoreModal)
+    //   "house"   → {interpretations:{data:"..."}} → plain paragraph from .data field (Angular showMoreModalHouse)
+    //   "generic" → {interpretation:"text"} → plain paragraph
+    promptType?: "planet" | "house" | "aspect" | "generic";
+    // For planet type: structured numbered entries extracted from response
+    planetEntries?: { planet: string; items: string[] }[];
+  } | null>(null);
 
-  async function trigger(title: string, currentText: string, promptData: any, areaOfInquiry?: string) {
-    setModal({ title, content: "", loading: true });
+  // aspectTitle: pass for aspect cards → triggers Angular's exact aspect prompt
+  // promptType: "planet" for planet show-more, "house" for house show-more, "aspect" for aspects, else generic
+  async function trigger(
+    title: string,
+    currentText: string,
+    promptData: any,
+    areaOfInquiry?: string,
+    aspectTitle?: string,
+    isKeyValue?: boolean,
+    promptType?: "planet" | "house" | "aspect" | "generic",
+  ) {
+    const resolvedType = promptType ?? (aspectTitle ? "aspect" : "generic");
+    setModal({ title, content: "", loading: true, aspectTitle, promptType: resolvedType });
+
     try {
-      const aiPayload = {
-        condition: {
-          system_content: "Give response as plain text, answer as an astrologer not an AI bot. Be detailed and thorough.",
-          user_content: `Give me a much more detailed and expanded interpretation of "${title}" in western astrology. Based on the given data, provide at least 10 sentences covering its meaning, influence on personality, life events, relationships, career, and spiritual growth. Current summary: ${currentText}`,
-        },
-        toolname: "other",
-        json: [promptData],
-      };
-      const res = await callAI(aiPayload as any, areaOfInquiry);
-      let text = res.ai_response;
-      if (typeof text !== "string") text = JSON.stringify(text, null, 2);
-      setModal({ title, content: text, loading: false });
+      let aiPayload: any;
+
+      if (resolvedType === "aspect" || aspectTitle) {
+        // Exact Angular prompt from common-tabil-aspects.component.ts shoMoreOption()
+        aiPayload = {
+          condition: {
+            system_content: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
+            user_content: "Generate western chart details only on aspects based on given json with atleast 8 sentences the json must be as {interpretation:data} where data in response from chatbot and it must be paragraph / string  but not object type (must not have any index in data or under interpretation index value) for sure.Response should not start with string 'json'  ever  and must be a valid json format  ",
+          },
+          toolname: "other",
+          json: [promptData],
+        };
+      } else if (resolvedType === "planet") {
+        // Exact Angular prompt from common-tabil-lilith.component.ts shoMoreOption()
+        // Response format: {PlanetName: {1:"text",2:"text",3:"text",4:"text",5:"text"}}
+        aiPayload = {
+          condition: {
+            system_content: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that planet and under that interpretation ",
+            user_content: "Generate western chart details only onmentioned planet based on given json with detailed signifance of sign . retro , house , degree and speed data given as json format  with atleast 5 sentences or 2 paragraphs  on each mentioned topic in as much as detail possible , remove full degree , norm degree , speed , retrograde , sign , house from  json index and add number as index on each interpretation (e.g {Sun : {1:interpretation data,2:interpretation data,3:interpretation data,4:interpretation data,5:interpretation data}}) please and don't miss a single planet there are many please be careful .Response should not start with string 'json'  ever  and must be a valid json format ",
+          },
+          toolname: "other",
+          json: [promptData],
+        };
+      } else if (resolvedType === "house") {
+        // Exact Angular prompt from common-tabil-house.component.ts shoMoreOption()
+        // Response format: {interpretations: {data: "..."}}
+        aiPayload = {
+          condition: {
+            system_content: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation ",
+            user_content: "Generate western chart details only on only one house  provided in json with atleast 5 sentences on 3 paragraphs on each interpretation making sure mentioning significance of house , sign and degree in details , in json I need to see interpreation as index only and nothing else such as {interpretations:{data}} where is the content generated by astrologer and data is paragraph as text not json object and it must not have any inner index .Response should not start with string 'json'  ever  and must be a valid json format ",
+          },
+          toolname: "other",
+          json: [promptData],
+        };
+      } else {
+        // Generic expanded interpretation
+        aiPayload = {
+          condition: {
+            system_content: "give response only in json format as a whole , nothing else answer as astrologer not AI BOT",
+            user_content: `Give me a much more detailed and expanded interpretation of "${title}" in western astrology. Based on the given data, provide at least 8 sentences covering meaning, planetary influence, house significance, and practical life guidance. Response must be in json format as {interpretation: "detailed paragraph text"}`,
+          },
+          toolname: "other",
+          json: [promptData],
+        };
+      }
+
+      const res = await callAI(aiPayload, areaOfInquiry);
+      let parsed = res.ai_response;
+      if (typeof parsed === "string") { try { parsed = JSON.parse(parsed); } catch { /* keep string */ } }
+
+      if (resolvedType === "planet") {
+        // Response: {PlanetName: {1:"...", 2:"...", ...}} — extract as structured entries
+        let planetEntries: { planet: string; items: string[] }[] = [];
+        if (typeof parsed === "object" && parsed !== null) {
+          for (const [planetName, numbered] of Object.entries(parsed as Record<string, any>)) {
+            const items: string[] = typeof numbered === "object" && numbered !== null
+              ? Object.values(numbered).map(String)
+              : [String(numbered)];
+            planetEntries.push({ planet: planetName, items });
+          }
+        }
+        setModal({ title, content: "", loading: false, aspectTitle, promptType: resolvedType, planetEntries });
+      } else if (resolvedType === "house") {
+        // Response: {interpretations: {data: "..."}} — extract .interpretations.data
+        let text = "";
+        if (typeof parsed === "object" && parsed !== null) {
+          const interp = (parsed as any).interpretations;
+          if (typeof interp === "object" && interp !== null) {
+            text = interp.data ?? JSON.stringify(interp);
+          } else if (typeof interp === "string") {
+            text = interp;
+          } else {
+            text = parsed.interpretation ?? JSON.stringify(parsed, null, 2);
+          }
+        } else {
+          text = String(parsed ?? "");
+        }
+        setModal({ title, content: text, loading: false, aspectTitle, promptType: resolvedType });
+      } else {
+        // aspect / generic: extract .interpretation
+        let text: string;
+        if (typeof parsed === "object" && parsed !== null) {
+          text = (parsed as any).interpretation ?? JSON.stringify(parsed, null, 2);
+        } else {
+          text = String(parsed ?? "");
+        }
+        setModal({ title, content: text, loading: false, aspectTitle, promptType: resolvedType });
+      }
     } catch {
-      setModal({ title, content: "Could not load extended interpretation. Please try again.", loading: false });
+      setModal({ title, content: "Could not load extended interpretation. Please try again.", loading: false, aspectTitle, promptType: resolvedType });
     }
   }
 
   return { modal, trigger, close: () => setModal(null) };
 }
 
+// ─── Decan Modal ─────────────────────────────────────────────────────────────
+// Mirrors Angular's decan detail modal — 3 AI sections per decan:
+//   1. Planet-in-Decan interpretation (short + long)
+//   2. Greek Daemon spirit of the decan (short + long)
+//   3. Tarot attribution via Crowley/Thoth system (short + long)
+
+function ordinalDecan(n: number): string {
+  return n === 1 ? "1st" : n === 2 ? "2nd" : "3rd";
+}
+
+function DecanAiBlock({ title, data, loading }: { title: string; data: DecanAi | null; loading: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  if (loading) {
+    return (
+      <div className="space-y-1.5 animate-pulse">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-600">{title}</p>
+        <div className="h-3 bg-muted rounded w-4/5" />
+        <div className="h-3 bg-muted rounded w-3/5" />
+      </div>
+    );
+  }
+  if (!data) return null;
+  return (
+    <div className="space-y-1.5">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-600">{title}</p>
+      <p className="text-sm leading-relaxed text-foreground">{data.short_format}</p>
+      {expanded && <p className="text-sm leading-relaxed text-muted-foreground mt-1">{data.long_format}</p>}
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
+      >
+        {expanded ? "Show Less" : "Read More"}
+      </button>
+    </div>
+  );
+}
+
+function DecanModal({ planet, sign, open, onClose }: {
+  planet: string; sign: string; open: boolean; onClose: () => void;
+}) {
+  const [rows, setRows]       = useState<DecanRow[]>([]);
+  const [sections, setSections] = useState<Record<number, DecanSection>>({});
+  const [loadingRows, setLoadingRows] = useState(false);
+  const [rowError, setRowError] = useState<string | null>(null);
+
+  // Fetch decan rows + fire 3 AI calls per decan whenever modal opens
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setRows([]);
+    setSections({});
+    setRowError(null);
+    setLoadingRows(true);
+
+    (async () => {
+      try {
+        const { results } = await callDecanLookup(sign, planet);
+        if (cancelled) return;
+        if (!results.length) { setRowError("No decan data found for this planet/sign combination."); setLoadingRows(false); return; }
+        setRows(results);
+        setLoadingRows(false);
+
+        // Fire 3 AI calls per decan row in parallel (non-fatal)
+        for (const row of results) {
+          const decanLabel = ordinalDecan(row.decan);
+          // Initialise loading state for this decan
+          setSections((prev) => ({ ...prev, [row.decan]: { planetAi: null, daemonAi: null, tarotAi: null, loading: true } }));
+
+          const systemContent = "give response only in json format as a whole , nothing else answer as astrologer not AI BOT";
+
+          // Angular exact prompts — three parallel AI calls
+          const [planetRes, daemonRes, tarotRes] = await Promise.allSettled([
+            callAI({
+              condition: {
+                system_content: systemContent,
+                user_content: `What does it mean when you have ${planet} in the ${decanLabel} decan of ${sign} in astrology , give me response in json where two indexes are short_format (min 3 sentences) and long_format (min 5 sentences) and response should not start with 'json' ever`,
+              },
+              toolname: "other",
+              json: [{ planet, sign, decan: decanLabel, decan_data: row }],
+            } as any),
+            callAI({
+              condition: {
+                system_content: systemContent,
+                user_content: `Explain the Greek daemon ${row.greek_daemon} as the spirit of the decan in relation to the ${decanLabel} decan of ${sign} in astrology. Give response in json where two indexes are short_format (min 3 sentences) and long_format (min 5 sentences) and response should not start with 'json' ever`,
+              },
+              toolname: "other",
+              json: [{ daemon: row.greek_daemon, sign, decan: decanLabel }],
+            } as any),
+            callAI({
+              condition: {
+                system_content: systemContent,
+                user_content: `Using the Crowley's thoth decks attributions, without referencing his deck directly, explain the ${row.tarot_name} as it would relate to the ${decanLabel} decan of ${sign} in astrology. Give response in json where two indexes are short_format (min 3 sentences) and long_format (min 5 sentences) and response should not start with 'json' ever`,
+              },
+              toolname: "other",
+              json: [{ tarot: row.tarot_name, sign, decan: decanLabel }],
+            } as any),
+          ]);
+
+          if (cancelled) return;
+
+          function parseDecanAi(res: PromiseSettledResult<any>): DecanAi | null {
+            if (res.status === "rejected") return null;
+            let parsed = res.value?.ai_response;
+            if (typeof parsed === "string") { try { parsed = JSON.parse(parsed); } catch { /* keep */ } }
+            if (typeof parsed === "object" && parsed !== null) {
+              return { short_format: parsed.short_format ?? "", long_format: parsed.long_format ?? "" };
+            }
+            return null;
+          }
+
+          setSections((prev) => ({
+            ...prev,
+            [row.decan]: {
+              planetAi: parseDecanAi(planetRes),
+              daemonAi: parseDecanAi(daemonRes),
+              tarotAi:  parseDecanAi(tarotRes),
+              loading: false,
+            },
+          }));
+        }
+      } catch (e: unknown) {
+        if (cancelled) return;
+        setRowError(e instanceof Error ? e.message : "Failed to load decan data");
+        setLoadingRows(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, planet, sign]);
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base font-bold">
+            {/* Planet image + title */}
+            {PLANET_IMAGES[planet] && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={PLANET_IMAGES[planet]} alt={planet} className="size-6 object-contain" />
+            )}
+            <span>{planet} Decans in {sign}</span>
+          </DialogTitle>
+        </DialogHeader>
+
+        {loadingRows && (
+          <div className="flex items-center gap-3 py-8 justify-center text-muted-foreground">
+            <Loader2 className="size-5 animate-spin text-amber-500" />
+            <span className="text-sm">Loading decan data…</span>
+          </div>
+        )}
+
+        {rowError && (
+          <div className="py-4 text-sm text-destructive">{rowError}</div>
+        )}
+
+        {rows.length > 0 && (
+          <div className="space-y-6">
+            {rows.map((row) => {
+              const sec = sections[row.decan];
+              return (
+                <div key={row.decan} className="rounded-lg border overflow-hidden">
+                  {/* Decan header */}
+                  <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-500/10 border-b">
+                    <span className="text-xs font-bold uppercase tracking-widest text-amber-600">{ordinalDecan(row.decan)} Decan</span>
+                    <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-400 ml-auto">{planet} in {sign}</Badge>
+                  </div>
+
+                  {/* Static labels row */}
+                  <div className="grid grid-cols-2 gap-px bg-border">
+                    <div className="bg-background px-4 py-2.5 space-y-0.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Greek Daemon</p>
+                      <p className="text-sm font-medium text-foreground">{row.greek_daemon || "—"}</p>
+                    </div>
+                    <div className="bg-background px-4 py-2.5 space-y-0.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tarot Card</p>
+                      <p className="text-sm font-medium text-foreground">{row.tarot_name || "—"}</p>
+                    </div>
+                  </div>
+
+                  {/* Static description if present */}
+                  {row.description && (
+                    <div className="px-4 py-3 bg-muted/5 border-t">
+                      <p className="text-xs text-muted-foreground leading-relaxed">{row.description}</p>
+                    </div>
+                  )}
+
+                  {/* AI sections */}
+                  <div className="px-4 py-4 space-y-5 border-t">
+                    <DecanAiBlock
+                      title={`${planet} in ${ordinalDecan(row.decan)} Decan of ${sign}`}
+                      data={sec?.planetAi ?? null}
+                      loading={sec?.loading ?? true}
+                    />
+                    <DecanAiBlock
+                      title={`Greek Daemon: ${row.greek_daemon}`}
+                      data={sec?.daemonAi ?? null}
+                      loading={sec?.loading ?? true}
+                    />
+                    <DecanAiBlock
+                      title={`Tarot: ${row.tarot_name}`}
+                      data={sec?.tarotAi ?? null}
+                      loading={sec?.loading ?? true}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Planets Section ──────────────────────────────────────────────────────────
 
 function PlanetsSection({ planets, aiData, areaOfInquiry }: { planets: any[]; aiData: any; areaOfInquiry?: string }) {
   const { modal, trigger, close } = useShowMore();
+  const [decanPlanet, setDecanPlanet] = useState<{ name: string; sign: string } | null>(null);
 
   if (!planets) return null;
 
@@ -447,7 +1103,14 @@ function PlanetsSection({ planets, aiData, areaOfInquiry }: { planets: any[]; ai
 
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
+      {/* Decan modal — opens per-planet on Decan button click */}
+      <DecanModal
+        planet={decanPlanet?.name ?? ""}
+        sign={decanPlanet?.sign ?? ""}
+        open={!!decanPlanet}
+        onClose={() => setDecanPlanet(null)}
+      />
 
       {/* Table */}
       <div className="rounded-lg border overflow-hidden">
@@ -501,10 +1164,19 @@ function PlanetsSection({ planets, aiData, areaOfInquiry }: { planets: any[]; ai
                 </div>
                 <div className="px-4 py-3">
                   <p className="text-sm leading-relaxed text-foreground">{interp}</p>
-                  <button
-                    onClick={() => trigger(p.name, interp, { planet: p, context: "western astrology planet interpretation" }, areaOfInquiry)}
-                    className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
-                  >Show More</button>
+                  <div className="mt-2 flex items-center gap-3">
+                    <button
+                      onClick={() => trigger(p.name, interp, { planet: p, context: "western astrology planet interpretation" }, areaOfInquiry, undefined, false, "planet")}
+                      className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
+                    >Show More</button>
+                    {/* Decan button — mirrors Angular decan detail section */}
+                    {p.sign && (
+                      <button
+                        onClick={() => setDecanPlanet({ name: p.name, sign: p.sign })}
+                        className="text-xs text-purple-600 hover:text-purple-700 font-medium underline underline-offset-2"
+                      >Decan</button>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -541,7 +1213,7 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
 
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
 
       {/* House table */}
       <div className="rounded-lg border overflow-hidden">
@@ -623,7 +1295,7 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
               </div>
               <div className="px-4 py-3">
                 <p className="text-sm leading-relaxed">{item.interpretation}</p>
-                <button onClick={() => trigger(`House ${item.house}`, item.interpretation, item, areaOfInquiry)} className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                <button onClick={() => trigger(`House ${item.house}`, item.interpretation, item, areaOfInquiry, undefined, false, "house")} className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
               </div>
             </div>
           ))}
@@ -656,7 +1328,7 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
 
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
       <AspectsLegend />
 
       <div className="rounded-lg border overflow-hidden">
@@ -684,8 +1356,13 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
                     </div>
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      <span className="text-amber-500">{ASPECT_SYMBOLS[a.type] ?? ""}</span>
+                    <span className="inline-flex items-center gap-1.5">
+                      {ASPECT_IMAGES[a.type] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={ASPECT_IMAGES[a.type]} alt={a.type} className="size-4 object-contain" />
+                      ) : (
+                        <span className="text-amber-500 text-sm">{ASPECT_SYMBOLS[a.type] ?? ""}</span>
+                      )}
                       <span>{a.type}</span>
                     </span>
                   </td>
@@ -699,22 +1376,32 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
         </div>
       </div>
 
-      {/* AI aspect interpretations */}
+      {/* AI aspect interpretations with word association */}
       {!aiData && <SectionSkeleton title="Aspect Interpretations" />}
       {aiData === "error" && <SectionError title="Aspect Interpretations" />}
       {Array.isArray(aiData) && aiData.length > 0 && (
         <div className="space-y-3">
-          {aiData.map((item: any, i: number) => (
-            <div key={i} className="rounded-lg border overflow-hidden">
-              <div className="px-4 py-2.5 bg-muted/40 border-b">
-                <h4 className="text-sm font-semibold">{item.title ?? `Aspect ${i + 1}`}</h4>
+          {aiData.map((item: any, i: number) => {
+            // Parse planet/aspect names directly from the AI title — no fuzzy rawAspect lookup
+            // e.g. "Moon Conjunction Venus" → p1="Moon", aspectType="Conjunction", p2="Venus"
+            const { p1, aspectType, p2 } = parseAspectTitle(item.title);
+            return (
+              <div key={i} className="rounded-lg border overflow-hidden">
+                {/* Header — Angular astroHeaderModifierPipe pattern: WORD [img] WORD [img] WORD [img] */}
+                <div className="px-4 py-2.5 bg-muted/40 border-b">
+                  <AstroHeaderParts title={item.title ?? `Aspect ${i + 1}`} />
+                </div>
+                <div className="px-4 py-3">
+                  <p className="text-sm leading-relaxed">{item.interpretation}</p>
+                  <button onClick={() => trigger(item.title ?? `Aspect ${i + 1}`, item.interpretation, item, areaOfInquiry, item.title)} className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                </div>
+                {/* Word association keyword chips — 3 columns for the two planets + aspect type */}
+                {p1 && p2 && (
+                  <WordAssociationChips aspecting={p1} type={aspectType} aspected={p2} />
+                )}
               </div>
-              <div className="px-4 py-3">
-                <p className="text-sm leading-relaxed">{item.interpretation}</p>
-                <button onClick={() => trigger(item.title ?? `Aspect ${i + 1}`, item.interpretation, item, areaOfInquiry)} className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -734,7 +1421,7 @@ function DharmaKarmaSection({ data, rawData, areaOfInquiry }: { data: any; rawDa
 
   return (
     <div className="space-y-3">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
       {[{ key: "dharma", label: "Dharma", text: dharma }, { key: "karma", label: "Karma", text: karma }].map(({ key, label, text }) => (
         text ? (
           <div key={key} className="rounded-lg border overflow-hidden">
@@ -763,7 +1450,7 @@ function LilithSection({ lilith, aiData, areaOfInquiry }: { lilith: any; aiData:
 
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
       <div className="rounded-lg border overflow-hidden">
         <div className="px-4 py-2.5 bg-muted/40 border-b">
           <h3 className="text-sm font-semibold">Lilith <span className="text-amber-500 ml-1">⚸</span></h3>
@@ -822,7 +1509,7 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry }: { natal
 
   return (
     <div className="rounded-lg border overflow-hidden">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
       <div className="px-4 py-2.5 bg-muted/40 border-b">
         <h3 className="text-sm font-semibold">Ascendant · Midheaven · Vertex</h3>
       </div>
@@ -926,7 +1613,7 @@ function PlanetReturnInterpretation({ tab, aiData, areaOfInquiry }: { tab: strin
 
   return (
     <div className="rounded-lg border overflow-hidden">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
       <div className="px-4 py-2.5 bg-muted/40 border-b">
         <h3 className="text-sm font-semibold">{title}</h3>
       </div>
@@ -957,86 +1644,376 @@ function PlanetReturnInterpretation({ tab, aiData, areaOfInquiry }: { tab: strin
 
 // ─── Solar Return Section ─────────────────────────────────────────────────────
 
-function SolarReturnSection({ details, planets, cusps, aspects, aiData, areaOfInquiry }: {
-  details: any; planets: any; cusps: any; aspects: any; aiData: any; areaOfInquiry?: string;
+function SolarReturnSection({ details, planets, cusps, aspects, planetReport, aspectsReport, aiData, areaOfInquiry }: {
+  details: any; planets: any; cusps: any; aspects: any;
+  // AstrologyAPI data — ported from Angular solar-return-v2 getHttpHoroscopePost() calls
+  planetReport?: any; // solar_return_planet_report: [{name, forecast:[string,...], ...}]
+  aspectsReport?: any; // solar_return_aspects_report: [{solar_return_planet, type, natal_planet, forecast}]
+  aiData: any; areaOfInquiry?: string;
 }) {
   const { modal, trigger, close } = useShowMore();
-  const sections = [
-    { key: "details", label: "Solar Return Details", data: details },
-    { key: "planets", label: "Solar Return Planets", data: planets },
-    { key: "cusps", label: "Solar Return House Cusps", data: cusps },
-    { key: "aspects", label: "Solar Return Aspects", data: aspects },
-  ];
+
+  // aiData: only solar_return_details comes from AI Lambda now
+  const detailsAi = aiData?.solar_return_details ?? null;
+  // planet/aspects data come from AstrologyAPI results directly
+  const planetAi  = null; // not used anymore — see planetReport prop
+  const aspectsAi = null; // not used anymore — see aspectsReport prop
+
+  function AiCards({ data, title }: { data: any; title: string }) {
+    if (!data) return <SectionSkeleton title={title} />;
+    if (data === "error") return <SectionError title={title} />;
+    const items: any[] = Array.isArray(data) ? data : [];
+    return (
+      <div className="space-y-2">
+        {items.map((item: any, i: number) => (
+          <div key={i} className="rounded-lg border overflow-hidden">
+            <div className="px-4 py-2 bg-muted/30 border-b flex items-center gap-2">
+              {item.name && PLANET_IMAGES[item.name] && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={PLANET_IMAGES[item.name]} alt={item.name} className="size-5 object-contain" />
+              )}
+              <h4 className="text-sm font-semibold">{item.title ?? item.name ?? `${title} ${i + 1}`}</h4>
+            </div>
+            <div className="px-4 py-3">
+              <p className="text-sm leading-relaxed">{item.interpretation ?? item.data ?? item.forecast}</p>
+              <button onClick={() => trigger(item.title ?? item.name ?? title, item.interpretation ?? item.data ?? "", item, areaOfInquiry)} className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const planetList: any[] = Array.isArray(planets) ? planets : (planets?.planets ?? []);
+  const cuspObj = cusps ?? {};
+  const houseList: any[] = Array.isArray(cuspObj.houses) ? cuspObj.houses : [];
+  const aspectList: any[] = Array.isArray(aspects) ? aspects : (aspects?.aspects ?? []);
 
   return (
-    <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} />
+    <div className="space-y-5">
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
 
-      {/* Solar return date table from details */}
+      {/* 1. Solar Return Details */}
       {details && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b">
-            <h3 className="text-sm font-semibold">Solar Return Details</h3>
-          </div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Solar Return Details</h3></div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/20">
-                  {["Native Birth Date", "Solar Return Date", "Sun Degree", "Solar Return ASC"].map((h) => (
-                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
-                  ))}
-                </tr>
-              </thead>
+              <thead><tr className="border-b bg-muted/20">
+                {["Native Birth Date", "Solar Return Date", "Sun Degree", "Solar Return ASC"].map((h) => (
+                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                ))}
+              </tr></thead>
+              <tbody><tr className="bg-background">
+                <td className="px-3 py-2">{details.native_birth_date ?? details.date_of_birth ?? "—"}</td>
+                <td className="px-3 py-2 font-semibold text-amber-600">{details.solar_return_date ?? details.return_date ?? "—"}</td>
+                <td className="px-3 py-2 font-mono text-xs">{details.sun_degree ?? "—"}</td>
+                <td className="px-3 py-2">{details.solar_return_asc ?? details.ascendant ?? "—"}</td>
+              </tr></tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Solar Return Planets table */}
+      {planetList.length > 0 && (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Solar Return Planets</h3></div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b bg-muted/20">
+                {["Planet", "House", "Full Degree", "Sign", "Norm Degree", "Speed", "Retro?"].map((h) => (
+                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                ))}
+              </tr></thead>
               <tbody>
-                <tr className="bg-background">
-                  <td className="px-3 py-2">{details.native_birth_date ?? details.date_of_birth ?? "—"}</td>
-                  <td className="px-3 py-2 font-semibold text-amber-600">{details.solar_return_date ?? details.return_date ?? "—"}</td>
-                  <td className="px-3 py-2 font-mono text-xs">{details.sun_degree ?? "—"}</td>
-                  <td className="px-3 py-2">{details.solar_return_asc ?? details.ascendant ?? "—"}</td>
-                </tr>
+                {planetList.map((p: any, i: number) => (
+                  <tr key={p.name ?? i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                    <td className="px-3 py-2 font-medium whitespace-nowrap"><PlanetSymbol name={p.name} /></td>
+                    <td className="px-3 py-2 text-center">{p.house ?? "—"}</td>
+                    <td className="px-3 py-2 font-mono text-xs">{Number(p.full_degree ?? 0).toFixed(2)}°</td>
+                    <td className="px-3 py-2 whitespace-nowrap"><ZodiacSymbol sign={p.sign} /></td>
+                    <td className="px-3 py-2 font-mono text-xs">{Number(p.norm_degree ?? 0).toFixed(2)}°</td>
+                    <td className="px-3 py-2 font-mono text-xs">{Number(p.speed ?? 0).toFixed(4)}</td>
+                    <td className="px-3 py-2"><Badge variant={p.is_retro === "true" || p.is_retro === true ? "destructive" : "outline"} className="text-[10px]">{p.is_retro === "true" || p.is_retro === true ? "R" : "—"}</Badge></td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* AI interpretation */}
-      {!aiData && <SectionSkeleton title="Solar Return Interpretation" />}
-      {aiData === "error" && <SectionError title="Solar Return Interpretation" />}
-      {Array.isArray(aiData) && aiData.map((item: any, i: number) => (
-        <div key={i} className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b">
-            <h4 className="text-sm font-semibold">{item.title ?? `Section ${i + 1}`}</h4>
+      {/* 3. Solar Return Planet Report — from AstrologyAPI solar_return_planet_report
+           Shape: [{name, forecast:[str,str,...], full_degree?, sign?, house?}]
+           Ported from Angular solar-return-v2 getHttpHoroscopePost("solar_return_planet_report") */}
+      {planetReport !== null && planetReport !== undefined && (() => {
+        const items: any[] = Array.isArray(planetReport) ? planetReport : [];
+        if (items.length === 0) return null;
+        return (
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold px-1">Solar Return Planet Interpretations</h3>
+            {items.map((p: any, i: number) => {
+              const forecasts: string[] = Array.isArray(p.forecast) ? p.forecast : (p.forecast ? [String(p.forecast)] : []);
+              return (
+                <div key={p.name ?? i} className="rounded-lg border overflow-hidden">
+                  <div className="px-4 py-2 bg-muted/30 border-b flex items-center gap-2">
+                    {p.name && PLANET_IMAGES[p.name] && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={PLANET_IMAGES[p.name]} alt={p.name} className="size-5 object-contain" />
+                    )}
+                    <h4 className="text-sm font-semibold">{p.name ?? `Planet ${i + 1}`}</h4>
+                    {p.sign && <Badge variant="outline" className="ml-auto text-[10px] text-amber-600 border-amber-400">{p.sign}{p.house ? ` · House ${p.house}` : ""}</Badge>}
+                  </div>
+                  <div className="px-4 py-3 space-y-1.5">
+                    {forecasts.map((f: string, fi: number) => (
+                      <p key={fi} className="text-sm leading-relaxed text-foreground">{f}</p>
+                    ))}
+                    {forecasts.length === 0 && <p className="text-sm text-muted-foreground italic">No forecast available.</p>}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div className="px-4 py-3">
-            <p className="text-sm leading-relaxed">{item.interpretation ?? item.data}</p>
-            <button onClick={() => trigger(item.title ?? `Section ${i + 1}`, item.interpretation ?? item.data, item, areaOfInquiry)} className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+        );
+      })()}
+
+      {/* 4. Solar Return House Cusps */}
+      {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex || houseList.length > 0) && (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Solar Return House Cusps</h3></div>
+          {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex) && (
+            <div className="overflow-x-auto border-b">
+              <table className="w-full text-sm">
+                <thead><tr className="border-b bg-muted/20">
+                  {["Point", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {[{ label: "Ascendant", val: cuspObj.ascendant }, { label: "Midheaven", val: cuspObj.midheaven }, { label: "Vertex", val: cuspObj.vertex }].filter((r) => r.val).map((r) => (
+                    <tr key={r.label} className="border-b last:border-0 bg-background">
+                      <td className="px-3 py-2 font-medium">{r.label}</td>
+                      <td className="px-3 py-2"><ZodiacSymbol sign={typeof r.val === "object" ? r.val?.sign : String(r.val)} /></td>
+                      <td className="px-3 py-2 font-mono text-xs">{typeof r.val === "object" ? `${Number(r.val?.degree ?? 0).toFixed(2)}°` : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {houseList.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="border-b bg-muted/20">
+                  {["House", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {houseList.map((h: any, i: number) => (
+                    <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                      <td className="px-3 py-2 font-medium">{h.house}</td>
+                      <td className="px-3 py-2"><ZodiacSymbol sign={h.sign} /></td>
+                      <td className="px-3 py-2 font-mono text-xs">{Number(h.degree ?? 0).toFixed(2)}°</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 5. Solar Return Aspects table */}
+      {aspectList.length > 0 && (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Solar Return Planet Aspects</h3></div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b bg-muted/20">
+                {["SR Planet", "Natal Planet", "Type", "Orb"].map((h) => (
+                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {aspectList.map((a: any, i: number) => (
+                  <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                    <td className="px-3 py-2 whitespace-nowrap"><PlanetSymbol name={a.solar_return_planet ?? a.aspecting_planet ?? a.planet1 ?? "—"} /></td>
+                    <td className="px-3 py-2 whitespace-nowrap"><PlanetSymbol name={a.natal_planet ?? a.aspected_planet ?? a.planet2 ?? "—"} /></td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5">
+                        {ASPECT_IMAGES[a.type] && <img src={ASPECT_IMAGES[a.type]} alt={a.type} className="size-4 object-contain" />}
+                        {a.type}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 font-mono text-xs">{Number(a.orb ?? 0).toFixed(2)}°</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-      ))}
+      )}
 
-      {/* Raw data panels */}
-      {sections.map(({ key, label, data }) => data && (
-        <details key={key} className="rounded-lg border">
-          <summary className="px-4 py-2.5 text-sm font-semibold cursor-pointer bg-muted/20 hover:bg-muted/40">{label} (raw)</summary>
-          <pre className="px-4 py-3 text-xs font-mono bg-muted/10 overflow-x-auto whitespace-pre-wrap">{JSON.stringify(data, null, 2)}</pre>
-        </details>
-      ))}
+      {/* 6. Solar Return Aspects Report — from AstrologyAPI solar_return_aspects_report
+           Shape: [{solar_return_planet, type, natal_planet, forecast}]
+           Ported from Angular solar-return-v2 getHttpHoroscopePost("solar_return_aspects_report") */}
+      {aspectsReport !== null && aspectsReport !== undefined && (() => {
+        const items: any[] = Array.isArray(aspectsReport) ? aspectsReport : [];
+        if (items.length === 0) return null;
+        return (
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold px-1">Solar Return Planet Aspects Interpretations</h3>
+            {items.map((a: any, i: number) => {
+              const srPlanet  = a.solar_return_planet ?? a.aspecting_planet ?? "";
+              const nPlanet   = a.natal_planet ?? a.aspected_planet ?? "";
+              const aType     = a.type ?? "";
+              const header    = [srPlanet, aType, nPlanet].filter(Boolean).join(" ");
+              const forecast  = a.forecast ?? a.interpretation ?? "";
+              return (
+                <div key={i} className="rounded-lg border overflow-hidden">
+                  <div className="px-4 py-2 bg-muted/30 border-b flex items-center gap-2 flex-wrap">
+                    {srPlanet && <PlanetSymbol name={srPlanet} showImage />}
+                    {aType && ASPECT_IMAGES[aType] && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={ASPECT_IMAGES[aType]} alt={aType} className="size-4 object-contain" />
+                    )}
+                    {nPlanet && <PlanetSymbol name={nPlanet} showImage />}
+                    <h4 className="text-sm font-semibold ml-1">{header || `Aspect ${i + 1}`}</h4>
+                  </div>
+                  <div className="px-4 py-3">
+                    <p className="text-sm leading-relaxed text-foreground">{String(forecast)}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
+      {/* 7. General AI interpretation (solar_return_details key) */}
+      {detailsAi && <AiCards data={detailsAi} title="Solar Return Interpretation" />}
     </div>
   );
 }
 
 // ─── Transit Section ──────────────────────────────────────────────────────────
 
-function TransitSection({ data, aiData, tabSlug, areaOfInquiry }: { data: any; aiData: any; tabSlug: string; areaOfInquiry?: string }) {
+function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, areaOfInquiry }: {
+  data: any; lunarMetrics?: any; aiData: any; lunarAiData?: any; tabSlug: string; areaOfInquiry?: string;
+}) {
   const { modal, trigger, close } = useShowMore();
-  const label = tabSlug === "tropical_transits_weekly_v2" ? "Weekly Transits" : "Monthly Transits";
+  const isWeekly = tabSlug === "tropical_transits_weekly_v2";
+  const label = isWeekly ? "Weekly Transits" : "Monthly Transits";
+
+  // Normalise transit relation rows — handles both Lambda and AstrologyAPI shapes
+  const transitRows: any[] = (() => {
+    if (!data) return [];
+    // Lambda: { transit_relation: [...] } or direct array
+    if (Array.isArray(data?.transit_relation)) return data.transit_relation;
+    if (Array.isArray(data?.transits)) return data.transits;
+    if (Array.isArray(data)) return data;
+    // AstrologyAPI weekly shape: { transit_planet: { Sun: {...}, ... } } — flatten
+    if (data?.transit_planet && typeof data.transit_planet === "object") {
+      return Object.entries(data.transit_planet).flatMap(([tPlanet, aspects]: [string, any]) =>
+        Object.entries(aspects ?? {}).map(([nPlanet, detail]: [string, any]) => ({
+          transit_planet: tPlanet, natal_planet: nPlanet,
+          type: detail?.aspect_type ?? detail?.type ?? "",
+          orb: detail?.orb ?? "",
+          date: detail?.date ?? "",
+          ...(typeof detail === "object" ? detail : {}),
+        }))
+      );
+    }
+    return [];
+  })();
+
+  // Lunar metrics rows
+  const lunarRows: any[] = (() => {
+    const src = lunarMetrics ?? data?.lunar_data ?? data?.lunar_metrics;
+    if (!src) return [];
+    if (Array.isArray(src)) return src;
+    // Object keyed by month or numeric index
+    if (typeof src === "object") return Object.values(src);
+    return [];
+  })();
 
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
 
-      {/* AI sections */}
+      {/* Weekly / Monthly Transit Relation Table */}
+      {transitRows.length > 0 && (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-2.5 bg-muted/40 border-b">
+            <h3 className="text-sm font-semibold">{label} — Transit Aspects</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/20">
+                  {["Transit Planet", "Aspect", "Natal Planet", "Orb", "Date"].map((h) => (
+                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {transitRows.map((row: any, i: number) => {
+                  const tPlanet = row.transit_planet ?? row.transiting_planet ?? row.planet ?? "";
+                  const nPlanet = row.natal_planet ?? row.aspected_planet ?? "";
+                  const aspType = row.type ?? row.aspect_type ?? row.aspect ?? "";
+                  const orb = row.orb != null ? `${Number(row.orb).toFixed(2)}°` : "—";
+                  const dt = row.date ?? row.transit_date ?? "";
+                  return (
+                    <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                      <td className="px-3 py-2 whitespace-nowrap">{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5">
+                          {ASPECT_IMAGES[aspType] && <img src={ASPECT_IMAGES[aspType]} alt={aspType} className="size-4 object-contain" />}
+                          <span>{aspType || "—"}</span>
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
+                      <td className="px-3 py-2 font-mono text-xs">{orb}</td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">{dt || "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Lunar Return Metrics (monthly only) */}
+      {!isWeekly && lunarRows.length > 0 && (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-2.5 bg-muted/40 border-b">
+            <h3 className="text-sm font-semibold">Lunar Return Metrics</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/20">
+                  {["Date / Month", "Moon Day", "Illumination", "Phase", "Moon Sign"].map((h) => (
+                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {lunarRows.map((row: any, i: number) => (
+                  <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                    <td className="px-3 py-2 text-xs">{row.date ?? row.month ?? `Month ${i + 1}`}</td>
+                    <td className="px-3 py-2 text-xs">{row.moon_day ?? row.day ?? "—"}</td>
+                    <td className="px-3 py-2 text-xs">{row.moon_illumination != null ? `${Number(row.moon_illumination).toFixed(1)}%` : (row.illumination ?? "—")}</td>
+                    <td className="px-3 py-2 text-xs">{row.moon_phase ?? row.phase ?? "—"}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{row.moon_sign ? <ZodiacSymbol sign={row.moon_sign} /> : (row.sign ? <ZodiacSymbol sign={row.sign} /> : "—")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* AI interpretation cards */}
       {!aiData && <SectionSkeleton title={`${label} Interpretation`} />}
       {aiData === "error" && <SectionError title={`${label} Interpretation`} />}
       {Array.isArray(aiData) && aiData.map((item: any, i: number) => (
@@ -1051,8 +2028,29 @@ function TransitSection({ data, aiData, tabSlug, areaOfInquiry }: { data: any; a
         </div>
       ))}
 
-      {/* Raw data */}
-      {data && (
+      {/* Lunar AI interpretation (monthly only) — from AI Lambda lunar_metrics prompt */}
+      {!isWeekly && lunarAiData && (() => {
+        const items: any[] = Array.isArray(lunarAiData) ? lunarAiData : (typeof lunarAiData === "object" ? [lunarAiData] : []);
+        return items.length > 0 ? (
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold px-1">Lunar Return AI Interpretation</h3>
+            {items.map((item: any, i: number) => (
+              <div key={i} className="rounded-lg border overflow-hidden">
+                <div className="px-4 py-2.5 bg-muted/40 border-b">
+                  <h4 className="text-sm font-semibold">{item.title ?? `Lunar Return ${i + 1}`}</h4>
+                </div>
+                <div className="px-4 py-3">
+                  <p className="text-sm leading-relaxed">{item.interpretation ?? item.data ?? JSON.stringify(item)}</p>
+                  <button onClick={() => trigger(item.title ?? "Lunar Return", item.interpretation ?? "", item, areaOfInquiry)} className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null;
+      })()}
+
+      {/* Raw data fallback */}
+      {data && transitRows.length === 0 && !Array.isArray(aiData) && (
         <details className="rounded-lg border">
           <summary className="px-4 py-2.5 text-sm font-semibold cursor-pointer bg-muted/20 hover:bg-muted/40">{label} Raw Data</summary>
           <pre className="px-4 py-3 text-xs font-mono bg-muted/10 overflow-x-auto whitespace-pre-wrap">{JSON.stringify(data, null, 2)}</pre>
@@ -1069,9 +2067,15 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
   if (!data) return <SectionSkeleton title="Horary Chart Interpretation" />;
   if (data === "error") return <SectionError title="Horary Chart Interpretation" />;
 
+  // The AI response has both root-level keys AND a nested `data` key
   const inner = data?.data ?? data;
+  const rootPlanet = data?.planet;               // root level planet object
+  const astroConsiderations = data?.astrological_considerations;
+  const recommendations = data?.recommendations;
+  const alternativeTimings = data?.alternative_timings;
 
   function ItemBlock({ title, text }: { title: string; text: string }) {
+    if (!text) return null;
     return (
       <div className="rounded-lg border overflow-hidden">
         <div className="px-4 py-2.5 bg-muted/40 border-b">
@@ -1085,16 +2089,50 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
     );
   }
 
+  function ObjSection({ title, obj }: { title: string; obj: any }) {
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return null;
+    const entries = Object.entries(obj).filter(([, v]) => v && typeof v === "string");
+    if (!entries.length) return null;
+    return (
+      <div className="rounded-lg border overflow-hidden">
+        <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">{title}</h3></div>
+        <div className="divide-y">
+          {entries.map(([k, v]) => (
+            <div key={k} className="px-4 py-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{k.replace(/_/g, " ")}</h4>
+              <p className="text-sm leading-relaxed">{String(v)}</p>
+              <button onClick={() => trigger(k, String(v), obj, areaOfInquiry)} className="mt-1.5 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const hasContent = inner?.recomendation_on_date_and_timeline || inner?.house || inner?.planet || inner?.summary || rootPlanet || astroConsiderations;
+
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
 
-      {/* Recommendation */}
+      {/* Recommendation on Date & Timeline */}
       {inner?.recomendation_on_date_and_timeline?.data && (
         <ItemBlock title={inner.recomendation_on_date_and_timeline.title ?? "Recommendation on Date & Timeline"} text={inner.recomendation_on_date_and_timeline.data} />
       )}
 
-      {/* Summary */}
+      {/* Root-level planet significators */}
+      <ObjSection title="Planet Significators" obj={rootPlanet} />
+
+      {/* Astrological Considerations */}
+      <ObjSection title="Astrological Considerations" obj={astroConsiderations} />
+
+      {/* Recommendations */}
+      <ObjSection title="Recommendations" obj={recommendations} />
+
+      {/* Alternative Timings */}
+      <ObjSection title="Alternative Timings" obj={alternativeTimings} />
+
+      {/* Summary — timeline entries */}
       {Array.isArray(inner?.summary?.recommendation_on_date_and_timeline) && (
         <div className="rounded-lg border overflow-hidden">
           <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Summary</h3></div>
@@ -1110,10 +2148,40 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
         </div>
       )}
 
+      {/* Summary — answer array */}
+      {Array.isArray(inner?.summary?.answer) && inner.summary.answer.length > 0 && (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20"><h3 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Answer</h3></div>
+          <div className="divide-y">
+            {inner.summary.answer.map((a: any, i: number) => (
+              <div key={i} className="px-4 py-3">
+                {a.title && <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{a.title}</h4>}
+                <p className="text-sm leading-relaxed">{a.data ?? a.text ?? String(a)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Summary — recommendation array */}
+      {Array.isArray(inner?.summary?.recommendation) && inner.summary.recommendation.length > 0 && (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Recommendations</h3></div>
+          <div className="divide-y">
+            {inner.summary.recommendation.map((r: any, i: number) => (
+              <div key={i} className="px-4 py-3">
+                {r.title && <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{r.title}</h4>}
+                <p className="text-sm leading-relaxed">{r.data ?? r.text ?? String(r)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Houses */}
       {Array.isArray(inner?.house) && inner.house.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">House</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">House Analysis</h3></div>
           <div className="divide-y">
             {inner.house.map((h: any, i: number) => (
               <div key={i} className="px-4 py-3">
@@ -1126,24 +2194,45 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
         </div>
       )}
 
-      {/* Planets */}
+      {/* Planets (inner.planet array) */}
       {Array.isArray(inner?.planet) && inner.planet.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Planet</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Planet Analysis</h3></div>
           <div className="divide-y">
-            {inner.planet.map((p: any, i: number) => (
-              <div key={i} className="px-4 py-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{p.title}</h4>
-                <p className="text-sm leading-relaxed">{p.data}</p>
-                <button onClick={() => trigger(p.title, p.data, p, areaOfInquiry)} className="mt-1.5 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+            {inner.planet.map((p: any, i: number) => {
+              const pName = p.title?.split(" ")[0];
+              return (
+                <div key={i} className="px-4 py-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    {pName && PLANET_IMAGES[pName] && <img src={PLANET_IMAGES[pName]} alt={pName} className="size-5 object-contain" />}
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600">{p.title}</h4>
+                  </div>
+                  <p className="text-sm leading-relaxed">{p.data}</p>
+                  <button onClick={() => trigger(p.title, p.data, p, areaOfInquiry)} className="mt-1.5 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Astrological aspects sub-section */}
+      {inner?.astrological_aspect && typeof inner.astrological_aspect === "object" && (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Astrological Aspects</h3></div>
+          <div className="divide-y">
+            {Object.entries(inner.astrological_aspect).map(([k, v]: [string, any]) => (
+              <div key={k} className="px-4 py-3">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{k.replace(/_/g, " ")}</h4>
+                <p className="text-sm leading-relaxed">{typeof v === "string" ? v : JSON.stringify(v)}</p>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Fallback raw */}
-      {!inner?.recomendation_on_date_and_timeline && !inner?.house && !inner?.planet && (
+      {/* Fallback raw data */}
+      {!hasContent && (
         <details className="rounded-lg border">
           <summary className="px-4 py-2.5 text-sm font-semibold cursor-pointer bg-muted/20 hover:bg-muted/40">Horary Chart Raw Data</summary>
           <pre className="px-4 py-3 text-xs font-mono bg-muted/10 overflow-x-auto whitespace-pre-wrap">{JSON.stringify(data, null, 2)}</pre>
@@ -1153,21 +2242,39 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
   );
 }
 
-// ─── Relationship Section (Synastry / Composite) ──────────────────────────────
+// ─── Relationship Section — all 8 Angular AI sections ────────────────────────
 
-function RelationshipSection({ synastryAi, compositeAi, areaOfInquiry }: { synastryAi: any; compositeAi: any; areaOfInquiry?: string }) {
+const RELATIONSHIP_AI_SECTIONS = [
+  { key: "synastry_horoscope",            label: "Synastry Horoscope" },
+  { key: "composite_horoscope",           label: "Composite Horoscope" },
+  { key: "davison_relationship",          label: "Davison Relationship" },
+  { key: "major_aspects_and_connections", label: "Major Aspects & Connections" },
+  { key: "compatibility_score_or_summary",label: "Compatibility Score / Summary" },
+  { key: "elemental_balance",             label: "Elemental Balance" },
+  { key: "timing_and_transits",           label: "Timing & Transits" },
+  { key: "karmic_and_soulmate_indicators",label: "Karmic & Soulmate Indicators" },
+  // business only
+  { key: "professional_alignment_and_goals", label: "Professional Alignment & Goals" },
+];
+
+function RelationshipSection({ aiMap, areaOfInquiry, tabSlug }: { aiMap: Record<string, any>; areaOfInquiry?: string; tabSlug: string }) {
   const { modal, trigger, close } = useShowMore();
+  const isBusiness = tabSlug === "business_partner_v2";
 
-  function AiBlock({ title, items }: { title: string; items: any[] }) {
+  function AiBlock({ title, sectionKey, data }: { title: string; sectionKey: string; data: any }) {
+    if (!data && data !== "error") return <SectionSkeleton title={title} />;
+    if (data === "error") return <SectionError title={title} />;
+    const items: any[] = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+    if (!items.length) return null;
     return (
       <div className="rounded-lg border overflow-hidden">
         <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">{title}</h3></div>
         <div className="divide-y">
           {items.map((item: any, i: number) => (
             <div key={i} className="px-4 py-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{item.title}</h4>
-              <p className="text-sm leading-relaxed">{item.data}</p>
-              <button onClick={() => trigger(item.title, item.data, item, areaOfInquiry)} className="mt-1.5 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{item.title ?? item.name}</h4>
+              <p className="text-sm leading-relaxed">{item.data ?? item.interpretation ?? item.description}</p>
+              <button onClick={() => trigger(item.title ?? title, item.data ?? item.interpretation ?? "", item, areaOfInquiry)} className="mt-1.5 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
             </div>
           ))}
         </div>
@@ -1175,19 +2282,18 @@ function RelationshipSection({ synastryAi, compositeAi, areaOfInquiry }: { synas
     );
   }
 
+  const sections = RELATIONSHIP_AI_SECTIONS.filter((s) => {
+    if (s.key === "professional_alignment_and_goals") return isBusiness;
+    if (s.key === "karmic_and_soulmate_indicators") return !isBusiness;
+    return true;
+  });
+
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} />
-      {!synastryAi && <SectionSkeleton title="Synastry Horoscope" />}
-      {synastryAi === "error" && <SectionError title="Synastry Horoscope" />}
-      {synastryAi && synastryAi !== "error" && Array.isArray(synastryAi?.data) && (
-        <AiBlock title="Synastry Horoscope" items={synastryAi.data} />
-      )}
-      {!compositeAi && <SectionSkeleton title="Composite Horoscope" />}
-      {compositeAi === "error" && <SectionError title="Composite Horoscope" />}
-      {compositeAi && compositeAi !== "error" && Array.isArray(compositeAi?.data) && (
-        <AiBlock title="Composite Horoscope" items={compositeAi.data} />
-      )}
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
+      {sections.map((s) => (
+        <AiBlock key={s.key} title={s.label} sectionKey={s.key} data={aiMap[s.key]} />
+      ))}
     </div>
   );
 }
@@ -1527,6 +2633,11 @@ export default function AdminHoroscopePage() {
 
       // ── Single person ─────────────────────────────────────────────────────
       if (currentTab.type === "single") {
+        // Store birth1 fields and city so buildAiPrompts can interpolate into prompts
+        // (Angular uses formData.year, formData.month, etc. directly in prompt strings)
+        Object.assign(collected, birth1);
+        collected.city = form.person1?.city ?? "";
+
         addProgress("Calculating natal chart…");
         const natalData = await callCompute("western_horoscope", birth1 as unknown as Record<string, unknown>);
         collected.natal_chart_data = natalData;
@@ -1547,16 +2658,21 @@ export default function AdminHoroscopePage() {
         // Tab-specific data
         if (currentTab.slug === "solar_return_v2") {
           addProgress("Fetching solar return data…");
-          const [det, pla, cup, asp] = await Promise.allSettled([
+          const [det, pla, cup, asp, planRep, aspRep] = await Promise.allSettled([
             callCompute("solar_return_details", birth1 as unknown as Record<string, unknown>),
             callCompute("solar_return_planets", birth1 as unknown as Record<string, unknown>),
             callCompute("solar_return_house_cusps", birth1 as unknown as Record<string, unknown>),
             callCompute("solar_return_planet_aspects", birth1 as unknown as Record<string, unknown>),
+            // These come from AstrologyAPI (not AI Lambda) — ported from Angular solar-return-v2 getHttpHoroscopePost()
+            callCompute("solar_return_planet_report", birth1 as unknown as Record<string, unknown>),
+            callCompute("solar_return_aspects_report", birth1 as unknown as Record<string, unknown>),
           ]);
           collected.solar_return_details = det.status === "fulfilled" ? det.value : null;
           collected.solar_return_planets = pla.status === "fulfilled" ? pla.value : null;
           collected.solar_return_cusps = cup.status === "fulfilled" ? cup.value : null;
           collected.solar_return_aspects = asp.status === "fulfilled" ? asp.value : null;
+          collected.solar_return_planet_report = planRep.status === "fulfilled" ? planRep.value : null;
+          collected.solar_return_aspects_report = aspRep.status === "fulfilled" ? aspRep.value : null;
         }
 
         if (currentTab.slug === "tropical_transits_weekly_v2") {
@@ -1564,8 +2680,11 @@ export default function AdminHoroscopePage() {
           if (form.futureWeek) {
             const wd = await callPlanetReturn({ steps: "astrology_report_weekly", birth_details: birth1, week_start_date: form.futureWeek });
             collected.transit_data = wd?.astrology_report_weekly ?? wd;
+            collected.is_future_transit = true;
+            collected.future_transit_date = form.futureWeek; // "YYYY-MM-DD"
           } else {
             collected.transit_data = await callCompute("tropical_transits/weekly", birth1 as unknown as Record<string, unknown>);
+            collected.is_future_transit = false;
           }
         }
 
@@ -1576,6 +2695,8 @@ export default function AdminHoroscopePage() {
             const md = await callPlanetReturn({ steps: "astrology_report_monthly", birth_details: birth1, target_year: mYear, target_month: mMonth });
             collected.transit_data = md?.astrology_report_monthly ?? md;
             collected.lunar_metrics = md?.astrology_report_monthly?.lunar_data ?? null;
+            collected.is_future_transit = true;
+            collected.future_transit_date = form.futureMonth; // "YYYY-MM"
           } else {
             const [mt, lu] = await Promise.allSettled([
               callCompute("tropical_transits/monthly", birth1 as unknown as Record<string, unknown>),
@@ -1583,12 +2704,16 @@ export default function AdminHoroscopePage() {
             ]);
             collected.transit_data = mt.status === "fulfilled" ? mt.value : null;
             collected.lunar_metrics = lu.status === "fulfilled" ? lu.value : null;
+            collected.is_future_transit = false;
           }
         }
 
         if (currentTab.slug === "horary_chart_v2") {
           addProgress("Calculating horary chart…");
           collected.horary_chart_data = await callCompute("horary_chart", { ...birth1, question: form.question } as unknown as Record<string, unknown>);
+          // Store question and city so buildAiPrompts can interpolate into horary prompt
+          collected.question = form.question;
+          collected.city = form.person1?.city ?? "";
         }
 
         // Planet return tabs
@@ -1663,6 +2788,13 @@ export default function AdminHoroscopePage() {
           callNatalWheel(freeWheelBody(form.person1) as unknown as Record<string, unknown>).then((r) => { const svg = r?.results?.output; if (svg) { setNatalSvg(svg); setShowChartBtn(true); } }),
           callNatalWheel(freeWheelBody(form.person2) as unknown as Record<string, unknown>).then((r) => { const svg = r?.results?.output; if (svg) setNatalSvgTransit(svg); }),
         ]);
+
+        // Store birth data so buildAiPrompts can interpolate it into relationship prompts
+        // Matches Angular formData.s_* (self) and formData.p_* (partner) fields
+        collected.person1_birth = birth1;
+        collected.person2_birth = birth2;
+        collected.persona_city = form.person1?.city ?? "";
+        collected.partner_city = form.person2?.city ?? "";
 
         addProgress("Running AI interpretations…");
         const combinedData = { ...synastry, ...collected };
@@ -1820,17 +2952,17 @@ export default function AdminHoroscopePage() {
 
               {/* ─── Solar Return ───────────────────────────── */}
               {isSolarReturn && (
-                <SolarReturnSection details={results.solar_return_details} planets={results.solar_return_planets} cusps={results.solar_return_cusps} aspects={results.solar_return_aspects} aiData={ai.solar_return} areaOfInquiry={form.areaOfInquiry} />
+                <SolarReturnSection details={results.solar_return_details} planets={results.solar_return_planets} cusps={results.solar_return_cusps} aspects={results.solar_return_aspects} planetReport={results.solar_return_planet_report} aspectsReport={results.solar_return_aspects_report} aiData={ai} areaOfInquiry={form.areaOfInquiry} />
               )}
 
               {/* ─── Saturn Return also shows solar return ──── */}
               {currentSlug === "saturn_return_v2" && results.solar_return_details && (
-                <SolarReturnSection details={results.solar_return_details} planets={results.solar_return_planets} cusps={results.solar_return_cusps} aspects={results.solar_return_aspects} aiData={null} areaOfInquiry={form.areaOfInquiry} />
+                <SolarReturnSection details={results.solar_return_details} planets={results.solar_return_planets} cusps={results.solar_return_cusps} aspects={results.solar_return_aspects} planetReport={results.solar_return_planet_report} aspectsReport={results.solar_return_aspects_report} aiData={null} areaOfInquiry={form.areaOfInquiry} />
               )}
 
               {/* ─── Transits ───────────────────────────────── */}
               {isTransit && (
-                <TransitSection data={results.transit_data} aiData={currentSlug === "tropical_transits_weekly_v2" ? ai.tropical_transits_weekly : ai.tropical_transits_monthly} tabSlug={currentSlug} areaOfInquiry={form.areaOfInquiry} />
+                <TransitSection data={results.transit_data} lunarMetrics={results.lunar_metrics} aiData={currentSlug === "tropical_transits_weekly_v2" ? ai.tropical_transits_weekly : ai.tropical_transits_monthly} lunarAiData={currentSlug === "tropical_transits_monthly_v3" ? ai.lunar_metrics : undefined} tabSlug={currentSlug} areaOfInquiry={form.areaOfInquiry} />
               )}
 
               {/* ─── Horary ─────────────────────────────────── */}
@@ -1838,9 +2970,9 @@ export default function AdminHoroscopePage() {
                 <HorarySection data={ai.horary_chart_question} areaOfInquiry={form.areaOfInquiry} />
               )}
 
-              {/* ─── Two-person relationship ─────────────────── */}
+              {/* ─── Two-person relationship (all 8 AI sections) ─ */}
               {isTwoPersonAiTab && (
-                <RelationshipSection synastryAi={ai.synastry_horoscope} compositeAi={ai.composite_horoscope} areaOfInquiry={form.areaOfInquiry} />
+                <RelationshipSection aiMap={ai} areaOfInquiry={form.areaOfInquiry} tabSlug={currentSlug} />
               )}
 
               {/* ─── Natal chart sections (all single tabs + planet return tabs) ─ */}

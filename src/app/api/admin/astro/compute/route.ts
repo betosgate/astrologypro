@@ -21,6 +21,8 @@ const ALLOWED_ENDPOINTS = [
   "solar_return_planets",
   "solar_return_house_cusps",
   "solar_return_planet_aspects",
+  "solar_return_planet_report",
+  "solar_return_aspects_report",
   // Transits
   "tropical_transits/daily",
   "tropical_transits/weekly",
