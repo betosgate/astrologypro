@@ -13,54 +13,54 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-type Program = { id: string; name: string };
+type Role = { id: string; role_name: string; slug: string; description: string };
 
-export default function EditCategoryPage() {
+export default function EditProgramPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params.id;
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  const [programs, setPrograms] = useState<Program[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
 
   const [form, setForm] = useState({
-    training_id: "",
     name: "",
     description: "",
     priority: "0",
     is_active: true,
+    allowed_roles: [] as string[],
   });
 
   useEffect(() => {
     async function load() {
       try {
-        const [catRes, progRes] = await Promise.all([
-          fetch(`/api/admin/training/categories/${id}`),
-          fetch("/api/admin/training/programs"),
+        const [progRes, rolesRes] = await Promise.all([
+          fetch(`/api/admin/training/programs/${id}`),
+          fetch("/api/admin/roles"),
         ]);
 
-        if (!catRes.ok) {
-          toast.error("Category not found.");
+        if (!progRes.ok) {
+          toast.error("Program not found.");
           router.push("/admin/training");
           return;
         }
 
-        const catData = await catRes.json();
-        const progData = progRes.ok ? await progRes.json() : { programs: [] };
+        const progData = await progRes.json();
+        const rolesData = rolesRes.ok ? await rolesRes.json() : { data: [] };
 
-        setPrograms(progData.programs ?? []);
+        setRoles(rolesData.data ?? []);
 
-        const cat = catData.category;
+        const prog = progData.program;
         setForm({
-          training_id: cat.training_id ?? "",
-          name: cat.name ?? "",
-          description: cat.description ?? "",
-          priority: String(cat.priority ?? 0),
-          is_active: cat.is_active ?? true,
+          name: prog.name ?? "",
+          description: prog.description ?? "",
+          priority: String(prog.priority ?? 0),
+          is_active: prog.is_active ?? true,
+          allowed_roles: Array.isArray(prog.allowed_roles) ? prog.allowed_roles : [],
         });
       } catch {
-        toast.error("Failed to load category.");
+        toast.error("Failed to load program.");
         router.push("/admin/training");
       } finally {
         setFetching(false);
@@ -70,7 +70,7 @@ export default function EditCategoryPage() {
   }, [id, router]);
 
   function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) {
     const { name, value, type } = e.target;
     if (type === "checkbox") {
@@ -83,12 +83,17 @@ export default function EditCategoryPage() {
     }
   }
 
+  function toggleRole(slug: string) {
+    setForm((prev) => ({
+      ...prev,
+      allowed_roles: prev.allowed_roles.includes(slug)
+        ? prev.allowed_roles.filter((r) => r !== slug)
+        : [...prev.allowed_roles, slug],
+    }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.training_id) {
-      toast.error("Training program is required.");
-      return;
-    }
     if (!form.name.trim()) {
       toast.error("Name is required.");
       return;
@@ -96,25 +101,25 @@ export default function EditCategoryPage() {
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/training/categories/${id}`, {
+      const res = await fetch(`/api/admin/training/programs/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          training_id: form.training_id,
           name: form.name.trim(),
           description: form.description.trim() || null,
           priority: parseInt(form.priority, 10) || 0,
           is_active: form.is_active,
+          allowed_roles: form.allowed_roles,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? "Failed to update category.");
+        toast.error(data.error ?? "Failed to update program.");
         return;
       }
 
-      toast.success("Category updated.");
+      toast.success("Training program updated.");
       router.push("/admin/training");
     } catch {
       toast.error("An unexpected error occurred.");
@@ -124,19 +129,19 @@ export default function EditCategoryPage() {
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this category? This cannot be undone.")) return;
+    if (!confirm("Delete this training program? All categories must be reassigned first.")) return;
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/training/categories/${id}`, {
+      const res = await fetch(`/api/admin/training/programs/${id}`, {
         method: "DELETE",
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? "Failed to delete category.");
+        toast.error(data.error ?? "Failed to delete program.");
         return;
       }
-      toast.success("Category deleted.");
+      toast.success("Training program deleted.");
       router.push("/admin/training");
     } catch {
       toast.error("An unexpected error occurred.");
@@ -159,36 +164,16 @@ export default function EditCategoryPage() {
         <Button asChild variant="ghost" size="sm">
           <Link href="/admin/training">← Back</Link>
         </Button>
-        <h1 className="text-xl font-bold tracking-tight">Edit Category</h1>
+        <h1 className="text-xl font-bold tracking-tight">Edit Training Program</h1>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Update Training Category</CardTitle>
-          <CardDescription>Edit the details for this category.</CardDescription>
+          <CardTitle>Update Training Program</CardTitle>
+          <CardDescription>Edit the details for this training program.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Training Program */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium" htmlFor="training_id">
-                Training Program <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="training_id"
-                name="training_id"
-                value={form.training_id}
-                onChange={handleChange}
-                required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="">— Select a program —</option>
-                {programs.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-
             {/* Name */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium" htmlFor="name">
@@ -234,9 +219,43 @@ export default function EditCategoryPage() {
                 onChange={handleChange}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
               />
-              <p className="text-xs text-muted-foreground">
-                Lower number = shown first.
-              </p>
+              <p className="text-xs text-muted-foreground">Lower number = shown first.</p>
+            </div>
+
+            {/* Allowed Roles */}
+            <div className="space-y-2">
+              <div>
+                <p className="text-sm font-medium">Access — Allowed Roles</p>
+                <p className="text-xs text-muted-foreground">
+                  Leave all unchecked to allow access for every authenticated user.
+                </p>
+              </div>
+              {roles.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Loading roles…</p>
+              ) : (
+                <div className="rounded-md border divide-y">
+                  {roles.map((role) => (
+                    <label
+                      key={role.slug}
+                      className="flex cursor-pointer items-start gap-3 px-3 py-2.5 hover:bg-muted/40"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={form.allowed_roles.includes(role.slug)}
+                        onChange={() => toggleRole(role.slug)}
+                        className="mt-0.5 size-4 accent-primary"
+                      />
+                      <div>
+                        <p className="text-sm font-medium leading-none">{role.role_name}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">{role.description}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {form.allowed_roles.length === 0 && (
+                <p className="text-xs text-amber-600">No roles selected — all authenticated users can access this program.</p>
+              )}
             </div>
 
             {/* Active */}

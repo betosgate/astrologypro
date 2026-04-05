@@ -8,6 +8,34 @@ import Link from "next/link";
 
 export const metadata = { title: "Training School - AstrologyPro" };
 
+/** Resolve role slugs for the current user by checking membership tables. */
+async function getUserRoleSlugs(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+): Promise<string[]> {
+  const slugs: string[] = [];
+
+  const [trainee, diviner, community, advocate, affiliate] = await Promise.all([
+    supabase.from("trainees").select("id").eq("user_id", userId).maybeSingle(),
+    supabase.from("diviners").select("id").eq("user_id", userId).maybeSingle(),
+    supabase.from("community_members").select("id, membership_type").eq("user_id", userId).maybeSingle(),
+    supabase.from("social_advocates").select("id").eq("user_id", userId).maybeSingle(),
+    supabase.from("affiliates").select("id").eq("user_id", userId).maybeSingle(),
+  ]);
+
+  if (trainee.data)    slugs.push("is_trainee");
+  if (diviner.data)    slugs.push("is_astrologer");
+  if (advocate.data)   slugs.push("is_social_advo");
+  if (affiliate.data)  slugs.push("is_affiliate");
+
+  if (community.data) {
+    if (community.data.membership_type === "mystery_school")     slugs.push("is_mystery_school");
+    if (community.data.membership_type === "perennial_mandalism") slugs.push("is_Perennial_Mandalism");
+  }
+
+  return slugs;
+}
+
 export default async function TrainingCategoriesPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -21,14 +49,27 @@ export default async function TrainingCategoriesPage() {
 
   if (!trainee) redirect("/join/trainee");
 
-  // Fetch all active categories ordered by priority
-  const { data: categories } = await supabase
+  // Resolve the user's role slugs
+  const userSlugs = await getUserRoleSlugs(supabase, user.id);
+
+  // Fetch active categories joined with their program's allowed_roles
+  // Only include categories whose program is unrestricted OR allows one of the user's slugs
+  const { data: allCategories } = await supabase
     .from("training_categories")
-    .select("id, name, description, priority")
+    .select("id, name, description, priority, training_id, training_programs!inner(allowed_roles)")
     .eq("is_active", true)
     .order("priority", { ascending: true });
 
-  if (!categories || categories.length === 0) {
+  // Filter by role access
+  const categories = (allCategories ?? []).filter((cat) => {
+    const prog = cat.training_programs as { allowed_roles: string[] } | null;
+    if (!prog) return true; // no program record — allow
+    const allowed: string[] = prog.allowed_roles ?? [];
+    if (allowed.length === 0) return true; // unrestricted
+    return userSlugs.some((s) => allowed.includes(s));
+  });
+
+  if (categories.length === 0) {
     return (
       <div className="space-y-6">
         <div>
@@ -41,9 +82,9 @@ export default async function TrainingCategoriesPage() {
               <BookOpen className="size-7 text-primary" />
             </div>
             <div>
-              <h2 className="font-semibold">No training categories yet</h2>
+              <h2 className="font-semibold">No training available</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Training modules will appear here once your administrator adds content.
+                No training modules are available for your account. Contact your administrator if you believe this is an error.
               </p>
             </div>
           </CardContent>

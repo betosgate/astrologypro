@@ -17,7 +17,7 @@ async function getAdminUser() {
   return user;
 }
 
-// GET /api/admin/training/categories — list all
+// GET /api/admin/training/programs — list all
 export async function GET(req: NextRequest) {
   const user = await getAdminUser();
   if (!user?.email || !ADMIN_EMAILS.includes(user.email)) {
@@ -30,8 +30,8 @@ export async function GET(req: NextRequest) {
 
   const admin = createAdminClient();
   let query = admin
-    .from("training_categories")
-    .select("id, training_id, name, description, priority, is_active, created_at")
+    .from("training_programs")
+    .select("id, name, description, priority, is_active, allowed_roles, created_at")
     .order("priority", { ascending: true });
 
   if (createdFrom) query = query.gte("created_at", createdFrom);
@@ -42,10 +42,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ categories: data });
+  return NextResponse.json({ programs: data });
 }
 
-// POST /api/admin/training/categories — create
+// POST /api/admin/training/programs — create
 export async function POST(req: NextRequest) {
   const user = await getAdminUser();
   if (!user?.email || !ADMIN_EMAILS.includes(user.email)) {
@@ -53,11 +53,11 @@ export async function POST(req: NextRequest) {
   }
 
   let body: {
-    training_id?: string;
     name?: string;
     description?: string | null;
     priority?: number;
     is_active?: boolean;
+    allowed_roles?: string[];
   };
   try {
     body = await req.json();
@@ -65,24 +65,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { training_id, name, description, priority, is_active } = body;
+  const { name, description, priority, is_active, allowed_roles } = body;
 
-  if (!training_id || typeof training_id !== "string") {
-    return NextResponse.json({ error: "Training program is required." }, { status: 422 });
-  }
   if (!name || typeof name !== "string" || !name.trim()) {
     return NextResponse.json({ error: "Name is required." }, { status: 422 });
   }
 
   const admin = createAdminClient();
   const { data, error } = await admin
-    .from("training_categories")
+    .from("training_programs")
     .insert({
-      training_id,
       name: name.trim(),
       description: description ?? null,
       priority: priority ?? 0,
       is_active: is_active ?? true,
+      allowed_roles: Array.isArray(allowed_roles) ? allowed_roles : [],
     })
     .select()
     .single();
@@ -91,5 +88,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ category: data }, { status: 201 });
+  return NextResponse.json({ program: data }, { status: 201 });
 }

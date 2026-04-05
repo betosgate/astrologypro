@@ -13,29 +13,29 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-type Program = { id: string; name: string };
+type Role = { id: string; role_name: string; slug: string; description: string };
 
-export default function NewCategoryPage() {
+export default function NewProgramPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [programs, setPrograms] = useState<Program[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
 
   const [form, setForm] = useState({
-    training_id: "",
     name: "",
     description: "",
     priority: "0",
     is_active: true,
+    allowed_roles: [] as string[],
   });
 
   useEffect(() => {
-    fetch("/api/admin/training/programs")
+    fetch("/api/admin/roles")
       .then((r) => r.json())
-      .then((d) => setPrograms(d.programs ?? []));
+      .then((d) => setRoles(d.data ?? []));
   }, []);
 
   function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) {
     const { name, value, type } = e.target;
     if (type === "checkbox") {
@@ -48,12 +48,17 @@ export default function NewCategoryPage() {
     }
   }
 
+  function toggleRole(slug: string) {
+    setForm((prev) => ({
+      ...prev,
+      allowed_roles: prev.allowed_roles.includes(slug)
+        ? prev.allowed_roles.filter((r) => r !== slug)
+        : [...prev.allowed_roles, slug],
+    }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.training_id) {
-      toast.error("Training program is required.");
-      return;
-    }
     if (!form.name.trim()) {
       toast.error("Name is required.");
       return;
@@ -61,25 +66,25 @@ export default function NewCategoryPage() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/training/categories", {
+      const res = await fetch("/api/admin/training/programs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          training_id: form.training_id,
           name: form.name.trim(),
           description: form.description.trim() || null,
           priority: parseInt(form.priority, 10) || 0,
           is_active: form.is_active,
+          allowed_roles: form.allowed_roles,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? "Failed to create category.");
+        toast.error(data.error ?? "Failed to create program.");
         return;
       }
 
-      toast.success("Category created.");
+      toast.success("Training program created.");
       router.push("/admin/training");
     } catch {
       toast.error("An unexpected error occurred.");
@@ -94,44 +99,18 @@ export default function NewCategoryPage() {
         <Button asChild variant="ghost" size="sm">
           <Link href="/admin/training">← Back</Link>
         </Button>
-        <h1 className="text-xl font-bold tracking-tight">New Category</h1>
+        <h1 className="text-xl font-bold tracking-tight">New Training Program</h1>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Create Training Category</CardTitle>
+          <CardTitle>Create Training Program</CardTitle>
           <CardDescription>
-            Categories group related lessons together within a training program.
+            Training programs are the top-level containers for training categories and lessons.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Training Program */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium" htmlFor="training_id">
-                Training Program <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="training_id"
-                name="training_id"
-                value={form.training_id}
-                onChange={handleChange}
-                required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="">— Select a program —</option>
-                {programs.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-              {programs.length === 0 && (
-                <p className="text-xs text-amber-600">
-                  No programs found.{" "}
-                  <Link href="/admin/training/programs/new" className="underline">Create one first.</Link>
-                </p>
-              )}
-            </div>
-
             {/* Name */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium" htmlFor="name">
@@ -145,7 +124,7 @@ export default function NewCategoryPage() {
                 onChange={handleChange}
                 required
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="e.g. Astrology Fundamentals"
+                placeholder="e.g. Diviner Certification Program"
               />
             </div>
 
@@ -161,7 +140,7 @@ export default function NewCategoryPage() {
                 onChange={handleChange}
                 rows={3}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="Brief description of this category"
+                placeholder="Brief description of this training program"
               />
             </div>
 
@@ -179,9 +158,43 @@ export default function NewCategoryPage() {
                 onChange={handleChange}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
               />
-              <p className="text-xs text-muted-foreground">
-                Lower number = shown first.
-              </p>
+              <p className="text-xs text-muted-foreground">Lower number = shown first.</p>
+            </div>
+
+            {/* Allowed Roles */}
+            <div className="space-y-2">
+              <div>
+                <p className="text-sm font-medium">Access — Allowed Roles</p>
+                <p className="text-xs text-muted-foreground">
+                  Leave all unchecked to allow access for every authenticated user.
+                </p>
+              </div>
+              {roles.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Loading roles…</p>
+              ) : (
+                <div className="rounded-md border divide-y">
+                  {roles.map((role) => (
+                    <label
+                      key={role.slug}
+                      className="flex cursor-pointer items-start gap-3 px-3 py-2.5 hover:bg-muted/40"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={form.allowed_roles.includes(role.slug)}
+                        onChange={() => toggleRole(role.slug)}
+                        className="mt-0.5 size-4 accent-primary"
+                      />
+                      <div>
+                        <p className="text-sm font-medium leading-none">{role.role_name}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">{role.description}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {form.allowed_roles.length === 0 && (
+                <p className="text-xs text-amber-600">No roles selected — all authenticated users can access this program.</p>
+              )}
             </div>
 
             {/* Active */}
@@ -201,7 +214,7 @@ export default function NewCategoryPage() {
 
             <div className="flex gap-3 pt-2">
               <Button type="submit" disabled={loading}>
-                {loading ? "Saving…" : "Create Category"}
+                {loading ? "Saving…" : "Create Program"}
               </Button>
               <Button asChild type="button" variant="outline">
                 <Link href="/admin/training">Cancel</Link>

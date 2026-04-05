@@ -15,7 +15,7 @@ async function getAdminUser() {
   return user;
 }
 
-// GET /api/admin/training/categories/[id] — single category
+// GET /api/admin/training/programs/[id]
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -29,19 +29,19 @@ export async function GET(
   const admin = createAdminClient();
 
   const { data, error } = await admin
-    .from("training_categories")
-    .select("id, training_id, name, description, priority, is_active, created_at")
+    .from("training_programs")
+    .select("id, name, description, priority, is_active, allowed_roles, created_at")
     .eq("id", id)
     .single();
 
   if (error || !data) {
-    return NextResponse.json({ error: "Category not found." }, { status: 404 });
+    return NextResponse.json({ error: "Program not found." }, { status: 404 });
   }
 
-  return NextResponse.json({ category: data });
+  return NextResponse.json({ program: data });
 }
 
-// PUT /api/admin/training/categories/[id] — update
+// PUT /api/admin/training/programs/[id]
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -54,11 +54,11 @@ export async function PUT(
   const { id } = await params;
 
   let body: {
-    training_id?: string;
     name?: string;
     description?: string | null;
     priority?: number;
     is_active?: boolean;
+    allowed_roles?: string[];
   };
   try {
     body = await req.json();
@@ -66,24 +66,22 @@ export async function PUT(
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { training_id, name, description, priority, is_active } = body;
+  const { name, description, priority, is_active, allowed_roles } = body;
 
-  if (!training_id || typeof training_id !== "string") {
-    return NextResponse.json({ error: "Training program is required." }, { status: 422 });
-  }
   if (!name || typeof name !== "string" || !name.trim()) {
     return NextResponse.json({ error: "Name is required." }, { status: 422 });
   }
 
   const admin = createAdminClient();
   const { data, error } = await admin
-    .from("training_categories")
+    .from("training_programs")
     .update({
-      training_id,
       name: name.trim(),
       description: description ?? null,
       priority: priority ?? 0,
       is_active: is_active ?? true,
+      allowed_roles: Array.isArray(allowed_roles) ? allowed_roles : [],
+      updated_at: new Date().toISOString(),
     })
     .eq("id", id)
     .select()
@@ -93,10 +91,10 @@ export async function PUT(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ category: data });
+  return NextResponse.json({ program: data });
 }
 
-// DELETE /api/admin/training/categories/[id] — delete
+// DELETE /api/admin/training/programs/[id]
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -109,8 +107,21 @@ export async function DELETE(
   const { id } = await params;
   const admin = createAdminClient();
 
-  const { error } = await admin
+  // Check if any categories are still assigned to this program
+  const { count } = await admin
     .from("training_categories")
+    .select("id", { count: "exact", head: true })
+    .eq("training_id", id);
+
+  if (count && count > 0) {
+    return NextResponse.json(
+      { error: `Cannot delete: ${count} categor${count === 1 ? "y is" : "ies are"} still assigned to this program. Reassign them first.` },
+      { status: 409 }
+    );
+  }
+
+  const { error } = await admin
+    .from("training_programs")
     .delete()
     .eq("id", id);
 

@@ -15,8 +15,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye } from "lucide-react";
 
+type Program = {
+  id: string;
+  name: string;
+  description: string | null;
+  priority: number;
+  is_active: boolean;
+  allowed_roles: string[];
+  created_at: string;
+};
+
 type Category = {
   id: string;
+  training_id: string;
   name: string;
   description: string | null;
   priority: number;
@@ -50,6 +61,7 @@ const fmt = (d: string) =>
   d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
 
 export default function TrainingPage() {
+  const [programs, setPrograms] = useState<Program[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
@@ -64,9 +76,18 @@ export default function TrainingPage() {
   const [lesCreatedTo, setLesCreatedTo] = useState("");
 
   // Preview modals
+  const [previewProgram, setPreviewProgram] = useState<Program | null>(null);
   const [previewCat, setPreviewCat] = useState<Category | null>(null);
   const [previewLesson, setPreviewLesson] = useState<Lesson | null>(null);
   const [previewQuiz, setPreviewQuiz] = useState<Quiz | null>(null);
+
+  async function loadPrograms() {
+    const res = await fetch("/api/admin/training/programs");
+    if (res.ok) {
+      const json = await res.json();
+      setPrograms(json.programs ?? []);
+    }
+  }
 
   async function loadCategories(overrides?: { catCreatedFrom?: string; catCreatedTo?: string }) {
     const cf = overrides?.catCreatedFrom ?? catCreatedFrom;
@@ -80,6 +101,7 @@ export default function TrainingPage() {
       setCategories(json.categories ?? []);
     }
   }
+
 
   async function loadLessons(overrides?: { lesCreatedFrom?: string; lesCreatedTo?: string }) {
     const cf = overrides?.lesCreatedFrom ?? lesCreatedFrom;
@@ -104,13 +126,15 @@ export default function TrainingPage() {
 
   async function loadAll() {
     setLoading(true);
-    await Promise.all([loadCategories(), loadLessons(), loadQuizzes()]);
+    await Promise.all([loadPrograms(), loadCategories(), loadLessons(), loadQuizzes()]);
     setLoading(false);
   }
 
   useEffect(() => { loadAll(); }, []);
 
   // Build lookup maps
+  const programMap: Record<string, string> = {};
+  for (const p of programs) { programMap[p.id] = p.name; }
   const categoryMap: Record<string, string> = {};
   for (const c of categories) { categoryMap[c.id] = c.name; }
   const lessonMap: Record<string, string> = {};
@@ -123,6 +147,30 @@ export default function TrainingPage() {
         <p className="text-muted-foreground">Manage training categories, lessons, and quizzes.</p>
       </div>
 
+      {/* Program preview modal */}
+      {previewProgram && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setPreviewProgram(null)}>
+          <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <CardHeader><CardTitle>Program Preview</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div><span className="font-medium">Name:</span> {previewProgram.name}</div>
+              {previewProgram.description && <div><span className="font-medium">Description:</span> {previewProgram.description}</div>}
+              <div><span className="font-medium">Priority:</span> {previewProgram.priority}</div>
+              <div><span className="font-medium">Status:</span> <Badge variant={previewProgram.is_active ? "default" : "outline"}>{previewProgram.is_active ? "Active" : "Inactive"}</Badge></div>
+              <div><span className="font-medium">Created:</span> {fmt(previewProgram.created_at)}</div>
+              <div><span className="font-medium">Categories:</span> {categories.filter((c) => c.training_id === previewProgram.id).length}</div>
+              <div>
+                <span className="font-medium">Access:</span>{" "}
+                {!previewProgram.allowed_roles || previewProgram.allowed_roles.length === 0
+                  ? "All authenticated users"
+                  : previewProgram.allowed_roles.map((r) => r.replace(/^is_/, "")).join(", ")}
+              </div>
+              <Button size="sm" className="mt-2" onClick={() => setPreviewProgram(null)}>Close</Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Category preview modal */}
       {previewCat && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setPreviewCat(null)}>
@@ -130,6 +178,7 @@ export default function TrainingPage() {
             <CardHeader><CardTitle>Category Preview</CardTitle></CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div><span className="font-medium">Name:</span> {previewCat.name}</div>
+              <div><span className="font-medium">Program:</span> {programMap[previewCat.training_id] ?? "—"}</div>
               {previewCat.description && <div><span className="font-medium">Description:</span> {previewCat.description}</div>}
               <div><span className="font-medium">Priority:</span> {previewCat.priority}</div>
               <div><span className="font-medium">Status:</span> <Badge variant={previewCat.is_active ? "default" : "outline"}>{previewCat.is_active ? "Active" : "Inactive"}</Badge></div>
@@ -199,6 +248,76 @@ export default function TrainingPage() {
 
       {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
 
+      {/* Training Programs */}
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle>Training Programs</CardTitle>
+            <CardDescription>{programs.length} program{programs.length === 1 ? "" : "s"}</CardDescription>
+          </div>
+          <Button asChild size="sm">
+            <Link href="/admin/training/programs/new">+ Add Program</Link>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {programs.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">No programs yet. Add one before creating categories.</p>
+          ) : (
+            <div className="rounded-md border">
+              <table className="w-full text-sm">
+                <thead className="border-b bg-muted/50">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-medium">Name</th>
+                    <th className="px-3 py-2 text-left font-medium">Access — Roles</th>
+                    <th className="px-3 py-2 text-left font-medium">Description</th>
+                    <th className="px-3 py-2 text-left font-medium">Categories</th>
+                    <th className="px-3 py-2 text-left font-medium">Priority</th>
+                    <th className="px-3 py-2 text-left font-medium">Status</th>
+                    <th className="px-3 py-2 text-left font-medium">Created</th>
+                    <th className="px-3 py-2 text-right font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {programs.map((prog) => (
+                    <tr key={prog.id} className="border-b last:border-0 hover:bg-muted/30">
+                      <td className="px-3 py-2 font-medium">{prog.name}</td>
+                      <td className="px-3 py-2">
+                        {!prog.allowed_roles || prog.allowed_roles.length === 0 ? (
+                          <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600">All</Badge>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {prog.allowed_roles.map((r) => (
+                              <Badge key={r} variant="outline" className="text-xs">{r.replace(/^is_/, "")}</Badge>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 max-w-xs truncate text-muted-foreground text-xs">{prog.description ?? "—"}</td>
+                      <td className="px-3 py-2 text-sm">{categories.filter((c) => c.training_id === prog.id).length}</td>
+                      <td className="px-3 py-2 text-sm">{prog.priority}</td>
+                      <td className="px-3 py-2">
+                        <Badge variant="outline" className={prog.is_active ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"}>
+                          {prog.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">{fmt(prog.created_at)}</td>
+                      <td className="px-3 py-2 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button size="sm" variant="ghost" onClick={() => setPreviewProgram(prog)}><Eye className="size-3.5" /></Button>
+                          <Button asChild size="sm" variant="outline">
+                            <Link href={`/admin/training/programs/${prog.id}/edit`}>Edit</Link>
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Categories */}
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4">
@@ -235,6 +354,7 @@ export default function TrainingPage() {
                 <thead className="border-b bg-muted/50">
                   <tr>
                     <th className="px-3 py-2 text-left font-medium">Name</th>
+                    <th className="px-3 py-2 text-left font-medium">Program</th>
                     <th className="px-3 py-2 text-left font-medium">Description</th>
                     <th className="px-3 py-2 text-left font-medium">Priority</th>
                     <th className="px-3 py-2 text-left font-medium">Status</th>
@@ -246,6 +366,7 @@ export default function TrainingPage() {
                   {categories.map((cat) => (
                     <tr key={cat.id} className="border-b last:border-0 hover:bg-muted/30">
                       <td className="px-3 py-2 font-medium">{cat.name}</td>
+                      <td className="px-3 py-2 text-sm text-muted-foreground">{programMap[cat.training_id] ?? "—"}</td>
                       <td className="px-3 py-2 max-w-xs truncate text-muted-foreground text-xs">{cat.description ?? "—"}</td>
                       <td className="px-3 py-2 text-sm">{cat.priority ?? 0}</td>
                       <td className="px-3 py-2">
