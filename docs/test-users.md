@@ -93,6 +93,14 @@ Users with multiple roles are redirected to `/switch` on login to select their p
 
 ---
 
+## Admin Users — AstrologyPro (Supabase)
+
+| Email | Password | Portal | Notes |
+|---|---|---|---|
+| admin@astrologypro.com | Admin@AstroPro2026! | `/admin` | Primary admin; seeded in `admin_users` table; DB-based auth |
+
+---
+
 ## Notes
 
 - All users are email-confirmed and can log in immediately

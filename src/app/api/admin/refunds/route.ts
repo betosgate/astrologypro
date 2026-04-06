@@ -1,24 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import { sendRefundProcessed } from "@/lib/email";
 
 export const runtime = "nodejs";
 
-async function assertAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  if (!adminEmails.includes((user.email ?? "").toLowerCase())) return null;
-  return user;
-}
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +15,7 @@ export const dynamic = "force-dynamic";
  * Supports ?created_from=YYYY-MM-DD&created_to=YYYY-MM-DD date filters on scheduled_at.
  */
 export async function GET(request: NextRequest) {
-  const user = await assertAdmin();
+  const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const sp = request.nextUrl.searchParams;
@@ -64,7 +51,7 @@ export async function GET(request: NextRequest) {
  * Issue a full refund for a booking (admin override — no ownership check).
  */
 export async function POST(request: NextRequest) {
-  const user = await assertAdmin();
+  const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { bookingId, reason } = await request.json();

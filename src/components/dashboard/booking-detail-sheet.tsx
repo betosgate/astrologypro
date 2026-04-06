@@ -34,6 +34,7 @@ interface BookingDetailProps {
     duration: number;
     amount: number;
     notes: string | null;
+    booking_notes?: string | null;
     session_notes?: string | null;
     client_name: string;
     client_email: string;
@@ -172,6 +173,13 @@ export function BookingDetailSheet({ booking }: BookingDetailProps) {
               <div>
                 <p className="text-xs text-muted-foreground">Booking Notes</p>
                 <p className="text-sm">{booking.notes}</p>
+              </div>
+            )}
+
+            {booking.booking_notes && (
+              <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3">
+                <p className="text-xs font-medium text-amber-400 mb-1">Client Notes</p>
+                <p className="text-sm text-muted-foreground">{booking.booking_notes}</p>
               </div>
             )}
 

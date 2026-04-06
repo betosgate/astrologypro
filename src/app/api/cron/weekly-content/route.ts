@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { sendSMS } from "@/lib/sms";
 import { APP_URL } from "@/lib/constants";
+import { verifyCronAuth } from "@/lib/cron-auth";
 
 function generateToken(): string {
   const chars =
@@ -15,11 +16,8 @@ function generateToken(): string {
 }
 
 export async function GET(request: NextRequest) {
-  // Verify cron secret
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = verifyCronAuth(request);
+  if (authError) return authError;
 
   const admin = createAdminClient();
   const results: Array<{ diviner: string; token: string; email: boolean; sms: boolean }> = [];
