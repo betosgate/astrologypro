@@ -15,7 +15,9 @@ Implement the requirement-driven monthly transit ready email for active communit
 
 - Monthly transit page exists at `src/app/community/transits/page.tsx`.
 - Transit generation logic exists in `src/app/api/cron/monthly-transits/route.ts`.
-- A verified member-notification path for “monthly transit ready” is not currently exposed.
+- A verified member-notification path for ï¿½monthly transit readyï¿½ is not currently exposed.
+
+
 
 ## Required Behavior
 

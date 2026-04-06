@@ -21,6 +21,8 @@ Implement the requirement-driven 5 percent community member discount flow for As
   - token issuance from the monthly transit page
   - platform-cut discount application at booking
 
+
+
 ## User-Visible Problem
 
 Community members do not yet have the promised “members get 5% off” reading flow from the transit experience into AstrologyPro checkout.
