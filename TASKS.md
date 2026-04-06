@@ -1,7 +1,7 @@
 # AstrologyPro — Daily Task Board
 
 > **Workflow:** Update this file each session. Check off items as you go. Push at end of day.
-> **Last updated:** 2026-04-06 (session 15 — mystery school 08-11, PM content library, CRON fix, affiliate commission docs)
+> **Last updated:** 2026-04-06 (session 16 — Nativity Birth Chart V2, Affiliate Commission MVP, Mundane Astrology Dashboard Phase 1, CRON_SECRET fix)
 > **Migrations:** All applied via `scripts/run-migration.js` — no manual SQL editor needed.
 
 ---
@@ -89,7 +89,9 @@
 | Mystery school decan curriculum + timeline | ✅ Done — metadata fields, lifecycle dates, grace state, enriched dashboard |
 | Mystery school ritual praxis runner | ✅ Done — sequential step enforcement, execution tracking |
 | Mystery school scry + mundane journals | ✅ Done — card association, 3-section mundane, server validation |
-| Nativity Birth Chart V2 | 🔲 Planned — astro-toolkit/nativity_Birth_Chart_Master_Documentation.md |
+| Nativity Birth Chart V2 | ✅ Done — city autocomplete, natal wheel, planets/houses/aspects, AI interpretations (20/day limit), chart history |
+| Affiliate Commission MVP | ✅ Done — commission rules (% or fixed), immutable ledger, payout records, 3-role dashboards, cursor pagination, full audit trail |
+| Mundane Astrology Dashboard Phase 1 | ✅ Done — entity/country registry, entity charts, forecasts CRUD, community hub, admin hub, navigation wired |
 | Mystery school tasks 08–11 (missed decan, graduation, tarot, emails) | ✅ Done — see session 15 |
 | Admin: spiritual wisdom CRUD | ✅ Done |
 | Admin: decan journals CRUD | ✅ Done |
