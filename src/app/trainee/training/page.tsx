@@ -1,44 +1,240 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { CircularProgress } from "@/components/ui/circular-progress";
+import { BookOpen, GraduationCap, CheckCircle2, LayoutGrid } from "lucide-react";
 import Link from "next/link";
 
-export const metadata = { title: "Training School - AstrologyPro" };
+export const metadata = { title: "Training Center - AstrologyPro" };
+export const dynamic = "force-dynamic";
 
-/** Resolve role slugs for the current user by checking membership tables. */
-async function getUserRoleSlugs(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string
-): Promise<string[]> {
-  const slugs: string[] = [];
+// ---------------------------------------------------------------------------
+// Types (match the shape returned by GET /api/trainee/training/programs)
+// ---------------------------------------------------------------------------
+type ProgramCategory = {
+  id: string;
+  name: string;
+  description: string | null;
+  priority: number;
+  completed: boolean;
+  progress: { completed: number; total: number };
+  lessons: {
+    id: string;
+    title: string;
+    priority: number;
+    completed: boolean;
+    quiz_passed: boolean | null;
+  }[];
+};
 
-  const [trainee, diviner, community, advocate, affiliate] = await Promise.all([
-    supabase.from("trainees").select("id").eq("user_id", userId).maybeSingle(),
-    supabase.from("diviners").select("id").eq("user_id", userId).maybeSingle(),
-    supabase.from("community_members").select("id, membership_type").eq("user_id", userId).maybeSingle(),
-    supabase.from("social_advocates").select("id").eq("user_id", userId).maybeSingle(),
-    supabase.from("affiliates").select("id").eq("user_id", userId).maybeSingle(),
-  ]);
+type Program = {
+  id: string;
+  name: string;
+  description: string | null;
+  priority: number;
+  progress: number; // 0–100
+  categories: ProgramCategory[];
+};
 
-  if (trainee.data)    slugs.push("is_trainee");
-  if (diviner.data)    slugs.push("is_astrologer");
-  if (advocate.data)   slugs.push("is_social_advo");
-  if (affiliate.data)  slugs.push("is_affiliate");
+// ---------------------------------------------------------------------------
+// Data fetch (server-side, co-located)
+// ---------------------------------------------------------------------------
+async function fetchPrograms(): Promise<Program[]> {
+  // We call our own API route from the server via absolute URL.
+  // Use NEXT_PUBLIC_APP_URL or fall back to localhost for SSR.
+  const base =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    `http://localhost:${process.env.PORT ?? 3000}`;
 
-  if (community.data) {
-    if (community.data.membership_type === "mystery_school")     slugs.push("is_mystery_school");
-    if (community.data.membership_type === "perennial_mandalism") slugs.push("is_Perennial_Mandalism");
-  }
+  const { createClient: makeClient } = await import("@/lib/supabase/server");
+  const { cookies } = await import("next/headers");
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((c) => `${c.name}=${c.value}`)
+    .join("; ");
 
-  return slugs;
+  const res = await fetch(`${base}/api/trainee/training/programs`, {
+    headers: { cookie: cookieHeader },
+    cache: "no-store",
+  });
+
+  if (!res.ok) return [];
+  const json = await res.json();
+  return json.programs ?? [];
 }
 
-export default async function TrainingCategoriesPage() {
+// ---------------------------------------------------------------------------
+// Skeleton loader
+// ---------------------------------------------------------------------------
+function ProgramCardSkeleton() {
+  return (
+    <div className="animate-pulse rounded-xl border bg-card p-6 space-y-4">
+      <div className="flex items-start gap-4">
+        <div className="size-20 rounded-full bg-muted shrink-0" />
+        <div className="flex-1 space-y-2 pt-1">
+          <div className="h-5 w-2/3 rounded bg-muted" />
+          <div className="h-3 w-full rounded bg-muted" />
+          <div className="h-3 w-3/4 rounded bg-muted" />
+        </div>
+      </div>
+      <div className="h-2 rounded-full bg-muted" />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Program Card
+// ---------------------------------------------------------------------------
+function ProgramCard({ program }: { program: Program }) {
+  const totalLessons = program.categories.reduce(
+    (s, c) => s + c.progress.total,
+    0
+  );
+  const completedLessons = program.categories.reduce(
+    (s, c) => s + c.progress.completed,
+    0
+  );
+  const completedCategories = program.categories.filter((c) => c.completed)
+    .length;
+
+  // Find the current in-progress category (first not fully done)
+  const currentCategory = program.categories.find(
+    (c) => !c.completed && c.progress.total > 0
+  );
+
+  const isComplete = program.progress === 100 && totalLessons > 0;
+  const isStarted = completedLessons > 0;
+
+  const ctaHref = currentCategory
+    ? `/trainee/training/${program.id}/${currentCategory.id}`
+    : `/trainee/training/${program.id}`;
+
+  return (
+    <div className="group rounded-xl border bg-card transition-colors hover:border-primary/40 overflow-hidden">
+      {/* Status strip at top */}
+      {isComplete && (
+        <div className="flex items-center gap-2 bg-green-500/10 px-4 py-2 text-xs font-medium text-green-600">
+          <CheckCircle2 className="size-3.5 shrink-0" />
+          Program Complete
+        </div>
+      )}
+      {!isComplete && isStarted && currentCategory && (
+        <div className="flex items-center gap-2 bg-amber-500/10 px-4 py-2 text-xs font-medium text-amber-600 truncate">
+          <div className="size-1.5 rounded-full bg-amber-500 shrink-0 animate-pulse" />
+          <span className="truncate">In progress: {currentCategory.name}</span>
+        </div>
+      )}
+
+      <div className="p-5 space-y-4">
+        {/* Card body */}
+        <div className="flex items-start gap-4">
+          {/* Circular progress ring */}
+          <CircularProgress
+            percentage={program.progress}
+            size={72}
+            strokeWidth={6}
+            className="shrink-0"
+          />
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <h2 className="text-base font-semibold leading-snug group-hover:text-primary transition-colors">
+                {program.name}
+              </h2>
+              {isComplete && (
+                <Badge className="shrink-0 bg-green-500/15 text-green-600 border-green-500/30 hover:bg-green-500/20">
+                  Complete
+                </Badge>
+              )}
+            </div>
+            {program.description && (
+              <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+                {program.description}
+              </p>
+            )}
+            {/* Meta badges */}
+            <div className="mt-2 flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs text-muted-foreground">
+                <LayoutGrid className="size-3" />
+                {program.categories.length}{" "}
+                {program.categories.length === 1 ? "category" : "categories"}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs text-muted-foreground">
+                <BookOpen className="size-3" />
+                {totalLessons} {totalLessons === 1 ? "lesson" : "lessons"}
+              </span>
+              {completedCategories > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-md border border-green-500/30 bg-green-500/5 px-2 py-0.5 text-xs text-green-600">
+                  <CheckCircle2 className="size-3" />
+                  {completedCategories} done
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              {completedLessons}/{totalLessons} lessons complete
+            </span>
+            <span>{program.progress}%</span>
+          </div>
+          <Progress value={program.progress} className="h-1.5" />
+        </div>
+
+        {/* CTA */}
+        <Button
+          asChild
+          size="sm"
+          variant={isComplete ? "outline" : "default"}
+          className="w-full"
+        >
+          <Link href={ctaHref}>
+            {isComplete ? "Review Program" : isStarted ? "Continue" : "Start Program"}
+          </Link>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Empty state
+// ---------------------------------------------------------------------------
+function EmptyState() {
+  return (
+    <Card>
+      <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
+        <div className="flex size-14 items-center justify-center rounded-full bg-primary/10">
+          <GraduationCap className="size-7 text-primary" />
+        </div>
+        <div>
+          <h2 className="font-semibold">No training available</h2>
+          <p className="mt-1 text-sm text-muted-foreground max-w-xs mx-auto">
+            No training programs are available for your account. Contact your
+            administrator if you believe this is an error.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+export default async function TrainingCenterPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const { data: trainee } = await supabase
@@ -46,126 +242,92 @@ export default async function TrainingCategoriesPage() {
     .select("id")
     .eq("user_id", user.id)
     .single();
-
   if (!trainee) redirect("/join/trainee");
 
-  // Resolve the user's role slugs
-  const userSlugs = await getUserRoleSlugs(supabase, user.id);
+  const programs = await fetchPrograms();
 
-  // Fetch active categories joined with their program's allowed_roles
-  // Only include categories whose program is unrestricted OR allows one of the user's slugs
-  const { data: allCategories } = await supabase
-    .from("training_categories")
-    .select("id, name, description, priority, training_id, training_programs!inner(allowed_roles)")
-    .eq("is_active", true)
-    .order("priority", { ascending: true });
-
-  // Filter by role access
-  const categories = (allCategories ?? []).filter((cat) => {
-    const prog = cat.training_programs as unknown as { allowed_roles: string[] } | null;
-    if (!prog) return true; // no program record — allow
-    const allowed: string[] = prog.allowed_roles ?? [];
-    if (allowed.length === 0) return true; // unrestricted
-    return userSlugs.some((s) => allowed.includes(s));
-  });
-
-  if (categories.length === 0) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Training School</h1>
-          <p className="text-muted-foreground">Study materials and lessons for your certification.</p>
-        </div>
-        <Card>
-          <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
-            <div className="flex size-14 items-center justify-center rounded-full bg-primary/10">
-              <BookOpen className="size-7 text-primary" />
-            </div>
-            <div>
-              <h2 className="font-semibold">No training available</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                No training modules are available for your account. Contact your administrator if you believe this is an error.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Fetch lesson counts per category
-  const categoryIds = categories.map((c) => c.id);
-
-  const { data: allLessons } = await supabase
-    .from("training_lessons")
-    .select("id, category_id")
-    .in("category_id", categoryIds)
-    .eq("is_active", true);
-
-  // Fetch progress records for this trainee
-  const lessonIds = (allLessons ?? []).map((l) => l.id);
-  const { data: progressRows } = lessonIds.length > 0
-    ? await supabase
-        .from("trainee_lesson_progress")
-        .select("lesson_id")
-        .eq("trainee_id", trainee.id)
-        .not("completed_at", "is", null)
-        .in("lesson_id", lessonIds)
-    : { data: [] };
-
-  const completedSet = new Set((progressRows ?? []).map((p) => p.lesson_id));
-
-  // Build per-category stats
-  const categoryStats = categories.map((cat) => {
-    const total = (allLessons ?? []).filter((l) => l.category_id === cat.id).length;
-    const completed = (allLessons ?? []).filter(
-      (l) => l.category_id === cat.id && completedSet.has(l.id)
-    ).length;
-    return { ...cat, total, completed };
-  });
+  // Overall summary stats
+  const totalLessons = programs.reduce(
+    (s, p) => s + p.categories.reduce((cs, c) => cs + c.progress.total, 0),
+    0
+  );
+  const completedLessons = programs.reduce(
+    (s, p) => s + p.categories.reduce((cs, c) => cs + c.progress.completed, 0),
+    0
+  );
+  const completedCategories = programs.reduce(
+    (s, p) => s + p.categories.filter((c) => c.completed).length,
+    0
+  );
+  const overallPct =
+    totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Training School</h1>
-        <p className="text-muted-foreground">Study materials and lessons for your certification.</p>
+    <div className="space-y-8">
+      {/* Hero */}
+      <div className="space-y-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Training Center</h1>
+          <p className="text-muted-foreground mt-1">
+            Work through your training programs and earn your certification.
+          </p>
+        </div>
+        {totalLessons > 0 && (
+          <div className="space-y-2 rounded-xl border bg-card p-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium">Overall Progress</span>
+              <span className="text-muted-foreground tabular-nums">
+                {completedLessons}/{totalLessons} lessons
+              </span>
+            </div>
+            <Progress value={overallPct} className="h-2" />
+          </div>
+        )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        {categoryStats.map((cat) => {
-          const progressPct = cat.total > 0 ? Math.round((cat.completed / cat.total) * 100) : 0;
-          const isComplete = cat.total > 0 && cat.completed === cat.total;
+      {/* Programs grid */}
+      {programs.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <div className="grid gap-5 sm:grid-cols-2">
+          {programs.map((program) => (
+            <ProgramCard key={program.id} program={program} />
+          ))}
+        </div>
+      )}
 
-          return (
-            <Link key={cat.id} href={`/trainee/training/${cat.id}`} className="group block">
-              <Card className="h-full transition-colors hover:border-primary/30">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-base leading-snug group-hover:text-primary transition-colors">
-                      {cat.name}
-                    </CardTitle>
-                    {isComplete && (
-                      <Badge variant="default" className="shrink-0">
-                        Complete
-                      </Badge>
-                    )}
-                  </div>
-                  {cat.description && (
-                    <CardDescription className="text-sm">{cat.description}</CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>{cat.total} {cat.total === 1 ? "lesson" : "lessons"}</span>
-                    <span>{cat.completed}/{cat.total} completed</span>
-                  </div>
-                  <Progress value={progressPct} className="h-2" />
-                </CardContent>
-              </Card>
-            </Link>
-          );
-        })}
-      </div>
+      {/* Summary strip */}
+      {completedLessons > 0 && (
+        <div className="rounded-xl border bg-card px-5 py-4">
+          <h2 className="text-sm font-semibold mb-3">Your Progress Summary</h2>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-2xl font-bold tabular-nums text-primary">
+                {completedLessons}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Lessons Done
+              </p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold tabular-nums text-primary">
+                {completedCategories}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Categories Done
+              </p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold tabular-nums text-primary">
+                {overallPct}%
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Overall
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

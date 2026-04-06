@@ -22,6 +22,16 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
+import {
   Search,
   MoreHorizontal,
   StickyNote,
@@ -37,6 +47,10 @@ import {
   CalendarIcon,
   RefreshCw,
   FilterX,
+  Pencil,
+  KeyRound,
+  Trash2,
+  UserCog,
 } from "lucide-react";
 import { UserDetailSheet } from "./user-detail-sheet";
 import { InviteUserForm } from "./invite-user-form";
@@ -68,12 +82,14 @@ interface Props {
     q?: string;
     role?: string;
     page?: string;
+    pageSize?: string;
     sortBy?: string;
     sortDir?: string;
     joinedFrom?: string;
     joinedTo?: string;
     loginFrom?: string;
     loginTo?: string;
+    status?: string;
   };
 }
 
@@ -88,12 +104,26 @@ const ROLE_OPTIONS = [
   { value: "trainee",   label: "Trainees" },
 ];
 
+const STATUS_OPTIONS = [
+  { value: "all",      label: "All Statuses" },
+  { value: "active",   label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
 type SortKey = "name" | "email" | "role" | "joinedAt" | "lastLoginAt";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function dateStr(d: string) {
-  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: tz,
+  }).format(new Date(d));
 }
 
 /** Format a raw phone string to US (XXX) XXX-XXXX or +1 (XXX) XXX-XXXX */
@@ -266,6 +296,7 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
   // ── Current params (read from server-rendered props, URL is source of truth) ─
   const currentQ          = sp.q ?? "";
   const currentRole       = sp.role ?? "all";
+  const currentStatus     = sp.status ?? "all";
   const currentPage       = Math.max(1, parseInt(sp.page ?? "1", 10));
   const currentSort       = sp.sortBy ?? "lastLoginAt";
   const currentDir        = sp.sortDir ?? "desc";
@@ -287,6 +318,7 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
   const hasActiveFilters =
     !!currentQ ||
     (currentRole !== "all") ||
+    (currentStatus !== "all") ||
     !!currentJoinedFrom ||
     !!currentJoinedTo ||
     !!currentLoginFrom ||
@@ -341,6 +373,7 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
         JSON.stringify({
           q:           currentQ,
           role:        currentRole,
+          status:      currentStatus,
           sortBy:      currentSort,
           sortDir:     currentDir,
           joinedFrom:  currentJoinedFrom,
@@ -352,7 +385,7 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
     } catch {
       // ignore
     }
-  }, [currentQ, currentRole, currentSort, currentDir, currentJoinedFrom, currentJoinedTo, currentLoginFrom, currentLoginTo]);
+  }, [currentQ, currentRole, currentStatus, currentSort, currentDir, currentJoinedFrom, currentJoinedTo, currentLoginFrom, currentLoginTo]);
 
   // Build URL with updated params and push (wrapped in transition so isPending fires)
   const pushParams = useCallback(
@@ -378,6 +411,14 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
     pushParams({ role: value });
   }
 
+  function handleStatusChange(value: string) {
+    pushParams({ status: value });
+  }
+
+  function handlePageSizeChange(value: string) {
+    pushParams({ pageSize: value, page: "1" });
+  }
+
   function handleSort(col: SortKey) {
     if (currentSort === col) {
       pushParams({ sortBy: col, sortDir: currentDir === "asc" ? "desc" : "asc" });
@@ -399,6 +440,150 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
 
   // Optimistic unblock (no full page refresh needed)
   const [localUnblocked, setLocalUnblocked] = useState<Set<string>>(new Set());
+
+  // ── Block with note dialog ──────────────────────────────────────────────
+  const [blockDialogUser, setBlockDialogUser] = useState<AdminUser | null>(null);
+  const [blockNote, setBlockNote] = useState("");
+  const [blockLoading, setBlockLoading] = useState(false);
+
+  async function handleBlockWithNote() {
+    if (!blockDialogUser) return;
+    setBlockLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${blockDialogUser.userId}/block`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: blockNote }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      // Save note to admin_user_notes
+      if (blockNote.trim()) {
+        await fetch(`/api/admin/users/${blockDialogUser.userId}/notes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ note: `Block reason: ${blockNote}`, role: blockDialogUser.role, action_type: "block" }),
+        });
+      }
+      toast.success(`${blockDialogUser.name} has been blocked`);
+      setBlockDialogUser(null);
+      setBlockNote("");
+      router.refresh();
+    } catch {
+      toast.error("Failed to block user");
+    } finally {
+      setBlockLoading(false);
+    }
+  }
+
+  // ── Password management dialogs ─────────────────────────────────────────
+  const [pwdDialogUser, setPwdDialogUser] = useState<AdminUser | null>(null);
+  const [pwdDialogMode, setPwdDialogMode] = useState<"reset_link" | "force_set">("reset_link");
+  const [forcePassword, setForcePassword] = useState("");
+  const [pwdLoading, setPwdLoading] = useState(false);
+
+  async function handlePasswordAction() {
+    if (!pwdDialogUser) return;
+    setPwdLoading(true);
+    try {
+      const body =
+        pwdDialogMode === "reset_link"
+          ? { action: "reset_link" }
+          : { action: "force_set", password: forcePassword };
+      const res = await fetch(`/api/admin/users/${pwdDialogUser.userId}/password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      if (pwdDialogMode === "reset_link" && data.link) {
+        await navigator.clipboard.writeText(data.link).catch(() => {});
+        toast.success("Password reset link copied to clipboard");
+      } else {
+        toast.success("Password updated successfully");
+      }
+      setPwdDialogUser(null);
+      setForcePassword("");
+    } catch {
+      toast.error("Failed to perform password action");
+    } finally {
+      setPwdLoading(false);
+    }
+  }
+
+  // ── Soft delete dialog ──────────────────────────────────────────────────
+  const [deleteDialogUser, setDeleteDialogUser] = useState<AdminUser | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  async function handleSoftDelete() {
+    if (!deleteDialogUser) return;
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${deleteDialogUser.userId}/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: deleteDialogUser.role, rowId: deleteDialogUser.rowId }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast.success(`${deleteDialogUser.name} has been soft-deleted`);
+      setDeleteDialogUser(null);
+      router.refresh();
+    } catch {
+      toast.error("Failed to delete user");
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
+
+  // ── Training status dialog ──────────────────────────────────────────────
+  const [trainingDialogUser, setTrainingDialogUser] = useState<AdminUser | null>(null);
+  const [trainingStatus, setTrainingStatus] = useState("in_progress");
+  const [trainingLoading, setTrainingLoading] = useState(false);
+
+  async function handleTrainingStatusUpdate() {
+    if (!trainingDialogUser) return;
+    setTrainingLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${trainingDialogUser.userId}/training-status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: trainingStatus }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast.success("Training status updated");
+      setTrainingDialogUser(null);
+      router.refresh();
+    } catch {
+      toast.error("Failed to update training status");
+    } finally {
+      setTrainingLoading(false);
+    }
+  }
+
+  // ── Role change dialog ──────────────────────────────────────────────────
+  const [roleDialogUser, setRoleDialogUser] = useState<AdminUser | null>(null);
+  const [newRole, setNewRole] = useState("client");
+  const [roleLoading, setRoleLoading] = useState(false);
+
+  async function handleRoleChangeAction() {
+    if (!roleDialogUser) return;
+    setRoleLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${roleDialogUser.userId}/change-role`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ new_role: newRole }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast.success(`Role record created for ${roleDialogUser.name}`);
+      setRoleDialogUser(null);
+      router.refresh();
+    } catch {
+      toast.error("Failed to change role");
+    } finally {
+      setRoleLoading(false);
+    }
+  }
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
@@ -440,7 +625,7 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
 
       {/* ── Filter bar ─────────────────────────────────────────────────────── */}
       <div className="space-y-3">
-        {/* Row 1: search + role */}
+        {/* Row 1: search + role + status + page size */}
         <div className="flex gap-3 flex-col sm:flex-row">
           <SearchAutocomplete
             defaultValue={currentQ}
@@ -453,6 +638,26 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
             <SelectContent>
               {ROLE_OPTIONS.map((o) => (
                 <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={currentStatus} onValueChange={handleStatusChange}>
+            <SelectTrigger className="w-full sm:w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+            <SelectTrigger className="w-full sm:w-28">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map((n) => (
+                <SelectItem key={n} value={String(n)}>{n} / page</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -647,6 +852,10 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
                             <Eye className="mr-2 size-4" />
                             View Details
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/admin/users/edit/${u.userId}`)}>
+                            <Pencil className="mr-2 size-4" />
+                            Edit Profile
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openSheet(u, "notes")}>
                             <StickyNote className="mr-2 size-4" />
                             {(u.notesCount ?? 0) > 0 ? `Notes (${u.notesCount})` : "Add Note"}
@@ -655,6 +864,30 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
                             <Eye className="mr-2 size-4" />
                             Login History
                           </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => { setPwdDialogUser(u); setPwdDialogMode("reset_link"); }}
+                          >
+                            <KeyRound className="mr-2 size-4" />
+                            Send Password Reset
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => { setPwdDialogUser(u); setPwdDialogMode("force_set"); setForcePassword(""); }}
+                          >
+                            <KeyRound className="mr-2 size-4" />
+                            Force Set Password
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => { setRoleDialogUser(u); setNewRole("client"); }}>
+                            <UserCog className="mr-2 size-4" />
+                            Change Role
+                          </DropdownMenuItem>
+                          {u.role === "trainee" && (
+                            <DropdownMenuItem onClick={() => { setTrainingDialogUser(u); setTrainingStatus("in_progress"); }}>
+                              <UserCog className="mr-2 size-4" />
+                              Update Training Status
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuSeparator />
                           {isBlocked ? (
                             <DropdownMenuItem
@@ -670,12 +903,20 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
                           ) : (
                             <DropdownMenuItem
                               className="text-destructive"
-                              onClick={() => openSheet(u, "overview")}
+                              onClick={() => { setBlockDialogUser(u); setBlockNote(""); }}
                             >
                               <ShieldOff className="mr-2 size-4" />
                               Block User…
                             </DropdownMenuItem>
                           )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => setDeleteDialogUser(u)}
+                          >
+                            <Trash2 className="mr-2 size-4" />
+                            Delete User…
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -764,6 +1005,160 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
           }
         }}
       />
+
+      {/* ── Block with note dialog ─────────────────────────────────────────── */}
+      <Dialog open={!!blockDialogUser} onOpenChange={(v) => { if (!v) setBlockDialogUser(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Block {blockDialogUser?.name}?</DialogTitle>
+            <DialogDescription>
+              This will prevent them from logging in. You can unblock at any time. Please provide a reason.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            placeholder="Reason for blocking (required)…"
+            value={blockNote}
+            onChange={(e) => setBlockNote(e.target.value)}
+            rows={3}
+            className="resize-none"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBlockDialogUser(null)} disabled={blockLoading}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBlockWithNote}
+              disabled={blockLoading || !blockNote.trim()}
+            >
+              {blockLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Block User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Password management dialog ─────────────────────────────────────── */}
+      <Dialog open={!!pwdDialogUser} onOpenChange={(v) => { if (!v) { setPwdDialogUser(null); setForcePassword(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {pwdDialogMode === "reset_link" ? "Send Password Reset Link" : "Force Set Password"}
+            </DialogTitle>
+            <DialogDescription>
+              {pwdDialogMode === "reset_link"
+                ? `A password reset link will be generated for ${pwdDialogUser?.email} and copied to your clipboard.`
+                : `Set a new password for ${pwdDialogUser?.name}. This will override their current password immediately.`}
+            </DialogDescription>
+          </DialogHeader>
+          {pwdDialogMode === "force_set" && (
+            <Input
+              type="password"
+              placeholder="New password (min 8 characters)"
+              value={forcePassword}
+              onChange={(e) => setForcePassword(e.target.value)}
+              minLength={8}
+            />
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setPwdDialogUser(null); setForcePassword(""); }} disabled={pwdLoading}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handlePasswordAction}
+              disabled={pwdLoading || (pwdDialogMode === "force_set" && forcePassword.length < 8)}
+            >
+              {pwdLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {pwdDialogMode === "reset_link" ? "Generate & Copy Link" : "Set Password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Soft delete dialog ─────────────────────────────────────────────── */}
+      <Dialog open={!!deleteDialogUser} onOpenChange={(v) => { if (!v) setDeleteDialogUser(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {deleteDialogUser?.name}?</DialogTitle>
+            <DialogDescription>
+              This performs a soft delete — the user&apos;s data is archived and can be restored later. Their account will be deactivated.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogUser(null)} disabled={deleteLoading}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleSoftDelete} disabled={deleteLoading}>
+              {deleteLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Delete User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Training status dialog ─────────────────────────────────────────── */}
+      <Dialog open={!!trainingDialogUser} onOpenChange={(v) => { if (!v) setTrainingDialogUser(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Training Status</DialogTitle>
+            <DialogDescription>
+              Update the training status for {trainingDialogUser?.name}.
+            </DialogDescription>
+          </DialogHeader>
+          <Select value={trainingStatus} onValueChange={setTrainingStatus}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="certified">Certified</SelectItem>
+              <SelectItem value="dropped">Dropped</SelectItem>
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTrainingDialogUser(null)} disabled={trainingLoading}>
+              Cancel
+            </Button>
+            <Button onClick={handleTrainingStatusUpdate} disabled={trainingLoading}>
+              {trainingLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Update Status
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Role change dialog ─────────────────────────────────────────────── */}
+      <Dialog open={!!roleDialogUser} onOpenChange={(v) => { if (!v) setRoleDialogUser(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Role for {roleDialogUser?.name}</DialogTitle>
+            <DialogDescription>
+              This will create a new profile record in the target role table. The existing role record will NOT be deleted (for audit purposes). Current role: <strong>{roleDialogUser?.roleLabel}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <Select value={newRole} onValueChange={setNewRole}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="diviner">Diviner</SelectItem>
+              <SelectItem value="client">Client</SelectItem>
+              <SelectItem value="advocate">Advocate</SelectItem>
+              <SelectItem value="trainee">Trainee</SelectItem>
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRoleDialogUser(null)} disabled={roleLoading}>
+              Cancel
+            </Button>
+            <Button onClick={handleRoleChangeAction} disabled={roleLoading || newRole === roleDialogUser?.role}>
+              {roleLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Create Role Record
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
