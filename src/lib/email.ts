@@ -1101,3 +1101,354 @@ export async function sendMysterySchoolGraduation({
     }),
   });
 }
+
+// ---------------------------------------------------------------------------
+// Community: Payment Failed
+// ---------------------------------------------------------------------------
+
+interface CommunityPaymentFailedParams {
+  to: string;
+  name: string;
+  amount: string;
+  currency: string;
+  retryDate: string;
+  billingPortalUrl: string;
+}
+
+export async function sendCommunityPaymentFailed({
+  to,
+  name,
+  amount,
+  currency,
+  retryDate,
+  billingPortalUrl,
+}: CommunityPaymentFailedParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">We were unable to process your community membership payment. Your access remains active for now, but please update your payment method to avoid any interruption.</p>
+
+    ${detailRow("Amount Due", `${currency} ${amount}`)}
+    ${detailRow("Next Retry", retryDate)}
+
+    ${infoCard(`Please update your payment method in the billing portal to ensure uninterrupted access to the community. If no action is taken, your membership may be paused after repeated failed attempts.`)}
+
+    <p style="margin:16px 0 0;color:#a1a1aa;">Questions? Reply to this email or contact us at <a href="mailto:support@astrologypro.com" style="color:#8b5cf6;">support@astrologypro.com</a>.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Action required: Community membership payment failed`,
+    html: buildEmailHtml({
+      title: "Payment Unsuccessful",
+      preheader: `Your community membership payment of ${currency} ${amount} could not be processed.`,
+      content,
+      ctaText: "Update Payment Method",
+      ctaUrl: billingPortalUrl,
+      footer: `AstrologyPro &mdash; Divine Infinite Being`,
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Community: Subscription Renewal Reminder (7 days before)
+// ---------------------------------------------------------------------------
+
+interface CommunityRenewalReminderParams {
+  to: string;
+  name: string;
+  renewalDate: string;
+  amount: string;
+  planName: string;
+  billingPortalUrl: string;
+}
+
+export async function sendCommunityRenewalReminder({
+  to,
+  name,
+  renewalDate,
+  amount,
+  planName,
+  billingPortalUrl,
+}: CommunityRenewalReminderParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">Your community membership is renewing soon. Here is a quick summary:</p>
+
+    ${detailRow("Plan", planName)}
+    ${detailRow("Renewal Date", renewalDate)}
+    ${detailRow("Amount", amount)}
+
+    ${infoCard(`No action is needed if you would like to continue your membership. Your saved payment method will be charged automatically on the renewal date.`)}
+
+    <p style="margin:16px 0 0;color:#a1a1aa;">Need to make changes or cancel? Visit your billing portal before the renewal date.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Your community membership renews on ${renewalDate}`,
+    html: buildEmailHtml({
+      title: "Membership Renewal Reminder",
+      preheader: `Your ${planName} membership renews on ${renewalDate}`,
+      content,
+      ctaText: "Manage Billing",
+      ctaUrl: billingPortalUrl,
+      footer: `AstrologyPro &mdash; Divine Infinite Being`,
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Community: Membership Expiry Warning (3 days before expiry)
+// ---------------------------------------------------------------------------
+
+interface MembershipExpiryWarningParams {
+  to: string;
+  name: string;
+  expiryDate: string;
+  renewUrl: string;
+}
+
+export async function sendMembershipExpiryWarning({
+  to,
+  name,
+  expiryDate,
+  renewUrl,
+}: MembershipExpiryWarningParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">Your community membership is expiring on <strong style="color:#f4f4f5;">${expiryDate}</strong>. After this date, your access to community content, decans, and other member benefits will be paused.</p>
+
+    ${infoCard(`Renew now to keep your progress and maintain uninterrupted access to the community.`)}
+
+    <p style="margin:16px 0 0;color:#a1a1aa;">If you have already renewed, you can safely ignore this message.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Your membership expires on ${expiryDate} — renew now`,
+    html: buildEmailHtml({
+      title: "Membership Expiring Soon",
+      preheader: `Your community membership expires on ${expiryDate}`,
+      content,
+      ctaText: "Renew Membership",
+      ctaUrl: renewUrl,
+      footer: `AstrologyPro &mdash; Divine Infinite Being`,
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Community: Subscription Cancelled Confirmation
+// ---------------------------------------------------------------------------
+
+interface CommunitySubscriptionCancelledParams {
+  to: string;
+  name: string;
+  accessUntil: string;
+  rejoinUrl: string;
+}
+
+export async function sendCommunitySubscriptionCancelled({
+  to,
+  name,
+  accessUntil,
+  rejoinUrl,
+}: CommunitySubscriptionCancelledParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">Your community membership has been cancelled. You will continue to have access to all member benefits until <strong style="color:#f4f4f5;">${accessUntil}</strong>, after which your account will revert to a free plan.</p>
+
+    ${infoCard(`No further charges will be made. Your progress and history are saved — you can rejoin at any time.`)}
+
+    <p style="margin:16px 0 0;color:#a1a1aa;">We are sorry to see you go. If you change your mind, you are always welcome back.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Your community membership has been cancelled`,
+    html: buildEmailHtml({
+      title: "Membership Cancelled",
+      preheader: `Your community membership is cancelled. Access continues until ${accessUntil}.`,
+      content,
+      ctaText: "Rejoin the Community",
+      ctaUrl: rejoinUrl,
+      footer: `AstrologyPro &mdash; Divine Infinite Being`,
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Training: Quiz Passed
+// ---------------------------------------------------------------------------
+
+export async function sendQuizPassed(opts: {
+  to: string;
+  name: string;
+  lessonTitle: string;
+  score: number;
+  total: number;
+  pct: number;
+}) {
+  const { to, name, lessonTitle, score, total, pct } = opts;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Well done, <strong style="color:#f4f4f5;">${name}</strong>! You passed the quiz for <strong style="color:#f4f4f5;">${lessonTitle}</strong>.</p>
+
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0;background-color:#1e1b2e;border:1px solid #2e2548;border-radius:12px;">
+      <tr>
+        <td align="center" style="padding:28px 20px;">
+          <p style="margin:0;font-family:system-ui,-apple-system,sans-serif;font-size:13px;color:#71717a;text-transform:uppercase;letter-spacing:1px;">Your Score</p>
+          <p style="margin:8px 0 4px;font-family:system-ui,-apple-system,sans-serif;font-size:40px;font-weight:700;color:#8b5cf6;">${pct}%</p>
+          <p style="margin:0;font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#a1a1aa;">${score} out of ${total} correct</p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:16px 0 0;color:#a1a1aa;">Keep up the great work. Every lesson brings you closer to mastery.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Quiz passed: ${lessonTitle}`,
+    html: buildEmailHtml({
+      title: "Quiz Passed &#127775;",
+      preheader: `You scored ${pct}% on the ${lessonTitle} quiz. Great work!`,
+      content,
+      ctaText: "Continue Training",
+      ctaUrl: `${APP_URL}/trainee/training`,
+      footer: `AstrologyPro &mdash; Training Center`,
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Training: Lesson Complete
+// ---------------------------------------------------------------------------
+
+export async function sendLessonComplete(opts: {
+  to: string;
+  name: string;
+  lessonTitle: string;
+  categoryName: string;
+  nextLessonTitle?: string;
+}) {
+  const { to, name, lessonTitle, categoryName, nextLessonTitle } = opts;
+
+  const nextLessonBlock = nextLessonTitle
+    ? `${sectionHeading("Up Next")}
+       ${infoCard(`<strong style="color:#e4e4e7;">Next lesson:</strong> ${nextLessonTitle}`)}`
+    : `${infoCard(`You have completed all lessons in <strong style="color:#e4e4e7;">${categoryName}</strong>. Excellent work!`)}`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Great work, <strong style="color:#f4f4f5;">${name}</strong>! You have completed the lesson <strong style="color:#f4f4f5;">${lessonTitle}</strong> in <strong style="color:#f4f4f5;">${categoryName}</strong>.</p>
+
+    ${detailRow("Lesson", lessonTitle)}
+    ${detailRow("Category", categoryName)}
+
+    ${nextLessonBlock}
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Lesson complete: ${lessonTitle}`,
+    html: buildEmailHtml({
+      title: "Lesson Complete &#10003;",
+      preheader: `You completed ${lessonTitle} in ${categoryName}. Keep going!`,
+      content,
+      ctaText: "Continue Training",
+      ctaUrl: `${APP_URL}/trainee/training`,
+      footer: `AstrologyPro &mdash; Training Center`,
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Training: Category Complete
+// ---------------------------------------------------------------------------
+
+export async function sendCategoryComplete(opts: {
+  to: string;
+  name: string;
+  categoryName: string;
+  programName: string;
+  lessonsCompleted: number;
+  nextCategoryName?: string;
+}) {
+  const { to, name, categoryName, programName, lessonsCompleted, nextCategoryName } = opts;
+
+  const nextCategoryBlock = nextCategoryName
+    ? `${sectionHeading("What's Next")}
+       ${infoCard(`Your next section is <strong style="color:#e4e4e7;">${nextCategoryName}</strong>. Ready to keep going?`)}`
+    : `${infoCard(`You have completed all sections so far in <strong style="color:#e4e4e7;">${programName}</strong>. Stay tuned for more.`)}`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Congratulations, <strong style="color:#f4f4f5;">${name}</strong>! You have finished all lessons in <strong style="color:#f4f4f5;">${categoryName}</strong>.</p>
+
+    ${detailRow("Section Completed", categoryName)}
+    ${detailRow("Program", programName)}
+    ${detailRow("Lessons Completed", String(lessonsCompleted))}
+
+    ${nextCategoryBlock}
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Section complete: ${categoryName}`,
+    html: buildEmailHtml({
+      title: "Section Complete &#127775;",
+      preheader: `You finished all lessons in ${categoryName} — ${programName}`,
+      content,
+      ctaText: "Continue Training",
+      ctaUrl: `${APP_URL}/trainee/training`,
+      footer: `AstrologyPro &mdash; Training Center`,
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Training: Program Complete + Certificate Ready
+// ---------------------------------------------------------------------------
+
+export async function sendProgramComplete(opts: {
+  to: string;
+  name: string;
+  programName: string;
+  certificateUrl: string;
+}) {
+  const { to, name, programName, certificateUrl } = opts;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Outstanding achievement, <strong style="color:#f4f4f5;">${name}</strong>! You have completed the full <strong style="color:#f4f4f5;">${programName}</strong> training program and officially graduated.</p>
+
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0;background-color:#1e1b2e;border:1px solid #2e2548;border-radius:12px;">
+      <tr>
+        <td align="center" style="padding:32px 20px;">
+          <p style="margin:0 0 8px;font-family:system-ui,-apple-system,sans-serif;font-size:13px;color:#71717a;text-transform:uppercase;letter-spacing:1px;">Program Completed</p>
+          <p style="margin:0;font-family:system-ui,-apple-system,sans-serif;font-size:22px;font-weight:700;color:#f4f4f5;">${programName}</p>
+          <p style="margin:12px 0 0;font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#8b5cf6;font-weight:600;">Graduate &#127775;</p>
+        </td>
+      </tr>
+    </table>
+
+    ${infoCard("Your certificate of completion is ready. Download and share it to showcase your achievement.")}
+
+    <p style="margin:16px 0 0;color:#a1a1aa;">This marks a major milestone in your journey. Your dedication and commitment have paid off. Thank you for your hard work.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `You graduated from ${programName}! Your certificate is ready`,
+    html: buildEmailHtml({
+      title: `Congratulations, ${name} &#127775;`,
+      preheader: `You completed ${programName} and your certificate is ready to download`,
+      content,
+      ctaText: "Download Your Certificate",
+      ctaUrl: certificateUrl,
+      footer: `AstrologyPro &mdash; Training Center`,
+    }),
+  });
+}

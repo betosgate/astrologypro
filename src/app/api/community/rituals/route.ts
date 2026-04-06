@@ -21,7 +21,9 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("user_ritual_configurations")
-    .select("id, ritual_name, ritual_tags, created_at, updated_at")
+    .select(
+      "id, ritual_name, ritual_tags, created_at, updated_at, last_executed_at, execution_count, current_step, is_complete"
+    )
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 

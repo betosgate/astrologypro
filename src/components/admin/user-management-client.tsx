@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -51,6 +52,9 @@ import {
   KeyRound,
   Trash2,
   UserCog,
+  Download,
+  Mail,
+  X,
 } from "lucide-react";
 import { UserDetailSheet } from "./user-detail-sheet";
 import { InviteUserForm } from "./invite-user-form";
@@ -565,6 +569,137 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
   const [newRole, setNewRole] = useState("client");
   const [roleLoading, setRoleLoading] = useState(false);
 
+  // ── Bulk select ─────────────────────────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  function toggleSelect(userId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    const allPageIds = users.map((u) => u.userId);
+    const allSelected = allPageIds.every((id) => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const id of allPageIds) next.delete(id);
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const id of allPageIds) next.add(id);
+        return next;
+      });
+    }
+  }
+
+  const allOnPageSelected = users.length > 0 && users.every((u) => selectedIds.has(u.userId));
+  const someOnPageSelected = users.some((u) => selectedIds.has(u.userId));
+
+  // ── Bulk email dialog ───────────────────────────────────────────────────
+  const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
+  const [bulkEmailSubject, setBulkEmailSubject] = useState("");
+  const [bulkEmailMessage, setBulkEmailMessage] = useState("");
+  const [bulkEmailLoading, setBulkEmailLoading] = useState(false);
+
+  async function handleBulkEmail() {
+    setBulkEmailLoading(true);
+    try {
+      const res = await fetch("/api/admin/bulk-email", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_ids: [...selectedIds],
+          subject:  bulkEmailSubject,
+          message:  bulkEmailMessage,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      toast.success(`Email sent to ${data.sent} user${data.sent !== 1 ? "s" : ""}${data.failed > 0 ? ` (${data.failed} failed)` : ""}`);
+      setBulkEmailOpen(false);
+      setBulkEmailSubject("");
+      setBulkEmailMessage("");
+    } catch {
+      toast.error("Failed to send bulk email");
+    } finally {
+      setBulkEmailLoading(false);
+    }
+  }
+
+  // ── Bulk status dialog ──────────────────────────────────────────────────
+  const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
+  const [bulkStatusValue, setBulkStatusValue] = useState<"active" | "blocked">("active");
+  const [bulkStatusLoading, setBulkStatusLoading] = useState(false);
+
+  async function handleBulkStatus() {
+    setBulkStatusLoading(true);
+    try {
+      const res = await fetch("/api/admin/bulk-status", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_ids: [...selectedIds],
+          status:   bulkStatusValue,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      toast.success(`Updated ${data.updated} user${data.updated !== 1 ? "s" : ""}${data.failed > 0 ? ` (${data.failed} failed)` : ""}`);
+      setBulkStatusOpen(false);
+      setSelectedIds(new Set());
+      router.refresh();
+    } catch {
+      toast.error("Failed to update user statuses");
+    } finally {
+      setBulkStatusLoading(false);
+    }
+  }
+
+  // ── Bulk CSV export (selected rows — POSTs IDs, streams download) ───────
+  const [bulkExportLoading, setBulkExportLoading] = useState(false);
+
+  async function handleBulkExportCSV() {
+    setBulkExportLoading(true);
+    try {
+      const res = await fetch("/api/admin/export/users", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [...selectedIds] }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `users-selected-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to export CSV");
+    } finally {
+      setBulkExportLoading(false);
+    }
+  }
+
+  // ── Export all (GET with current filter params) ─────────────────────────
+  function handleExportAll() {
+    const params = new URLSearchParams();
+    if (currentQ)           params.set("search",      currentQ);
+    if (currentRole !== "all") params.set("role",      currentRole);
+    if (currentStatus !== "all") params.set("status",  currentStatus);
+    if (currentJoinedFrom)  params.set("joined_from", currentJoinedFrom);
+    if (currentJoinedTo)    params.set("joined_to",   currentJoinedTo);
+    const qs = params.toString();
+    window.location.href = `/api/admin/export/users${qs ? `?${qs}` : ""}`;
+  }
+
   async function handleRoleChangeAction() {
     if (!roleDialogUser) return;
     setRoleLoading(true);
@@ -618,6 +753,15 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
           >
             <RefreshCw className={cn("size-4", isRefreshing && "animate-spin")} />
             {isRefreshing ? "Refreshing…" : "Refresh"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportAll}
+            className="gap-1.5"
+          >
+            <Download className="size-4" />
+            Export All (CSV)
           </Button>
           <InviteUserForm />
         </div>
@@ -725,6 +869,67 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
         </div>
       </div>
 
+      {/* ── Bulk action bar (visible when rows are selected) ───────────────── */}
+      {selectedIds.size > 0 && (
+        <div className="sticky top-0 z-20 flex flex-wrap items-center gap-2 rounded-lg border bg-background/95 px-4 py-2.5 shadow-sm backdrop-blur">
+          <span className="text-sm font-medium text-foreground">
+            {selectedIds.size} user{selectedIds.size !== 1 ? "s" : ""} selected
+          </span>
+          <div className="flex flex-wrap items-center gap-2 ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={bulkExportLoading}
+              onClick={handleBulkExportCSV}
+            >
+              {bulkExportLoading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Download className="size-4" />
+              )}
+              Export Selected CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setBulkEmailOpen(true)}
+            >
+              <Mail className="size-4" />
+              Send Email
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  Change Status
+                  <ArrowDown className="size-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => { setBulkStatusValue("active"); setBulkStatusOpen(true); }}>
+                  <ShieldCheck className="mr-2 size-4 text-green-500" />
+                  Set Active
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setBulkStatusValue("blocked"); setBulkStatusOpen(true); }}>
+                  <ShieldOff className="mr-2 size-4 text-destructive" />
+                  Block Users
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              <X className="size-4" />
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* ── Table ──────────────────────────────────────────────────────────── */}
       <Card className="relative">
         {/* Loading overlay — visible while server is fetching new results */}
@@ -740,6 +945,18 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/40">
               <tr>
+                <th className="pl-4 pr-2 py-2.5 w-8">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all on this page"
+                    checked={allOnPageSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = !allOnPageSelected && someOnPageSelected;
+                    }}
+                    onChange={toggleSelectAll}
+                    className="size-4 cursor-pointer accent-primary"
+                  />
+                </th>
                 <th className="px-4 py-2.5 text-left">
                   <SortHeader label="Name"       column="name"        currentSort={currentSort} currentDir={currentDir} onSort={handleSort} />
                 </th>
@@ -768,12 +985,26 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
             <tbody className={cn(isPending || isRefreshing ? "opacity-50" : "opacity-100", "transition-opacity duration-150")}>
               {users.map((u) => {
                 const isBlocked = u.blocked && !localUnblocked.has(u.userId);
+                const isSelected = selectedIds.has(u.userId);
                 return (
                   <tr
                     key={`${u.role}-${u.rowId}`}
-                    className="border-b last:border-0 hover:bg-muted/20 cursor-pointer"
+                    className={cn(
+                      "border-b last:border-0 hover:bg-muted/20 cursor-pointer",
+                      isSelected && "bg-primary/5"
+                    )}
                     onClick={() => openSheet(u, "overview")}
                   >
+                    {/* Checkbox */}
+                    <td className="pl-4 pr-2 py-2.5 w-8" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${u.name}`}
+                        checked={isSelected}
+                        onChange={() => toggleSelect(u.userId)}
+                        className="size-4 cursor-pointer accent-primary"
+                      />
+                    </td>
                     {/* Name */}
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-1.5">
@@ -926,7 +1157,7 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
 
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={10} className="px-4 py-12 text-center text-muted-foreground">
                     No users match your search
                   </td>
                 </tr>
@@ -1123,6 +1354,73 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
             <Button onClick={handleTrainingStatusUpdate} disabled={trainingLoading}>
               {trainingLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
               Update Status
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Bulk email dialog ─────────────────────────────────────────────── */}
+      <Dialog open={bulkEmailOpen} onOpenChange={(v) => { if (!v) { setBulkEmailOpen(false); setBulkEmailSubject(""); setBulkEmailMessage(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Email to {selectedIds.size} User{selectedIds.size !== 1 ? "s" : ""}</DialogTitle>
+            <DialogDescription>
+              Compose an email to send to the selected users. Emails are sent individually.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="Subject…"
+              value={bulkEmailSubject}
+              onChange={(e) => setBulkEmailSubject(e.target.value)}
+            />
+            <Textarea
+              placeholder="Message body…"
+              value={bulkEmailMessage}
+              onChange={(e) => setBulkEmailMessage(e.target.value)}
+              rows={5}
+              className="resize-none"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkEmailOpen(false)} disabled={bulkEmailLoading}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBulkEmail}
+              disabled={bulkEmailLoading || !bulkEmailSubject.trim() || !bulkEmailMessage.trim()}
+            >
+              {bulkEmailLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Send Email
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Bulk status dialog ─────────────────────────────────────────────── */}
+      <Dialog open={bulkStatusOpen} onOpenChange={(v) => { if (!v) setBulkStatusOpen(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {bulkStatusValue === "blocked" ? "Block" : "Activate"} {selectedIds.size} User{selectedIds.size !== 1 ? "s" : ""}?
+            </DialogTitle>
+            <DialogDescription>
+              {bulkStatusValue === "blocked"
+                ? `This will block ${selectedIds.size} user${selectedIds.size !== 1 ? "s" : ""} — they will be unable to log in. You can unblock them individually at any time.`
+                : `This will re-activate ${selectedIds.size} user${selectedIds.size !== 1 ? "s" : ""} and lift any bans.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkStatusOpen(false)} disabled={bulkStatusLoading}>
+              Cancel
+            </Button>
+            <Button
+              variant={bulkStatusValue === "blocked" ? "destructive" : "default"}
+              onClick={handleBulkStatus}
+              disabled={bulkStatusLoading}
+            >
+              {bulkStatusLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {bulkStatusValue === "blocked" ? "Block Users" : "Activate Users"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDateTime } from "@/lib/format";
 import { Radio, Calendar, PlayCircle } from "lucide-react";
+import { BroadcastRsvpButton } from "@/components/community/broadcast-rsvp-button";
 
 export const metadata = { title: "Broadcasts & Live Events - AstrologyPro Community" };
 export const dynamic = "force-dynamic";
@@ -76,6 +77,39 @@ export default async function CommunityBroadcastsPage() {
     .order("updated_at", { ascending: false });
 
   const broadcasts: Broadcast[] = error ? [] : (data ?? []);
+
+  // Fetch current user's RSVPs + counts for all broadcasts in one query
+  // Using the user-scoped supabase client so RLS restricts to the current user
+  const broadcastIds = broadcasts.map((b) => b.id);
+  let userRsvpMap: Record<string, string> = {};
+  let goingCountMap: Record<string, number> = {};
+  let maybeCountMap: Record<string, number> = {};
+
+  if (broadcastIds.length > 0) {
+    // User's own RSVPs
+    const { data: myRsvps } = await supabase
+      .from("broadcast_rsvps")
+      .select("broadcast_id, rsvp_status")
+      .in("broadcast_id", broadcastIds);
+
+    for (const r of myRsvps ?? []) {
+      userRsvpMap[r.broadcast_id] = r.rsvp_status;
+    }
+
+    // Aggregate counts via admin client (bypasses RLS to count all users)
+    const { data: allRsvps } = await admin
+      .from("broadcast_rsvps")
+      .select("broadcast_id, rsvp_status")
+      .in("broadcast_id", broadcastIds);
+
+    for (const r of allRsvps ?? []) {
+      if (r.rsvp_status === "going") {
+        goingCountMap[r.broadcast_id] = (goingCountMap[r.broadcast_id] ?? 0) + 1;
+      } else if (r.rsvp_status === "maybe") {
+        maybeCountMap[r.broadcast_id] = (maybeCountMap[r.broadcast_id] ?? 0) + 1;
+      }
+    }
+  }
 
   // Broadcasts don't have a premiere_at column based on the admin API —
   // they are created with a status field. Treat status values accordingly.
@@ -157,6 +191,11 @@ export default async function CommunityBroadcastsPage() {
                   <p className="text-xs text-muted-foreground">
                     Scheduled: <span className="font-medium text-foreground">{formatDateTime(b.updated_at)}</span>
                   </p>
+                  <BroadcastRsvpButton
+                    broadcastId={b.id}
+                    initialStatus={(userRsvpMap[b.id] as "going" | "maybe" | "not_going") ?? null}
+                    initialCounts={{ going: goingCountMap[b.id] ?? 0, maybe: maybeCountMap[b.id] ?? 0 }}
+                  />
                   <a
                     href={buildGoogleCalendarUrl(
                       b.title,

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  sendLessonComplete,
+  sendCategoryComplete,
+  sendProgramComplete,
+} from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -30,10 +35,10 @@ export async function POST(
   const { id: lessonId } = await params;
   const admin = createAdminClient();
 
-  // Verify the lesson exists and is active
+  // Verify the lesson exists and is active — also fetch title and category
   const { data: lesson, error: lessonError } = await admin
     .from("training_lessons")
-    .select("id, category_id")
+    .select("id, title, category_id")
     .eq("id", lessonId)
     .eq("is_active", true)
     .single();
@@ -61,7 +66,8 @@ export async function POST(
   }
 
   // Upsert lesson completion with time tracking fields
-  const { error: completionError } = await admin
+  // ignoreDuplicates: true — idempotent; we detect "new completion" by checking error/count
+  const { error: completionError, count: insertedCount } = await admin
     .from("lesson_completions")
     .upsert(
       {
@@ -72,7 +78,7 @@ export async function POST(
           ? { time_spent_seconds: lessonProgress.time_spent_seconds }
           : {}),
       },
-      { onConflict: "user_id,lesson_id", ignoreDuplicates: true }
+      { onConflict: "user_id,lesson_id", ignoreDuplicates: true, count: "exact" }
     );
 
   if (completionError) {
@@ -82,6 +88,9 @@ export async function POST(
       { status: 500 }
     );
   }
+
+  // Detect if this is a new (first-time) completion vs. a duplicate upsert
+  const isNewCompletion = (insertedCount ?? 0) > 0;
 
   // Check if all lessons in the category are now complete
   let categoryCompleted = false;
@@ -133,7 +142,7 @@ export async function POST(
             : null;
 
         // All lessons done — record category completion (idempotent)
-        const { error: catCompError } = await admin
+        const { error: catCompError, count: catInsertedCount } = await admin
           .from("category_completions")
           .upsert(
             {
@@ -142,11 +151,145 @@ export async function POST(
               ...(catStartedAt ? { started_at: catStartedAt } : {}),
               ...(catTimeSpent != null ? { time_spent_seconds: catTimeSpent } : {}),
             },
-            { onConflict: "user_id,category_id", ignoreDuplicates: true }
+            { onConflict: "user_id,category_id", ignoreDuplicates: true, count: "exact" }
           );
 
         if (!catCompError) {
-          categoryCompleted = true;
+          categoryCompleted = (catInsertedCount ?? 0) > 0;
+        }
+      }
+    }
+  }
+
+  // ── Fire-and-forget emails ──────────────────────────────────────────────────
+  // Only send emails for new completions (not duplicate/idempotent calls)
+  if (isNewCompletion) {
+    // Fetch trainee email + name, lesson title, category, and program info in parallel
+    const [authUser, categoryRow, progProgressRows] = await Promise.all([
+      admin.auth.admin.getUserById(user.id),
+      categoryId
+        ? admin
+            .from("training_categories")
+            .select("id, name, training_id")
+            .eq("id", categoryId)
+            .single()
+        : Promise.resolve({ data: null }),
+      admin
+        .from("user_program_progress")
+        .select("program_id, progress_pct, next_category_name, next_lesson_title")
+        .eq("user_id", user.id),
+    ]);
+
+    const traineeEmail = authUser.data.user?.email ?? "";
+    const traineeName =
+      authUser.data.user?.user_metadata?.full_name ??
+      authUser.data.user?.email?.split("@")[0] ??
+      "Trainee";
+
+    const catData = categoryRow.data as {
+      id: string;
+      name: string;
+      training_id: string | null;
+    } | null;
+
+    const lessonTitle = lesson.title;
+    const categoryName = catData?.name ?? "";
+
+    // Fetch next lesson title for this category from user_category_progress cache
+    let nextLessonTitle: string | undefined;
+    if (categoryId) {
+      const { data: ucpRow } = await admin
+        .from("user_category_progress")
+        .select("next_lesson_title")
+        .eq("user_id", user.id)
+        .eq("category_id", categoryId)
+        .maybeSingle();
+      nextLessonTitle = ucpRow?.next_lesson_title ?? undefined;
+    }
+
+    if (traineeEmail) {
+      // Lesson complete email
+      sendLessonComplete({
+        to: traineeEmail,
+        name: traineeName,
+        lessonTitle,
+        categoryName,
+        nextLessonTitle,
+      }).catch(() => {});
+
+      // Category complete email (only when newly completed this call)
+      if (categoryCompleted && catData?.training_id) {
+        const programProgressRows = progProgressRows.data ?? [];
+        const programRow = programProgressRows.find(
+          (r) => r.program_id === catData.training_id
+        );
+        const nextCategoryName = programRow?.next_category_name ?? undefined;
+
+        // Fetch program name and completed lesson count
+        const [programRow2, lessonsCompletedInCat] = await Promise.all([
+          admin
+            .from("training_programs")
+            .select("name")
+            .eq("id", catData.training_id)
+            .single(),
+          admin
+            .from("lesson_completions")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", user.id)
+            .in(
+              "lesson_id",
+              (
+                await admin
+                  .from("training_lessons")
+                  .select("id")
+                  .eq("category_id", categoryId)
+                  .eq("is_active", true)
+              ).data?.map((l) => l.id) ?? []
+            ),
+        ]);
+
+        sendCategoryComplete({
+          to: traineeEmail,
+          name: traineeName,
+          categoryName,
+          programName: programRow2.data?.name ?? "",
+          lessonsCompleted: lessonsCompletedInCat.count ?? 0,
+          nextCategoryName,
+        }).catch(() => {});
+
+        // Graduation check: if ALL programs for this user have progress_pct >= 100
+        const allPrograms = programProgressRows;
+        if (
+          allPrograms.length > 0 &&
+          allPrograms.every((r) => Number(r.progress_pct) >= 100)
+        ) {
+          // Check that trainee is not already graduated
+          const { data: traineeRow } = await admin
+            .from("trainees")
+            .select("id, graduated_at")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          if (traineeRow && !traineeRow.graduated_at) {
+            // Auto-graduate
+            await admin
+              .from("trainees")
+              .update({
+                graduated_at: new Date().toISOString(),
+                training_status: "graduated",
+              })
+              .eq("id", traineeRow.id);
+
+            const programName = programRow2.data?.name ?? "Training Program";
+            const certificateUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/trainee/certificate`;
+
+            sendProgramComplete({
+              to: traineeEmail,
+              name: traineeName,
+              programName,
+              certificateUrl,
+            }).catch(() => {});
+          }
         }
       }
     }

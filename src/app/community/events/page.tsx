@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { EventRsvpButton } from "@/components/community/event-rsvp-button";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -16,6 +17,12 @@ interface CalendarEvent {
   start_at: string;
   end_at: string | null;
   display_for: string;
+}
+
+interface RsvpInfo {
+  my_rsvp: "going" | "maybe" | "not_going" | null;
+  going_count: number;
+  maybe_count: number;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -110,6 +117,7 @@ export default function CommunityEventsPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [rsvpMap, setRsvpMap] = useState<Record<string, RsvpInfo>>({});
 
   const fetchEvents = useCallback(async (month: number, year: number) => {
     setLoading(true);
@@ -117,7 +125,24 @@ export default function CommunityEventsPage() {
       const res = await fetch(`/api/community/events?month=${month}&year=${year}`);
       if (res.ok) {
         const json = await res.json();
-        setEvents(json.events ?? []);
+        const loadedEvents: CalendarEvent[] = json.events ?? [];
+        setEvents(loadedEvents);
+
+        // Fetch RSVPs for all loaded events in parallel
+        if (loadedEvents.length > 0) {
+          const rsvpResults = await Promise.allSettled(
+            loadedEvents.map((e) =>
+              fetch(`/api/community/events/${e.id}/rsvp`).then((r) => (r.ok ? r.json() : null))
+            )
+          );
+          const newRsvpMap: Record<string, RsvpInfo> = {};
+          rsvpResults.forEach((result, idx) => {
+            if (result.status === "fulfilled" && result.value) {
+              newRsvpMap[loadedEvents[idx].id] = result.value as RsvpInfo;
+            }
+          });
+          setRsvpMap(newRsvpMap);
+        }
       }
     } finally {
       setLoading(false);
@@ -286,31 +311,39 @@ export default function CommunityEventsPage() {
               </Card>
             ) : (
               <div className="space-y-3">
-                {panelEvents.map((e) => (
-                  <Card key={e.id}>
-                    <CardHeader className="pb-2 pt-4 px-4">
-                      <div className="flex items-start gap-2">
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="text-sm leading-snug">{e.title}</CardTitle>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {formatEventTime(e.start_at)}
-                            {e.end_at && ` – ${formatTimeOnly(e.end_at)}`}
-                          </p>
+                {panelEvents.map((e) => {
+                  const rsvp = rsvpMap[e.id];
+                  return (
+                    <Card key={e.id}>
+                      <CardHeader className="pb-2 pt-4 px-4">
+                        <div className="flex items-start gap-2">
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="text-sm leading-snug">{e.title}</CardTitle>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {formatEventTime(e.start_at)}
+                              {e.end_at && ` – ${formatTimeOnly(e.end_at)}`}
+                            </p>
+                          </div>
+                          {e.category && (
+                            <Badge variant="outline" className={`shrink-0 text-xs capitalize ${categoryColor(e.category)}`}>
+                              {e.category}
+                            </Badge>
+                          )}
                         </div>
-                        {e.category && (
-                          <Badge variant="outline" className={`shrink-0 text-xs capitalize ${categoryColor(e.category)}`}>
-                            {e.category}
-                          </Badge>
+                      </CardHeader>
+                      <CardContent className="px-4 pb-4 pt-0 space-y-2">
+                        {e.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-3">{e.description}</p>
                         )}
-                      </div>
-                    </CardHeader>
-                    {e.description && (
-                      <CardContent className="px-4 pb-4 pt-0">
-                        <p className="text-xs text-muted-foreground line-clamp-3">{e.description}</p>
+                        <EventRsvpButton
+                          eventId={e.id}
+                          initialStatus={rsvp?.my_rsvp ?? null}
+                          initialCounts={{ going: rsvp?.going_count ?? 0, maybe: rsvp?.maybe_count ?? 0 }}
+                        />
                       </CardContent>
-                    )}
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </div>

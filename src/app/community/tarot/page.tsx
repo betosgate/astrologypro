@@ -35,11 +35,16 @@ export default async function TarotSpreadsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Tarot Spreads</h1>
-        <p className="mt-1 text-muted-foreground">
-          Choose a spread and begin an interactive card reading.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Tarot Spreads</h1>
+          <p className="mt-1 text-muted-foreground">
+            Choose a spread and begin an interactive card reading.
+          </p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/community/tarot/history">My Reading History</Link>
+        </Button>
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

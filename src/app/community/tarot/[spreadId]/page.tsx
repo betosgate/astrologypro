@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,17 @@ interface DrawnCard {
   card: TarotCard;
   reversed: boolean;
 }
+
+interface SavedCard {
+  position: number;
+  position_name: string;
+  card_name: string;
+  is_reversed: boolean;
+  keywords: string[];
+  meaning: string;
+}
+
+type SaveState = "idle" | "saving" | "saved" | "error";
 
 // ─── Fisher-Yates shuffle ─────────────────────────────────────────────────────
 
@@ -265,11 +277,62 @@ function ReadingSummary({
   spread,
   drawnCards,
   onNewReading,
+  onSave,
+  savedReadingId,
+  saveState,
 }: {
   spread: TarotSpread;
   drawnCards: (DrawnCard | null)[];
   onNewReading: () => void;
+  onSave: () => void;
+  savedReadingId: string | null;
+  saveState: SaveState;
 }) {
+  const [notes, setNotes] = useState("");
+  const [notesSaved, setNotesSaved] = useState(false);
+  const [notesSaving, setNotesSaving] = useState(false);
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+
+  const handleSaveNotes = useCallback(async () => {
+    if (!savedReadingId || !notes.trim()) return;
+    setNotesSaving(true);
+    try {
+      await fetch(`/api/community/tarot/readings/${savedReadingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes }),
+      });
+      setNotesSaved(true);
+    } finally {
+      setNotesSaving(false);
+    }
+  }, [savedReadingId, notes]);
+
+  const handleShare = useCallback(async () => {
+    if (!savedReadingId) return;
+    setShareLoading(true);
+    try {
+      const res = await fetch(`/api/community/tarot/readings/${savedReadingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ generate_share: true }),
+      });
+      const json = await res.json();
+      const token: string = json.reading?.share_token;
+      if (token) {
+        setShareToken(token);
+        const url = `${window.location.origin}/community/tarot/share/${token}`;
+        await navigator.clipboard.writeText(url);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 3000);
+      }
+    } finally {
+      setShareLoading(false);
+    }
+  }, [savedReadingId]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -325,6 +388,112 @@ function ReadingSummary({
         })}
       </div>
 
+      {/* ── Save / Notes / Share panel ── */}
+      <div className="rounded-lg border border-indigo-800/30 bg-indigo-950/20 px-4 py-4 space-y-4">
+        {/* Save button row */}
+        <div className="flex flex-wrap items-center gap-3">
+          {saveState === "idle" && (
+            <Button
+              onClick={onSave}
+              className="bg-indigo-700 hover:bg-indigo-600"
+              size="sm"
+            >
+              Save Reading
+            </Button>
+          )}
+          {saveState === "saving" && (
+            <Button disabled size="sm" className="bg-indigo-700/60">
+              Saving…
+            </Button>
+          )}
+          {(saveState === "saved") && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-900/40 px-3 py-1 text-xs font-medium text-emerald-400 ring-1 ring-emerald-700/40">
+              ✓ Reading saved to your history
+            </span>
+          )}
+          {saveState === "error" && (
+            <span className="text-xs text-red-400">Failed to save. Try again.</span>
+          )}
+          {saveState !== "idle" && (
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+              <Link href="/community/tarot/history">View History</Link>
+            </Button>
+          )}
+        </div>
+
+        {/* Notes — only shown after save */}
+        {saveState === "saved" && savedReadingId && (
+          <div className="space-y-2">
+            <label
+              htmlFor="reading-notes"
+              className="text-xs font-semibold uppercase tracking-widest text-indigo-400"
+            >
+              Add Notes
+            </label>
+            <Textarea
+              id="reading-notes"
+              placeholder="Write your personal reflections on this reading…"
+              value={notes}
+              onChange={(e) => {
+                setNotes(e.target.value);
+                setNotesSaved(false);
+              }}
+              rows={3}
+              className="resize-none bg-indigo-950/30 border-indigo-800/40 text-sm"
+            />
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSaveNotes}
+                disabled={notesSaving || !notes.trim()}
+              >
+                {notesSaving ? "Saving…" : "Save Notes"}
+              </Button>
+              {notesSaved && (
+                <span className="text-xs text-emerald-400">Notes saved.</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Share — only shown after save */}
+        {saveState === "saved" && savedReadingId && (
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            {!shareToken ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleShare}
+                disabled={shareLoading}
+                className="border-indigo-700/50 text-indigo-300 hover:bg-indigo-900/30"
+                aria-label="Generate and copy shareable link for this reading"
+              >
+                {shareLoading ? "Generating…" : "Share Reading"}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  const url = `${window.location.origin}/community/tarot/share/${shareToken}`;
+                  await navigator.clipboard.writeText(url);
+                  setShareCopied(true);
+                  setTimeout(() => setShareCopied(false), 3000);
+                }}
+                className="border-indigo-700/50 text-indigo-300 hover:bg-indigo-900/30"
+                aria-label="Copy shareable link to clipboard"
+              >
+                {shareCopied ? "Link Copied!" : "Copy Share Link"}
+              </Button>
+            )}
+            {shareCopied && (
+              <span className="text-xs text-emerald-400">Copied to clipboard.</span>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="pt-2 flex gap-3">
         <Button onClick={onNewReading} className="bg-indigo-700 hover:bg-indigo-600">
           Begin Another Reading
@@ -350,6 +519,8 @@ export default function SpreadReadingPage() {
   const [deck, setDeck] = useState<TarotCard[]>([]);
   const [drawnCards, setDrawnCards] = useState<(DrawnCard | null)[]>([]);
   const [nextSlot, setNextSlot] = useState(0);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [savedReadingId, setSavedReadingId] = useState<string | null>(null);
 
   const handleShuffleAndBegin = useCallback(() => {
     if (!spread) return;
@@ -389,7 +560,42 @@ export default function SpreadReadingPage() {
     setDeck([]);
     setDrawnCards([]);
     setNextSlot(0);
+    setSaveState("idle");
+    setSavedReadingId(null);
   }, []);
+
+  const handleSave = useCallback(async () => {
+    if (!spread || saveState !== "idle") return;
+    setSaveState("saving");
+
+    const cards: SavedCard[] = spread.positions.map((pos, i) => {
+      const drawn = drawnCards[i];
+      if (!drawn) return null;
+      const { card, reversed } = drawn;
+      return {
+        position: pos.number,
+        position_name: pos.name,
+        card_name: card.name,
+        is_reversed: reversed,
+        keywords: reversed ? card.reversedKeywords : card.keywords,
+        meaning: reversed ? card.reversedMeaning : card.uprightMeaning,
+      };
+    }).filter((c): c is SavedCard => c !== null);
+
+    try {
+      const res = await fetch("/api/community/tarot/readings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ spread_id: spread.slug, spread_name: spread.name, cards }),
+      });
+      if (!res.ok) throw new Error("Save failed");
+      const json = await res.json();
+      setSavedReadingId(json.reading?.id ?? null);
+      setSaveState("saved");
+    } catch {
+      setSaveState("error");
+    }
+  }, [spread, drawnCards, saveState]);
 
   // ── 404 ──
   if (!spread) {
@@ -487,6 +693,9 @@ export default function SpreadReadingPage() {
           spread={spread}
           drawnCards={drawnCards}
           onNewReading={handleNewReading}
+          onSave={handleSave}
+          savedReadingId={savedReadingId}
+          saveState={saveState}
         />
       </div>
     );

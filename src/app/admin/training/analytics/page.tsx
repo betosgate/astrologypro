@@ -10,6 +10,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Download } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -47,6 +48,30 @@ function passRateCls(rate: number) {
   if (rate >= 70) return "bg-green-100 text-green-800";
   if (rate >= 50) return "bg-yellow-100 text-yellow-800";
   return "bg-red-100 text-red-800";
+}
+
+// ─── CSV helpers ──────────────────────────────────────────────────────────────
+
+function toCSV(rows: Record<string, unknown>[], headers: string[]): string {
+  const escape = (v: unknown) => {
+    const s = String(v ?? "");
+    return s.includes(",") || s.includes('"') || s.includes("\n")
+      ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return [
+    headers.join(","),
+    ...rows.map(r => headers.map(h => escape(r[h])).join(","))
+  ].join("\n");
+}
+
+function downloadCSV(csvContent: string, filename: string) {
+  const blob = new Blob([csvContent], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -491,6 +516,47 @@ export default function TrainingAnalyticsPage() {
                 <SelectItem value="time_spent">Time Spent</SelectItem>
               </SelectContent>
             </Select>
+            {/* Export current view — client-side CSV from loaded data */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-auto gap-1.5"
+              disabled={users.length === 0}
+              onClick={() => {
+                const headers = [
+                  "Name", "Email", "Status", "Lessons Done",
+                  "Total", "Progress %", "Quiz Pass Rate", "Avg Attempts", "Time Spent (mins)",
+                ];
+                const rows = users.map((u) => ({
+                  "Name":              u.display_name || "",
+                  "Email":             u.email || "",
+                  "Status":            u.training_status,
+                  "Lessons Done":      u.completed_lessons,
+                  "Total":             u.total_lessons,
+                  "Progress %":        u.progress_pct,
+                  "Quiz Pass Rate":    u.quiz_pass_rate,
+                  "Avg Attempts":      u.avg_attempts_to_pass,
+                  "Time Spent (mins)": Math.round(u.time_spent_seconds / 60),
+                }));
+                downloadCSV(
+                  toCSV(rows as unknown as Record<string, unknown>[], headers),
+                  `analytics-users-${new Date().toISOString().slice(0, 10)}.csv`
+                );
+              }}
+            >
+              <Download className="size-4" />
+              Export Current View
+            </Button>
+            {/* Export full dataset from server */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => { window.location.href = "/api/admin/export/analytics"; }}
+            >
+              <Download className="size-4" />
+              Export CSV
+            </Button>
           </div>
 
           <Card>

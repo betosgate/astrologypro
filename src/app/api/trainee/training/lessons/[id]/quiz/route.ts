@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendQuizPassed } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -249,6 +250,26 @@ export async function POST(
         }
       }
     }
+
+    // Fire-and-forget: quiz passed email
+    const pct = Math.round((score / total) * 100);
+    admin.auth.admin.getUserById(user.id).then(({ data: authUser }) => {
+      const traineeEmail = authUser.user?.email ?? "";
+      const traineeName =
+        authUser.user?.user_metadata?.full_name ??
+        authUser.user?.email?.split("@")[0] ??
+        "Trainee";
+      if (traineeEmail) {
+        sendQuizPassed({
+          to: traineeEmail,
+          name: traineeName,
+          lessonTitle: lesson.title,
+          score,
+          total,
+          pct,
+        }).catch(() => {});
+      }
+    }).catch(() => {});
   }
 
   return NextResponse.json({ score, total, passed, results });
