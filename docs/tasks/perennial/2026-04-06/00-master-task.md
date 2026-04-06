@@ -48,6 +48,8 @@ Close the remaining requirement gaps for the Perennial / community membership ex
 - holy books and doctrine links are database-managed through admin workflows
 - Sunday Service supports admin publishing workflows, member notification, and the required browsing detail/filter behavior
 
+
+
 ## Verification Gate
 
 1. Validate membership welcome and enrollment confirmation emails trigger correctly.
@@ -56,6 +58,8 @@ Close the remaining requirement gaps for the Perennial / community membership ex
 4. Validate member discount tokens create, validate, apply, and mark used correctly.
 5. Validate holy books and doctrine links can be managed without code deploy.
 6. Validate Sunday Service publish, browse, and filter behavior matches the requirement.
+
+
 
 ## Notion Ready Summary
 
