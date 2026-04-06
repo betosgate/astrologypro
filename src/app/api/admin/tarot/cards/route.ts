@@ -40,14 +40,30 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { name, arcana, suit, number, upright_meaning, reversed_meaning, image_url, spread_id, is_active } = body;
+  const {
+    name, arcana, suit, number,
+    priority, upright_meaning, reversed_meaning,
+    image_url, card_image_url, related_spread_ids,
+    spread_id, is_active,
+  } = body;
 
-  if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  if (!name) return NextResponse.json({ error: "Name is required" }, { status: 422 });
+  if (priority === undefined || priority === null || priority === "")
+    return NextResponse.json({ error: "Priority is required" }, { status: 422 });
 
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("tarot_cards")
-    .insert({ name, arcana, suit, number, upright_meaning, reversed_meaning, image_url, spread_id, is_active })
+    .insert({
+      name, arcana, suit, number,
+      priority: Number(priority),
+      upright_meaning, reversed_meaning,
+      image_url,
+      card_image_url: card_image_url ?? null,
+      related_spread_ids: related_spread_ids ?? null,
+      spread_id: spread_id ?? null,
+      is_active,
+    })
     .select()
     .single();
 

@@ -30,7 +30,7 @@ export async function GET(
 
   const { data, error } = await admin
     .from("training_categories")
-    .select("id, training_id, name, description, priority, is_active, created_at")
+    .select("id, training_id, name, description, priority, is_active, is_sequential, created_at")
     .eq("id", id)
     .single();
 
@@ -59,6 +59,7 @@ export async function PUT(
     description?: string | null;
     priority?: number;
     is_active?: boolean;
+    is_sequential?: boolean;
   };
   try {
     body = await req.json();
@@ -66,7 +67,7 @@ export async function PUT(
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { training_id, name, description, priority, is_active } = body;
+  const { training_id, name, description, priority, is_active, is_sequential } = body;
 
   if (!training_id || typeof training_id !== "string") {
     return NextResponse.json({ error: "Training program is required." }, { status: 422 });
@@ -84,6 +85,7 @@ export async function PUT(
       description: description ?? null,
       priority: priority ?? 0,
       is_active: is_active ?? true,
+      is_sequential: is_sequential ?? false,
     })
     .eq("id", id)
     .select()

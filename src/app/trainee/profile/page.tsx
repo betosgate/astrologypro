@@ -1,101 +1,247 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { CircularProgress } from "@/components/ui/circular-progress";
+import { ProfileEditor } from "@/components/trainee/profile-editor";
+import {
+  GraduationCap,
+  TrendingUp,
+  User,
+} from "lucide-react";
+import Link from "next/link";
 
-export const metadata = { title: "Profile - AstrologyPro" };
+export const metadata = { title: "My Profile - AstrologyPro" };
 
+// ---------------------------------------------------------------------------
+// Allowed specialties (kept in sync with the API route validation schema)
+// ---------------------------------------------------------------------------
+const ALLOWED_SPECIALTIES = [
+  "astrology",
+  "tarot",
+  "numerology",
+  "human design",
+  "oracle cards",
+  "palmistry",
+  "runes",
+  "crystal healing",
+] as const;
+
+// ---------------------------------------------------------------------------
+// Status badge
+// ---------------------------------------------------------------------------
+const STATUS_VARIANT: Record<
+  string,
+  "default" | "secondary" | "destructive" | "outline"
+> = {
+  active: "default",
+  pending: "outline",
+  graduated: "default",
+  paused: "secondary",
+  cancelled: "destructive",
+};
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 export default async function TraineeProfilePage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const { data: trainee } = await supabase
     .from("trainees")
-    .select("id, name, email, username, bio, specialties, training_status, mentor_diviner_id, created_at")
+    .select(
+      "id, name, email, username, bio, specialties, training_status, mentor_diviner_id, graduated_at, created_at"
+    )
     .eq("user_id", user.id)
     .single();
 
   if (!trainee) redirect("/join/trainee");
 
-  let mentorName = "Unassigned";
-  if (trainee.mentor_diviner_id) {
-    const { data: mentor } = await supabase
-      .from("diviners")
-      .select("display_name")
-      .eq("id", trainee.mentor_diviner_id)
-      .single();
-    if (mentor) mentorName = mentor.display_name;
-  }
+  const admin = createAdminClient();
+
+  // Fetch avatar_url separately (added in migration 20260406000016)
+  // and mentor + progress in parallel
+  const [avatarResult, mentorResult, progressResult] = await Promise.all([
+    admin
+      .from("trainees")
+      .select("avatar_url")
+      .eq("id", trainee.id)
+      .single(),
+    trainee.mentor_diviner_id
+      ? admin
+          .from("diviners")
+          .select("display_name, avatar_url, username")
+          .eq("id", trainee.mentor_diviner_id)
+          .single()
+      : Promise.resolve({ data: null }),
+    admin
+      .from("user_program_progress")
+      .select("total_lessons, completed_lessons, progress_pct")
+      .eq("user_id", user.id),
+  ]);
+
+  const avatarUrl =
+    (avatarResult.data as { avatar_url?: string | null } | null)?.avatar_url ?? null;
+
+  type MentorData = { display_name: string; avatar_url: string | null; username: string } | null;
+  const mentor = mentorResult.data as MentorData;
+
+  const progressRows = (progressResult.data as {
+    total_lessons: number;
+    completed_lessons: number;
+    progress_pct: number;
+  }[] | null) ?? [];
+
+  const totalLessons = progressRows.reduce((sum, r) => sum + (r.total_lessons ?? 0), 0);
+  const completedLessons = progressRows.reduce((sum, r) => sum + (r.completed_lessons ?? 0), 0);
+  const overallPct =
+    totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+
+  const joinedDate = new Date(trainee.created_at).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* ── Header ── */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">My Profile</h1>
-        <p className="text-muted-foreground">Manage your trainee profile</p>
+        <p className="text-muted-foreground">
+          Manage your trainee profile and track your training status.
+        </p>
       </div>
 
+      {/* ── Profile Editor (client component) ── */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Account Info</CardTitle>
+          <CardTitle className="text-base">Personal Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Name</span>
-            <span className="font-medium">{trainee.name}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Email</span>
-            <span className="font-medium">{trainee.email}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Username</span>
-            <span className="font-mono font-medium">@{trainee.username}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Mentor</span>
-            <span className="font-medium">{mentorName}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Status</span>
-            <Badge variant={trainee.training_status === "active" ? "default" : "secondary"}>
-              {trainee.training_status}
-            </Badge>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Joined</span>
-            <span className="font-medium">
-              {new Date(trainee.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-            </span>
-          </div>
+        <CardContent>
+          <ProfileEditor
+            profileId={trainee.id}
+            name={trainee.name}
+            bio={trainee.bio ?? null}
+            specialties={trainee.specialties ?? []}
+            avatarUrl={avatarUrl}
+            username={trainee.username}
+            allowedSpecialties={ALLOWED_SPECIALTIES}
+          />
         </CardContent>
       </Card>
 
-      {trainee.bio && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Bio</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">{trainee.bio}</p>
-          </CardContent>
-        </Card>
-      )}
+      <Separator />
 
-      {trainee.specialties && trainee.specialties.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Specialties</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {trainee.specialties.map((s: string) => (
-                <Badge key={s} variant="secondary">{s}</Badge>
-              ))}
+      {/* ── Account Info ── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Account Information</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Email</span>
+            <span className="font-medium">{trainee.email}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Username</span>
+            <span className="font-mono font-medium">@{trainee.username}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Member since</span>
+            <span className="font-medium">{joinedDate}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Training status</span>
+            <Badge variant={STATUS_VARIANT[trainee.training_status] ?? "secondary"}>
+              {trainee.training_status}
+            </Badge>
+          </div>
+          {trainee.graduated_at && (
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Graduated</span>
+              <span className="font-medium">
+                {new Date(trainee.graduated_at).toLocaleDateString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Training Status ── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Training Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-6">
+            {/* Progress ring */}
+            <CircularProgress
+              percentage={overallPct}
+              size={88}
+              strokeWidth={8}
+            />
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="font-semibold">
+                {completedLessons} of {totalLessons} lessons complete
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {totalLessons === 0
+                  ? "No lessons available yet."
+                  : overallPct < 100
+                  ? `${100 - overallPct}% remaining across all programs.`
+                  : "All lessons complete — well done!"}
+              </p>
+              {/* Mentor */}
+              {mentor ? (
+                <div className="mt-2 flex items-center gap-2 text-sm">
+                  <User className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  <span className="text-muted-foreground">Mentor:</span>
+                  <span className="font-medium">{mentor.display_name}</span>
+                </div>
+              ) : (
+                <div className="mt-2 flex items-center gap-2 text-sm">
+                  <User className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  <span className="text-muted-foreground">No mentor assigned yet.</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Action links */}
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/trainee/progress">
+                <TrendingUp className="mr-1.5 size-3.5" aria-hidden="true" />
+                View full progress
+              </Link>
+            </Button>
+            {trainee.graduated_at && (
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/trainee/certificate">
+                  <GraduationCap className="mr-1.5 size-3.5" aria-hidden="true" />
+                  View certificate
+                </Link>
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

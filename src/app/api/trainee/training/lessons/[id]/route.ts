@@ -1,0 +1,171 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * GET /api/trainee/training/lessons/[id]
+ * Returns full lesson detail: lesson fields + videos + assets + quiz questions
+ * (options included, correct_answer excluded — server-side only)
+ * Also returns the user's completion status and whether quiz is passed.
+ */
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const admin = createAdminClient();
+
+  // Fetch lesson, videos, assets, and quiz questions in parallel
+  const [lessonResult, videosResult, assetsResult, questionsResult] =
+    await Promise.all([
+      admin
+        .from("training_lessons")
+        .select(
+          "id, category_id, title, description, video_url, pdf_url, content, duration_mins, priority, previous_lesson_id, is_active, created_at"
+        )
+        .eq("id", id)
+        .eq("is_active", true)
+        .single(),
+      admin
+        .from("lesson_videos")
+        .select("id, title, video_url, duration_mins, priority")
+        .eq("lesson_id", id)
+        .order("priority", { ascending: true }),
+      admin
+        .from("lesson_assets")
+        .select(
+          "id, title, asset_type, url, file_size_bytes, is_downloadable, priority"
+        )
+        .eq("lesson_id", id)
+        .order("priority", { ascending: true }),
+      admin
+        .from("quiz_questions")
+        // Deliberately exclude correct_answer — it stays server-side
+        .select("id, question, options, explanation, priority")
+        .eq("lesson_id", id)
+        .order("priority", { ascending: true }),
+    ]);
+
+  if (lessonResult.error || !lessonResult.data) {
+    return NextResponse.json({ error: "Lesson not found." }, { status: 404 });
+  }
+
+  const lesson = lessonResult.data;
+
+  // ── Sequential lock check (category level) ────────────────────────────────
+  const { data: category } = await admin
+    .from("training_categories")
+    .select("id, training_id, is_sequential, priority")
+    .eq("id", lesson.category_id)
+    .single();
+
+  if (category?.is_sequential) {
+    // Find all active lessons in this category with lower priority
+    const { data: prevLessons } = await admin
+      .from("training_lessons")
+      .select("id")
+      .eq("category_id", category.id)
+      .eq("is_active", true)
+      .lt("priority", lesson.priority)
+      .order("priority", { ascending: true });
+
+    if (prevLessons && prevLessons.length > 0) {
+      const prevIds = prevLessons.map((l) => l.id);
+      const { count: completedCount } = await admin
+        .from("lesson_completions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .in("lesson_id", prevIds);
+
+      if ((completedCount ?? 0) < prevIds.length) {
+        return NextResponse.json(
+          { error: "Complete previous lessons in order first.", locked: true },
+          { status: 403 }
+        );
+      }
+    }
+  }
+
+  // ── Sequential lock check (program level) ─────────────────────────────────
+  if (category) {
+    const { data: program } = await admin
+      .from("training_programs")
+      .select("id, is_sequential")
+      .eq("id", category.training_id)
+      .single();
+
+    if (program?.is_sequential) {
+      // Find all active categories in this program with lower priority
+      const { data: prevCats } = await admin
+        .from("training_categories")
+        .select("id")
+        .eq("training_id", program.id)
+        .eq("is_active", true)
+        .lt("priority", category.priority)
+        .order("priority", { ascending: true });
+
+      if (prevCats && prevCats.length > 0) {
+        const prevCatIds = prevCats.map((c) => c.id);
+        const { count: completedCatCount } = await admin
+          .from("category_completions")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .in("category_id", prevCatIds);
+
+        if ((completedCatCount ?? 0) < prevCatIds.length) {
+          return NextResponse.json(
+            {
+              error: "Complete previous categories in order first.",
+              locked: true,
+            },
+            { status: 403 }
+          );
+        }
+      }
+    }
+  }
+
+  // Fetch user's completion + latest quiz attempt status
+  const [completionResult, quizAttemptResult] = await Promise.all([
+    admin
+      .from("lesson_completions")
+      .select("completed_at")
+      .eq("user_id", user.id)
+      .eq("lesson_id", id)
+      .maybeSingle(),
+    admin
+      .from("quiz_attempts")
+      .select("passed, score, total_questions, attempted_at")
+      .eq("user_id", user.id)
+      .eq("lesson_id", id)
+      .order("attempted_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  return NextResponse.json({
+    lesson: {
+      ...lessonResult.data,
+      videos: videosResult.data ?? [],
+      assets: assetsResult.data ?? [],
+      quiz_questions: questionsResult.data ?? [],
+      completed: !!completionResult.data,
+      completed_at: completionResult.data?.completed_at ?? null,
+      quiz_passed: quizAttemptResult.data?.passed ?? null,
+      quiz_last_score: quizAttemptResult.data?.score ?? null,
+      quiz_last_total: quizAttemptResult.data?.total_questions ?? null,
+      quiz_last_attempted_at: quizAttemptResult.data?.attempted_at ?? null,
+    },
+  });
+}

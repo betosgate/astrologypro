@@ -33,7 +33,7 @@ export default async function TraineeProgressPage() {
   // Fetch all active categories + lessons
   const { data: categories } = await supabase
     .from("training_categories")
-    .select("id, name, description, priority")
+    .select("id, name, description, priority, training_id")
     .eq("is_active", true)
     .order("priority", { ascending: true });
 
@@ -246,7 +246,7 @@ export default async function TraineeProgressPage() {
                               <div className="size-4 shrink-0 rounded-full border-2 border-muted-foreground/30" />
                             )}
                             <Link
-                              href={`/trainee/training/${cat.id}/${lesson.id}`}
+                              href={`/trainee/training/${(cat as typeof cat & { training_id?: string }).training_id ?? ""}/${cat.id}/${lesson.id}`}
                               className="truncate hover:text-primary transition-colors"
                             >
                               {lesson.title}
