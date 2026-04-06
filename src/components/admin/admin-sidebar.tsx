@@ -80,7 +80,8 @@ const NAV_GROUPS = [
     label: "Astrology",
     items: [
       { label: "Wheel Signs", href: "/admin/wheel-signs", icon: CircleDot },
-      { label: "Ingress Charts", href: "/admin/ingress-charts", icon: Navigation },
+      { label: "Mundane Astrology", href: "/admin/ingress-charts", icon: Navigation },
+      { label: "Mundane Access", href: "/admin/mundane-access", icon: Shield },
       { label: "Decan Journals", href: "/admin/decan-journals", icon: BookOpen },
       { label: "Decan Media", href: "/admin/decan-media", icon: Film },
       { label: "Quarters", href: "/admin/quarters", icon: Grid2X2 },

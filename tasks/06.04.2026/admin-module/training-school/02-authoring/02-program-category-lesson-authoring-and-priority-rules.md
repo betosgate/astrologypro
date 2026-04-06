@@ -1,45 +1,66 @@
 # Module 02 - Program, Category, Lesson Authoring and Priority Rules
 
 ## Objective
-Bring the training content model and admin authoring flow into line with the architect requirement for training -> categories -> lessons, each with priority and explicit progression behavior.
+Make the training hierarchy and ordering behavior explicit in admin authoring and learner routing.
 
-## Current State In Repo
+## Current Repo State
 - `training_programs`, `training_categories`, and `training_lessons` already exist.
-- Program, category, and lesson priority already exist.
+- Program/category/lesson priority already exists.
 - `training_lessons.previous_lesson_id` already exists.
-- Admin CRUD pages already exist, but the resume/priority behavior is not fully documented from the admin perspective.
+- Admin create/edit flows already exist for programs, categories, and lessons.
 
-## Required Outcome
-- The authoring flow clearly supports:
-  - top-level trainings
-  - nested categories
-  - nested lessons
-  - category priority
-  - lesson priority
-  - previous lesson linkage
-- The learner resume rule is based on the highest-priority incomplete category and lesson, not just generic ordering.
+## Exact Gap
+- The hierarchy exists, but the execution rules for next-item routing are not written in an implementation-atomic way.
+- `previous_lesson_id` and priority can conflict if both are treated as competing ordering sources.
+- Admin surfaces do not yet guarantee enough clarity around the actual learner path.
 
-## Detailed Tasks
-- [ ] Review all admin create/edit pages and APIs for programs, categories, and lessons to ensure priority fields are first-class and validated consistently.
-- [ ] Confirm the app uses `training_programs` as the architect's "main layer named training" and update labels/help text where needed instead of inventing a new layer.
-- [ ] Validate that `training_lessons.previous_lesson_id` is optional but coherent with the final lesson-ordering logic.
-- [ ] Decide whether previous-lesson linkage is purely informational, purely enforcement-driven, or both when priority already exists.
-- [ ] Define the exact next-item algorithm for:
-  - incomplete training entry
-  - next category
-  - next lesson
-  - ties or duplicate priorities
-- [ ] Ensure admin list and preview surfaces show enough ordering metadata that content managers can reason about the learner path.
-- [ ] Add guardrails so invalid priority collisions or circular previous-lesson relationships are prevented or flagged.
+## Required Implementation
+- Use `training_programs` as the top-level training layer. Do not introduce a new entity.
+- Treat priority as the primary ordering source for:
+  - programs
+  - categories within a program
+  - lessons within a category
+- Treat `previous_lesson_id` as a validation and relational aid, not as the primary ordering source.
+- Enforce this next-item rule:
+  - when a learner reopens an incomplete training, send them to the lowest-priority-number incomplete category within that program
+  - inside that category, send them to the lowest-priority-number incomplete lesson
+  - if duplicate priorities exist, break ties by `created_at`, then `id`
+- Add validation or admin warnings to prevent:
+  - circular previous-lesson chains
+  - previous lesson references outside the same category
+  - invalid duplicate ordering behavior that makes the path ambiguous
+- Update admin list/detail/preview surfaces if needed so ordering information is visible.
+
+## Likely Affected Files
+- `src/app/admin/training/page.tsx`
+- `src/app/admin/training/programs/new/page.tsx`
+- `src/app/admin/training/categories/new/page.tsx`
+- `src/app/admin/training/lessons/new/page.tsx`
+- corresponding edit pages
+- corresponding admin API routes for programs/categories/lessons
+- learner program/category routing logic
+
+## API and Schema Constraints
+- Keep using `training_programs`, `training_categories`, `training_lessons`.
+- Keep `previous_lesson_id`; do not remove it unless dead code proves it is unused and removal is explicitly requested later.
+- Do not create a separate ordering table.
+
+## Dependencies
+- Execute after Module 01.
 
 ## Acceptance Criteria
-- Admins can author programs, categories, and lessons with clear priority semantics.
-- The repo has one explicit rule for next-item routing and it is consistent across admin expectations and learner APIs.
-- Previous-lesson data does not conflict with priority-driven progression.
+- Admin authoring makes the hierarchy and priority model clear.
+- Learner next-item routing follows one deterministic priority-first rule.
+- `previous_lesson_id` cannot create contradictory or invalid lesson chains.
 
 ## Verification Test Plan
-- [ ] Create at least two programs with different priorities and confirm ordering is stable in admin and learner APIs.
-- [ ] Create multiple categories in one program and confirm lower priority values surface first.
-- [ ] Create multiple lessons in one category and confirm ordering is stable and matches the chosen next-item algorithm.
-- [ ] Verify invalid previous-lesson references are rejected or prevented.
-- [ ] Start an incomplete training and confirm the learner is routed to the highest-priority incomplete category and the highest-priority incomplete lesson within that category.
+- [ ] Create multiple programs and confirm priority ordering is stable.
+- [ ] Create multiple categories in a program and confirm priority ordering is stable.
+- [ ] Create multiple lessons in a category and confirm priority ordering is stable.
+- [ ] Reopen an incomplete training and confirm the learner is sent to the lowest-priority incomplete category and lesson.
+- [ ] Attempt to create an invalid previous-lesson reference and confirm validation blocks or flags it.
+
+## Out Of Scope
+- media delivery model
+- video-triggered quizzes
+- reporting
