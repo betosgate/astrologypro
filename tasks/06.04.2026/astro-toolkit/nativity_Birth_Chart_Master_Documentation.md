@@ -6,6 +6,7 @@ This master document consolidates all technical documentation for the "Nativity 
 1. [Deep Technical Walkthrough](#1-deep-technical-walkthrough-western-horoscope-v2-nativity-birth-chart)
 2. [Component & Data Architecture](#2-technical-walkthrough-nativity-birth-chart-western-horoscope-v2)
 3. [Full API Reference Documentation](#3-nativity-birth-chart-api-documentation)
+4. [Zodiac and Planet Icon Rendering Logic](#4-technical-logic-zodiac-and-planet-icon-rendering)
 
 ---
 
@@ -800,3 +801,102 @@ Retrieves a saved report using its `_id`.
 **Endpoint:** `user/save-customer-astro-responce`
 
 Saves the report specifically to a user's account history.
+
+---
+
+## 4. Technical Logic: Zodiac and Planet Icon Rendering
+
+*Original Source: docs/zodiac_planet_icons_technical_logic.md*
+
+### Technical Logic: Zodiac and Planet Icon Rendering
+
+This document explains the implementation details of how zodiac signs and planetary icons are dynamically rendered in the "Nativity Birth Chart" (Western Horoscope V2) module.
+
+---
+
+## 1. Icon Asset Location
+All astrological icons are stored as local static assets within the project directory:
+`src/assets/images/zodiac/`
+
+These icons are formatted as PNG files and are called by the frontend components based on the data received from the astrological APIs.
+
+---
+
+## 2. Rendering Mechanism: Conditional Logic (`*ngIf`)
+The application uses Angular's `*ngIf` structural directive to perform string matching between the API response data and the hardcoded asset paths.
+
+### A. Planet Icons Implementation
+In the Planet tables (`common-tabil-lilith.component.html`), the system checks the `name` property of each astrological object:
+
+```html
+<!-- Example of Planet Icon Logic -->
+<ng-container *ngIf="item.name === 'Sun'">
+  <img src="../../../../../assets/images/zodiac/sun.png" alt="Sun" />
+</ng-container>
+
+<ng-container *ngIf="item.name === 'Moon'">
+  <img src="../../../../../assets/images/zodiac/moon .png" alt="Moon" />
+</ng-container>
+```
+
+**Planet to Icon Mapping:**
+| Planet Name | File Path (`assets/images/zodiac/`) |
+| :--- | :--- |
+| Sun | `sun.png` |
+| Moon | `moon .png` |
+| Mercury | `mercury.png` |
+| Venus | `venus.png` |
+| Mars | `mars .png` |
+| Jupiter | `jupiter.png` |
+| Saturn | `saturn.png` |
+| Uranus | `uranus.png` |
+| Neptune | `neptune.png` |
+| Pluto | `pluto.png` |
+| Node | `node.png` |
+| Part of Fortune | `part_of_fortune.png` |
+| Chiron | `chiron.png` |
+
+---
+
+### B. Zodiac Sign Icons Implementation
+In the House tables (`common-tabil-house.component.html`), the system checks the `sign` property to display the corresponding zodiac icon next to the sign name:
+
+```html
+<!-- Example of Zodiac Sign Logic -->
+<ng-container *ngIf="item.sign === 'Taurus'">
+  <img src="../../../../../assets/images/zodiac/taurus.png" alt="Taurus" />
+</ng-container>
+```
+
+**Zodiac to Icon Mapping:**
+| Zodiac Sign | File Path (`assets/images/zodiac/`) |
+| :--- | :--- |
+| Aries | `aries.png` |
+| Taurus | `taurus.png` |
+| Gemini | `gemini.png` |
+| Cancer | `cancer.png` |
+| Leo | `leo .png` |
+| Virgo | `virgo.png` |
+| Libra | `libra.png` |
+| Scorpio | `scorpio.png` |
+| Sagittarius | `sagittarius.png` |
+| Capricorn | `capricorn.png` |
+| Aquarius | `aquarius.png` |
+| Pisces | `pisces.png` |
+
+---
+
+## 3. Dynamic Header Illustrations (`astroHeaderImage` Pipe)
+For the detailed AI interpretation sections, the system uses a custom data pipe called `astroHeaderImage`. This pipe dynamically transforms the planet or house name into a URL for a larger header illustration.
+
+- **Usage**: `[src]="aspect.name | astroHeaderImage"`
+- **Logic**: It usually maps names to an external S3 bucket where stylized, high-resolution astrological graphics are hosted.
+
+---
+
+## 4. Summary of Logic Flow
+1. **API Call**: Database/API returns an array of objects (e.g., `{ "name": "Sun", "sign": "Gemini", "house": 9 }`).
+2. **Component Input**: The data is passed to the child components (`app-common-tabil-lilith`, `app-common-tabil-house`).
+3. **Template Parsing**: The HTML template iterates through the array.
+4. **Matching**: For each item, the `*ngIf` conditions check if the name/sign matches a known astrological entity.
+5. **Display**: If a match is found, the `<img>` tag with the relative path to the `assets/images/zodiac/` folder is rendered.

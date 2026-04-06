@@ -1582,3 +1582,37 @@ export async function sendSessionReminder({
     }),
   });
 }
+
+// ── Family Member Login Invite ────────────────────────────────────────────────
+export async function sendFamilyMemberInvite({
+  to,
+  inviterName,
+  familyMemberName,
+  inviteUrl,
+}: {
+  to: string;
+  inviterName: string;
+  familyMemberName: string;
+  inviteUrl: string;
+}) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${familyMemberName},</p>
+    <p style="margin:0 0 16px;color:#a1a1aa;"><strong style="color:#f4f4f5;">${inviterName}</strong> has added you to their AstrologyPro family and invited you to log in and view your personal natal chart.</p>
+    ${infoCard(`<strong style="color:#e4e4e7;">&#11088; Your natal chart is ready to explore</strong><br/><span style="color:#a1a1aa;font-size:13px;">Planet positions, rising sign, midheaven, and more — all calculated for your birth details.</span>`)}
+    <p style="margin:0 0 16px;color:#a1a1aa;">Click the button below to activate your account and view your chart. This invite link is unique to you.</p>
+    <p style="margin-top:16px;font-size:13px;color:#9ca3af;">This link will expire in 7 days. If you did not expect this invitation, you can safely ignore this email.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `${inviterName} invited you to view your natal chart on AstrologyPro`,
+    html: buildEmailHtml({
+      title: "You've been invited to AstrologyPro",
+      preheader: `${inviterName} has shared your natal chart with you.`,
+      content,
+      ctaText: "View My Natal Chart",
+      ctaUrl: inviteUrl,
+      footer: `AstrologyPro &mdash; Explore Your Cosmic Blueprint`,
+    }),
+  });
+}
