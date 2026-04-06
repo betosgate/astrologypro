@@ -5,11 +5,44 @@ import tarotSpreads from '@/data/tarot-spreads'
 import houses from '@/data/houses'
 import planets from '@/data/planets'
 import aspects from '@/data/aspects'
+import {
+  getAllPublishedPostSlugs,
+  getAllCategorySlugs,
+  getAllAuthorSlugs,
+} from '@/lib/blog'
 
 const BASE_URL = 'https://astrologypro.com'
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date()
+
+  // Blog dynamic pages — fetched from DB
+  const [blogPostSlugs, blogCategorySlugs, blogAuthorSlugs] = await Promise.all([
+    getAllPublishedPostSlugs(),
+    getAllCategorySlugs(),
+    getAllAuthorSlugs(),
+  ])
+
+  const blogPostPages: MetadataRoute.Sitemap = blogPostSlugs.map((entry) => ({
+    url: `${BASE_URL}/blog/${entry.slug}`,
+    lastModified: entry.published_at ? new Date(entry.published_at) : now,
+    changeFrequency: 'weekly' as const,
+    priority: 0.8,
+  }))
+
+  const blogCategoryPages: MetadataRoute.Sitemap = blogCategorySlugs.map((slug) => ({
+    url: `${BASE_URL}/blog/category/${slug}`,
+    lastModified: now,
+    changeFrequency: 'daily' as const,
+    priority: 0.7,
+  }))
+
+  const blogAuthorPages: MetadataRoute.Sitemap = blogAuthorSlugs.map((slug) => ({
+    url: `${BASE_URL}/blog/author/${slug}`,
+    lastModified: now,
+    changeFrequency: 'weekly' as const,
+    priority: 0.6,
+  }))
 
   // Static marketing pages — high priority
   const marketingPages: MetadataRoute.Sitemap = [
@@ -121,5 +154,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...planetPages,
     ...aspectPages,
     ...guidePages,
+    ...blogPostPages,
+    ...blogCategoryPages,
+    ...blogAuthorPages,
   ]
 }

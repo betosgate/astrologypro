@@ -51,6 +51,7 @@ import {
   MailCheck,
   History,
   FileCode2,
+  Mail,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -66,14 +67,19 @@ const NAV_GROUPS = [
     label: "People",
     items: [
       { label: "Users", href: "/admin/users", icon: Users },
+      { label: "Diviners", href: "/admin/diviners", icon: Star },
       { label: "Roles", href: "/admin/roles", icon: Shield },
+      { label: "Invitations", href: "/admin/invitations", icon: Mail },
       { label: "Social Advocacy", href: "/admin/social-advocacy", icon: Share2 },
     ],
   },
   {
     label: "Content",
     items: [
-      { label: "Blog", href: "/admin/blog", icon: FileText },
+      { label: "Blog Posts", href: "/admin/blog", icon: FileText },
+      { label: "Blog Categories", href: "/admin/blog/categories", icon: Layers },
+      { label: "Blog Authors", href: "/admin/blog/authors", icon: Users },
+      { label: "Blog Series", href: "/admin/blog/series", icon: BookOpen },
       { label: "Videos", href: "/admin/videos", icon: Video },
       { label: "Webinars", href: "/admin/webinars", icon: Monitor },
       { label: "Spiritual Wisdom", href: "/admin/spiritual-wisdom", icon: Sparkles },
