@@ -80,7 +80,7 @@ export async function POST(
   // Verify lesson exists and is active
   const { data: lesson, error: lessonError } = await admin
     .from("training_lessons")
-    .select("id, category_id")
+    .select("id, title, category_id")
     .eq("id", lessonId)
     .eq("is_active", true)
     .single();
