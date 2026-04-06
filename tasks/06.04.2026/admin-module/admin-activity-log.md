@@ -1,3 +1,5 @@
+**Status:** Done
+
 # Task: Admin Activity Log
 
 ## Objective

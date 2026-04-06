@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Flame, AlertCircle, Loader2, ChevronRight, X } from "lucide-react";
+import { Flame, AlertCircle, Loader2, ChevronRight, X, CheckCircle2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
@@ -79,6 +79,12 @@ function buildCustomTags(
 
 type Step = "choose" | "custom";
 
+type StepPreview = {
+  matched_steps: number;
+  total_tags: number;
+  missing_tags: string[];
+} | null;
+
 export default function CreateRitualPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("choose");
@@ -90,6 +96,10 @@ export default function CreateRitualPage() {
   const [selectedPlanets, setSelectedPlanets] = useState<string[]>([]);
   const [selectedZodiacs, setSelectedZodiacs] = useState<string[]>([]);
 
+  // Step preview state
+  const [stepPreview, setStepPreview] = useState<StepPreview>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+
   function toggleItem(
     item: string,
     list: string[],
@@ -99,6 +109,37 @@ export default function CreateRitualPage() {
       prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item]
     );
   }
+
+  // Fetch step preview whenever tags change in custom configurator
+  useEffect(() => {
+    if (step !== "custom") return;
+
+    const tags = buildCustomTags(mode, selectedPlanets, selectedZodiacs);
+    if (selectedPlanets.length === 0 && selectedZodiacs.length === 0) {
+      setStepPreview(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setLoadingPreview(true);
+
+    fetch(`/api/community/rituals/preview-steps?tags=${tags.join(",")}`, {
+      signal: controller.signal,
+    })
+      .then((res) => {
+        if (!res.ok) return null;
+        return res.json();
+      })
+      .then((data) => {
+        if (data) setStepPreview(data);
+        setLoadingPreview(false);
+      })
+      .catch(() => {
+        setLoadingPreview(false);
+      });
+
+    return () => controller.abort();
+  }, [step, mode, selectedPlanets, selectedZodiacs]);
 
   async function submitPreset(name: string, tags: string[]) {
     setSaving(true);
@@ -223,13 +264,16 @@ export default function CreateRitualPage() {
   }
 
   // ── Step: Custom configurator ───────────────────────────────────────────────
+  const previewTags = buildCustomTags(mode, selectedPlanets, selectedZodiacs);
+  const hasSelections = selectedPlanets.length > 0 || selectedZodiacs.length > 0;
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
         <button
           type="button"
           className="text-sm text-muted-foreground hover:text-foreground"
-          onClick={() => { setStep("choose"); setError(null); }}
+          onClick={() => { setStep("choose"); setError(null); setStepPreview(null); }}
         >
           ← Back to Ritual Options
         </button>
@@ -335,19 +379,39 @@ export default function CreateRitualPage() {
         </CardContent>
       </Card>
 
-      {/* Preview of generated tags */}
-      {(selectedPlanets.length > 0 || selectedZodiacs.length > 0) && (
+      {/* Preview of generated tags + step readiness */}
+      {hasSelections && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">Preview — Ritual Tags</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <div className="flex flex-wrap gap-1.5">
-              {buildCustomTags(mode, selectedPlanets, selectedZodiacs).map((tag) => (
+              {previewTags.map((tag) => (
                 <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0.5">
                   {tag.replace(/_/g, " ")}
                 </Badge>
               ))}
+            </div>
+
+            {/* Step readiness indicator */}
+            <div className="flex items-center gap-2 text-sm">
+              {loadingPreview ? (
+                <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+              ) : stepPreview ? (
+                stepPreview.matched_steps > 0 ? (
+                  <CheckCircle2 className="size-3.5 text-green-500 shrink-0" />
+                ) : (
+                  <AlertCircle className="size-3.5 text-amber-500 shrink-0" />
+                )
+              ) : null}
+              {!loadingPreview && stepPreview && (
+                <span className="text-xs text-muted-foreground">
+                  {stepPreview.matched_steps > 0
+                    ? `This ritual has ${stepPreview.matched_steps} step${stepPreview.matched_steps !== 1 ? "s" : ""} ready`
+                    : "Ritual instructions are being prepared by your guide"}
+                </span>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -361,7 +425,7 @@ export default function CreateRitualPage() {
         <Button
           type="button"
           variant="outline"
-          onClick={() => { setStep("choose"); setError(null); }}
+          onClick={() => { setStep("choose"); setError(null); setStepPreview(null); }}
         >
           Cancel
         </Button>

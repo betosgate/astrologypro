@@ -1,3 +1,5 @@
+**Status:** Done
+
 # Task: User Soft Delete & Restore
 
 ## Objective

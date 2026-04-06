@@ -1,3 +1,5 @@
+**Status:** Done
+
 # Task: User List Status Search & Indexing
 
 ## Objective

@@ -1,5 +1,7 @@
 # Task: Fix Admin Login Failure
 
+**Status:** Done
+
 ## Objective
 Investigate and resolve the issue where administrative login is not working as expected.
 

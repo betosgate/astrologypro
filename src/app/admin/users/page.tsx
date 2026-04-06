@@ -9,24 +9,28 @@ interface SearchParams {
   q?: string;
   role?: string;
   page?: string;
+  pageSize?: string;
   sortBy?: string;
   sortDir?: string;
   joinedFrom?: string;
   joinedTo?: string;
   loginFrom?: string;
   loginTo?: string;
+  status?: string;
 }
 
-export const PAGE_SIZE = 10;
+const ALLOWED_PAGE_SIZES = [10, 25, 50, 100];
+export const DEFAULT_PAGE_SIZE = 10;
 
 // ─── Data fetch ───────────────────────────────────────────────────────────────
 
 
-async function getAllUsers(params: SearchParams): Promise<{ users: AdminUser[]; total: number }> {
+async function getAllUsers(params: SearchParams, pageSize: number): Promise<{ users: AdminUser[]; total: number }> {
   const admin = createAdminClient();
 
   const q = params.q?.trim() ?? "";
   const roleFilter = params.role ?? "all";
+  const statusFilter = params.status ?? "all";
   const sortBy = params.sortBy ?? "lastLoginAt";
   const sortDir = (params.sortDir ?? "desc") as "asc" | "desc";
   const page = Math.max(1, parseInt(params.page ?? "1", 10));
@@ -71,14 +75,18 @@ async function getAllUsers(params: SearchParams): Promise<{ users: AdminUser[]; 
     // No DB-level text filter — email lives in auth.users not in this table.
     // Application-level post-filter (below) handles email matching via authEmailMap.
     fetchDiviners
-      ? applyDateFilter(
-          admin
-            .from("diviners")
-            .select("id, user_id, display_name, phone, is_active, created_at, is_certified"),
-          "created_at"
-        )
-          .order("created_at", { ascending: false })
-          .limit(500)
+      ? (() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let q: any = applyDateFilter(
+            admin
+              .from("diviners")
+              .select("id, user_id, display_name, phone, is_active, created_at, is_certified"),
+            "created_at"
+          );
+          if (statusFilter === "active") q = q.eq("is_active", true);
+          if (statusFilter === "inactive") q = q.eq("is_active", false);
+          return q.order("created_at", { ascending: false }).limit(500);
+        })()
       : Promise.resolve({ data: [] }),
 
     // ── Clients ───────────────────────────────────────────────────────────
@@ -98,47 +106,59 @@ async function getAllUsers(params: SearchParams): Promise<{ users: AdminUser[]; 
 
     // ── Social Advocates ──────────────────────────────────────────────────
     fetchAdvocates
-      ? applyDateFilter(
-          applyTextFilter(
-            admin
-              .from("social_advocates")
-              .select("id, user_id, name, email, phone, referral_code, is_active, total_referrals, created_at"),
-            ["name", "email", "phone"]
-          ),
-          "created_at"
-        )
-          .order("created_at", { ascending: false })
-          .limit(500)
+      ? (() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let q: any = applyDateFilter(
+            applyTextFilter(
+              admin
+                .from("social_advocates")
+                .select("id, user_id, name, email, phone, referral_code, is_active, total_referrals, created_at"),
+              ["name", "email", "phone"]
+            ),
+            "created_at"
+          );
+          if (statusFilter === "active") q = q.eq("is_active", true);
+          if (statusFilter === "inactive") q = q.eq("is_active", false);
+          return q.order("created_at", { ascending: false }).limit(500);
+        })()
       : Promise.resolve({ data: [] }),
 
     // ── Community Members ─────────────────────────────────────────────────
     fetchCommunity
-      ? applyDateFilter(
-          applyTextFilter(
-            admin
-              .from("community_members")
-              .select("id, user_id, full_name, email, phone, membership_type, membership_status, joined_at"),
-            ["full_name", "email", "phone"]
-          ),
-          "joined_at"
-        )
-          .order("joined_at", { ascending: false })
-          .limit(500)
+      ? (() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let q: any = applyDateFilter(
+            applyTextFilter(
+              admin
+                .from("community_members")
+                .select("id, user_id, full_name, email, phone, membership_type, membership_status, joined_at"),
+              ["full_name", "email", "phone"]
+            ),
+            "joined_at"
+          );
+          if (statusFilter === "active") q = q.eq("membership_status", "active");
+          if (statusFilter === "inactive") q = q.neq("membership_status", "active");
+          return q.order("joined_at", { ascending: false }).limit(500);
+        })()
       : Promise.resolve({ data: [] }),
 
     // ── Trainees ──────────────────────────────────────────────────────────
     fetchTrainees
-      ? applyDateFilter(
-          applyTextFilter(
-            admin
-              .from("trainees")
-              .select("id, user_id, name, email, phone, username, training_status, created_at"),
-            ["name", "email", "phone"]
-          ),
-          "created_at"
-        )
-          .order("created_at", { ascending: false })
-          .limit(500)
+      ? (() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let q: any = applyDateFilter(
+            applyTextFilter(
+              admin
+                .from("trainees")
+                .select("id, user_id, name, email, phone, username, training_status, created_at"),
+              ["name", "email", "phone"]
+            ),
+            "created_at"
+          );
+          if (statusFilter === "active") q = q.in("training_status", ["in_progress", "active"]);
+          if (statusFilter === "inactive") q = q.in("training_status", ["dropped", "completed", "certified"]);
+          return q.order("created_at", { ascending: false }).limit(500);
+        })()
       : Promise.resolve({ data: [] }),
 
     // ── Login logs: last login per user ───────────────────────────────────
@@ -359,8 +379,8 @@ async function getAllUsers(params: SearchParams): Promise<{ users: AdminUser[]; 
   // ── Paginate ──────────────────────────────────────────────────────────────
 
   const total = sorted.length;
-  const start = (page - 1) * PAGE_SIZE;
-  const users = sorted.slice(start, start + PAGE_SIZE);
+  const start = (page - 1) * pageSize;
+  const users = sorted.slice(start, start + pageSize);
 
   return { users, total };
 }
@@ -373,7 +393,9 @@ export default async function AdminUsersPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  const { users, total } = await getAllUsers(params);
+  const rawPageSize = parseInt(params.pageSize ?? String(DEFAULT_PAGE_SIZE), 10);
+  const pageSize = ALLOWED_PAGE_SIZES.includes(rawPageSize) ? rawPageSize : DEFAULT_PAGE_SIZE;
+  const { users, total } = await getAllUsers(params, pageSize);
 
   return (
     <div className="space-y-6">
@@ -381,7 +403,7 @@ export default async function AdminUsersPage({
         users={users}
         total={total}
         searchParams={params}
-        pageSize={PAGE_SIZE}
+        pageSize={pageSize}
       />
     </div>
   );

@@ -1,3 +1,5 @@
+**Status:** Done
+
 # Task: Viewer-Specific Time Zone Display
 
 ## Objective

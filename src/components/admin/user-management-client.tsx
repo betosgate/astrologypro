@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,16 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
+import {
   Search,
   MoreHorizontal,
   StickyNote,
@@ -37,6 +48,13 @@ import {
   CalendarIcon,
   RefreshCw,
   FilterX,
+  Pencil,
+  KeyRound,
+  Trash2,
+  UserCog,
+  Download,
+  Mail,
+  X,
 } from "lucide-react";
 import { UserDetailSheet } from "./user-detail-sheet";
 import { InviteUserForm } from "./invite-user-form";
@@ -68,12 +86,14 @@ interface Props {
     q?: string;
     role?: string;
     page?: string;
+    pageSize?: string;
     sortBy?: string;
     sortDir?: string;
     joinedFrom?: string;
     joinedTo?: string;
     loginFrom?: string;
     loginTo?: string;
+    status?: string;
   };
 }
 
@@ -88,12 +108,26 @@ const ROLE_OPTIONS = [
   { value: "trainee",   label: "Trainees" },
 ];
 
+const STATUS_OPTIONS = [
+  { value: "all",      label: "All Statuses" },
+  { value: "active",   label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
 type SortKey = "name" | "email" | "role" | "joinedAt" | "lastLoginAt";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function dateStr(d: string) {
-  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: tz,
+  }).format(new Date(d));
 }
 
 /** Format a raw phone string to US (XXX) XXX-XXXX or +1 (XXX) XXX-XXXX */
@@ -266,6 +300,7 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
   // ── Current params (read from server-rendered props, URL is source of truth) ─
   const currentQ          = sp.q ?? "";
   const currentRole       = sp.role ?? "all";
+  const currentStatus     = sp.status ?? "all";
   const currentPage       = Math.max(1, parseInt(sp.page ?? "1", 10));
   const currentSort       = sp.sortBy ?? "lastLoginAt";
   const currentDir        = sp.sortDir ?? "desc";
@@ -287,6 +322,7 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
   const hasActiveFilters =
     !!currentQ ||
     (currentRole !== "all") ||
+    (currentStatus !== "all") ||
     !!currentJoinedFrom ||
     !!currentJoinedTo ||
     !!currentLoginFrom ||
@@ -341,6 +377,7 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
         JSON.stringify({
           q:           currentQ,
           role:        currentRole,
+          status:      currentStatus,
           sortBy:      currentSort,
           sortDir:     currentDir,
           joinedFrom:  currentJoinedFrom,
@@ -352,7 +389,7 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
     } catch {
       // ignore
     }
-  }, [currentQ, currentRole, currentSort, currentDir, currentJoinedFrom, currentJoinedTo, currentLoginFrom, currentLoginTo]);
+  }, [currentQ, currentRole, currentStatus, currentSort, currentDir, currentJoinedFrom, currentJoinedTo, currentLoginFrom, currentLoginTo]);
 
   // Build URL with updated params and push (wrapped in transition so isPending fires)
   const pushParams = useCallback(
@@ -378,6 +415,14 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
     pushParams({ role: value });
   }
 
+  function handleStatusChange(value: string) {
+    pushParams({ status: value });
+  }
+
+  function handlePageSizeChange(value: string) {
+    pushParams({ pageSize: value, page: "1" });
+  }
+
   function handleSort(col: SortKey) {
     if (currentSort === col) {
       pushParams({ sortBy: col, sortDir: currentDir === "asc" ? "desc" : "asc" });
@@ -399,6 +444,281 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
 
   // Optimistic unblock (no full page refresh needed)
   const [localUnblocked, setLocalUnblocked] = useState<Set<string>>(new Set());
+
+  // ── Block with note dialog ──────────────────────────────────────────────
+  const [blockDialogUser, setBlockDialogUser] = useState<AdminUser | null>(null);
+  const [blockNote, setBlockNote] = useState("");
+  const [blockLoading, setBlockLoading] = useState(false);
+
+  async function handleBlockWithNote() {
+    if (!blockDialogUser) return;
+    setBlockLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${blockDialogUser.userId}/block`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: blockNote }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      // Save note to admin_user_notes
+      if (blockNote.trim()) {
+        await fetch(`/api/admin/users/${blockDialogUser.userId}/notes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ note: `Block reason: ${blockNote}`, role: blockDialogUser.role, action_type: "block" }),
+        });
+      }
+      toast.success(`${blockDialogUser.name} has been blocked`);
+      setBlockDialogUser(null);
+      setBlockNote("");
+      router.refresh();
+    } catch {
+      toast.error("Failed to block user");
+    } finally {
+      setBlockLoading(false);
+    }
+  }
+
+  // ── Password management dialogs ─────────────────────────────────────────
+  const [pwdDialogUser, setPwdDialogUser] = useState<AdminUser | null>(null);
+  const [pwdDialogMode, setPwdDialogMode] = useState<"reset_link" | "force_set">("reset_link");
+  const [forcePassword, setForcePassword] = useState("");
+  const [pwdLoading, setPwdLoading] = useState(false);
+
+  async function handlePasswordAction() {
+    if (!pwdDialogUser) return;
+    setPwdLoading(true);
+    try {
+      const body =
+        pwdDialogMode === "reset_link"
+          ? { action: "reset_link" }
+          : { action: "force_set", password: forcePassword };
+      const res = await fetch(`/api/admin/users/${pwdDialogUser.userId}/password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      if (pwdDialogMode === "reset_link" && data.link) {
+        await navigator.clipboard.writeText(data.link).catch(() => {});
+        toast.success("Password reset link copied to clipboard");
+      } else {
+        toast.success("Password updated successfully");
+      }
+      setPwdDialogUser(null);
+      setForcePassword("");
+    } catch {
+      toast.error("Failed to perform password action");
+    } finally {
+      setPwdLoading(false);
+    }
+  }
+
+  // ── Soft delete dialog ──────────────────────────────────────────────────
+  const [deleteDialogUser, setDeleteDialogUser] = useState<AdminUser | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  async function handleSoftDelete() {
+    if (!deleteDialogUser) return;
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${deleteDialogUser.userId}/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: deleteDialogUser.role, rowId: deleteDialogUser.rowId }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast.success(`${deleteDialogUser.name} has been soft-deleted`);
+      setDeleteDialogUser(null);
+      router.refresh();
+    } catch {
+      toast.error("Failed to delete user");
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
+
+  // ── Training status dialog ──────────────────────────────────────────────
+  const [trainingDialogUser, setTrainingDialogUser] = useState<AdminUser | null>(null);
+  const [trainingStatus, setTrainingStatus] = useState("in_progress");
+  const [trainingLoading, setTrainingLoading] = useState(false);
+
+  async function handleTrainingStatusUpdate() {
+    if (!trainingDialogUser) return;
+    setTrainingLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${trainingDialogUser.userId}/training-status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: trainingStatus }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast.success("Training status updated");
+      setTrainingDialogUser(null);
+      router.refresh();
+    } catch {
+      toast.error("Failed to update training status");
+    } finally {
+      setTrainingLoading(false);
+    }
+  }
+
+  // ── Role change dialog ──────────────────────────────────────────────────
+  const [roleDialogUser, setRoleDialogUser] = useState<AdminUser | null>(null);
+  const [newRole, setNewRole] = useState("client");
+  const [roleLoading, setRoleLoading] = useState(false);
+
+  // ── Bulk select ─────────────────────────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  function toggleSelect(userId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    const allPageIds = users.map((u) => u.userId);
+    const allSelected = allPageIds.every((id) => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const id of allPageIds) next.delete(id);
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const id of allPageIds) next.add(id);
+        return next;
+      });
+    }
+  }
+
+  const allOnPageSelected = users.length > 0 && users.every((u) => selectedIds.has(u.userId));
+  const someOnPageSelected = users.some((u) => selectedIds.has(u.userId));
+
+  // ── Bulk email dialog ───────────────────────────────────────────────────
+  const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
+  const [bulkEmailSubject, setBulkEmailSubject] = useState("");
+  const [bulkEmailMessage, setBulkEmailMessage] = useState("");
+  const [bulkEmailLoading, setBulkEmailLoading] = useState(false);
+
+  async function handleBulkEmail() {
+    setBulkEmailLoading(true);
+    try {
+      const res = await fetch("/api/admin/bulk-email", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_ids: [...selectedIds],
+          subject:  bulkEmailSubject,
+          message:  bulkEmailMessage,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      toast.success(`Email sent to ${data.sent} user${data.sent !== 1 ? "s" : ""}${data.failed > 0 ? ` (${data.failed} failed)` : ""}`);
+      setBulkEmailOpen(false);
+      setBulkEmailSubject("");
+      setBulkEmailMessage("");
+    } catch {
+      toast.error("Failed to send bulk email");
+    } finally {
+      setBulkEmailLoading(false);
+    }
+  }
+
+  // ── Bulk status dialog ──────────────────────────────────────────────────
+  const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
+  const [bulkStatusValue, setBulkStatusValue] = useState<"active" | "blocked">("active");
+  const [bulkStatusLoading, setBulkStatusLoading] = useState(false);
+
+  async function handleBulkStatus() {
+    setBulkStatusLoading(true);
+    try {
+      const res = await fetch("/api/admin/bulk-status", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_ids: [...selectedIds],
+          status:   bulkStatusValue,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      toast.success(`Updated ${data.updated} user${data.updated !== 1 ? "s" : ""}${data.failed > 0 ? ` (${data.failed} failed)` : ""}`);
+      setBulkStatusOpen(false);
+      setSelectedIds(new Set());
+      router.refresh();
+    } catch {
+      toast.error("Failed to update user statuses");
+    } finally {
+      setBulkStatusLoading(false);
+    }
+  }
+
+  // ── Bulk CSV export (selected rows — POSTs IDs, streams download) ───────
+  const [bulkExportLoading, setBulkExportLoading] = useState(false);
+
+  async function handleBulkExportCSV() {
+    setBulkExportLoading(true);
+    try {
+      const res = await fetch("/api/admin/export/users", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [...selectedIds] }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `users-selected-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to export CSV");
+    } finally {
+      setBulkExportLoading(false);
+    }
+  }
+
+  // ── Export all (GET with current filter params) ─────────────────────────
+  function handleExportAll() {
+    const params = new URLSearchParams();
+    if (currentQ)           params.set("search",      currentQ);
+    if (currentRole !== "all") params.set("role",      currentRole);
+    if (currentStatus !== "all") params.set("status",  currentStatus);
+    if (currentJoinedFrom)  params.set("joined_from", currentJoinedFrom);
+    if (currentJoinedTo)    params.set("joined_to",   currentJoinedTo);
+    const qs = params.toString();
+    window.location.href = `/api/admin/export/users${qs ? `?${qs}` : ""}`;
+  }
+
+  async function handleRoleChangeAction() {
+    if (!roleDialogUser) return;
+    setRoleLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${roleDialogUser.userId}/change-role`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ new_role: newRole }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast.success(`Role record created for ${roleDialogUser.name}`);
+      setRoleDialogUser(null);
+      router.refresh();
+    } catch {
+      toast.error("Failed to change role");
+    } finally {
+      setRoleLoading(false);
+    }
+  }
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
@@ -434,13 +754,22 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
             <RefreshCw className={cn("size-4", isRefreshing && "animate-spin")} />
             {isRefreshing ? "Refreshing…" : "Refresh"}
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportAll}
+            className="gap-1.5"
+          >
+            <Download className="size-4" />
+            Export All (CSV)
+          </Button>
           <InviteUserForm />
         </div>
       </div>
 
       {/* ── Filter bar ─────────────────────────────────────────────────────── */}
       <div className="space-y-3">
-        {/* Row 1: search + role */}
+        {/* Row 1: search + role + status + page size */}
         <div className="flex gap-3 flex-col sm:flex-row">
           <SearchAutocomplete
             defaultValue={currentQ}
@@ -453,6 +782,26 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
             <SelectContent>
               {ROLE_OPTIONS.map((o) => (
                 <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={currentStatus} onValueChange={handleStatusChange}>
+            <SelectTrigger className="w-full sm:w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+            <SelectTrigger className="w-full sm:w-28">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map((n) => (
+                <SelectItem key={n} value={String(n)}>{n} / page</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -520,6 +869,67 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
         </div>
       </div>
 
+      {/* ── Bulk action bar (visible when rows are selected) ───────────────── */}
+      {selectedIds.size > 0 && (
+        <div className="sticky top-0 z-20 flex flex-wrap items-center gap-2 rounded-lg border bg-background/95 px-4 py-2.5 shadow-sm backdrop-blur">
+          <span className="text-sm font-medium text-foreground">
+            {selectedIds.size} user{selectedIds.size !== 1 ? "s" : ""} selected
+          </span>
+          <div className="flex flex-wrap items-center gap-2 ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={bulkExportLoading}
+              onClick={handleBulkExportCSV}
+            >
+              {bulkExportLoading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Download className="size-4" />
+              )}
+              Export Selected CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setBulkEmailOpen(true)}
+            >
+              <Mail className="size-4" />
+              Send Email
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  Change Status
+                  <ArrowDown className="size-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => { setBulkStatusValue("active"); setBulkStatusOpen(true); }}>
+                  <ShieldCheck className="mr-2 size-4 text-green-500" />
+                  Set Active
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setBulkStatusValue("blocked"); setBulkStatusOpen(true); }}>
+                  <ShieldOff className="mr-2 size-4 text-destructive" />
+                  Block Users
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              <X className="size-4" />
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* ── Table ──────────────────────────────────────────────────────────── */}
       <Card className="relative">
         {/* Loading overlay — visible while server is fetching new results */}
@@ -535,6 +945,18 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/40">
               <tr>
+                <th className="pl-4 pr-2 py-2.5 w-8">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all on this page"
+                    checked={allOnPageSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = !allOnPageSelected && someOnPageSelected;
+                    }}
+                    onChange={toggleSelectAll}
+                    className="size-4 cursor-pointer accent-primary"
+                  />
+                </th>
                 <th className="px-4 py-2.5 text-left">
                   <SortHeader label="Name"       column="name"        currentSort={currentSort} currentDir={currentDir} onSort={handleSort} />
                 </th>
@@ -563,12 +985,26 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
             <tbody className={cn(isPending || isRefreshing ? "opacity-50" : "opacity-100", "transition-opacity duration-150")}>
               {users.map((u) => {
                 const isBlocked = u.blocked && !localUnblocked.has(u.userId);
+                const isSelected = selectedIds.has(u.userId);
                 return (
                   <tr
                     key={`${u.role}-${u.rowId}`}
-                    className="border-b last:border-0 hover:bg-muted/20 cursor-pointer"
+                    className={cn(
+                      "border-b last:border-0 hover:bg-muted/20 cursor-pointer",
+                      isSelected && "bg-primary/5"
+                    )}
                     onClick={() => openSheet(u, "overview")}
                   >
+                    {/* Checkbox */}
+                    <td className="pl-4 pr-2 py-2.5 w-8" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${u.name}`}
+                        checked={isSelected}
+                        onChange={() => toggleSelect(u.userId)}
+                        className="size-4 cursor-pointer accent-primary"
+                      />
+                    </td>
                     {/* Name */}
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-1.5">
@@ -647,6 +1083,10 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
                             <Eye className="mr-2 size-4" />
                             View Details
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/admin/users/edit/${u.userId}`)}>
+                            <Pencil className="mr-2 size-4" />
+                            Edit Profile
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openSheet(u, "notes")}>
                             <StickyNote className="mr-2 size-4" />
                             {(u.notesCount ?? 0) > 0 ? `Notes (${u.notesCount})` : "Add Note"}
@@ -655,6 +1095,30 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
                             <Eye className="mr-2 size-4" />
                             Login History
                           </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => { setPwdDialogUser(u); setPwdDialogMode("reset_link"); }}
+                          >
+                            <KeyRound className="mr-2 size-4" />
+                            Send Password Reset
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => { setPwdDialogUser(u); setPwdDialogMode("force_set"); setForcePassword(""); }}
+                          >
+                            <KeyRound className="mr-2 size-4" />
+                            Force Set Password
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => { setRoleDialogUser(u); setNewRole("client"); }}>
+                            <UserCog className="mr-2 size-4" />
+                            Change Role
+                          </DropdownMenuItem>
+                          {u.role === "trainee" && (
+                            <DropdownMenuItem onClick={() => { setTrainingDialogUser(u); setTrainingStatus("in_progress"); }}>
+                              <UserCog className="mr-2 size-4" />
+                              Update Training Status
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuSeparator />
                           {isBlocked ? (
                             <DropdownMenuItem
@@ -670,12 +1134,20 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
                           ) : (
                             <DropdownMenuItem
                               className="text-destructive"
-                              onClick={() => openSheet(u, "overview")}
+                              onClick={() => { setBlockDialogUser(u); setBlockNote(""); }}
                             >
                               <ShieldOff className="mr-2 size-4" />
                               Block User…
                             </DropdownMenuItem>
                           )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => setDeleteDialogUser(u)}
+                          >
+                            <Trash2 className="mr-2 size-4" />
+                            Delete User…
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -685,7 +1157,7 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
 
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={10} className="px-4 py-12 text-center text-muted-foreground">
                     No users match your search
                   </td>
                 </tr>
@@ -764,6 +1236,227 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
           }
         }}
       />
+
+      {/* ── Block with note dialog ─────────────────────────────────────────── */}
+      <Dialog open={!!blockDialogUser} onOpenChange={(v) => { if (!v) setBlockDialogUser(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Block {blockDialogUser?.name}?</DialogTitle>
+            <DialogDescription>
+              This will prevent them from logging in. You can unblock at any time. Please provide a reason.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            placeholder="Reason for blocking (required)…"
+            value={blockNote}
+            onChange={(e) => setBlockNote(e.target.value)}
+            rows={3}
+            className="resize-none"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBlockDialogUser(null)} disabled={blockLoading}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBlockWithNote}
+              disabled={blockLoading || !blockNote.trim()}
+            >
+              {blockLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Block User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Password management dialog ─────────────────────────────────────── */}
+      <Dialog open={!!pwdDialogUser} onOpenChange={(v) => { if (!v) { setPwdDialogUser(null); setForcePassword(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {pwdDialogMode === "reset_link" ? "Send Password Reset Link" : "Force Set Password"}
+            </DialogTitle>
+            <DialogDescription>
+              {pwdDialogMode === "reset_link"
+                ? `A password reset link will be generated for ${pwdDialogUser?.email} and copied to your clipboard.`
+                : `Set a new password for ${pwdDialogUser?.name}. This will override their current password immediately.`}
+            </DialogDescription>
+          </DialogHeader>
+          {pwdDialogMode === "force_set" && (
+            <Input
+              type="password"
+              placeholder="New password (min 8 characters)"
+              value={forcePassword}
+              onChange={(e) => setForcePassword(e.target.value)}
+              minLength={8}
+            />
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setPwdDialogUser(null); setForcePassword(""); }} disabled={pwdLoading}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handlePasswordAction}
+              disabled={pwdLoading || (pwdDialogMode === "force_set" && forcePassword.length < 8)}
+            >
+              {pwdLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {pwdDialogMode === "reset_link" ? "Generate & Copy Link" : "Set Password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Soft delete dialog ─────────────────────────────────────────────── */}
+      <Dialog open={!!deleteDialogUser} onOpenChange={(v) => { if (!v) setDeleteDialogUser(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {deleteDialogUser?.name}?</DialogTitle>
+            <DialogDescription>
+              This performs a soft delete — the user&apos;s data is archived and can be restored later. Their account will be deactivated.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogUser(null)} disabled={deleteLoading}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleSoftDelete} disabled={deleteLoading}>
+              {deleteLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Delete User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Training status dialog ─────────────────────────────────────────── */}
+      <Dialog open={!!trainingDialogUser} onOpenChange={(v) => { if (!v) setTrainingDialogUser(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Training Status</DialogTitle>
+            <DialogDescription>
+              Update the training status for {trainingDialogUser?.name}.
+            </DialogDescription>
+          </DialogHeader>
+          <Select value={trainingStatus} onValueChange={setTrainingStatus}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="certified">Certified</SelectItem>
+              <SelectItem value="dropped">Dropped</SelectItem>
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTrainingDialogUser(null)} disabled={trainingLoading}>
+              Cancel
+            </Button>
+            <Button onClick={handleTrainingStatusUpdate} disabled={trainingLoading}>
+              {trainingLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Update Status
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Bulk email dialog ─────────────────────────────────────────────── */}
+      <Dialog open={bulkEmailOpen} onOpenChange={(v) => { if (!v) { setBulkEmailOpen(false); setBulkEmailSubject(""); setBulkEmailMessage(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Email to {selectedIds.size} User{selectedIds.size !== 1 ? "s" : ""}</DialogTitle>
+            <DialogDescription>
+              Compose an email to send to the selected users. Emails are sent individually.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="Subject…"
+              value={bulkEmailSubject}
+              onChange={(e) => setBulkEmailSubject(e.target.value)}
+            />
+            <Textarea
+              placeholder="Message body…"
+              value={bulkEmailMessage}
+              onChange={(e) => setBulkEmailMessage(e.target.value)}
+              rows={5}
+              className="resize-none"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkEmailOpen(false)} disabled={bulkEmailLoading}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBulkEmail}
+              disabled={bulkEmailLoading || !bulkEmailSubject.trim() || !bulkEmailMessage.trim()}
+            >
+              {bulkEmailLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Send Email
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Bulk status dialog ─────────────────────────────────────────────── */}
+      <Dialog open={bulkStatusOpen} onOpenChange={(v) => { if (!v) setBulkStatusOpen(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {bulkStatusValue === "blocked" ? "Block" : "Activate"} {selectedIds.size} User{selectedIds.size !== 1 ? "s" : ""}?
+            </DialogTitle>
+            <DialogDescription>
+              {bulkStatusValue === "blocked"
+                ? `This will block ${selectedIds.size} user${selectedIds.size !== 1 ? "s" : ""} — they will be unable to log in. You can unblock them individually at any time.`
+                : `This will re-activate ${selectedIds.size} user${selectedIds.size !== 1 ? "s" : ""} and lift any bans.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkStatusOpen(false)} disabled={bulkStatusLoading}>
+              Cancel
+            </Button>
+            <Button
+              variant={bulkStatusValue === "blocked" ? "destructive" : "default"}
+              onClick={handleBulkStatus}
+              disabled={bulkStatusLoading}
+            >
+              {bulkStatusLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {bulkStatusValue === "blocked" ? "Block Users" : "Activate Users"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Role change dialog ─────────────────────────────────────────────── */}
+      <Dialog open={!!roleDialogUser} onOpenChange={(v) => { if (!v) setRoleDialogUser(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Role for {roleDialogUser?.name}</DialogTitle>
+            <DialogDescription>
+              This will create a new profile record in the target role table. The existing role record will NOT be deleted (for audit purposes). Current role: <strong>{roleDialogUser?.roleLabel}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <Select value={newRole} onValueChange={setNewRole}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="diviner">Diviner</SelectItem>
+              <SelectItem value="client">Client</SelectItem>
+              <SelectItem value="advocate">Advocate</SelectItem>
+              <SelectItem value="trainee">Trainee</SelectItem>
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRoleDialogUser(null)} disabled={roleLoading}>
+              Cancel
+            </Button>
+            <Button onClick={handleRoleChangeAction} disabled={roleLoading || newRole === roleDialogUser?.role}>
+              {roleLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Create Role Record
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
