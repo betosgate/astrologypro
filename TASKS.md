@@ -1,7 +1,7 @@
 # AstrologyPro — Daily Task Board
 
 > **Workflow:** Update this file each session. Check off items as you go. Push at end of day.
-> **Last updated:** 2026-04-06 (session 14 — calendar module, mundane astrology, mystery school lifecycle, PM dashboard enrichment, family login)
+> **Last updated:** 2026-04-06 (session 15 — mystery school 08-11, PM content library, CRON fix, affiliate commission docs)
 > **Migrations:** All applied via `scripts/run-migration.js` — no manual SQL editor needed.
 
 ---
@@ -81,7 +81,7 @@
 | Calendar module (dual-calendar, booking mgmt) | ✅ Done — Microsoft + Google, availability templates, token-based booking page |
 | Admin login (DB-based, no env var dependency) | ✅ Done — admin_users table, requireAdmin(), bootstrap fallback |
 | Admin PM content management (gold standard) | ✅ Done — stats, filters, rich create/edit, seed script |
-| PM community dashboard enrichment | ✅ Done — donate banner, membership details, chart highlights, family rings |
+| PM community dashboard enrichment | ✅ Done — donate banner, membership details, chart highlights, family rings, content library cards |
 | Family member management + invite login | ✅ Done — rich astro form, profile completion, invite-to-login flow |
 | Mystery school enrollment lifecycle | ✅ Done — 4-step upgrade flow, quarter selection, PM→MS upgrade, access guards |
 | Mundane Astrology admin (ingress charts) | ✅ Done — gold standard admin, sector filter, rich create/edit, mundane access control |
@@ -90,7 +90,7 @@
 | Mystery school ritual praxis runner | ✅ Done — sequential step enforcement, execution tracking |
 | Mystery school scry + mundane journals | ✅ Done — card association, 3-section mundane, server validation |
 | Nativity Birth Chart V2 | 🔲 Planned — astro-toolkit/nativity_Birth_Chart_Master_Documentation.md |
-| Mystery school tasks 08–11 (missed decan, graduation, tarot, emails) | 🔲 In queue |
+| Mystery school tasks 08–11 (missed decan, graduation, tarot, emails) | ✅ Done — see session 15 |
 | Admin: spiritual wisdom CRUD | ✅ Done |
 | Admin: decan journals CRUD | ✅ Done |
 | Admin: decan media CRUD | ✅ Done |
@@ -159,6 +159,20 @@
 - Angular bundle optimisation (E10-S3)
 - Angular duplicate AuthService cleanup (E1-S3)
 - Angular TypeScript model interfaces (E1-S4)
+
+---
+
+## ✅ Completed This Session (session 15 — 2026-04-06)
+
+| Feature | Detail |
+|---|---|
+| Mystery school task 08 — missed decan retry | Migration 026; `retried_at` + `retry_reason` on student_decan_progress; decan-unlock cron adds retry pass; admin student detail page with full progress + excuse modal |
+| Mystery school task 09 — graduation + ritual builder | Migration 027; `graduation.ts` service; graduation-check cron; `/community/training/graduation` ceremony page; post-grad personal ritual builder (`/community/training/ritual-builder`) with CRUD API |
+| Mystery school task 10 — tarot seed | Migration 028; tarot card seed data for all 36 decans wired to decan detail pages |
+| Mystery school task 11 — lifecycle emails | `ms-email-reminders` cron: enrollment welcome, decan-unlock notification, inactivity warning (7d), graduation congratulations; registered in vercel.json |
+| PM content library | `mandalism-content` API; `MandalismContentPreview` component; type-specific cards (video/youtube/live/announcement/doc); `/community/library` rewritten server-first with type filter pills |
+| CRON_SECRET whitespace fix | `instrumentation.ts` trims env var at startup + Vercel env var updated directly to clean value via browser; Vercel redeployment triggered |
+| Affiliate Commission task docs | Diviner Affiliate Commission Requirements.docx + overview.md saved to `tasks/06.04.2026/affiliate-commission/` |
 
 ---
 
