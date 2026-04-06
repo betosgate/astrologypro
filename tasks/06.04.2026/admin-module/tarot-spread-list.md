@@ -1,3 +1,5 @@
+**Status:** Done
+
 # Task: Tarot Spread List
 
 ## Target Details

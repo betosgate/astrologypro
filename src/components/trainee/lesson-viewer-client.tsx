@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -224,6 +224,31 @@ export function LessonViewerClient(props: LessonViewerProps) {
       setActiveVideoIdx((i) => i + 1);
     }
   }, [activeVideoIdx, allVideos.length]);
+
+  // Record lesson start on mount
+  useEffect(() => {
+    fetch(`/api/trainee/training/lessons/${lessonId}/start`, { method: "POST" })
+      .catch(() => {}); // fire-and-forget, don't block UI
+  }, [lessonId]);
+
+  // Heartbeat every 30 seconds while the component is mounted
+  useEffect(() => {
+    let lastTick = Date.now();
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const delta = Math.round((now - lastTick) / 1000);
+      lastTick = now;
+
+      fetch(`/api/trainee/training/lessons/${lessonId}/heartbeat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ delta_seconds: delta }),
+      }).catch(() => {}); // fire-and-forget
+    }, 30_000);
+
+    return () => clearInterval(interval);
+  }, [lessonId]);
 
   // All assets + legacy pdf_url
   const allAssets: LessonAsset[] = [

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PrintButton } from "@/components/trainee/print-button";
+import { ShareButton } from "@/components/trainee/share-button";
 import { Award, Star } from "lucide-react";
 import Link from "next/link";
 
@@ -16,7 +17,7 @@ export default async function TraineeCertificatePage() {
 
   const { data: trainee } = await supabase
     .from("trainees")
-    .select("id, name, graduated_at, training_status, specialties")
+    .select("id, name, graduated_at, training_status, specialties, certificate_code")
     .eq("user_id", user.id)
     .single();
 
@@ -28,6 +29,16 @@ export default async function TraineeCertificatePage() {
     { month: "long", day: "numeric", year: "numeric" }
   );
 
+  // certificate_code takes priority; fall back to first UUID segment
+  const displayCode =
+    trainee.certificate_code ?? trainee.id.split("-")[0].toUpperCase();
+
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+  const verifyUrl = trainee.certificate_code
+    ? `${appUrl}/certificate/verify/${trainee.certificate_code}`
+    : null;
+
   return (
     <div className="space-y-6">
       {/* Actions — hidden when printing */}
@@ -35,7 +46,10 @@ export default async function TraineeCertificatePage() {
         <Button variant="outline" size="sm" asChild>
           <Link href="/trainee/progress">← Back to Progress</Link>
         </Button>
-        <PrintButton />
+        <div className="flex items-center gap-2">
+          {verifyUrl && <ShareButton shareUrl={verifyUrl} />}
+          <PrintButton />
+        </div>
       </div>
 
       {/* Certificate */}
@@ -126,16 +140,31 @@ export default async function TraineeCertificatePage() {
           </div>
         </div>
 
-        {/* Certificate ID */}
-        <div className="mt-6 text-center">
+        {/* Certificate ID + Verification */}
+        <div className="mt-6 space-y-3 text-center">
           <p className="text-xs text-gray-400 font-mono">
-            Certificate ID: {trainee.id.split("-")[0].toUpperCase()}
+            Certificate ID: {displayCode}
           </p>
+
+          {verifyUrl && (
+            <div className="rounded-lg border border-amber-100 bg-amber-50/60 px-4 py-3 space-y-1">
+              <p className="text-xs text-gray-500">
+                Verify this certificate:
+              </p>
+              <p className="text-xs font-mono text-amber-700 break-all">
+                {verifyUrl}
+              </p>
+              <p className="text-xs text-gray-400 italic">
+                Scan or visit the URL above to verify authenticity
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
       <p className="text-center text-sm text-muted-foreground print:hidden">
-        Use your browser&apos;s print function or the button above to save as PDF.
+        Use the &ldquo;Download PDF&rdquo; button above, or your browser&apos;s
+        print function, to save this certificate.
       </p>
     </div>
   );

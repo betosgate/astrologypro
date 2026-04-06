@@ -1,3 +1,5 @@
+**Status:** Done
+
 # Task: Tarot Card List
 
 ## Target Details
