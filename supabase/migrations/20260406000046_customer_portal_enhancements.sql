@@ -37,13 +37,37 @@ ALTER TABLE orders ADD CONSTRAINT orders_status_check CHECK (
 );
 
 -- Add client-readable RLS policy for orders (admin policy exists; add client policy)
-CREATE POLICY "clients_read_own_orders"
-  ON orders FOR SELECT
-  USING (client_id IN (SELECT id FROM clients WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'orders'
+      AND policyname = 'clients_read_own_orders'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "clients_read_own_orders"
+        ON orders FOR SELECT
+        USING (client_id IN (SELECT id FROM clients WHERE user_id = auth.uid()))
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "diviners_read_their_orders"
-  ON orders FOR SELECT
-  USING (diviner_id IN (SELECT id FROM diviners WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'orders'
+      AND policyname = 'diviners_read_their_orders'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "diviners_read_their_orders"
+        ON orders FOR SELECT
+        USING (diviner_id IN (SELECT id FROM diviners WHERE user_id = auth.uid()))
+    $p$;
+  END IF;
+END $$;
 
 -- Intake submissions for orders
 CREATE TABLE IF NOT EXISTS order_intake_submissions (
@@ -57,17 +81,41 @@ CREATE TABLE IF NOT EXISTS order_intake_submissions (
 
 ALTER TABLE order_intake_submissions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "clients_manage_own_intake"
-  ON order_intake_submissions FOR ALL
-  USING (client_id IN (SELECT id FROM clients WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'order_intake_submissions'
+      AND policyname = 'clients_manage_own_intake'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "clients_manage_own_intake"
+        ON order_intake_submissions FOR ALL
+        USING (client_id IN (SELECT id FROM clients WHERE user_id = auth.uid()))
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "diviners_read_order_intake"
-  ON order_intake_submissions FOR SELECT
-  USING (order_id IN (
-    SELECT id FROM orders WHERE diviner_id IN (
-      SELECT id FROM diviners WHERE user_id = auth.uid()
-    )
-  ));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'order_intake_submissions'
+      AND policyname = 'diviners_read_order_intake'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "diviners_read_order_intake"
+        ON order_intake_submissions FOR SELECT
+        USING (order_id IN (
+          SELECT id FROM orders WHERE diviner_id IN (
+            SELECT id FROM diviners WHERE user_id = auth.uid()
+          )
+        ))
+    $p$;
+  END IF;
+END $$;
 
 -- Client subscriptions (tracks active weekly/recurring subscriptions per client)
 CREATE TABLE IF NOT EXISTS client_subscriptions (
@@ -91,6 +139,18 @@ CREATE INDEX IF NOT EXISTS cs_diviner_idx ON client_subscriptions(diviner_id, st
 
 ALTER TABLE client_subscriptions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "clients_read_own_subscriptions"
-  ON client_subscriptions FOR SELECT
-  USING (client_id IN (SELECT id FROM clients WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'client_subscriptions'
+      AND policyname = 'clients_read_own_subscriptions'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "clients_read_own_subscriptions"
+        ON client_subscriptions FOR SELECT
+        USING (client_id IN (SELECT id FROM clients WHERE user_id = auth.uid()))
+    $p$;
+  END IF;
+END $$;

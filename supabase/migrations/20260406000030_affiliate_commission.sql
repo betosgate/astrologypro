@@ -81,19 +81,145 @@ ALTER TABLE affiliate_payout_allocations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE affiliate_commission_audit ENABLE ROW LEVEL SECURITY;
 
 -- Diviners see their own commission rules
-CREATE POLICY "diviner_own_rules" ON commission_rules FOR ALL USING (auth.uid() = diviner_user_id);
-CREATE POLICY "service_role_rules" ON commission_rules FOR ALL TO service_role USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'commission_rules'
+      AND policyname = 'diviner_own_rules'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "diviner_own_rules" ON commission_rules FOR ALL USING (auth.uid() = diviner_user_id)
+    $p$;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'commission_rules'
+      AND policyname = 'service_role_rules'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "service_role_rules" ON commission_rules FOR ALL TO service_role USING (true)
+    $p$;
+  END IF;
+END $$;
 
 -- Diviner sees ledger entries they own; affiliate sees their own
-CREATE POLICY "diviner_ledger" ON commission_ledger_entries FOR SELECT USING (auth.uid() = diviner_user_id);
-CREATE POLICY "affiliate_ledger" ON commission_ledger_entries FOR SELECT USING (auth.uid() = affiliate_user_id);
-CREATE POLICY "service_role_ledger" ON commission_ledger_entries FOR ALL TO service_role USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'commission_ledger_entries'
+      AND policyname = 'diviner_ledger'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "diviner_ledger" ON commission_ledger_entries FOR SELECT USING (auth.uid() = diviner_user_id)
+    $p$;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'commission_ledger_entries'
+      AND policyname = 'affiliate_ledger'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "affiliate_ledger" ON commission_ledger_entries FOR SELECT USING (auth.uid() = affiliate_user_id)
+    $p$;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'commission_ledger_entries'
+      AND policyname = 'service_role_ledger'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "service_role_ledger" ON commission_ledger_entries FOR ALL TO service_role USING (true)
+    $p$;
+  END IF;
+END $$;
 
 -- Diviner manages payouts
-CREATE POLICY "diviner_payouts" ON affiliate_payout_records FOR ALL USING (auth.uid() = diviner_user_id);
-CREATE POLICY "affiliate_view_payouts" ON affiliate_payout_records FOR SELECT USING (auth.uid() = affiliate_user_id);
-CREATE POLICY "service_role_payouts" ON affiliate_payout_records FOR ALL TO service_role USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'affiliate_payout_records'
+      AND policyname = 'diviner_payouts'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "diviner_payouts" ON affiliate_payout_records FOR ALL USING (auth.uid() = diviner_user_id)
+    $p$;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'affiliate_payout_records'
+      AND policyname = 'affiliate_view_payouts'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "affiliate_view_payouts" ON affiliate_payout_records FOR SELECT USING (auth.uid() = affiliate_user_id)
+    $p$;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'affiliate_payout_records'
+      AND policyname = 'service_role_payouts'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "service_role_payouts" ON affiliate_payout_records FOR ALL TO service_role USING (true)
+    $p$;
+  END IF;
+END $$;
 
 -- Payout allocations inherit from payout records
-CREATE POLICY "service_role_allocations" ON affiliate_payout_allocations FOR ALL TO service_role USING (true);
-CREATE POLICY "service_role_audit" ON affiliate_commission_audit FOR ALL TO service_role USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'affiliate_payout_allocations'
+      AND policyname = 'service_role_allocations'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "service_role_allocations" ON affiliate_payout_allocations FOR ALL TO service_role USING (true)
+    $p$;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'affiliate_commission_audit'
+      AND policyname = 'service_role_audit'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "service_role_audit" ON affiliate_commission_audit FOR ALL TO service_role USING (true)
+    $p$;
+  END IF;
+END $$;

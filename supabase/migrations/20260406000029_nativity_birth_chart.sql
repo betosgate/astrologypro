@@ -23,14 +23,38 @@ CREATE INDEX ON birth_chart_results(user_id, created_at DESC);
 
 ALTER TABLE birth_chart_results ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "users_own_charts"
-  ON birth_chart_results FOR ALL
-  USING (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'birth_chart_results'
+      AND policyname = 'users_own_charts'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "users_own_charts"
+        ON birth_chart_results FOR ALL
+        USING (auth.uid() = user_id)
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "service_role_all"
-  ON birth_chart_results FOR ALL
-  TO service_role
-  USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'birth_chart_results'
+      AND policyname = 'service_role_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "service_role_all"
+        ON birth_chart_results FOR ALL
+        TO service_role
+        USING (true)
+    $p$;
+  END IF;
+END $$;
 
 -- AI rate limiting: simple counter per user per UTC day
 CREATE TABLE IF NOT EXISTS ai_interpretation_usage (
@@ -45,11 +69,35 @@ CREATE INDEX ON ai_interpretation_usage(user_id, usage_date);
 
 ALTER TABLE ai_interpretation_usage ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "users_own_usage"
-  ON ai_interpretation_usage FOR ALL
-  USING (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'ai_interpretation_usage'
+      AND policyname = 'users_own_usage'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "users_own_usage"
+        ON ai_interpretation_usage FOR ALL
+        USING (auth.uid() = user_id)
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "service_role_usage_all"
-  ON ai_interpretation_usage FOR ALL
-  TO service_role
-  USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'ai_interpretation_usage'
+      AND policyname = 'service_role_usage_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "service_role_usage_all"
+        ON ai_interpretation_usage FOR ALL
+        TO service_role
+        USING (true)
+    $p$;
+  END IF;
+END $$;

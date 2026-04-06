@@ -32,10 +32,22 @@ CREATE TABLE IF NOT EXISTS decan_excuse_audit (
 
 ALTER TABLE decan_excuse_audit ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "service_role_excuse_audit"
-  ON decan_excuse_audit FOR ALL TO service_role
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'decan_excuse_audit'
+      AND policyname = 'service_role_excuse_audit'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "service_role_excuse_audit"
+        ON decan_excuse_audit FOR ALL TO service_role
+        USING (true)
+        WITH CHECK (true)
+    $p$;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_excuse_audit_student
   ON decan_excuse_audit (student_id);

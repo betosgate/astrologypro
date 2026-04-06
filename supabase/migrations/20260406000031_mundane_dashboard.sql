@@ -59,9 +59,86 @@ ALTER TABLE mundane_entity_charts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mundane_forecasts ENABLE ROW LEVEL SECURITY;
 
 -- Authenticated users can read; service_role has full access
-CREATE POLICY "auth_read_entities" ON mundane_entities FOR SELECT TO authenticated USING (true);
-CREATE POLICY "service_role_entities" ON mundane_entities FOR ALL TO service_role USING (true);
-CREATE POLICY "auth_read_entity_charts" ON mundane_entity_charts FOR SELECT TO authenticated USING (true);
-CREATE POLICY "service_role_entity_charts" ON mundane_entity_charts FOR ALL TO service_role USING (true);
-CREATE POLICY "auth_read_forecasts" ON mundane_forecasts FOR SELECT TO authenticated USING (is_published = true);
-CREATE POLICY "service_role_forecasts" ON mundane_forecasts FOR ALL TO service_role USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'mundane_entities'
+      AND policyname = 'auth_read_entities'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "auth_read_entities" ON mundane_entities FOR SELECT TO authenticated USING (true)
+    $p$;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'mundane_entities'
+      AND policyname = 'service_role_entities'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "service_role_entities" ON mundane_entities FOR ALL TO service_role USING (true)
+    $p$;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'mundane_entity_charts'
+      AND policyname = 'auth_read_entity_charts'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "auth_read_entity_charts" ON mundane_entity_charts FOR SELECT TO authenticated USING (true)
+    $p$;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'mundane_entity_charts'
+      AND policyname = 'service_role_entity_charts'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "service_role_entity_charts" ON mundane_entity_charts FOR ALL TO service_role USING (true)
+    $p$;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'mundane_forecasts'
+      AND policyname = 'auth_read_forecasts'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "auth_read_forecasts" ON mundane_forecasts FOR SELECT TO authenticated USING (is_published = true)
+    $p$;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'mundane_forecasts'
+      AND policyname = 'service_role_forecasts'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "service_role_forecasts" ON mundane_forecasts FOR ALL TO service_role USING (true)
+    $p$;
+  END IF;
+END $$;

@@ -46,9 +46,21 @@ CREATE INDEX IF NOT EXISTS testimonials_status_idx
 --    "testimonials_client_insert" already handles authenticated client inserts;
 --    we add a separate policy for anonymous/unauthenticated public submissions.
 
-CREATE POLICY "public_submit_testimonials"
-  ON testimonials FOR INSERT
-  WITH CHECK (status = 'submitted');
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'testimonials'
+      AND policyname = 'public_submit_testimonials'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "public_submit_testimonials"
+        ON testimonials FOR INSERT
+        WITH CHECK (status = 'submitted')
+    $p$;
+  END IF;
+END $$;
 
 -- Diviners-manage policy already exists as "testimonials_diviner_all".
 -- Admins use the service-role client (bypasses RLS).

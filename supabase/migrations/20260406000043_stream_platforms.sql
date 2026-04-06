@@ -13,17 +13,41 @@ CREATE TABLE stream_platform_configs (
   UNIQUE(diviner_id, platform)
 );
 
-CREATE INDEX spc_diviner_id_idx ON stream_platform_configs(diviner_id, sort_order, is_enabled);
+CREATE INDEX IF NOT EXISTS spc_diviner_id_idx ON stream_platform_configs(diviner_id, sort_order, is_enabled);
 
 ALTER TABLE stream_platform_configs ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "diviners_manage_own_platforms"
-  ON stream_platform_configs FOR ALL
-  USING (diviner_id IN (SELECT id FROM diviners WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'stream_platform_configs'
+      AND policyname = 'diviners_manage_own_platforms'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "diviners_manage_own_platforms"
+        ON stream_platform_configs FOR ALL
+        USING (diviner_id IN (SELECT id FROM diviners WHERE user_id = auth.uid()))
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "public_read_enabled_platforms"
-  ON stream_platform_configs FOR SELECT
-  USING (is_enabled = true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'stream_platform_configs'
+      AND policyname = 'public_read_enabled_platforms'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "public_read_enabled_platforms"
+        ON stream_platform_configs FOR SELECT
+        USING (is_enabled = true)
+    $p$;
+  END IF;
+END $$;
 
 -- Migrate existing data
 INSERT INTO stream_platform_configs (diviner_id, platform, stream_url, is_enabled)

@@ -139,113 +139,305 @@ CREATE INDEX IF NOT EXISTS blog_posts_updated_at_id ON blog_posts(updated_at DES
 DROP POLICY IF EXISTS "public reads published posts" ON blog_posts;
 DROP POLICY IF EXISTS "service role full access blog" ON blog_posts;
 
-CREATE POLICY "blog_posts_public_read"
-  ON blog_posts FOR SELECT
-  USING (status = 'published');
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'blog_posts'
+      AND policyname = 'blog_posts_public_read'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "blog_posts_public_read"
+        ON blog_posts FOR SELECT
+        USING (status = 'published')
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "blog_posts_service_role_all"
-  ON blog_posts FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'blog_posts'
+      AND policyname = 'blog_posts_service_role_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "blog_posts_service_role_all"
+        ON blog_posts FOR ALL
+        TO service_role
+        USING (true)
+        WITH CHECK (true)
+    $p$;
+  END IF;
+END $$;
 
 -- blog_categories
 ALTER TABLE blog_categories ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "blog_categories_public_read"
-  ON blog_categories FOR SELECT
-  USING (is_active = true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'blog_categories'
+      AND policyname = 'blog_categories_public_read'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "blog_categories_public_read"
+        ON blog_categories FOR SELECT
+        USING (is_active = true)
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "blog_categories_service_role_all"
-  ON blog_categories FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'blog_categories'
+      AND policyname = 'blog_categories_service_role_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "blog_categories_service_role_all"
+        ON blog_categories FOR ALL
+        TO service_role
+        USING (true)
+        WITH CHECK (true)
+    $p$;
+  END IF;
+END $$;
 
 -- blog_tags
 ALTER TABLE blog_tags ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "blog_tags_public_read"
-  ON blog_tags FOR SELECT
-  USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'blog_tags'
+      AND policyname = 'blog_tags_public_read'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "blog_tags_public_read"
+        ON blog_tags FOR SELECT
+        USING (true)
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "blog_tags_service_role_all"
-  ON blog_tags FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'blog_tags'
+      AND policyname = 'blog_tags_service_role_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "blog_tags_service_role_all"
+        ON blog_tags FOR ALL
+        TO service_role
+        USING (true)
+        WITH CHECK (true)
+    $p$;
+  END IF;
+END $$;
 
 -- blog_authors
 ALTER TABLE blog_authors ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "blog_authors_public_read"
-  ON blog_authors FOR SELECT
-  USING (is_active = true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'blog_authors'
+      AND policyname = 'blog_authors_public_read'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "blog_authors_public_read"
+        ON blog_authors FOR SELECT
+        USING (is_active = true)
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "blog_authors_service_role_all"
-  ON blog_authors FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'blog_authors'
+      AND policyname = 'blog_authors_service_role_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "blog_authors_service_role_all"
+        ON blog_authors FOR ALL
+        TO service_role
+        USING (true)
+        WITH CHECK (true)
+    $p$;
+  END IF;
+END $$;
 
 -- blog_series
 ALTER TABLE blog_series ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "blog_series_public_read"
-  ON blog_series FOR SELECT
-  USING (is_active = true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'blog_series'
+      AND policyname = 'blog_series_public_read'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "blog_series_public_read"
+        ON blog_series FOR SELECT
+        USING (is_active = true)
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "blog_series_service_role_all"
-  ON blog_series FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'blog_series'
+      AND policyname = 'blog_series_service_role_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "blog_series_service_role_all"
+        ON blog_series FOR ALL
+        TO service_role
+        USING (true)
+        WITH CHECK (true)
+    $p$;
+  END IF;
+END $$;
 
 -- blog_post_categories
 ALTER TABLE blog_post_categories ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "blog_post_categories_service_role_all"
-  ON blog_post_categories FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'blog_post_categories'
+      AND policyname = 'blog_post_categories_service_role_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "blog_post_categories_service_role_all"
+        ON blog_post_categories FOR ALL
+        TO service_role
+        USING (true)
+        WITH CHECK (true)
+    $p$;
+  END IF;
+END $$;
 
 -- blog_post_tags
 ALTER TABLE blog_post_tags ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "blog_post_tags_service_role_all"
-  ON blog_post_tags FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'blog_post_tags'
+      AND policyname = 'blog_post_tags_service_role_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "blog_post_tags_service_role_all"
+        ON blog_post_tags FOR ALL
+        TO service_role
+        USING (true)
+        WITH CHECK (true)
+    $p$;
+  END IF;
+END $$;
 
 -- blog_post_revisions
 ALTER TABLE blog_post_revisions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "blog_revisions_service_role_all"
-  ON blog_post_revisions FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'blog_post_revisions'
+      AND policyname = 'blog_revisions_service_role_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "blog_revisions_service_role_all"
+        ON blog_post_revisions FOR ALL
+        TO service_role
+        USING (true)
+        WITH CHECK (true)
+    $p$;
+  END IF;
+END $$;
 
 -- blog_redirects
 ALTER TABLE blog_redirects ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "blog_redirects_public_read"
-  ON blog_redirects FOR SELECT
-  USING (is_active = true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'blog_redirects'
+      AND policyname = 'blog_redirects_public_read'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "blog_redirects_public_read"
+        ON blog_redirects FOR SELECT
+        USING (is_active = true)
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "blog_redirects_service_role_all"
-  ON blog_redirects FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'blog_redirects'
+      AND policyname = 'blog_redirects_service_role_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "blog_redirects_service_role_all"
+        ON blog_redirects FOR ALL
+        TO service_role
+        USING (true)
+        WITH CHECK (true)
+    $p$;
+  END IF;
+END $$;
 
 -- blog_cta_blocks
 ALTER TABLE blog_cta_blocks ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "blog_cta_service_role_all"
-  ON blog_cta_blocks FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'blog_cta_blocks'
+      AND policyname = 'blog_cta_service_role_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "blog_cta_service_role_all"
+        ON blog_cta_blocks FOR ALL
+        TO service_role
+        USING (true)
+        WITH CHECK (true)
+    $p$;
+  END IF;
+END $$;

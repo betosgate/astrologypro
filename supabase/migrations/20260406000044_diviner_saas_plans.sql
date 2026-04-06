@@ -58,14 +58,26 @@ CREATE TABLE diviner_plan_subscriptions (
   UNIQUE(diviner_id)
 );
 
-CREATE INDEX dps_diviner_idx ON diviner_plan_subscriptions(diviner_id, status);
-CREATE INDEX dps_stripe_idx ON diviner_plan_subscriptions(stripe_subscription_id);
+CREATE INDEX IF NOT EXISTS dps_diviner_idx ON diviner_plan_subscriptions(diviner_id, status);
+CREATE INDEX IF NOT EXISTS dps_stripe_idx ON diviner_plan_subscriptions(stripe_subscription_id);
 
 ALTER TABLE diviner_plan_subscriptions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "diviners_read_own_plan"
-  ON diviner_plan_subscriptions FOR SELECT
-  USING (diviner_id IN (SELECT id FROM diviners WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'diviner_plan_subscriptions'
+      AND policyname = 'diviners_read_own_plan'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "diviners_read_own_plan"
+        ON diviner_plan_subscriptions FOR SELECT
+        USING (diviner_id IN (SELECT id FROM diviners WHERE user_id = auth.uid()))
+    $p$;
+  END IF;
+END $$;
 
 -- Active add-ons per diviner
 CREATE TABLE diviner_active_addons (
@@ -81,9 +93,21 @@ CREATE TABLE diviner_active_addons (
 
 ALTER TABLE diviner_active_addons ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "diviners_read_own_addons"
-  ON diviner_active_addons FOR SELECT
-  USING (diviner_id IN (SELECT id FROM diviners WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'diviner_active_addons'
+      AND policyname = 'diviners_read_own_addons'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "diviners_read_own_addons"
+        ON diviner_active_addons FOR SELECT
+        USING (diviner_id IN (SELECT id FROM diviners WHERE user_id = auth.uid()))
+    $p$;
+  END IF;
+END $$;
 
 -- Invoices for diviner SaaS billing
 CREATE TABLE diviner_invoices (
@@ -104,13 +128,25 @@ CREATE TABLE diviner_invoices (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX di_diviner_idx ON diviner_invoices(diviner_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS di_diviner_idx ON diviner_invoices(diviner_id, created_at DESC);
 
 ALTER TABLE diviner_invoices ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "diviners_read_own_invoices"
-  ON diviner_invoices FOR SELECT
-  USING (diviner_id IN (SELECT id FROM diviners WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'diviner_invoices'
+      AND policyname = 'diviners_read_own_invoices'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "diviners_read_own_invoices"
+        ON diviner_invoices FOR SELECT
+        USING (diviner_id IN (SELECT id FROM diviners WHERE user_id = auth.uid()))
+    $p$;
+  END IF;
+END $$;
 
 -- Telephony usage charges
 CREATE TABLE telephony_usage_records (
@@ -126,10 +162,22 @@ CREATE TABLE telephony_usage_records (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX tur_diviner_idx ON telephony_usage_records(diviner_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS tur_diviner_idx ON telephony_usage_records(diviner_id, created_at DESC);
 
 ALTER TABLE telephony_usage_records ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "diviners_read_own_telephony"
-  ON telephony_usage_records FOR SELECT
-  USING (diviner_id IN (SELECT id FROM diviners WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'telephony_usage_records'
+      AND policyname = 'diviners_read_own_telephony'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "diviners_read_own_telephony"
+        ON telephony_usage_records FOR SELECT
+        USING (diviner_id IN (SELECT id FROM diviners WHERE user_id = auth.uid()))
+    $p$;
+  END IF;
+END $$;

@@ -196,72 +196,228 @@ WHERE is_active = false
 -- permissions: publicly readable; admin-only writes
 ALTER TABLE permissions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "permissions_read_all"
-  ON permissions FOR SELECT
-  USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'permissions'
+      AND policyname = 'permissions_read_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "permissions_read_all"
+        ON permissions FOR SELECT
+        USING (true)
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "permissions_admin_write"
-  ON permissions FOR ALL
-  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'permissions'
+      AND policyname = 'permissions_admin_write'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "permissions_admin_write"
+        ON permissions FOR ALL
+        USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()))
+    $p$;
+  END IF;
+END $$;
 
 -- role_permissions: publicly readable; admin-only writes
 ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "role_permissions_read_all"
-  ON role_permissions FOR SELECT
-  USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'role_permissions'
+      AND policyname = 'role_permissions_read_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "role_permissions_read_all"
+        ON role_permissions FOR SELECT
+        USING (true)
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "role_permissions_admin_write"
-  ON role_permissions FOR ALL
-  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'role_permissions'
+      AND policyname = 'role_permissions_admin_write'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "role_permissions_admin_write"
+        ON role_permissions FOR ALL
+        USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()))
+    $p$;
+  END IF;
+END $$;
 
 -- invitations: admin full access
 ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "invitations_admin_all"
-  ON invitations FOR ALL
-  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'invitations'
+      AND policyname = 'invitations_admin_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "invitations_admin_all"
+        ON invitations FOR ALL
+        USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()))
+    $p$;
+  END IF;
+END $$;
 
 -- user_relationships: admin full; diviner reads own scope (parent or child)
 ALTER TABLE user_relationships ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "user_relationships_admin_all"
-  ON user_relationships FOR ALL
-  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'user_relationships'
+      AND policyname = 'user_relationships_admin_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "user_relationships_admin_all"
+        ON user_relationships FOR ALL
+        USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()))
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "user_relationships_diviner_read"
-  ON user_relationships FOR SELECT
-  USING (parent_user_id = auth.uid() OR child_user_id = auth.uid());
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'user_relationships'
+      AND policyname = 'user_relationships_diviner_read'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "user_relationships_diviner_read"
+        ON user_relationships FOR SELECT
+        USING (parent_user_id = auth.uid() OR child_user_id = auth.uid())
+    $p$;
+  END IF;
+END $$;
 
 -- user_security_events: admin full; user reads own events
 ALTER TABLE user_security_events ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "security_events_admin_all"
-  ON user_security_events FOR ALL
-  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'user_security_events'
+      AND policyname = 'security_events_admin_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "security_events_admin_all"
+        ON user_security_events FOR ALL
+        USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()))
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "security_events_self_read"
-  ON user_security_events FOR SELECT
-  USING (user_id = auth.uid());
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'user_security_events'
+      AND policyname = 'security_events_self_read'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "security_events_self_read"
+        ON user_security_events FOR SELECT
+        USING (user_id = auth.uid())
+    $p$;
+  END IF;
+END $$;
 
 -- communication_preferences: admin full; user manages own row
 ALTER TABLE communication_preferences ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "comm_prefs_admin_all"
-  ON communication_preferences FOR ALL
-  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'communication_preferences'
+      AND policyname = 'comm_prefs_admin_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "comm_prefs_admin_all"
+        ON communication_preferences FOR ALL
+        USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()))
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "comm_prefs_self_all"
-  ON communication_preferences FOR ALL
-  USING (user_id = auth.uid());
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'communication_preferences'
+      AND policyname = 'comm_prefs_self_all'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "comm_prefs_self_all"
+        ON communication_preferences FOR ALL
+        USING (user_id = auth.uid())
+    $p$;
+  END IF;
+END $$;
 
 -- user_impersonation_log: admin read + insert only
 ALTER TABLE user_impersonation_log ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "impersonation_log_admin_read"
-  ON user_impersonation_log FOR SELECT
-  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'user_impersonation_log'
+      AND policyname = 'impersonation_log_admin_read'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "impersonation_log_admin_read"
+        ON user_impersonation_log FOR SELECT
+        USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()))
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "impersonation_log_admin_insert"
-  ON user_impersonation_log FOR INSERT
-  WITH CHECK (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'user_impersonation_log'
+      AND policyname = 'impersonation_log_admin_insert'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "impersonation_log_admin_insert"
+        ON user_impersonation_log FOR INSERT
+        WITH CHECK (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()))
+    $p$;
+  END IF;
+END $$;

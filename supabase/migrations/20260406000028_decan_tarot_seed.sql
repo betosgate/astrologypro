@@ -62,9 +62,21 @@ CREATE INDEX IF NOT EXISTS idx_ms_email_log_student ON ms_email_log (student_id)
 ALTER TABLE ms_email_log ENABLE ROW LEVEL SECURITY;
 
 -- Service role has full access; no end-user access needed.
-CREATE POLICY "service_role_ms_email_log"
-  ON ms_email_log
-  FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'ms_email_log'
+      AND policyname = 'service_role_ms_email_log'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "service_role_ms_email_log"
+        ON ms_email_log
+        FOR ALL
+        TO service_role
+        USING (true)
+        WITH CHECK (true)
+    $p$;
+  END IF;
+END $$;

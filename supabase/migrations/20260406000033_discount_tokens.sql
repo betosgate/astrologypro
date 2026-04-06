@@ -16,12 +16,36 @@ CREATE INDEX ON member_discount_tokens(token);
 ALTER TABLE member_discount_tokens ENABLE ROW LEVEL SECURITY;
 
 -- Users can read and manage their own tokens
-CREATE POLICY "Users own their tokens"
-  ON member_discount_tokens FOR ALL
-  USING (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'member_discount_tokens'
+      AND policyname = 'Users own their tokens'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "Users own their tokens"
+        ON member_discount_tokens FOR ALL
+        USING (auth.uid() = user_id)
+    $p$;
+  END IF;
+END $$;
 
 -- Service role has unrestricted access (needed by booking-payment route)
-CREATE POLICY "Service role full access"
-  ON member_discount_tokens
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'member_discount_tokens'
+      AND policyname = 'Service role full access'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "Service role full access"
+        ON member_discount_tokens
+        USING (true)
+        WITH CHECK (true)
+    $p$;
+  END IF;
+END $$;

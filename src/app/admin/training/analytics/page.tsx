@@ -237,7 +237,13 @@ export default function TrainingAnalyticsPage() {
     setOverviewLoading(true);
     fetch("/api/admin/training/analytics/overview")
       .then((r) => r.json())
-      .then((d) => setOverview(d))
+      .then((d) => {
+        // Guard: only set if the response looks like valid overview data
+        if (d && typeof d.total_trainees === "number") {
+          setOverview(d);
+        }
+      })
+      .catch(() => {/* silently ignore network/parse errors */})
       .finally(() => setOverviewLoading(false));
   }, []);
 
@@ -253,9 +259,10 @@ export default function TrainingAnalyticsPage() {
     fetch(`/api/admin/training/analytics/users?${params}`)
       .then((r) => r.json())
       .then((d) => {
-        setUsers(d.users ?? []);
-        setUsersTotal(d.total ?? 0);
+        setUsers(Array.isArray(d?.users) ? d.users : []);
+        setUsersTotal(typeof d?.total === "number" ? d.total : 0);
       })
+      .catch(() => { setUsers([]); setUsersTotal(0); })
       .finally(() => setUsersLoading(false));
   };
 
@@ -265,7 +272,8 @@ export default function TrainingAnalyticsPage() {
     setProgramsLoading(true);
     fetch("/api/admin/training/analytics/programs")
       .then((r) => r.json())
-      .then((d) => setPrograms(d.programs ?? []))
+      .then((d) => setPrograms(Array.isArray(d?.programs) ? d.programs : []))
+      .catch(() => setPrograms([]))
       .finally(() => {
         setProgramsLoading(false);
         setProgramsFetched(true);
@@ -287,7 +295,8 @@ export default function TrainingAnalyticsPage() {
     if (pid && pid !== "all") params.set("program_id", pid);
     fetch(`/api/admin/training/analytics/categories?${params}`)
       .then((r) => r.json())
-      .then((d) => setCategories(d.categories ?? []))
+      .then((d) => setCategories(Array.isArray(d?.categories) ? d.categories : []))
+      .catch(() => setCategories([]))
       .finally(() => {
         setCategoriesLoading(false);
         setCategoriesFetched(true);
@@ -309,7 +318,8 @@ export default function TrainingAnalyticsPage() {
     if (cid && cid !== "all") params.set("category_id", cid);
     fetch(`/api/admin/training/analytics/lessons?${params}`)
       .then((r) => r.json())
-      .then((d) => setLessons(d.lessons ?? []))
+      .then((d) => setLessons(Array.isArray(d?.lessons) ? d.lessons : []))
+      .catch(() => setLessons([]))
       .finally(() => {
         setLessonsLoading(false);
         setLessonsFetched(true);
@@ -322,7 +332,8 @@ export default function TrainingAnalyticsPage() {
     setQuizzesLoading(true);
     fetch("/api/admin/training/analytics/quizzes")
       .then((r) => r.json())
-      .then((d) => setQuizzes(d.quizzes ?? []))
+      .then((d) => setQuizzes(Array.isArray(d?.quizzes) ? d.quizzes : []))
+      .catch(() => setQuizzes([]))
       .finally(() => {
         setQuizzesLoading(false);
         setQuizzesFetched(true);

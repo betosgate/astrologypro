@@ -31,19 +31,43 @@ CREATE TABLE IF NOT EXISTS personal_rituals (
 
 ALTER TABLE personal_rituals ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "student_own_rituals"
-  ON personal_rituals FOR ALL TO authenticated
-  USING (student_id IN (
-    SELECT id FROM mystery_school_students WHERE user_id = auth.uid()
-  ))
-  WITH CHECK (student_id IN (
-    SELECT id FROM mystery_school_students WHERE user_id = auth.uid()
-  ));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'personal_rituals'
+      AND policyname = 'student_own_rituals'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "student_own_rituals"
+        ON personal_rituals FOR ALL TO authenticated
+        USING (student_id IN (
+          SELECT id FROM mystery_school_students WHERE user_id = auth.uid()
+        ))
+        WITH CHECK (student_id IN (
+          SELECT id FROM mystery_school_students WHERE user_id = auth.uid()
+        ))
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "service_role_personal_rituals"
-  ON personal_rituals FOR ALL TO service_role
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'personal_rituals'
+      AND policyname = 'service_role_personal_rituals'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "service_role_personal_rituals"
+        ON personal_rituals FOR ALL TO service_role
+        USING (true)
+        WITH CHECK (true)
+    $p$;
+  END IF;
+END $$;
 
 -- Index for student personal ritual lookups
 CREATE INDEX IF NOT EXISTS idx_personal_rituals_student_id

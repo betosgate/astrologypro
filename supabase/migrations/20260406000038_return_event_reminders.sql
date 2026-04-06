@@ -37,8 +37,20 @@ CREATE INDEX IF NOT EXISTS lifecycle_events_date_type_idx ON lifecycle_return_ev
 -- RLS: admin can manage all events; diviners can see their clients' events
 ALTER TABLE lifecycle_return_events ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "lifecycle_events_admin" ON lifecycle_return_events FOR ALL
-  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'lifecycle_return_events'
+      AND policyname = 'lifecycle_events_admin'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "lifecycle_events_admin" ON lifecycle_return_events FOR ALL
+        USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()))
+    $p$;
+  END IF;
+END $$;
 
 -- ---------------------------------------------------------------------------
 -- Add primary_diviner_id to clients for attribution / email routing

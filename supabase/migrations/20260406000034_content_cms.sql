@@ -16,14 +16,38 @@ CREATE TABLE IF NOT EXISTS holy_books (
 
 ALTER TABLE holy_books ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Active members can read holy_books"
-  ON holy_books FOR SELECT
-  USING (is_active = true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'holy_books'
+      AND policyname = 'Active members can read holy_books'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "Active members can read holy_books"
+        ON holy_books FOR SELECT
+        USING (is_active = true)
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "Service role full access holy_books"
-  ON holy_books
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'holy_books'
+      AND policyname = 'Service role full access holy_books'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "Service role full access holy_books"
+        ON holy_books
+        USING (true)
+        WITH CHECK (true)
+    $p$;
+  END IF;
+END $$;
 
 -- ── Doctrine Links ────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS doctrine_links (
@@ -41,14 +65,38 @@ CREATE TABLE IF NOT EXISTS doctrine_links (
 
 ALTER TABLE doctrine_links ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Active members can read doctrine_links"
-  ON doctrine_links FOR SELECT
-  USING (is_active = true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'doctrine_links'
+      AND policyname = 'Active members can read doctrine_links'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "Active members can read doctrine_links"
+        ON doctrine_links FOR SELECT
+        USING (is_active = true)
+    $p$;
+  END IF;
+END $$;
 
-CREATE POLICY "Service role full access doctrine_links"
-  ON doctrine_links
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'doctrine_links'
+      AND policyname = 'Service role full access doctrine_links'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "Service role full access doctrine_links"
+        ON doctrine_links
+        USING (true)
+        WITH CHECK (true)
+    $p$;
+  END IF;
+END $$;
 
 -- ── Sunday Service: add book_name column ──────────────────────────────────────
 ALTER TABLE sunday_service_sessions ADD COLUMN IF NOT EXISTS book_name text;

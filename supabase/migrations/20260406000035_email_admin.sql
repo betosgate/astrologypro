@@ -11,7 +11,20 @@ CREATE TABLE IF NOT EXISTS email_send_log (
 CREATE INDEX ON email_send_log(user_id, template_name);
 CREATE INDEX ON email_send_log(sent_at DESC);
 ALTER TABLE email_send_log ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Service role full access" ON email_send_log USING (true) WITH CHECK (true);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'email_send_log'
+      AND policyname = 'Service role full access'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "Service role full access" ON email_send_log USING (true) WITH CHECK (true)
+    $p$;
+  END IF;
+END $$;
 
 -- Email sequence pause controls
 CREATE TABLE IF NOT EXISTS email_sequence_controls (
@@ -25,7 +38,20 @@ CREATE TABLE IF NOT EXISTS email_sequence_controls (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE email_sequence_controls ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Service role full access" ON email_sequence_controls USING (true) WITH CHECK (true);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'email_sequence_controls'
+      AND policyname = 'Service role full access'
+  ) THEN
+    EXECUTE $p$
+      CREATE POLICY "Service role full access" ON email_sequence_controls USING (true) WITH CHECK (true)
+    $p$;
+  END IF;
+END $$;
 
 -- Seed sequence control rows
 INSERT INTO email_sequence_controls (sequence_name, display_name, description) VALUES
