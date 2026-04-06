@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { CheckCircle2, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { CheckCircle2, XCircle, ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -50,6 +50,34 @@ export function LessonViewerQuiz({
   const [score, setScore] = useState<number | null>(null);
   const [total, setTotal] = useState<number | null>(null);
   const [passed, setPassed] = useState(false);
+  const [cooldownEndsAt, setCooldownEndsAt] = useState<Date | null>(null);
+  const [cooldownSecondsLeft, setCooldownSecondsLeft] = useState<number>(0);
+  const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Cooldown countdown timer ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!cooldownEndsAt) return;
+
+    function tick() {
+      const remaining = Math.ceil((cooldownEndsAt!.getTime() - Date.now()) / 1000);
+      if (remaining <= 0) {
+        setCooldownSecondsLeft(0);
+        setCooldownEndsAt(null);
+        if (cooldownTimerRef.current) {
+          clearInterval(cooldownTimerRef.current);
+          cooldownTimerRef.current = null;
+        }
+      } else {
+        setCooldownSecondsLeft(remaining);
+      }
+    }
+
+    tick(); // run immediately
+    cooldownTimerRef.current = setInterval(tick, 1000);
+    return () => {
+      if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+    };
+  }, [cooldownEndsAt]);
 
   if (alreadyPassed) {
     return (
@@ -94,6 +122,15 @@ export function LessonViewerQuiz({
         }
       );
 
+      if (res.status === 429) {
+        const errJson = await res.json().catch(() => ({}));
+        if (errJson.cooldown && errJson.cooldown_ends_at) {
+          setCooldownEndsAt(new Date(errJson.cooldown_ends_at));
+          setCooldownSecondsLeft((errJson.minutes_left ?? 1) * 60);
+        }
+        throw new Error(errJson.error ?? "Too many attempts. Please wait before retrying.");
+      }
+
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
         throw new Error(errJson.error ?? "Failed to submit quiz");
@@ -130,6 +167,15 @@ export function LessonViewerQuiz({
     setTotal(null);
     setPassed(false);
     setCurrentQ(0);
+    // Do not clear cooldown here — cooldown persists across retry button clicks
+  }
+
+  const isCoolingDown = cooldownEndsAt !== null && cooldownSecondsLeft > 0;
+
+  function formatCountdown(seconds: number): string {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return m > 0 ? `${m}m ${s.toString().padStart(2, "0")}s` : `${s}s`;
   }
 
   const q = questions[currentQ];
@@ -220,14 +266,30 @@ export function LessonViewerQuiz({
         </div>
 
         {!passed && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRetry}
-            className="w-full"
-          >
-            Try Again
-          </Button>
+          <>
+            {isCoolingDown && (
+              <div className="flex items-center gap-2 rounded-lg border border-amber-400/40 bg-amber-500/5 px-3 py-2.5 text-sm text-amber-600">
+                <Clock className="size-4 shrink-0" />
+                <span>
+                  Please wait{" "}
+                  <span className="font-semibold tabular-nums">
+                    {formatCountdown(cooldownSecondsLeft)}
+                  </span>{" "}
+                  before trying again.
+                </span>
+              </div>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              disabled={isCoolingDown}
+              className="w-full"
+              aria-disabled={isCoolingDown}
+            >
+              {isCoolingDown ? `Retry available in ${formatCountdown(cooldownSecondsLeft)}` : "Try Again"}
+            </Button>
+          </>
         )}
       </div>
     );
@@ -298,7 +360,7 @@ export function LessonViewerQuiz({
           <Button
             size="sm"
             onClick={handleSubmit}
-            disabled={!allAnswered || submitting}
+            disabled={!allAnswered || submitting || isCoolingDown}
           >
             {submitting ? "Submitting…" : "Submit Quiz"}
           </Button>

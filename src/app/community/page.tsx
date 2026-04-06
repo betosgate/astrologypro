@@ -26,6 +26,7 @@ import Link from "next/link";
 import { AstroChartsSection } from "@/components/community/astro-charts-section";
 import { ProfileProgressSection } from "@/components/community/profile-progress-section";
 import { MembershipCard, type MembershipSubscription } from "@/components/community/membership-card";
+import { ProfileCompletionCard, type ProfileCompletionData } from "@/components/community/profile-completion-card";
 
 export const metadata = { title: "Community - AstrologyPro" };
 export const dynamic = "force-dynamic";
@@ -79,6 +80,8 @@ export default async function CommunityDashboardPage() {
     recentBlogResult,
     ritualsResult,
     contentCountsResult,
+    profileCompletionFamilyResult,
+    profileCompletionRelChartResult,
   ] = await Promise.all([
     // Client profile for progress ring calculation
     supabase
@@ -131,6 +134,20 @@ export default async function CommunityDashboardPage() {
       .from("mandalism_content")
       .select("content_type")
       .eq("is_published", true),
+
+    // Profile completion: family members with natal_chart data
+    supabase
+      .from("community_family_members")
+      .select("id, natal_chart")
+      .eq("member_id", member.id),
+
+    // Profile completion: relationship charts generated
+    supabase
+      .from("relationship_charts")
+      .select("id, generated_at")
+      .eq("member_id", member.id)
+      .not("generated_at", "is", null)
+      .limit(1),
   ]);
 
   const client = clientResult.data;
@@ -140,6 +157,8 @@ export default async function CommunityDashboardPage() {
   const recentBlog = recentBlogResult.data ?? [];
   const rituals = ritualsResult.data ?? [];
   const allContent = contentCountsResult.data ?? [];
+  const pcFamilyMembers = profileCompletionFamilyResult.data ?? [];
+  const pcRelCharts = profileCompletionRelChartResult.data ?? [];
 
   // ── Membership card subscription prop ────────────────────────────────────
   const maxMembers = planType === "family" ? 5 : 1;
@@ -166,11 +185,80 @@ export default async function CommunityDashboardPage() {
     max_members: maxMembers,
   };
 
-  // ── Profile completion percentage ─────────────────────────────────────────
+  // ── Legacy profile completion percentage (birth-data-only ring) ──────────
   let profilePct = 0;
   if (client?.birth_date) profilePct += 34;
   if (client?.birth_time) profilePct += 33;
   if (client?.birth_city) profilePct += 33;
+
+  // ── Full profile completion data (weighted, for ProfileCompletionCard) ────
+  const hasPhoto = Boolean(
+    user.user_metadata?.avatar_url &&
+      String(user.user_metadata.avatar_url).trim() !== ""
+  );
+  const pcHasFullName = Boolean(member.full_name && member.full_name.trim() !== "");
+  const pcHasBirthData = Boolean(
+    client?.birth_date && client?.birth_time && client?.birth_city
+  );
+  const pcHasNatalChart = pcFamilyMembers.some(
+    (fm) =>
+      fm.natal_chart != null &&
+      Object.keys(fm.natal_chart as Record<string, unknown>).length > 0
+  );
+  const pcHasFamilyMember = pcFamilyMembers.length > 0;
+  const pcHasRelationshipChart = pcRelCharts.length > 0;
+
+  const profileCompletionItems: ProfileCompletionData["items"] = [
+    {
+      key: "profile_photo",
+      label: "Profile photo uploaded",
+      completed: hasPhoto,
+      pct: 20,
+      action_url: "/community/profile",
+    },
+    {
+      key: "full_name",
+      label: "Full name set",
+      completed: pcHasFullName,
+      pct: 10,
+      action_url: "/community/profile",
+    },
+    {
+      key: "birth_data",
+      label: "Birth data complete (date, time & location)",
+      completed: pcHasBirthData,
+      pct: 25,
+      action_url: "/community/profile",
+    },
+    {
+      key: "natal_chart",
+      label: "Natal chart generated",
+      completed: pcHasNatalChart,
+      pct: 20,
+      action_url: "/community/family",
+    },
+    {
+      key: "family_member",
+      label: "At least 1 family member added",
+      completed: pcHasFamilyMember,
+      pct: 10,
+      action_url: "/community/family",
+    },
+    {
+      key: "relationship_chart",
+      label: "Relationship chart generated",
+      completed: pcHasRelationshipChart,
+      pct: 15,
+      action_url: "/community/family",
+    },
+  ];
+
+  const profileCompletionData: ProfileCompletionData = {
+    overall_pct: profileCompletionItems
+      .filter((i) => i.completed)
+      .reduce((sum, i) => sum + i.pct, 0),
+    items: profileCompletionItems,
+  };
 
   // ── Content counts by type ─────────────────────────────────────────────────
   const contentCounts: Record<string, number> = {};
@@ -277,6 +365,9 @@ export default async function CommunityDashboardPage() {
 
       {/* ── Membership Info Card ────────────────────────────────────────────── */}
       <MembershipCard subscription={membershipSubscription} />
+
+      {/* ── PM Profile Completion Card ─────────────────────────────────────── */}
+      <ProfileCompletionCard initialData={profileCompletionData} />
 
       {/* ── Profile Progress + Astro Charts ────────────────────────────────── */}
       <section className="grid gap-4 sm:grid-cols-2">

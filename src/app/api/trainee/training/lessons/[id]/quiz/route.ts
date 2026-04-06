@@ -6,6 +6,8 @@ import { sendQuizPassed } from "@/lib/email";
 export const dynamic = "force-dynamic";
 
 const PASS_THRESHOLD_PCT = 70;
+const COOLDOWN_MINUTES = 30;
+const FREE_ATTEMPTS_BEFORE_COOLDOWN = 2; // first 2 attempts have no cooldown
 
 /**
  * POST /api/trainee/training/lessons/[id]/quiz
@@ -118,6 +120,45 @@ export async function POST(
     );
   }
 
+  // ── Cooldown check ────────────────────────────────────────────────────────
+  // Find the most recent failed attempt for this user+lesson
+  const { data: recentFailed } = await admin
+    .from("quiz_attempts")
+    .select("attempted_at, attempt_number")
+    .eq("user_id", user.id)
+    .eq("lesson_id", lessonId)
+    .eq("passed", false)
+    .order("attempted_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (recentFailed && recentFailed.attempt_number >= FREE_ATTEMPTS_BEFORE_COOLDOWN) {
+    const cooldownEndsAt = new Date(recentFailed.attempted_at);
+    cooldownEndsAt.setMinutes(cooldownEndsAt.getMinutes() + COOLDOWN_MINUTES);
+
+    if (new Date() < cooldownEndsAt) {
+      const minutesLeft = Math.ceil((cooldownEndsAt.getTime() - Date.now()) / 60000);
+      return NextResponse.json(
+        {
+          error: `Please wait ${minutesLeft} minute(s) before retrying.`,
+          cooldown: true,
+          cooldown_ends_at: cooldownEndsAt.toISOString(),
+          minutes_left: minutesLeft,
+        },
+        { status: 429 }
+      );
+    }
+  }
+
+  // ── Count total attempts to set attempt_number ─────────────────────────────
+  const { count: attemptCount } = await admin
+    .from("quiz_attempts")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("lesson_id", lessonId);
+
+  const attemptNumber = (attemptCount ?? 0) + 1;
+
   // Grade the quiz
   let score = 0;
   const results = questions.map((q, idx) => {
@@ -145,6 +186,7 @@ export async function POST(
     score,
     total_questions: total,
     passed,
+    attempt_number: attemptNumber,
     ...(timeTakenSeconds !== null ? { time_taken_seconds: timeTakenSeconds } : {}),
   });
 

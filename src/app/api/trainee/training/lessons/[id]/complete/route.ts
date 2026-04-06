@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -6,6 +7,7 @@ import {
   sendCategoryComplete,
   sendProgramComplete,
 } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -271,12 +273,15 @@ export async function POST(
             .maybeSingle();
 
           if (traineeRow && !traineeRow.graduated_at) {
-            // Auto-graduate
+            // Auto-graduate — generate a unique certificate verification code
+            const certCode = randomBytes(6).toString("hex").toUpperCase();
+
             await admin
               .from("trainees")
               .update({
                 graduated_at: new Date().toISOString(),
                 training_status: "graduated",
+                certificate_code: certCode,
               })
               .eq("id", traineeRow.id);
 
@@ -288,6 +293,15 @@ export async function POST(
               name: traineeName,
               programName,
               certificateUrl,
+            }).catch(() => {});
+
+            // In-app graduation notification (fire-and-forget)
+            createNotification({
+              userId: user.id,
+              title: "🎓 Training Complete!",
+              body: "You've completed all programs. Your certificate is ready.",
+              type: "training",
+              actionUrl: "/trainee/certificate",
             }).catch(() => {});
           }
         }
