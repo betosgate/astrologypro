@@ -92,6 +92,7 @@ const NAV_GROUPS = [
     items: [
       { label: "Mystery School", href: "/admin/mystery-school", icon: Eye },
       { label: "Mandalism", href: "/admin/mandalism", icon: Hexagon },
+      { label: "PM Plan Tiers", href: "/admin/pm-plan-tiers", icon: Layers },
       { label: "Sunday Service", href: "/admin/sunday-service", icon: Sun },
     ],
   },
