@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
-  .split(",")
-  .map((e) => e.trim())
-  .filter(Boolean);
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
 const FROM_EMAIL     = process.env.RESEND_FROM_EMAIL ?? "admin@divineinfinitebeing.com";
@@ -16,11 +11,8 @@ const FROM_EMAIL     = process.env.RESEND_FROM_EMAIL ?? "admin@divineinfinitebei
 // Body: { user_ids: string[], subject: string, message: string }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user: adminUser },
-  } = await supabase.auth.getUser();
-  if (!adminUser?.email || !ADMIN_EMAILS.includes(adminUser.email)) {
+  const adminUser = await getAdminUser();
+  if (!adminUser) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

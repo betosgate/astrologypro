@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/admin-auth";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { RouteTracker } from "@/components/shared/route-tracker";
 
@@ -12,21 +12,8 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
-  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-
-  if (!adminEmails.includes((user.email ?? "").toLowerCase())) {
-    redirect("/dashboard");
-  }
+  const user = await requireAdmin();
+  if (!user) redirect("/login?reason=admin");
 
   return (
     <div className="min-h-screen bg-background">

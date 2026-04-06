@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEventReminder } from "@/lib/email";
+import { verifyCronAuth } from "@/lib/cron-auth";
 
 // Map event types to recommended service trigger_event slugs
 const EVENT_SERVICE_MAP: Record<string, string> = {
@@ -20,10 +21,8 @@ const EVENT_SUBJECTS: Record<string, (date: string) => string> = {
 };
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = verifyCronAuth(request);
+  if (authError) return authError;
 
   const admin = createAdminClient();
   const now = new Date();

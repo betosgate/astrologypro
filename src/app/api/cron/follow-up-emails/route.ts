@@ -6,12 +6,11 @@ import {
   sendRebookingNudge,
 } from "@/lib/email";
 import { generateReviewToken } from "@/lib/review-token";
+import { verifyCronAuth } from "@/lib/cron-auth";
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = verifyCronAuth(request);
+  if (authError) return authError;
 
   const admin = createAdminClient();
   const appUrl =

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin } from "@/lib/admin-auth";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { MobileNav } from "@/components/dashboard/mobile-nav";
 import { PhoneWidgetLoader } from "@/components/dashboard/phone-widget-loader";
@@ -22,13 +23,10 @@ export default async function DashboardLayout({
 
   if (!user) redirect("/login");
 
-  // Admins (ADMIN_EMAILS) are never gated by diviner onboarding.
+  // Admins are never gated by diviner onboarding.
   // They may or may not have a diviners row — let them through regardless.
-  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  const isAdmin = adminEmails.includes((user.email ?? "").toLowerCase());
+  const adminUser = await requireAdmin();
+  const isAdmin = !!adminUser;
 
   // Use admin client for the data fetch — auth is already verified above.
   // This bypasses any RLS/session-cookie timing issue that could cause

@@ -5,6 +5,7 @@ import { sendSMS } from "@/lib/sms";
 import { APP_URL } from "@/lib/constants";
 import { getMundaneEventsForDate, selectDailyEvents } from "@/lib/mundane-events";
 import { generateMundaneContent, EventType } from "@/lib/mundane-content";
+import { verifyCronAuth } from "@/lib/cron-auth";
 
 function generateToken(): string {
   const chars =
@@ -33,11 +34,8 @@ function getUTCDateString(date: Date): string {
 }
 
 export async function GET(request: NextRequest) {
-  // Verify cron secret
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = verifyCronAuth(request);
+  if (authError) return authError;
 
   const { searchParams } = new URL(request.url);
   const shareNumber = parseInt(searchParams.get("n") ?? "1", 10) === 2 ? 2 : 1;
