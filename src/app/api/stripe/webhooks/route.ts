@@ -7,6 +7,8 @@ import {
   sendBookingAccessInstructions,
   sendGiftCertificateToRecipient,
   sendGiftCertificateConfirmation,
+  sendCommunityPaymentFailed,
+  sendCommunitySubscriptionCancelled,
 } from "@/lib/email";
 import { createCalendarEvent } from "@/lib/google-calendar";
 
@@ -218,6 +220,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   const subscriptionId = getSubscriptionIdFromInvoice(invoice);
   if (!subscriptionId) return;
 
+  // Diviner: mark as past_due
   const { error } = await supabase
     .from("diviners")
     .update({ subscription_status: "past_due" })
@@ -229,6 +232,83 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
       error
     );
   }
+
+  // Community member: keep active but send payment-failed warning
+  const customerId =
+    typeof invoice.customer === "string"
+      ? invoice.customer
+      : (invoice.customer as Stripe.Customer | null)?.id ?? null;
+
+  if (customerId) {
+    const { data: communityMember } = await supabase
+      .from("community_members")
+      .select("id, email, full_name, membership_status")
+      .eq("stripe_customer_id", customerId)
+      .maybeSingle();
+
+    if (communityMember) {
+      // Keep access active — just alert the member
+      await supabase
+        .from("community_members")
+        .update({ membership_status: "active" })
+        .eq("id", communityMember.id);
+
+      if (communityMember.email) {
+        sendCommunityPaymentFailed({
+          to: communityMember.email,
+          name: communityMember.full_name ?? "Member",
+          amount: (invoice.amount_due / 100).toFixed(2),
+          currency: invoice.currency.toUpperCase(),
+          retryDate: invoice.next_payment_attempt
+            ? new Date(invoice.next_payment_attempt * 1000).toLocaleDateString()
+            : "soon",
+          billingPortalUrl: `${process.env.NEXT_PUBLIC_APP_URL}/community/plan?tab=billing`,
+        }).catch(() => {});
+      }
+    }
+  }
+}
+
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  const adminClient = createAdminClient();
+  const customerId =
+    typeof subscription.customer === "string"
+      ? subscription.customer
+      : (subscription.customer as Stripe.Customer).id;
+
+  const { data: member } = await adminClient
+    .from("community_members")
+    .select("id, user_id, email, membership_status")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+
+  if (!member) return;
+
+  const newStatus = subscription.status;
+  const mappedStatus =
+    newStatus === "active"
+      ? "active"
+      : newStatus === "past_due"
+      ? "active" // keep access, just flag payment issue
+      : newStatus === "canceled"
+      ? "cancelled"
+      : newStatus === "paused"
+      ? "paused"
+      : member.membership_status;
+
+  const subAny = subscription as unknown as { current_period_end?: number };
+  const periodEnd = subAny.current_period_end
+    ? new Date(subAny.current_period_end * 1000).toISOString()
+    : null;
+
+  await adminClient
+    .from("community_members")
+    .update({
+      membership_status: mappedStatus,
+      current_period_end: periodEnd,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", member.id);
 }
 
 async function handleSubscriptionDeleted(
@@ -242,11 +322,41 @@ async function handleSubscriptionDeleted(
     .update({ subscription_status: "cancelled", is_active: false })
     .eq("stripe_subscription_id", subscription.id);
 
-  // Community membership cancelled
-  await supabase
+  // Community membership cancelled — fetch member before updating so we have email
+  const { data: communityMember } = await supabase
     .from("community_members")
-    .update({ membership_status: "cancelled" })
-    .eq("stripe_subscription_id", subscription.id);
+    .select("id, email, full_name, current_period_end")
+    .eq("stripe_subscription_id", subscription.id)
+    .maybeSingle();
+
+  if (communityMember) {
+    await supabase
+      .from("community_members")
+      .update({ membership_status: "cancelled" })
+      .eq("id", communityMember.id);
+
+    if (communityMember.email) {
+      const subDelAny = subscription as unknown as { current_period_end?: number };
+      const accessUntil = communityMember.current_period_end
+        ? new Date(communityMember.current_period_end).toLocaleDateString(
+            "en-US",
+            { month: "long", day: "numeric", year: "numeric" }
+          )
+        : subDelAny.current_period_end
+        ? new Date(subDelAny.current_period_end * 1000).toLocaleDateString(
+            "en-US",
+            { month: "long", day: "numeric", year: "numeric" }
+          )
+        : "the end of the current billing period";
+
+      sendCommunitySubscriptionCancelled({
+        to: communityMember.email,
+        name: communityMember.full_name ?? "Member",
+        accessUntil,
+        rejoinUrl: `${process.env.NEXT_PUBLIC_APP_URL}/community/join`,
+      }).catch(() => {});
+    }
+  }
 }
 
 async function handleAccountUpdated(account: Stripe.Account) {
@@ -399,6 +509,11 @@ export async function POST(request: NextRequest) {
       case "invoice.payment_failed":
         await handleInvoicePaymentFailed(
           event.data.object as Stripe.Invoice
+        );
+        break;
+      case "customer.subscription.updated":
+        await handleSubscriptionUpdated(
+          event.data.object as Stripe.Subscription
         );
         break;
       case "customer.subscription.deleted":

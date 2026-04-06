@@ -11,6 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { TrainingNotes } from "@/components/admin/training-notes";
 
@@ -24,6 +26,7 @@ export default function EditCategoryPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [isSequential, setIsSequential] = useState(false);
 
   const [form, setForm] = useState({
     training_id: "",
@@ -60,6 +63,7 @@ export default function EditCategoryPage() {
           priority: String(cat.priority ?? 0),
           is_active: cat.is_active ?? true,
         });
+        setIsSequential(cat.is_sequential ?? false);
       } catch {
         toast.error("Failed to load category.");
         router.push("/admin/training");
@@ -106,6 +110,7 @@ export default function EditCategoryPage() {
           description: form.description.trim() || null,
           priority: parseInt(form.priority, 10) || 0,
           is_active: form.is_active,
+          is_sequential: isSequential,
         }),
       });
 
@@ -238,6 +243,20 @@ export default function EditCategoryPage() {
               <p className="text-xs text-muted-foreground">
                 Lower number = shown first.
               </p>
+            </div>
+
+            {/* Sequential Lock */}
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div>
+                <Label className="text-sm font-medium">Sequential Lock</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Users must complete lessons in order within this category
+                </p>
+              </div>
+              <Switch
+                checked={isSequential}
+                onCheckedChange={setIsSequential}
+              />
             </div>
 
             {/* Active */}

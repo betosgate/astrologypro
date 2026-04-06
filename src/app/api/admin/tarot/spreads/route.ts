@@ -30,14 +30,14 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { name, description, card_count, priority, is_active } = body;
+  const { name, description, card_count, priority, thumbnail_url, is_active } = body;
 
-  if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  if (!name) return NextResponse.json({ error: "Name is required" }, { status: 422 });
 
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("tarot_spreads")
-    .insert({ name, description, card_count, priority, is_active })
+    .insert({ name, description, card_count, priority, thumbnail_url: thumbnail_url ?? null, is_active })
     .select()
     .single();
 

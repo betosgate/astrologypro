@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -14,12 +14,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { createClient } from "@/lib/supabase/client";
+
+const BUCKET = "all-frontend-assets";
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 interface Spread { id: string; name: string; }
 
 export default function NewTarotCardPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [spreads, setSpreads] = useState<Spread[]>([]);
 
@@ -28,12 +35,14 @@ export default function NewTarotCardPage() {
     arcana: "major",
     suit: "",
     number: "",
+    priority: "",
     upright_meaning: "",
     reversed_meaning: "",
     image_url: "",
-    spread_id: "",
     is_active: true,
   });
+  const [cardImageUrl, setCardImageUrl] = useState("");
+  const [relatedSpreadIds, setRelatedSpreadIds] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/admin/tarot/spreads")
@@ -42,8 +51,53 @@ export default function NewTarotCardPage() {
       .catch(() => {});
   }, []);
 
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setError("Invalid file type. Allowed: JPEG, PNG, WebP, GIF.");
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setError("File too large. Maximum size is 10 MB.");
+      return;
+    }
+
+    setError(null);
+    setUploading(true);
+
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `divine-infinity-profile-images/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const supabase = createClient();
+
+    const { error: uploadError } = await supabase.storage
+      .from(BUCKET)
+      .upload(path, file, { upsert: false });
+
+    if (uploadError) {
+      setError(`Upload failed: ${uploadError.message}`);
+      setUploading(false);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
+    setCardImageUrl(urlData.publicUrl);
+    setUploading(false);
+  }
+
+  function toggleSpread(id: string) {
+    setRelatedSpreadIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.priority) {
+      setError("Priority is required.");
+      return;
+    }
     setSaving(true);
     setError(null);
 
@@ -55,10 +109,12 @@ export default function NewTarotCardPage() {
         arcana: form.arcana,
         suit: form.arcana === "minor" ? (form.suit || null) : null,
         number: form.number ? parseInt(form.number) : null,
+        priority: parseInt(form.priority),
         upright_meaning: form.upright_meaning || null,
         reversed_meaning: form.reversed_meaning || null,
         image_url: form.image_url || null,
-        spread_id: form.spread_id || null,
+        card_image_url: cardImageUrl || null,
+        related_spread_ids: relatedSpreadIds.length > 0 ? relatedSpreadIds : null,
         is_active: form.is_active,
       }),
     });
@@ -70,7 +126,7 @@ export default function NewTarotCardPage() {
       return;
     }
 
-    router.push("/admin/tarot");
+    router.push("/admin/tarot/cards");
   }
 
   return (
@@ -114,9 +170,22 @@ export default function NewTarotCardPage() {
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="number">Number</Label>
-              <Input id="number" type="number" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="number">Number</Label>
+                <Input id="number" type="number" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="priority">Priority *</Label>
+                <Input
+                  id="priority"
+                  type="number"
+                  min="0"
+                  value={form.priority}
+                  onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                  required
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -135,19 +204,54 @@ export default function NewTarotCardPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="spread_id">Spread</Label>
-              <select
-                id="spread_id"
-                value={form.spread_id}
-                onChange={(e) => setForm({ ...form, spread_id: e.target.value })}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="">— None —</option>
-                {spreads.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+              <Label>Card Image Upload</Label>
+              <div className="flex items-center gap-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploading ? "Uploading…" : "Choose Image"}
+                </Button>
+                {cardImageUrl && (
+                  <a href={cardImageUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline break-all max-w-xs truncate">
+                    {cardImageUrl}
+                  </a>
+                )}
+              </div>
+              {cardImageUrl && (
+                <img src={cardImageUrl} alt="Card preview" className="mt-2 h-24 w-auto rounded border object-contain" />
+              )}
             </div>
+
+            {spreads.length > 0 && (
+              <div className="space-y-2">
+                <Label>Related Spreads</Label>
+                <div className="rounded-md border border-input p-3 space-y-2 max-h-48 overflow-y-auto">
+                  {spreads.map((s) => (
+                    <div key={s.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`spread-${s.id}`}
+                        checked={relatedSpreadIds.includes(s.id)}
+                        onCheckedChange={() => toggleSpread(s.id)}
+                      />
+                      <Label htmlFor={`spread-${s.id}`} className="font-normal cursor-pointer">
+                        {s.name}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-2">
               <Checkbox id="is_active" checked={form.is_active} onCheckedChange={(checked) => setForm({ ...form, is_active: !!checked })} />
@@ -157,8 +261,8 @@ export default function NewTarotCardPage() {
             {error && <p className="text-sm text-red-500">{error}</p>}
 
             <div className="flex gap-3 pt-2">
-              <Button type="submit" disabled={saving}>{saving ? "Saving…" : "Create Card"}</Button>
-              <Button type="button" variant="outline" onClick={() => router.push("/admin/tarot")}>Cancel</Button>
+              <Button type="submit" disabled={saving || uploading}>{saving ? "Saving…" : "Create Card"}</Button>
+              <Button type="button" variant="outline" onClick={() => router.push("/admin/tarot/cards")}>Cancel</Button>
             </div>
           </form>
         </CardContent>

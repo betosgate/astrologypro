@@ -1,12 +1,16 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 // build: 2026-04-03T09:30Z
 const nextConfig: NextConfig = {
   // Exclude playwright and electron from the server bundle — they are dev-only
   // test dependencies and should never be bundled into the Next.js server.
   serverExternalPackages: ["playwright-core", "playwright", "electron", "chromium-bidi"],
-  // Empty turbopack config silences the "webpack config ignored" warning
-  turbopack: {},
+  // Pin turbopack root to this project directory — prevents it picking up the
+  // parent monorepo lockfile and resolving node_modules from the wrong location.
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
 
   // Ensure the Geist Bold TTF is bundled with the image-compositing Lambda.
   // readFileSync on a non-imported file is not auto-traced by Next.js bundler,
@@ -16,6 +20,17 @@ const nextConfig: NextConfig = {
       "./node_modules/geist/dist/fonts/geist-sans/Geist-Bold.ttf",
     ],
   },
+  webpack: (config) => {
+    // Next.js detects divine/ as workspace root (parent package-lock.json).
+    // Override context and resolve.modules to use this project's directory.
+    config.context = path.resolve(__dirname);
+    config.resolve.modules = [
+      path.resolve(__dirname, "node_modules"),
+      "node_modules",
+    ];
+    return config;
+  },
+
   async headers() {
     return [
       {

@@ -6,12 +6,10 @@ import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Flame, Plus, Trash2, Loader2, AlertCircle, ArrowRight } from "lucide-react";
+import { Flame, Plus, Trash2, Loader2, AlertCircle, Play, ArrowRight } from "lucide-react";
 import { formatDate } from "@/lib/format";
 
 type RitualRow = {
@@ -19,6 +17,10 @@ type RitualRow = {
   ritual_name: string;
   ritual_tags: string[];
   created_at: string;
+  last_executed_at: string | null;
+  execution_count: number;
+  current_step: number;
+  is_complete: boolean;
 };
 
 export default function CommunityRitualsPage() {
@@ -114,54 +116,94 @@ export default function CommunityRitualsPage() {
           <p className="text-sm text-muted-foreground">
             {rituals.length} ritual{rituals.length !== 1 ? "s" : ""} saved
           </p>
-          {rituals.map((r) => (
-            <Card key={r.id}>
-              <CardContent className="flex items-center justify-between gap-4 py-4 flex-wrap">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-sm truncate">{r.ritual_name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {formatDate(r.created_at)} &middot; {r.ritual_tags.length} tag
-                    {r.ritual_tags.length !== 1 ? "s" : ""}
-                  </p>
-                  <div className="mt-1.5 flex flex-wrap gap-1">
-                    {r.ritual_tags.slice(0, 4).map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0.5">
-                        {tag.replace(/_/g, " ")}
-                      </Badge>
-                    ))}
-                    {r.ritual_tags.length > 4 && (
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
-                        +{r.ritual_tags.length - 4} more
-                      </Badge>
-                    )}
+          {rituals.map((r) => {
+            const isInProgress = r.current_step > 0 && !r.is_complete;
+            const isCompleted = r.is_complete && r.last_executed_at;
+
+            return (
+              <Card key={r.id}>
+                <CardContent className="flex items-center justify-between gap-4 py-4 flex-wrap">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm truncate">{r.ritual_name}</p>
+
+                    {/* Execution status line */}
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                      {isInProgress ? (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-1.5 py-0.5 border-amber-400 text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400"
+                        >
+                          In Progress — Step {r.current_step}
+                        </Badge>
+                      ) : isCompleted ? (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-1.5 py-0.5 border-green-400 text-green-600 bg-green-50 dark:bg-green-950/30 dark:text-green-400"
+                        >
+                          Last performed: {formatDate(r.last_executed_at!)}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-[11px]">Never performed</span>
+                      )}
+                      {r.execution_count > 0 && (
+                        <span className="text-[11px] text-muted-foreground">
+                          · {r.execution_count}× completed
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Tag row */}
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {r.ritual_tags.slice(0, 4).map((tag) => (
+                        <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0.5">
+                          {tag.replace(/_/g, " ")}
+                        </Badge>
+                      ))}
+                      {r.ritual_tags.length > 4 && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
+                          +{r.ritual_tags.length - 4} more
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => router.push(`/community/rituals/${r.id}`)}
-                  >
-                    <ArrowRight className="mr-1.5 size-3.5" />
-                    View
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-destructive hover:text-destructive"
-                    disabled={deleting === r.id}
-                    onClick={() => handleDelete(r.id, r.ritual_name)}
-                  >
-                    {deleting === r.id ? (
-                      <Loader2 className="size-3.5 animate-spin" />
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isInProgress ? (
+                      <Button
+                        size="sm"
+                        onClick={() => router.push(`/community/rituals/${r.id}`)}
+                      >
+                        <Play className="mr-1.5 size-3.5" />
+                        Continue
+                      </Button>
                     ) : (
-                      <Trash2 className="size-3.5" />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => router.push(`/community/rituals/${r.id}`)}
+                      >
+                        <ArrowRight className="mr-1.5 size-3.5" />
+                        {r.execution_count > 0 ? "View" : "Begin"}
+                      </Button>
                     )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive hover:text-destructive"
+                      disabled={deleting === r.id}
+                      onClick={() => handleDelete(r.id, r.ritual_name)}
+                    >
+                      {deleting === r.id ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="size-3.5" />
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
