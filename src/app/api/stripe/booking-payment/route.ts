@@ -22,6 +22,7 @@ interface BookingPaymentBody {
   giftCode?: string;
   policyAcknowledgedAt?: string;
   booking_notes?: string;
+  discount_token?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
       giftCode,
       policyAcknowledgedAt,
       booking_notes,
+      discount_token,
     } = body;
 
     // Capture request metadata for audit/analytics
@@ -229,6 +231,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // --- Member Discount Token Check ---
+    // Valid token reduces platform fee from 20% to 15% (platform cut only; diviner payout unchanged).
+    // Combined floor with any future stacking is 10%.
+    let memberDiscountTokenId: string | null = null;
+    let memberDiscountApplied = false;
+
+    if (discount_token) {
+      const { data: tokenRecord } = await adminSupabase
+        .from("member_discount_tokens")
+        .select("id, user_id, discount_percent, expires_at, used_at")
+        .eq("token", discount_token)
+        .maybeSingle();
+
+      if (
+        tokenRecord &&
+        !tokenRecord.used_at &&
+        new Date(tokenRecord.expires_at) >= new Date()
+      ) {
+        memberDiscountTokenId = tokenRecord.id as string;
+        memberDiscountApplied = true;
+      }
+    }
+
     // --- Gift Certificate Check ---
     let giftDeduction = 0;
     let giftCertificateId: string | null = null;
@@ -317,9 +342,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Calculate platform fee on the final price
+    // Calculate platform fee on the final price.
+    // Member discount token: platform fee drops from 20% → 15% (diviner payout unchanged).
+    // Floor at 10% to prevent stacking below the minimum viable platform margin.
+    const effectivePlatformFeePercent = memberDiscountApplied
+      ? Math.max(PRICING.platformFeePercent - 5, 10)
+      : PRICING.platformFeePercent;
     const platformFee =
-      (finalPrice * PRICING.platformFeePercent) / 100;
+      (finalPrice * effectivePlatformFeePercent) / 100;
 
     let clientSecret: string | null = null;
 
@@ -338,6 +368,7 @@ export async function POST(request: NextRequest) {
           ...(loyaltyRuleName
             ? { loyaltyDiscount: `${loyaltyDiscountPercent}%` }
             : {}),
+          ...(memberDiscountApplied ? { memberDiscount: "5%" } : {}),
         },
       });
 
@@ -347,6 +378,17 @@ export async function POST(request: NextRequest) {
         .from("bookings")
         .update({ stripe_payment_intent_id: paymentIntent.id })
         .eq("id", booking.id);
+
+      // Consume the member discount token now that the payment intent is created
+      if (memberDiscountTokenId) {
+        await adminSupabase
+          .from("member_discount_tokens")
+          .update({
+            used_at: new Date().toISOString(),
+            booking_id: booking.id,
+          })
+          .eq("id", memberDiscountTokenId);
+      }
     } else {
       // Fully covered by gift certificate — mark booking as confirmed
       await adminSupabase
@@ -492,6 +534,9 @@ export async function POST(request: NextRequest) {
         : {}),
       ...(giftDeduction > 0
         ? { giftDeduction: Math.round(giftDeduction * 100) / 100 }
+        : {}),
+      ...(memberDiscountApplied
+        ? { memberDiscount: { platformFeePercent: effectivePlatformFeePercent } }
         : {}),
     });
   } catch (err) {

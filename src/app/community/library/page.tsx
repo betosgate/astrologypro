@@ -1,9 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -20,51 +20,24 @@ import type { MandalismContent } from "@/components/community/mandalism-content-
 export const metadata = { title: "Library - AstrologyPro Community" };
 export const dynamic = "force-dynamic";
 
-// ── Static content ───────────────────────────────────────────────────────────
+// ── DB types ─────────────────────────────────────────────────────────────────
 
-const HOLY_BOOKS = [
-  {
-    id: "bhagavad-gita",
-    title: "Bhagavad Gita",
-    subtitle: "The Song of God",
-    description:
-      "A 700-verse Hindu scripture that is part of the epic Mahabharata. A conversation between prince Arjuna and his guide Krishna on duty, righteousness, and the nature of the soul.",
-    storageKey: "holy-books/bhagavad-gita.pdf",
-  },
-  {
-    id: "gospel-of-thomas",
-    title: "Gospel of Thomas",
-    subtitle: "The Secret Sayings of Jesus",
-    description:
-      "114 sayings attributed to Jesus, discovered in Nag Hammadi, Egypt in 1945. A Gnostic text offering a contemplative path to the Kingdom of Heaven within.",
-    storageKey: "holy-books/gospel-of-thomas.pdf",
-  },
-  {
-    id: "tao-te-ching",
-    title: "Tao Te Ching",
-    subtitle: "The Way and Its Virtue",
-    description:
-      "Lao Tzu's foundational text of Taoism — 81 short chapters on the nature of the Tao, effortless action (wu wei), and living in harmony with the flow of existence.",
-    storageKey: "holy-books/tao-te-ching.pdf",
-  },
-];
+type HolyBook = {
+  id: string;
+  title: string;
+  description: string | null;
+  cover_image_url: string | null;
+  file_url: string | null;
+  sort_order: number;
+};
 
-const DOCTRINE_LINKS = [
-  {
-    id: "central-doctrine",
-    label: "Central Doctrine",
-    description: "The core metaphysical principles of Divine Infinite Being.",
-    href: "/community/resources#central-doctrine",
-    internal: true,
-  },
-  {
-    id: "fivefold-creed",
-    label: "Five-fold Creed",
-    description: "The five foundational affirmations of the tradition.",
-    href: "/community/resources#fivefold-creed",
-    internal: true,
-  },
-];
+type DoctrineLink = {
+  id: string;
+  label: string;
+  description: string | null;
+  url: string;
+  link_type: string;
+};
 
 // ── Type filter config ───────────────────────────────────────────────────────
 
@@ -356,17 +329,9 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
       : "all";
 
   // ── Parallel fetches ──────────────────────────────────────────────────────
-  const [bookUrlsRaw, mandalismResult] = await Promise.all([
-    // Signed URLs for holy book PDFs
-    Promise.all(
-      HOLY_BOOKS.map(async (book) => {
-        const { data } = await supabase.storage
-          .from("community-content")
-          .createSignedUrl(book.storageKey, 3600);
-        return { id: book.id, url: data?.signedUrl ?? null };
-      })
-    ),
+  const admin = createAdminClient();
 
+  const [mandalismResult, holyBooksResult, doctrineLinksResult] = await Promise.all([
     // All published mandalism content, access-control filtered
     supabase
       .from("mandalism_content")
@@ -377,13 +342,27 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
       .or(`access_control.eq.free,access_control.eq.members`)
       .order("priority", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false }),
+
+    // Holy books from DB (admin client to bypass anon RLS, member access verified above)
+    admin
+      .from("holy_books")
+      .select("id, title, description, cover_image_url, file_url, sort_order")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
+
+    // Doctrine links from DB
+    admin
+      .from("doctrine_links")
+      .select("id, label, description, url, link_type")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
   ]);
 
-  const bookUrls: Record<string, string | null> = Object.fromEntries(
-    bookUrlsRaw.map(({ id, url }) => [id, url])
-  );
-
   const allMandalismItems = (mandalismResult.data ?? []) as MandalismContent[];
+  const holyBooks = (holyBooksResult.data ?? []) as HolyBook[];
+  const doctrineLinks = (doctrineLinksResult.data ?? []) as DoctrineLink[];
 
   // Apply type filter
   const filteredItems =
@@ -467,25 +446,33 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
       )}
 
       {/* ── Holy Books ────────────────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-muted-foreground uppercase tracking-wider">
-          <BookOpen className="size-4" />
-          Holy Books
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {HOLY_BOOKS.map((book) => {
-            const url = bookUrls[book.id];
-            return (
+      {holyBooks.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-muted-foreground uppercase tracking-wider">
+            <BookOpen className="size-4" />
+            Holy Books
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {holyBooks.map((book) => (
               <Card key={book.id} className="flex flex-col">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">{book.title}</CardTitle>
-                  <CardDescription>{book.subtitle}</CardDescription>
+                  {book.cover_image_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={book.cover_image_url}
+                      alt={book.title}
+                      className="mt-2 h-32 w-full rounded-md object-cover"
+                    />
+                  )}
                 </CardHeader>
                 <CardContent className="flex flex-1 flex-col gap-4">
-                  <p className="text-sm text-muted-foreground flex-1">{book.description}</p>
-                  {url ? (
+                  {book.description && (
+                    <p className="text-sm text-muted-foreground flex-1">{book.description}</p>
+                  )}
+                  {book.file_url ? (
                     <a
-                      href={url}
+                      href={book.file_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
@@ -501,33 +488,37 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
                   )}
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── Doctrine & Creed ──────────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-muted-foreground uppercase tracking-wider">
-          <Star className="size-4" />
-          Doctrine &amp; Creed
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {DOCTRINE_LINKS.map((item) => (
-            <Card key={item.id}>
-              <CardContent className="flex items-start justify-between gap-4 py-4">
-                <div>
-                  <p className="font-medium">{item.label}</p>
-                  <p className="text-sm text-muted-foreground mt-0.5">{item.description}</p>
-                </div>
-                <Button asChild variant="outline" size="sm" className="shrink-0">
-                  <Link href={item.href}>View</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
+      {doctrineLinks.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-muted-foreground uppercase tracking-wider">
+            <Star className="size-4" />
+            Doctrine &amp; Creed
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {doctrineLinks.map((item) => (
+              <Card key={item.id}>
+                <CardContent className="flex items-start justify-between gap-4 py-4">
+                  <div>
+                    <p className="font-medium">{item.label}</p>
+                    {item.description && (
+                      <p className="text-sm text-muted-foreground mt-0.5">{item.description}</p>
+                    )}
+                  </div>
+                  <Button asChild variant="outline" size="sm" className="shrink-0">
+                    <Link href={item.url}>View</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── Diviner CTA ───────────────────────────────────────────────────── */}
       <section>

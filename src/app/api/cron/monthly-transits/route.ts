@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { calculateMonthlyTransits } from "@/lib/astro/transits";
 import type { NatalChartData } from "@/lib/astro/natal-chart";
 import { verifyCronAuth } from "@/lib/cron-auth";
+import { sendMonthlyTransitReady } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -60,13 +61,58 @@ export async function GET(request: NextRequest) {
       month
     );
 
-    await admin.from("monthly_transits").insert({
-      family_member_id: fm.id,
-      month: monthStr,
-      transit_data: transitData,
-    });
+    const { data: newTransit } = await admin
+      .from("monthly_transits")
+      .insert({
+        family_member_id: fm.id,
+        month: monthStr,
+        transit_data: transitData,
+        notification_sent: false,
+      })
+      .select("id")
+      .single();
 
     generated++;
+
+    // Send transit-ready email to the member who owns this family member
+    // Only send if insert succeeded and notification not yet sent
+    if (newTransit?.id) {
+      try {
+        // Fetch the owning community_member's email
+        const { data: familyRow } = await admin
+          .from("community_family_members")
+          .select("full_name, member_id")
+          .eq("id", fm.id)
+          .single();
+
+        if (familyRow?.member_id) {
+          const { data: ownerMember } = await admin
+            .from("community_members")
+            .select("email, full_name, membership_status")
+            .eq("id", familyRow.member_id)
+            .single();
+
+          if (
+            ownerMember?.email &&
+            ownerMember.membership_status === "active"
+          ) {
+            await sendMonthlyTransitReady({
+              to: ownerMember.email,
+              name: ownerMember.full_name ?? "Member",
+              month: monthStr,
+              familyMemberName: familyRow.full_name ?? fm.full_name ?? "your family member",
+            });
+
+            await admin
+              .from("monthly_transits")
+              .update({ notification_sent: true })
+              .eq("id", newTransit.id);
+          }
+        }
+      } catch (emailErr) {
+        console.error("[monthly-transits] Failed to send transit-ready email for", fm.id, emailErr);
+      }
+    }
   }
 
   console.log(`[monthly-transits] generated=${generated} skipped=${skipped} month=${monthStr}`);

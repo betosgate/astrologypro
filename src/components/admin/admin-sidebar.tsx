@@ -48,6 +48,9 @@ import {
   Star,
   Globe,
   Building2,
+  MailCheck,
+  History,
+  FileCode2,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -107,6 +110,8 @@ const NAV_GROUPS = [
       { label: "PM Plan Tiers", href: "/admin/pm-plan-tiers", icon: Layers },
       { label: "Broadcasts", href: "/admin/broadcasting", icon: Radio },
       { label: "Calendar", href: "/admin/calendar", icon: CalendarDays },
+      { label: "Holy Books", href: "/admin/holy-books", icon: BookOpen },
+      { label: "Doctrine Links", href: "/admin/doctrine-links", icon: Star },
     ],
   },
   {
@@ -126,6 +131,14 @@ const NAV_GROUPS = [
       { label: "Refunds", href: "/admin/refunds", icon: RefreshCcw },
       { label: "Orders", href: "/admin/orders", icon: ShoppingBag },
       { label: "Reports", href: "/admin/reports", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Email",
+    items: [
+      { label: "Email Sequences", href: "/admin/email-sequences", icon: MailCheck },
+      { label: "Email History", href: "/admin/email-history", icon: History },
+      { label: "Email Preview", href: "/admin/email-preview", icon: FileCode2 },
     ],
   },
   {

@@ -10,6 +10,7 @@ import {
   sendCommunityPaymentFailed,
   sendCommunitySubscriptionCancelled,
   sendMysterySchoolEnrollmentConfirmation,
+  sendCommunityMembershipWelcome,
 } from "@/lib/email";
 import { createCalendarEvent } from "@/lib/google-calendar";
 
@@ -117,6 +118,18 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
     )
     .select("id")
     .single();
+
+  // Send community welcome email for all membership types (idempotent via SES dedup window)
+  if (email) {
+    sendCommunityMembershipWelcome({
+      to: email,
+      name: fullName ?? "Member",
+      membershipType,
+      planType: planType ?? null,
+    }).catch((err) =>
+      console.error("[Webhook] Failed to send community welcome email:", err)
+    );
+  }
 
   // Provision mystery school student record on enrollment
   if (membershipType === "mystery_school") {
@@ -327,8 +340,14 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   if (!member) return;
 
   const newStatus = subscription.status;
+  const cancelAtPeriodEnd =
+    (subscription as unknown as { cancel_at_period_end?: boolean })
+      .cancel_at_period_end ?? false;
+
   const mappedStatus =
-    newStatus === "active"
+    newStatus === "active" && cancelAtPeriodEnd
+      ? "cancelling" // scheduled to cancel at period end
+      : newStatus === "active"
       ? "active"
       : newStatus === "past_due"
       ? "active" // keep access, just flag payment issue

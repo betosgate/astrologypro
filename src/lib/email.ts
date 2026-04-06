@@ -7,6 +7,7 @@ import {
   sectionHeading,
   starRating,
 } from "./email-base";
+import { logEmail, isSequencePaused } from "./email-log";
 
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
@@ -1124,6 +1125,12 @@ export async function sendCommunityPaymentFailed({
   retryDate,
   billingPortalUrl,
 }: CommunityPaymentFailedParams) {
+  if (await isSequencePaused("community_payment_failed")) {
+    console.log("[email] community_payment_failed sequence is paused — skipping send to", to);
+    return { success: false, id: "" };
+  }
+
+  const subject = `Action required: Community membership payment failed`;
   const content = `
     <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
 
@@ -1137,9 +1144,9 @@ export async function sendCommunityPaymentFailed({
     <p style="margin:16px 0 0;color:#a1a1aa;">Questions? Reply to this email or contact us at <a href="mailto:support@astrologypro.com" style="color:#8b5cf6;">support@astrologypro.com</a>.</p>
   `;
 
-  return sendEmail({
+  const result = await sendEmail({
     to,
-    subject: `Action required: Community membership payment failed`,
+    subject,
     html: buildEmailHtml({
       title: "Payment Unsuccessful",
       preheader: `Your community membership payment of ${currency} ${amount} could not be processed.`,
@@ -1149,6 +1156,9 @@ export async function sendCommunityPaymentFailed({
       footer: `AstrologyPro &mdash; Divine Infinite Being`,
     }),
   });
+
+  await logEmail({ emailTo: to, templateName: "community_payment_failed", subject });
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -1172,6 +1182,12 @@ export async function sendCommunityRenewalReminder({
   planName,
   billingPortalUrl,
 }: CommunityRenewalReminderParams) {
+  if (await isSequencePaused("community_renewal_reminder")) {
+    console.log("[email] community_renewal_reminder sequence is paused — skipping send to", to);
+    return { success: false, id: "" };
+  }
+
+  const subject = `Your community membership renews on ${renewalDate}`;
   const content = `
     <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
 
@@ -1186,9 +1202,9 @@ export async function sendCommunityRenewalReminder({
     <p style="margin:16px 0 0;color:#a1a1aa;">Need to make changes or cancel? Visit your billing portal before the renewal date.</p>
   `;
 
-  return sendEmail({
+  const result = await sendEmail({
     to,
-    subject: `Your community membership renews on ${renewalDate}`,
+    subject,
     html: buildEmailHtml({
       title: "Membership Renewal Reminder",
       preheader: `Your ${planName} membership renews on ${renewalDate}`,
@@ -1198,6 +1214,9 @@ export async function sendCommunityRenewalReminder({
       footer: `AstrologyPro &mdash; Divine Infinite Being`,
     }),
   });
+
+  await logEmail({ emailTo: to, templateName: "community_renewal_reminder", subject });
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -1583,6 +1602,127 @@ export async function sendSessionReminder({
   });
 }
 
+// ── Community — Membership Welcome ───────────────────────────────────────────
+
+export async function sendCommunityMembershipWelcome({
+  to,
+  name,
+  membershipType,
+  planType,
+}: {
+  to: string;
+  name: string;
+  membershipType: "perennial_mandalism" | "mystery_school" | string;
+  planType?: string | null;
+}) {
+  const portalUrl = `${APP_URL}/community`;
+
+  const isMysterySchool = membershipType === "mystery_school";
+  const displayType = isMysterySchool
+    ? "Mystery School"
+    : "Perennial Mandalism";
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Welcome, ${name}.</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">Your <strong style="color:#f4f4f5;">${displayType}</strong> membership is now active.${planType ? ` You are enrolled on the <strong style="color:#f4f4f5;">${planType}</strong> plan.` : ""} The community portal is ready for you.</p>
+
+    ${sectionHeading("What You Have Access To")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">Monthly planetary transit reports for your family members</li>
+      <li style="margin-bottom:6px;">Community broadcasts, events, and live streams</li>
+      <li style="margin-bottom:6px;">Astrological training library and Sunday Service recordings</li>
+      ${isMysterySchool ? `<li style="margin-bottom:6px;">Mystery School curriculum — Foundation Weeks and all 36 Decans</li>` : ""}
+    </ul>
+
+    <p style="margin:16px 0 0;color:#a1a1aa;font-size:13px;">Enter your community portal to get started.</p>
+  `;
+
+  if (await isSequencePaused("community_welcome")) {
+    console.log("[email] community_welcome sequence is paused — skipping send to", to);
+    return { success: false, id: "" };
+  }
+
+  const subject = `Welcome to ${displayType} — Your membership is active`;
+  const result = await sendEmail({
+    to,
+    subject,
+    html: buildEmailHtml({
+      title: `Welcome to ${displayType}`,
+      badge: "Active",
+      preheader: `Your ${displayType} membership is confirmed and active. Your portal is ready.`,
+      content,
+      ctaText: "Enter the Community Portal",
+      ctaUrl: portalUrl,
+      footer: "AstrologyPro &mdash; Divine Infinite Being",
+    }),
+  });
+
+  await logEmail({ emailTo: to, templateName: "community_welcome", subject });
+  return result;
+}
+
+// ── Community — Monthly Transit Ready ────────────────────────────────────────
+
+export async function sendMonthlyTransitReady({
+  to,
+  name,
+  month,
+  familyMemberName,
+}: {
+  to: string;
+  name: string;
+  month: string; // YYYY-MM
+  familyMemberName: string;
+}) {
+  const [year, monthNum] = month.split("-");
+  const monthLabel = new Date(
+    parseInt(year, 10),
+    parseInt(monthNum, 10) - 1,
+    1
+  ).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+  const transitsUrl = `${APP_URL}/community/transits`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hello, ${name}.</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">The <strong style="color:#f4f4f5;">${monthLabel}</strong> planetary transit report for <strong style="color:#f4f4f5;">${familyMemberName}</strong> is ready in your community portal.</p>
+
+    ${sectionHeading("What's in Your Transit Report")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">Planetary transits to natal chart positions for the month</li>
+      <li style="margin-bottom:6px;">Key dates and astrological windows to watch</li>
+      <li style="margin-bottom:6px;">Aspect interpretations based on your natal chart</li>
+    </ul>
+
+    <p style="margin:16px 0 0;color:#a1a1aa;font-size:13px;">New reports are generated at the start of each month for all family members with natal charts on file.</p>
+  `;
+
+  if (await isSequencePaused("monthly_transit_ready")) {
+    console.log("[email] monthly_transit_ready sequence is paused — skipping send to", to);
+    return { success: false, id: "" };
+  }
+
+  const subject = `Your ${monthLabel} transit report is ready — ${familyMemberName}`;
+  const result = await sendEmail({
+    to,
+    subject,
+    html: buildEmailHtml({
+      title: `${monthLabel} Transits Ready`,
+      badge: familyMemberName,
+      preheader: `The ${monthLabel} planetary transit report for ${familyMemberName} is now available in your portal.`,
+      content,
+      ctaText: "View Transit Report",
+      ctaUrl: transitsUrl,
+      footer: "AstrologyPro &mdash; Perennial Mandalism",
+    }),
+  });
+
+  await logEmail({ emailTo: to, templateName: "monthly_transit_ready", subject });
+  return result;
+}
+
 // ── Mystery School — Enrollment Confirmation ─────────────────────────────────
 
 export async function sendMysterySchoolEnrollmentConfirmation({
@@ -1620,9 +1760,15 @@ export async function sendMysterySchoolEnrollmentConfirmation({
     <p style="margin:16px 0 0;color:#a1a1aa;font-size:13px;">Enter your student portal to begin.</p>
   `;
 
-  return sendEmail({
+  if (await isSequencePaused("mystery_school_enrollment")) {
+    console.log("[email] mystery_school_enrollment sequence is paused — skipping send to", to);
+    return { success: false, id: "" };
+  }
+
+  const subject = "Welcome to the Mystery School — Your journey begins";
+  const result = await sendEmail({
     to,
-    subject: "Welcome to the Mystery School — Your journey begins",
+    subject,
     html: buildEmailHtml({
       title: "Mystery School",
       badge: "Enrolled",
@@ -1633,6 +1779,9 @@ export async function sendMysterySchoolEnrollmentConfirmation({
       footer: "AstrologyPro &mdash; Mystery School",
     }),
   });
+
+  await logEmail({ emailTo: to, templateName: "mystery_school_enrollment", subject });
+  return result;
 }
 
 // ── Mystery School — Decan Lifecycle Emails ───────────────────────────────────
@@ -2051,6 +2200,47 @@ export async function sendGraduationCongratulations({
       ctaText: "View Your Graduation",
       ctaUrl: graduationUrl,
       footer: `AstrologyPro &mdash; Divine Infinite Being`,
+    }),
+  });
+}
+
+
+// ---------------------------------------------------------------------------
+// Sunday Service — New Episode Notification
+// Sent to all active community members when an episode is published live.
+// ---------------------------------------------------------------------------
+
+interface SundayServiceNewEpisodeParams {
+  to: string;
+  episodeTitle: string;
+  episodeDescription: string | null;
+  watchUrl: string;
+}
+
+export async function sendSundayServiceNewEpisode({
+  to,
+  episodeTitle,
+  episodeDescription,
+  watchUrl,
+}: SundayServiceNewEpisodeParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">A new Sunday Service episode is now live and ready to watch.</p>
+
+    ${infoCard(`<strong style="color:#e4e4e7;">${episodeTitle}</strong>${episodeDescription ? `<br/><span style="color:#a1a1aa;font-size:14px;">${episodeDescription}</span>` : ""}`)}
+
+    <p style="margin:0;color:#a1a1aa;">Join the community every Sunday for guided teachings, ritual, and divine connection.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `New Sunday Service: ${episodeTitle}`,
+    html: buildEmailHtml({
+      title: "New Sunday Service Episode",
+      preheader: `${episodeTitle} is now available to watch`,
+      content,
+      ctaText: "Watch Now",
+      ctaUrl: watchUrl,
+      footer: `You are receiving this because you are an active community member on AstrologyPro. <a href="${APP_URL}/community/settings" style="color:#71717a;text-decoration:underline;">Manage preferences</a><br/>AstrologyPro &mdash; Divine Infinite Being`,
     }),
   });
 }
