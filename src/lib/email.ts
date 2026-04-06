@@ -2244,3 +2244,226 @@ export async function sendSundayServiceNewEpisode({
     }),
   });
 }
+
+// ---------------------------------------------------------------------------
+// Return Event Reminders — Saturn Return, Jupiter Return, Solar Return
+// Triggered by the /api/cron/return-event-reminders daily cron.
+// Each function builds subject + body based on how many days until the event.
+// ---------------------------------------------------------------------------
+
+function buildReturnReminderSubject(eventName: string, daysUntil: number): string {
+  if (daysUntil >= 28) return `Your ${eventName} is in 30 days — prepare now`;
+  if (daysUntil >= 5) return `7 days until your ${eventName} — don't miss this window`;
+  if (daysUntil >= 1) return `Tomorrow is your ${eventName} — it's time`;
+  return `Today is your ${eventName} — a powerful moment is here`;
+}
+
+// ---------------------------------------------------------------------------
+// Saturn Return Reminder
+// ---------------------------------------------------------------------------
+
+interface SaturnReturnReminderParams {
+  to: string;
+  name: string;
+  eventDate: string;       // pre-formatted display date, e.g. "April 18, 2026"
+  daysUntil: number;
+  occurrenceNumber: number;
+  landingPageUrl: string;  // e.g. /readings/saturn-return
+}
+
+export async function sendSaturnReturnReminder({
+  to,
+  name,
+  eventDate,
+  daysUntil,
+  occurrenceNumber,
+  landingPageUrl,
+}: SaturnReturnReminderParams) {
+  if (await isSequencePaused("return_reminders")) {
+    console.log("[email] return_reminders sequence is paused — skipping Saturn Return send to", to);
+    return { success: false, id: "" };
+  }
+
+  const ordinal = occurrenceNumber === 1 ? "1st" : occurrenceNumber === 2 ? "2nd" : `${occurrenceNumber}th`;
+  const subject = buildReturnReminderSubject("Saturn Return", daysUntil);
+
+  const urgencyLine =
+    daysUntil <= 0
+      ? `<p style="margin:0 0 16px;color:#d4d4d8;">Today is your ${ordinal} Saturn Return — one of the most significant astrological thresholds of your life.</p>`
+      : daysUntil === 1
+      ? `<p style="margin:0 0 16px;color:#d4d4d8;">Tomorrow your ${ordinal} Saturn Return arrives. This is a threshold you have been building toward for ~29.5 years.</p>`
+      : `<p style="margin:0 0 16px;color:#d4d4d8;">Your ${ordinal} Saturn Return arrives on <strong style="color:#e4e4e7;">${eventDate}</strong> — in <strong style="color:#e4e4e7;">${daysUntil} days</strong>.</p>`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    ${urgencyLine}
+
+    ${infoCard(`<strong style="color:#e4e4e7;">What is a Saturn Return?</strong><br/><span style="color:#a1a1aa;">Saturn takes ~29.5 years to complete its orbit and return to the exact position it held at your birth. This is a moment of reckoning, maturation, and profound restructuring — one of the most significant transits in a lifetime. The themes of responsibility, identity, and purpose come sharply into focus.</span>`)}
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">Many people feel its effects in the months leading up to and following the exact date. Working with a skilled diviner during this window can help you navigate the transition consciously and with clarity.</p>
+
+    ${secondaryCta("Book a Reading for Your Saturn Return", `${APP_URL}${landingPageUrl}`)}
+  `;
+
+  const result = await sendEmail({
+    to,
+    subject,
+    html: buildEmailHtml({
+      title: `Your ${ordinal} Saturn Return`,
+      preheader: `Saturn Return arrives on ${eventDate} — a pivotal threshold is approaching.`,
+      content,
+      ctaText: "Book a Saturn Return Reading",
+      ctaUrl: `${APP_URL}${landingPageUrl}`,
+      footer: `AstrologyPro &mdash; Divine Infinite Being`,
+    }),
+  });
+
+  await logEmail({
+    emailTo: to,
+    templateName: "saturn_return_reminder",
+    subject,
+    metadata: { daysUntil, occurrenceNumber, eventDate },
+  });
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Jupiter Return Reminder
+// ---------------------------------------------------------------------------
+
+interface JupiterReturnReminderParams {
+  to: string;
+  name: string;
+  eventDate: string;
+  daysUntil: number;
+  occurrenceNumber: number;
+  landingPageUrl: string;
+}
+
+export async function sendJupiterReturnReminder({
+  to,
+  name,
+  eventDate,
+  daysUntil,
+  occurrenceNumber,
+  landingPageUrl,
+}: JupiterReturnReminderParams) {
+  if (await isSequencePaused("return_reminders")) {
+    console.log("[email] return_reminders sequence is paused — skipping Jupiter Return send to", to);
+    return { success: false, id: "" };
+  }
+
+  const ordinal = occurrenceNumber === 1 ? "1st" : occurrenceNumber === 2 ? "2nd" : occurrenceNumber === 3 ? "3rd" : `${occurrenceNumber}th`;
+  const subject = buildReturnReminderSubject("Jupiter Return", daysUntil);
+
+  const urgencyLine =
+    daysUntil <= 0
+      ? `<p style="margin:0 0 16px;color:#d4d4d8;">Today is your ${ordinal} Jupiter Return — a rare window of expansion and aligned opportunity opens now.</p>`
+      : daysUntil === 1
+      ? `<p style="margin:0 0 16px;color:#d4d4d8;">Tomorrow your ${ordinal} Jupiter Return arrives. This cycle of abundance and growth begins on <strong style="color:#e4e4e7;">${eventDate}</strong>.</p>`
+      : `<p style="margin:0 0 16px;color:#d4d4d8;">Your ${ordinal} Jupiter Return arrives on <strong style="color:#e4e4e7;">${eventDate}</strong> — in <strong style="color:#e4e4e7;">${daysUntil} days</strong>.</p>`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    ${urgencyLine}
+
+    ${infoCard(`<strong style="color:#e4e4e7;">What is a Jupiter Return?</strong><br/><span style="color:#a1a1aa;">Jupiter orbits the sun every ~12 years, returning to its exact birth position and initiating a new cycle of expansion, opportunity, and abundance. Each return brings a fresh chapter of growth — in finances, relationships, spirituality, or career depending on your chart. This is one of the most auspicious transits in the astrological calendar.</span>`)}
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">Knowing what Jupiter activates in your natal chart can help you lean into the right areas of life during this window. A Jupiter Return reading gives you a personalised roadmap for the 12-year cycle ahead.</p>
+
+    ${secondaryCta("Book a Reading for Your Jupiter Return", `${APP_URL}${landingPageUrl}`)}
+  `;
+
+  const result = await sendEmail({
+    to,
+    subject,
+    html: buildEmailHtml({
+      title: `Your ${ordinal} Jupiter Return`,
+      preheader: `Jupiter Return arrives on ${eventDate} — a new cycle of expansion is beginning.`,
+      content,
+      ctaText: "Book a Jupiter Return Reading",
+      ctaUrl: `${APP_URL}${landingPageUrl}`,
+      footer: `AstrologyPro &mdash; Divine Infinite Being`,
+    }),
+  });
+
+  await logEmail({
+    emailTo: to,
+    templateName: "jupiter_return_reminder",
+    subject,
+    metadata: { daysUntil, occurrenceNumber, eventDate },
+  });
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Solar Return Reminder
+// ---------------------------------------------------------------------------
+
+interface SolarReturnReminderParams {
+  to: string;
+  name: string;
+  eventDate: string;
+  daysUntil: number;
+  landingPageUrl: string;
+}
+
+export async function sendSolarReturnReminder({
+  to,
+  name,
+  eventDate,
+  daysUntil,
+  landingPageUrl,
+}: SolarReturnReminderParams) {
+  if (await isSequencePaused("return_reminders")) {
+    console.log("[email] return_reminders sequence is paused — skipping Solar Return send to", to);
+    return { success: false, id: "" };
+  }
+
+  const subject = buildReturnReminderSubject("Solar Return", daysUntil);
+
+  const urgencyLine =
+    daysUntil <= 0
+      ? `<p style="margin:0 0 16px;color:#d4d4d8;">Today is your Solar Return — your personal new year begins now.</p>`
+      : daysUntil === 1
+      ? `<p style="margin:0 0 16px;color:#d4d4d8;">Tomorrow is your Solar Return — your personal new year arrives on <strong style="color:#e4e4e7;">${eventDate}</strong>.</p>`
+      : `<p style="margin:0 0 16px;color:#d4d4d8;">Your Solar Return arrives on <strong style="color:#e4e4e7;">${eventDate}</strong> — in <strong style="color:#e4e4e7;">${daysUntil} days</strong>.</p>`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    ${urgencyLine}
+
+    ${infoCard(`<strong style="color:#e4e4e7;">What is a Solar Return?</strong><br/><span style="color:#a1a1aa;">Each year, the Sun returns to the exact degree it occupied at the moment of your birth. This Solar Return is your personal new year — a powerful reset point that sets the energetic tone for the 12 months ahead. The Solar Return chart reveals the themes, opportunities, and challenges that will define your coming year.</span>`)}
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">A Solar Return reading is one of the most practical astrological tools available — it gives you a precise, personalised preview of the year ahead so you can prepare, prioritise, and move with intention.</p>
+
+    ${secondaryCta("Book a Reading for Your Solar Return", `${APP_URL}${landingPageUrl}`)}
+  `;
+
+  const result = await sendEmail({
+    to,
+    subject,
+    html: buildEmailHtml({
+      title: `Your Solar Return`,
+      preheader: `Your Solar Return is on ${eventDate} — your personal new year is almost here.`,
+      content,
+      ctaText: "Book a Solar Return Reading",
+      ctaUrl: `${APP_URL}${landingPageUrl}`,
+      footer: `AstrologyPro &mdash; Divine Infinite Being`,
+    }),
+  });
+
+  await logEmail({
+    emailTo: to,
+    templateName: "solar_return_reminder",
+    subject,
+    metadata: { daysUntil, eventDate },
+  });
+
+  return result;
+}

@@ -1,223 +1,414 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Star, ArrowRight, Search } from "lucide-react";
+import { Star, ArrowRight, Search, BadgeCheck, X } from "lucide-react";
+import type { DivinerCard, DivinerSubType } from "./page";
 
-interface DivinerCard {
-  id: string;
-  username: string;
-  display_name: string;
-  tagline: string | null;
-  avatar_url: string | null;
-  specialties: string[];
-  completedSessions: number;
-  averageRating: number | null;
-  reviewCount: number;
-  startingPrice: number | null;
+type SortOption = "certified" | "rating" | "sessions" | "price";
+type TypeFilter = "all" | DivinerSubType;
+
+const TYPE_LABELS: Record<TypeFilter, string> = {
+  all: "All",
+  astrologer: "Astrologer",
+  tarot: "Tarot Reader",
+  oracle: "Oracle",
+};
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "certified", label: "Certified First" },
+  { value: "rating", label: "Top Rated" },
+  { value: "sessions", label: "Most Sessions" },
+  { value: "price", label: "Lowest Price" },
+];
+
+const SUB_TYPE_COLORS: Record<DivinerSubType, string> = {
+  astrologer: "border-[#4c6bc9]/20 bg-[#4c6bc9]/10 text-[#8ba4e8]",
+  tarot: "border-[#9c4cc9]/20 bg-[#9c4cc9]/10 text-[#c08ae8]",
+  oracle: "border-[#c9a84c]/20 bg-[#c9a84c]/10 text-[#c9a84c]",
+};
+
+function StarRating({ rating }: { rating: number }) {
+  const full = Math.floor(rating);
+  const half = rating - full >= 0.5;
+  return (
+    <span className="flex items-center gap-0.5" aria-label={`${rating.toFixed(1)} stars`}>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Star
+          key={i}
+          className={`size-3 ${
+            i < full
+              ? "fill-[#c9a84c] text-[#c9a84c]"
+              : i === full && half
+              ? "fill-[#c9a84c]/50 text-[#c9a84c]/50"
+              : "fill-transparent text-[#b8bcd0]/20"
+          }`}
+        />
+      ))}
+    </span>
+  );
 }
 
-type SortOption = "rating" | "price" | "sessions";
-type SpecialtyFilter = "all" | "astrology" | "tarot";
+function GradientPlaceholder({ name }: { name: string }) {
+  const initials = name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#c9a84c]/20 to-[#4c6bc9]/10">
+      <span className="font-display text-2xl font-semibold text-[#c9a84c]/60">
+        {initials}
+      </span>
+    </div>
+  );
+}
+
+function DivinerCardGrid({ diviner }: { diviner: DivinerCard }) {
+  return (
+    <article className="group flex flex-col overflow-hidden rounded-2xl border border-white/5 bg-[#0d1117]/60 transition-all hover:border-[#c9a84c]/30 hover:shadow-[0_0_30px_rgba(201,168,76,0.05)]">
+      {/* Cover image / gradient */}
+      <div className="relative h-24 overflow-hidden bg-[#0d1117]">
+        {diviner.coverImageUrl ? (
+          <img
+            src={diviner.coverImageUrl}
+            alt=""
+            className="h-full w-full object-cover opacity-60"
+          />
+        ) : (
+          <GradientPlaceholder name={diviner.displayName} />
+        )}
+
+        {/* Certified badge — top-right of cover */}
+        {diviner.isCertified && (
+          <span
+            title="Divine Infinite Being Certified"
+            className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-[#0d1117]/80 px-2 py-0.5 text-[10px] font-semibold text-[#c9a84c] backdrop-blur-sm"
+          >
+            <BadgeCheck className="size-3" aria-hidden="true" />
+            DIB Certified
+          </span>
+        )}
+      </div>
+
+      {/* Avatar — overlaps cover */}
+      <div className="relative -mt-7 flex flex-col px-5">
+        <div className="flex items-end justify-between">
+          {diviner.avatarUrl ? (
+            <img
+              src={diviner.avatarUrl}
+              alt={diviner.displayName}
+              className="size-14 rounded-full border-2 border-[#0d1117] object-cover ring-1 ring-[#c9a84c]/20"
+            />
+          ) : (
+            <div className="flex size-14 items-center justify-center rounded-full border-2 border-[#0d1117] bg-[#c9a84c]/10 text-base font-semibold text-[#c9a84c] ring-1 ring-[#c9a84c]/20">
+              {diviner.displayName
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .slice(0, 2)}
+            </div>
+          )}
+
+          {/* Sub-type pill */}
+          <span
+            className={`mb-1 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${SUB_TYPE_COLORS[diviner.subType]}`}
+          >
+            {TYPE_LABELS[diviner.subType]}
+          </span>
+        </div>
+
+        {/* Name + tagline */}
+        <div className="mt-3">
+          <h3 className="font-semibold text-[#f5f0e8] group-hover:text-[#c9a84c] transition-colors">
+            {diviner.displayName}
+          </h3>
+          {diviner.tagline && (
+            <p className="mt-0.5 line-clamp-2 text-sm text-[#b8bcd0]/60">
+              {diviner.tagline}
+            </p>
+          )}
+        </div>
+
+        {/* Specialties tags */}
+        {diviner.specialties.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {diviner.specialties.slice(0, 3).map((spec) => (
+              <Badge
+                key={spec}
+                variant="outline"
+                className="border-[#c9a84c]/10 bg-[#c9a84c]/5 text-[10px] text-[#c9a84c]/80"
+              >
+                {spec}
+              </Badge>
+            ))}
+            {diviner.specialties.length > 3 && (
+              <Badge
+                variant="outline"
+                className="border-white/5 text-[10px] text-[#b8bcd0]/40"
+              >
+                +{diviner.specialties.length - 3} more
+              </Badge>
+            )}
+          </div>
+        )}
+
+        {/* Stats row */}
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          {diviner.averageRating !== null && diviner.reviewCount > 0 && (
+            <span className="flex items-center gap-1.5 text-[#c9a84c]">
+              <StarRating rating={diviner.averageRating} />
+              <span className="font-medium">{diviner.averageRating.toFixed(1)}</span>
+              <span className="text-[#b8bcd0]/40">({diviner.reviewCount})</span>
+            </span>
+          )}
+          {diviner.completedSessions > 0 && (
+            <span className="text-[#b8bcd0]/50">
+              {diviner.completedSessions.toLocaleString()} session
+              {diviner.completedSessions !== 1 ? "s" : ""}
+            </span>
+          )}
+          {diviner.startingPrice !== null && (
+            <span className="ml-auto font-medium text-[#f5f0e8]">
+              From ${diviner.startingPrice}
+            </span>
+          )}
+        </div>
+
+        {/* CTA */}
+        <div className="mb-5 mt-4">
+          <Button
+            asChild
+            className="w-full bg-[#c9a84c] text-black hover:bg-[#e2c97e] font-semibold"
+          >
+            <Link href={`/${diviner.username}`}>
+              Book a Reading
+              <ArrowRight className="ml-1 size-3.5" aria-hidden="true" />
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 export function DiscoverFilters({
   diviners,
+  total,
 }: {
   diviners: DivinerCard[];
+  total: number;
 }) {
-  const [search, setSearch] = useState("");
-  const [specialty, setSpecialty] = useState<SpecialtyFilter>("all");
-  const [sort, setSort] = useState<SortOption>("rating");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const search = searchParams.get("search") ?? "";
+  const type = (searchParams.get("type") ?? "all") as TypeFilter;
+  const sort = (searchParams.get("sort") ?? "certified") as SortOption;
+
+  const updateParams = useCallback(
+    (updates: Record<string, string>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === "" || value === "all" || value === "certified") {
+          params.delete(key);
+        } else {
+          params.set(key, value);
+        }
+      }
+      // Always clear page when filters change
+      params.delete("page");
+      const query = params.toString();
+      router.replace(`/discover${query ? `?${query}` : ""}`, { scroll: false });
+    },
+    [router, searchParams]
+  );
+
+  const handleSearch = useCallback(
+    (value: string) => updateParams({ search: value }),
+    [updateParams]
+  );
+  const handleType = useCallback(
+    (value: TypeFilter) => updateParams({ type: value }),
+    [updateParams]
+  );
+  const handleSort = useCallback(
+    (value: SortOption) => updateParams({ sort: value }),
+    [updateParams]
+  );
+
+  const clearFilters = useCallback(() => {
+    router.replace("/discover", { scroll: false });
+  }, [router]);
+
+  const hasActiveFilters = search !== "" || type !== "all" || sort !== "certified";
 
   const filtered = useMemo(() => {
     let result = [...diviners];
 
-    // Search filter
+    // Search: display_name, tagline, bio, specialties
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
         (d) =>
-          d.display_name.toLowerCase().includes(q) ||
+          d.displayName.toLowerCase().includes(q) ||
           (d.tagline?.toLowerCase().includes(q) ?? false) ||
+          (d.bio?.toLowerCase().includes(q) ?? false) ||
           d.specialties.some((s) => s.toLowerCase().includes(q))
       );
     }
 
-    // Specialty filter
-    if (specialty === "astrology") {
-      result = result.filter((d) =>
-        d.specialties.some((s) => s.toLowerCase().includes("astrology"))
-      );
-    } else if (specialty === "tarot") {
-      result = result.filter((d) =>
-        d.specialties.some((s) => s.toLowerCase().includes("tarot"))
-      );
+    // Type filter
+    if (type !== "all") {
+      result = result.filter((d) => d.subType === type);
     }
 
     // Sort
     switch (sort) {
+      case "certified":
+        result.sort((a, b) => {
+          if (a.isCertified !== b.isCertified) return a.isCertified ? -1 : 1;
+          if (b.reviewCount !== a.reviewCount) return b.reviewCount - a.reviewCount;
+          return b.completedSessions - a.completedSessions;
+        });
+        break;
       case "rating":
-        result.sort((a, b) => (b.averageRating ?? 0) - (a.averageRating ?? 0));
+        result.sort((a, b) => {
+          // Certified always above non-certified within same rating bucket
+          const ratingDiff = (b.averageRating ?? 0) - (a.averageRating ?? 0);
+          if (Math.abs(ratingDiff) > 0.001) return ratingDiff;
+          if (a.isCertified !== b.isCertified) return a.isCertified ? -1 : 1;
+          return b.reviewCount - a.reviewCount;
+        });
+        break;
+      case "sessions":
+        result.sort((a, b) => {
+          if (b.completedSessions !== a.completedSessions)
+            return b.completedSessions - a.completedSessions;
+          if (a.isCertified !== b.isCertified) return a.isCertified ? -1 : 1;
+          return 0;
+        });
         break;
       case "price":
         result.sort(
-          (a, b) => (a.startingPrice ?? 999) - (b.startingPrice ?? 999)
+          (a, b) => (a.startingPrice ?? 9999) - (b.startingPrice ?? 9999)
         );
-        break;
-      case "sessions":
-        result.sort((a, b) => b.completedSessions - a.completedSessions);
         break;
     }
 
     return result;
-  }, [diviners, search, specialty, sort]);
+  }, [diviners, search, type, sort]);
 
   return (
     <div>
       {/* Filters bar */}
       <div className="mb-8 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#b8bcd0]/40" />
-          <Input
-            placeholder="Search by name or specialty..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 border-white/10 bg-[#0d1117] text-[#f5f0e8] placeholder:text-[#b8bcd0]/30"
+        {/* Search input */}
+        <div className="relative min-w-[200px] flex-1">
+          <Search
+            className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#b8bcd0]/40"
+            aria-hidden="true"
           />
+          <Input
+            placeholder="Search by name, specialty, or keyword..."
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-10 border-white/10 bg-[#0d1117] text-[#f5f0e8] placeholder:text-[#b8bcd0]/30 focus-visible:ring-[#c9a84c]/30"
+            aria-label="Search diviners"
+          />
+          {search && (
+            <button
+              onClick={() => handleSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b8bcd0]/40 hover:text-[#b8bcd0]/80 transition-colors"
+              aria-label="Clear search"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
         </div>
 
-        <div className="flex gap-1.5">
-          {(["all", "astrology", "tarot"] as const).map((opt) => (
-            <Button
+        {/* Type filter pills */}
+        <div
+          className="flex flex-wrap gap-1.5"
+          role="group"
+          aria-label="Filter by practitioner type"
+        >
+          {(["all", "astrologer", "tarot", "oracle"] as const).map((opt) => (
+            <button
               key={opt}
-              variant={specialty === opt ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSpecialty(opt)}
-              className={
-                specialty === opt
-                  ? "bg-[#c9a84c] text-black hover:bg-[#e2c97e]"
-                  : "border-white/10 text-[#b8bcd0]/60 hover:text-[#f5f0e8]"
-              }
+              onClick={() => handleType(opt)}
+              className={`inline-flex h-9 items-center rounded-full border px-3.5 text-sm font-medium transition-all ${
+                type === opt
+                  ? "border-[#c9a84c] bg-[#c9a84c] text-black"
+                  : "border-white/10 bg-transparent text-[#b8bcd0]/60 hover:border-white/20 hover:text-[#f5f0e8]"
+              }`}
+              aria-pressed={type === opt}
             >
-              {opt === "all" ? "All" : opt.charAt(0).toUpperCase() + opt.slice(1)}
-            </Button>
+              {TYPE_LABELS[opt]}
+            </button>
           ))}
         </div>
 
+        {/* Sort dropdown */}
         <select
           value={sort}
-          onChange={(e) => setSort(e.target.value as SortOption)}
-          className="h-9 rounded-md border border-white/10 bg-[#0d1117] px-3 text-sm text-[#b8bcd0]/80 outline-none"
+          onChange={(e) => handleSort(e.target.value as SortOption)}
+          className="h-9 rounded-md border border-white/10 bg-[#0d1117] px-3 text-sm text-[#b8bcd0]/80 outline-none focus:border-[#c9a84c]/30 focus:ring-0"
+          aria-label="Sort diviners"
         >
-          <option value="rating">Highest Rated</option>
-          <option value="price">Lowest Price</option>
-          <option value="sessions">Most Sessions</option>
+          {SORT_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
         </select>
       </div>
 
-      {/* Results */}
+      {/* Results count + clear filters */}
+      <div className="mb-6 flex items-center justify-between">
+        <p className="text-sm text-[#b8bcd0]/50">
+          Showing{" "}
+          <span className="font-medium text-[#b8bcd0]/80">{filtered.length}</span>{" "}
+          of{" "}
+          <span className="font-medium text-[#b8bcd0]/80">{total}</span> diviner
+          {total !== 1 ? "s" : ""}
+        </p>
+        {hasActiveFilters && (
+          <button
+            onClick={clearFilters}
+            className="inline-flex items-center gap-1 text-sm text-[#c9a84c]/70 hover:text-[#c9a84c] transition-colors"
+          >
+            <X className="size-3" aria-hidden="true" />
+            Clear filters
+          </button>
+        )}
+      </div>
+
+      {/* Results grid */}
       {filtered.length === 0 ? (
-        <div className="py-16 text-center">
-          <p className="text-[#b8bcd0]/50">
-            No readers found matching your criteria.
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <p className="text-lg font-medium text-[#b8bcd0]/50">
+            No diviners match your search
           </p>
+          <p className="mt-2 text-sm text-[#b8bcd0]/30">
+            Try adjusting your filters or search terms
+          </p>
+          <button
+            onClick={clearFilters}
+            className="mt-6 inline-flex h-9 items-center rounded-full border border-[#c9a84c]/30 px-4 text-sm text-[#c9a84c] transition-colors hover:border-[#c9a84c]/60 hover:bg-[#c9a84c]/5"
+          >
+            Clear all filters
+          </button>
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((diviner) => (
-            <div
-              key={diviner.id}
-              className="group rounded-2xl border border-white/5 bg-[#0d1117]/60 p-6 transition-all hover:border-[#c9a84c]/30 hover:shadow-[0_0_30px_rgba(201,168,76,0.05)]"
-            >
-              <div className="flex items-start gap-4">
-                {diviner.avatar_url ? (
-                  <img
-                    src={diviner.avatar_url}
-                    alt={diviner.display_name}
-                    className="size-14 rounded-full border border-[#c9a84c]/20 object-cover"
-                  />
-                ) : (
-                  <div className="flex size-14 items-center justify-center rounded-full bg-[#c9a84c]/10 text-lg font-semibold text-[#c9a84c]">
-                    {diviner.display_name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .slice(0, 2)}
-                  </div>
-                )}
-                <div className="flex-1">
-                  <h3 className="font-semibold text-[#f5f0e8]">
-                    {diviner.display_name}
-                  </h3>
-                  {diviner.tagline && (
-                    <p className="mt-0.5 line-clamp-2 text-sm text-[#b8bcd0]/60">
-                      {diviner.tagline}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {diviner.specialties.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-1.5">
-                  {diviner.specialties.slice(0, 3).map((spec) => (
-                    <Badge
-                      key={spec}
-                      variant="outline"
-                      className="border-[#c9a84c]/10 bg-[#c9a84c]/5 text-[10px] text-[#c9a84c]/80"
-                    >
-                      {spec}
-                    </Badge>
-                  ))}
-                  {diviner.specialties.length > 3 && (
-                    <Badge
-                      variant="outline"
-                      className="border-white/5 text-[10px] text-[#b8bcd0]/40"
-                    >
-                      +{diviner.specialties.length - 3} more
-                    </Badge>
-                  )}
-                </div>
-              )}
-
-              <div className="mt-4 flex items-center gap-4 text-sm">
-                {diviner.averageRating !== null && (
-                  <span className="flex items-center gap-1 text-[#c9a84c]">
-                    <Star className="size-3.5 fill-current" />
-                    {diviner.averageRating.toFixed(1)}
-                    <span className="text-[#b8bcd0]/40">
-                      ({diviner.reviewCount})
-                    </span>
-                  </span>
-                )}
-                {diviner.completedSessions > 0 && (
-                  <span className="text-[#b8bcd0]/50">
-                    {diviner.completedSessions} session
-                    {diviner.completedSessions !== 1 ? "s" : ""}
-                  </span>
-                )}
-                {diviner.startingPrice !== null && (
-                  <span className="ml-auto text-[#f5f0e8]">
-                    From ${diviner.startingPrice}
-                  </span>
-                )}
-              </div>
-
-              <div className="mt-5">
-                <Button
-                  asChild
-                  variant="outline"
-                  className="w-full border-[#c9a84c]/20 text-[#c9a84c] hover:bg-[#c9a84c]/5 hover:border-[#c9a84c]/40"
-                >
-                  <Link href={`/${diviner.username}`}>
-                    View Profile
-                    <ArrowRight className="ml-1 size-3.5" />
-                  </Link>
-                </Button>
-              </div>
-            </div>
+            <DivinerCardGrid key={diviner.username} diviner={diviner} />
           ))}
         </div>
       )}
