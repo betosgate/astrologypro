@@ -80,7 +80,7 @@ export async function GET() {
       return NextResponse.json({ error: familyError.message }, { status: 500 });
     }
 
-    const tier = member.pm_plan_tiers as {
+    type TierShape = {
       id: string;
       name: string;
       description: string;
@@ -88,7 +88,11 @@ export async function GET() {
       base_member_limit: number;
       extra_per_member_usd: number;
       max_total_members: number;
-    } | null;
+    };
+    const rawTier = member.pm_plan_tiers;
+    const tier: TierShape | null = Array.isArray(rawTier)
+      ? (rawTier[0] as TierShape) ?? null
+      : (rawTier as unknown as TierShape | null);
 
     const currentMembers = (familyMembers ?? []).length;
     const extraMembers = tier

@@ -101,12 +101,16 @@ export async function POST(request: NextRequest) {
         { expand: ["items"] }
       );
 
-      const currentTier = member.pm_plan_tiers as {
+      type TierShape = {
         id: string;
         stripe_price_id: string | null;
         stripe_extra_price_id: string | null;
         base_member_limit: number;
-      } | null;
+      };
+      const rawTier = member.pm_plan_tiers;
+      const currentTier: TierShape | null = Array.isArray(rawTier)
+        ? (rawTier[0] as TierShape) ?? null
+        : (rawTier as unknown as TierShape | null);
 
       const oldPriceId = currentTier?.stripe_price_id;
       const oldItem = oldPriceId

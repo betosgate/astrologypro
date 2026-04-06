@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCronSecret } from "@/lib/cron-auth";
 
 export const runtime = "nodejs";
 
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${process.env.CRON_SECRET}`,
+            "Authorization": `Bearer ${getCronSecret()}`,
           },
           body: JSON.stringify({
             diviner_id: diviner.id,

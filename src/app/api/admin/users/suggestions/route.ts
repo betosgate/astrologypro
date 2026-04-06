@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
 
 /** GET /api/admin/users/suggestions?q=... — typeahead for the users search box */
 export async function GET(req: NextRequest) {
   // Auth guard
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email || !ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+  const user = await getAdminUser();
+  if (!user) {
     return NextResponse.json({ suggestions: [] }, { status: 403 });
   }
 
