@@ -74,6 +74,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     '/guides',
     '/glossary',
     '/zodiac',
+    '/readings',
+    '/readings/saturn-return',
+    '/readings/jupiter-return',
+    '/readings/solar-return',
   ].map((route) => ({
     url: `${BASE_URL}${route}`,
     lastModified: now,

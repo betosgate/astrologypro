@@ -35,6 +35,7 @@ import {
   ShoppingBag,
   BarChart3,
   Radio,
+  ClipboardList,
   Shuffle,
   Flame,
   Settings2,
@@ -52,6 +53,7 @@ import {
   History,
   FileCode2,
   Mail,
+  Gift,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -80,6 +82,7 @@ const NAV_GROUPS = [
       { label: "Blog Categories", href: "/admin/blog/categories", icon: Layers },
       { label: "Blog Authors", href: "/admin/blog/authors", icon: Users },
       { label: "Blog Series", href: "/admin/blog/series", icon: BookOpen },
+      { label: "Media Items", href: "/admin/media-items", icon: Film },
       { label: "Videos", href: "/admin/videos", icon: Video },
       { label: "Webinars", href: "/admin/webinars", icon: Monitor },
       { label: "Spiritual Wisdom", href: "/admin/spiritual-wisdom", icon: Sparkles },
@@ -111,6 +114,13 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: "Live",
+    items: [
+      { label: "Live Sessions", href: "/admin/live-sessions", icon: Radio },
+      { label: "Check-ins", href: "/admin/check-ins", icon: ClipboardList },
+    ],
+  },
+  {
     label: "Community",
     items: [
       { label: "PM Plan Tiers", href: "/admin/pm-plan-tiers", icon: Layers },
@@ -130,6 +140,12 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: "Plans",
+    items: [
+      { label: "Diviner Plans", href: "/admin/diviner-plans", icon: Layers },
+    ],
+  },
+  {
     label: "Commerce",
     items: [
       { label: "Packages", href: "/admin/packages", icon: Package },
@@ -145,6 +161,12 @@ const NAV_GROUPS = [
       { label: "Email Sequences", href: "/admin/email-sequences", icon: MailCheck },
       { label: "Email History", href: "/admin/email-history", icon: History },
       { label: "Email Preview", href: "/admin/email-preview", icon: FileCode2 },
+    ],
+  },
+  {
+    label: "Engagement",
+    items: [
+      { label: "Giveaways", href: "/admin/giveaways", icon: Gift },
     ],
   },
   {

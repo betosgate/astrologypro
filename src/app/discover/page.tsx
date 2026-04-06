@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { DiscoverFilters } from "./discover-filters";
 import { APP_URL } from "@/lib/constants";
 
-export const revalidate = 300; // 5 min ISR
+// Cookie read requires dynamic rendering — cannot use ISR
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -163,8 +165,93 @@ async function getActiveDiviners(): Promise<DivinerCard[]> {
   return cards;
 }
 
+async function getPreferredDiviner(username: string): Promise<DivinerCard | null> {
+  const admin = createAdminClient();
+
+  const { data: diviner } = await admin
+    .from("diviners")
+    .select(
+      "id, username, display_name, tagline, bio, avatar_url, cover_image_url, specialties, is_certified"
+    )
+    .eq("username", username)
+    .eq("is_active", true)
+    .eq("onboarding_completed", true)
+    .eq("account_status", "active")
+    .eq("charges_enabled", true)
+    .single();
+
+  if (!diviner) return null;
+
+  const id = diviner.id as string;
+
+  const [servicesResult, testimonialsResult, bookingsResult] = await Promise.all([
+    admin
+      .from("services")
+      .select("diviner_id, category, base_price")
+      .eq("diviner_id", id)
+      .eq("is_active", true),
+    admin
+      .from("testimonials")
+      .select("rating")
+      .eq("diviner_id", id)
+      .eq("status", "approved"),
+    admin
+      .from("bookings")
+      .select("diviner_id", { count: "exact", head: true })
+      .eq("diviner_id", id)
+      .eq("status", "completed"),
+  ]);
+
+  const services = (servicesResult.data ?? []).map((s) => ({
+    category: s.category as string,
+    base_price: Number(s.base_price),
+  }));
+  const ratings = (testimonialsResult.data ?? [])
+    .filter((t) => t.rating != null)
+    .map((t) => t.rating as number);
+  const completedSessions = bookingsResult.count ?? 0;
+
+  const hasAstrology = services.some((s) => s.category === "astrology");
+  const hasTarot = services.some((s) => s.category === "tarot");
+  let subType: DivinerSubType = "astrologer";
+  if (hasAstrology && hasTarot) subType = "oracle";
+  else if (hasTarot) subType = "tarot";
+
+  const startingPrice =
+    services.length > 0
+      ? Math.min(...services.map((s) => s.base_price))
+      : null;
+
+  const averageRating =
+    ratings.length > 0
+      ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+      : null;
+
+  return {
+    username: diviner.username as string,
+    displayName: diviner.display_name as string,
+    tagline: (diviner.tagline as string | null) ?? null,
+    bio: (diviner.bio as string | null) ?? null,
+    avatarUrl: (diviner.avatar_url as string | null) ?? null,
+    coverImageUrl: (diviner.cover_image_url as string | null) ?? null,
+    isCertified: !!(diviner.is_certified as boolean | null),
+    specialties: (diviner.specialties as string[]) ?? [],
+    subType,
+    startingPrice,
+    reviewCount: ratings.length,
+    averageRating,
+    completedSessions,
+  };
+}
+
 export default async function DiscoverPage() {
-  const diviners = await getActiveDiviners();
+  const cookieStore = await cookies();
+  const preferredUsername = cookieStore.get("preferred_diviner")?.value ?? null;
+
+  const [diviners, preferredDiviner] = await Promise.all([
+    getActiveDiviners(),
+    preferredUsername ? getPreferredDiviner(preferredUsername) : Promise.resolve(null),
+  ]);
 
   return (
     <div className="min-h-screen bg-[#06080f]">
@@ -186,7 +273,11 @@ export default async function DiscoverPage() {
 
       {/* All diviners with filters */}
       <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
-        <DiscoverFilters diviners={diviners} total={diviners.length} />
+        <DiscoverFilters
+          diviners={diviners}
+          total={diviners.length}
+          preferredDiviner={preferredDiviner}
+        />
       </section>
 
       <MarketingFooter />

@@ -49,6 +49,8 @@ export default async function PortalLayout({
   const navLinks = [
     { label: "Dashboard", href: "/portal" },
     { label: "Bookings", href: "/portal/bookings" },
+    { label: "My Orders", href: "/portal/orders" },
+    { label: "Subscriptions", href: "/portal/subscriptions" },
     { label: "Profile", href: "/portal/profile" },
   ];
 

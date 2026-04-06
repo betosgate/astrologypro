@@ -21,6 +21,7 @@ import {
   Tag,
   Mail,
   ClipboardList,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ const navItems = [
   { label: "Discounts", href: "/dashboard/discounts", icon: Tag },
   { label: "Follow-ups", href: "/dashboard/follow-ups", icon: Mail },
   { label: "Intake Builder", href: "/dashboard/intake-builder", icon: ClipboardList },
+  { label: "Billing", href: "/dashboard/billing", icon: CreditCard },
   { label: "Profile", href: "/dashboard/profile", icon: User },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];

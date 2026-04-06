@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -197,12 +197,77 @@ function DivinerCardGrid({ diviner }: { diviner: DivinerCard }) {
   );
 }
 
+const SESSION_DISMISSED_KEY = "preferred_diviner_dismissed";
+
+function PreferredDivinerBanner({ diviner }: { diviner: DivinerCard }) {
+  const [dismissed, setDismissed] = useState(false);
+
+  // Restore dismissed state from sessionStorage on mount
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(SESSION_DISMISSED_KEY) === "true") {
+        setDismissed(true);
+      }
+    } catch {
+      // sessionStorage unavailable (SSR guard — should not happen in client component but defensive)
+    }
+  }, []);
+
+  const handleDismiss = useCallback(() => {
+    setDismissed(true);
+    try {
+      sessionStorage.setItem(SESSION_DISMISSED_KEY, "true");
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  if (dismissed) return null;
+
+  return (
+    <section
+      aria-label="Your Astrologer"
+      className="mb-10 rounded-2xl border border-[#c9a84c]/25 bg-[#c9a84c]/5 p-5"
+    >
+      {/* Section header */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span aria-hidden="true" className="text-[#c9a84c]">⭐</span>
+          <h2 className="font-display text-lg font-semibold text-[#c9a84c]">
+            Your Astrologer
+          </h2>
+        </div>
+        <button
+          onClick={handleDismiss}
+          className="text-sm text-[#b8bcd0]/50 underline underline-offset-2 transition-colors hover:text-[#b8bcd0]/80"
+          aria-label="Dismiss your astrologer section"
+        >
+          Choose a different astrologer
+        </button>
+      </div>
+
+      {/* Diviner card with "Your Astrologer" badge overlay */}
+      <div className="relative max-w-sm">
+        {/* Badge */}
+        <div className="absolute -top-2.5 left-4 z-10">
+          <span className="inline-flex items-center gap-1 rounded-full border border-[#c9a84c]/60 bg-[#c9a84c] px-3 py-0.5 text-[11px] font-semibold text-black shadow-sm">
+            ⭐ Your Astrologer
+          </span>
+        </div>
+        <DivinerCardGrid diviner={diviner} />
+      </div>
+    </section>
+  );
+}
+
 export function DiscoverFilters({
   diviners,
   total,
+  preferredDiviner = null,
 }: {
   diviners: DivinerCard[];
   total: number;
+  preferredDiviner?: DivinerCard | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -306,6 +371,9 @@ export function DiscoverFilters({
 
   return (
     <div>
+      {/* Preferred diviner — shown above filters when cookie is set */}
+      {preferredDiviner && <PreferredDivinerBanner diviner={preferredDiviner} />}
+
       {/* Filters bar */}
       <div className="mb-8 flex flex-wrap items-center gap-3">
         {/* Search input */}
