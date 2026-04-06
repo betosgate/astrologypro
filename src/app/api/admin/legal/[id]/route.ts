@@ -6,8 +6,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const user = await getAdminUser();
   if (!user) {
     return NextResponse.json(
@@ -21,7 +22,7 @@ export async function GET(
   const { data: doc, error } = await admin
     .from("legal_documents")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (error || !doc) {
@@ -35,15 +36,16 @@ export async function GET(
   const { count } = await admin
     .from("legal_acceptances")
     .select("id", { count: "exact", head: true })
-    .eq("document_id", params.id);
+    .eq("document_id", id);
 
   return NextResponse.json({ ...doc, acceptance_count: count ?? 0 });
 }
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const user = await getAdminUser();
   if (!user) {
     return NextResponse.json(
@@ -68,7 +70,7 @@ export async function PATCH(
   const { data: existing, error: fetchError } = await admin
     .from("legal_documents")
     .select("id, document_type, is_active")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (fetchError || !existing) {
@@ -97,7 +99,7 @@ export async function PATCH(
     const { data: activated, error: activateError } = await admin
       .from("legal_documents")
       .update({ is_active: true })
-      .eq("id", params.id)
+      .eq("id", id)
       .select()
       .single();
 
@@ -133,7 +135,7 @@ export async function PATCH(
   const { data: updated, error: updateError } = await admin
     .from("legal_documents")
     .update(updates)
-    .eq("id", params.id)
+    .eq("id", id)
     .select()
     .single();
 
@@ -149,8 +151,9 @@ export async function PATCH(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const user = await getAdminUser();
   if (!user) {
     return NextResponse.json(
@@ -164,7 +167,7 @@ export async function DELETE(
   const { data: existing, error: fetchError } = await admin
     .from("legal_documents")
     .select("id, is_active")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (fetchError || !existing) {
@@ -190,7 +193,7 @@ export async function DELETE(
   const { count: acceptanceCount } = await admin
     .from("legal_acceptances")
     .select("id", { count: "exact", head: true })
-    .eq("document_id", params.id);
+    .eq("document_id", id);
 
   if (acceptanceCount && acceptanceCount > 0) {
     return NextResponse.json(
@@ -207,7 +210,7 @@ export async function DELETE(
   const { error: deleteError } = await admin
     .from("legal_documents")
     .delete()
-    .eq("id", params.id);
+    .eq("id", id);
 
   if (deleteError) {
     return NextResponse.json(

@@ -4,10 +4,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 // ─── GET /api/admin/live-sessions/[id] ───────────────────────────────────────
 export async function GET(_req: NextRequest, { params }: Params) {
+  const { id } = await params;
   const adminUser = await getAdminUser();
   if (!adminUser) {
     return NextResponse.json(
@@ -25,7 +26,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
        check_in_enabled, check_in_form_title, check_in_form_subtitle, created_at, updated_at,
        diviners(id, display_name, username, avatar_url)`
     )
-    .eq("id", params.id)
+    .eq("id", id)
     .maybeSingle();
 
   if (error) {
@@ -69,6 +70,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 //                 check_in_enabled, check_in_form_title, check_in_form_subtitle
 // Status transitions: scheduled→live, live→ended, any→cancelled
 export async function PATCH(req: NextRequest, { params }: Params) {
+  const { id } = await params;
   const adminUser = await getAdminUser();
   if (!adminUser) {
     return NextResponse.json(
@@ -100,7 +102,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const { data: existing, error: fetchErr } = await admin
     .from("live_sessions")
     .select("id, status")
-    .eq("id", params.id)
+    .eq("id", id)
     .maybeSingle();
 
   if (fetchErr) {
@@ -175,7 +177,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const { data, error } = await admin
     .from("live_sessions")
     .update(updates)
-    .eq("id", params.id)
+    .eq("id", id)
     .select()
     .single();
 
@@ -193,6 +195,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 // ─── DELETE /api/admin/live-sessions/[id] ────────────────────────────────────
 // Soft-cancel: sets status = 'cancelled'
 export async function DELETE(_req: NextRequest, { params }: Params) {
+  const { id } = await params;
   const adminUser = await getAdminUser();
   if (!adminUser) {
     return NextResponse.json(
@@ -206,7 +209,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   const { data, error } = await admin
     .from("live_sessions")
     .update({ status: "cancelled", updated_at: new Date().toISOString() })
-    .eq("id", params.id)
+    .eq("id", id)
     .select("id, status")
     .maybeSingle();
 

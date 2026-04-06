@@ -57,19 +57,20 @@ async function getSessionOwnedByDiviner(sessionId: string, dividerId: string) {
  */
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const diviner = await getAuthenticatedDiviner();
   if (!diviner) return problem(401, "Unauthorized", "Authentication required.");
 
-  const session = await getSessionOwnedByDiviner(params.id, diviner.id);
+  const session = await getSessionOwnedByDiviner(id, diviner.id);
   if (!session) return problem(404, "Not Found", "Video session not found.");
 
   const admin = createAdminClient();
   const { count: participantCount } = await admin
     .from("video_session_participants")
     .select("id", { count: "exact", head: true })
-    .eq("session_id", params.id);
+    .eq("session_id", id);
 
   return NextResponse.json({ session, participantCount: participantCount ?? 0 });
 }
@@ -80,12 +81,13 @@ export async function GET(
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const diviner = await getAuthenticatedDiviner();
   if (!diviner) return problem(401, "Unauthorized", "Authentication required.");
 
-  const session = await getSessionOwnedByDiviner(params.id, diviner.id);
+  const session = await getSessionOwnedByDiviner(id, diviner.id);
   if (!session) return problem(404, "Not Found", "Video session not found.");
 
   let body: {
@@ -142,7 +144,7 @@ export async function PATCH(
     const { error: updateErr } = await admin
       .from("video_sessions")
       .update(updates)
-      .eq("id", params.id);
+      .eq("id", id);
 
     if (updateErr) return problem(500, "Internal Server Error", updateErr.message);
 
@@ -201,7 +203,7 @@ export async function PATCH(
   const { data: updated, error: updateErr } = await admin
     .from("video_sessions")
     .update(updates)
-    .eq("id", params.id)
+    .eq("id", id)
     .select()
     .single();
 

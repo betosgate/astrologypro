@@ -44,12 +44,13 @@ async function fetchDocument(type: string): Promise<LegalDocument | null> {
 export async function generateMetadata({
   params,
 }: {
-  params: { type: string };
+  params: Promise<{ type: string }>;
 }): Promise<Metadata> {
-  if (!VALID_TYPES.includes(params.type as LegalType)) {
+  const { type } = await params;
+  if (!VALID_TYPES.includes(type as LegalType)) {
     return { title: "Not Found" };
   }
-  const doc = await fetchDocument(params.type);
+  const doc = await fetchDocument(type);
   if (!doc) return { title: "Legal Document" };
   return {
     title: `${doc.title} | AstrologyPro`,
@@ -57,12 +58,13 @@ export async function generateMetadata({
   };
 }
 
-export default async function LegalPage({ params }: { params: { type: string } }) {
-  if (!VALID_TYPES.includes(params.type as LegalType)) {
+export default async function LegalPage({ params }: { params: Promise<{ type: string }> }) {
+  const { type } = await params;
+  if (!VALID_TYPES.includes(type as LegalType)) {
     notFound();
   }
 
-  const doc = await fetchDocument(params.type);
+  const doc = await fetchDocument(type);
   if (!doc) {
     notFound();
   }

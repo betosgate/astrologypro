@@ -5,14 +5,16 @@ import { VideoJoin } from "@/components/portal/video-join";
 export const dynamic = "force-dynamic";
 
 interface PortalVideoPageProps {
-  params: { id: string };
-  searchParams: { t?: string };
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ t?: string }>;
 }
 
 export default async function PortalVideoPage({
   params,
   searchParams,
 }: PortalVideoPageProps) {
+  const { id } = await params;
+  const { t } = await searchParams;
   const admin = createAdminClient();
 
   const { data: session } = await admin
@@ -21,7 +23,7 @@ export default async function PortalVideoPage({
       `id, room_id, room_name, status,
        diviners(id, display_name)`
     )
-    .eq("id", params.id)
+    .eq("id", id)
     .in("status", ["created", "waiting", "live"])
     .maybeSingle();
 
@@ -29,7 +31,7 @@ export default async function PortalVideoPage({
 
   // `t` is the client_token passed in the URL — it will be validated by the
   // join API endpoint. We do not expose the stored client_token to the browser.
-  const clientSessionToken = searchParams.t ?? "";
+  const clientSessionToken = t ?? "";
 
   const divinerName =
     (session.diviners as { display_name?: string | null } | null)

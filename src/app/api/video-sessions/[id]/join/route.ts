@@ -34,14 +34,15 @@ function problem(status: number, title: string, detail: string): NextResponse {
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   // Rate limit by IP + session ID
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     req.headers.get("x-real-ip") ??
     "unknown";
-  const rlKey = `${ip}:${params.id}`;
+  const rlKey = `${ip}:${id}`;
   if (!checkRateLimit(rlKey)) {
     return NextResponse.json(
       {
@@ -85,7 +86,7 @@ export async function POST(
     .select(
       "id, room_id, room_name, status, client_id, client_token, diviner_id"
     )
-    .eq("id", params.id)
+    .eq("id", id)
     .maybeSingle();
 
   if (fetchErr || !session) {

@@ -7,10 +7,11 @@ import { generateVideoSDKToken, isVideoSDKConfigured } from "@/lib/videosdk";
 export const dynamic = "force-dynamic";
 
 interface VideoSessionPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function VideoSessionPage({ params }: VideoSessionPageProps) {
+  const { id } = await params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -35,7 +36,7 @@ export default async function VideoSessionPage({ params }: VideoSessionPageProps
       `id, room_id, room_name, status, diviner_token, client_token, client_id,
        started_at, ended_at, duration_seconds, created_at`
     )
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("diviner_id", diviner.id)
     .maybeSingle();
 
@@ -45,7 +46,7 @@ export default async function VideoSessionPage({ params }: VideoSessionPageProps
   const { count: participantCount } = await admin
     .from("video_session_participants")
     .select("id", { count: "exact", head: true })
-    .eq("session_id", params.id);
+    .eq("session_id", id);
 
   // Refresh tokens server-side so they are fresh on page load
   if (!isVideoSDKConfigured()) {

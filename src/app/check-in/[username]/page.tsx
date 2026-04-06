@@ -21,20 +21,21 @@ interface LiveSessionRow {
 }
 
 interface PageProps {
-  params: { username: string };
+  params: Promise<{ username: string }>;
 }
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { username } = await params;
   const admin = createAdminClient();
   const { data: diviner } = await admin
     .from("diviners")
     .select("display_name")
-    .eq("username", params.username)
+    .eq("username", username)
     .maybeSingle();
 
-  const name = diviner?.display_name ?? params.username;
+  const name = diviner?.display_name ?? username;
   return {
     title: `Check In with ${name} | AstrologyPro`,
     description: `Check in to ${name}'s live session and get personalized insights.`,
@@ -45,13 +46,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function CheckInPage({ params }: PageProps) {
+  const { username } = await params;
   const admin = createAdminClient();
 
   // Fetch diviner
   const { data: diviner } = await admin
     .from("diviners")
     .select("id, display_name, username, avatar_url")
-    .eq("username", params.username)
+    .eq("username", username)
     .maybeSingle<DivinerRow>();
 
   if (!diviner) {
