@@ -1,7 +1,7 @@
 # AstrologyPro — Daily Task Board
 
 > **Workflow:** Update this file each session. Check off items as you go. Push at end of day.
-> **Last updated:** 2026-04-06 (session 16 — Nativity Birth Chart V2, Affiliate Commission MVP, Mundane Astrology Dashboard Phase 1, CRON_SECRET fix)
+> **Last updated:** 2026-04-06 (session 17 — Perennial gap closure: emails, lifecycle, discount tokens, content CMS, email admin, dashboard polish)
 > **Migrations:** All applied via `scripts/run-migration.js` — no manual SQL editor needed.
 
 ---
@@ -78,6 +78,16 @@
 | Blog: live posts from DB | ✅ Done — /blog/[slug] page; listing switches from static to live automatically |
 | Admin: payments history | ✅ Done — paginated table from bookings |
 | Admin: social advocacy CRUD | ✅ Done |
+| Perennial: community welcome email | ✅ Done — wired to Stripe webhook on checkout success |
+| Perennial: monthly transit ready email | ✅ Done — fires from cron after generation, deduped per cycle |
+| Perennial: subscription cancel/uncancel | ✅ Done — cancel_at_period_end flow + plan page UI |
+| Perennial: member discount token (5% cross-sell) | ✅ Done — token issuance/validation, transit CTA, booking payment 20%→15% |
+| Perennial: holy books admin CMS | ✅ Done — CRUD, sort, active toggle, library page now DB-driven |
+| Perennial: doctrine links admin CMS | ✅ Done — CRUD, sort, active toggle, library page now DB-driven |
+| Perennial: Sunday Service book filter + new-episode email | ✅ Done — filter pills, book_name field, publish triggers email blast |
+| Perennial: email sequence admin (pause/resume) | ✅ Done — /admin/email-sequences with subscriber counts |
+| Perennial: email history + template preview | ✅ Done — /admin/email-history, /admin/email-preview |
+| Perennial: dashboard visual hierarchy (tasks 12–15) | ✅ Done — section groups, quick actions, empty states, mobile, cancel banners |
 | Calendar module (dual-calendar, booking mgmt) | ✅ Done — Microsoft + Google, availability templates, token-based booking page |
 | Admin login (DB-based, no env var dependency) | ✅ Done — admin_users table, requireAdmin(), bootstrap fallback |
 | Admin PM content management (gold standard) | ✅ Done — stats, filters, rich create/edit, seed script |
