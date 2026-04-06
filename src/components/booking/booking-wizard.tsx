@@ -173,6 +173,7 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [intakeData, setIntakeData] = useState<IntakeData>(INITIAL_INTAKE);
+  const [bookingNotes, setBookingNotes] = useState("");
   const [policyAcknowledged, setPolicyAcknowledged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // Stable session token for slot holds (persists for the lifetime of this wizard)
@@ -323,6 +324,7 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
             ...intakeData.extras,
           },
           affiliateCode,
+          booking_notes: bookingNotes.trim() || undefined,
           policyAcknowledgedAt: policyAcknowledged ? new Date().toISOString() : undefined,
         }),
       });
@@ -515,14 +517,19 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
                         Available times for{" "}
                         {format(selectedDate, "EEEE, MMMM d")}
                       </h3>
-                      <p className="mb-3 text-xs text-muted-foreground">
-                        Times shown in your timezone ({clientTimezone})
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Times shown in{" "}
+                        <span className="font-medium text-foreground">
+                          {clientTimezone.replace(/_/g, " ")}
+                        </span>
+                        {" "}(your local time)
                       </p>
 
                       {loadingSlots ? (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Loader2 className="size-4 animate-spin" />
-                          Loading times...
+                        <div className="animate-pulse space-y-3">
+                          {[1, 2, 3].map((i) => (
+                            <div key={i} className="h-12 rounded-lg bg-white/5" />
+                          ))}
                         </div>
                       ) : timeSlots.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
@@ -576,6 +583,31 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
                 data={intakeData}
                 onChange={setIntakeData}
               />
+
+              {/* Notes & Special Requests */}
+              <div className="mt-5 space-y-2">
+                <label
+                  htmlFor="bookingNotes"
+                  className="block text-sm font-medium"
+                >
+                  Notes for your practitioner{" "}
+                  <span className="font-normal text-muted-foreground">
+                    (optional)
+                  </span>
+                </label>
+                <textarea
+                  id="bookingNotes"
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                  rows={4}
+                  maxLength={1000}
+                  placeholder="Share anything that would help prepare for your session..."
+                  value={bookingNotes}
+                  onChange={(e) => setBookingNotes(e.target.value)}
+                />
+                <p className="text-right text-xs text-muted-foreground">
+                  {bookingNotes.length}/1000
+                </p>
+              </div>
             </>
           )}
 

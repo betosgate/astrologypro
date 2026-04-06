@@ -70,7 +70,7 @@ export default async function BookingPage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950">
       <div className="mx-auto max-w-4xl px-4 py-8">
         {/* Back link */}
         <Button asChild variant="ghost" size="sm" className="mb-6 gap-2">

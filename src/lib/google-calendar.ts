@@ -204,6 +204,63 @@ export async function createCalendarEvent(
 }
 
 /**
+ * Update an existing Google Calendar event (for reschedule).
+ */
+export async function updateGoogleCalendarEvent(
+  divinerId: string,
+  eventId: string,
+  newScheduledAt: string,
+  durationMinutes: number
+): Promise<boolean> {
+  try {
+    const accessToken = await getAccessToken(divinerId);
+    if (!accessToken) return false;
+
+    const start = new Date(newScheduledAt);
+    const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+
+    const res = await fetch(
+      `${GOOGLE_CALENDAR_API}/calendars/primary/events/${eventId}`,
+      {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          start: { dateTime: start.toISOString() },
+          end: { dateTime: end.toISOString() },
+        }),
+      }
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Delete a Google Calendar event (for cancellation).
+ */
+export async function deleteGoogleCalendarEvent(
+  divinerId: string,
+  eventId: string
+): Promise<boolean> {
+  try {
+    const accessToken = await getAccessToken(divinerId);
+    if (!accessToken) return false;
+
+    const res = await fetch(
+      `${GOOGLE_CALENDAR_API}/calendars/primary/events/${eventId}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+    return res.ok || res.status === 410 || res.status === 404;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Disconnects Google Calendar by clearing the stored token.
  */
 export async function disconnectGoogleCalendar(
