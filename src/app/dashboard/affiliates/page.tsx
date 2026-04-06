@@ -289,6 +289,13 @@ export default function AffiliatesPage() {
           <p className="text-muted-foreground">
             Manage your affiliate partners and track referrals.
           </p>
+          <Link
+            href="/dashboard/affiliate-commission"
+            className="mt-1 inline-flex items-center gap-1 text-sm text-primary hover:underline"
+          >
+            <DollarSign className="size-3.5" />
+            Commission Management
+          </Link>
         </div>
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild>

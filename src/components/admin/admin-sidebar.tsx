@@ -46,6 +46,8 @@ import {
   ChevronRight,
   LayoutGrid,
   Star,
+  Globe,
+  Building2,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -80,7 +82,10 @@ const NAV_GROUPS = [
     label: "Astrology",
     items: [
       { label: "Wheel Signs", href: "/admin/wheel-signs", icon: CircleDot },
-      { label: "Mundane Astrology", href: "/admin/ingress-charts", icon: Navigation },
+      { label: "Mundane Hub", href: "/admin/mundane-dashboard", icon: Globe },
+      { label: "Ingress Charts", href: "/admin/ingress-charts", icon: Navigation },
+      { label: "Entities", href: "/admin/mundane-entities", icon: Building2 },
+      { label: "Forecasts", href: "/admin/mundane-forecasts", icon: TrendingUp },
       { label: "Mundane Access", href: "/admin/mundane-access", icon: Shield },
       { label: "Decan Journals", href: "/admin/decan-journals", icon: BookOpen },
       { label: "Decan Media", href: "/admin/decan-media", icon: Film },

@@ -46,6 +46,7 @@ export default async function CommunityLayout({ children }: { children: React.Re
       { label: "Training", href: "/community/training" },
       { label: "Decans", href: "/community/decans" },
     ] : []),
+    { label: "Mundane", href: "/community/mundane" },
     { label: "Ingress Charts", href: "/community/ingress-charts" },
     { label: "Horoscope", href: "/community/horoscope" },
     { label: "Service", href: "/community/sunday-service" },
