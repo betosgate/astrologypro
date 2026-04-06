@@ -26,6 +26,7 @@ type Decan = {
   end_month: number;
   end_day: number;
   description: string | null;
+  tarot_card_ref: string | null;
   ritualStepCount: number;
 };
 
@@ -45,6 +46,7 @@ export default function AdminDecansPage() {
   const [ritualSteps, setRitualSteps] = useState<Record<string, RitualStep[]>>({});
   const [newStep, setNewStep] = useState({ stepType: "instruction", content: "" });
   const [description, setDescription] = useState<Record<string, string>>({});
+  const [tarotCardRef, setTarotCardRef] = useState<Record<string, string>>({});
   const [savingDesc, setSavingDesc] = useState<string | null>(null);
   const [addingStep, setAddingStep] = useState(false);
 
@@ -59,6 +61,7 @@ export default function AdminDecansPage() {
     if (expandedId === decan.id) { setExpandedId(null); return; }
     setExpandedId(decan.id);
     setDescription((prev) => ({ ...prev, [decan.id]: decan.description ?? "" }));
+    setTarotCardRef((prev) => ({ ...prev, [decan.id]: decan.tarot_card_ref ?? "" }));
 
     if (!ritualSteps[decan.id]) {
       // Fetch steps from general decans endpoint (admin can read authenticated)
@@ -74,8 +77,20 @@ export default function AdminDecansPage() {
     await fetch("/api/admin/mystery-school/decans", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ decanId, description: description[decanId], content: "noop" }),
+      body: JSON.stringify({
+        decanId,
+        description: description[decanId],
+        tarotCardRef: tarotCardRef[decanId] ?? null,
+        content: "noop",
+      }),
     });
+    setDecans((prev) =>
+      prev.map((d) =>
+        d.id === decanId
+          ? { ...d, description: description[decanId], tarot_card_ref: tarotCardRef[decanId] || null }
+          : d
+      )
+    );
     setSavingDesc(null);
   }
 
@@ -135,6 +150,7 @@ export default function AdminDecansPage() {
                       <span className="text-sm font-medium">{decan.title}</span>
                       <span className="ml-2 text-xs text-muted-foreground">
                         {formatDate(decan.start_month, decan.start_day)} – {formatDate(decan.end_month, decan.end_day)} · {decan.planet}
+                        {decan.tarot_card_ref && ` · ${decan.tarot_card_ref}`}
                       </span>
                     </div>
                   </div>
@@ -153,7 +169,7 @@ export default function AdminDecansPage() {
 
               {expandedId === decan.id && (
                 <CardContent className="pt-0 space-y-5">
-                  {/* Description */}
+                  {/* Description + Tarot Card Ref */}
                   <div className="space-y-1.5">
                     <Label>Thematic Description</Label>
                     <Textarea
@@ -162,6 +178,17 @@ export default function AdminDecansPage() {
                       onChange={(e) => setDescription((p) => ({ ...p, [decan.id]: e.target.value }))}
                       placeholder="Describe this decan's energy, themes, and practice focus…"
                     />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Tarot Card Reference</Label>
+                    <Input
+                      value={tarotCardRef[decan.id] ?? ""}
+                      onChange={(e) => setTarotCardRef((p) => ({ ...p, [decan.id]: e.target.value }))}
+                      placeholder="e.g. Eight of Wands"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      The canonical tarot card assigned to this decan. Populated from the standard mapping — override only if needed.
+                    </p>
                     <Button
                       size="sm"
                       variant="outline"
@@ -169,7 +196,7 @@ export default function AdminDecansPage() {
                       disabled={savingDesc === decan.id}
                     >
                       <Save className="mr-1.5 size-3.5" />
-                      {savingDesc === decan.id ? "Saving…" : "Save Description"}
+                      {savingDesc === decan.id ? "Saving…" : "Save Description &amp; Tarot"}
                     </Button>
                   </div>
 

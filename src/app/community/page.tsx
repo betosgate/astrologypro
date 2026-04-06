@@ -31,6 +31,7 @@ import { ProfileProgressSection } from "@/components/community/profile-progress-
 import { MembershipCard, type MembershipSubscription } from "@/components/community/membership-card";
 import { ProfileCompletionCard, type ProfileCompletionData } from "@/components/community/profile-completion-card";
 import { ProgressRing } from "@/components/community/progress-ring";
+import { MandalismContentPreview, type MandalismContent } from "@/components/community/mandalism-content-preview";
 
 export const metadata = { title: "Community - AstrologyPro" };
 export const dynamic = "force-dynamic";
@@ -124,7 +125,7 @@ export default async function CommunityDashboardPage() {
     recentWisdomResult,
     recentBlogResult,
     ritualsResult,
-    contentCountsResult,
+    mandalismItemsResult,
     profileCompletionFamilyResult,
     profileCompletionRelChartResult,
     pmTierResult,
@@ -177,11 +178,17 @@ export default async function CommunityDashboardPage() {
       .order("created_at", { ascending: false })
       .limit(5),
 
-    // Content counts — mandalism_content by type
+    // Mandalism content preview — latest 8 published items
     supabase
       .from("mandalism_content")
-      .select("content_type")
-      .eq("is_published", true),
+      .select(
+        "id, title, content_type, access_control, url, pdf_url, content_thumbnail_url, duration_label, description, start_at, end_at, priority"
+      )
+      .eq("is_published", true)
+      .or(`access_control.eq.free,access_control.eq.members`)
+      .order("priority", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(8),
 
     // Profile completion: family members with natal_chart data
     supabase
@@ -213,7 +220,7 @@ export default async function CommunityDashboardPage() {
   const recentWisdom = recentWisdomResult.data ?? [];
   const recentBlog = recentBlogResult.data ?? [];
   const rituals = ritualsResult.data ?? [];
-  const allContent = contentCountsResult.data ?? [];
+  const mandalismItems = (mandalismItemsResult.data ?? []) as MandalismContent[];
   const pcFamilyMembers = profileCompletionFamilyResult.data ?? [];
   const pcRelCharts = profileCompletionRelChartResult.data ?? [];
   const pmTier = pmTierResult.data ?? null;
@@ -335,13 +342,6 @@ export default async function CommunityDashboardPage() {
       .reduce((sum, i) => sum + i.pct, 0),
     items: profileCompletionItems,
   };
-
-  // ── Content counts by type ─────────────────────────────────────────────────
-  const contentCounts: Record<string, number> = {};
-  for (const item of allContent) {
-    const t = item.content_type as string;
-    contentCounts[t] = (contentCounts[t] ?? 0) + 1;
-  }
 
   // ── Feature quick links ────────────────────────────────────────────────────
   const features = isMysterySchool
@@ -817,34 +817,19 @@ export default async function CommunityDashboardPage() {
 
       <Separator />
 
-      {/* ── Content Counts ─────────────────────────────────────────────────── */}
-      {Object.keys(contentCounts).length > 0 && (
-        <section className="space-y-3">
+      {/* ── Content Library ─────────────────────────────────────────────────── */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <BookMarked className="size-4 text-muted-foreground" />
             <h2 className="text-base font-semibold">Content Library</h2>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {Object.entries(contentCounts).map(([type, count]) => (
-              <Card key={type}>
-                <CardContent className="py-4 text-center">
-                  <p className="text-2xl font-bold">{count}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 capitalize">
-                    {type.replace(/_/g, " ")}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-            {/* Blog posts count */}
-            <Card>
-              <CardContent className="py-4 text-center">
-                <p className="text-2xl font-bold">{recentBlog.length > 0 ? "+" : "0"}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Blog Posts</p>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-      )}
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/community/library">View All →</Link>
+          </Button>
+        </div>
+        <MandalismContentPreview initialItems={mandalismItems} />
+      </section>
 
       {/* ── Recent Spiritual Wisdom ────────────────────────────────────────── */}
       {recentWisdom.length > 0 && (

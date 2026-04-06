@@ -9,6 +9,7 @@ import {
   sendGiftCertificateConfirmation,
   sendCommunityPaymentFailed,
   sendCommunitySubscriptionCancelled,
+  sendMysterySchoolEnrollmentConfirmation,
 } from "@/lib/email";
 import { createCalendarEvent } from "@/lib/google-calendar";
 
@@ -146,6 +147,19 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
 
     if (studentError) {
       console.error("[Webhook] Failed to upsert mystery_school_students:", studentError);
+    }
+
+    // Send enrollment confirmation email (fire-and-forget; idempotent via SES dedup window)
+    if (email) {
+      sendMysterySchoolEnrollmentConfirmation({
+        to: email,
+        name: fullName ?? "Student",
+        quarter: entryQuarter,
+        entryDate: enrollmentDate,
+        startDate: null,
+      }).catch((err) =>
+        console.error("[Webhook] Failed to send MS enrollment confirmation:", err)
+      );
     }
 
     // If this was a PM → MS upgrade, ensure the community_members row reflects

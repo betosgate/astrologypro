@@ -1583,6 +1583,381 @@ export async function sendSessionReminder({
   });
 }
 
+// ── Mystery School — Enrollment Confirmation ─────────────────────────────────
+
+export async function sendMysterySchoolEnrollmentConfirmation({
+  to,
+  name,
+  quarter,
+  entryDate,
+  startDate,
+}: {
+  to: string;
+  name: string;
+  quarter: string | null;
+  entryDate: string;
+  startDate?: string | null;
+}) {
+  const portalUrl = `${APP_URL}/community/mystery-school`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Welcome, ${name}.</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">You have been enrolled in the <strong style="color:#f4f4f5;">Mystery School</strong>. The path of the 36 Decans is now open to you.</p>
+
+    ${detailRow("Entry Quarter", quarter ?? "Forthcoming")}
+    ${detailRow("Enrollment Date", new Date(entryDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }))}
+    ${startDate ? detailRow("Foundation Begins", new Date(startDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })) : ""}
+
+    ${sectionHeading("What Happens Next")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">Your Foundation Weeks become available in sequence — one per week</li>
+      <li style="margin-bottom:6px;">Decan windows open according to the astrological calendar</li>
+      <li style="margin-bottom:6px;">Each decan requires a ritual, scrying journal, and mundane impact journal</li>
+      <li style="margin-bottom:6px;">You will receive email reminders as windows open and approach their close</li>
+    </ul>
+
+    <p style="margin:16px 0 0;color:#a1a1aa;font-size:13px;">Enter your student portal to begin.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: "Welcome to the Mystery School — Your journey begins",
+    html: buildEmailHtml({
+      title: "Mystery School",
+      badge: "Enrolled",
+      preheader: "Your enrollment is confirmed. The path of the 36 Decans is open.",
+      content,
+      ctaText: "Enter the Mystery School",
+      ctaUrl: portalUrl,
+      footer: "AstrologyPro &mdash; Mystery School",
+    }),
+  });
+}
+
+// ── Mystery School — Decan Lifecycle Emails ───────────────────────────────────
+
+function formatDecanWindow(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+export async function sendDecanOpened({
+  to,
+  name,
+  decanTitle,
+  decanNumber,
+  sign,
+  planet,
+  tarotCard,
+  windowClose,
+  actionUrl,
+}: {
+  to: string;
+  name: string;
+  decanTitle: string;
+  decanNumber: number;
+  sign: string;
+  planet: string;
+  tarotCard: string | null;
+  windowClose: string;
+  actionUrl: string;
+}) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Greetings, ${name}.</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">
+      Your next decan window is now <strong style="color:#f4f4f5;">open</strong>.
+      The stars are aligned — enter the work before the window closes.
+    </p>
+
+    ${detailRow("Decan", `${decanNumber}. ${decanTitle}`)}
+    ${detailRow("Sign", sign)}
+    ${detailRow("Planet", planet)}
+    ${tarotCard ? detailRow("Tarot Card", tarotCard) : ""}
+    ${detailRow("Window Closes", formatDecanWindow(windowClose))}
+
+    ${sectionHeading("Your Work This Decan")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">Complete the guided ritual</li>
+      <li style="margin-bottom:6px;">Submit your scrying journal${tarotCard ? ` (assigned card: ${tarotCard})` : ""}</li>
+      <li style="margin-bottom:6px;">Submit your mundane impact journal</li>
+    </ul>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Decan ${decanNumber} is open — ${decanTitle}`,
+    html: buildEmailHtml({
+      title: decanTitle,
+      badge: `Decan ${decanNumber}`,
+      preheader: `Your ${sign} decan window is now open. Complete your work by ${formatDecanWindow(windowClose)}.`,
+      content,
+      ctaText: "Begin This Decan",
+      ctaUrl: actionUrl,
+      footer: "AstrologyPro &mdash; Mystery School",
+    }),
+  });
+}
+
+export async function sendDecanUrgency3Days({
+  to,
+  name,
+  decanTitle,
+  decanNumber,
+  windowClose,
+  incompleteItems,
+  actionUrl,
+}: {
+  to: string;
+  name: string;
+  decanTitle: string;
+  decanNumber: number;
+  windowClose: string;
+  incompleteItems: string[];
+  actionUrl: string;
+}) {
+  const itemList = incompleteItems
+    .map((item) => `<li style="margin-bottom:6px;">${item}</li>`)
+    .join("");
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">
+      The action window for <strong style="color:#f4f4f5;">Decan ${decanNumber}: ${decanTitle}</strong> closes in
+      <strong style="color:#f59e0b;">3 days</strong>.
+      Complete the remaining work before the window closes — a 2-day grace period follows, but the primary window is ending soon.
+    </p>
+
+    ${detailRow("Window Closes", formatDecanWindow(windowClose))}
+
+    ${sectionHeading("Remaining Items")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      ${itemList}
+    </ul>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `3 days left — Decan ${decanNumber}: ${decanTitle}`,
+    html: buildEmailHtml({
+      title: "Window Closing Soon",
+      badge: `Decan ${decanNumber}`,
+      preheader: `3 days remain to complete Decan ${decanNumber}: ${decanTitle}.`,
+      content,
+      ctaText: "Continue My Work",
+      ctaUrl: actionUrl,
+      footer: "AstrologyPro &mdash; Mystery School",
+    }),
+  });
+}
+
+export async function sendGracePeriodStarted({
+  to,
+  name,
+  decanTitle,
+  decanNumber,
+  graceClose,
+  incompleteItems,
+  actionUrl,
+}: {
+  to: string;
+  name: string;
+  decanTitle: string;
+  decanNumber: number;
+  graceClose: string;
+  incompleteItems: string[];
+  actionUrl: string;
+}) {
+  const itemList = incompleteItems
+    .map((item) => `<li style="margin-bottom:6px;">${item}</li>`)
+    .join("");
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">
+      The primary action window for <strong style="color:#f4f4f5;">Decan ${decanNumber}: ${decanTitle}</strong> has closed.
+      You are now in a <strong style="color:#f59e0b;">2-day grace period</strong>. Complete all remaining items before the grace window ends.
+    </p>
+
+    ${detailRow("Grace Period Ends", formatDecanWindow(graceClose))}
+
+    ${sectionHeading("Remaining Items")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      ${itemList}
+    </ul>
+
+    <p style="margin:16px 0 0;font-size:13px;color:#9ca3af;">After the grace period ends this decan will be marked missed and cannot be completed until the next cycle.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Grace period started — Decan ${decanNumber}: ${decanTitle}`,
+    html: buildEmailHtml({
+      title: "Grace Period Active",
+      badge: `Decan ${decanNumber}`,
+      preheader: `Grace period for Decan ${decanNumber} started. Ends ${formatDecanWindow(graceClose)}.`,
+      content,
+      ctaText: "Complete My Work Now",
+      ctaUrl: actionUrl,
+      footer: "AstrologyPro &mdash; Mystery School",
+    }),
+  });
+}
+
+export async function sendGrace24HourWarning({
+  to,
+  name,
+  decanTitle,
+  decanNumber,
+  graceClose,
+  incompleteItems,
+  actionUrl,
+}: {
+  to: string;
+  name: string;
+  decanTitle: string;
+  decanNumber: number;
+  graceClose: string;
+  incompleteItems: string[];
+  actionUrl: string;
+}) {
+  const itemList = incompleteItems
+    .map((item) => `<li style="margin-bottom:6px;">${item}</li>`)
+    .join("");
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">
+      The grace period for <strong style="color:#f4f4f5;">Decan ${decanNumber}: ${decanTitle}</strong> ends in
+      <strong style="color:#ef4444;">less than 24 hours</strong>. After this point the decan will be marked missed.
+    </p>
+
+    ${detailRow("Grace Ends", formatDecanWindow(graceClose))}
+
+    ${sectionHeading("Still Needed")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      ${itemList}
+    </ul>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Last 24 hours — Decan ${decanNumber} grace period ending`,
+    html: buildEmailHtml({
+      title: "Final Warning",
+      badge: `Decan ${decanNumber}`,
+      preheader: `Grace period for Decan ${decanNumber} ends in under 24 hours.`,
+      content,
+      ctaText: "Complete Now",
+      ctaUrl: actionUrl,
+      footer: "AstrologyPro &mdash; Mystery School",
+    }),
+  });
+}
+
+export async function sendDecanMissed({
+  to,
+  name,
+  decanTitle,
+  decanNumber,
+  retryWindowOpen,
+  retryYear,
+}: {
+  to: string;
+  name: string;
+  decanTitle: string;
+  decanNumber: number;
+  retryWindowOpen: string | null;
+  retryYear: number | null;
+}) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">
+      The grace period for <strong style="color:#f4f4f5;">Decan ${decanNumber}: ${decanTitle}</strong> has passed without completion.
+      This decan has been marked <strong style="color:#ef4444;">missed</strong>.
+    </p>
+
+    ${retryWindowOpen ? detailRow("Retry Window Opens", formatDecanWindow(retryWindowOpen)) : ""}
+    ${retryYear ? detailRow("Retry Year", String(retryYear)) : ""}
+
+    ${sectionHeading("What This Means")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">Your progress toward completion is paused for this decan</li>
+      <li style="margin-bottom:6px;">You can retry when the decan window reopens next cycle</li>
+      <li style="margin-bottom:6px;">Contact your administrator if you believe an excusal applies</li>
+    </ul>
+
+    <p style="margin:16px 0 0;font-size:13px;color:#9ca3af;">Your journey continues — missed decans can be retried in the next cycle.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Decan ${decanNumber} missed — ${decanTitle}`,
+    html: buildEmailHtml({
+      title: "Decan Missed",
+      badge: `Decan ${decanNumber}`,
+      preheader: `Decan ${decanNumber}: ${decanTitle} has been marked missed. Retry window opens next cycle.`,
+      content,
+      footer: "AstrologyPro &mdash; Mystery School",
+    }),
+  });
+}
+
+export async function sendDecanReopened({
+  to,
+  name,
+  decanTitle,
+  decanNumber,
+  retryWindowOpen,
+  retryWindowClose,
+  actionUrl,
+}: {
+  to: string;
+  name: string;
+  decanTitle: string;
+  decanNumber: number;
+  retryWindowOpen: string;
+  retryWindowClose: string;
+  actionUrl: string;
+}) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">
+      <strong style="color:#f4f4f5;">Decan ${decanNumber}: ${decanTitle}</strong> that you missed in a previous cycle has reopened.
+      This is your opportunity to complete it.
+    </p>
+
+    ${detailRow("Retry Window Opens", formatDecanWindow(retryWindowOpen))}
+    ${detailRow("Retry Window Closes", formatDecanWindow(retryWindowClose))}
+
+    <p style="margin:16px 0 0;color:#a1a1aa;">The same three tasks apply — ritual, scrying journal, and mundane impact journal.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Retry window open — Decan ${decanNumber}: ${decanTitle}`,
+    html: buildEmailHtml({
+      title: "Decan Reopened",
+      badge: `Decan ${decanNumber} · Retry`,
+      preheader: `A second chance: Decan ${decanNumber} is open again. Window closes ${formatDecanWindow(retryWindowClose)}.`,
+      content,
+      ctaText: "Begin Retry",
+      ctaUrl: actionUrl,
+      footer: "AstrologyPro &mdash; Mystery School",
+    }),
+  });
+}
+
 // ── Family Member Login Invite ────────────────────────────────────────────────
 export async function sendFamilyMemberInvite({
   to,
@@ -1613,6 +1988,69 @@ export async function sendFamilyMemberInvite({
       ctaText: "View My Natal Chart",
       ctaUrl: inviteUrl,
       footer: `AstrologyPro &mdash; Explore Your Cosmic Blueprint`,
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Mystery School: Graduation Congratulations (with Ritual Builder CTA)
+// ---------------------------------------------------------------------------
+
+interface GraduationCongratulationsParams {
+  to: string;
+  name: string;
+  graduationDate: string;
+  graduationUrl: string;
+}
+
+export async function sendGraduationCongratulations({
+  to,
+  name,
+  graduationDate,
+  graduationUrl,
+}: GraduationCongratulationsParams) {
+  const ritualBuilderUrl = `${APP_URL}/community/training/ritual-builder`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">
+      Congratulations, <strong style="color:#f4f4f5;">${name}</strong>!
+    </p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">
+      You have completed all 36 decan rituals and your full Q1 foundation work.
+      You are now a <strong style="color:#e4e4e7;">Priest / Priestess of the Mystery School</strong>.
+    </p>
+
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0;background-color:#1e1b2e;border:1px solid #3b2f6e;border-radius:12px;">
+      <tr>
+        <td align="center" style="padding:24px 20px;">
+          <p style="margin:0;font-family:system-ui,-apple-system,sans-serif;font-size:12px;color:#a78bfa;text-transform:uppercase;letter-spacing:1px;">Graduated</p>
+          <p style="margin:8px 0 0;font-family:system-ui,-apple-system,sans-serif;font-size:18px;font-weight:700;color:#e9d5ff;">${graduationDate}</p>
+          <p style="margin:8px 0 0;font-family:system-ui,-apple-system,sans-serif;font-size:13px;color:#71717a;">36 Decans Complete &bull; All Foundation Work Complete</p>
+        </td>
+      </tr>
+    </table>
+
+    ${sectionHeading("Post-Graduation: Ritual Builder")}
+    <p style="margin:0 0 16px;color:#a1a1aa;">
+      As a graduate, you now have access to the personal ritual builder &mdash;
+      design your own rituals using the full component library: planetary invocations,
+      decan workings, seasonal rites, and custom steps.
+    </p>
+
+    ${secondaryCta("Open Ritual Builder", ritualBuilderUrl)}
+  `;
+
+  return sendEmail({
+    to,
+    subject: `You have graduated from the Mystery School`,
+    html: buildEmailHtml({
+      title: `Congratulations, ${name} &mdash; Mystery School Graduate`,
+      preheader: "You completed all 36 decans and your full foundation. You have graduated.",
+      content,
+      ctaText: "View Your Graduation",
+      ctaUrl: graduationUrl,
+      footer: `AstrologyPro &mdash; Divine Infinite Being`,
     }),
   });
 }

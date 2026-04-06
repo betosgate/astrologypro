@@ -21,9 +21,15 @@ export const maxDuration = 60;
  *
  *   4. MISSED   — grace_close passed, not completed:
  *      grace/active → missed
+ *      Persists missed_at, retry_year, retry_window_open, retry_window_close.
+ *
+ *   5. RETRY REOPEN — retry_window_open reached for a missed decan:
+ *      missed → active (using retry window dates)
  *
  * Completed decans are never touched.
  * Admin-excused decans are never touched.
+ *
+ * Graduation gate: a student with ANY unexcused missed decan is NOT graduated.
  */
 export async function GET(request: NextRequest) {
   const authError = verifyCronAuth(request);
@@ -45,7 +51,7 @@ export async function GET(request: NextRequest) {
     .in("training_status", ["foundation", "decans"]);
 
   if (!decans || !students) {
-    return NextResponse.json({ previewed: 0, unlocked: 0, graced: 0, missed: 0 });
+    return NextResponse.json({ previewed: 0, unlocked: 0, graced: 0, missed: 0, retried: 0 });
   }
 
   /**
@@ -59,11 +65,11 @@ export async function GET(request: NextRequest) {
     start_day: number;
     end_month: number;
     end_day: number;
-  }) {
+  }, year: number = currentYear) {
     const crossesYear = d.start_month === 12 && d.end_month !== 12;
-    const windowOpen = new Date(currentYear, d.start_month - 1, d.start_day, 0, 0, 0);
+    const windowOpen = new Date(year, d.start_month - 1, d.start_day, 0, 0, 0);
     const windowClose = new Date(
-      crossesYear ? currentYear + 1 : currentYear,
+      crossesYear ? year + 1 : year,
       d.end_month - 1,
       d.end_day,
       23, 59, 59
@@ -73,10 +79,24 @@ export async function GET(request: NextRequest) {
     return { windowOpen, windowClose, graceClose, previewOpen };
   }
 
+  /**
+   * Compute the retry year for a missed decan.
+   * If the decan falls in Q4 (months 10–12) of the current year, retry in +5 years
+   * (long cycle). Otherwise retry in current year + 1.
+   */
+  function computeRetryYear(
+    decan: { start_month: number },
+    missedYear: number
+  ): number {
+    const isLastQuarter = decan.start_month >= 10;
+    return missedYear + (isLastQuarter ? 5 : 1);
+  }
+
   let previewed = 0;
   let unlocked = 0;
   let graced = 0;
   let missed = 0;
+  let retried = 0;
 
   for (const student of students) {
     for (const decan of decans) {
@@ -86,14 +106,16 @@ export async function GET(request: NextRequest) {
       const { data: rawProgress } = await admin
         .from("student_decan_progress")
         .select(
-          "status, ritual_done, scry_done, journal_done, unlocked_at, " +
-            "window_open, window_close, grace_close, admin_excused"
+          "id, status, ritual_done, scry_done, journal_done, unlocked_at, " +
+            "window_open, window_close, grace_close, admin_excused, " +
+            "missed_at, retry_window_open, retry_window_close, retry_year"
         )
         .eq("student_id", student.id)
         .eq("decan_id", decan.id)
         .maybeSingle();
 
       const progress = rawProgress as {
+        id: string;
         status: string;
         ritual_done: boolean;
         scry_done: boolean;
@@ -103,6 +125,10 @@ export async function GET(request: NextRequest) {
         window_close: string | null;
         grace_close: string | null;
         admin_excused: boolean;
+        missed_at: string | null;
+        retry_window_open: string | null;
+        retry_window_close: string | null;
+        retry_year: number | null;
       } | null;
 
       // Never touch completed or admin-excused rows
@@ -119,6 +145,34 @@ export async function GET(request: NextRequest) {
         ? new Date(progress.grace_close)
         : graceClose;
 
+      // ── 5. RETRY REOPEN — missed decan whose retry window has opened ──────
+      if (
+        currentStatus === "missed" &&
+        progress?.retry_window_open &&
+        progress?.retry_window_close
+      ) {
+        const retryOpen = new Date(progress.retry_window_open);
+        const retryClose = new Date(progress.retry_window_close);
+        if (now >= retryOpen && now <= retryClose) {
+          await admin
+            .from("student_decan_progress")
+            .update({
+              status: "active",
+              window_open: retryOpen.toISOString(),
+              window_close: retryClose.toISOString(),
+              grace_close: new Date(retryClose.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+              unlocked_at: now.toISOString(),
+              updated_at: now.toISOString(),
+            })
+            .eq("student_id", student.id)
+            .eq("decan_id", decan.id);
+          retried++;
+          continue;
+        }
+        // Retry window hasn't opened yet — skip all other checks for this missed decan
+        continue;
+      }
+
       // ── 1. MISSED — grace_close has passed, not completed ──────────────────
       if (
         now > effectiveGraceClose &&
@@ -129,11 +183,19 @@ export async function GET(request: NextRequest) {
           (progress?.scry_done ?? false) &&
           (progress?.journal_done ?? false);
         if (!allDone) {
+          // Compute retry window for next eligible year
+          const missedYear = effectiveGraceClose.getFullYear();
+          const retryYear = computeRetryYear(decan, missedYear);
+          const retryDates = decanDates(decan, retryYear);
+
           await admin
             .from("student_decan_progress")
             .update({
               status: "missed",
               missed_at: now.toISOString(),
+              retry_year: retryYear,
+              retry_window_open: retryDates.windowOpen.toISOString(),
+              retry_window_close: retryDates.graceClose.toISOString(),
               updated_at: now.toISOString(),
             })
             .eq("student_id", student.id)
@@ -222,7 +284,7 @@ export async function GET(request: NextRequest) {
   }
 
   console.log(
-    `[decan-unlock] previewed=${previewed} unlocked=${unlocked} graced=${graced} missed=${missed}`
+    `[decan-unlock] previewed=${previewed} unlocked=${unlocked} graced=${graced} missed=${missed} retried=${retried}`
   );
-  return NextResponse.json({ previewed, unlocked, graced, missed });
+  return NextResponse.json({ previewed, unlocked, graced, missed, retried });
 }

@@ -104,13 +104,15 @@ export async function GET() {
 
   const decans = (decansRaw ?? []) as unknown as DecanRow[];
 
-  // Student's progress records — include new lifecycle columns
+  // Student's progress records — include new lifecycle and retry columns
   const { data: progressRaw } = await supabase
     .from("student_decan_progress")
     .select(
       "decan_id, status, ritual_done, scry_done, journal_done, " +
         "unlocked_at, completed_at, missed_at, " +
-        "window_open, window_close, grace_close"
+        "window_open, window_close, grace_close, " +
+        "retry_year, retry_window_open, retry_window_close, " +
+        "admin_excused, excuse_reason, excused_at"
     )
     .eq("student_id", studentTyped.id);
 
@@ -126,6 +128,12 @@ export async function GET() {
     window_open: string | null;
     window_close: string | null;
     grace_close: string | null;
+    retry_year: number | null;
+    retry_window_open: string | null;
+    retry_window_close: string | null;
+    admin_excused: boolean;
+    excuse_reason: string | null;
+    excused_at: string | null;
   };
 
   const progressMap = new Map<string, ProgressRow>(
@@ -228,15 +236,28 @@ export async function GET() {
       grace_close: graceClose.toISOString(),
       unlocked_at: p?.unlocked_at ?? null,
       completed_at: p?.completed_at ?? null,
+      missed_at: p?.missed_at ?? null,
       ritual_done: p?.ritual_done ?? false,
       scry_done: p?.scry_done ?? false,
       journal_done: p?.journal_done ?? false,
       days_remaining: daysRemaining,
       is_current: status === "active",
+      // Retry fields
+      retry_year: p?.retry_year ?? null,
+      retry_window_open: p?.retry_window_open ?? null,
+      retry_window_close: p?.retry_window_close ?? null,
+      // Admin excuse
+      admin_excused: p?.admin_excused ?? false,
+      excuse_reason: p?.excuse_reason ?? null,
+      excused_at: p?.excused_at ?? null,
     };
   });
 
   const completedCount = decansWithStatus.filter((d) => d.status === "completed").length;
+  const unexcusedMissedCount = decansWithStatus.filter(
+    (d) => d.status === "missed" && !d.admin_excused
+  ).length;
+  const graduationEligible = completedCount === 36 && unexcusedMissedCount === 0;
 
   return NextResponse.json({
     student: {
@@ -249,5 +270,7 @@ export async function GET() {
     totalDecans: 36,
     current_decan_number: currentDecanNumber,
     q1_complete: q1Complete,
+    graduation_eligible: graduationEligible,
+    unexcused_missed_count: unexcusedMissedCount,
   });
 }

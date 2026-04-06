@@ -55,7 +55,9 @@ export async function GET(
       .from("student_decan_progress")
       .select(
         "status, ritual_done, scry_done, journal_done, unlocked_at, completed_at, " +
-          "window_open, window_close, grace_close"
+          "window_open, window_close, grace_close, missed_at, " +
+          "retry_year, retry_window_open, retry_window_close, " +
+          "admin_excused, excuse_reason, excused_at"
       )
       .eq("student_id", student.id)
       .eq("decan_id", id)

@@ -28,6 +28,7 @@ import {
   Lock,
   AlertTriangle,
   PlayCircle,
+  RotateCcw,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -51,6 +52,14 @@ type Progress = {
   window_close: string;
   grace_close: string;
   days_remaining: number | null;
+  // Retry fields (set by cron after miss)
+  retry_year: number | null;
+  retry_window_open: string | null;
+  retry_window_close: string | null;
+  // Admin excuse fields
+  admin_excused: boolean;
+  excuse_reason: string | null;
+  excused_at: string | null;
 };
 
 type RitualExecution = {
@@ -220,6 +229,69 @@ function ActiveDateBanner({ progress }: { progress: Progress }) {
         2-day grace period applies after {formatShortDate(progress.window_close)}.
       </p>
       <LiveCountdown closeIso={progress.window_close} label="Window closes" />
+    </div>
+  );
+}
+
+function MissedRetryBanner({ progress }: { progress: Progress }) {
+  const retryDate = progress.retry_window_open
+    ? new Date(progress.retry_window_open).toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })
+    : null;
+
+  return (
+    <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 space-y-1">
+      <div className="flex items-center gap-2 text-amber-800 font-semibold text-sm">
+        <RotateCcw className="size-4 shrink-0" />
+        Decan Missed — Retry Available
+      </div>
+      <p className="text-sm text-amber-700">
+        The window for this decan has closed without completion.
+        {retryDate && (
+          <>
+            {" "}This decan reopens on{" "}
+            <span className="font-medium">{retryDate}</span>
+            {progress.retry_year && (
+              <span> (Year {progress.retry_year})</span>
+            )}
+            .
+          </>
+        )}
+      </p>
+      <p className="text-xs text-amber-600 mt-0.5">
+        Contact your administrator if you believe this was in error.
+      </p>
+    </div>
+  );
+}
+
+function MissedExcusedBanner({ progress }: { progress: Progress }) {
+  const excusedDate = progress.excused_at
+    ? new Date(progress.excused_at).toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })
+    : null;
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 space-y-1">
+      <div className="flex items-center gap-2 text-slate-700 font-semibold text-sm">
+        <CheckCircle2 className="size-4 shrink-0 text-slate-500" />
+        Missed — Admin Excused
+      </div>
+      <p className="text-sm text-slate-600">
+        This decan was missed but has been officially excused by an administrator.
+        {excusedDate && (
+          <span> Excused on {excusedDate}.</span>
+        )}
+      </p>
+      {progress.excuse_reason && (
+        <p className="text-xs text-slate-500 italic">"{progress.excuse_reason}"</p>
+      )}
     </div>
   );
 }
@@ -398,11 +470,19 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
           )}
         </div>
 
-        {/* Tarot card chip */}
+        {/* Tarot card chip + library link */}
         {decan.tarot_card_ref && (
-          <div className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium bg-muted/40">
-            <Star className="size-3 text-muted-foreground" />
-            {decan.tarot_card_ref}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium bg-muted/40">
+              <Star className="size-3 text-muted-foreground" />
+              {decan.tarot_card_ref}
+            </div>
+            <Link
+              href={`/community/tarot?card=${encodeURIComponent(decan.tarot_card_ref)}`}
+              className="text-xs text-primary hover:underline"
+            >
+              Open {decan.tarot_card_ref} in Tarot library →
+            </Link>
           </div>
         )}
 
@@ -421,6 +501,13 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
       {isGrace && progress && <GraceBanner progress={progress} />}
       {isPreview && progress && <PreviewBanner progress={progress} />}
       {isActive && progress && <ActiveDateBanner progress={progress} />}
+      {/* Missed: show retry banner or excused banner depending on admin_excused flag */}
+      {isMissed && progress && !progress.admin_excused && (
+        <MissedRetryBanner progress={progress} />
+      )}
+      {isMissed && progress && progress.admin_excused && (
+        <MissedExcusedBanner progress={progress} />
+      )}
 
       {/* ── Locked state ────────────────────────────────────────── */}
       {isLocked && (
@@ -432,17 +519,22 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
         </Card>
       )}
 
-      {/* ── Missed state ────────────────────────────────────────── */}
+      {/* ── Missed state — hide all work sections, show retry info only ── */}
       {isMissed && (
-        <Card className="border-destructive/30 bg-destructive/5">
+        <Card className={progress?.admin_excused ? "border-slate-200" : "border-amber-200/60"}>
           <CardContent className="py-5">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="size-5 text-destructive shrink-0 mt-0.5" />
+              <AlertTriangle className={`size-5 shrink-0 mt-0.5 ${progress?.admin_excused ? "text-slate-400" : "text-amber-600"}`} />
               <div>
-                <p className="text-sm font-semibold text-destructive">Decan missed</p>
+                <p className={`text-sm font-semibold ${progress?.admin_excused ? "text-slate-600" : "text-amber-800"}`}>
+                  {progress?.admin_excused ? "Decan excused" : "Decan missed"}
+                </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  The action and grace windows for this decan have closed.
-                  Contact your administrator if you need an excusal or retry.
+                  {progress?.admin_excused
+                    ? "This decan has been excused by an administrator and will not block your graduation."
+                    : progress?.retry_window_open
+                    ? "This decan did not reach completion. Your retry window is shown above."
+                    : "The action and grace windows for this decan have closed. Contact your administrator if you need an excusal or retry."}
                 </p>
               </div>
             </div>
@@ -450,8 +542,8 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
         </Card>
       )}
 
-      {/* ── Main content (visible for active, grace, preview, completed, missed) */}
-      {!isLocked && (
+      {/* ── Main content (visible for active, grace, preview, completed — hidden for missed) */}
+      {!isLocked && !isMissed && (
         <>
           {/* Progress checklist */}
           <Card>
@@ -545,9 +637,17 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
 
           {/* ── Scrying journal ──────────────────────────────────── */}
           <section className="space-y-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Eye className="size-4 text-muted-foreground" />
               <h2 className="font-semibold">Scrying Journal</h2>
+              {decan.tarot_card_ref && (
+                <Link
+                  href={`/community/tarot?card=${encodeURIComponent(decan.tarot_card_ref)}`}
+                  className="text-xs text-primary hover:underline"
+                >
+                  {decan.tarot_card_ref} →
+                </Link>
+              )}
               {progress?.scry_done && (
                 <Badge className="bg-green-100 text-green-800 border-0 text-[10px]">Submitted</Badge>
               )}
