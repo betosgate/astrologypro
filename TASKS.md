@@ -1,7 +1,7 @@
 # AstrologyPro — Daily Task Board
 
 > **Workflow:** Update this file each session. Check off items as you go. Push at end of day.
-> **Last updated:** 2026-04-06 (session 13 — training analytics, PM plan tiers, community features, notifications, admin global search, certificate, quiz cooldown)
+> **Last updated:** 2026-04-06 (session 14 — calendar module, mundane astrology, mystery school lifecycle, PM dashboard enrichment, family login)
 > **Migrations:** All applied via `scripts/run-migration.js` — no manual SQL editor needed.
 
 ---
@@ -78,6 +78,19 @@
 | Blog: live posts from DB | ✅ Done — /blog/[slug] page; listing switches from static to live automatically |
 | Admin: payments history | ✅ Done — paginated table from bookings |
 | Admin: social advocacy CRUD | ✅ Done |
+| Calendar module (dual-calendar, booking mgmt) | ✅ Done — Microsoft + Google, availability templates, token-based booking page |
+| Admin login (DB-based, no env var dependency) | ✅ Done — admin_users table, requireAdmin(), bootstrap fallback |
+| Admin PM content management (gold standard) | ✅ Done — stats, filters, rich create/edit, seed script |
+| PM community dashboard enrichment | ✅ Done — donate banner, membership details, chart highlights, family rings |
+| Family member management + invite login | ✅ Done — rich astro form, profile completion, invite-to-login flow |
+| Mystery school enrollment lifecycle | ✅ Done — 4-step upgrade flow, quarter selection, PM→MS upgrade, access guards |
+| Mundane Astrology admin (ingress charts) | ✅ Done — gold standard admin, sector filter, rich create/edit, mundane access control |
+| Mystery school Foundation Q1 task system | ✅ Done — task-level completion, checklist UI, week unlock logic |
+| Mystery school decan curriculum + timeline | ✅ Done — metadata fields, lifecycle dates, grace state, enriched dashboard |
+| Mystery school ritual praxis runner | ✅ Done — sequential step enforcement, execution tracking |
+| Mystery school scry + mundane journals | ✅ Done — card association, 3-section mundane, server validation |
+| Nativity Birth Chart V2 | 🔲 Planned — astro-toolkit/nativity_Birth_Chart_Master_Documentation.md |
+| Mystery school tasks 08–11 (missed decan, graduation, tarot, emails) | 🔲 In queue |
 | Admin: spiritual wisdom CRUD | ✅ Done |
 | Admin: decan journals CRUD | ✅ Done |
 | Admin: decan media CRUD | ✅ Done |
@@ -146,6 +159,26 @@
 - Angular bundle optimisation (E10-S3)
 - Angular duplicate AuthService cleanup (E1-S3)
 - Angular TypeScript model interfaces (E1-S4)
+
+---
+
+## ✅ Completed This Session (session 14 — 2026-04-06)
+
+| Feature | Detail |
+|---|---|
+| Calendar module | Microsoft/Outlook OAuth + Google Calendar update/delete; availability templates; booking management page; reschedule/cancel APIs (dual-auth: booking_token + session); 24h/1h reminder cron; booking notes + metadata capture; CopyBookingLink; CalendarConnections; booking wizard skeleton + timezone display |
+| Admin test user | admin@astrologypro.com / Admin@AstroPro2026! seeded in admin_users table + docs/test-users.md |
+| CRON_SECRET fix | Shared verifyCronAuth helper — trims whitespace before comparison; all 15 cron/twilio routes updated |
+| Admin login overhaul | DB-based admin_users table; requireAdmin() lib; 113 admin routes migrated from inline ADMIN_EMAILS check |
+| Admin PM content (gold standard) | Stats bar, type/status/access/search filters, rich create/edit forms (YouTube embed preview, thumbnail, duration), AlertDialog deletes, seed script (10 items) |
+| PM community dashboard enrichment | Donate banner (top), rich membership details + member slot progress, own chart readiness + family chart rings, MS join banner (bottom) |
+| Family member management | Rich add-member form (all astro fields + live completion ring), edit form, detail page enrichment, invite-to-login flow (invite_token), sendFamilyMemberInvite email |
+| Mystery school enrollment lifecycle | Migration 020 (12 lifecycle columns on mystery_school_students); quarter utility (2026–2030 dates); 4-step upgrade flow; access guard requireMysterySchoolAccess; training layout guard |
+| Mundane Astrology admin | Gold standard ingress charts admin (stats, filters, sector multi-select, rich create/edit with interpretation/chart ruler/challenges+strengths); admin mundane access control page; community detail enrichment; seed script |
+| Mystery school foundation Q1 | Task-level completion system; per-task check API; week unlock based on all-tasks-done; admin foundation task authoring |
+| Mystery school decan curriculum | Metadata fields (decan_name, tarot_card_ref, artwork_url); student_decan_progress lifecycle (window_open/close, grace_close); enriched decan grid + detail; admin student progress overview |
+| Mystery school ritual runner | Step-by-step guided runner with sequential enforcement; ritual_executions table; 3-second read delay per step; admin publish/version controls |
+| Mystery school journals | scry_journals (card association, experience text); mundane_journals (3 required sections, 100-char minimum); server-side validation; admin journal review |
 
 ---
 

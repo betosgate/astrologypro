@@ -8,8 +8,22 @@ export const maxDuration = 60;
 /**
  * GET /api/cron/decan-unlock
  * Runs daily. For each active mystery school student:
- *   - Unlocks decans whose start date is within 7 days (status: upcoming → active)
- *   - Marks grace-period-expired decans as missed (end_date + 2 days passed, not completed)
+ *
+ *   1. PREVIEW  — 7 days before window_open:
+ *      locked → preview (upsert with window dates)
+ *
+ *   2. ACTIVATE — window_open reached:
+ *      preview/upcoming/locked → active
+ *      Persists window_open, window_close, grace_close on the progress row.
+ *
+ *   3. GRACE    — window_close passed, not completed:
+ *      active → grace (persist grace_close = window_close + 2 days)
+ *
+ *   4. MISSED   — grace_close passed, not completed:
+ *      grace/active → missed
+ *
+ * Completed decans are never touched.
+ * Admin-excused decans are never touched.
  */
 export async function GET(request: NextRequest) {
   const authError = verifyCronAuth(request);
@@ -17,8 +31,6 @@ export async function GET(request: NextRequest) {
 
   const admin = createAdminClient();
   const now = new Date();
-  const currentMonth = now.getMonth() + 1;
-  const currentDay = now.getDate();
   const currentYear = now.getFullYear();
 
   // All 36 decans
@@ -26,103 +38,191 @@ export async function GET(request: NextRequest) {
     .from("decans")
     .select("id, decan_number, start_month, start_day, end_month, end_day");
 
-  // All active mystery school students
+  // All mystery school students in foundation or decans training phase
   const { data: students } = await admin
     .from("mystery_school_students")
     .select("id, training_status")
-    .eq("training_status", "decans");
+    .in("training_status", ["foundation", "decans"]);
 
   if (!decans || !students) {
-    return NextResponse.json({ unlocked: 0, missed: 0 });
+    return NextResponse.json({ previewed: 0, unlocked: 0, graced: 0, missed: 0 });
   }
 
+  /**
+   * Compute canonical window dates for a decan using seeded month/day values.
+   * Capricorn I (start_month=12, end_month=12): both in current year.
+   * Capricorn II/III (start_month=1): standard current year.
+   * The only cross-year case is a decan whose start is Dec and end is Jan.
+   */
+  function decanDates(d: {
+    start_month: number;
+    start_day: number;
+    end_month: number;
+    end_day: number;
+  }) {
+    const crossesYear = d.start_month === 12 && d.end_month !== 12;
+    const windowOpen = new Date(currentYear, d.start_month - 1, d.start_day, 0, 0, 0);
+    const windowClose = new Date(
+      crossesYear ? currentYear + 1 : currentYear,
+      d.end_month - 1,
+      d.end_day,
+      23, 59, 59
+    );
+    const graceClose = new Date(windowClose.getTime() + 2 * 24 * 60 * 60 * 1000);
+    const previewOpen = new Date(windowOpen.getTime() - 7 * 24 * 60 * 60 * 1000);
+    return { windowOpen, windowClose, graceClose, previewOpen };
+  }
+
+  let previewed = 0;
   let unlocked = 0;
+  let graced = 0;
   let missed = 0;
-
-  function decanDates(d: { start_month: number; start_day: number; end_month: number; end_day: number }) {
-    // Handle Capricorn I which crosses year boundary (Dec 22 – Dec 31)
-    const startYear = currentYear;
-    const endYear = d.start_month === 12 && d.end_month === 1 ? currentYear + 1 : currentYear;
-    const start = new Date(startYear, d.start_month - 1, d.start_day);
-    const end = new Date(endYear, d.end_month - 1, d.end_day, 23, 59, 59);
-    return { start, end };
-  }
 
   for (const student of students) {
     for (const decan of decans) {
-      const { start, end } = decanDates(decan);
-      const sevenDaysBefore = new Date(start.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const graceEnd = new Date(end.getTime() + 2 * 24 * 60 * 60 * 1000);
+      const { windowOpen, windowClose, graceClose, previewOpen } = decanDates(decan);
 
-      // Check existing progress
-      const { data: progress } = await admin
+      // Fetch existing progress row (if any)
+      const { data: rawProgress } = await admin
         .from("student_decan_progress")
-        .select("status, ritual_done, scry_done, journal_done, unlocked_at")
+        .select(
+          "status, ritual_done, scry_done, journal_done, unlocked_at, " +
+            "window_open, window_close, grace_close, admin_excused"
+        )
         .eq("student_id", student.id)
         .eq("decan_id", decan.id)
-        .single();
+        .maybeSingle();
 
-      const progressTyped = progress as unknown as {
+      const progress = rawProgress as {
         status: string;
         ritual_done: boolean;
         scry_done: boolean;
         journal_done: boolean;
         unlocked_at: string | null;
+        window_open: string | null;
+        window_close: string | null;
+        grace_close: string | null;
+        admin_excused: boolean;
       } | null;
 
-      // Unlock: 7 days before start, move to "upcoming"
-      if (now >= sevenDaysBefore && now < start) {
-        if (!progressTyped || progressTyped.status === "locked") {
-          await admin
-            .from("student_decan_progress")
-            .upsert(
-              {
-                student_id: student.id,
-                decan_id: decan.id,
-                status: "upcoming",
-                unlocked_at: now.toISOString(),
-                updated_at: now.toISOString(),
-              },
-              { onConflict: "student_id,decan_id" }
-            );
-          unlocked++;
-        }
-      }
+      // Never touch completed or admin-excused rows
+      if (progress?.status === "completed") continue;
+      if (progress?.admin_excused === true) continue;
 
-      // Activate: decan has started
-      if (now >= start && now <= end) {
-        if (!progressTyped || progressTyped.status === "upcoming" || progressTyped.status === "locked") {
-          await admin
-            .from("student_decan_progress")
-            .upsert(
-              {
-                student_id: student.id,
-                decan_id: decan.id,
-                status: "active",
-                unlocked_at: progressTyped?.unlocked_at ?? now.toISOString(),
-                updated_at: now.toISOString(),
-              },
-              { onConflict: "student_id,decan_id" }
-            );
-          unlocked++;
-        }
-      }
+      const currentStatus = progress?.status ?? "locked";
 
-      // Miss: grace period expired, not completed
-      if (now > graceEnd && progressTyped && progressTyped.status === "active") {
-        const allDone = progressTyped.ritual_done && progressTyped.scry_done && progressTyped.journal_done;
+      // Use persisted window dates if available (set at activation time)
+      const effectiveWindowClose = progress?.window_close
+        ? new Date(progress.window_close)
+        : windowClose;
+      const effectiveGraceClose = progress?.grace_close
+        ? new Date(progress.grace_close)
+        : graceClose;
+
+      // ── 1. MISSED — grace_close has passed, not completed ──────────────────
+      if (
+        now > effectiveGraceClose &&
+        (currentStatus === "grace" || currentStatus === "active")
+      ) {
+        const allDone =
+          (progress?.ritual_done ?? false) &&
+          (progress?.scry_done ?? false) &&
+          (progress?.journal_done ?? false);
         if (!allDone) {
           await admin
             .from("student_decan_progress")
-            .update({ status: "missed", missed_at: now.toISOString(), updated_at: now.toISOString() })
+            .update({
+              status: "missed",
+              missed_at: now.toISOString(),
+              updated_at: now.toISOString(),
+            })
             .eq("student_id", student.id)
             .eq("decan_id", decan.id);
           missed++;
         }
+        continue;
+      }
+
+      // ── 2. GRACE — window_close passed, not completed ──────────────────────
+      if (
+        now > effectiveWindowClose &&
+        now <= effectiveGraceClose &&
+        currentStatus === "active"
+      ) {
+        const allDone =
+          (progress?.ritual_done ?? false) &&
+          (progress?.scry_done ?? false) &&
+          (progress?.journal_done ?? false);
+        if (!allDone) {
+          await admin
+            .from("student_decan_progress")
+            .update({
+              status: "grace",
+              grace_close: effectiveGraceClose.toISOString(),
+              updated_at: now.toISOString(),
+            })
+            .eq("student_id", student.id)
+            .eq("decan_id", decan.id);
+          graced++;
+        }
+        continue;
+      }
+
+      // ── 3. ACTIVATE — window has opened ────────────────────────────────────
+      if (
+        now >= windowOpen &&
+        now <= windowClose &&
+        (currentStatus === "locked" ||
+          currentStatus === "upcoming" ||
+          currentStatus === "preview")
+      ) {
+        await admin
+          .from("student_decan_progress")
+          .upsert(
+            {
+              student_id: student.id,
+              decan_id: decan.id,
+              status: "active",
+              unlocked_at: progress?.unlocked_at ?? now.toISOString(),
+              window_open: windowOpen.toISOString(),
+              window_close: windowClose.toISOString(),
+              grace_close: graceClose.toISOString(),
+              updated_at: now.toISOString(),
+            },
+            { onConflict: "student_id,decan_id" }
+          );
+        unlocked++;
+        continue;
+      }
+
+      // ── 4. PREVIEW — 7 days before window opens ────────────────────────────
+      if (
+        now >= previewOpen &&
+        now < windowOpen &&
+        (currentStatus === "locked" || currentStatus === "upcoming")
+      ) {
+        await admin
+          .from("student_decan_progress")
+          .upsert(
+            {
+              student_id: student.id,
+              decan_id: decan.id,
+              status: "preview",
+              window_open: windowOpen.toISOString(),
+              window_close: windowClose.toISOString(),
+              grace_close: graceClose.toISOString(),
+              updated_at: now.toISOString(),
+            },
+            { onConflict: "student_id,decan_id" }
+          );
+        previewed++;
+        continue;
       }
     }
   }
 
-  console.log(`[decan-unlock] unlocked=${unlocked} missed=${missed}`);
-  return NextResponse.json({ unlocked, missed });
+  console.log(
+    `[decan-unlock] previewed=${previewed} unlocked=${unlocked} graced=${graced} missed=${missed}`
+  );
+  return NextResponse.json({ previewed, unlocked, graced, missed });
 }
