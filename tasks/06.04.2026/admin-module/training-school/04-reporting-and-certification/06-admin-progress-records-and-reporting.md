@@ -1,46 +1,71 @@
 # Module 06 - Admin Progress Records and Reporting Matrix
 
 ## Objective
-Define and complete the admin reporting surfaces requested by the architect for training-wise, category-wise, lesson-wise, and user-wise reporting.
+Implement the required training/category/lesson/user reporting model in a way that is concrete enough for direct coding.
 
-## Current State In Repo
+## Current Repo State
 - Admin analytics already has overview, users, programs, categories, lessons, and quizzes tabs.
-- Existing APIs already expose substantial aggregate data.
-- The architect requirement asks for "training wise, category wise, lesson wise and user wise report with 4 different parameters," but the parameter set is not yet standardized in the tasking.
+- Existing APIs already return several aggregate metrics.
+- The architect requirement asks for four report types with four parameters each, but that matrix is not fixed in the current task pack.
 
-## Required Outcome
-- The reporting matrix is defined clearly enough that implementation is testable.
-- Progress-record views exist for both per-user inspection and hierarchy-level performance inspection.
-- Existing analytics endpoints are reused or extended rather than replaced.
+## Exact Gap
+- The reporting requirement is too ambiguous for an AI agent to implement safely without a fixed metric matrix.
+- The repo has analytics, but not a locked reporting contract for these four views.
 
-## Detailed Tasks
-- [ ] Formalize the four required parameters for each report type instead of leaving them ambiguous.
-- [ ] Propose one consistent baseline matrix for:
-  - training/program wise
-  - category wise
-  - lesson wise
-  - user wise
-- [ ] Validate whether the existing analytics APIs already cover some or all of that matrix.
-- [ ] Add any missing dimensions needed for progress records, for example:
-  - completion status/count
-  - in-progress count
-  - pass rate
-  - average time spent
-  - last activity
-  - attempts to pass
-- [ ] Add a dedicated progress-record section if the current analytics dashboard is too aggregate and not user-operational enough.
-- [ ] Ensure admins can pivot from a user record to that user's program/category/lesson status detail.
-- [ ] Ensure naming stays aligned with current repo concepts: "program" may be displayed as "training" in the UI if needed, but table/API names remain unchanged.
+## Required Implementation
+- Implement this baseline metric matrix unless product provides a stricter replacement before coding:
+  - training/program view:
+    - total enrolled users
+    - completed users
+    - completion rate
+    - average time spent
+  - category view:
+    - users started
+    - users completed
+    - completion rate
+    - average time spent
+  - lesson view:
+    - users started
+    - users completed
+    - completion rate
+    - quiz pass rate
+  - user view:
+    - enrolled programs
+    - completed lessons
+    - progress percent
+    - last activity
+- Reuse existing analytics endpoints where possible and extend them only for missing metrics.
+- Add drill-down capability from user-level reporting into that user’s program/category/lesson status where current UI is insufficient.
+- If the UI displays “training,” it may map to the existing `program` entity, but table/API names must remain unchanged.
+
+## Likely Affected Files
+- `src/app/admin/training/analytics/page.tsx`
+- `src/app/api/admin/training/analytics/overview/route.ts`
+- `src/app/api/admin/training/analytics/users/route.ts`
+- `src/app/api/admin/training/analytics/programs/route.ts`
+- `src/app/api/admin/training/analytics/categories/route.ts`
+- `src/app/api/admin/training/analytics/lessons/route.ts`
+
+## API and Schema Constraints
+- Keep existing analytics route names.
+- Keep existing entity names in schema and API layers.
+- Add new fields to response payloads only where needed.
+
+## Dependencies
+- Execute after Module 05.
 
 ## Acceptance Criteria
-- Each of the four report types has a defined and implemented parameter set.
-- Admins can inspect both aggregate performance and individual learner progress.
-- Existing analytics surfaces are extended coherently instead of duplicated.
+- Each report type exposes the defined metric set.
+- Admins can inspect both hierarchy-level and user-level progress.
+- Existing analytics pages are extended coherently rather than duplicated.
 
 ## Verification Test Plan
-- [ ] Validate the final parameter matrix against stakeholder approval before implementation.
-- [ ] Verify training/program report returns the agreed metrics for each active program.
-- [ ] Verify category report returns the agreed metrics for each category and can filter by program.
-- [ ] Verify lesson report returns the agreed metrics for each lesson and can filter by category.
-- [ ] Verify user report returns the agreed metrics per learner and supports search/filtering.
-- [ ] Confirm an admin can drill from a user record to that user's detailed progress breakdown.
+- [ ] Verify training/program report returns the defined four metrics.
+- [ ] Verify category report returns the defined four metrics.
+- [ ] Verify lesson report returns the defined four metrics.
+- [ ] Verify user report returns the defined four metrics.
+- [ ] Confirm filters and drill-downs work where implemented.
+
+## Out Of Scope
+- median time-to-complete calculations
+- certificate logic

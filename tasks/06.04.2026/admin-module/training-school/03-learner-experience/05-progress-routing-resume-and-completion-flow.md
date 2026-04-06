@@ -1,46 +1,60 @@
 # Module 05 - Progress Routing, Resume, and Completion Flow
 
 ## Objective
-Make the learner progression model explicit from training start to training completion, including resume behavior, completion gating, and the interaction between progress tables and completion tables.
+Finalize how progress is stored, resumed, and completed once the trigger-based quiz model is introduced.
 
-## Current State In Repo
+## Current Repo State
 - `lesson_progress`, `lesson_completions`, `category_completions`, `user_program_progress`, and `user_category_progress` already exist.
-- Learner APIs already expose next lesson/category fields from cache tables.
-- Lesson completion today is driven mainly by passing the whole lesson quiz.
-- The documented requirements expect trigger-by-trigger progression and completion based on all required question pairs.
+- Learner APIs already expose next lesson/category information from cache tables.
+- Current lesson completion is mainly tied to passing the whole lesson quiz.
 
-## Required Outcome
-- Progress records reflect real in-progress learner state.
-- Resume logic and completion logic remain consistent after the slide quiz engine is introduced.
-- Incomplete training entry always routes the learner to the correct next target.
+## Exact Gap
+- Trigger-based quiz progression requires more granular state than the current end-of-lesson model.
+- Resume and completion semantics must be unified so the learner always returns to the correct item.
+- Legacy progress paths may conflict with the newer tracking model.
 
-## Detailed Tasks
-- [ ] Audit how `lesson_progress` is currently updated by lesson start, heartbeat, quiz pass, and lesson completion routes.
-- [ ] Decide whether the current progress model can represent trigger-level state or whether it needs additive fields/tables.
-- [ ] Ensure lesson completion only occurs after all required trigger questions have been answered correctly.
-- [ ] Ensure category completion only occurs after all active lessons in that category are complete.
-- [ ] Ensure program/training completion only occurs after all required categories are complete.
-- [ ] Define how the app chooses the learner's next destination when:
-  - program sequential is on
-  - program sequential is off
-  - category sequential is on
-  - category sequential is off
-- [ ] Validate the architect rule that reopening an incomplete training jumps to the highest-priority incomplete category and highest-priority incomplete lesson.
-- [ ] Ensure the learner-facing progress bar is consistent on:
-  - lesson page
-  - category overview
-  - program overview
-- [ ] Remove or reconcile any legacy progress flow such as `trainee_lesson_progress` if it causes behavioral duplication with the current model.
+## Required Implementation
+- Use `lesson_progress` as the primary in-progress lesson state.
+- Extend the progress model if required so it can store trigger-level progress without replacing current tables unnecessarily.
+- Mark a lesson complete only when all required trigger question pairs are answered correctly.
+- Mark a category complete only when all active lessons in that category are complete.
+- Mark a program complete only when all required categories in that program are complete.
+- Enforce this next-destination rule:
+  - learner re-entry goes to the lowest-priority incomplete category in the current program
+  - inside that category, learner re-entry goes to the lowest-priority incomplete lesson
+  - sequential settings from Module 01 determine what is locked, not what is considered the next item
+- Reconcile or retire any legacy path such as `trainee_lesson_progress` if it causes duplicate truth.
+- Keep learner progress indicators consistent across lesson, category, and program views.
+
+## Likely Affected Files
+- `src/app/api/trainee/training/lessons/[id]/start/route.ts`
+- `src/app/api/trainee/training/lessons/[id]/heartbeat/route.ts`
+- `src/app/api/trainee/training/lessons/[id]/complete/route.ts`
+- `src/app/api/trainee/training/programs/route.ts`
+- `src/app/api/trainee/training/lessons/[id]/quiz/route.ts`
+- trainee training page components
+- progress-related migrations if trigger progress requires additive storage
+
+## API and Schema Constraints
+- Keep current progress/completion/cache table names unless explicit cleanup is necessary.
+- Do not create a parallel progress stack if additive fields or a small helper table are sufficient.
+
+## Dependencies
+- Execute after Module 04.
 
 ## Acceptance Criteria
-- Progress state is durable and consistent across route refreshes and re-entry.
-- Completion state only advances when the required lesson/category/program conditions are met.
-- Next-item routing is deterministic and aligns with the architect requirement.
+- Progress is durable and resumes correctly after refresh or route re-entry.
+- Completion only advances when the final required conditions are met.
+- Next-item routing is deterministic and consistent with priority rules.
 
 ## Verification Test Plan
-- [ ] Open a lesson, confirm `lesson_progress` is created or updated.
-- [ ] Leave and re-enter an incomplete lesson, then confirm resume state and next destination are stable.
-- [ ] Complete all lessons in a category and confirm `category_completions` updates exactly once.
-- [ ] Complete all categories in a program and confirm program-level progress becomes complete.
-- [ ] Re-open an incomplete program and confirm the learner lands on the correct highest-priority incomplete path.
-- [ ] Confirm progress percentages remain correct when one lesson is partially watched but not complete.
+- [ ] Start a lesson and confirm progress state is created or updated.
+- [ ] Leave a lesson mid-progress and confirm resume state is preserved.
+- [ ] Complete all required triggers in a lesson and confirm lesson completion is recorded once.
+- [ ] Complete all lessons in a category and confirm category completion is recorded once.
+- [ ] Complete all required categories in a program and confirm program completion is recorded once.
+- [ ] Reopen an incomplete program and confirm routing lands on the correct next incomplete category and lesson.
+
+## Out Of Scope
+- admin analytics UI work
+- certificate delivery
