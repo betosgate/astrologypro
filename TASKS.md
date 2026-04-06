@@ -123,17 +123,18 @@
 | Certified badge (discover page) | ✅ Done — is_certified column + BadgeCheck icon |
 | Policy acknowledgement at checkout | ✅ Done — checkbox + policyAcknowledgedAt saved |
 | Policy display on diviner profile | ✅ Done |
-| Check-in system | ✅ Done — migration 039; public check-in page + admin management |
-| Giveaway system | ✅ Done — migration 040; public entry page + admin management |
-| Media gallery | ✅ Done — migration 041; admin management |
-| Weekly subscription product | ✅ Done — migration 042; diviner setup UI |
-| Stream platform configs | ✅ Done — migration 043; multi-platform live dashboard rebuilt |
-| Diviner SaaS plans | ✅ Done — migration 044; billing page, Stripe checkout/portal, webhook handlers |
-| Testimonial enhancements | ✅ Done — migration 045 |
-| Customer portal enhancements | ✅ Done — migration 046; orders + subscriptions portal pages |
-| Video reading system | ✅ Done — migration 047; VideoSDK JWT; room + join pages |
-| Dynamic intake templates | ✅ Done — migration 049; field builder UI + renderer |
-| Legal policy management | ✅ Done — migration 050; versioned docs CMS + public pages |
+| Check-in system | ✅ Done — live-gated form, check_ins + live_sessions tables, admin mgmt |
+| Giveaway system | ✅ Done — giveaways/entries/winners, Fisher-Yates selection, public entry page |
+| Media items gallery | ✅ Done — media_items per diviner, public gallery on profile, admin mgmt |
+| Weekly subscription schema | ✅ Done — tables created, Stripe checkout wired (migration 042+048) |
+| Multi-platform live module | ✅ Done — stream_platform_configs, dashboard rebuilt, public platform switcher |
+| Diviner SaaS plans | ✅ Done — plans/addons/invoices tables, feature gating, Stripe checkout + webhooks |
+| Testimonial enhancements | ✅ Done — public form, spam scoring, moderation workflow, diviner dashboard |
+| Customer portal v2 | ✅ Done — orders, intake forms, subscription management |
+| Diviner stickiness cookie | ✅ Done — preferred_diviner cookie, Your Astrologer banner on /discover |
+| Video reading system | ✅ Done — video_sessions table, VideoSDK integration, diviner room + client join page |
+| Dynamic intake templates | ✅ Done — intake_templates table, field builder, dynamic form renderer |
+| Legal policy management | ✅ Done — legal_documents + legal_acceptances, admin CMS, public /legal/[type] |
 | Email notifications (AWS SES) | 🟡 Wired; DNS added; awaiting SES domain verification |
 | Phone readings end-to-end | 🟡 Code complete; blocked on Twilio credentials in Vercel |
 | Social auto-posting (Ayrshare) | 🟡 Code complete; needs `AYRSHARE_API_KEY` in Vercel |
@@ -191,21 +192,22 @@
 
 ## ✅ Completed This Session (session 20 — 2026-04-06)
 
-| Feature | Detail |
+| Module | Detail |
 |---|---|
-| Check-in system | Migration 039; `check_ins` + `live_sessions` tables; public `/check-in/[username]` page; admin `/admin/check-ins` management; `/api/check-in/[username]` public endpoint |
-| Giveaway system | Migration 040; `giveaways` + `giveaway_entries` + `giveaway_winners` tables; public `/giveaways/[id]` entry page; admin `/admin/giveaways` management |
-| Media gallery | Migration 041; `media_items` table with type (image/video/audio/document), Supabase Storage URLs; admin `/admin/media-items` management |
-| Weekly subscription product | Migration 042; `weekly_subscription_products` + `weekly_subscription_subscribers` + `weekly_subscription_deliveries` tables; diviner toggle/setup UI |
-| Stream platform configs | Migration 043; `stream_platform_configs` table; multi-platform live page rebuilt at `/dashboard/live` (YouTube + Facebook + custom RTMP) |
-| Diviner SaaS plans | Migration 044; `diviner_plans` + `diviner_plan_addons` + `diviner_plan_subscriptions` + `diviner_invoices` + `telephony_usage_records`; billing page at `/dashboard/billing`; admin plan management; Stripe checkout + portal routes; webhook handlers in `/api/stripe/webhooks` |
-| Testimonial enhancements | Migration 045; `verified_at`, `reply_body`, `reply_at`, `reading_type`, `featured_position` on testimonials |
-| Customer portal enhancements | Migration 046; `orders` + `order_intake_submissions` + `client_subscriptions` tables; portal orders list + detail pages; portal subscriptions page |
-| Video reading system | Migration 047; `video_sessions` + `video_session_participants` tables; `src/lib/videosdk.ts` (VideoSDK JWT via jose); diviner room page `/dashboard/video/[id]`; client join `/portal/video/[id]`; admin `/admin/videos`; API routes: `/api/dashboard/video-sessions`, `/api/video-sessions/[id]/join` |
-| Stripe SaaS billing lib | `src/lib/stripe-saas.ts`; getOrCreateDivinerCustomer(), createDivinerPlanCheckout(), createDivinerBillingPortalSession(), cancelDivinerPlanAtPeriodEnd(); billing checkout + portal API routes |
-| Dynamic intake templates | Migration 049; `intake_templates` table; `src/lib/intake-fields.ts` (7 field types + PRESET_TEMPLATES); intake builder UI at `/dashboard/intake-builder`; DynamicIntakeForm renderer component |
-| Legal policy management | Migration 050; `legal_documents` (versioned, type-checked) + `legal_acceptances` tables; 5 seed documents; admin CMS at `/admin/legal`; public `/legal/[type]` pages; `/api/legal/accept` endpoint |
-| Training analytics fix | `/admin/training/analytics` blank page fixed — all 6 fetch calls now have type guards + `.catch()` handlers; no more crash on API failure |
+| Check-In System (migration 039) | check_ins + live_sessions tables, public /check-in/[username], admin live sessions management, CSV export |
+| Giveaway System (migration 040) | giveaways/entries/winners tables, public entry page, Fisher-Yates winner selection, admin management |
+| Media Items Gallery (migration 041) | media_items per diviner, public gallery on /[username], URL-param type filter, admin reorder + soft delete |
+| Weekly Subscription Schema (migration 042) | weekly_subscription_products/subscribers/deliveries tables, stub Stripe routes |
+| Diviner Stickiness Cookie | preferred_diviner cookie set on /[username], prominent banner on /discover with dismiss |
+| Multi-Platform Live Module (migration 043) | stream_platform_configs table, migrated YouTube+Facebook data, dashboard rebuilt with Go Live toggle + per-platform config, public LiveStreamSection with tab switcher |
+| Diviner SaaS Plans + Feature Gating (migration 044) | diviner_plans/addons/subscriptions/invoices/telephony tables, feature-gate.ts, admin plans UI, diviner billing page |
+| Testimonial Enhancements (migration 045) | spam-check.ts, public submission API + form, TestimonialsSection on /[username], diviner dashboard moderation |
+| Customer Portal v2 (migration 046) | orders + order_intake_submissions + client_subscriptions tables, portal /orders, /orders/[id], /subscriptions pages |
+| Stripe SaaS Billing (migration 048) | stripe_saas.ts helpers, /dashboard/billing/checkout + /portal APIs, webhook handlers for subscription events |
+| Video Reading System (migration 047) | video_sessions + participants tables, VideoSDK JWT auth, diviner room page, client join page, admin videos page |
+| Dynamic Intake Templates (migration 049) | intake_templates table, PRESET_TEMPLATES, field builder UI, DynamicIntakeForm renderer, wired to portal orders |
+| Legal Policy Management (migration 050) | legal_documents + legal_acceptances tables, admin CMS with version history, public /legal/[type], acceptance API |
+| Migration fixes | Wrapped all CREATE POLICY in DO guards (migrations 026-046), IF NOT EXISTS on all CREATE INDEX |
 
 ---
 

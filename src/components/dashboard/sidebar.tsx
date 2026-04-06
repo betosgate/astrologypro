@@ -22,6 +22,7 @@ import {
   Mail,
   ClipboardList,
   CreditCard,
+  Video,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ const navItems = [
   { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { label: "Affiliates", href: "/dashboard/affiliates", icon: Users2 },
   { label: "Live", href: "/dashboard/live", icon: Radio },
+  { label: "Video Sessions", href: "/dashboard/video", icon: Video },
   { label: "Marketing", href: "/dashboard/marketing", icon: Megaphone },
   { label: "Services", href: "/dashboard/services", icon: Sparkles },
   { label: "Gift Certificates", href: "/dashboard/gift-certificates", icon: Gift },

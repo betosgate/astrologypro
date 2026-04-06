@@ -62,9 +62,15 @@ export default async function DashboardVideoPage() {
       ? `${lastItem.created_at}:${lastItem.id}`
       : null;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const typedSessions = (sessions as any[]).map((s) => ({
+    ...s,
+    clients: Array.isArray(s.clients) ? (s.clients[0] ?? null) : s.clients,
+  })) as Parameters<typeof VideoSessionsList>[0]["initialSessions"];
+
   return (
     <VideoSessionsList
-      initialSessions={sessions as Parameters<typeof VideoSessionsList>[0]["initialSessions"]}
+      initialSessions={typedSessions}
       initialNextCursor={nextCursor}
       initialHasMore={hasMore}
     />

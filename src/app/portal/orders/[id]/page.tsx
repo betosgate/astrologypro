@@ -1,11 +1,13 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { IntakeForm } from "@/components/portal/intake-form";
+import { DynamicIntakeForm } from "@/components/portal/dynamic-intake-form";
 import { formatDateTime } from "@/lib/format";
 import { ArrowLeft, CheckCircle2, Circle, User } from "lucide-react";
+import type { IntakeTemplate } from "@/lib/intake-fields";
 
 export const metadata = {
   title: "Order Details",
@@ -77,12 +79,13 @@ interface OrderDetail {
   intake_submitted_at: string | null;
   delivered_at: string | null;
   created_at: string;
+  service_id: string | null;
   diviners: {
     display_name: string;
     username: string;
     avatar_url: string | null;
   } | null;
-  services: { name: string } | null;
+  services: { name: string; intake_template_id: string | null } | null;
 }
 
 interface IntakeSubmission {
@@ -98,6 +101,7 @@ interface RouteParams {
 export default async function PortalOrderDetailPage({ params }: RouteParams) {
   const { id } = await params;
   const supabase = await createClient();
+  const admin = createAdminClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -116,9 +120,9 @@ export default async function PortalOrderDetailPage({ params }: RouteParams) {
     .from("orders")
     .select(
       `id, product_title, product_type, amount_cents, currency, status, notes,
-       paid_at, intake_submitted_at, delivered_at, created_at,
+       paid_at, intake_submitted_at, delivered_at, created_at, service_id,
        diviners(display_name, username, avatar_url),
-       services(name)`
+       services(name, intake_template_id)`
     )
     .eq("id", id)
     .eq("client_id", client.id)
@@ -128,13 +132,27 @@ export default async function PortalOrderDetailPage({ params }: RouteParams) {
 
   const order = orderRaw as unknown as OrderDetail;
 
-  const { data: intakeRaw } = await supabase
-    .from("order_intake_submissions")
-    .select("id, fields, completed_at")
-    .eq("order_id", id)
-    .maybeSingle();
+  // Fetch intake submission and template in parallel
+  const [intakeResult, templateResult] = await Promise.all([
+    supabase
+      .from("order_intake_submissions")
+      .select("id, fields, completed_at")
+      .eq("order_id", id)
+      .maybeSingle(),
+    (async (): Promise<IntakeTemplate | null> => {
+      const templateId = order.services?.intake_template_id ?? null;
+      if (!templateId) return null;
+      const { data } = await admin
+        .from("intake_templates")
+        .select("id, diviner_id, name, description, is_default, fields, created_at, updated_at")
+        .eq("id", templateId)
+        .maybeSingle();
+      return (data as IntakeTemplate | null);
+    })(),
+  ]);
 
-  const intake = intakeRaw as IntakeSubmission | null;
+  const intake = intakeResult.data as IntakeSubmission | null;
+  const intakeTemplate = templateResult;
 
   const currentStep = STATUS_ORDER[order.status] ?? 0;
   const diviner = order.diviners;
@@ -270,7 +288,9 @@ export default async function PortalOrderDetailPage({ params }: RouteParams) {
       {/* Intake section */}
       {showIntakeSection && (
         <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-5 space-y-4">
-          <h2 className="font-semibold">Birth Chart Intake</h2>
+          <h2 className="font-semibold">
+            {intakeTemplate?.name ?? "Reading Intake"}
+          </h2>
 
           {intake ? (
             <div className="space-y-3">
@@ -290,8 +310,9 @@ export default async function PortalOrderDetailPage({ params }: RouteParams) {
               </div>
             </div>
           ) : order.status === "awaiting_intake" ? (
-            <IntakeForm
+            <DynamicIntakeForm
               orderId={order.id}
+              template={intakeTemplate}
               productTitle={order.product_title || order.services?.name || "Reading"}
               clientName={client.full_name}
             />

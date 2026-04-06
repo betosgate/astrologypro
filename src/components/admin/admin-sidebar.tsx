@@ -54,6 +54,7 @@ import {
   FileCode2,
   Mail,
   Gift,
+  ScrollText,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -84,6 +85,7 @@ const NAV_GROUPS = [
       { label: "Blog Series", href: "/admin/blog/series", icon: BookOpen },
       { label: "Media Items", href: "/admin/media-items", icon: Film },
       { label: "Videos", href: "/admin/videos", icon: Video },
+      { label: "Video Sessions", href: "/admin/video-sessions", icon: Video },
       { label: "Webinars", href: "/admin/webinars", icon: Monitor },
       { label: "Spiritual Wisdom", href: "/admin/spiritual-wisdom", icon: Sparkles },
       { label: "General Content", href: "/admin/general-content", icon: Layers },
@@ -174,6 +176,12 @@ const NAV_GROUPS = [
     items: [
       { label: "Tarot", href: "/admin/tarot", icon: Shuffle },
       { label: "Rituals", href: "/admin/rituals", icon: Flame },
+    ],
+  },
+  {
+    label: "Config",
+    items: [
+      { label: "Legal", href: "/admin/legal", icon: ScrollText },
     ],
   },
 ];
