@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -14,11 +14,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { createClient } from "@/lib/supabase/client";
+
+const BUCKET = "all-frontend-assets";
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export default function NewTarotSpreadPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
 
   const [form, setForm] = useState({
     name: "",
@@ -27,6 +35,41 @@ export default function NewTarotSpreadPage() {
     priority: "",
     is_active: true,
   });
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setError("Invalid file type. Allowed: JPEG, PNG, WebP, GIF.");
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setError("File too large. Maximum size is 10 MB.");
+      return;
+    }
+
+    setError(null);
+    setUploading(true);
+
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `divine-infinity-being/tarot-spread-image/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const supabase = createClient();
+
+    const { error: uploadError } = await supabase.storage
+      .from(BUCKET)
+      .upload(path, file, { upsert: false });
+
+    if (uploadError) {
+      setError(`Upload failed: ${uploadError.message}`);
+      setUploading(false);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
+    setThumbnailUrl(urlData.publicUrl);
+    setUploading(false);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,6 +84,7 @@ export default function NewTarotSpreadPage() {
         description: form.description,
         card_count: parseInt(form.card_count) || 0,
         priority: form.priority ? parseInt(form.priority) : 0,
+        thumbnail_url: thumbnailUrl || null,
         is_active: form.is_active,
       }),
     });
@@ -52,7 +96,7 @@ export default function NewTarotSpreadPage() {
       return;
     }
 
-    router.push("/admin/tarot");
+    router.push("/admin/tarot/spreads");
   }
 
   return (
@@ -91,6 +135,36 @@ export default function NewTarotSpreadPage() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label>Thumbnail</Label>
+              <div className="flex items-center gap-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploading ? "Uploading…" : "Choose Image"}
+                </Button>
+                {thumbnailUrl && (
+                  <a href={thumbnailUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline break-all max-w-xs truncate">
+                    {thumbnailUrl}
+                  </a>
+                )}
+              </div>
+              {thumbnailUrl && (
+                <img src={thumbnailUrl} alt="Thumbnail preview" className="mt-2 h-24 w-auto rounded border object-contain" />
+              )}
+            </div>
+
             <div className="flex items-center gap-2">
               <Checkbox id="is_active" checked={form.is_active} onCheckedChange={(checked) => setForm({ ...form, is_active: !!checked })} />
               <Label htmlFor="is_active">Active</Label>
@@ -99,8 +173,8 @@ export default function NewTarotSpreadPage() {
             {error && <p className="text-sm text-red-500">{error}</p>}
 
             <div className="flex gap-3 pt-2">
-              <Button type="submit" disabled={saving}>{saving ? "Saving…" : "Create Spread"}</Button>
-              <Button type="button" variant="outline" onClick={() => router.push("/admin/tarot")}>Cancel</Button>
+              <Button type="submit" disabled={saving || uploading}>{saving ? "Saving…" : "Create Spread"}</Button>
+              <Button type="button" variant="outline" onClick={() => router.push("/admin/tarot/spreads")}>Cancel</Button>
             </div>
           </form>
         </CardContent>

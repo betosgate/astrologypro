@@ -1,3 +1,5 @@
+**Status:** Done
+
 # Task: User Note Management
 
 ## Objective

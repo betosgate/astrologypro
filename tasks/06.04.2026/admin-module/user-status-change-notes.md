@@ -1,3 +1,5 @@
+**Status:** Done
+
 # Task: User Status Change Notes & Notification
 
 ## Objective
