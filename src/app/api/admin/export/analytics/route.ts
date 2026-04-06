@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
-  .split(",")
-  .map((e) => e.trim())
-  .filter(Boolean);
 
 function toCSV(rows: Record<string, unknown>[], headers: string[]): string {
   const escape = (v: unknown) => {
@@ -24,11 +19,8 @@ function toCSV(rows: Record<string, unknown>[], headers: string[]): string {
 // GET /api/admin/export/analytics
 // Exports full training analytics (all trainees, no pagination limit)
 export async function GET(req: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user: adminUser },
-  } = await supabase.auth.getUser();
-  if (!adminUser?.email || !ADMIN_EMAILS.includes(adminUser.email)) {
+  const adminUser = await getAdminUser();
+  if (!adminUser) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

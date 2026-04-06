@@ -296,8 +296,9 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       ? "paused"
       : member.membership_status;
 
-  const periodEnd = subscription.current_period_end
-    ? new Date(subscription.current_period_end * 1000).toISOString()
+  const subAny = subscription as unknown as { current_period_end?: number };
+  const periodEnd = subAny.current_period_end
+    ? new Date(subAny.current_period_end * 1000).toISOString()
     : null;
 
   await adminClient
@@ -335,13 +336,14 @@ async function handleSubscriptionDeleted(
       .eq("id", communityMember.id);
 
     if (communityMember.email) {
+      const subDelAny = subscription as unknown as { current_period_end?: number };
       const accessUntil = communityMember.current_period_end
         ? new Date(communityMember.current_period_end).toLocaleDateString(
             "en-US",
             { month: "long", day: "numeric", year: "numeric" }
           )
-        : subscription.current_period_end
-        ? new Date(subscription.current_period_end * 1000).toLocaleDateString(
+        : subDelAny.current_period_end
+        ? new Date(subDelAny.current_period_end * 1000).toLocaleDateString(
             "en-US",
             { month: "long", day: "numeric", year: "numeric" }
           )

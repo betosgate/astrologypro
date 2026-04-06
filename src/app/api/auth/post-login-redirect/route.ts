@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin } from "@/lib/admin-auth";
 import { getRoleDestination } from "@/types/user";
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
 
 const VALID_PORTAL_BASES = [
   "/dashboard",
@@ -76,7 +72,8 @@ export async function GET(req: NextRequest) {
   // ── Log the login event (non-blocking) ───────────────────────────────────
   logPasswordLogin(user.id, req);
 
-  const isAdmin = ADMIN_EMAILS.includes((user.email ?? "").toLowerCase());
+  const adminUser = await requireAdmin();
+  const isAdmin = !!adminUser;
   const admin = createAdminClient();
   const role = user.user_metadata?.role as string | undefined;
 

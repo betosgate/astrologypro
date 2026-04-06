@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import Anthropic from "@anthropic-ai/sdk";
 import JSZip from "jszip";
@@ -7,19 +7,6 @@ import JSZip from "jszip";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-async function assertAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  if (!adminEmails.includes((user.email ?? "").toLowerCase())) return null;
-  return user;
-}
 
 /**
  * Extracts plain text from a PPTX file buffer.
@@ -68,7 +55,7 @@ async function extractPptxText(buffer: Buffer): Promise<string> {
  *   questionCount: number (default 10)
  */
 export async function POST(request: NextRequest) {
-  const user = await assertAdmin();
+  const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const formData = await request.formData();

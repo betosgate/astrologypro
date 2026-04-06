@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
-  .split(",")
-  .map((e) => e.trim())
-  .filter(Boolean);
 
 // ─── CSV helpers ──────────────────────────────────────────────────────────────
 
@@ -30,11 +25,8 @@ function toCSV(rows: Record<string, unknown>[], headers: string[]): string {
 // Body:          { ids: string[] } — export specific user IDs
 
 async function buildExport(req: NextRequest, selectedIds?: string[]) {
-  const supabase = await createClient();
-  const {
-    data: { user: adminUser },
-  } = await supabase.auth.getUser();
-  if (!adminUser?.email || !ADMIN_EMAILS.includes(adminUser.email)) {
+  const adminUser = await getAdminUser();
+  if (!adminUser) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -303,11 +295,8 @@ export async function GET(req: NextRequest) {
 
 // POST with { ids: string[] } exports only the specified user IDs
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user: adminUser },
-  } = await supabase.auth.getUser();
-  if (!adminUser?.email || !ADMIN_EMAILS.includes(adminUser.email)) {
+  const adminUser = await getAdminUser();
+  if (!adminUser) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

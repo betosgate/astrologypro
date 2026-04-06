@@ -80,13 +80,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const tier = member.pm_plan_tiers as {
+    type TierShape = {
       name: string;
       base_price_usd: number;
       base_member_limit: number;
       extra_per_member_usd: number;
       max_total_members: number;
-    } | null;
+    };
+    const rawTier = member.pm_plan_tiers;
+    const tier: TierShape | null = Array.isArray(rawTier)
+      ? (rawTier[0] as TierShape) ?? null
+      : (rawTier as unknown as TierShape | null);
 
     if (!tier) {
       return NextResponse.json(
