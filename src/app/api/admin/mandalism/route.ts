@@ -1,20 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
 
-async function requireAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email || !ADMIN_EMAILS.includes(user.email)) return null;
-  return user;
-}
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const user = await requireAdmin();
+  const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const sp = req.nextUrl.searchParams;
@@ -36,7 +29,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await requireAdmin();
+  const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
@@ -47,6 +40,8 @@ export async function POST(req: NextRequest) {
     url,
     pdf_url,
     content_body,
+    content_thumbnail_url,
+    duration_label,
     start_at,
     end_at,
     access_control,
@@ -67,6 +62,8 @@ export async function POST(req: NextRequest) {
       url,
       pdf_url,
       content_body,
+      content_thumbnail_url: content_thumbnail_url ?? null,
+      duration_label: duration_label ?? null,
       start_at,
       end_at,
       access_control: access_control ?? "members",

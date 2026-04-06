@@ -21,6 +21,7 @@ interface BookingPaymentBody {
   affiliateCode?: string;
   giftCode?: string;
   policyAcknowledgedAt?: string;
+  booking_notes?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -38,7 +39,19 @@ export async function POST(request: NextRequest) {
       affiliateCode,
       giftCode,
       policyAcknowledgedAt,
+      booking_notes,
     } = body;
+
+    // Capture request metadata for audit/analytics
+    const requestMetadata = {
+      ip:
+        request.headers.get("cf-connecting-ip") ??
+        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+        "unknown",
+      userAgent: request.headers.get("user-agent") ?? "",
+      referrer: request.headers.get("referer") ?? "",
+      language: request.headers.get("accept-language") ?? "",
+    };
 
     // Extract birth geo from questionnaire (sent inline by the wizard)
     const birthLat = questionnaire?.birthLat as number | undefined;
@@ -259,6 +272,8 @@ export async function POST(request: NextRequest) {
         status: "pending",
         base_price: finalPrice,
         questionnaire_responses: questionnaire,
+        booking_notes: booking_notes ?? null,
+        metadata: requestMetadata,
         ...(policyAcknowledgedAt ? { policy_acknowledged_at: policyAcknowledgedAt } : {}),
       })
       .select("id")

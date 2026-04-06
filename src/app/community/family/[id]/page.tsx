@@ -12,8 +12,24 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { NatalWheel } from "@/components/community/natal-wheel";
-import { ArrowLeft, RefreshCw, Info, Loader2, Star } from "lucide-react";
+import { ProgressRing } from "@/components/community/progress-ring";
+import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
+import {
+  ArrowLeft,
+  RefreshCw,
+  Info,
+  Loader2,
+  Star,
+  Pencil,
+  Mail,
+  CheckCircle2,
+} from "lucide-react";
 import Link from "next/link";
+import { formatDate } from "@/lib/format";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 type PlanetPosition = {
   name: string;
@@ -43,7 +59,17 @@ type FamilyMember = {
   age_group: "child" | "adult";
   natal_chart: NatalChartData | null;
   chart_updated_at: string | null;
+  notes: string | null;
+  // invite fields
+  invite_email: string | null;
+  invite_sent_at: string | null;
+  invite_accepted_at: string | null;
+  user_id: string | null;
 };
+
+// ---------------------------------------------------------------------------
+// Astrology lookup tables
+// ---------------------------------------------------------------------------
 
 const PLANET_GLYPHS: Record<string, string> = {
   Sun: "☉", Moon: "☽", Mercury: "☿", Venus: "♀",
@@ -76,6 +102,37 @@ const MODALITY: Record<string, string> = {
   Sagittarius: "Mutable", Capricorn: "Cardinal", Aquarius: "Fixed", Pisces: "Mutable",
 };
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function InviteStatus({ member }: { member: FamilyMember }) {
+  if (member.user_id && member.invite_accepted_at) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs text-green-600">
+        <CheckCircle2 className="size-3.5" />
+        Login activated on {formatDate(member.invite_accepted_at)}
+      </div>
+    );
+  }
+  if (member.invite_sent_at) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs text-amber-600">
+        <Mail className="size-3.5" />
+        Invite sent {formatDate(member.invite_sent_at)}
+        {member.invite_email && ` to ${member.invite_email}`}
+      </div>
+    );
+  }
+  return (
+    <div className="text-xs text-muted-foreground">Not yet invited to log in</div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main page
+// ---------------------------------------------------------------------------
+
 export default function FamilyMemberChartPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -84,6 +141,13 @@ export default function FamilyMemberChartPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Invite state
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [showInviteInput, setShowInviteInput] = useState(false);
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [inviteSuccess, setInviteSuccess] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
 
   const loadMember = useCallback(async () => {
     const res = await fetch("/api/community/family");
@@ -119,6 +183,30 @@ export default function FamilyMemberChartPage() {
     setGenerating(false);
   }
 
+  async function sendInvite() {
+    if (!inviteEmail) return;
+    setSendingInvite(true);
+    setInviteError(null);
+    const res = await fetch(`/api/community/family/${id}/invite`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: inviteEmail }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setInviteError(data.error ?? "Failed to send invite");
+    } else {
+      setInviteSuccess(true);
+      setShowInviteInput(false);
+      await loadMember();
+    }
+    setSendingInvite(false);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Loading / empty guard
+  // ---------------------------------------------------------------------------
+
   if (loading) {
     return (
       <div className="flex justify-center py-20">
@@ -135,8 +223,37 @@ export default function FamilyMemberChartPage() {
     (Date.now() - dob.getTime()) / (365.25 * 24 * 3600 * 1000)
   );
 
+  // Profile completion
+  const completion = calcFamilyProfileCompletion({
+    full_name: member.full_name,
+    date_of_birth: member.date_of_birth,
+    birth_time: member.birth_time,
+    birth_city: member.birth_city,
+    birth_country: member.birth_country,
+    relationship: member.relationship,
+    natal_chart: member.natal_chart,
+  });
+
+  const ringColor =
+    completion.percent >= 80
+      ? "hsl(142, 71%, 45%)"
+      : completion.percent >= 50
+      ? "hsl(var(--primary))"
+      : "hsl(25, 90%, 55%)";
+
+  const hasBirthDataForChart =
+    member.date_of_birth &&
+    (member.birth_time || true) && // chart can be generated without time (less accurate)
+    member.birth_city &&
+    member.birth_country;
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
   return (
     <div className="space-y-6">
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" asChild>
@@ -150,23 +267,32 @@ export default function FamilyMemberChartPage() {
               {member.full_name}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {member.relationship ? `${member.relationship} · ` : ""}Age {ageYears} · {member.age_group === "child" ? "Simplified chart" : "Full natal chart"}
+              {member.relationship ? `${member.relationship} · ` : ""}Age {ageYears} ·{" "}
+              {member.age_group === "child" ? "Simplified chart" : "Full natal chart"}
             </p>
           </div>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={generateChart}
-          disabled={generating}
-        >
-          {generating ? (
-            <Loader2 className="mr-2 size-4 animate-spin" />
-          ) : (
-            <RefreshCw className="mr-2 size-4" />
-          )}
-          {chart ? "Regenerate" : "Generate Chart"}
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button size="sm" variant="outline" asChild>
+            <Link href={`/community/family/${id}/edit`}>
+              <Pencil className="mr-1.5 size-4" />
+              Edit Details
+            </Link>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={generateChart}
+            disabled={generating}
+          >
+            {generating ? (
+              <Loader2 className="mr-2 size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 size-4" />
+            )}
+            {chart ? "Regenerate" : "Generate Chart"}
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -175,7 +301,183 @@ export default function FamilyMemberChartPage() {
         </div>
       )}
 
-      {/* Birth time prompt */}
+      {/* ── Profile Details + Completion ───────────────────────────────── */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        {/* Birth details card */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Birth Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Date of birth</span>
+              <span>
+                {dob.toLocaleDateString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Birth time</span>
+              {member.birth_time ? (
+                <span>{member.birth_time}</span>
+              ) : (
+                <span className="text-amber-600 text-xs">Unknown</span>
+              )}
+            </div>
+            {(member.birth_city || member.birth_country) && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Birth place</span>
+                <span>
+                  {[member.birth_city, member.birth_country]
+                    .filter(Boolean)
+                    .join(", ")}
+                </span>
+              </div>
+            )}
+            {member.relationship && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Relationship</span>
+                <span>{member.relationship}</span>
+              </div>
+            )}
+            {member.notes && (
+              <div className="pt-1">
+                <p className="text-muted-foreground text-xs mb-0.5">Notes</p>
+                <p className="text-xs">{member.notes}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Profile completion + chart status */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Profile Status</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-4">
+              <ProgressRing
+                percentage={completion.percent}
+                size={64}
+                strokeWidth={6}
+                color={ringColor}
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{completion.percent}% complete</p>
+                {completion.missing.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
+                    Missing:{" "}
+                    {completion.missing
+                      .filter((m) => m !== "Natal chart generated")
+                      .join(", ") || "—"}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Chart status chip */}
+            <div className="flex items-center gap-2">
+              {chart ? (
+                <Badge className="bg-green-500/15 text-green-700 border-green-500/30 hover:bg-green-500/20">
+                  Chart Ready ✓
+                </Badge>
+              ) : (
+                <Badge
+                  variant="outline"
+                  className="border-amber-400/50 text-amber-700 bg-amber-50/50"
+                >
+                  Chart Pending
+                </Badge>
+              )}
+              {chart?.generatedAt && (
+                <span className="text-xs text-muted-foreground">
+                  Generated {formatDate(chart.generatedAt)}
+                </span>
+              )}
+            </div>
+
+            {!chart && hasBirthDataForChart && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={generateChart}
+                disabled={generating}
+                className="w-full"
+              >
+                {generating ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <Star className="mr-2 size-4" />
+                )}
+                Generate Chart Now
+              </Button>
+            )}
+
+            {/* Invite status */}
+            <div className="border-t pt-2 space-y-2">
+              <InviteStatus member={member} />
+              {!member.user_id && !showInviteInput && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs text-primary"
+                  onClick={() => setShowInviteInput(true)}
+                >
+                  <Mail className="mr-1.5 size-3" />
+                  Send Login Invite
+                </Button>
+              )}
+              {showInviteInput && (
+                <div className="space-y-2">
+                  <input
+                    type="email"
+                    className="w-full rounded-md border px-2 py-1.5 text-xs bg-background"
+                    placeholder="Email address"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                  />
+                  {inviteError && (
+                    <p className="text-xs text-destructive">{inviteError}</p>
+                  )}
+                  <div className="flex gap-1.5">
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={sendInvite}
+                      disabled={sendingInvite || !inviteEmail}
+                    >
+                      {sendingInvite && (
+                        <Loader2 className="mr-1 size-3 animate-spin" />
+                      )}
+                      Send
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs"
+                      onClick={() => {
+                        setShowInviteInput(false);
+                        setInviteEmail("");
+                        setInviteError(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {inviteSuccess && (
+                <p className="text-xs text-green-600">Invite sent successfully.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Birth time warning ──────────────────────────────────────────── */}
       {!member.birth_time && (
         <Card className="border-amber-400/30 bg-amber-50/40">
           <CardContent className="flex items-start gap-3 py-4">
@@ -185,7 +487,10 @@ export default function FamilyMemberChartPage() {
               <p className="text-sm text-amber-700">
                 Add a birth time for greater accuracy — the ascendant and house
                 positions cannot be calculated without it.{" "}
-                <Link href="/community/family" className="underline hover:text-amber-900">
+                <Link
+                  href={`/community/family/${id}/edit`}
+                  className="underline hover:text-amber-900"
+                >
                   Edit profile →
                 </Link>
               </p>
@@ -194,6 +499,7 @@ export default function FamilyMemberChartPage() {
         </Card>
       )}
 
+      {/* ── No chart yet ────────────────────────────────────────────────── */}
       {!chart && !generating && (
         <Card>
           <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
@@ -223,6 +529,7 @@ export default function FamilyMemberChartPage() {
         </Card>
       )}
 
+      {/* ── Chart ───────────────────────────────────────────────────────── */}
       {chart && !generating && (
         <>
           {/* Visual wheel */}
@@ -253,9 +560,7 @@ export default function FamilyMemberChartPage() {
                 <Card>
                   <CardHeader className="pb-2">
                     <CardDescription>Rising Sign (Ascendant)</CardDescription>
-                    <CardTitle className="text-2xl">
-                      {chart.ascendant.sign}
-                    </CardTitle>
+                    <CardTitle className="text-2xl">{chart.ascendant.sign}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">

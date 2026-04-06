@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
-  .split(",")
-  .map((e) => e.trim())
-  .filter(Boolean);
 
 // ─── POST /api/admin/users/[id]/restore ──────────────────────────────────────
 // Restores a soft-deleted user: marks the deleted_users row as restored
@@ -15,11 +10,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user: adminUser },
-  } = await supabase.auth.getUser();
-  if (!adminUser?.email || !ADMIN_EMAILS.includes(adminUser.email)) {
+  const adminUser = await getAdminUser();
+  if (!adminUser) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
