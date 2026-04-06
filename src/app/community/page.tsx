@@ -21,15 +21,60 @@ import {
   Heart,
   GraduationCap,
   HandHeart,
+  MapPin,
+  Clock,
+  CalendarDays,
 } from "lucide-react";
 import Link from "next/link";
 import { AstroChartsSection } from "@/components/community/astro-charts-section";
 import { ProfileProgressSection } from "@/components/community/profile-progress-section";
 import { MembershipCard, type MembershipSubscription } from "@/components/community/membership-card";
 import { ProfileCompletionCard, type ProfileCompletionData } from "@/components/community/profile-completion-card";
+import { ProgressRing } from "@/components/community/progress-ring";
 
 export const metadata = { title: "Community - AstrologyPro" };
 export const dynamic = "force-dynamic";
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+/**
+ * Calculate profile completion % for a family member.
+ * Weights: full_name 20%, date_of_birth 15%, birth_time 15%,
+ *          birth_city 15%, birth_country 15%, relationship 10%, natal_chart 10%
+ */
+function calcFamilyMemberPct(m: {
+  full_name?: string | null;
+  date_of_birth?: string | null;
+  birth_time?: string | null;
+  birth_city?: string | null;
+  birth_country?: string | null;
+  relationship?: string | null;
+  natal_chart?: Record<string, unknown> | null;
+}): number {
+  let pct = 0;
+  if (m.full_name?.trim()) pct += 20;
+  if (m.date_of_birth) pct += 15;
+  if (m.birth_time) pct += 15;
+  if (m.birth_city?.trim()) pct += 15;
+  if (m.birth_country?.trim()) pct += 15;
+  if (m.relationship?.trim()) pct += 10;
+  if (m.natal_chart && Object.keys(m.natal_chart).length > 0) pct += 10;
+  return pct;
+}
+
+function ringColor(pct: number): string {
+  if (pct >= 100) return "hsl(142, 71%, 45%)";
+  if (pct >= 60) return "hsl(var(--primary))";
+  return "hsl(25, 90%, 55%)";
+}
+
+const AVATAR_COLORS = [
+  "bg-rose-500/15 text-rose-600",
+  "bg-violet-500/15 text-violet-600",
+  "bg-sky-500/15 text-sky-600",
+  "bg-amber-500/15 text-amber-600",
+  "bg-emerald-500/15 text-emerald-600",
+];
 
 export default async function CommunityDashboardPage() {
   const supabase = await createClient();
@@ -41,7 +86,7 @@ export default async function CommunityDashboardPage() {
   const { data: member } = await supabase
     .from("community_members")
     .select(
-      "id, full_name, email, membership_type, membership_status, plan_type, joined_at, expires_at"
+      "id, full_name, email, membership_type, membership_status, plan_type, joined_at, expires_at, pm_tier_id, current_period_end, extra_member_count"
     )
     .eq("user_id", user.id)
     .single();
@@ -82,6 +127,7 @@ export default async function CommunityDashboardPage() {
     contentCountsResult,
     profileCompletionFamilyResult,
     profileCompletionRelChartResult,
+    pmTierResult,
   ] = await Promise.all([
     // Client profile for progress ring calculation
     supabase
@@ -90,12 +136,14 @@ export default async function CommunityDashboardPage() {
       .eq("user_id", user.id)
       .single(),
 
-    // Family members for relationship preview
+    // Family members — full fields for profile completion rings
     supabase
       .from("community_family_members")
-      .select("id, full_name, relationship")
+      .select(
+        "id, full_name, relationship, date_of_birth, birth_time, birth_city, birth_country, natal_chart"
+      )
       .eq("member_id", member.id)
-      .limit(5),
+      .limit(10),
 
     // Other community members for members connected count
     supabase
@@ -148,6 +196,15 @@ export default async function CommunityDashboardPage() {
       .eq("member_id", member.id)
       .not("generated_at", "is", null)
       .limit(1),
+
+    // PM plan tier for rich membership display
+    member.pm_tier_id
+      ? supabase
+          .from("pm_plan_tiers")
+          .select("id, name, base_price_usd, base_member_limit, extra_per_member_usd, max_total_members")
+          .eq("id", member.pm_tier_id)
+          .single()
+      : Promise.resolve({ data: null }),
   ]);
 
   const client = clientResult.data;
@@ -159,14 +216,31 @@ export default async function CommunityDashboardPage() {
   const allContent = contentCountsResult.data ?? [];
   const pcFamilyMembers = profileCompletionFamilyResult.data ?? [];
   const pcRelCharts = profileCompletionRelChartResult.data ?? [];
+  const pmTier = pmTierResult.data ?? null;
 
   // ── Membership card subscription prop ────────────────────────────────────
-  const maxMembers = planType === "family" ? 5 : 1;
+  // Max members: from tier table if available, else derive from plan_type
+  const maxMembers: number =
+    (pmTier as { max_total_members?: number } | null)?.max_total_members ??
+    (planType === "family" ? 5 : 1);
+
   // family count: family members + the primary member
   const memberCount =
     planType === "family"
       ? Math.min((familyMembers?.length ?? 0) + 1, maxMembers)
       : 1;
+
+  // Tier display name: use pm_plan_tiers.name if available
+  const tierName: string | null =
+    (pmTier as { name?: string } | null)?.name ??
+    PLAN_LABELS[membershipType]?.[planType] ??
+    null;
+
+  // Best renewal date: prefer current_period_end (Stripe), fallback expires_at
+  const renewalDate: string | null =
+    (member as { current_period_end?: string | null }).current_period_end ??
+    member.expires_at ??
+    null;
 
   const membershipSubscription: MembershipSubscription = {
     membership_type: membershipType,
@@ -174,12 +248,14 @@ export default async function CommunityDashboardPage() {
     plan_label:
       PLAN_LABELS[membershipType]?.[planType] ??
       PLAN_LABELS["perennial_mandalism"]["individual"],
+    tier_name: tierName,
     status: member.membership_status ?? "active",
     amount:
       PLAN_AMOUNTS[membershipType]?.[planType] ??
       PLAN_AMOUNTS["perennial_mandalism"]["individual"],
     currency: "usd",
-    renewal_date: member.expires_at ?? null,
+    billing_cycle: "monthly",
+    renewal_date: renewalDate,
     created_at: member.joined_at,
     member_count: memberCount,
     max_members: maxMembers,
@@ -327,8 +403,44 @@ export default async function CommunityDashboardPage() {
         },
       ];
 
+  // ── Own chart completeness (server-side, no polling needed) ───────────────
+  const ownChartMissingFields: string[] = [];
+  if (!client?.birth_date) ownChartMissingFields.push("date of birth");
+  if (!client?.birth_time) ownChartMissingFields.push("birth time");
+  if (!client?.birth_city) ownChartMissingFields.push("birth city");
+  const ownChartReady = ownChartMissingFields.length === 0;
+  const relationshipChartCount = pcRelCharts.length;
+
   return (
     <div className="space-y-8">
+      {/* ═══════════════════════════════════════════════════════════════════
+          A. DONATE BANNER — top of page, before everything
+      ════════════════════════════════════════════════════════════════════ */}
+      <div className="rounded-xl bg-gradient-to-r from-amber-500/20 via-orange-500/10 to-yellow-500/20 border border-amber-500/30 px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-amber-500/20">
+            <HandHeart className="size-5 text-amber-600" aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 leading-tight">
+              Support the Sacred Journey
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-300/80 leading-snug mt-0.5 line-clamp-1">
+              Your generosity sustains this community, funds new content, and keeps the wisdom flowing. Every gift matters.
+            </p>
+          </div>
+        </div>
+        <Button
+          asChild
+          size="sm"
+          className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white"
+        >
+          <a href="https://divineinfinitebeing.com/donate" target="_blank" rel="noopener noreferrer">
+            Donate Now ❤
+          </a>
+        </Button>
+      </div>
+
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -363,7 +475,7 @@ export default async function CommunityDashboardPage() {
         </Card>
       )}
 
-      {/* ── Membership Info Card ────────────────────────────────────────────── */}
+      {/* ── C. Rich Membership Info Card ────────────────────────────────────── */}
       <MembershipCard subscription={membershipSubscription} />
 
       {/* ── PM Profile Completion Card ─────────────────────────────────────── */}
@@ -379,6 +491,77 @@ export default async function CommunityDashboardPage() {
       </section>
 
       <Separator />
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          E. OWN CHART HIGHLIGHT — server-side, above family section
+      ════════════════════════════════════════════════════════════════════ */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Star className="size-4 text-amber-500" />
+          <h2 className="text-base font-semibold">Astro Overview</h2>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {/* Own natal chart status */}
+          <Card className={ownChartReady ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/20 bg-amber-500/5"}>
+            <CardContent className="flex items-center gap-4 py-4">
+              <div className={`flex size-10 shrink-0 items-center justify-center rounded-full ${ownChartReady ? "bg-emerald-500/15" : "bg-amber-500/15"}`}>
+                <Star className={`size-5 ${ownChartReady ? "text-emerald-600" : "text-amber-600"}`} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold leading-tight">Your Natal Chart</p>
+                {ownChartReady ? (
+                  <>
+                    <p className="text-xs text-emerald-600 mt-0.5">Birth data complete — ready to generate</p>
+                    <Button asChild variant="link" size="sm" className="h-auto p-0 mt-1 text-xs text-primary">
+                      <Link href="/community/family">View Charts →</Link>
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-amber-600 mt-0.5">
+                      Missing: {ownChartMissingFields.join(", ")}
+                    </p>
+                    <Button asChild variant="link" size="sm" className="h-auto p-0 mt-1 text-xs text-primary">
+                      <Link href="/community/profile">Complete Your Profile →</Link>
+                    </Button>
+                  </>
+                )}
+              </div>
+              <Badge
+                variant="outline"
+                className={`shrink-0 text-xs ${ownChartReady ? "border-emerald-500/40 text-emerald-700" : "border-amber-500/40 text-amber-700"}`}
+              >
+                {ownChartReady ? "Ready" : "Incomplete"}
+              </Badge>
+            </CardContent>
+          </Card>
+
+          {/* Relationship charts quick stat */}
+          <Card>
+            <CardContent className="flex items-center gap-4 py-4">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-violet-500/10">
+                <Heart className="size-5 text-violet-600" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold leading-tight">Relationship Charts</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {relationshipChartCount > 0
+                    ? `${relationshipChartCount} chart${relationshipChartCount !== 1 ? "s" : ""} generated`
+                    : "No charts generated yet"}
+                </p>
+                <Button asChild variant="link" size="sm" className="h-auto p-0 mt-1 text-xs text-primary">
+                  <Link href="/community/charts">
+                    {relationshipChartCount > 0 ? "View Charts →" : "Generate a Chart →"}
+                  </Link>
+                </Button>
+              </div>
+              <span className="text-2xl font-bold tabular-nums text-violet-600 shrink-0">
+                {relationshipChartCount}
+              </span>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
 
       {/* ── My Rituals ─────────────────────────────────────────────────────── */}
       {isPerennial && (
@@ -451,7 +634,9 @@ export default async function CommunityDashboardPage() {
         </section>
       )}
 
-      {/* ── Relationships / Family Members ─────────────────────────────────── */}
+      {/* ═══════════════════════════════════════════════════════════════════
+          D. FAMILY MEMBERS — with profile completion rings
+      ════════════════════════════════════════════════════════════════════ */}
       {isPerennial && (
         <section className="space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -484,22 +669,108 @@ export default async function CommunityDashboardPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {familyMembers.map((m) => (
-                <Card key={m.id}>
-                  <CardContent className="flex items-center gap-3 py-3">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-rose-500/10 text-sm font-bold text-rose-600">
-                      {m.full_name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate uppercase">{m.full_name}</p>
-                      {m.relationship && (
-                        <p className="text-xs text-muted-foreground">{m.relationship}</p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {familyMembers.map((m, idx) => {
+                const completionPct = calcFamilyMemberPct(
+                  m as {
+                    full_name?: string | null;
+                    date_of_birth?: string | null;
+                    birth_time?: string | null;
+                    birth_city?: string | null;
+                    birth_country?: string | null;
+                    relationship?: string | null;
+                    natal_chart?: Record<string, unknown> | null;
+                  }
+                );
+                const hasNatalChart =
+                  m.natal_chart != null &&
+                  Object.keys(m.natal_chart as Record<string, unknown>).length > 0;
+                const avatarColor = AVATAR_COLORS[idx % AVATAR_COLORS.length];
+
+                return (
+                  <Card key={m.id} className="transition-colors hover:border-primary/30">
+                    <CardContent className="py-4 px-4 space-y-3">
+                      {/* Top row: avatar + name + chart badge */}
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${avatarColor}`}
+                        >
+                          {m.full_name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold truncate uppercase">
+                            {m.full_name}
+                          </p>
+                          {m.relationship && (
+                            <p className="text-xs text-muted-foreground capitalize">
+                              {m.relationship}
+                            </p>
+                          )}
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={`shrink-0 text-[10px] px-1.5 py-0 ${
+                            hasNatalChart
+                              ? "border-emerald-500/40 text-emerald-700"
+                              : "border-amber-500/40 text-amber-700"
+                          }`}
+                        >
+                          {hasNatalChart ? "Chart Ready" : "Chart Pending"}
+                        </Badge>
+                      </div>
+
+                      {/* Profile details chips */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {m.date_of_birth && (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <CalendarDays className="size-3 shrink-0" />
+                            {new Date(m.date_of_birth + "T12:00:00").toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </span>
+                        )}
+                        {m.birth_time && (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <Clock className="size-3 shrink-0" />
+                            {m.birth_time}
+                          </span>
+                        )}
+                        {m.birth_city && (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <MapPin className="size-3 shrink-0" />
+                            {m.birth_city}
+                            {m.birth_country ? `, ${m.birth_country}` : ""}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Profile completion ring + link */}
+                      <div className="flex items-center justify-between gap-3">
+                        <ProgressRing
+                          percentage={completionPct}
+                          size={56}
+                          strokeWidth={6}
+                          color={ringColor(completionPct)}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground leading-snug">
+                            Profile {completionPct < 100 ? "incomplete" : "complete"}
+                          </p>
+                          {completionPct < 100 && (
+                            <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-xs text-primary">
+                              <Link href={`/community/family/${m.id}`}>
+                                Complete Profile →
+                              </Link>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
               <Card className="border-dashed">
                 <CardContent className="flex items-center justify-center py-3">
                   <Button asChild variant="ghost" size="sm">
@@ -655,85 +926,25 @@ export default async function CommunityDashboardPage() {
         </section>
       )}
 
-      <Separator />
-
-      {/* ── Mystery School + Donation Promo Blocks ──────────────────────────── */}
-      <section className="grid gap-4 sm:grid-cols-2">
-        {/* Mystery School CTA */}
-        {isPerennial && (
-          <Card className="border-primary/30 bg-gradient-to-br from-primary/5 via-primary/10 to-violet-500/10">
-            <CardContent className="space-y-3 py-6">
-              <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
-                <GraduationCap className="size-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-semibold text-base">Enter the Sacred Gateway</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  The{" "}
-                  <span className="font-medium text-foreground">
-                    Mystery School
-                  </span>{" "}
-                  Grand Opening 2025 is here. Deepen your practice with the
-                  12-week foundation and year-long decan curriculum.
-                </p>
-                <p className="mt-2 text-sm">
-                  Join from just{" "}
-                  <span className="font-bold text-primary">$10/month</span>.
-                </p>
-              </div>
-              <Button asChild size="sm">
-                <Link href="/community/upgrade">Register for the Mystery School →</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Mystery School nav for existing MS members */}
-        {isMysterySchool && (
-          <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-violet-500/10">
-            <CardContent className="space-y-3 py-6">
-              <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
-                <GraduationCap className="size-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-semibold text-base">Continue Your Studies</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Access your Mystery School curriculum, decan work, and live training sessions.
-                </p>
-              </div>
-              <Button asChild size="sm">
-                <Link href="/community/training">Go to Training →</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Donation CTA */}
-        <Card className="border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-orange-500/10">
+      {/* ── Mystery School nav for existing MS members ─────────────────────── */}
+      {isMysterySchool && (
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-violet-500/10">
           <CardContent className="space-y-3 py-6">
-            <div className="flex size-10 items-center justify-center rounded-full bg-amber-500/10">
-              <HandHeart className="size-5 text-amber-600" />
+            <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
+              <GraduationCap className="size-5 text-primary" />
             </div>
             <div>
-              <p className="font-semibold text-base">Support the Eternal Flame</p>
+              <p className="font-semibold text-base">Continue Your Studies</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Your generosity helps us maintain this sacred space, create new
-                content, and support seekers on their path. Every contribution keeps
-                the light burning.
+                Access your Mystery School curriculum, decan work, and live training sessions.
               </p>
             </div>
-            <Button
-              asChild
-              size="sm"
-              className="bg-amber-600 hover:bg-amber-700 text-white"
-            >
-              <a href="https://divineinfinitebeing.com/donate" target="_blank" rel="noopener noreferrer">
-                Donate Now ❤
-              </a>
+            <Button asChild size="sm">
+              <Link href="/community/training">Go to Training →</Link>
             </Button>
           </CardContent>
         </Card>
-      </section>
+      )}
 
       <Separator />
 
@@ -764,6 +975,45 @@ export default async function CommunityDashboardPage() {
           })}
         </div>
       </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          B. MYSTERY SCHOOL BANNER — bottom, PM members only, full-width
+      ════════════════════════════════════════════════════════════════════ */}
+      {isPerennial && (
+        <div className="rounded-2xl bg-gradient-to-br from-indigo-950 via-purple-950 to-violet-900 border border-purple-500/30 px-6 py-8 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="flex size-12 items-center justify-center rounded-full bg-purple-500/20">
+              <GraduationCap className="size-7 text-purple-300" aria-hidden="true" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-white leading-tight">The Mystery School Awaits You</p>
+              <p className="text-xs text-purple-300/80 mt-0.5">Sacred Gateway — Next Seasonal Cohort Open</p>
+            </div>
+          </div>
+          <p className="text-sm text-purple-100/80 max-w-xl leading-relaxed">
+            Deepen your practice with the 12-week foundation and year-long decan curriculum.
+            Join the next seasonal cohort and unlock ancient wisdom through structured, mentored study.
+          </p>
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="text-sm text-purple-100/70">
+              From{" "}
+              <span className="font-bold text-white">$97 one-time</span>
+              {" "}+{" "}
+              <span className="font-bold text-white">$27/month</span>
+              {" "}— or{" "}
+              <span className="font-bold text-amber-300">+$17.03/month</span>
+              {" "}upgrade for PM members
+            </div>
+          </div>
+          <Button
+            asChild
+            size="default"
+            className="bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-600 hover:to-violet-600 text-white font-semibold shadow-lg shadow-purple-900/40"
+          >
+            <Link href="/community/upgrade">Enter the Sacred Gateway →</Link>
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
