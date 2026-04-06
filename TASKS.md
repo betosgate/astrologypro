@@ -1,7 +1,7 @@
 # AstrologyPro — Daily Task Board
 
 > **Workflow:** Update this file each session. Check off items as you go. Push at end of day.
-> **Last updated:** 2026-04-06 (session 18 — Blog v2 full rebuild + User Management v2 module)
+> **Last updated:** 2026-04-06 (session 19 — Discover page v2, return event emails, milestone reading pages)
 > **Migrations:** All applied via `scripts/run-migration.js` — no manual SQL editor needed.
 
 ---
@@ -74,6 +74,9 @@
 | Community portal — Horoscope calculator | ✅ Done — proxies to AstrologyAPI |
 | Mystery School auto-graduation | ✅ Done — triggers on 36th decan completion + graduation email |
 | Join pages (all roles) | ✅ Done — /join, /join/advocate, /join/community, /join/trainee |
+| Discover page v2 | ✅ Done — sub-type filters (Astrologer/Tarot/Oracle), certified-first sort, URL-synced filters, richer cards, /api/public/diviners cursor-paginated API |
+| Return event lifecycle emails | ✅ Done — migration 038; lifecycle_return_events table; return-events.ts math utils; 3 email functions; daily cron (30d/7d/1d/day-of reminders for Saturn/Jupiter/Solar returns) |
+| Milestone reading landing pages | ✅ Done — /readings hub + /readings/saturn-return + /readings/jupiter-return + /readings/solar-return; ISR, SEO metadata, diviner grids, FAQ, sitemap |
 | Blog v2 — editorial core | ✅ Done — migration 036; 9 tables; status machine (7 states); content_blocks JSONB; block editor; categories/authors/series/tags admin |
 | Blog v2 — public experience | ✅ Done — homepage (hero/featured/latest/categories); post detail (TOC/author/series/share/related); category/tag/author/series/search listing pages; RSS feed; sitemap |
 | User Management v2 | ✅ Done — migration 037; permissions (29); role_permissions; invitations; user_relationships; user_security_events; comm_prefs; impersonation log; 12 new API routes; rich 7-tab user detail; permission matrix; invitations page; diviners page |
