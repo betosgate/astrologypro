@@ -36,14 +36,26 @@ export async function POST(
 
   const { id: lessonId } = await params;
 
-  let body: { answers?: unknown };
+  let body: { answers?: unknown; time_taken_seconds?: unknown };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { answers } = body;
+  const { answers, time_taken_seconds: rawTimeTaken } = body;
+
+  // Validate time_taken_seconds — must be a non-negative integer or absent/null
+  let timeTakenSeconds: number | null = null;
+  if (rawTimeTaken !== undefined && rawTimeTaken !== null) {
+    if (typeof rawTimeTaken !== "number" || !Number.isInteger(rawTimeTaken) || rawTimeTaken < 0) {
+      return NextResponse.json(
+        { error: "time_taken_seconds must be a non-negative integer." },
+        { status: 422 }
+      );
+    }
+    timeTakenSeconds = rawTimeTaken;
+  }
 
   if (!Array.isArray(answers)) {
     return NextResponse.json(
@@ -132,6 +144,7 @@ export async function POST(
     score,
     total_questions: total,
     passed,
+    ...(timeTakenSeconds !== null ? { time_taken_seconds: timeTakenSeconds } : {}),
   });
 
   if (attemptError) {
@@ -144,10 +157,36 @@ export async function POST(
 
   // If passed, mark lesson as complete (upsert — idempotent)
   if (passed) {
+    const now = new Date().toISOString();
+
+    // Look up lesson_progress to carry started_at / time_spent_seconds into completion record
+    const { data: lessonProgress } = await admin
+      .from("lesson_progress")
+      .select("id, started_at, time_spent_seconds")
+      .eq("user_id", user.id)
+      .eq("lesson_id", lessonId)
+      .single();
+
+    // Mark lesson_progress.completed_at
+    if (lessonProgress) {
+      await admin
+        .from("lesson_progress")
+        .update({ completed_at: now })
+        .eq("id", lessonProgress.id);
+    }
+
+    // Upsert lesson_completions with time tracking fields
     await admin
       .from("lesson_completions")
       .upsert(
-        { user_id: user.id, lesson_id: lessonId },
+        {
+          user_id: user.id,
+          lesson_id: lessonId,
+          ...(lessonProgress?.started_at ? { started_at: lessonProgress.started_at } : {}),
+          ...(lessonProgress?.time_spent_seconds != null
+            ? { time_spent_seconds: lessonProgress.time_spent_seconds }
+            : {}),
+        },
         { onConflict: "user_id,lesson_id", ignoreDuplicates: true }
       );
 
@@ -176,10 +215,35 @@ export async function POST(
           .in("lesson_id", categoryLessonIds);
 
         if ((completedCount ?? 0) >= totalCount) {
+          // Aggregate started_at (min) and time_spent_seconds (sum) from lesson_progress
+          const { data: progressRows } = await admin
+            .from("lesson_progress")
+            .select("started_at, time_spent_seconds")
+            .eq("user_id", user.id)
+            .in("lesson_id", categoryLessonIds);
+
+          const catStartedAt =
+            progressRows && progressRows.length > 0
+              ? progressRows.reduce((min, r) =>
+                  r.started_at && (!min || r.started_at < min) ? r.started_at : min,
+                  null as string | null
+                )
+              : null;
+
+          const catTimeSpent =
+            progressRows && progressRows.length > 0
+              ? progressRows.reduce((sum, r) => sum + (r.time_spent_seconds ?? 0), 0)
+              : null;
+
           await admin
             .from("category_completions")
             .upsert(
-              { user_id: user.id, category_id: categoryId },
+              {
+                user_id: user.id,
+                category_id: categoryId,
+                ...(catStartedAt ? { started_at: catStartedAt } : {}),
+                ...(catTimeSpent != null ? { time_spent_seconds: catTimeSpent } : {}),
+              },
               { onConflict: "user_id,category_id", ignoreDuplicates: true }
             );
         }

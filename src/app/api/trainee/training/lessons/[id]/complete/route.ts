@@ -42,11 +42,36 @@ export async function POST(
     return NextResponse.json({ error: "Lesson not found." }, { status: 404 });
   }
 
-  // Upsert lesson completion (ignore duplicate via ON CONFLICT DO NOTHING equivalent)
+  const now = new Date().toISOString();
+
+  // Look up lesson_progress to carry started_at / time_spent_seconds into completion record
+  const { data: lessonProgress } = await admin
+    .from("lesson_progress")
+    .select("id, started_at, time_spent_seconds")
+    .eq("user_id", user.id)
+    .eq("lesson_id", lessonId)
+    .single();
+
+  // Mark lesson_progress.completed_at
+  if (lessonProgress) {
+    await admin
+      .from("lesson_progress")
+      .update({ completed_at: now })
+      .eq("id", lessonProgress.id);
+  }
+
+  // Upsert lesson completion with time tracking fields
   const { error: completionError } = await admin
     .from("lesson_completions")
     .upsert(
-      { user_id: user.id, lesson_id: lessonId },
+      {
+        user_id: user.id,
+        lesson_id: lessonId,
+        ...(lessonProgress?.started_at ? { started_at: lessonProgress.started_at } : {}),
+        ...(lessonProgress?.time_spent_seconds != null
+          ? { time_spent_seconds: lessonProgress.time_spent_seconds }
+          : {}),
+      },
       { onConflict: "user_id,lesson_id", ignoreDuplicates: true }
     );
 
@@ -87,11 +112,36 @@ export async function POST(
         .in("lesson_id", categoryLessonIds);
 
       if ((completedCount ?? 0) >= totalCount) {
+        // Aggregate started_at (min) and time_spent_seconds (sum) from lesson_progress
+        const { data: progressRows } = await admin
+          .from("lesson_progress")
+          .select("started_at, time_spent_seconds")
+          .eq("user_id", user.id)
+          .in("lesson_id", categoryLessonIds);
+
+        const catStartedAt =
+          progressRows && progressRows.length > 0
+            ? progressRows.reduce((min, r) =>
+                r.started_at && (!min || r.started_at < min) ? r.started_at : min,
+                null as string | null
+              )
+            : null;
+
+        const catTimeSpent =
+          progressRows && progressRows.length > 0
+            ? progressRows.reduce((sum, r) => sum + (r.time_spent_seconds ?? 0), 0)
+            : null;
+
         // All lessons done — record category completion (idempotent)
         const { error: catCompError } = await admin
           .from("category_completions")
           .upsert(
-            { user_id: user.id, category_id: categoryId },
+            {
+              user_id: user.id,
+              category_id: categoryId,
+              ...(catStartedAt ? { started_at: catStartedAt } : {}),
+              ...(catTimeSpent != null ? { time_spent_seconds: catTimeSpent } : {}),
+            },
             { onConflict: "user_id,category_id", ignoreDuplicates: true }
           );
 

@@ -29,12 +29,15 @@ export default async function CommunityLayout({ children }: { children: React.Re
   const navLinks = [
     { label: "Home", href: "/community" },
     { label: "Sessions", href: "/community/sessions" },
+    { label: "Broadcasts", href: "/community/broadcasts" },
+    { label: "Events", href: "/community/events" },
     { label: "Resources", href: "/community/resources" },
     ...(member.membership_type !== "mystery_school" ? [
       { label: "Family", href: "/community/family" },
       { label: "Charts", href: "/community/charts" },
       { label: "Transits", href: "/community/transits" },
       { label: "Rituals", href: "/community/rituals" },
+      { label: "Tarot", href: "/community/tarot" },
     ] : []),
     ...(isMysterySchool ? [
       { label: "Training", href: "/community/training" },

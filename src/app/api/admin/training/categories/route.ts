@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   const admin = createAdminClient();
   let query = admin
     .from("training_categories")
-    .select("id, training_id, name, description, priority, is_active, created_at")
+    .select("id, training_id, name, description, priority, is_active, is_sequential, created_at")
     .order("priority", { ascending: true });
 
   if (createdFrom) query = query.gte("created_at", createdFrom);
@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
     description?: string | null;
     priority?: number;
     is_active?: boolean;
+    is_sequential?: boolean;
   };
   try {
     body = await req.json();
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { training_id, name, description, priority, is_active } = body;
+  const { training_id, name, description, priority, is_active, is_sequential } = body;
 
   if (!training_id || typeof training_id !== "string") {
     return NextResponse.json({ error: "Training program is required." }, { status: 422 });
@@ -83,6 +84,7 @@ export async function POST(req: NextRequest) {
       description: description ?? null,
       priority: priority ?? 0,
       is_active: is_active ?? true,
+      is_sequential: is_sequential ?? false,
     })
     .select()
     .single();

@@ -30,7 +30,7 @@ export async function GET(
 
   const { data, error } = await admin
     .from("training_programs")
-    .select("id, name, description, priority, is_active, allowed_roles, created_at")
+    .select("id, name, description, priority, is_active, is_sequential, allowed_roles, created_at")
     .eq("id", id)
     .single();
 
@@ -58,6 +58,7 @@ export async function PUT(
     description?: string | null;
     priority?: number;
     is_active?: boolean;
+    is_sequential?: boolean;
     allowed_roles?: string[];
   };
   try {
@@ -66,7 +67,7 @@ export async function PUT(
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { name, description, priority, is_active, allowed_roles } = body;
+  const { name, description, priority, is_active, is_sequential, allowed_roles } = body;
 
   if (!name || typeof name !== "string" || !name.trim()) {
     return NextResponse.json({ error: "Name is required." }, { status: 422 });
@@ -80,6 +81,7 @@ export async function PUT(
       description: description ?? null,
       priority: priority ?? 0,
       is_active: is_active ?? true,
+      is_sequential: is_sequential ?? false,
       allowed_roles: Array.isArray(allowed_roles) ? allowed_roles : [],
       updated_at: new Date().toISOString(),
     })
