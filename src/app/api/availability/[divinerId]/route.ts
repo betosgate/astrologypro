@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAvailableSlots } from "@/lib/availability";
+import { getAvailableSlotsFromGoogle } from "@/lib/google-calendar";
+import { getMsFreeBusy } from "@/lib/microsoft-calendar";
 
 export async function GET(
   request: NextRequest,
@@ -88,6 +90,13 @@ export async function GET(
       .gte("scheduled_at", dayStart)
       .lte("scheduled_at", dayEnd);
 
+    // Fetch external calendar busy slots in parallel (Google + Outlook)
+    const [googleBusy, outlookBusy] = await Promise.all([
+      getAvailableSlotsFromGoogle(divinerId, new Date(date)).catch(() => []),
+      getMsFreeBusy(divinerId, date).catch(() => []),
+    ]);
+    const externalBusy = [...googleBusy, ...outlookBusy];
+
     const allBlockedSlots = [
       ...(bookings ?? []).map((b) => ({
         start: b.scheduled_at,
@@ -101,6 +110,7 @@ export async function GET(
           new Date(h.scheduled_at).getTime() + (h.duration_minutes ?? 60) * 60_000
         ).toISOString(),
       })),
+      ...externalBusy,
     ];
 
     const slots = getAvailableSlots({

@@ -1,22 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
-
-async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user || !ADMIN_EMAILS.includes((user.email ?? "").toLowerCase())) return null;
-  return user;
-}
 
 export interface SearchResult {
   type: "user" | "booking" | "lesson" | "blog";
@@ -38,7 +25,7 @@ export interface SearchResponse {
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse<SearchResponse | { error: string }>> {
-  const adminUser = await requireAdmin();
+  const adminUser = await getAdminUser();
   if (!adminUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -218,15 +205,19 @@ export async function GET(req: NextRequest): Promise<NextResponse<SearchResponse
     id: string;
     title: string;
     category_id: string | null;
-    training_categories: { name: string } | null;
+    training_categories: { name: string }[] | { name: string } | null;
   };
-  const lessons: SearchResult[] = ((lessonsRes.data ?? []) as LessonRow[]).map((l) => ({
-    type: "lesson",
-    id: l.id,
-    label: l.title,
-    sublabel: (l.training_categories as { name: string } | null)?.name ?? undefined,
-    url: `/admin/training/lessons/${l.id}/edit`,
-  }));
+  const lessons: SearchResult[] = ((lessonsRes.data ?? []) as unknown as LessonRow[]).map((l) => {
+    const cat = l.training_categories;
+    const catName = Array.isArray(cat) ? cat[0]?.name : (cat as { name: string } | null)?.name;
+    return {
+      type: "lesson",
+      id: l.id,
+      label: l.title,
+      sublabel: catName ?? undefined,
+      url: `/admin/training/lessons/${l.id}/edit`,
+    };
+  });
 
   // Blog
   type BlogRow = { id: string; title: string; category: string };

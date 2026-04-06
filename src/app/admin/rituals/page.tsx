@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/admin-auth";
 import { redirect } from "next/navigation";
 import {
   Card,
@@ -22,12 +22,9 @@ import { Button } from "@/components/ui/button";
 export const metadata = { title: "Ritual Invocations — Admin" };
 export const dynamic = "force-dynamic";
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
-
 export default async function AdminRitualsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email || !ADMIN_EMAILS.includes(user.email.toLowerCase())) redirect("/dashboard");
+  const user = await requireAdmin();
+  if (!user) redirect("/dashboard");
 
   const admin = createAdminClient();
   const { data: rituals } = await admin

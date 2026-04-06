@@ -28,7 +28,7 @@ export default async function TrainingCategoryPage({ params }: Props) {
 
   if (!member) redirect("/join/community");
   if (member.membership_status !== "active") redirect("/join/community?status=inactive");
-  if (member.membership_type !== "mystery_school") redirect("/community/training");
+  if (member.membership_type !== "mystery_school") redirect("/community/upgrade");
 
   const admin = createAdminClient();
 

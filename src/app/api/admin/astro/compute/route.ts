@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminUser } from "@/lib/admin-auth";
 import { callAstrologyApi } from "@/lib/astrology-api";
 
 export const dynamic = "force-dynamic";
@@ -36,14 +36,8 @@ const ALLOWED_ENDPOINTS = [
 ];
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase());
-  if (!adminEmails.includes(user.email?.toLowerCase() ?? "")) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const user = await getAdminUser();
+  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
   const { endpoint, payload } = body as { endpoint: string; payload: Record<string, unknown> };

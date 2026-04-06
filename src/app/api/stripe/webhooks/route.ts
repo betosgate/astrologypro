@@ -119,17 +119,45 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
 
   // Provision mystery school student record on enrollment
   if (membershipType === "mystery_school") {
-    await supabase
+    const entryQuarter = session.metadata?.entry_quarter ?? null;
+    const entryYearRaw = session.metadata?.entry_year;
+    const entryYear = entryYearRaw ? parseInt(entryYearRaw, 10) : null;
+    const enrollmentDate = new Date().toISOString();
+
+    // Idempotent upsert — repeated webhook delivery is safe
+    const { error: studentError } = await supabase
       .from("mystery_school_students")
       .upsert(
         {
           user_id: userId,
           community_member_id: member?.id ?? null,
-          enrolled_at: new Date().toISOString(),
+          enrolled_at: enrollmentDate,
+          enrollment_date: enrollmentDate,
           training_status: "foundation",
+          entry_quarter: entryQuarter,
+          entry_year: entryYear,
+          stripe_subscription_id: subscriptionId ?? null,
+          one_time_fee_paid: true,
+          one_time_fee_amount: 97.00,
+          status: "active",
         },
         { onConflict: "user_id" }
       );
+
+    if (studentError) {
+      console.error("[Webhook] Failed to upsert mystery_school_students:", studentError);
+    }
+
+    // If this was a PM → MS upgrade, ensure the community_members row reflects
+    // the new membership type (it was already set above via the upsert, but
+    // explicitly confirm in case a pre-existing row conflicted).
+    const upgradeFromPm = session.metadata?.upgrade_from_pm === "true";
+    if (upgradeFromPm && member?.id) {
+      await supabase
+        .from("community_members")
+        .update({ membership_type: "mystery_school", membership_status: "active" })
+        .eq("id", member.id);
+    }
   }
 }
 
@@ -296,8 +324,9 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       ? "paused"
       : member.membership_status;
 
-  const periodEnd = subscription.current_period_end
-    ? new Date(subscription.current_period_end * 1000).toISOString()
+  const subAny = subscription as unknown as { current_period_end?: number };
+  const periodEnd = subAny.current_period_end
+    ? new Date(subAny.current_period_end * 1000).toISOString()
     : null;
 
   await adminClient
@@ -335,13 +364,14 @@ async function handleSubscriptionDeleted(
       .eq("id", communityMember.id);
 
     if (communityMember.email) {
+      const subDelAny = subscription as unknown as { current_period_end?: number };
       const accessUntil = communityMember.current_period_end
         ? new Date(communityMember.current_period_end).toLocaleDateString(
             "en-US",
             { month: "long", day: "numeric", year: "numeric" }
           )
-        : subscription.current_period_end
-        ? new Date(subscription.current_period_end * 1000).toLocaleDateString(
+        : subDelAny.current_period_end
+        ? new Date(subDelAny.current_period_end * 1000).toLocaleDateString(
             "en-US",
             { month: "long", day: "numeric", year: "numeric" }
           )

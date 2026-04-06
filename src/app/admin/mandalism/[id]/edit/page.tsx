@@ -13,7 +13,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Trash2 } from "lucide-react";
 
 type ContentType = "live_stream" | "video" | "document" | "youtube" | "announcement";
 
@@ -24,12 +36,27 @@ interface ContentForm {
   url: string;
   pdf_url: string;
   content_body: string;
+  content_thumbnail_url: string;
+  duration_label: string;
   start_at: string;
   end_at: string;
   access_control: string;
   priority: string;
   is_published: boolean;
 }
+
+const CONTENT_TYPE_OPTIONS: {
+  value: ContentType;
+  label: string;
+  icon: string;
+  description: string;
+}[] = [
+  { value: "live_stream", label: "Live Stream", icon: "📡", description: "Scheduled live broadcast" },
+  { value: "video", label: "Video", icon: "🎬", description: "Recorded video session" },
+  { value: "document", label: "Document", icon: "📄", description: "PDF guide or resource" },
+  { value: "youtube", label: "YouTube", icon: "▶️", description: "YouTube video embed" },
+  { value: "announcement", label: "Announcement", icon: "📢", description: "Community announcement" },
+];
 
 function toDatetimeLocal(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -38,11 +65,27 @@ function toDatetimeLocal(iso: string | null | undefined): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function extractYouTubeId(input: string): string {
+  if (!input) return "";
+  if (/^[a-zA-Z0-9_-]{11}$/.test(input.trim())) return input.trim();
+  try {
+    const url = new URL(input);
+    if (url.hostname.includes("youtu.be")) return url.pathname.slice(1);
+    if (url.searchParams.has("v")) return url.searchParams.get("v")!;
+    const match = url.pathname.match(/\/embed\/([^/?]+)/);
+    if (match) return match[1];
+  } catch {
+    // not a URL
+  }
+  return input.trim();
+}
+
 export default function EditMandalismContentPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState<ContentForm>({
@@ -52,6 +95,8 @@ export default function EditMandalismContentPage() {
     url: "",
     pdf_url: "",
     content_body: "",
+    content_thumbnail_url: "",
+    duration_label: "",
     start_at: "",
     end_at: "",
     access_control: "members",
@@ -59,23 +104,33 @@ export default function EditMandalismContentPage() {
     is_published: false,
   });
 
+  // For youtube type: the input field may hold an ID or full URL
+  const [youtubeInput, setYoutubeInput] = useState("");
+
   useEffect(() => {
     fetch(`/api/admin/mandalism/${id}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("Not found");
+        return r.json();
+      })
       .then((data) => {
+        const ct: ContentType = data.content_type ?? "announcement";
         setForm({
-          content_type: data.content_type ?? "announcement",
+          content_type: ct,
           title: data.title ?? "",
           description: data.description ?? "",
-          url: data.url ?? "",
+          url: ct !== "youtube" ? (data.url ?? "") : "",
           pdf_url: data.pdf_url ?? "",
           content_body: data.content_body ?? "",
+          content_thumbnail_url: data.content_thumbnail_url ?? "",
+          duration_label: data.duration_label ?? "",
           start_at: toDatetimeLocal(data.start_at),
           end_at: toDatetimeLocal(data.end_at),
           access_control: data.access_control ?? "members",
           priority: data.priority != null ? String(data.priority) : "0",
           is_published: data.is_published ?? false,
         });
+        if (ct === "youtube") setYoutubeInput(data.url ?? "");
         setLoading(false);
       })
       .catch(() => {
@@ -84,30 +139,62 @@ export default function EditMandalismContentPage() {
       });
   }, [id]);
 
-  const showUrl = ["live_stream", "video", "youtube"].includes(form.content_type);
+  const showStreamUrl = form.content_type === "live_stream";
+  const showVideoUrl = form.content_type === "video";
+  const showYoutube = form.content_type === "youtube";
   const showPdfUrl = form.content_type === "document";
   const showContentBody = form.content_type === "announcement";
   const showDates = form.content_type === "live_stream";
+  const showThumbnail = form.content_type === "video" || form.content_type === "document";
+  const showDuration = form.content_type === "video";
+
+  const youtubeId = extractYouTubeId(youtubeInput);
+  const youtubePreviewUrl = youtubeId ? `https://www.youtube.com/embed/${youtubeId}` : null;
+
+  function validate(): string | null {
+    if (!form.title.trim()) return "Title is required.";
+    if (showStreamUrl && !form.url.trim()) return "Stream URL is required.";
+    if (showVideoUrl && !form.url.trim()) return "Video URL is required.";
+    if (showYoutube && !youtubeInput.trim()) return "YouTube video ID or URL is required.";
+    if (showContentBody && !form.content_body.trim()) return "Announcement text is required.";
+    return null;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     setSaving(true);
     setError(null);
+
+    const resolvedUrl = showYoutube
+      ? youtubeId || null
+      : showStreamUrl || showVideoUrl
+      ? form.url || null
+      : null;
 
     const res = await fetch(`/api/admin/mandalism/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         content_type: form.content_type,
-        title: form.title,
-        description: form.description || null,
-        url: showUrl ? (form.url || null) : null,
-        pdf_url: showPdfUrl ? (form.pdf_url || null) : null,
-        content_body: showContentBody ? (form.content_body || null) : null,
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        url: resolvedUrl,
+        pdf_url: showPdfUrl ? (form.pdf_url.trim() || null) : null,
+        content_body: showContentBody ? (form.content_body.trim() || null) : null,
+        content_thumbnail_url: showThumbnail
+          ? (form.content_thumbnail_url.trim() || null)
+          : null,
+        duration_label: showDuration ? (form.duration_label.trim() || null) : null,
         start_at: showDates && form.start_at ? new Date(form.start_at).toISOString() : null,
         end_at: showDates && form.end_at ? new Date(form.end_at).toISOString() : null,
         access_control: form.access_control,
-        priority: parseInt(form.priority) || 0,
+        priority: parseInt(form.priority, 10) || 0,
         is_published: form.is_published,
       }),
     });
@@ -123,13 +210,23 @@ export default function EditMandalismContentPage() {
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this content? This cannot be undone.")) return;
+    setDeleting(true);
     const res = await fetch(`/api/admin/mandalism/${id}`, { method: "DELETE" });
-    if (res.ok) router.push("/admin/mandalism");
-    else setError("Failed to delete content");
+    if (res.ok) {
+      router.push("/admin/mandalism");
+    } else {
+      setError("Failed to delete content");
+      setDeleting(false);
+    }
   }
 
-  if (loading) return <div className="py-8 text-center text-muted-foreground">Loading…</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -141,40 +238,55 @@ export default function EditMandalismContentPage() {
           ← Back to Mandalism Content
         </Link>
         <h1 className="mt-2 text-2xl font-bold tracking-tight">Edit Content</h1>
+        <p className="text-muted-foreground">Update content details for the Mandalism library.</p>
       </div>
 
-      <Card className="max-w-2xl">
-        <CardHeader>
-          <CardTitle>Content Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="content_type">Content Type *</Label>
-              <select
-                id="content_type"
-                value={form.content_type}
-                onChange={(e) => setForm({ ...form, content_type: e.target.value as ContentType })}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="live_stream">Live Stream</option>
-                <option value="video">Video</option>
-                <option value="document">Document</option>
-                <option value="youtube">YouTube</option>
-                <option value="announcement">Announcement</option>
-              </select>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Type selector cards */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Content Type</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {CONTENT_TYPE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setForm({ ...form, content_type: opt.value })}
+                  className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-colors ${
+                    form.content_type === opt.value
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-background hover:border-muted-foreground/40"
+                  }`}
+                >
+                  <span className="text-2xl">{opt.icon}</span>
+                  <span className="text-sm font-medium">{opt.label}</span>
+                  <span className="text-xs text-muted-foreground leading-snug">{opt.description}</span>
+                </button>
+              ))}
             </div>
+          </CardContent>
+        </Card>
 
+        {/* Core fields */}
+        <Card className="max-w-2xl">
+          <CardHeader>
+            <CardTitle>Content Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {/* Title */}
             <div className="space-y-2">
               <Label htmlFor="title">Title *</Label>
               <Input
                 id="title"
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-                required
+                placeholder="Enter content title"
               />
             </div>
 
+            {/* Description */}
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea
@@ -182,24 +294,79 @@ export default function EditMandalismContentPage() {
                 rows={3}
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Optional short description"
               />
             </div>
 
-            {showUrl && (
+            {/* Live stream URL */}
+            {showStreamUrl && (
               <div className="space-y-2">
-                <Label htmlFor="url">
-                  {form.content_type === "live_stream" ? "Stream URL" : "Video URL"}
-                </Label>
+                <Label htmlFor="url">Stream URL *</Label>
                 <Input
                   id="url"
                   type="url"
                   value={form.url}
                   onChange={(e) => setForm({ ...form, url: e.target.value })}
-                  placeholder="https://"
+                  placeholder="https://stream.example.com/…"
                 />
               </div>
             )}
 
+            {/* Video URL */}
+            {showVideoUrl && (
+              <div className="space-y-2">
+                <Label htmlFor="url">Video URL *</Label>
+                <Input
+                  id="url"
+                  type="url"
+                  value={form.url}
+                  onChange={(e) => setForm({ ...form, url: e.target.value })}
+                  placeholder="https://…"
+                />
+              </div>
+            )}
+
+            {/* Thumbnail (video + document) */}
+            {showThumbnail && (
+              <div className="space-y-2">
+                <Label htmlFor="content_thumbnail_url">
+                  {form.content_type === "document" ? "Cover Image URL" : "Thumbnail URL"}
+                </Label>
+                <Input
+                  id="content_thumbnail_url"
+                  type="url"
+                  value={form.content_thumbnail_url}
+                  onChange={(e) =>
+                    setForm({ ...form, content_thumbnail_url: e.target.value })
+                  }
+                  placeholder="https://…"
+                />
+                {form.content_thumbnail_url && (
+                  <img
+                    src={form.content_thumbnail_url}
+                    alt="Thumbnail preview"
+                    className="mt-2 h-24 rounded object-cover"
+                    onError={(e) => (e.currentTarget.style.display = "none")}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Duration (video only) */}
+            {showDuration && (
+              <div className="space-y-2">
+                <Label htmlFor="duration_label">Duration</Label>
+                <Input
+                  id="duration_label"
+                  value={form.duration_label}
+                  onChange={(e) => setForm({ ...form, duration_label: e.target.value })}
+                  placeholder="e.g. 45 min"
+                  maxLength={20}
+                />
+              </div>
+            )}
+
+            {/* PDF URL */}
             {showPdfUrl && (
               <div className="space-y-2">
                 <Label htmlFor="pdf_url">PDF URL</Label>
@@ -208,27 +375,69 @@ export default function EditMandalismContentPage() {
                   type="url"
                   value={form.pdf_url}
                   onChange={(e) => setForm({ ...form, pdf_url: e.target.value })}
-                  placeholder="https://"
+                  placeholder="https://…"
                 />
               </div>
             )}
 
+            {/* YouTube */}
+            {showYoutube && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="youtube_input">YouTube Video ID or URL *</Label>
+                  <Input
+                    id="youtube_input"
+                    value={youtubeInput}
+                    onChange={(e) => setYoutubeInput(e.target.value)}
+                    placeholder="dQw4w9WgXcQ or https://youtube.com/watch?v=…"
+                  />
+                  {youtubeId && (
+                    <p className="text-xs text-muted-foreground">
+                      Resolved ID: <code className="font-mono">{youtubeId}</code>
+                    </p>
+                  )}
+                </div>
+                {youtubePreviewUrl && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Preview</p>
+                    <div className="aspect-video w-full overflow-hidden rounded-lg border">
+                      <iframe
+                        src={youtubePreviewUrl}
+                        title="YouTube preview"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="h-full w-full"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Announcement body */}
             {showContentBody && (
               <div className="space-y-2">
-                <Label htmlFor="content_body">Announcement Text</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="content_body">Announcement Text *</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {form.content_body.length} chars
+                  </span>
+                </div>
                 <Textarea
                   id="content_body"
-                  rows={6}
+                  rows={8}
                   value={form.content_body}
                   onChange={(e) => setForm({ ...form, content_body: e.target.value })}
+                  placeholder="Write the announcement body…"
                 />
               </div>
             )}
 
+            {/* Scheduled dates (live stream) */}
             {showDates && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="start_at">Start Time</Label>
+                  <Label htmlFor="start_at">Scheduled Start</Label>
                   <Input
                     id="start_at"
                     type="datetime-local"
@@ -237,7 +446,7 @@ export default function EditMandalismContentPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="end_at">End Time</Label>
+                  <Label htmlFor="end_at">Scheduled End</Label>
                   <Input
                     id="end_at"
                     type="datetime-local"
@@ -248,61 +457,129 @@ export default function EditMandalismContentPage() {
               </div>
             )}
 
+            {/* Access */}
             <div className="space-y-2">
-              <Label htmlFor="access_control">Access</Label>
-              <select
-                id="access_control"
-                value={form.access_control}
-                onChange={(e) => setForm({ ...form, access_control: e.target.value })}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="free">Free (visible to all)</option>
-                <option value="members">Members only</option>
-              </select>
+              <Label>Access Control</Label>
+              <div className="flex gap-3">
+                {(["free", "members"] as const).map((a) => (
+                  <label
+                    key={a}
+                    className={`flex flex-1 cursor-pointer items-center gap-3 rounded-lg border-2 px-4 py-3 transition-colors ${
+                      form.access_control === a
+                        ? "border-primary bg-primary/5"
+                        : "border-border"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="access_control"
+                      value={a}
+                      checked={form.access_control === a}
+                      onChange={() => setForm({ ...form, access_control: a })}
+                      className="sr-only"
+                    />
+                    <div>
+                      <p className="text-sm font-medium">
+                        {a === "free" ? "Free" : "Members Only"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {a === "free"
+                          ? "Visible to all visitors"
+                          : "Requires active Mandalism subscription"}
+                      </p>
+                    </div>
+                  </label>
+                ))}
+              </div>
             </div>
 
+            {/* Priority */}
             <div className="space-y-2">
-              <Label htmlFor="priority">Priority</Label>
+              <Label htmlFor="priority">
+                Priority{" "}
+                <span className="text-xs text-muted-foreground font-normal">(0–100, higher = shown first)</span>
+              </Label>
               <Input
                 id="priority"
                 type="number"
                 min="0"
+                max="100"
                 value={form.priority}
                 onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                className="w-28"
               />
             </div>
 
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="is_published"
+            {/* Published toggle */}
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div>
+                <p className="text-sm font-medium">Published</p>
+                <p className="text-xs text-muted-foreground">
+                  Published content is visible to eligible members
+                </p>
+              </div>
+              <Switch
                 checked={form.is_published}
-                onCheckedChange={(checked) => setForm({ ...form, is_published: !!checked })}
+                onCheckedChange={(checked) => setForm({ ...form, is_published: checked })}
               />
-              <Label htmlFor="is_published">Published</Label>
             </div>
 
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && (
+              <p className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+                {error}
+              </p>
+            )}
 
+            {/* Action buttons */}
             <div className="flex items-center justify-between pt-2">
               <div className="flex gap-3">
-                <Button type="submit" disabled={saving}>
+                <Button type="submit" disabled={saving || deleting}>
                   {saving ? "Saving…" : "Save Changes"}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => router.push("/admin/mandalism")}
+                  disabled={saving || deleting}
                 >
                   Cancel
                 </Button>
               </div>
-              <Button type="button" variant="destructive" onClick={handleDelete}>
-                Delete
-              </Button>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={saving || deleting}
+                  >
+                    <Trash2 className="mr-2 size-4" />
+                    {deleting ? "Deleting…" : "Delete"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this content?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      <strong>{form.title}</strong> will be permanently deleted. This action
+                      cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-red-600 hover:bg-red-700"
+                      onClick={handleDelete}
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </form>
     </div>
   );
 }
