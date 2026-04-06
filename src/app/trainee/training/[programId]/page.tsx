@@ -46,6 +46,8 @@ type LessonSummary = {
   completed: boolean;
   quiz_passed: boolean | null;
   previous_lesson_id: string | null;
+  is_locked: boolean;
+  lock_reason: string | null;
 };
 
 type CategoryWithProgress = {
@@ -54,7 +56,15 @@ type CategoryWithProgress = {
   description: string | null;
   priority: number;
   completed: boolean;
-  progress: { completed: number; total: number };
+  is_locked: boolean;
+  lock_reason: string | null;
+  is_sequential: boolean;
+  // API returns flat fields — progress_pct / completed_lessons / total_lessons
+  progress_pct: number;
+  completed_lessons: number;
+  total_lessons: number;
+  next_lesson_id: string | null;
+  next_lesson_title: string | null;
   lessons: LessonSummary[];
 };
 
@@ -63,7 +73,14 @@ type ProgramDetail = {
   name: string;
   description: string | null;
   priority: number;
-  progress: number;
+  is_sequential: boolean;
+  progress_pct: number;
+  completed_lessons: number;
+  total_lessons: number;
+  completed_categories: number;
+  total_categories: number;
+  next_category_id: string | null;
+  next_category_name: string | null;
   categories: CategoryWithProgress[];
 };
 
@@ -161,49 +178,52 @@ function LessonRow({
 }
 
 // ---------------------------------------------------------------------------
-// Category card (server — no expand/collapse for simplicity; always expanded)
+// Category card (server — always expanded)
 // ---------------------------------------------------------------------------
 function CategoryCard({
   category,
   index,
   programId,
-  allCategories,
+  nextCategoryId,
 }: {
   category: CategoryWithProgress;
   index: number;
   programId: string;
-  allCategories: CategoryWithProgress[];
+  nextCategoryId: string | null;
 }) {
-  const { completed, total } = category.progress;
-  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const completed = category.completed_lessons;
+  const total = category.total_lessons;
+  const pct = category.progress_pct;
 
-  // Status
+  // Use API-sourced lock flag — computed server-side from is_sequential + priorities
+  const isLocked = category.is_locked;
   const isDone = category.completed || (total > 0 && completed === total);
-  const isPrev = index > 0 && !allCategories[index - 1].completed;
-  // A category is locked if ANY previous category is not complete
-  const isLocked = allCategories
-    .slice(0, index)
-    .some((c) => !c.completed && c.progress.total > 0);
+  // "Resume" badge: the category is not done, not locked, and is the next one
+  const isResume =
+    !isDone &&
+    !isLocked &&
+    nextCategoryId !== null &&
+    category.id === nextCategoryId;
 
-  const statusLabel = isDone ? "Done" : isLocked ? "Locked" : completed > 0 ? "In Progress" : "Not Started";
+  const statusLabel = isDone
+    ? "Done"
+    : isLocked
+    ? "Locked"
+    : isResume
+    ? "Resume"
+    : completed > 0
+    ? "In Progress"
+    : "Not Started";
+
   const statusClasses = isDone
     ? "bg-green-500/10 text-green-600 border-green-500/30"
     : isLocked
     ? "bg-muted text-muted-foreground border-border"
+    : isResume
+    ? "bg-primary/5 text-primary border-primary/30"
     : completed > 0
     ? "bg-amber-500/10 text-amber-600 border-amber-500/30"
     : "bg-muted text-muted-foreground border-border";
-
-  // For each lesson, determine if it's locked based on previous_lesson_id
-  const completedSet = new Set(
-    category.lessons.filter((l) => l.completed).map((l) => l.id)
-  );
-
-  function isLessonLocked(lesson: LessonSummary): boolean {
-    if (isLocked) return true;
-    if (!lesson.previous_lesson_id) return false;
-    return !completedSet.has(lesson.previous_lesson_id);
-  }
 
   return (
     <div
@@ -211,6 +231,7 @@ function CategoryCard({
         "rounded-xl border overflow-hidden transition-colors",
         isLocked ? "opacity-70" : "hover:border-primary/30",
       ].join(" ")}
+      title={isLocked ? (category.lock_reason ?? undefined) : undefined}
     >
       {/* Category header */}
       <div className="flex items-start gap-4 px-5 py-4">
@@ -220,14 +241,26 @@ function CategoryCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-sm">{category.name}</h3>
-              {isLocked && <Lock className="size-3.5 text-muted-foreground/60" />}
+              {isLocked ? (
+                <>
+                  <h3 className="font-semibold text-sm">{category.name}</h3>
+                  <Lock className="size-3.5 text-muted-foreground/60" />
+                </>
+              ) : (
+                <Link
+                  href={`/trainee/training/${programId}/${category.id}`}
+                  className="font-semibold text-sm hover:text-primary hover:underline underline-offset-2 transition-colors"
+                >
+                  {category.name}
+                </Link>
+              )}
             </div>
             <Badge
               variant="outline"
               className={["text-xs shrink-0", statusClasses].join(" ")}
             >
               {isDone && <CheckCircle2 className="size-3 mr-1" />}
+              {isLocked && <Lock className="size-3 mr-1" />}
               {statusLabel}
             </Badge>
           </div>
@@ -241,13 +274,15 @@ function CategoryCard({
               <BookOpen className="size-3" />
               {total} {total === 1 ? "lesson" : "lessons"}
             </span>
-            <span>{completed}/{total} complete</span>
+            <span>
+              {completed}/{total} complete
+            </span>
           </div>
           <Progress value={pct} className="mt-2 h-1" />
         </div>
       </div>
 
-      {/* Lessons list */}
+      {/* Lessons list — use API is_locked field per lesson */}
       {category.lessons.length > 0 && (
         <div className="border-t bg-muted/10 px-2 py-2 space-y-0.5">
           {category.lessons.map((lesson, li) => (
@@ -257,7 +292,7 @@ function CategoryCard({
               index={li}
               programId={programId}
               categoryId={category.id}
-              isLocked={isLessonLocked(lesson)}
+              isLocked={isLocked || lesson.is_locked}
             />
           ))}
         </div>
@@ -292,15 +327,9 @@ export default async function ProgramDetailPage({
   const program = await fetchProgramDetail(programId);
   if (!program) notFound();
 
-  const totalLessons = program.categories.reduce(
-    (s, c) => s + c.progress.total,
-    0
-  );
-  const completedLessons = program.categories.reduce(
-    (s, c) => s + c.progress.completed,
-    0
-  );
-  const completedCats = program.categories.filter((c) => c.completed).length;
+  const totalLessons = program.total_lessons;
+  const completedLessons = program.completed_lessons;
+  const completedCats = program.completed_categories;
 
   return (
     <div className="space-y-6">
@@ -342,7 +371,7 @@ export default async function ProgramDetailPage({
                   category={cat}
                   index={idx}
                   programId={programId}
-                  allCategories={program.categories}
+                  nextCategoryId={program.next_category_id}
                 />
               ))
             )}
@@ -355,7 +384,7 @@ export default async function ProgramDetailPage({
             <h2 className="text-sm font-semibold">Your Progress</h2>
             <div className="flex flex-col items-center gap-3">
               <CircularProgress
-                percentage={program.progress}
+                percentage={program.progress_pct}
                 size={96}
                 strokeWidth={8}
               />
@@ -367,7 +396,7 @@ export default async function ProgramDetailPage({
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Categories</span>
                 <span className="font-medium tabular-nums">
-                  {completedCats}/{program.categories.length}
+                  {completedCats}/{program.total_categories}
                 </span>
               </div>
               <div className="flex items-center justify-between">

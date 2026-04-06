@@ -8,8 +8,18 @@ export const dynamic = "force-dynamic";
  * GET /api/trainee/training/programs
  * Returns all programs the current user has access to, with full hierarchy:
  *   programs → categories → lessons (with completion + quiz status per user)
- * Each category includes: completed flag, progress (x/total)
- * Each program includes: overall progress percentage
+ *
+ * Progress data is sourced from the cache tables:
+ *   user_program_progress  (one row per user+program)
+ *   user_category_progress (one row per user+category)
+ *
+ * Both tables are populated/updated automatically via DB triggers on
+ * lesson_completions, training_lessons, and training_categories changes.
+ * If no cache row exists (user has not started), zeroed defaults are returned
+ * without triggering recalculation — the trigger handles it on first activity.
+ *
+ * Query cost: 2 cache queries (batch, not N+1) + existing lesson/completion
+ * queries already present in the previous implementation.
  */
 export async function GET() {
   const supabase = await createClient();
@@ -60,7 +70,7 @@ export async function GET() {
   // ── 2. Fetch all active programs ──────────────────────────────────────────
   const { data: programs, error: programsError } = await admin
     .from("training_programs")
-    .select("id, name, description, priority, allowed_roles")
+    .select("id, name, description, priority, is_active, allowed_roles, is_sequential")
     .eq("is_active", true)
     .order("priority", { ascending: true });
 
@@ -87,7 +97,7 @@ export async function GET() {
   // ── 3. Fetch categories for accessible programs ───────────────────────────
   const { data: categories, error: catError } = await admin
     .from("training_categories")
-    .select("id, name, description, priority, training_id")
+    .select("id, name, description, priority, is_active, training_id, is_sequential")
     .in("training_id", programIds)
     .eq("is_active", true)
     .order("priority", { ascending: true });
@@ -117,52 +127,109 @@ export async function GET() {
 
   const lessonIds = (lessons ?? []).map((l) => l.id);
 
-  // ── 5. Fetch user's completion + quiz status ───────────────────────────────
-  const [completionsResult, quizAttemptsResult, categoryCompletionsResult] =
-    await Promise.all([
-      lessonIds.length > 0
-        ? admin
-            .from("lesson_completions")
-            .select("lesson_id")
-            .eq("user_id", user.id)
-            .in("lesson_id", lessonIds)
-        : Promise.resolve({ data: [] as { lesson_id: string }[], error: null }),
-      lessonIds.length > 0
-        ? admin
-            .from("quiz_attempts")
-            .select("lesson_id, passed")
-            .eq("user_id", user.id)
-            .in("lesson_id", lessonIds)
-            .order("attempted_at", { ascending: false })
-        : Promise.resolve(
-            {
-              data: [] as { lesson_id: string; passed: boolean }[],
-              error: null,
-            }
-          ),
-      categoryIds.length > 0
-        ? admin
-            .from("category_completions")
-            .select("category_id")
-            .eq("user_id", user.id)
-            .in("category_id", categoryIds)
-        : Promise.resolve(
-            { data: [] as { category_id: string }[], error: null }
-          ),
-    ]);
+  // ── 5. Fetch user's completion + quiz status + progress cache ─────────────
+  // All five queries run in parallel. The two cache queries are batch fetches
+  // (one per table) — not N+1.
+  const [
+    completionsResult,
+    quizAttemptsResult,
+    categoryCompletionsResult,
+    programCacheResult,
+    categoryCacheResult,
+  ] = await Promise.all([
+    // Lesson-level completion flags (for per-lesson "completed" boolean)
+    lessonIds.length > 0
+      ? admin
+          .from("lesson_completions")
+          .select("lesson_id")
+          .eq("user_id", user.id)
+          .in("lesson_id", lessonIds)
+      : Promise.resolve({ data: [] as { lesson_id: string }[], error: null }),
+
+    // Quiz pass/fail per lesson (latest attempt, ordered descending)
+    lessonIds.length > 0
+      ? admin
+          .from("quiz_attempts")
+          .select("lesson_id, passed")
+          .eq("user_id", user.id)
+          .in("lesson_id", lessonIds)
+          .order("attempted_at", { ascending: false })
+      : Promise.resolve(
+          { data: [] as { lesson_id: string; passed: boolean }[], error: null }
+        ),
+
+    // Category-level completion flags
+    categoryIds.length > 0
+      ? admin
+          .from("category_completions")
+          .select("category_id")
+          .eq("user_id", user.id)
+          .in("category_id", categoryIds)
+      : Promise.resolve(
+          { data: [] as { category_id: string }[], error: null }
+        ),
+
+    // Batch: all program-level progress cache rows for this user
+    programIds.length > 0
+      ? admin
+          .from("user_program_progress")
+          .select(
+            "program_id, total_lessons, completed_lessons, total_categories, completed_categories, progress_pct, started_at, last_activity_at, completed_at, next_lesson_id, next_lesson_title, next_category_id, next_category_name"
+          )
+          .eq("user_id", user.id)
+          .in("program_id", programIds)
+      : Promise.resolve({
+          data: [] as {
+            program_id: string;
+            total_lessons: number;
+            completed_lessons: number;
+            total_categories: number;
+            completed_categories: number;
+            progress_pct: number;
+            started_at: string | null;
+            last_activity_at: string | null;
+            completed_at: string | null;
+            next_lesson_id: string | null;
+            next_lesson_title: string | null;
+            next_category_id: string | null;
+            next_category_name: string | null;
+          }[],
+          error: null,
+        }),
+
+    // Batch: all category-level progress cache rows for this user
+    categoryIds.length > 0
+      ? admin
+          .from("user_category_progress")
+          .select(
+            "category_id, total_lessons, completed_lessons, progress_pct, started_at, last_activity_at, completed_at, next_lesson_id, next_lesson_title"
+          )
+          .eq("user_id", user.id)
+          .in("category_id", categoryIds)
+      : Promise.resolve({
+          data: [] as {
+            category_id: string;
+            total_lessons: number;
+            completed_lessons: number;
+            progress_pct: number;
+            started_at: string | null;
+            last_activity_at: string | null;
+            completed_at: string | null;
+            next_lesson_id: string | null;
+            next_lesson_title: string | null;
+          }[],
+          error: null,
+        }),
+  ]);
+
+  // ── 6. Build lookup maps ───────────────────────────────────────────────────
 
   const completedLessons = new Set(
     (completionsResult.data ?? []).map((r) => r.lesson_id)
   );
 
-  // For each lesson, keep only the most recent quiz attempt's pass status
+  // Keep only the most recent quiz attempt's pass status per lesson
   const quizPassMap = new Map<string, boolean>();
-  for (const attempt of completionsResult.data ?? []) {
-    // quiz_attempts rows — we only need "passed" per lesson_id (latest first from ORDER BY)
-    if (!quizPassMap.has(attempt.lesson_id)) {
-      // completionsResult has no "passed" — use quizAttemptsResult
-    }
-  }
   for (const attempt of quizAttemptsResult.data ?? []) {
     if (!quizPassMap.has(attempt.lesson_id)) {
       quizPassMap.set(attempt.lesson_id, attempt.passed);
@@ -173,7 +240,15 @@ export async function GET() {
     (categoryCompletionsResult.data ?? []).map((r) => r.category_id)
   );
 
-  // ── 6. Assemble hierarchy ──────────────────────────────────────────────────
+  // Index cache rows by their FK for O(1) lookup during assembly
+  const programCacheMap = new Map(
+    (programCacheResult.data ?? []).map((r) => [r.program_id, r])
+  );
+  const categoryCacheMap = new Map(
+    (categoryCacheResult.data ?? []).map((r) => [r.category_id, r])
+  );
+
+  // ── 7. Assemble lesson and category buckets ────────────────────────────────
   const lessonsByCategory = new Map<string, typeof lessons>();
   for (const lesson of lessons ?? []) {
     if (!lesson.category_id) continue;
@@ -189,57 +264,115 @@ export async function GET() {
     categoriesByProgram.set(cat.training_id, bucket);
   }
 
-  let totalProgramLessons = 0;
-  let totalProgramCompleted = 0;
-
+  // ── 8. Assemble final response ─────────────────────────────────────────────
   const result = accessiblePrograms.map((prog) => {
     const progCategories = categoriesByProgram.get(prog.id) ?? [];
-    let progTotal = 0;
-    let progCompleted = 0;
+    const progCache = programCacheMap.get(prog.id) ?? null;
+    const nextCategoryId = progCache?.next_category_id ?? null;
 
     const enrichedCategories = progCategories.map((cat) => {
       const catLessons = lessonsByCategory.get(cat.id) ?? [];
-      const total = catLessons.length;
-      const completedCount = catLessons.filter((l) =>
-        completedLessons.has(l.id)
-      ).length;
+      const catCache = categoryCacheMap.get(cat.id) ?? null;
+      const catCompleted = completedCategories.has(cat.id);
+      const nextLessonId = catCache?.next_lesson_id ?? null;
 
-      progTotal += total;
-      progCompleted += completedCount;
+      // ── Category sequential lock ─────────────────────────────────────────
+      // A category is locked when the program is sequential AND this category
+      // is not completed AND it is not the immediate next one AND there is
+      // at least one lower-priority category that is not yet completed.
+      const isCatLocked =
+        !!(prog as { is_sequential?: boolean }).is_sequential &&
+        !catCompleted &&
+        cat.id !== (nextCategoryId ?? cat.id) &&
+        progCategories.some(
+          (c) =>
+            c.training_id === prog.id &&
+            c.priority < cat.priority &&
+            c.is_active &&
+            !completedCategories.has(c.id)
+        );
 
-      const enrichedLessons = catLessons.map((l) => ({
-        id: l.id,
-        title: l.title,
-        priority: l.priority,
-        is_active: l.is_active,
-        previous_lesson_id: l.previous_lesson_id,
-        completed: completedLessons.has(l.id),
-        quiz_passed: quizPassMap.get(l.id) ?? null,
-      }));
+      // ── Lesson assembly with sequential lock ─────────────────────────────
+      const enrichedLessons = catLessons.map((l) => {
+        const lessonCompleted = completedLessons.has(l.id);
+
+        // A lesson is locked when:
+        //   - the category is sequential
+        //   - it is not completed
+        //   - it is not the immediate next lesson for this category
+        //   - there is at least one lower-priority incomplete lesson before it
+        const isLessonLocked =
+          !lessonCompleted &&
+          !!(cat as { is_sequential?: boolean }).is_sequential &&
+          l.id !== (nextLessonId ?? l.id) &&
+          catLessons.some(
+            (prev) =>
+              prev.priority < l.priority &&
+              prev.is_active &&
+              !completedLessons.has(prev.id)
+          );
+
+        return {
+          id: l.id,
+          title: l.title,
+          priority: l.priority,
+          is_active: l.is_active,
+          previous_lesson_id: l.previous_lesson_id,
+          completed: lessonCompleted,
+          quiz_passed: quizPassMap.get(l.id) ?? null,
+          is_locked: isLessonLocked,
+          lock_reason: isLessonLocked
+            ? "Complete previous lessons in order first"
+            : null,
+        };
+      });
 
       return {
         id: cat.id,
         name: cat.name,
-        description: cat.description,
         priority: cat.priority,
-        completed: completedCategories.has(cat.id),
-        progress: { completed: completedCount, total },
+        is_active: cat.is_active,
+        is_sequential: !!(cat as { is_sequential?: boolean }).is_sequential,
+        // Legacy completion flag kept for backward compat with existing UI
+        completed: catCompleted,
+        is_locked: isCatLocked,
+        lock_reason: isCatLocked
+          ? "Complete previous categories in order first"
+          : null,
+        // Cache-sourced progress fields
+        progress_pct: catCache ? Number(catCache.progress_pct) : 0,
+        completed_lessons: catCache ? catCache.completed_lessons : 0,
+        total_lessons: catCache ? catCache.total_lessons : catLessons.length,
+        started_at: catCache?.started_at ?? null,
+        last_activity_at: catCache?.last_activity_at ?? null,
+        completed_at: catCache?.completed_at ?? null,
+        next_lesson_id: catCache?.next_lesson_id ?? null,
+        next_lesson_title: catCache?.next_lesson_title ?? null,
         lessons: enrichedLessons,
       };
     });
 
-    totalProgramLessons += progTotal;
-    totalProgramCompleted += progCompleted;
-
-    const progressPct =
-      progTotal > 0 ? Math.round((progCompleted / progTotal) * 100) : 0;
-
     return {
       id: prog.id,
       name: prog.name,
-      description: prog.description,
+      description: prog.description ?? null,
       priority: prog.priority,
-      progress: progressPct,
+      is_active: prog.is_active,
+      is_sequential: !!(prog as { is_sequential?: boolean }).is_sequential,
+      allowed_roles: prog.allowed_roles ?? [],
+      // Cache-sourced progress fields; zeroed defaults when cache row absent
+      progress_pct: progCache ? Number(progCache.progress_pct) : 0,
+      completed_lessons: progCache ? progCache.completed_lessons : 0,
+      total_lessons: progCache ? progCache.total_lessons : 0,
+      completed_categories: progCache ? progCache.completed_categories : 0,
+      total_categories: progCache ? progCache.total_categories : progCategories.length,
+      started_at: progCache?.started_at ?? null,
+      last_activity_at: progCache?.last_activity_at ?? null,
+      completed_at: progCache?.completed_at ?? null,
+      next_lesson_id: progCache?.next_lesson_id ?? null,
+      next_lesson_title: progCache?.next_lesson_title ?? null,
+      next_category_id: progCache?.next_category_id ?? null,
+      next_category_name: progCache?.next_category_name ?? null,
       categories: enrichedCategories,
     };
   });

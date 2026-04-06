@@ -1,7 +1,7 @@
 # AstrologyPro — Daily Task Board
 
 > **Workflow:** Update this file each session. Check off items as you go. Push at end of day.
-> **Last updated:** 2026-04-04 (session 12 — full Angular port)
+> **Last updated:** 2026-04-06 (session 13 — training analytics, PM plan tiers, community features, notifications, admin global search, certificate, quiz cooldown)
 > **Migrations:** All applied via `scripts/run-migration.js` — no manual SQL editor needed.
 
 ---
@@ -41,7 +41,33 @@
 | Email: single template base | ✅ Done — buildEmailHtml + 12 helpers |
 | Training school (Sprint 2) | ✅ Done — categories, lessons, quizzes, admin CRUD |
 | Trainee portal | ✅ Done — dashboard, progress, sessions, resources, training, certificate |
-| Training analytics admin | ✅ Done — trainee counts by status, lesson completion, quiz pass rates |
+| Training analytics admin | ✅ Done — 6-tab dashboard: overview, users, programs, categories, lessons, quizzes |
+| Training progress cache | ✅ Done — user_category_progress + user_program_progress, SECURITY DEFINER triggers |
+| Training sequential lock | ✅ Done — is_sequential on programs/categories; lesson 403 if locked; lock icons in UI |
+| Training time tracking | ✅ Done — lesson_progress, /start + /heartbeat (30s), time_spent_seconds |
+| Training milestone emails | ✅ Done — sendQuizPassed, sendLessonComplete, sendCategoryComplete, sendProgramComplete |
+| Training auto-graduation | ✅ Done — certificate_code generated, trainees.graduated_at set, sendProgramComplete fired |
+| Quiz retry cooldown | ✅ Done — 30-min cooldown after 2 failed attempts; 429 with cooldown_ends_at; countdown UI |
+| Admin training settings | ✅ Done — allowed_roles config at /admin/training/settings |
+| PM plan tiers | ✅ Done — pm_plan_tiers table, admin CRUD, Stripe per-seat billing, user plan management |
+| PM user plan self-service | ✅ Done — change tier, add/remove members, invoice history, price preview |
+| Tarot reading player | ✅ Done — 9 spreads, 3-state machine, Celtic Cross layout, save + share + notes |
+| Tarot reading history | ✅ Done — history list, full detail page, public share page |
+| Community broadcasts page | ✅ Done — Live/Upcoming/On-Demand sections + RSVP |
+| Community events calendar | ✅ Done — interactive calendar grid + RSVP |
+| Community membership card | ✅ Done — membership-card component |
+| Community mobile nav | ✅ Done — Sheet-based hamburger for mobile viewports |
+| PM profile completion card | ✅ Done — 6-item weighted calculation, server-computed |
+| PM ritual execution persistence | ✅ Done — current_step, is_complete, last_executed_at on user_ritual_configurations |
+| In-app notification center | ✅ Done — notifications table, 60s polling bell, unread badge, per-type icons |
+| Admin global search | ✅ Done — Cmd+K, users/bookings/lessons/blog in parallel, keyboard nav |
+| Certificate sharing | ✅ Done — certificate_code on trainees, public /certificate/verify/[code], share dialog |
+| Trainee resources page | ✅ Done — lesson assets grouped by type with download links |
+| Trainee sessions page | ✅ Done — upcoming/past bookings with stats |
+| Trainee profile page | ✅ Done — avatar upload, bio, specialties, training status ring |
+| Community subscription emails | ✅ Done — payment failed, renewal reminder, expiry warning, cancelled |
+| Stripe webhook — subscription.updated | ✅ Done — community member status sync on plan change |
+| Admin module — 21 tasks | ✅ Done — user mgmt, tarot CRUD, testimonials, activity log, soft delete, role mgmt |
 | Community portal — Perennial Mandalism | ✅ Done — family, charts, transits, library, resources, sunday service |
 | Community portal — Mystery School | ✅ Done — foundation 12-week training, decan calendar, ritual performer, scry + journal |
 | Community portal — Ingress Charts | ✅ Done — list + detail pages |
@@ -120,6 +146,43 @@
 - Angular bundle optimisation (E10-S3)
 - Angular duplicate AuthService cleanup (E1-S3)
 - Angular TypeScript model interfaces (E1-S4)
+
+---
+
+## ✅ Completed This Session (session 13 — 2026-04-06)
+
+| Feature | Detail |
+|---|---|
+| Training analytics | 6-tab admin dashboard (overview, users, programs, categories, lessons, quizzes); first-attempt pass rate, avg attempts-to-pass |
+| Progress cache | `user_category_progress` + `user_program_progress` tables; 4 PostgreSQL SECURITY DEFINER functions; 3 auto-recalc triggers |
+| Sequential lock | `is_sequential` on programs + categories; API-level 403 if lesson locked; lock icons in UI; lock reason in lesson list |
+| Admin training settings | `/admin/training/settings` — role-based access control; `training_settings` table |
+| Time tracking | `lesson_progress` table; `/start` upsert on open; `/heartbeat` accumulates delta_seconds (capped 0-120); 30s client heartbeat |
+| Training milestone emails | `sendQuizPassed`, `sendLessonComplete`, `sendCategoryComplete`, `sendProgramComplete` |
+| Auto-graduation | `certificate_code` (randomBytes 6 hex); `trainees.graduated_at` + `training_status=graduated`; sendProgramComplete email |
+| Quiz retry cooldown | 30-min cooldown after 2 failed attempts; `attempt_number` on quiz_attempts; 429 + `cooldown_ends_at`; countdown timer in UI |
+| PM plan tiers | `pm_plan_tiers` table; admin CRUD at `/admin/pm-plan-tiers`; `updateStripeExtraSeats` helper; per-seat Stripe billing |
+| PM user plan self-service | `/community/plan` — 3 tabs: overview + price calculator, members + billing badges, billing + invoice history |
+| Tarot reading player | 9 spreads; 3-state machine (setup→drawing→revealed); Celtic Cross positional layout; save + share + notes |
+| Tarot history + public share | `/community/tarot/history`, `/community/tarot/readings/[id]`, `/community/tarot/share/[token]` |
+| Community broadcasts | Live/Upcoming/On-Demand sections; RSVP button; `/api/community/broadcasts/[id]/rsvp` |
+| Community events calendar | Interactive calendar grid; RSVP; `/api/community/events/[id]/rsvp` |
+| Membership card | `membership-card.tsx` component on community dashboard |
+| Community mobile nav | Sheet-based hamburger at `src/components/community/mobile-nav.tsx` |
+| PM profile completion | 6-item weighted card (avatar, bio, family, ritual, chart, session); server-computed |
+| Ritual execution persistence | `current_step`, `is_complete`, `last_executed_at`, `execution_count` on `user_ritual_configurations` |
+| Notification center | `notifications` table; GET/PATCH/mark-all-read APIs; `NotificationBell` with 60s polling + unread badge; `createNotification()` helper |
+| Admin global search | `Cmd+K` dialog; `/api/admin/search` queries users/bookings/lessons/blog in parallel; keyboard navigation |
+| Certificate sharing | `certificate_code` on trainees; public `/certificate/verify/[code]` page; copy/social share dialog |
+| Trainee resources | `/trainee/resources` — lesson assets grouped by type (PDF/video/image/link) with download links |
+| Trainee sessions | `/trainee/sessions` — upcoming/past bookings with stats bar |
+| Trainee profile | `/trainee/profile` — avatar upload to Supabase storage, bio, specialties, training status ring |
+| Community subscription emails | `sendCommunityPaymentFailed`, `sendCommunityRenewalReminder`, `sendMembershipExpiryWarning`, `sendCommunitySubscriptionCancelled` |
+| Stripe webhook | `customer.subscription.updated` handler; community member status sync |
+| Cron jobs | `/api/cron/community-renewal-reminders` (7-day window), `/api/cron/community-expiry-warnings` (3-day window) |
+| Bug fix | `quiz/route.ts` — added `title` to lesson select (was `undefined` in quiz-passed email) |
+| Admin module (21 tasks) | User mgmt enhancements, tarot card/spread CRUD, testimonials CRUD, activity log, soft delete/restore, role mgmt, password mgmt, notes |
+| Migrations applied | 000013 notifications, 000014 certificate_verification, 000015 quiz_cooldown, 000016 trainee_avatar |
 
 ---
 

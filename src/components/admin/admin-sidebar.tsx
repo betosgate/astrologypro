@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { GlobalSearch } from "@/components/admin/global-search";
 import {
   LayoutDashboard,
   Users,
@@ -79,7 +80,6 @@ const NAV_GROUPS = [
     label: "Astrology",
     items: [
       { label: "Wheel Signs", href: "/admin/wheel-signs", icon: CircleDot },
-      { label: "Calendar", href: "/admin/calendar", icon: CalendarDays },
       { label: "Ingress Charts", href: "/admin/ingress-charts", icon: Navigation },
       { label: "Decan Journals", href: "/admin/decan-journals", icon: BookOpen },
       { label: "Decan Media", href: "/admin/decan-media", icon: Film },
@@ -96,11 +96,20 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: "Community",
+    items: [
+      { label: "PM Plan Tiers", href: "/admin/pm-plan-tiers", icon: Layers },
+      { label: "Broadcasts", href: "/admin/broadcasting", icon: Radio },
+      { label: "Calendar", href: "/admin/calendar", icon: CalendarDays },
+    ],
+  },
+  {
     label: "Training",
     items: [
-      { label: "Training", href: "/admin/training", icon: GraduationCap },
-      { label: "Training Analytics", href: "/admin/training/analytics", icon: TrendingUp },
-      { label: "Class Config", href: "/admin/class-config", icon: Settings2 },
+      { label: "Programs & Lessons", href: "/admin/training", icon: GraduationCap, exact: true },
+      { label: "Analytics", href: "/admin/training/analytics", icon: TrendingUp },
+      { label: "Settings", href: "/admin/training/settings", icon: Settings2 },
+      { label: "Class Config", href: "/admin/class-config", icon: LayoutDashboard },
     ],
   },
   {
@@ -116,7 +125,6 @@ const NAV_GROUPS = [
   {
     label: "Tools",
     items: [
-      { label: "Broadcasting", href: "/admin/broadcasting", icon: Radio },
       { label: "Tarot", href: "/admin/tarot", icon: Shuffle },
       { label: "Rituals", href: "/admin/rituals", icon: Flame },
     ],
@@ -263,6 +271,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </div>
       </div>
 
+      {/* Global search */}
+      <div className="shrink-0 border-b px-3 py-2">
+        <GlobalSearch />
+      </div>
+
       {/* Nav groups */}
       <nav className="flex-1 space-y-3 overflow-y-auto p-3">
         {NAV_GROUPS.map((group) => (
@@ -334,6 +347,9 @@ export function AdminSidebar() {
         <span className="text-xs font-semibold uppercase tracking-widest text-amber-500">
           Admin
         </span>
+        <div className="ml-auto">
+          <GlobalSearch />
+        </div>
       </header>
 
       {/* Desktop sidebar */}

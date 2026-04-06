@@ -11,6 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import Link from "next/link";
 
 type Role = { id: string; role_name: string; slug: string; description: string };
@@ -19,6 +21,7 @@ export default function NewProgramPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [isSequential, setIsSequential] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -75,6 +78,7 @@ export default function NewProgramPage() {
           priority: parseInt(form.priority, 10) || 0,
           is_active: form.is_active,
           allowed_roles: form.allowed_roles,
+          is_sequential: isSequential,
         }),
       });
 
@@ -159,6 +163,20 @@ export default function NewProgramPage() {
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
               />
               <p className="text-xs text-muted-foreground">Lower number = shown first.</p>
+            </div>
+
+            {/* Sequential Lock */}
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div>
+                <Label className="text-sm font-medium">Sequential Lock</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Users must complete categories in order — they cannot skip ahead
+                </p>
+              </div>
+              <Switch
+                checked={isSequential}
+                onCheckedChange={setIsSequential}
+              />
             </div>
 
             {/* Allowed Roles */}
