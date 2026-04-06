@@ -331,6 +331,10 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       ? subscription.customer
       : (subscription.customer as Stripe.Customer).id;
 
+  // ── Diviner SaaS plan upsert ────────────────────────────────────────────────
+  await upsertDivinerPlanSubscription(adminClient, subscription, customerId);
+
+  // ── Community member status sync ────────────────────────────────────────────
   const { data: member } = await adminClient
     .from("community_members")
     .select("id, user_id, email, membership_status")
@@ -372,16 +376,169 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     .eq("id", member.id);
 }
 
+// ─── Diviner SaaS plan subscription helpers ───────────────────────────────────
+
+type SupabaseAdminClient = ReturnType<typeof createAdminClient>;
+
+function mapStripeStatusToDiviner(
+  stripeStatus: Stripe.Subscription.Status
+): string {
+  switch (stripeStatus) {
+    case "active":
+      return "active";
+    case "trialing":
+      return "trialing";
+    case "past_due":
+      return "past_due";
+    case "canceled":
+      return "cancelled";
+    case "unpaid":
+      return "suspended";
+    default:
+      return stripeStatus;
+  }
+}
+
+async function upsertDivinerPlanSubscription(
+  admin: SupabaseAdminClient,
+  subscription: Stripe.Subscription,
+  customerId: string
+): Promise<void> {
+  // Only process subscriptions tagged for diviner SaaS
+  const metadata = subscription.metadata ?? {};
+  const divinerId = metadata.diviner_id as string | undefined;
+  if (!divinerId && metadata.type !== "diviner_saas") {
+    // Not a diviner SaaS subscription — nothing to do here
+    return;
+  }
+
+  // Resolve diviner by customer ID if metadata doesn't have it
+  let resolvedDivinerId = divinerId;
+  if (!resolvedDivinerId) {
+    const { data: d } = await admin
+      .from("diviners")
+      .select("id")
+      .eq("stripe_customer_id", customerId)
+      .maybeSingle();
+    resolvedDivinerId = d?.id;
+  }
+
+  if (!resolvedDivinerId) {
+    console.warn("[Webhook] upsertDivinerPlanSubscription: no diviner found for customer", customerId);
+    return;
+  }
+
+  // Ensure stripe_customer_id is recorded on the diviners row
+  await admin
+    .from("diviners")
+    .update({ stripe_customer_id: customerId })
+    .eq("id", resolvedDivinerId)
+    .is("stripe_customer_id", null);
+
+  const subAny = subscription as unknown as {
+    current_period_start?: number;
+    current_period_end?: number;
+  };
+
+  const periodStart = subAny.current_period_start
+    ? new Date(subAny.current_period_start * 1000).toISOString()
+    : null;
+  const periodEnd = subAny.current_period_end
+    ? new Date(subAny.current_period_end * 1000).toISOString()
+    : null;
+
+  const items = subscription.items?.data ?? [];
+  const firstItem = items[0];
+  const firstPriceId = firstItem?.price?.id ?? null;
+
+  // Look up the plan by Stripe price ID
+  let planId: string | null = null;
+  if (firstPriceId) {
+    const { data: plan } = await admin
+      .from("diviner_plans")
+      .select("id")
+      .eq("stripe_price_id", firstPriceId)
+      .maybeSingle();
+    planId = plan?.id ?? null;
+  }
+
+  const mappedStatus = mapStripeStatusToDiviner(subscription.status);
+
+  // Upsert the plan subscription row
+  await admin.from("diviner_plan_subscriptions").upsert(
+    {
+      diviner_id: resolvedDivinerId,
+      plan_id: planId,
+      status: mappedStatus,
+      stripe_subscription_id: subscription.id,
+      stripe_customer_id: customerId,
+      current_period_start: periodStart,
+      current_period_end: periodEnd,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "stripe_subscription_id" }
+  );
+
+  // Upsert add-on items (any items beyond the first)
+  const addonItems = items.slice(1);
+  for (const item of addonItems) {
+    const addonPriceId = item.price?.id;
+    if (!addonPriceId) continue;
+
+    const { data: addon } = await admin
+      .from("diviner_plan_addons")
+      .select("id")
+      .eq("stripe_price_id", addonPriceId)
+      .maybeSingle();
+
+    if (!addon) continue;
+
+    await admin.from("diviner_active_addons").upsert(
+      {
+        diviner_id: resolvedDivinerId,
+        addon_id: addon.id,
+        status: "active",
+        stripe_subscription_item_id: item.id,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "stripe_subscription_item_id" }
+    );
+  }
+}
+
 async function handleSubscriptionDeleted(
   subscription: Stripe.Subscription
 ) {
   const supabase = createAdminClient();
 
-  // Diviner subscription cancelled
+  // Diviner legacy subscription cancelled
   await supabase
     .from("diviners")
     .update({ subscription_status: "cancelled", is_active: false })
     .eq("stripe_subscription_id", subscription.id);
+
+  // Diviner SaaS plan subscription cancelled
+  const { data: saasSubRow } = await supabase
+    .from("diviner_plan_subscriptions")
+    .select("id, diviner_id")
+    .eq("stripe_subscription_id", subscription.id)
+    .maybeSingle();
+
+  if (saasSubRow) {
+    await supabase
+      .from("diviner_plan_subscriptions")
+      .update({
+        status: "cancelled",
+        cancelled_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", saasSubRow.id);
+
+    await supabase
+      .from("diviner_active_addons")
+      .update({ status: "cancelled", updated_at: new Date().toISOString() })
+      .eq("diviner_id", saasSubRow.diviner_id);
+  }
 
   // Community membership cancelled — fetch member before updating so we have email
   const { data: communityMember } = await supabase
@@ -530,6 +687,65 @@ async function handlePaymentIntentSucceeded(
   }
 }
 
+// ─── Diviner SaaS invoice handler ────────────────────────────────────────────
+
+async function handleDivinerInvoice(
+  invoice: Stripe.Invoice,
+  isPaid: boolean
+): Promise<void> {
+  const customerId =
+    typeof invoice.customer === "string"
+      ? invoice.customer
+      : (invoice.customer as Stripe.Customer | null)?.id ?? null;
+
+  if (!customerId) return;
+
+  const admin = createAdminClient();
+
+  const { data: diviner } = await admin
+    .from("diviners")
+    .select("id")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+
+  if (!diviner) return;
+
+  const invoiceAny = invoice as unknown as {
+    period_start?: number;
+    period_end?: number;
+  };
+
+  const periodStart = invoiceAny.period_start
+    ? new Date(invoiceAny.period_start * 1000).toISOString()
+    : null;
+  const periodEnd = invoiceAny.period_end
+    ? new Date(invoiceAny.period_end * 1000).toISOString()
+    : null;
+
+  const invoiceUrl =
+    (invoice as unknown as { hosted_invoice_url?: string | null })
+      .hosted_invoice_url ?? null;
+  const pdfUrl =
+    (invoice as unknown as { invoice_pdf?: string | null }).invoice_pdf ?? null;
+
+  await admin.from("diviner_invoices").upsert(
+    {
+      diviner_id: diviner.id,
+      stripe_invoice_id: invoice.id,
+      amount_cents: invoice.amount_due,
+      status: isPaid ? "paid" : "open",
+      invoice_url: invoiceUrl,
+      pdf_url: pdfUrl,
+      description: invoice.description ?? null,
+      period_start: periodStart,
+      period_end: periodEnd,
+      paid_at: isPaid ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "stripe_invoice_id" }
+  );
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");
@@ -566,10 +782,20 @@ export async function POST(request: NextRequest) {
         break;
       case "invoice.paid":
         await handleInvoicePaid(event.data.object as Stripe.Invoice);
+        await handleDivinerInvoice(event.data.object as Stripe.Invoice, true);
+        break;
+      case "invoice.payment_succeeded":
+        await handleDivinerInvoice(event.data.object as Stripe.Invoice, true);
         break;
       case "invoice.payment_failed":
         await handleInvoicePaymentFailed(
           event.data.object as Stripe.Invoice
+        );
+        await handleDivinerInvoice(event.data.object as Stripe.Invoice, false);
+        break;
+      case "customer.subscription.created":
+        await handleSubscriptionUpdated(
+          event.data.object as Stripe.Subscription
         );
         break;
       case "customer.subscription.updated":

@@ -9,7 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -18,7 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { ExternalLink, FileText, Zap } from "lucide-react";
+import { ManageBillingButton, SubscribeButton } from "./billing-actions";
 
 export const metadata = {
   title: "Billing — Dashboard",
@@ -48,6 +49,7 @@ interface PlanSubscription {
 interface AddonDef {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
   price_cents: number;
   currency: string;
@@ -166,7 +168,7 @@ export default async function BillingPage() {
         .maybeSingle(),
       admin
         .from("diviner_active_addons")
-        .select("id, status, activated_at, diviner_plan_addons(id, name, description, price_cents, currency, billing_interval, feature_key)")
+        .select("id, status, activated_at, diviner_plan_addons(id, name, slug, description, price_cents, currency, billing_interval, feature_key)")
         .eq("diviner_id", divinerId)
         .eq("status", "active"),
       admin
@@ -183,12 +185,12 @@ export default async function BillingPage() {
         .order("created_at", { ascending: false }),
       admin
         .from("diviner_plan_addons")
-        .select("id, name, description, price_cents, currency, billing_interval, feature_key")
+        .select("id, name, slug, description, price_cents, currency, billing_interval, feature_key")
         .eq("is_active", true),
     ]);
 
   const subscription = subResult.data as PlanSubscription | null;
-  const activeAddons = (addonsResult.data ?? []) as ActiveAddon[];
+  const activeAddons = (addonsResult.data ?? []) as unknown as ActiveAddon[];
   const invoices = (invoicesResult.data ?? []) as Invoice[];
   const telephonyRecords = (telephonyResult.data ?? []) as TelephonyRecord[];
   const allAddons = (allAddonsResult.data ?? []) as AddonDef[];
@@ -218,8 +220,31 @@ export default async function BillingPage() {
         </CardHeader>
         <CardContent>
           {!subscription ? (
-            <div className="text-sm text-muted-foreground">
-              No active plan. Contact your account manager to get started.
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                No active plan. Subscribe to unlock your professional diviner dashboard.
+              </p>
+              {/* Get Started — Professional plan */}
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Zap className="size-5 text-amber-500" />
+                  <span className="text-lg font-bold">Professional Plan</span>
+                  <Badge variant="outline" className="text-xs text-amber-500 border-amber-500/50">
+                    Recommended
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Everything you need to run your diviner practice — bookings, client portal, live sessions, and more.
+                </p>
+                <p className="text-2xl font-bold">
+                  $99<span className="text-base font-normal text-muted-foreground"> / month</span>
+                </p>
+                <SubscribeButton
+                  planSlug="professional"
+                  label="Get Started — $99/month"
+                  className="bg-amber-500 hover:bg-amber-600 text-white border-0"
+                />
+              </div>
             </div>
           ) : (
             <div className="flex items-start justify-between gap-4">
@@ -253,9 +278,7 @@ export default async function BillingPage() {
                   </p>
                 )}
               </div>
-              <Button variant="outline" size="sm" disabled>
-                Manage Plan
-              </Button>
+              <ManageBillingButton />
             </div>
           )}
         </CardContent>
@@ -301,31 +324,45 @@ export default async function BillingPage() {
           {/* Promo: show inactive add-ons */}
           {allAddons
             .filter((a) => !activeAddonFeatureKeys.has(a.feature_key))
-            .map((addon) => (
-              <div
-                key={addon.id}
-                className="flex items-center justify-between rounded-lg border border-dashed border-amber-500/30 bg-amber-500/5 p-4"
-              >
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <Zap className="size-4 text-amber-500" />
-                    <p className="font-medium">{addon.name}</p>
-                    <Badge variant="outline" className="text-xs text-amber-500 border-amber-500/50">
-                      Available
-                    </Badge>
+            .map((addon) => {
+              const hasActivePlan =
+                !!subscription && subscription.status === "active";
+              const planSlug = subscription?.diviner_plans?.slug ?? "professional";
+              return (
+                <div
+                  key={addon.id}
+                  className="flex items-center justify-between rounded-lg border border-dashed border-amber-500/30 bg-amber-500/5 p-4"
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <Zap className="size-4 text-amber-500" />
+                      <p className="font-medium">{addon.name}</p>
+                      <Badge variant="outline" className="text-xs text-amber-500 border-amber-500/50">
+                        Available
+                      </Badge>
+                    </div>
+                    {addon.description && (
+                      <p className="text-xs text-muted-foreground">{addon.description}</p>
+                    )}
+                    <p className="text-sm text-muted-foreground">
+                      {formatCents(addon.price_cents, addon.currency)} / {addon.billing_interval}
+                    </p>
                   </div>
-                  {addon.description && (
-                    <p className="text-xs text-muted-foreground">{addon.description}</p>
+                  {hasActivePlan ? (
+                    <SubscribeButton
+                      planSlug={planSlug}
+                      addonSlugs={[addon.slug ?? addon.feature_key]}
+                      label={`Add to Plan — ${formatCents(addon.price_cents, addon.currency)}/month`}
+                      variant="outline"
+                    />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      Subscribe to a plan first
+                    </span>
                   )}
-                  <p className="text-sm text-muted-foreground">
-                    {formatCents(addon.price_cents, addon.currency)} / {addon.billing_interval}
-                  </p>
                 </div>
-                <Button size="sm" variant="outline" disabled>
-                  Contact us to activate
-                </Button>
-              </div>
-            ))}
+              );
+            })}
         </CardContent>
       </Card>
 
