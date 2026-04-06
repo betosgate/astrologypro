@@ -54,6 +54,9 @@ This folder contains the validated Perennial tasks derived from the shared requi
 9. `09-doctrine-links-admin-management.md`
 10. `10-sunday-service-admin-publishing.md`
 11. `11-sunday-service-member-filter-detail-and-notification.md`
+12. `12-dashboard-membership-and-summary-parity.md`
+13. `13-dashboard-chart-and-family-summary-parity.md`
+14. 14-dashboard-content-and-quick-actions-parity.md`r`n15. `15-dashboard-visual-hierarchy-and-member-journey.md`
 
 ## Umbrella Task Files
 
@@ -87,3 +90,4 @@ These broader files are still useful as grouped references, but the smaller task
 - This task set is requirement-driven, not legacy Angular parity-driven.
 - Only Perennial / community items from the requirement document are included here.
 - Shared platform modules such as affiliate management, certification badge system, training PDFs, and social advocacy are intentionally excluded from this folder.
+

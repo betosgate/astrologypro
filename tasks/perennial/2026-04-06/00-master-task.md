@@ -23,8 +23,6 @@ Close the remaining requirement gaps for the Perennial / community membership ex
   - doctrine links admin CMS
   - Sunday Service admin publishing, notification, and filtering/detail parity
 
-
-
 ## Child Tasks
 
 1. `01-membership-welcome-and-enrollment-emails.md`
@@ -38,6 +36,9 @@ Close the remaining requirement gaps for the Perennial / community membership ex
 9. `09-doctrine-links-admin-management.md`
 10. `10-sunday-service-admin-publishing.md`
 11. `11-sunday-service-member-filter-detail-and-notification.md`
+12. `12-dashboard-membership-and-summary-parity.md`
+13. `13-dashboard-chart-and-family-summary-parity.md`
+14. 14-dashboard-content-and-quick-actions-parity.md`r`n15. `15-dashboard-visual-hierarchy-and-member-journey.md`
 
 ## Done Definition
 
@@ -48,8 +49,6 @@ Close the remaining requirement gaps for the Perennial / community membership ex
 - holy books and doctrine links are database-managed through admin workflows
 - Sunday Service supports admin publishing workflows, member notification, and the required browsing detail/filter behavior
 
-
-
 ## Verification Gate
 
 1. Validate membership welcome and enrollment confirmation emails trigger correctly.
@@ -59,11 +58,10 @@ Close the remaining requirement gaps for the Perennial / community membership ex
 5. Validate holy books and doctrine links can be managed without code deploy.
 6. Validate Sunday Service publish, browse, and filter behavior matches the requirement.
 
-
-
 ## Notion Ready Summary
 
 Title: Perennial requirement gaps
 
 Summary:
-The current Perennial implementation already covers the core community member experience, but several requirement-driven business flows are still open. This task set now breaks those gaps into smaller execution units covering membership emails, transit notifications, subscription lifecycle management, email operations, cross-sell discount tokens, sacred-content admin flows, and Sunday Service publishing plus notification behavior.
+The current Perennial implementation already covers the core community member experience, but several requirement-driven business flows are still open. This task set now breaks those gaps into smaller execution units covering membership emails, transit notifications, subscription lifecycle management, email operations, cross-sell discount tokens, sacred-content admin flows, Sunday Service publishing plus notification behavior, and dashboard refinement.
+
