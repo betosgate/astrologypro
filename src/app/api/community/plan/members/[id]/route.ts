@@ -90,13 +90,17 @@ export async function DELETE(
 
     const newCount = remainingCount ?? 0;
 
-    const tier = member.pm_plan_tiers as {
+    type TierShape = {
       id: string;
       base_price_usd: number;
       base_member_limit: number;
       extra_per_member_usd: number;
       stripe_extra_price_id: string | null;
-    } | null;
+    };
+    const rawTier = member.pm_plan_tiers;
+    const tier: TierShape | null = Array.isArray(rawTier)
+      ? (rawTier[0] as TierShape) ?? null
+      : (rawTier as unknown as TierShape | null);
 
     const newExtraCount = tier
       ? Math.max(0, newCount - tier.base_member_limit)

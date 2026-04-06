@@ -218,15 +218,19 @@ export async function GET(req: NextRequest): Promise<NextResponse<SearchResponse
     id: string;
     title: string;
     category_id: string | null;
-    training_categories: { name: string } | null;
+    training_categories: { name: string }[] | { name: string } | null;
   };
-  const lessons: SearchResult[] = ((lessonsRes.data ?? []) as LessonRow[]).map((l) => ({
-    type: "lesson",
-    id: l.id,
-    label: l.title,
-    sublabel: (l.training_categories as { name: string } | null)?.name ?? undefined,
-    url: `/admin/training/lessons/${l.id}/edit`,
-  }));
+  const lessons: SearchResult[] = ((lessonsRes.data ?? []) as unknown as LessonRow[]).map((l) => {
+    const cat = l.training_categories;
+    const catName = Array.isArray(cat) ? cat[0]?.name : (cat as { name: string } | null)?.name;
+    return {
+      type: "lesson",
+      id: l.id,
+      label: l.title,
+      sublabel: catName ?? undefined,
+      url: `/admin/training/lessons/${l.id}/edit`,
+    };
+  });
 
   // Blog
   type BlogRow = { id: string; title: string; category: string };
