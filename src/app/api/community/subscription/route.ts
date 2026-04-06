@@ -95,9 +95,8 @@ export async function GET() {
       try {
         const { stripe } = await import("@/lib/stripe/client");
         const sub = await stripe.subscriptions.retrieve(
-          member.stripe_subscription_id,
-          { expand: [] }
-        );
+          member.stripe_subscription_id
+        ) as unknown as { current_period_end?: number };
         if (sub.current_period_end) {
           renewalDate = new Date(sub.current_period_end * 1000).toISOString();
         }

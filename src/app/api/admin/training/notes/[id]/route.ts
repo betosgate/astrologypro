@@ -20,14 +20,14 @@ async function getAdminUser() {
 // DELETE /api/admin/training/notes/[id]
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getAdminUser();
   if (!user?.email || !ADMIN_EMAILS.includes(user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   const admin = createAdminClient();
   const { error } = await admin
