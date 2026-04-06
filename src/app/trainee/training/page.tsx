@@ -62,7 +62,7 @@ export default async function TrainingCategoriesPage() {
 
   // Filter by role access
   const categories = (allCategories ?? []).filter((cat) => {
-    const prog = cat.training_programs as { allowed_roles: string[] } | null;
+    const prog = cat.training_programs as unknown as { allowed_roles: string[] } | null;
     if (!prog) return true; // no program record — allow
     const allowed: string[] = prog.allowed_roles ?? [];
     if (allowed.length === 0) return true; // unrestricted

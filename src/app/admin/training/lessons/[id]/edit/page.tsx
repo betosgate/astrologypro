@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Card,
@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { TrainingNotes } from "@/components/admin/training-notes";
 
 interface Category {
   id: string;
@@ -26,6 +27,12 @@ interface LessonOption {
 }
 
 type VideoMode = "youtube" | "url" | "upload";
+
+function detectVideoMode(url: string | null): VideoMode {
+  if (!url) return "youtube";
+  if (url.includes("youtube.com") || url.includes("youtu.be")) return "youtube";
+  return "url";
+}
 
 function normalizeYouTubeUrl(input: string): string {
   try {
@@ -43,9 +50,13 @@ function normalizeYouTubeUrl(input: string): string {
   return input;
 }
 
-export default function NewLessonPage() {
+export default function EditLessonPage() {
   const router = useRouter();
+  const params = useParams<{ id: string }>();
+  const id = params.id;
+
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryLessons, setCategoryLessons] = useState<LessonOption[]>([]);
   const [videoMode, setVideoMode] = useState<VideoMode>("youtube");
@@ -67,46 +78,62 @@ export default function NewLessonPage() {
   });
 
   useEffect(() => {
-    async function loadCategories() {
+    async function load() {
       try {
-        const res = await fetch("/api/admin/training/categories");
-        if (res.ok) {
-          const data = await res.json();
-          setCategories(data.categories ?? []);
-          if (data.categories?.length > 0) {
-            const firstId = data.categories[0].id;
-            setForm((prev) => ({ ...prev, category_id: firstId }));
-            loadLessonsForCategory(firstId);
+        const [lessonRes, catsRes] = await Promise.all([
+          fetch(`/api/admin/training/lessons/${id}`),
+          fetch("/api/admin/training/categories"),
+        ]);
+
+        if (!lessonRes.ok) {
+          toast.error("Lesson not found.");
+          router.push("/admin/training");
+          return;
+        }
+
+        const lessonData = await lessonRes.json();
+        const catsData = catsRes.ok ? await catsRes.json() : { categories: [] };
+
+        setCategories(catsData.categories ?? []);
+
+        const l = lessonData.lesson;
+        setVideoMode(detectVideoMode(l.video_url));
+        setForm({
+          title: l.title ?? "",
+          description: l.description ?? "",
+          video_url: l.video_url ?? "",
+          pdf_url: l.pdf_url ?? "",
+          content: l.content ?? "",
+          duration_mins: l.duration_mins != null ? String(l.duration_mins) : "",
+          category_id: l.category_id ?? "",
+          priority: String(l.priority ?? 0),
+          previous_lesson_id: l.previous_lesson_id ?? "",
+          is_active: l.is_active ?? true,
+        });
+
+        // Load sibling lessons for the "previous lesson" dropdown (exclude self)
+        if (l.category_id) {
+          const siblingsRes = await fetch(`/api/admin/training/lessons?category_id=${l.category_id}`);
+          if (siblingsRes.ok) {
+            const siblingsData = await siblingsRes.json();
+            const sorted = (siblingsData.lessons ?? [])
+              .filter((s: LessonOption) => s.id !== id)
+              .sort((a: LessonOption, b: LessonOption) => a.priority - b.priority);
+            setCategoryLessons(sorted);
           }
         }
       } catch {
-        toast.error("Failed to load categories.");
+        toast.error("Failed to load lesson.");
+        router.push("/admin/training");
+      } finally {
+        setFetching(false);
       }
     }
-    loadCategories();
-  }, []);
-
-  async function loadLessonsForCategory(categoryId: string) {
-    if (!categoryId) {
-      setCategoryLessons([]);
-      return;
-    }
-    try {
-      const res = await fetch(`/api/admin/training/lessons?category_id=${categoryId}`);
-      if (res.ok) {
-        const data = await res.json();
-        const sorted = (data.lessons ?? []).sort((a: LessonOption, b: LessonOption) => a.priority - b.priority);
-        setCategoryLessons(sorted);
-      }
-    } catch {
-      // non-fatal
-    }
-  }
+    load();
+  }, [id, router]);
 
   function handleChange(
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) {
     const { name, value, type } = e.target;
     if (type === "checkbox") {
@@ -118,7 +145,16 @@ export default function NewLessonPage() {
       setForm((prev) => ({ ...prev, [name]: value }));
       if (name === "category_id") {
         setForm((prev) => ({ ...prev, category_id: value, previous_lesson_id: "" }));
-        loadLessonsForCategory(value);
+        // Reload siblings for new category, excluding self
+        fetch(`/api/admin/training/lessons?category_id=${value}`)
+          .then((r) => r.json())
+          .then((data) => {
+            const sorted = (data.lessons ?? [])
+              .filter((s: LessonOption) => s.id !== id)
+              .sort((a: LessonOption, b: LessonOption) => a.priority - b.priority);
+            setCategoryLessons(sorted);
+          })
+          .catch(() => {});
       }
     }
   }
@@ -204,8 +240,8 @@ export default function NewLessonPage() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/training/lessons", {
-        method: "POST",
+      const res = await fetch(`/api/admin/training/lessons/${id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: form.title.trim(),
@@ -223,11 +259,11 @@ export default function NewLessonPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? "Failed to create lesson.");
+        toast.error(data.error ?? "Failed to update lesson.");
         return;
       }
 
-      toast.success("Lesson created.");
+      toast.success("Lesson updated.");
       router.push("/admin/training");
     } catch {
       toast.error("An unexpected error occurred.");
@@ -236,21 +272,49 @@ export default function NewLessonPage() {
     }
   }
 
+  async function handleDelete() {
+    if (!confirm("Delete this lesson? Associated quizzes will also be deleted.")) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/training/lessons/${id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Failed to delete lesson.");
+        return;
+      }
+      toast.success("Lesson deleted.");
+      router.push("/admin/training");
+    } catch {
+      toast.error("An unexpected error occurred.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (fetching) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="flex items-center gap-3">
         <Button asChild variant="ghost" size="sm">
           <Link href="/admin/training">← Back</Link>
         </Button>
-        <h1 className="text-xl font-bold tracking-tight">New Lesson</h1>
+        <h1 className="text-xl font-bold tracking-tight">Edit Lesson</h1>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Create Training Lesson</CardTitle>
-          <CardDescription>
-            Add a new lesson to a training category.
-          </CardDescription>
+          <CardTitle>Update Training Lesson</CardTitle>
+          <CardDescription>Edit the details for this lesson.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -406,6 +470,11 @@ export default function NewLessonPage() {
                       Uploaded: {uploadedFileName}
                     </p>
                   )}
+                  {form.video_url && !uploadedFileName && (
+                    <p className="text-xs text-muted-foreground break-all">
+                      Current: {form.video_url}
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     MP4, WebM, OGG, MOV or AVI · max 500 MB
                   </p>
@@ -495,17 +564,30 @@ export default function NewLessonPage() {
               </label>
             </div>
 
-            <div className="flex gap-3 pt-2">
-              <Button type="submit" disabled={loading}>
-                {loading ? "Saving…" : "Create Lesson"}
-              </Button>
-              <Button asChild type="button" variant="outline">
-                <Link href="/admin/training">Cancel</Link>
+            <div className="flex items-center justify-between gap-3 pt-2">
+              <div className="flex gap-3">
+                <Button type="submit" disabled={loading}>
+                  {loading ? "Saving…" : "Save Changes"}
+                </Button>
+                <Button asChild type="button" variant="outline">
+                  <Link href="/admin/training">Cancel</Link>
+                </Button>
+              </div>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={handleDelete}
+                disabled={loading}
+              >
+                Delete
               </Button>
             </div>
           </form>
         </CardContent>
       </Card>
+
+      <TrainingNotes entityType="lesson" entityId={id} />
     </div>
   );
 }

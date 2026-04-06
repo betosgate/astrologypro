@@ -31,7 +31,7 @@ export async function GET(
   const { data, error } = await admin
     .from("training_lessons")
     .select(
-      "id, category_id, title, description, video_url, pdf_url, content, duration_mins, priority, is_active, created_at"
+      "id, category_id, title, description, video_url, pdf_url, content, duration_mins, priority, previous_lesson_id, is_active, created_at"
     )
     .eq("id", id)
     .single();
@@ -64,6 +64,7 @@ export async function PUT(
     duration_mins?: number | null;
     category_id?: string;
     priority?: number;
+    previous_lesson_id?: string | null;
     is_active?: boolean;
   };
   try {
@@ -81,6 +82,7 @@ export async function PUT(
     duration_mins,
     category_id,
     priority,
+    previous_lesson_id,
     is_active,
   } = body;
 
@@ -106,6 +108,7 @@ export async function PUT(
       duration_mins: duration_mins ?? null,
       category_id,
       priority: priority ?? 0,
+      previous_lesson_id: previous_lesson_id ?? null,
       is_active: is_active ?? true,
     })
     .eq("id", id)
