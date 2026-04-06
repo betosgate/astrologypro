@@ -480,6 +480,7 @@ export async function sendReflectionEmail({
   });
 }
 
+
 // ---------------------------------------------------------------------------
 // 7. Rebooking Nudge (30 days after session)
 // ---------------------------------------------------------------------------
@@ -1449,6 +1450,135 @@ export async function sendProgramComplete(opts: {
       ctaText: "Download Your Certificate",
       ctaUrl: certificateUrl,
       footer: `AstrologyPro &mdash; Training Center`,
+    }),
+  });
+}
+
+// ── Reschedule Confirmation ────────────────────────────────────────────────
+export async function sendRescheduleConfirmation({
+  to,
+  name,
+  divinerName,
+  serviceName,
+  newDate,
+  manageUrl,
+}: {
+  to: string;
+  name: string;
+  divinerName: string;
+  serviceName: string;
+  newDate: string;
+  manageUrl: string;
+}) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+    <p style="margin:0 0 16px;color:#a1a1aa;">Your <strong style="color:#f4f4f5;">${serviceName}</strong> session with <strong style="color:#f4f4f5;">${divinerName}</strong> has been successfully rescheduled.</p>
+    ${infoCard(`<strong style="color:#e4e4e7;">New Date &amp; Time</strong><br>${newDate}`)}
+    <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;">If you did not request this reschedule, please contact us immediately.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Rescheduled: Your ${serviceName} session`,
+    html: buildEmailHtml({
+      title: "Session Rescheduled",
+      preheader: `Your session with ${divinerName} has been rescheduled.`,
+      content,
+      ctaText: "Manage Your Booking",
+      ctaUrl: manageUrl,
+      footer: `AstrologyPro &mdash; Run Your Divination Business`,
+    }),
+  });
+}
+
+// ── Cancellation Confirmation ────────────────────────────────────────────────
+export async function sendCancellationConfirmation({
+  to,
+  name,
+  divinerName,
+  serviceName,
+  cancelReason,
+  rebookUrl,
+}: {
+  to: string;
+  name: string;
+  divinerName: string;
+  serviceName: string;
+  cancelReason?: string;
+  rebookUrl: string;
+}) {
+  const reasonBlock = cancelReason
+    ? infoCard(`<strong style="color:#e4e4e7;">Reason:</strong> ${cancelReason}`)
+    : "";
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+    <p style="margin:0 0 16px;color:#a1a1aa;">Your <strong style="color:#f4f4f5;">${serviceName}</strong> session with <strong style="color:#f4f4f5;">${divinerName}</strong> has been cancelled.</p>
+    ${reasonBlock}
+    <p style="margin:16px 0 0;color:#a1a1aa;">We hope to see you again soon. You can book another session at any time.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Cancelled: Your ${serviceName} session`,
+    html: buildEmailHtml({
+      title: "Session Cancelled",
+      preheader: `Your session with ${divinerName} has been cancelled.`,
+      content,
+      ctaText: "Book Again",
+      ctaUrl: rebookUrl,
+      footer: `AstrologyPro &mdash; Run Your Divination Business`,
+    }),
+  });
+}
+
+// ── 24-Hour / 1-Hour Session Reminder ────────────────────────────────────────
+export async function sendSessionReminder({
+  to,
+  name,
+  divinerName,
+  serviceName,
+  scheduledAt,
+  timezone,
+  joinUrl,
+  manageUrl,
+}: {
+  to: string;
+  name: string;
+  divinerName: string;
+  serviceName: string;
+  scheduledAt: string;
+  timezone: string;
+  joinUrl?: string;
+  manageUrl: string;
+}) {
+  const dateStr = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(new Date(scheduledAt));
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+    <p style="margin:0 0 16px;color:#a1a1aa;">This is a friendly reminder that your <strong style="color:#f4f4f5;">${serviceName}</strong> session with <strong style="color:#f4f4f5;">${divinerName}</strong> is coming up.</p>
+    ${infoCard(`<strong style="color:#e4e4e7;">&#128197; ${dateStr}</strong>`)}
+    ${secondaryCta("Manage Booking", manageUrl)}
+    <p style="margin-top:16px;font-size:13px;color:#9ca3af;">Need to reschedule or cancel? Use the Manage Booking link above.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Reminder: ${serviceName} tomorrow with ${divinerName}`,
+    html: buildEmailHtml({
+      title: "Session Reminder",
+      preheader: `Your session is coming up soon.`,
+      content,
+      ...(joinUrl ? { ctaText: "Join Session", ctaUrl: joinUrl } : {}),
+      footer: `AstrologyPro &mdash; Run Your Divination Business`,
     }),
   });
 }
