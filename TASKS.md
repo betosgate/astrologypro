@@ -1,7 +1,7 @@
 # AstrologyPro — Daily Task Board
 
 > **Workflow:** Update this file each session. Check off items as you go. Push at end of day.
-> **Last updated:** 2026-04-06 (session 17 — Perennial gap closure: emails, lifecycle, discount tokens, content CMS, email admin, dashboard polish)
+> **Last updated:** 2026-04-06 (session 18 — Blog v2 full rebuild + User Management v2 module)
 > **Migrations:** All applied via `scripts/run-migration.js` — no manual SQL editor needed.
 
 ---
@@ -74,8 +74,9 @@
 | Community portal — Horoscope calculator | ✅ Done — proxies to AstrologyAPI |
 | Mystery School auto-graduation | ✅ Done — triggers on 36th decan completion + graduation email |
 | Join pages (all roles) | ✅ Done — /join, /join/advocate, /join/community, /join/trainee |
-| Admin: blog CRUD | ✅ Done — create/edit/publish/unpublish/delete |
-| Blog: live posts from DB | ✅ Done — /blog/[slug] page; listing switches from static to live automatically |
+| Blog v2 — editorial core | ✅ Done — migration 036; 9 tables; status machine (7 states); content_blocks JSONB; block editor; categories/authors/series/tags admin |
+| Blog v2 — public experience | ✅ Done — homepage (hero/featured/latest/categories); post detail (TOC/author/series/share/related); category/tag/author/series/search listing pages; RSS feed; sitemap |
+| User Management v2 | ✅ Done — migration 037; permissions (29); role_permissions; invitations; user_relationships; user_security_events; comm_prefs; impersonation log; 12 new API routes; rich 7-tab user detail; permission matrix; invitations page; diviners page |
 | Admin: payments history | ✅ Done — paginated table from bookings |
 | Admin: social advocacy CRUD | ✅ Done |
 | Perennial: community welcome email | ✅ Done — wired to Stripe webhook on checkout success |
