@@ -197,7 +197,7 @@ export async function callAstroAiApi(
     "https://www.backofficeportal.divineinfinitebeing.com";
 
   let lastError: unknown;
-  const maxRetries = 5;
+  const maxRetries = 1;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
