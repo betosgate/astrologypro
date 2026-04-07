@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/mystery-school/decan/[id]/ritual/start
  * Creates a ritual_executions row for this student+decan, or returns the existing one.

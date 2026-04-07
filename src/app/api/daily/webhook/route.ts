@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateShareId } from "@/lib/format";
 
+export const dynamic = "force-dynamic";
+
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {

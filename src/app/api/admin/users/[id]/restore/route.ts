@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const dynamic = "force-dynamic";
+
 // ─── POST /api/admin/users/[id]/restore ──────────────────────────────────────
 // Restores a soft-deleted user: marks the deleted_users row as restored
 // and re-activates the original profile row.

@@ -5,6 +5,8 @@ import type { NatalChartData } from "@/lib/astro/natal-chart";
 import { verifyCronAuth } from "@/lib/cron-auth";
 import { sendMonthlyTransitReady } from "@/lib/email";
 
+export const dynamic = "force-dynamic";
+
 export const runtime = "nodejs";
 export const maxDuration = 60;
 

@@ -4,6 +4,8 @@ import { stripe } from "@/lib/stripe/client";
 import { PRICING } from "@/lib/constants";
 import { sendPhoneSessionReceipt, sendPhonePaymentFailed } from "@/lib/email";
 
+export const dynamic = "force-dynamic";
+
 export const runtime = "nodejs";
 
 /**

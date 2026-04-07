@@ -72,10 +72,12 @@ export async function GET(req: NextRequest) {
   }
 
   if (search && search.trim()) {
-    const term = search.trim();
-    query = query.or(
-      `email.ilike.%${term}%,first_name.ilike.%${term}%,last_name.ilike.%${term}%`
-    );
+    const safeTerm = search.trim().replace(/[%_().,]/g, "");
+    if (safeTerm) {
+      query = query.or(
+        `email.ilike.%${safeTerm}%,first_name.ilike.%${safeTerm}%,last_name.ilike.%${safeTerm}%`
+      );
+    }
   }
 
   // Cursor-based pagination

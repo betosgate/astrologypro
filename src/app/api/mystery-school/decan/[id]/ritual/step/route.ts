@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendMysterySchoolGraduation } from "@/lib/email";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/mystery-school/decan/[id]/ritual/step
  * Body: { step_index: number }

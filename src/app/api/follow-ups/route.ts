@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 // This route is a placeholder for future follow-up template management.
 // The follow_up_sequences table is an instance log — sequences are created
 // automatically by the cron job when bookings complete.

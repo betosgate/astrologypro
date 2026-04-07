@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/availability/hold
  * Creates a 10-minute hold on a time slot so two clients can't book the

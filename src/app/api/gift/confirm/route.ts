@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Stripe Checkout success redirect for gift certificates.
  *
@@ -24,11 +26,19 @@ export async function GET(request: NextRequest) {
   // Poll for the cert — webhook usually fires within 1-3 seconds
   let code: string | null = null;
   for (let i = 0; i < 8; i++) {
-    const { data } = await admin
+    const { data, error } = await admin
       .from("gift_certificates")
       .select("code")
       .eq("stripe_payment_intent_id", sessionId)
       .maybeSingle();
+
+    if (error) {
+      console.error("[gift/confirm] query error", error);
+      return NextResponse.json(
+        { type: "about:blank", title: "Internal Server Error", status: 500, detail: "Failed to look up gift certificate." },
+        { status: 500, headers: { "Content-Type": "application/problem+json" } }
+      );
+    }
 
     if (data?.code) {
       code = data.code;
