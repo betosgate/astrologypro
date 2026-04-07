@@ -24,12 +24,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { id } = await params;
   const body = await req.json();
-  const { name, description, instructions, priority, is_active } = body;
+  const { name, description, instructions, priority, is_active, video_url } = body;
 
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("ritual_invocations")
-    .update({ name, description, instructions, priority, is_active })
+    .update({ name, description, instructions, priority, is_active, video_url: video_url || null })
     .eq("id", id)
     .select()
     .single();

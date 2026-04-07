@@ -25,14 +25,14 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { name, description, instructions, priority, is_active } = body;
+  const { name, description, instructions, priority, is_active, video_url } = body;
 
   if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
 
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("ritual_invocations")
-    .insert({ name, description, instructions, priority, is_active })
+    .insert({ name, description, instructions, priority, is_active, video_url: video_url || null })
     .select()
     .single();
 
