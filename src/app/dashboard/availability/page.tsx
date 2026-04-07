@@ -21,7 +21,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 export const TIMEZONE_OPTIONS = [
   { value: "America/New_York", label: "Eastern Time (ET) — UTC−5/−4" },
@@ -248,11 +249,18 @@ export default function AvailabilityPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Availability</h1>
-          <p className="text-muted-foreground text-sm">
-            Define the windows when clients can book sessions with you.
-          </p>
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard/calendar">
+            <Button variant="ghost" size="icon" className="size-8">
+              <ArrowLeft className="size-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Availability</h1>
+            <p className="text-muted-foreground text-sm">
+              Define the windows when clients can book sessions with you.
+            </p>
+          </div>
         </div>
         <Button onClick={openCreate} size="sm">
           <Plus className="mr-1.5 size-4" />

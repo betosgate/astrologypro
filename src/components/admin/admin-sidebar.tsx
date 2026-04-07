@@ -59,6 +59,7 @@ import {
   ListChecks,
   MessageSquare,
   MousePointerClick,
+  UserCog,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -128,6 +129,14 @@ const NAV_GROUPS = [
     items: [
       { label: "Live Sessions", href: "/admin/live-sessions", icon: Radio },
       { label: "Check-ins", href: "/admin/check-ins", icon: ClipboardList },
+    ],
+  },
+  {
+    label: "My Schedule",
+    items: [
+      { label: "My Schedule", href: "/admin/my-schedule", icon: UserCog },
+      { label: "Bookings", href: "/admin/bookings", icon: CalendarDays },
+      { label: "My Availability", href: "/admin/availability", icon: ClipboardList },
     ],
   },
   {
