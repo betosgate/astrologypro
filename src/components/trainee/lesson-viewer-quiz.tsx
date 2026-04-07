@@ -314,8 +314,9 @@ export function LessonViewerQuiz({
 
       {/* Options */}
       <div className="space-y-2">
-        {(q.options as { text: string }[]).map((opt, oIdx) => {
+        {q.options.map((opt, oIdx) => {
           const isSelected = answers[currentQ] === oIdx;
+          const label = opt?.text ?? `Option ${oIdx + 1}`;
           return (
             <button
               key={oIdx}
@@ -327,7 +328,7 @@ export function LessonViewerQuiz({
                   : "border-border hover:border-primary/40 hover:bg-muted/40"
               )}
             >
-              {opt.text}
+              {label}
             </button>
           );
         })}

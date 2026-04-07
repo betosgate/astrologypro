@@ -267,14 +267,14 @@ async function callNatalWheel(body: Record<string, unknown>) {
   return r.json();
 }
 async function callDecanLookup(signs: string, planet: string) {
-  const r = await fetch("/api/admin/astro/decan-lookup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signs, planet }) });
+  const r = await fetch("/api/admin/astro/decan-info", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signs, planet }) });
   if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? r.statusText); }
   return r.json() as Promise<{ results: DecanRow[] }>;
 }
 
 interface DecanRow {
-  id?: number;
-  sign_id?: number;
+  id?: string;
+  sign_id?: string;
   sign_name: string;
   planet: string;
   decan: number;           // 1 | 2 | 3
@@ -283,6 +283,13 @@ interface DecanRow {
   description?: string;
   decan_img?: string;
   is_active?: boolean;
+  // Cached AI descriptions (persisted by the server)
+  planet_sign_short_desc?: string | null;
+  planet_sign_long_desc?: string | null;
+  daemon_short_desc?: string | null;
+  daemon_long_desc?: string | null;
+  tarot_short_desc?: string | null;
+  tarot_long_desc?: string | null;
 }
 
 interface DecanAi {
@@ -1080,7 +1087,8 @@ function DecanModal({ planet, sign, open, onClose }: {
   const [rowError, setRowError] = useState<string | null>(null);
   const [fullscreenImg, setFullscreenImg] = useState<string | null>(null);
 
-  // Fetch decan rows + fire 3 AI calls per decan whenever modal opens
+  // Fetch decan rows from the new decan-info API which returns cached descriptions
+  // (and auto-generates + persists via AI if missing on the server side)
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -1097,64 +1105,24 @@ function DecanModal({ planet, sign, open, onClose }: {
         setRows(results);
         setLoadingRows(false);
 
-        // Fire 3 AI calls per decan row in parallel (non-fatal)
+        // Build sections from the cached (or freshly AI-generated) descriptions
+        // returned by the server. No client-side AI calls needed.
+        const newSections: Record<number, DecanSection> = {};
         for (const row of results) {
-          const decanLabel = ordinalDecan(row.decan);
-          // Initialise loading state for this decan
-          setSections((prev) => ({ ...prev, [row.decan]: { planetAi: null, daemonAi: null, tarotAi: null, loading: true } }));
-
-          const systemContent = "give response only in json format as a whole , nothing else answer as astrologer not AI BOT";
-
-          // Angular exact prompts — three parallel AI calls
-          const [planetRes, daemonRes, tarotRes] = await Promise.allSettled([
-            callAI({
-              condition: {
-                system_content: systemContent,
-                user_content: `What does it mean when you have ${planet} in the ${decanLabel} decan of ${sign} in astrology , give me response in json where two indexes are short_format (min 3 sentences) and long_format (min 5 sentences) and response should not start with 'json' ever`,
-              },
-              toolname: "other",
-              json: [{ planet, sign, decan: decanLabel, decan_data: row }],
-            } as any),
-            callAI({
-              condition: {
-                system_content: systemContent,
-                user_content: `Explain the Greek daemon ${row.greek_daemon} as the spirit of the decan in relation to the ${decanLabel} decan of ${sign} in astrology. Give response in json where two indexes are short_format (min 3 sentences) and long_format (min 5 sentences) and response should not start with 'json' ever`,
-              },
-              toolname: "other",
-              json: [{ daemon: row.greek_daemon, sign, decan: decanLabel }],
-            } as any),
-            callAI({
-              condition: {
-                system_content: systemContent,
-                user_content: `Using the Crowley's thoth decks attributions, without referencing his deck directly, explain the ${row.tarot_name} as it would relate to the ${decanLabel} decan of ${sign} in astrology. Give response in json where two indexes are short_format (min 3 sentences) and long_format (min 5 sentences) and response should not start with 'json' ever`,
-              },
-              toolname: "other",
-              json: [{ tarot: row.tarot_name, sign, decan: decanLabel }],
-            } as any),
-          ]);
-
-          if (cancelled) return;
-
-          function parseDecanAi(res: PromiseSettledResult<any>): DecanAi | null {
-            if (res.status === "rejected") return null;
-            let parsed = res.value?.ai_response;
-            if (typeof parsed === "string") { try { parsed = JSON.parse(parsed); } catch { /* keep */ } }
-            if (typeof parsed === "object" && parsed !== null) {
-              return { short_format: parsed.short_format ?? "", long_format: parsed.long_format ?? "" };
-            }
-            return null;
-          }
-
-          setSections((prev) => ({
-            ...prev,
-            [row.decan]: {
-              planetAi: parseDecanAi(planetRes),
-              daemonAi: parseDecanAi(daemonRes),
-              tarotAi: parseDecanAi(tarotRes),
-              loading: false,
-            },
-          }));
+          newSections[row.decan] = {
+            planetAi: (row.planet_sign_short_desc || row.planet_sign_long_desc)
+              ? { short_format: row.planet_sign_short_desc ?? "", long_format: row.planet_sign_long_desc ?? "" }
+              : null,
+            daemonAi: (row.daemon_short_desc || row.daemon_long_desc)
+              ? { short_format: row.daemon_short_desc ?? "", long_format: row.daemon_long_desc ?? "" }
+              : null,
+            tarotAi: (row.tarot_short_desc || row.tarot_long_desc)
+              ? { short_format: row.tarot_short_desc ?? "", long_format: row.tarot_long_desc ?? "" }
+              : null,
+            loading: false,
+          };
         }
+        if (!cancelled) setSections(newSections);
       } catch (e: unknown) {
         if (cancelled) return;
         setRowError(e instanceof Error ? e.message : "Failed to load decan data");
@@ -2931,12 +2899,12 @@ export default function AdminHoroscopePage() {
     setShowScrollTop(false); setShowChartBtn(false);
   }, [currentSlug]);
 
-  // Pre-fetch decan possibilities
+  // Pre-fetch decan possibilities (distinct planet+sign pairs)
   useEffect(() => {
-    fetch("/api/admin/astro-decans")
+    fetch("/api/admin/astro/decan-info")
       .then((r) => r.json())
       .then((data) => {
-        if (Array.isArray(data)) setDecanPossibilities(data);
+        if (data?.results && Array.isArray(data.results)) setDecanPossibilities(data.results);
       })
       .catch(() => { });
   }, []);
