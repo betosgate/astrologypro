@@ -18,6 +18,7 @@ import {
   BarChart3,
   BarChart2,
   CalendarDays,
+  LayoutGrid,
   Gift,
   Tag,
   Mail,
@@ -49,6 +50,7 @@ import { useState } from "react";
 const navItems = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { label: "Bookings", href: "/dashboard/bookings", icon: Calendar },
+  { label: "Schedule", href: "/dashboard/schedule", icon: LayoutGrid },
   { label: "Clients", href: "/dashboard/clients", icon: Users },
   { label: "Testimonials", href: "/dashboard/testimonials", icon: MessageSquare },
   { label: "Calendar", href: "/dashboard/calendar", icon: CalendarDays },

@@ -15,6 +15,7 @@ import {
   Radio,
   Users2,
   Megaphone,
+  LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -33,6 +34,7 @@ const primaryNavItems = [
 ];
 
 const moreNavItems = [
+  { label: "Schedule", href: "/dashboard/schedule", icon: LayoutGrid },
   { label: "Profile", href: "/dashboard/profile", icon: User },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
   { label: "Testimonials", href: "/dashboard/testimonials", icon: MessageSquare },

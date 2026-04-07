@@ -14,6 +14,7 @@ import {
   sendCommunityMembershipWelcome,
 } from "@/lib/email";
 import { createCalendarEvent } from "@/lib/google-calendar";
+import { createMsCalendarEvent } from "@/lib/microsoft-calendar";
 
 export const runtime = "nodejs";
 
@@ -651,7 +652,7 @@ async function handlePaymentIntentSucceeded(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, duration_minutes, diviner_id, client_id, services(name, duration_minutes), diviners(id, display_name, google_calendar_connected), clients(email, full_name, user_id)"
+      "id, scheduled_at, duration_minutes, diviner_id, client_id, services(name, duration_minutes), diviners(id, display_name, google_calendar_connected, outlook_calendar_connected), clients(email, full_name, user_id)"
     )
     .eq("id", bookingId)
     .single();
@@ -666,6 +667,7 @@ async function handlePaymentIntentSucceeded(
     id: string;
     display_name: string;
     google_calendar_connected: boolean;
+    outlook_calendar_connected: boolean;
   } | null;
   const clientRecord = (booking as Record<string, unknown>).clients as {
     email: string;
@@ -743,6 +745,32 @@ async function handlePaymentIntentSucceeded(
       )
       .catch((err) =>
         console.error("[Webhook] Failed to create Google Calendar event:", err)
+      );
+  }
+
+  // Push event to diviner's Outlook Calendar if connected (non-blocking)
+  if (div.outlook_calendar_connected) {
+    createMsCalendarEvent(div.id, {
+      id: bookingId,
+      scheduled_at: startTime.toISOString(),
+      duration_minutes: durationMins,
+      client: {
+        full_name: clientRecord?.full_name ?? undefined,
+        email: clientRecord?.email ?? clientEmail,
+      },
+      service: { name: svc.name },
+      daily_room_url: sessionLink,
+    })
+      .then((msEventId) => {
+        if (msEventId) {
+          return supabase
+            .from("bookings")
+            .update({ outlook_calendar_event_id: msEventId })
+            .eq("id", bookingId);
+        }
+      })
+      .catch((err) =>
+        console.error("[Webhook] Failed to create Outlook Calendar event:", err)
       );
   }
 }
