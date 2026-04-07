@@ -60,6 +60,9 @@ import {
   MessageSquare,
   MousePointerClick,
   UserCog,
+  Clock,
+  FlaskConical,
+  Search,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -109,6 +112,9 @@ const NAV_GROUPS = [
       { label: "Ingress Charts", href: "/admin/ingress-charts", icon: Navigation },
       { label: "Entities", href: "/admin/mundane-entities", icon: Building2 },
       { label: "Forecasts", href: "/admin/mundane-forecasts", icon: TrendingUp },
+      { label: "Event Calendar", href: "/admin/mundane/event-calendar", icon: CalendarDays },
+      { label: "Research", href: "/admin/mundane/research", icon: FlaskConical },
+      { label: "Mundane Search", href: "/admin/mundane/search", icon: Search },
       { label: "Mundane Access", href: "/admin/mundane-access", icon: Shield },
       { label: "Decan Journals", href: "/admin/decan-journals", icon: BookOpen },
       { label: "Decan Media", href: "/admin/decan-media", icon: Film },
@@ -205,7 +211,9 @@ const NAV_GROUPS = [
   {
     label: "Support",
     items: [
-      { label: "Tickets", href: "/admin/tickets", icon: MessageSquare },
+      { label: "Tickets", href: "/admin/tickets", icon: MessageSquare, exact: true },
+      { label: "SLA Dashboard", href: "/admin/tickets/sla", icon: Clock },
+      { label: "Queue Config", href: "/admin/tickets/queues", icon: ListChecks },
     ],
   },
   {

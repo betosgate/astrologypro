@@ -51,6 +51,31 @@ export async function POST(
 
   const now = new Date().toISOString();
 
+  // ── Server-side trigger gate ────────────────────────────────────────────────
+  // If the lesson has active in-video quiz triggers, all must be passed before completion.
+  const { data: activeTriggers } = await admin
+    .from("lesson_quiz_triggers")
+    .select("id")
+    .eq("lesson_id", lessonId)
+    .eq("is_active", true);
+
+  if (activeTriggers && activeTriggers.length > 0) {
+    const triggerIds = activeTriggers.map((t) => t.id);
+    const { count: passedCount } = await admin
+      .from("lesson_trigger_progress")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .in("trigger_id", triggerIds)
+      .eq("passed", true);
+
+    if ((passedCount ?? 0) < triggerIds.length) {
+      return NextResponse.json(
+        { error: "Complete all in-video quiz questions before marking the lesson done." },
+        { status: 422 }
+      );
+    }
+  }
+
   // Look up lesson_progress to carry started_at / time_spent_seconds into completion record
   const { data: lessonProgress } = await admin
     .from("lesson_progress")

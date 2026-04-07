@@ -61,11 +61,14 @@ export async function GET() {
   if (!studentTyped)
     return NextResponse.json({ error: "Student record not found" }, { status: 404 });
 
-  // Q1 complete check — student has completed all 12 foundation weeks
+  // Q1 complete check — count weeks where all tasks are done (week_completed_at set).
+  // student_foundation_progress rows are created when the first task is completed,
+  // so we must filter on week_completed_at to avoid counting partial weeks.
   const { count: q1Count } = await supabase
     .from("student_foundation_progress")
     .select("id", { count: "exact", head: true })
-    .eq("student_id", studentTyped.id);
+    .eq("student_id", studentTyped.id)
+    .not("week_completed_at", "is", null);
 
   const q1Complete = (q1Count ?? 0) >= 12;
 

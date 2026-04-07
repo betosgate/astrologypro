@@ -2195,6 +2195,82 @@ export async function sendGraduationCongratulations({
 
 
 // ---------------------------------------------------------------------------
+// Mystery School: Post-Graduation Consultation Reminder
+// Sequence: day 0, day 3, day 7, then weekly until consultation is booked.
+// Stop condition: mystery_school_students.post_grad_consultation_booked_at IS NOT NULL
+// ---------------------------------------------------------------------------
+
+interface PostGradConsultationReminderParams {
+  to: string;
+  name: string;
+  graduationDate: string;
+  dayOffset: number; // 0 | 3 | 7 | 14 | 21 | ...
+  bookingUrl: string;
+}
+
+export async function sendPostGraduationConsultationReminder({
+  to,
+  name,
+  graduationDate,
+  dayOffset,
+  bookingUrl,
+}: PostGradConsultationReminderParams) {
+  if (await isSequencePaused("post_grad_consultation")) {
+    console.log("[email] post_grad_consultation sequence is paused — skipping send to", to);
+    return { success: false, id: "" };
+  }
+
+  const isFirst = dayOffset === 0;
+  const isUrgent = dayOffset >= 14;
+
+  const subjectByDay: Record<number, string> = {
+    0: `Congratulations, ${name} — book your post-graduation consultation`,
+    3: `Your post-graduation consultation is still available, ${name}`,
+    7: `One week since graduation — have you booked your consultation?`,
+  };
+
+  const subject =
+    subjectByDay[dayOffset] ??
+    `Reminder — post-graduation consultation available, ${name}`;
+
+  const openingLine = isFirst
+    ? `<p style="margin:0 0 16px;color:#d4d4d8;">You graduated from the Mystery School on <strong style="color:#e4e4e7;">${graduationDate}</strong>. Well done.</p>`
+    : isUrgent
+    ? `<p style="margin:0 0 16px;color:#d4d4d8;">It has been ${dayOffset} days since you graduated. Your post-graduation consultation is still waiting.</p>`
+    : `<p style="margin:0 0 16px;color:#d4d4d8;">Your post-graduation consultation with Beto is part of your Mystery School journey — and it is still available.</p>`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    ${openingLine}
+
+    ${infoCard(`<strong style="color:#e4e4e7;">Post-Graduation Consultation</strong><br/><span style="color:#a1a1aa;font-size:14px;">As a Priest or Priestess of the Mystery School, you are entitled to a private consultation to review your journey through the 36 Decans and discuss your path forward.</span>`)}
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">This session is designed to help you integrate what you have learned and set clear intentions for what comes next — including access to the personal ritual builder.</p>
+
+    ${sectionHeading("How to Book")}
+    <p style="margin:0 0 16px;color:#a1a1aa;">Click the button below to schedule your consultation. Once booked, this reminder sequence will stop automatically.</p>
+  `;
+
+  const result = await sendEmail({
+    to,
+    subject,
+    html: buildEmailHtml({
+      title: "Post-Graduation Consultation",
+      badge: "Graduate",
+      preheader: `Book your post-graduation consultation, ${name}.`,
+      content,
+      ctaText: "Book My Consultation",
+      ctaUrl: bookingUrl,
+      footer: "AstrologyPro &mdash; Mystery School &mdash; <a href=\"" + APP_URL + "/community/settings\" style=\"color:#71717a;text-decoration:underline;\">Manage email preferences</a>",
+    }),
+  });
+
+  await logEmail({ emailTo: to, templateName: "post_grad_consultation_reminder", subject, metadata: { dayOffset } });
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // Sunday Service — New Episode Notification
 // Sent to all active community members when an episode is published live.
 // ---------------------------------------------------------------------------

@@ -31,21 +31,29 @@ Current observed failures:
 - [x] Mystery School validation requires `entry_quarter` and `entry_year`.
 - [x] Mystery School upgrade flow already sends seasonal enrollment data from `/community/upgrade`.
 - [x] Join Community page now includes the required Mystery School cohort payload.
+- [x] All 4 Stripe price env vars are present in `.env.local` (verified 2026-04-07).
+- [x] Checkout API returns clear 500 error messages when env vars are missing (e.g., "Mystery School Stripe prices not configured." / "Community Stripe price not configured.").
+- [x] Checkout API validates `entry_quarter` (must be spring/summer/autumn/winter) and `entry_year` (must be >= 2026) with 422 responses.
+- [x] `/join/community` sends `entry_quarter`, `entry_year` from `getUpcomingEntryDates()` for Mystery School; sends `planType` for PM plans. Compatible with checkout API.
+- [x] `/community/upgrade` sends `entry_quarter`, `entry_year`, and `upgrade_from_pm` correctly. Compatible with checkout API.
+- [x] Checkout parity verified: both UI entry points produce payloads compatible with the checkout API contract.
+- [x] Community Stripe product/price mapping documented in this file (see Recorded Stripe IDs section).
+- [x] TypeScript compiles cleanly (`tsc --noEmit --skipLibCheck` passes with no errors, verified 2026-04-07).
 
 ### ❌ NOT DONE (Missing)
-- [ ] Stripe test-mode products/prices for Community Membership have not been verified or created.
-- [ ] `STRIPE_PRICE_COMMUNITY_INDIVIDUAL` is not configured in local/runtime env.
-- [ ] `STRIPE_PRICE_COMMUNITY_FAMILY` is not configured in local/runtime env.
-- [ ] `STRIPE_PRICE_MYSTERY_ENROLLMENT` is not configured in local/runtime env.
-- [ ] `STRIPE_PRICE_MYSTERY_MONTHLY` is not configured in local/runtime env.
-- [ ] Community Stripe product/price mapping is not documented in a single operator-facing source.
-- [ ] Checkout parity verification has not been completed for both `/join/community` and `/community/upgrade`.
+- [x] ~~Stripe test-mode products/prices for Community Membership have not been verified or created.~~ — Prices exist in `.env.local`; Stripe CLI not available on this machine to independently verify in Stripe dashboard. User should confirm products exist in Stripe test-mode dashboard.
+- [x] ~~`STRIPE_PRICE_COMMUNITY_INDIVIDUAL` is not configured in local/runtime env.~~ — Present in `.env.local`.
+- [x] ~~`STRIPE_PRICE_COMMUNITY_FAMILY` is not configured in local/runtime env.~~ — Present in `.env.local`.
+- [x] ~~`STRIPE_PRICE_MYSTERY_ENROLLMENT` is not configured in local/runtime env.~~ — Present in `.env.local`.
+- [x] ~~`STRIPE_PRICE_MYSTERY_MONTHLY` is not configured in local/runtime env.~~ — Present in `.env.local`.
+- [x] ~~Community Stripe product/price mapping is not documented in a single operator-facing source.~~ — Documented below.
+- [x] ~~Checkout parity verification has not been completed for both `/join/community` and `/community/upgrade`.~~ — Verified 2026-04-07.
 
 ### 🛠️ FIXES/REFINEMENTS
-- [ ] Add a clear setup section for required Community/Mystery Stripe env vars.
-- [ ] Ensure local `.env.local`, deployment env vars, and Stripe test mode products stay aligned.
-- [ ] Add runtime-safe diagnostics or admin/operator guidance for missing Stripe prices.
-- [ ] Reduce drift by centralizing Community/Mystery checkout payload and config expectations.
+- [x] ~~Add a clear setup section for required Community/Mystery Stripe env vars.~~ — Recorded in env wiring table below.
+- [x] ~~Ensure local `.env.local`, deployment env vars, and Stripe test mode products stay aligned.~~ — Local env confirmed present; deployment env must be configured separately by operator.
+- [x] ~~Add runtime-safe diagnostics or admin/operator guidance for missing Stripe prices.~~ — Checkout API already returns descriptive 500-level errors when env vars are missing.
+- [ ] Reduce drift by centralizing Community/Mystery checkout payload and config expectations — deferred; current implementation is stable and both entry points are verified compatible.
 
 ## Detailed Requirements
 
@@ -116,26 +124,29 @@ Update this section after Stripe setup is completed.
 
 | Env Var | Product / Purpose | Billing Type | Expected Price | Stripe Price ID | Status |
 |---|---|---|---|---|---|
-| `STRIPE_PRICE_COMMUNITY_INDIVIDUAL` | Community Membership Individual | Monthly recurring | `9.97 USD/month` | `TBD` | `Pending` |
-| `STRIPE_PRICE_COMMUNITY_FAMILY` | Community Membership Family | Monthly recurring | `19.97 USD/month` | `TBD` | `Pending` |
-| `STRIPE_PRICE_MYSTERY_ENROLLMENT` | Mystery School Enrollment | One-time | `97.00 USD` | `TBD` | `Pending` |
-| `STRIPE_PRICE_MYSTERY_MONTHLY` | Mystery School Monthly | Monthly recurring | `27.00 USD/month` | `TBD` | `Pending` |
+| `STRIPE_PRICE_COMMUNITY_INDIVIDUAL` | Community Membership Individual | Monthly recurring | `9.97 USD/month` | `price_1TJOXhBcRXKECv5fuyZ9e2o0` | `Present in .env.local` |
+| `STRIPE_PRICE_COMMUNITY_FAMILY` | Community Membership Family | Monthly recurring | `19.97 USD/month` | `price_1TJOXiBcRXKECv5fBFg8oNpi` | `Present in .env.local` |
+| `STRIPE_PRICE_MYSTERY_ENROLLMENT` | Mystery School Enrollment | One-time | `97.00 USD` | `price_1TJOXjBcRXKECv5fQ4dz7W4z` | `Present in .env.local` |
+| `STRIPE_PRICE_MYSTERY_MONTHLY` | Mystery School Monthly | Monthly recurring | `27.00 USD/month` | `price_1TJOXlBcRXKECv5f64n37Za2` | `Present in .env.local` |
 
 ## Env Wiring Record
 Update this section with the required values only. Do not modify `.env.local` from this task.
 
 | Env Var | Applied Value | Environment | Updated By | Notes |
 |---|---|---|---|---|
-| `STRIPE_PRICE_COMMUNITY_INDIVIDUAL` | `TBD` | `Manual user update required` | `User` | `Record value here only; do not edit .env.local` |
-| `STRIPE_PRICE_COMMUNITY_FAMILY` | `TBD` | `Manual user update required` | `User` | `Record value here only; do not edit .env.local` |
-| `STRIPE_PRICE_MYSTERY_ENROLLMENT` | `TBD` | `Manual user update required` | `User` | `Record value here only; do not edit .env.local` |
-| `STRIPE_PRICE_MYSTERY_MONTHLY` | `TBD` | `Manual user update required` | `User` | `Record value here only; do not edit .env.local` |
+| `STRIPE_PRICE_COMMUNITY_INDIVIDUAL` | `price_1TJOXhBcRXKECv5fuyZ9e2o0` | `.env.local` (local dev) | `Already present` | Verify in Stripe dashboard; add to deployment env separately |
+| `STRIPE_PRICE_COMMUNITY_FAMILY` | `price_1TJOXiBcRXKECv5fBFg8oNpi` | `.env.local` (local dev) | `Already present` | Verify in Stripe dashboard; add to deployment env separately |
+| `STRIPE_PRICE_MYSTERY_ENROLLMENT` | `price_1TJOXjBcRXKECv5fQ4dz7W4z` | `.env.local` (local dev) | `Already present` | Verify in Stripe dashboard; add to deployment env separately |
+| `STRIPE_PRICE_MYSTERY_MONTHLY` | `price_1TJOXlBcRXKECv5f64n37Za2` | `.env.local` (local dev) | `Already present` | Verify in Stripe dashboard; add to deployment env separately |
 
-## Current State
-- Community checkout API is implemented but blocked by missing Stripe price env vars.
-- Stripe product/price creation work is a prerequisite before `.env.local` can be completed.
-- `.env.local` currently contains Tarot/Astrology/Both Stripe prices but not Community/Mystery price IDs.
-- Runtime errors currently appear only when the affected checkout path is exercised.
+## Current State (Updated 2026-04-07)
+- Community checkout API is fully implemented and all 4 required Stripe price env vars are present in `.env.local`.
+- `.env.local` contains Tarot/Astrology/Both AND Community/Mystery Stripe price IDs.
+- Checkout API returns clear error messages when env vars are missing at runtime.
+- Both `/join/community` and `/community/upgrade` send payloads compatible with the checkout API.
+- TypeScript compiles cleanly.
+- Stripe CLI is not installed on this machine; products/prices could not be independently verified against the Stripe dashboard. User should verify in Stripe test-mode dashboard that the 4 price IDs above correspond to the correct products, amounts, and billing intervals.
+- Deployment environments (staging, production) still need these 4 env vars configured separately.
 
 ## Success Criteria
 - Stripe test-mode has valid Community and Mystery School products/prices created.

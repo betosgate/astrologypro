@@ -38,6 +38,8 @@ interface CreateTicketBody {
   subcategory?: string;
   subject: string;
   description: string;
+  related_entity_type?: string;
+  related_entity_id?: string;
 }
 
 // ─── Problem Details helper ───────────────────────────────────────────────────
@@ -115,7 +117,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return problem(400, "Bad Request", "Invalid JSON body.");
   }
 
-  const { category, subcategory, subject, description } = body;
+  const { category, subcategory, subject, description, related_entity_type, related_entity_id } = body;
 
   if (!category || !subject || !description) {
     return problem(422, "Validation Error", "category, subject, and description are required.");
@@ -125,6 +127,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   if (description.trim().length < 10) {
     return problem(422, "Validation Error", "description must be at least 10 characters.");
+  }
+
+  // Validate related entity if provided
+  const allowedEntityTypes = ["order", "booking", "session", "course", "payout"];
+  if (related_entity_type && !allowedEntityTypes.includes(related_entity_type)) {
+    return problem(422, "Validation Error", `related_entity_type must be one of: ${allowedEntityTypes.join(", ")}.`);
+  }
+  if (related_entity_id && related_entity_id.trim().length > 255) {
+    return problem(422, "Validation Error", "related_entity_id must be 255 characters or fewer.");
   }
 
   // Resolve user metadata
@@ -151,6 +162,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       requester_email: requesterEmail,
       requester_name: requesterName,
       requester_role: "customer",
+      related_entity_type: related_entity_type?.trim() ?? null,
+      related_entity_id: related_entity_id?.trim() ?? null,
     })
     .select()
     .single();

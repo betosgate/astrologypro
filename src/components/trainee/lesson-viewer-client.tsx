@@ -545,7 +545,19 @@ export function LessonViewerClient(props: LessonViewerProps) {
   const [assetsExpanded, setAssetsExpanded] = useState(false);
 
   const hasQuiz = quizQuestions.length > 0;
-  const canComplete = !hasQuiz || quizPassed;
+
+  // All in-video trigger questions must be answered correctly before completing.
+  // A trigger counts as requiring a pass if it has a question attached.
+  const hasTriggers = triggers.length > 0;
+  const allTriggersPassed =
+    !hasTriggers ||
+    triggers.every((t) => {
+      // Only gate on triggers that have a question
+      if (!t.question) return true;
+      return t.user_progress?.passed === true;
+    });
+
+  const canComplete = (!hasQuiz || quizPassed) && allTriggersPassed;
 
   const handleVideoEnded = useCallback(() => {
     // Auto-advance to next video if available
@@ -853,7 +865,11 @@ export function LessonViewerClient(props: LessonViewerProps) {
             alreadyCompleted={isCompleted}
             disabled={!canComplete}
             disabledReason={
-              !canComplete ? "Pass the quiz above to complete this lesson." : undefined
+              !canComplete
+                ? !allTriggersPassed && (!hasQuiz || quizPassed)
+                  ? "Answer all in-video quiz questions correctly to complete this lesson."
+                  : "Pass the quiz above to complete this lesson."
+                : undefined
             }
             className="px-0"
           />
