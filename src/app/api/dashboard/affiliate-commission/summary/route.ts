@@ -44,11 +44,21 @@ export async function GET() {
 
   if (payoutError) return NextResponse.json({ error: payoutError.message }, { status: 500 });
 
+  // Resolve diviner record so we can scope affiliate lookup correctly
+  const { data: diviner } = await admin
+    .from("diviners")
+    .select("id")
+    .eq("user_id", user.id)
+    .single();
+
   // Fetch affiliate list so we have names — select user_id for the commission system lookup
-  const { data: affiliateRows, error: affiliateError } = await admin
-    .from("affiliates")
-    .select("id, name, email, user_id")
-    .eq("diviner_id", user.id);
+  // diviner_affiliates uses diviner_id = diviners.id (UUID), not auth user.id
+  const { data: affiliateRows, error: affiliateError } = diviner
+    ? await admin
+        .from("diviner_affiliates")
+        .select("id, name, email, user_id")
+        .eq("diviner_id", diviner.id)
+    : { data: [], error: null };
 
   if (affiliateError) return NextResponse.json({ error: affiliateError.message }, { status: 500 });
 

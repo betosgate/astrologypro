@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Star, BookOpen, Users, Moon, Check } from "lucide-react";
 import { toast } from "sonner";
+import { getUpcomingEntryDates } from "@/lib/mystery-school/quarters";
 
 type MembershipType = "perennial_mandalism" | "mystery_school";
 type PlanType = "individual" | "family";
@@ -17,16 +18,26 @@ export default function JoinCommunityPage() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<MembershipType>("perennial_mandalism");
   const [planType, setPlanType] = useState<PlanType>("individual");
+  const nextMysterySchoolEntry = getUpcomingEntryDates()[0] ?? null;
 
   async function handleSubscribe() {
     setLoading(true);
     try {
+      const mysterySchoolPayload =
+        activeTab === "mystery_school"
+          ? {
+              entry_quarter: nextMysterySchoolEntry?.quarter,
+              entry_year: nextMysterySchoolEntry?.year,
+            }
+          : {};
+
       const res = await fetch("/api/community/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           membershipType: activeTab,
           planType: activeTab === "mystery_school" ? "individual" : planType,
+          ...mysterySchoolPayload,
         }),
       });
 
@@ -162,6 +173,13 @@ export default function JoinCommunityPage() {
                           <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-center">
                             <p className="text-2xl font-bold">{p.pricing[0].price}</p>
                             <p className="mt-1 text-xs text-muted-foreground">Cancel anytime · Billed via Stripe</p>
+                            {key === "mystery_school" && nextMysterySchoolEntry && (
+                              <p className="mt-3 text-xs text-muted-foreground">
+                                Next cohort: <span className="font-medium text-foreground capitalize">
+                                  {nextMysterySchoolEntry.quarter} {nextMysterySchoolEntry.year}
+                                </span>
+                              </p>
+                            )}
                           </div>
                         )}
 

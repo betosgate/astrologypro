@@ -14,11 +14,13 @@ export default async function CommunityLayout({ children }: { children: React.Re
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // Use maybeSingle so a missing membership row redirects cleanly instead of
+  // throwing a PostgREST single-row error.
   const { data: member } = await supabase
     .from("community_members")
     .select("id, full_name, membership_type, membership_status")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!member) redirect("/join/community");
   if (member.membership_status !== "active") redirect("/join/community?status=inactive");

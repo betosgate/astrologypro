@@ -54,3 +54,94 @@ export async function GET(
 
   return NextResponse.json({ data: items, nextCursor, hasMore });
 }
+
+// PATCH /api/admin/affiliates/[id]/disputes
+// Resolve or dismiss a dispute.
+// Body: { dispute_id, status: "resolved" | "dismissed" | "under_review", resolution_notes? }
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const user = await getAdminUser();
+  if (!user) {
+    return NextResponse.json(
+      { type: "https://httpstatuses.io/403", title: "Forbidden", status: 403 },
+      { status: 403 }
+    );
+  }
+
+  const { id: affiliateId } = await params;
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { type: "https://httpstatuses.io/422", title: "Invalid JSON body", status: 422 },
+      { status: 422 }
+    );
+  }
+
+  const { dispute_id, status: newStatus, resolution_notes } = body as Record<string, unknown>;
+
+  const allowedStatuses = ["resolved", "dismissed", "under_review"];
+  if (typeof dispute_id !== "string" || dispute_id.trim() === "") {
+    return NextResponse.json(
+      { type: "https://httpstatuses.io/422", title: "dispute_id is required", status: 422 },
+      { status: 422 }
+    );
+  }
+  if (typeof newStatus !== "string" || !allowedStatuses.includes(newStatus)) {
+    return NextResponse.json(
+      {
+        type: "https://httpstatuses.io/422",
+        title: "Validation error",
+        status: 422,
+        detail: `status must be one of: ${allowedStatuses.join(", ")}`,
+      },
+      { status: 422 }
+    );
+  }
+
+  const admin = createAdminClient();
+
+  // Verify dispute belongs to the given affiliate
+  const { data: existing, error: fetchError } = await admin
+    .from("affiliate_commission_disputes")
+    .select("id, affiliate_id, status")
+    .eq("id", dispute_id.trim())
+    .eq("affiliate_id", affiliateId)
+    .single();
+
+  if (fetchError || !existing) {
+    return NextResponse.json(
+      { type: "https://httpstatuses.io/404", title: "Dispute not found", status: 404 },
+      { status: 404 }
+    );
+  }
+
+  const updatePayload: Record<string, unknown> = { status: newStatus };
+  if (newStatus === "resolved" || newStatus === "dismissed") {
+    updatePayload.resolved_by = user.id;
+    updatePayload.resolved_at = new Date().toISOString();
+  }
+  if (typeof resolution_notes === "string" && resolution_notes.trim()) {
+    updatePayload.resolution_notes = resolution_notes.trim();
+  }
+
+  const { data, error } = await admin
+    .from("affiliate_commission_disputes")
+    .update(updatePayload)
+    .eq("id", dispute_id.trim())
+    .select("id, status, resolution_notes, resolved_by, resolved_at, updated_at")
+    .single();
+
+  if (error || !data) {
+    return NextResponse.json(
+      { type: "https://httpstatuses.io/500", title: "Database error", detail: error?.message, status: 500 },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ data });
+}

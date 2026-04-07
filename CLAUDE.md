@@ -75,6 +75,12 @@ Before planning, always verify:
 
 ---
 
+## Developer Workflow Rules
+
+- **Never start the local dev server** (`npm run dev`, `next dev`, etc.) without explicitly asking the user first.
+
+---
+
 ## Known Technical Debt (do not introduce more)
 
 - `bypassSecurityTrustHtml` used in pipes — XSS risk, do not use for new pipes
