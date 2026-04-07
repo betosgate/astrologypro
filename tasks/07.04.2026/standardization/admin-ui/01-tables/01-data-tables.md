@@ -7,7 +7,7 @@ Establish the "Users Table" pattern as the universal standard for all administra
 Administrative tables must provide a consistent set of tools for data operators. Discrepancies in how search, sorting, or pagination work across modules lead to confusion and reduced efficiency.
 
 ## Standard Reference Pattern
-- **Reference File**: `file:///home/lucifer/Projects/astrologypro/src/components/admin/user-management-client.tsx`
+- **Reference File**: `src/components/admin/user-management-client.tsx`
 - **Key Component**: `SortHeader` (lines 265–291)
 - **Key Pattern**: `pushParams` helper for URL-driven state management (lines 395–412)
 

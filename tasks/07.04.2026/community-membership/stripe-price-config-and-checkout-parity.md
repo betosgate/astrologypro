@@ -2,6 +2,20 @@
 Date: 2026-04-07
 Category: Community Membership Module
 
+## Status
+Partially superseded by the dedicated Mystery School task set in:
+
+- `tasks/07.04.2026/mystery-school/00-master-task.md`
+- `tasks/07.04.2026/mystery-school/01-stripe-pricing-and-catalog.md`
+- `tasks/07.04.2026/mystery-school/02-parallel-membership-model.md`
+- `tasks/07.04.2026/mystery-school/03-admin-discount-setting.md`
+
+Use this file only for baseline Community / Mystery School Stripe setup and current checkout parity.
+Do not use this file as the source of truth for:
+- PM + Mystery School parallel membership behavior
+- admin-controlled PM-user Mystery School discount behavior
+- discounted Mystery School monthly Stripe price (`17.03 USD/month`)
+
 ## Execution Note For AI Agent
 - This task is intended to be executable by an AI agent.
 - The agent must treat this file as both:

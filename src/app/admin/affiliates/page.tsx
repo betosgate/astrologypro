@@ -60,6 +60,8 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+const PAGE_SIZE = 20;
+
 export default function AdminAffiliatesPage() {
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
   const [diviners, setDiviners] = useState<Diviner[]>([]);
@@ -70,6 +72,12 @@ export default function AdminAffiliatesPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Pagination state
+  const [cursorStack, setCursorStack] = useState<string[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const currentPage = cursorStack.length + 1;
+
   // Form state
   const [formDivinerId, setFormDivinerId] = useState("");
   const [formName, setFormName] = useState("");
@@ -78,21 +86,28 @@ export default function AdminAffiliatesPage() {
   const [formCommType, setFormCommType] = useState("percentage");
   const [formCommValue, setFormCommValue] = useState("10");
 
-  const loadAffiliates = useCallback(async () => {
+  const loadAffiliates = useCallback(async (cursor?: string | null) => {
     setLoading(true);
     const params = new URLSearchParams();
     if (filterStatus) params.set("status", filterStatus);
     if (filterDiviner) params.set("diviner_id", filterDiviner);
     if (q) params.set("q", q);
+    params.set("limit", String(PAGE_SIZE));
+    if (cursor) params.set("cursor", cursor);
     const res = await fetch(`/api/admin/affiliates?${params}`);
     if (res.ok) {
       const json = await res.json();
       setAffiliates(json.data ?? []);
+      setNextCursor(json.nextCursor ?? null);
+      setHasMore(json.hasMore ?? false);
     }
     setLoading(false);
   }, [filterStatus, filterDiviner, q]);
 
   useEffect(() => {
+    setCursorStack([]);
+    setNextCursor(null);
+    setHasMore(false);
     loadAffiliates();
   }, [loadAffiliates]);
 
@@ -139,6 +154,26 @@ export default function AdminAffiliatesPage() {
       toast.error(err.title ?? "Failed to create affiliate");
     }
     setSaving(false);
+  }
+
+  function goNextPage() {
+    if (!nextCursor) return;
+    // The current first item's cursor is the last item id on the current page
+    const currentCursor = cursorStack.length > 0 ? cursorStack[cursorStack.length - 1] : undefined;
+    setCursorStack((prev) => [...prev, nextCursor]);
+    loadAffiliates(nextCursor);
+  }
+
+  function goPrevPage() {
+    if (cursorStack.length <= 1) {
+      // Go back to first page
+      setCursorStack([]);
+      loadAffiliates();
+    } else {
+      const newStack = cursorStack.slice(0, -1);
+      setCursorStack(newStack);
+      loadAffiliates(newStack[newStack.length - 1]);
+    }
   }
 
   const divinerNameMap = Object.fromEntries(diviners.map((d) => [d.id, d.display_name]));
@@ -318,6 +353,33 @@ export default function AdminAffiliatesPage() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+
+          {/* Pagination controls */}
+          {(cursorStack.length > 0 || hasMore) && (
+            <div className="flex items-center justify-between border-t pt-4 mt-4">
+              <p className="text-sm text-muted-foreground">
+                Page {currentPage}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={cursorStack.length === 0}
+                  onClick={goPrevPage}
+                >
+                  Prev
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!hasMore}
+                  onClick={goNextPage}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

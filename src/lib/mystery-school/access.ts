@@ -1,11 +1,15 @@
 /**
  * Mystery School access guard.
  *
- * A user has active Mystery School access when ALL of the following are true:
- *   1. They have a community_members row with membership_type = 'mystery_school'
- *      AND membership_status = 'active'
- *   2. They have a mystery_school_students row with status = 'active'
- *      (or access_expires_at is in the future for cancelled-but-still-paid periods)
+ * Parallel membership model:
+ *   - mystery_school_students is the authoritative MS entitlement
+ *   - community_members may be PM, MS (legacy), or absent
+ *   - A user with both PM community_members AND mystery_school_students
+ *     has dual entitlement
+ *
+ * A user has active Mystery School access when:
+ *   - They have a mystery_school_students row with status = 'active'
+ *   - OR status = 'cancelled' but access_expires_at is in the future
  *
  * This check must live in the server/API layer — never in UI only.
  */
@@ -35,9 +39,10 @@ export interface MysterySchoolStudent {
  * Returns the authenticated user's MysterySchoolStudent record if they have
  * active access, or `null` if they are not enrolled / not active.
  *
- * Checks both community_members (membership gate) and mystery_school_students
- * (lifecycle gate) so access cannot be obtained by manipulating either record
- * in isolation.
+ * The mystery_school_students table is the single source of truth for MS
+ * entitlement (parallel membership model). community_members is NOT checked
+ * for membership_type — it may still be 'perennial_mandalism' for dual-
+ * entitlement users.
  *
  * For cancelled students: access is still granted while `access_expires_at` is
  * in the future, matching the business rule that access revokes at end of paid
@@ -54,22 +59,7 @@ export async function requireMysterySchoolAccess(): Promise<{
 
   if (!user) return null;
 
-  // Check community membership gate (RLS enforces user_id = auth.uid())
-  const { data: member } = await supabase
-    .from("community_members")
-    .select("id, membership_type, membership_status")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (
-    !member ||
-    member.membership_type !== "mystery_school" ||
-    member.membership_status !== "active"
-  ) {
-    return null;
-  }
-
-  // Check student lifecycle gate
+  // Check student lifecycle gate — this is the authoritative MS entitlement.
   // Cast via unknown because Supabase generated types may not yet reflect
   // the new columns added in migration 20260406000020.
   const { data: studentRaw } = await supabase

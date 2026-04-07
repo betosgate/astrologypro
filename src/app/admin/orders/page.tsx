@@ -1,153 +1,341 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import Link from "next/link";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Eye, ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
 
-type Order = {
-  id: string;
-  booking_id: string | null;
-  client_id: string | null;
-  diviner_id: string | null;
-  service_type: string | null;
-  amount: number | null;
-  currency: string | null;
-  status: string;
-  stripe_payment_intent_id: string | null;
-  invoice_email_sent: boolean | null;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
+export const metadata = { title: "Orders — Admin" };
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const PAGE_SIZE = 20;
+
+const STATUS_COLORS: Record<string, string> = {
+  paid: "bg-green-500/10 text-green-700 dark:text-green-400",
+  completed: "bg-green-500/10 text-green-700 dark:text-green-400",
+  pending: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  refunded: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  cancelled: "bg-red-500/10 text-red-700 dark:text-red-400",
+  failed: "bg-red-500/10 text-red-700 dark:text-red-400",
 };
 
-const STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  paid: "default",
-  pending: "outline",
-  refunded: "secondary",
-  failed: "destructive",
-};
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-export default function AdminOrdersPage() {
-  const [items, setItems] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [previewItem, setPreviewItem] = useState<Order | null>(null);
-  const [filterStatus, setFilterStatus] = useState("");
-  const [filterFrom, setFilterFrom] = useState("");
-  const [filterTo, setFilterTo] = useState("");
+function fmtDate(iso?: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
-  async function load() {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (filterStatus) params.set("status", filterStatus);
-    if (filterFrom) params.set("from", filterFrom);
-    if (filterTo) params.set("to", filterTo);
-    const res = await fetch(`/api/admin/orders?${params}`);
-    if (res.ok) setItems(await res.json());
-    setLoading(false);
+function fmtAmount(amountCents: number | null, currency?: string | null) {
+  if (amountCents == null) return "—";
+  return `$${(amountCents / 100).toFixed(2)}`;
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const cls = STATUS_COLORS[status] ?? "bg-muted text-muted-foreground";
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${cls}`}>
+      {status}
+    </span>
+  );
+}
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface OrdersSearchParams {
+  status?: string;
+  q?: string;
+  page?: string;
+}
+
+// ─── Data fetch ──────────────────────────────────────────────────────────────
+
+async function getOrders(params: OrdersSearchParams) {
+  const admin = createAdminClient();
+  const page = Math.max(1, parseInt(params.page ?? "1", 10));
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
+  // Build query with count
+  let query = admin
+    .from("orders")
+    .select(
+      "id, client_id, diviner_id, service_type, product_title, amount, amount_cents, currency, status, stripe_payment_intent_id, created_at",
+      { count: "exact" }
+    )
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(from, to);
+
+  if (params.status) query = query.eq("status", params.status);
+  if (params.q) {
+    query = query.or(
+      `product_title.ilike.%${params.q}%,stripe_payment_intent_id.ilike.%${params.q}%,id.ilike.%${params.q}%`
+    );
   }
 
-  useEffect(() => { load(); }, [filterStatus, filterFrom, filterTo]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { data, count, error } = await query;
+  if (error) return { orders: [], total: 0 };
 
-  async function openPreview(id: string) {
-    const res = await fetch(`/api/admin/orders/${id}`);
-    if (!res.ok) return;
-    setPreviewItem(await res.json());
+  const orders = (data ?? []) as Array<Record<string, unknown>>;
+
+  // Fetch client and diviner names in bulk
+  const clientIds = [...new Set(orders.map((o) => o.client_id as string).filter(Boolean))];
+  const divinerIds = [...new Set(orders.map((o) => o.diviner_id as string).filter(Boolean))];
+
+  const [clientsRes, divinersRes] = await Promise.all([
+    clientIds.length > 0
+      ? admin.from("clients").select("id, full_name, email").in("id", clientIds)
+      : Promise.resolve({ data: [] }),
+    divinerIds.length > 0
+      ? admin.from("diviners").select("id, display_name, username").in("id", divinerIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const clientMap = Object.fromEntries(
+    ((clientsRes.data ?? []) as Array<Record<string, unknown>>).map((c) => [
+      c.id,
+      { name: (c.full_name as string) || (c.email as string) || "—" },
+    ])
+  );
+
+  const divinerMap = Object.fromEntries(
+    ((divinersRes.data ?? []) as Array<Record<string, unknown>>).map((d) => [
+      d.id,
+      { name: (d.display_name as string) || `@${d.username}` || "—" },
+    ])
+  );
+
+  return {
+    orders: orders.map((o) => ({
+      id: o.id as string,
+      clientName: clientMap[o.client_id as string]?.name ?? "—",
+      divinerName: divinerMap[o.diviner_id as string]?.name ?? "—",
+      service: (o.product_title as string) || (o.service_type as string) || "—",
+      amountCents:
+        (o.amount_cents as number) != null && (o.amount_cents as number) > 0
+          ? (o.amount_cents as number)
+          : o.amount != null
+            ? Math.round(Number(o.amount) * 100)
+            : null,
+      currency: (o.currency as string) ?? "usd",
+      status: o.status as string,
+      createdAt: o.created_at as string,
+    })),
+    total: count ?? 0,
+  };
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+
+export default async function AdminOrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<OrdersSearchParams>;
+}) {
+  const params = await searchParams;
+  const { orders, total } = await getOrders(params);
+
+  const currentPage = Math.max(1, parseInt(params.page ?? "1", 10));
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const statusFilter = params.status ?? "";
+  const searchQ = params.q ?? "";
+
+  const STATUS_OPTIONS = ["", "paid", "completed", "pending", "refunded", "cancelled", "failed"];
+
+  function buildUrl(overrides: Record<string, string>) {
+    const p = new URLSearchParams();
+    if (overrides.status !== undefined) {
+      if (overrides.status) p.set("status", overrides.status);
+    } else if (statusFilter) {
+      p.set("status", statusFilter);
+    }
+    if (overrides.q !== undefined) {
+      if (overrides.q) p.set("q", overrides.q);
+    } else if (searchQ) {
+      p.set("q", searchQ);
+    }
+    if (overrides.page !== undefined) {
+      if (overrides.page !== "1") p.set("page", overrides.page);
+    } else if (params.page && params.page !== "1") {
+      p.set("page", params.page);
+    }
+    const qs = p.toString();
+    return `/admin/orders${qs ? `?${qs}` : ""}`;
   }
-
-  const total = items.reduce((s, o) => s + (o.amount ?? 0), 0);
 
   return (
     <div className="space-y-6">
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <div>
-        <h1 className="text-2xl font-bold">Orders</h1>
-        <p className="text-muted-foreground">{items.length} orders · Total: ${(total / 100).toFixed(2)}</p>
+        <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
+        <p className="text-sm text-muted-foreground">
+          {total} order{total !== 1 ? "s" : ""} total
+        </p>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <select
-          className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-        >
-          <option value="">All statuses</option>
-          <option value="paid">Paid</option>
-          <option value="pending">Pending</option>
-          <option value="refunded">Refunded</option>
-          <option value="failed">Failed</option>
-        </select>
-        <Input type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} className="w-40" />
-        <Input type="date" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} className="w-40" />
-        {(filterStatus || filterFrom || filterTo) && (
-          <Button variant="ghost" size="sm" onClick={() => { setFilterStatus(""); setFilterFrom(""); setFilterTo(""); }}>
-            Clear
+      {/* ── Filters ─────────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <form action="/admin/orders" method="get" className="contents">
+          <input
+            type="text"
+            name="q"
+            defaultValue={searchQ}
+            placeholder="Search order ID, title, or Stripe PI..."
+            className="flex h-9 w-64 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+          {statusFilter && <input type="hidden" name="status" value={statusFilter} />}
+          <Button type="submit" variant="secondary" size="sm">
+            Search
           </Button>
+        </form>
+
+        <div className="flex gap-1">
+          {STATUS_OPTIONS.map((s) => (
+            <Link
+              key={s || "all"}
+              href={buildUrl({ status: s, page: "1" })}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
+                statusFilter === s
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              {s || "All"}
+            </Link>
+          ))}
+        </div>
+
+        {(statusFilter || searchQ) && (
+          <Link href="/admin/orders">
+            <Button variant="ghost" size="sm">
+              Clear
+            </Button>
+          </Link>
         )}
       </div>
 
-      {previewItem && (
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-start justify-between">
-              <CardTitle className="text-base">Order Preview</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => setPreviewItem(null)}>Close</Button>
+      {/* ── Table ───────────────────────────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ShoppingBag className="size-4" />
+            Orders
+            <Badge variant="secondary" className="ml-1">{total}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {orders.length === 0 ? (
+            <div className="flex flex-col items-center gap-4 py-16 text-center">
+              <ShoppingBag className="size-10 text-muted-foreground/30" />
+              <p className="text-muted-foreground">No orders found.</p>
             </div>
-          </CardHeader>
-          <CardContent className="text-sm space-y-2">
-            <div className="grid sm:grid-cols-2 gap-2">
-              <div><span className="font-medium">ID: </span>{previewItem.id}</div>
-              <div><span className="font-medium">Booking ID: </span>{previewItem.booking_id ?? "—"}</div>
-              <div><span className="font-medium">Client ID: </span>{previewItem.client_id ?? "—"}</div>
-              <div><span className="font-medium">Diviner ID: </span>{previewItem.diviner_id ?? "—"}</div>
-              <div><span className="font-medium">Service Type: </span>{previewItem.service_type ?? "—"}</div>
-              <div><span className="font-medium">Amount: </span>{previewItem.amount != null ? `${(previewItem.amount / 100).toFixed(2)} ${previewItem.currency?.toUpperCase()}` : "—"}</div>
-              <div><span className="font-medium">Status: </span><Badge variant={STATUS_COLORS[previewItem.status] ?? "outline"}>{previewItem.status}</Badge></div>
-              <div><span className="font-medium">Stripe PI: </span><span className="font-mono text-xs">{previewItem.stripe_payment_intent_id ?? "—"}</span></div>
-              <div><span className="font-medium">Invoice Sent: </span>{previewItem.invoice_email_sent ? "Yes" : "No"}</div>
-              <div><span className="font-medium">Created: </span>{new Date(previewItem.created_at).toLocaleString()}</div>
-              <div className="sm:col-span-2"><span className="font-medium">Notes: </span>{previewItem.notes ?? "—"}</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order #</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Diviner</TableHead>
+                    <TableHead>Service</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-mono text-xs">
+                        <Link
+                          href={`/admin/orders/${order.id}`}
+                          className="hover:underline"
+                        >
+                          {order.id.slice(0, 8)}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-sm">{order.clientName}</TableCell>
+                      <TableCell className="text-sm">{order.divinerName}</TableCell>
+                      <TableCell className="text-sm max-w-[200px] truncate">
+                        {order.service}
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">
+                        {fmtAmount(order.amountCents, order.currency)}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={order.status} />
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {fmtDate(order.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" className="size-8" asChild>
+                          <Link href={`/admin/orders/${order.id}`}>
+                            <Eye className="size-3.5" />
+                            <span className="sr-only">View</span>
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
 
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : items.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-sm text-muted-foreground">No orders found.</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {items.map((order) => (
-            <Card key={order.id}>
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between gap-4 flex-wrap">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium">{order.service_type ?? "Unknown service"}</span>
-                      <Badge variant={STATUS_COLORS[order.status] ?? "outline"}>{order.status}</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {order.amount != null ? `$${(order.amount / 100).toFixed(2)} ${order.currency?.toUpperCase()}` : "—"}
-                      {order.stripe_payment_intent_id && <span className="ml-2 font-mono text-xs">{order.stripe_payment_intent_id}</span>}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{new Date(order.created_at).toLocaleString()}</p>
-                  </div>
-                  <Button size="sm" variant="outline" onClick={() => openPreview(order.id)}>
-                    <Eye className="size-4" />
+          {/* ── Pagination ──────────────────────────────────────────────── */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t pt-4 mt-4">
+              <p className="text-sm text-muted-foreground">
+                Page {currentPage} of {totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                {currentPage > 1 ? (
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={buildUrl({ page: String(currentPage - 1) })}>
+                      <ChevronLeft className="mr-1 size-4" />
+                      Prev
+                    </Link>
                   </Button>
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
-      )}
+                ) : (
+                  <Button variant="outline" size="sm" disabled>
+                    <ChevronLeft className="mr-1 size-4" />
+                    Prev
+                  </Button>
+                )}
+                {currentPage < totalPages ? (
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={buildUrl({ page: String(currentPage + 1) })}>
+                      Next
+                      <ChevronRight className="ml-1 size-4" />
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button variant="outline" size="sm" disabled>
+                    Next
+                    <ChevronRight className="ml-1 size-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

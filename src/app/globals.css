@@ -204,3 +204,32 @@
 .font-display {
   font-family: var(--font-display, "Cormorant Garamond", Georgia, serif);
 }
+
+/* ─── Global Scrollbar Styling ─────────────────────────────────────── */
+@layer base {
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #c9a84c;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #e2c97e;
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #c9a84c transparent;
+  }
+}

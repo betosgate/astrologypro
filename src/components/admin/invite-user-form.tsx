@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Loader2, UserPlus, CheckCircle } from "lucide-react";
@@ -22,6 +23,7 @@ export function InviteUserForm() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
+  const [personalMessage, setPersonalMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -36,7 +38,7 @@ export function InviteUserForm() {
       const res = await fetch("/api/admin/invite-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, role, name }),
+        body: JSON.stringify({ email, role, name, personal_message: personalMessage || undefined }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -47,6 +49,7 @@ export function InviteUserForm() {
       setEmail("");
       setName("");
       setRole("");
+      setPersonalMessage("");
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -62,6 +65,7 @@ export function InviteUserForm() {
       setEmail("");
       setName("");
       setRole("");
+      setPersonalMessage("");
     }
   }
 
@@ -88,7 +92,7 @@ export function InviteUserForm() {
             <p className="text-sm text-muted-foreground">
               An email has been sent to <strong>{email || "the user"}</strong>.
             </p>
-            <Button variant="outline" onClick={() => { setSuccess(false); setEmail(""); setName(""); setRole(""); }}>
+            <Button variant="outline" onClick={() => { setSuccess(false); setEmail(""); setName(""); setRole(""); setPersonalMessage(""); }}>
               Invite another
             </Button>
           </div>
@@ -128,6 +132,17 @@ export function InviteUserForm() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invite-message">Personal Message (optional)</Label>
+              <Textarea
+                id="invite-message"
+                placeholder="Add a personal note to include in the invitation email..."
+                value={personalMessage}
+                onChange={(e) => setPersonalMessage(e.target.value)}
+                rows={3}
+                className="resize-none"
+              />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <div className="flex justify-end gap-2">

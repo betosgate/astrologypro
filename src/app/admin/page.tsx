@@ -28,6 +28,11 @@ import {
   Megaphone,
   UserCheck,
   ArrowRight,
+  Activity,
+  UserPlus,
+  Target,
+  Receipt,
+  ArrowUpRight,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 
@@ -38,9 +43,21 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const admin = createAdminClient();
 
+  const now = new Date();
+
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
+
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString();
 
   const [
     divinerCount,
@@ -65,6 +82,12 @@ export default async function AdminPage() {
     traineesTotal,
     traineesActiveCount,
     traineesNew30d,
+    // ── New KPI queries ───────────────────────────────────────────────────
+    activeUsersToday,
+    newUsersThisWeek,
+    ordersCompleted,
+    revenueThisMonth,
+    revenueLastMonth,
   ] = await Promise.all([
     // Total diviners
     admin
@@ -144,6 +167,18 @@ export default async function AdminPage() {
     admin.from("trainees").select("id", { count: "exact", head: true }),
     admin.from("trainees").select("id", { count: "exact", head: true }).eq("training_status", "active"),
     admin.from("trainees").select("id", { count: "exact", head: true }).gte("created_at", thirtyDaysAgoISO),
+
+    // ── New KPI queries ───────────────────────────────────────────────────
+    // Active users today (profiles with last_sign_in_at >= today)
+    admin.from("profiles").select("id", { count: "exact", head: true }).gte("last_sign_in_at", todayStart),
+    // New users this week
+    admin.from("profiles").select("id", { count: "exact", head: true }).gte("created_at", sevenDaysAgoISO),
+    // Completed orders (for AOV)
+    admin.from("bookings").select("total_amount, base_price").eq("status", "completed"),
+    // Revenue this month
+    admin.from("bookings").select("total_amount, base_price").eq("status", "completed").gte("created_at", thisMonthStart),
+    // Revenue last month
+    admin.from("bookings").select("total_amount, base_price").eq("status", "completed").gte("created_at", lastMonthStart).lte("created_at", lastMonthEnd),
   ]);
 
   const totalBookingCount = totalBookings.count ?? 0;
@@ -210,6 +245,38 @@ export default async function AdminPage() {
       };
     });
   }
+
+  // ── New KPI computations ──────────────────────────────────────────────────
+  const activeUsersTodayCount = activeUsersToday.count ?? 0;
+  const newUsersWeekCount = newUsersThisWeek.count ?? 0;
+
+  const bookingConversionRate =
+    totalBookingCount > 0
+      ? ((completedCount / totalBookingCount) * 100).toFixed(1)
+      : "0.0";
+
+  const completedOrdersData = ordersCompleted.data ?? [];
+  const completedOrderCount = completedOrdersData.length;
+  const completedOrderSum = completedOrdersData.reduce(
+    (sum: number, b: any) => sum + (b.total_amount ?? b.base_price ?? 0),
+    0
+  );
+  const avgOrderValue = completedOrderCount > 0 ? completedOrderSum / completedOrderCount : 0;
+
+  const thisMonthRevenue = (revenueThisMonth.data ?? []).reduce(
+    (sum: number, b: any) => sum + (b.total_amount ?? b.base_price ?? 0),
+    0
+  );
+  const lastMonthRevenue = (revenueLastMonth.data ?? []).reduce(
+    (sum: number, b: any) => sum + (b.total_amount ?? b.base_price ?? 0),
+    0
+  );
+  const momGrowth =
+    lastMonthRevenue > 0
+      ? (((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100).toFixed(1)
+      : thisMonthRevenue > 0
+      ? "100.0"
+      : "0.0";
 
   // ── Role KPI data ─────────────────────────────────────────────────────────
   const roleKpis = [
@@ -353,6 +420,68 @@ export default async function AdminPage() {
               %
             </div>
             <p className="text-xs text-muted-foreground">bookings completed</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Extended KPI cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Users Today</CardTitle>
+            <Activity className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeUsersTodayCount}</div>
+            <p className="text-xs text-muted-foreground">signed in today</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">New Users (7d)</CardTitle>
+            <UserPlus className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{newUsersWeekCount}</div>
+            <p className="text-xs text-muted-foreground">joined this week</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Booking Conversion</CardTitle>
+            <Target className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{bookingConversionRate}%</div>
+            <p className="text-xs text-muted-foreground">completed / total</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Order Value</CardTitle>
+            <Receipt className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(avgOrderValue)}</div>
+            <p className="text-xs text-muted-foreground">{completedOrderCount} completed orders</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">MoM Growth</CardTitle>
+            <ArrowUpRight className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {Number(momGrowth) >= 0 ? "+" : ""}{momGrowth}%
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {formatCurrency(thisMonthRevenue)} vs {formatCurrency(lastMonthRevenue)}
+            </p>
           </CardContent>
         </Card>
       </div>
