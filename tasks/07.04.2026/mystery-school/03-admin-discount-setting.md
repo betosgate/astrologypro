@@ -2,6 +2,13 @@
 Date: 2026-04-07
 Category: Mystery School Module
 
+## Status
+
+- Mostly implemented
+- Admin setting storage and UI already exist in the codebase
+- Audit current behavior before changing it
+- Focus only on missing behavior, bugs, or integration gaps
+
 ## Objective
 Add a global admin-controlled setting that enables or disables the PM-user Mystery School monthly discount.
 

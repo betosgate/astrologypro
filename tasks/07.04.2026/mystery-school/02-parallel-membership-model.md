@@ -2,6 +2,13 @@
 Date: 2026-04-07
 Category: Mystery School Module
 
+## Status
+
+- Mostly implemented
+- Audit the existing code and data model before making changes
+- Do not reintroduce single-membership replacement logic
+- Only patch remaining mismatches or regressions
+
 ## Objective
 Change the membership model so Perennial Mandalism and Mystery School can coexist for the same user.
 

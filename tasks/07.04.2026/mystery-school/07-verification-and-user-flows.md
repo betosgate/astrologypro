@@ -1,6 +1,13 @@
-# Task 05: Verification And User Flows
+# Task 07: Verification And User Flows
 Date: 2026-04-07
 Category: Mystery School Module
+
+## Status
+
+- Verification task
+- Do not treat this file as proof that all implementation work is complete
+- Re-audit current behavior before marking anything done
+- Use this file to verify and record remaining gaps after implementation
 
 ## Objective
 Validate the complete Mystery School purchase and access behavior for all affected user scenarios.
@@ -29,6 +36,22 @@ Validate the complete Mystery School purchase and access behavior for all affect
    - Mystery School checkout success returns to a Mystery School destination
    - Mystery School checkout cancellation returns to a Mystery School-specific enrollment/decision path
 
+6. PM-facing pricing UI with discount OFF
+   - PM dashboard CTA shows full Mystery School pricing only
+   - `/community/upgrade` overview/review/payment steps show full pricing only
+   - no `+$17.03/month` messaging appears
+   - no PM credit line appears
+
+7. PM-facing pricing UI with discount ON
+   - PM dashboard CTA may show discounted PM-user messaging
+   - `/community/upgrade` overview/review/payment steps may show discount-aware pricing
+   - displayed pricing matches the actual checkout logic
+
+8. Copy alignment with parallel-membership model
+   - no PM -> Mystery School replacement wording remains
+   - no “PM will be replaced” message remains
+   - no “you will not be double-charged because PM is replaced” message remains
+
 ## Verification Checklist
 
 - [ ] Stripe checkout uses correct prices for each user state
@@ -40,6 +63,13 @@ Validate the complete Mystery School purchase and access behavior for all affect
 - [ ] Admin discount toggle changes checkout behavior correctly
 - [ ] Success redirect after Mystery School checkout does not land in generic PM-only Community flow
 - [ ] Cancel redirect after Mystery School checkout does not land in the wrong portal context
+- [ ] PM dashboard Mystery School CTA text matches the live discount toggle state
+- [ ] `/community/upgrade` overview step text matches the live discount toggle state
+- [ ] `/community/upgrade` review step text matches the live discount toggle state
+- [ ] `/community/upgrade` payment step text matches the live discount toggle state
+- [ ] No stale `+$17.03/month` text remains when the admin discount toggle is OFF
+- [ ] No stale PM credit line remains when the admin discount toggle is OFF
+- [ ] No PM replacement-tier copy remains in PM-facing Mystery School enrollment UI
 
 ## Implementation Notes (2026-04-07)
 
@@ -117,6 +147,31 @@ Validate the complete Mystery School purchase and access behavior for all affect
 1. Go to `/admin/platform-settings`
 2. Toggle switches correctly and persists on page reload
 3. Toggle state affects checkout pricing in real-time
+
+**Scenario 6: PM-facing pricing UI when discount OFF**
+1. Go to `/admin/platform-settings`, toggle discount OFF
+2. Log in as active PM user
+3. Check PM dashboard Mystery School CTA
+4. Verify it shows full pricing only: `$97 + $27/month`
+5. Verify it does not show `+$17.03/month`
+6. Open `/community/upgrade`
+7. Verify overview, review, and payment steps do not show PM credit or net-discount pricing
+8. Verify no replacement-tier copy appears
+
+**Scenario 7: PM-facing pricing UI when discount ON**
+1. Go to `/admin/platform-settings`, toggle discount ON
+2. Log in as active PM user
+3. Check PM dashboard Mystery School CTA
+4. Verify discount-aware pricing is shown only if system pricing supports it
+5. Open `/community/upgrade`
+6. Verify overview, review, and payment steps display pricing consistent with the live checkout behavior
+
+**Scenario 8: Parallel-membership copy validation**
+1. Review PM dashboard Mystery School CTA
+2. Review `/community/upgrade` overview, review, and payment steps
+3. Verify no text claims PM will be replaced by Mystery School
+4. Verify no text claims user avoids double charge because PM is replaced
+5. Verify all copy reflects PM + Mystery School as parallel memberships
 
 ## Success Criteria
 
