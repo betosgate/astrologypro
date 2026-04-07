@@ -1,7 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/portal", "/onboarding"];
+// Keep all authenticated portals behind the same session-refresh proxy.
+// Community was missing here, which caused valid members to lose access on SSR.
+const PROTECTED_PREFIXES = [
+  "/dashboard",
+  "/portal",
+  "/community",
+  "/trainee",
+  "/advocate",
+  "/admin",
+  "/onboarding",
+];
 
 // Social media crawlers that need OG metadata with public Cache-Control.
 // These bots can't execute JavaScript and require pre-rendered OG HTML.
@@ -81,5 +91,16 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/portal/:path*", "/onboarding", "/share/:path*"],
+  // Match every protected portal so Supabase auth cookies are refreshed before
+  // server components read the session.
+  matcher: [
+    "/dashboard/:path*",
+    "/portal/:path*",
+    "/community/:path*",
+    "/trainee/:path*",
+    "/advocate/:path*",
+    "/admin/:path*",
+    "/onboarding",
+    "/share/:path*",
+  ],
 };

@@ -48,6 +48,12 @@ import {
   DollarSign,
   ArrowLeft,
   Eye,
+  Link as LinkIcon,
+  Copy,
+  Users,
+  TrendingUp,
+  Clock,
+  Wallet,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -90,6 +96,19 @@ interface PayoutRecord {
   created_at: string;
 }
 
+interface ReferralLink {
+  id: string;
+  affiliate_id: string;
+  slug: string;
+  url: string;
+  product_id: string | null;
+  product_type: string | null;
+  clicks: number;
+  conversions: number;
+  is_active: boolean;
+  created_at: string;
+}
+
 interface AffiliateSummary {
   affiliate_user_id: string;
   name: string | null;
@@ -99,6 +118,25 @@ interface AffiliateSummary {
   approved: number;
   paid: number;
   last_payout_at: string | null;
+}
+
+interface AffiliateRow {
+  id: string;
+  diviner_id: string;
+  user_id: string | null;
+  name: string;
+  email: string;
+  phone: string | null;
+  status: string;
+  notes: string | null;
+  default_commission_type: string;
+  default_commission_value: number;
+  total_earned: number;
+  pending_commission: number;
+  approved_commission: number;
+  paid_commission: number;
+  total_paid_out: number;
+  created_at: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -142,7 +180,7 @@ function statusBadge(status: string) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AffiliateCommissionPage() {
-  const [activeTab, setActiveTab] = useState("rules");
+  const [activeTab, setActiveTab] = useState("affiliates");
 
   // Rules state
   const [rules, setRules] = useState<CommissionRule[]>([]);
@@ -192,6 +230,24 @@ export default function AffiliateCommissionPage() {
   // Summary state
   const [summary, setSummary] = useState<AffiliateSummary[]>([]);
   const [summaryLoading, setSummaryLoading] = useState(true);
+
+  // Links state
+  const [links, setLinks] = useState<ReferralLink[]>([]);
+  const [linksLoading, setLinksLoading] = useState(true);
+
+  // Affiliates list state
+  const [affiliates, setAffiliates] = useState<AffiliateRow[]>([]);
+  const [affiliatesLoading, setAffiliatesLoading] = useState(true);
+  const [addAffiliateOpen, setAddAffiliateOpen] = useState(false);
+  const [savingAffiliate, setSavingAffiliate] = useState(false);
+  const [affiliateForm, setAffiliateForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    notes: "",
+    default_commission_type: "percentage" as "percentage" | "fixed",
+    default_commission_value: "10",
+  });
 
   // ─── Load Functions ──────────────────────────────────────────────────────────
 
@@ -250,9 +306,31 @@ export default function AffiliateCommissionPage() {
     setSummaryLoading(false);
   }, []);
 
+  const loadLinks = useCallback(async () => {
+    setLinksLoading(true);
+    const res = await fetch("/api/dashboard/affiliate-commission/links");
+    if (res.ok) {
+      const json = await res.json() as { data: ReferralLink[] };
+      setLinks(json.data ?? []);
+    }
+    setLinksLoading(false);
+  }, []);
+
+  const loadAffiliates = useCallback(async () => {
+    setAffiliatesLoading(true);
+    const res = await fetch("/api/dashboard/affiliate-commission/affiliates");
+    if (res.ok) {
+      const json = await res.json() as { data: AffiliateRow[] };
+      setAffiliates(json.data ?? []);
+    }
+    setAffiliatesLoading(false);
+  }, []);
+
   useEffect(() => {
     void loadRules();
-  }, [loadRules]);
+    void loadSummary();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (activeTab === "ledger") {
@@ -261,6 +339,8 @@ export default function AffiliateCommissionPage() {
     }
     if (activeTab === "payouts") void loadPayouts();
     if (activeTab === "summary") void loadSummary();
+    if (activeTab === "links") void loadLinks();
+    if (activeTab === "affiliates") void loadAffiliates();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
@@ -456,6 +536,54 @@ export default function AffiliateCommissionPage() {
     setSavingPayout(false);
   }
 
+  // ─── Affiliate Handlers ──────────────────────────────────────────────────────
+
+  async function handleAddAffiliate() {
+    if (!affiliateForm.name.trim() || !affiliateForm.email.trim()) {
+      toast.error("Name and email are required");
+      return;
+    }
+    const commValue = parseFloat(affiliateForm.default_commission_value);
+    if (isNaN(commValue) || commValue < 0) {
+      toast.error("Commission value must be a non-negative number");
+      return;
+    }
+    setSavingAffiliate(true);
+    const body: Record<string, unknown> = {
+      name: affiliateForm.name.trim(),
+      email: affiliateForm.email.trim(),
+      default_commission_type: affiliateForm.default_commission_type,
+      default_commission_value: affiliateForm.default_commission_type === "fixed"
+        ? Math.round(commValue * 100)
+        : commValue,
+    };
+    if (affiliateForm.phone.trim()) body.phone = affiliateForm.phone.trim();
+    if (affiliateForm.notes.trim()) body.notes = affiliateForm.notes.trim();
+
+    const res = await fetch("/api/dashboard/affiliate-commission/affiliates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) {
+      toast.success("Affiliate added");
+      setAddAffiliateOpen(false);
+      setAffiliateForm({
+        name: "",
+        email: "",
+        phone: "",
+        notes: "",
+        default_commission_type: "percentage",
+        default_commission_value: "10",
+      });
+      await loadAffiliates();
+    } else {
+      const err = await res.json() as { detail?: string; title?: string };
+      toast.error(err.detail ?? err.title ?? "Failed to add affiliate");
+    }
+    setSavingAffiliate(false);
+  }
+
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
@@ -475,13 +603,130 @@ export default function AffiliateCommissionPage() {
         </div>
       </div>
 
+      {/* ── KPI Summary Cards ── */}
+      {summary.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Affiliates</CardTitle>
+              <Users className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{summary.length}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Commission Earned</CardTitle>
+              <TrendingUp className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">
+                {formatCents(summary.reduce((s, a) => s + a.total_earned, 0))}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Pending Payout</CardTitle>
+              <Clock className="size-4 text-amber-500" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-amber-600">
+                {formatCents(summary.reduce((s, a) => s + a.pending + a.approved, 0))}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Paid Out</CardTitle>
+              <Wallet className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-sky-600">
+                {formatCents(summary.reduce((s, a) => s + a.paid, 0))}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="affiliates">Affiliates</TabsTrigger>
           <TabsTrigger value="rules">Commission Rules</TabsTrigger>
           <TabsTrigger value="ledger">Ledger</TabsTrigger>
           <TabsTrigger value="payouts">Payouts</TabsTrigger>
+          <TabsTrigger value="links">Referral Links</TabsTrigger>
           <TabsTrigger value="summary">Per-Affiliate</TabsTrigger>
         </TabsList>
+
+        {/* ── TAB 0: Affiliates ── */}
+        <TabsContent value="affiliates" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {affiliates.length} affiliate{affiliates.length !== 1 ? "s" : ""}
+            </p>
+            <Button size="sm" onClick={() => setAddAffiliateOpen(true)}>
+              <Plus className="mr-2 size-4" />
+              Add Affiliate
+            </Button>
+          </div>
+          <Card>
+            <CardContent className="p-0">
+              {affiliatesLoading ? (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : affiliates.length === 0 ? (
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  No affiliates yet. Add your first affiliate to get started.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Commission</TableHead>
+                        <TableHead>Total Earned</TableHead>
+                        <TableHead>Pending</TableHead>
+                        <TableHead>Paid Out</TableHead>
+                        <TableHead className="text-right">Detail</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {affiliates.map((aff) => (
+                        <TableRow key={aff.id}>
+                          <TableCell className="font-medium">{aff.name}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{aff.email}</TableCell>
+                          <TableCell>{statusBadge(aff.status)}</TableCell>
+                          <TableCell>
+                            {aff.default_commission_type === "percentage"
+                              ? `${aff.default_commission_value}%`
+                              : formatCents(aff.default_commission_value)}
+                          </TableCell>
+                          <TableCell className="font-medium">{formatCents(aff.total_earned)}</TableCell>
+                          <TableCell className="text-amber-600">{formatCents(aff.pending_commission + aff.approved_commission)}</TableCell>
+                          <TableCell className="text-sky-600">{formatCents(aff.total_paid_out)}</TableCell>
+                          <TableCell className="text-right">
+                            <Button asChild variant="ghost" size="icon" className="size-8">
+                              <Link href={`/dashboard/affiliate-commission/${aff.id}`}>
+                                <Eye className="size-3.5" />
+                              </Link>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* ── TAB 1: Rules ── */}
         <TabsContent value="rules" className="space-y-4">
@@ -770,7 +1015,88 @@ export default function AffiliateCommissionPage() {
           </Card>
         </TabsContent>
 
-        {/* ── TAB 4: Per-Affiliate Summary ── */}
+        {/* ── TAB 4: Referral Links ── */}
+        <TabsContent value="links" className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            All referral links across your affiliate network. Manage individual links from each affiliate&apos;s detail page.
+          </p>
+          <Card>
+            <CardContent className="p-0">
+              {linksLoading ? (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : links.length === 0 ? (
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  No referral links yet. Generate links from each affiliate&apos;s detail page.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>URL</TableHead>
+                        <TableHead>Affiliate</TableHead>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Clicks</TableHead>
+                        <TableHead>Conversions</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Copy</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {links.map((link) => (
+                        <TableRow key={link.id}>
+                          <TableCell>
+                            <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+                              <LinkIcon className="size-3 shrink-0" />
+                              {link.url}
+                            </span>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {link.affiliate_id.slice(0, 8)}…
+                          </TableCell>
+                          <TableCell className="text-sm capitalize">
+                            {link.product_type ?? "—"}
+                          </TableCell>
+                          <TableCell>{link.clicks}</TableCell>
+                          <TableCell>{link.conversions}</TableCell>
+                          <TableCell>
+                            {link.is_active ? (
+                              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300">
+                                active
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground">
+                                inactive
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8"
+                              onClick={() => {
+                                navigator.clipboard.writeText(link.url);
+                                toast.success("Link copied");
+                              }}
+                              title="Copy link"
+                            >
+                              <Copy className="size-3.5" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── TAB 5: Per-Affiliate Summary ── */}
         <TabsContent value="summary" className="space-y-4">
           {summaryLoading ? (
             <div className="flex justify-center py-10">
@@ -830,6 +1156,104 @@ export default function AffiliateCommissionPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* ── Dialog: Add Affiliate ── */}
+      <Dialog open={addAffiliateOpen} onOpenChange={setAddAffiliateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Affiliate</DialogTitle>
+            <DialogDescription>
+              Create a new affiliate under your network. They will be set to active immediately.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="aff-name">Full Name</Label>
+              <Input
+                id="aff-name"
+                value={affiliateForm.name}
+                onChange={(e) => setAffiliateForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="Jane Smith"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="aff-email">Email</Label>
+              <Input
+                id="aff-email"
+                type="email"
+                value={affiliateForm.email}
+                onChange={(e) => setAffiliateForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="jane@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="aff-phone">Phone (optional)</Label>
+              <Input
+                id="aff-phone"
+                value={affiliateForm.phone}
+                onChange={(e) => setAffiliateForm((f) => ({ ...f, phone: e.target.value }))}
+                placeholder="+1 555 000 0000"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="aff-comm-type">Commission Type</Label>
+                <Select
+                  value={affiliateForm.default_commission_type}
+                  onValueChange={(v) =>
+                    setAffiliateForm((f) => ({
+                      ...f,
+                      default_commission_type: v as "percentage" | "fixed",
+                    }))
+                  }
+                >
+                  <SelectTrigger id="aff-comm-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percentage">Percentage (%)</SelectItem>
+                    <SelectItem value="fixed">Fixed Amount ($)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="aff-comm-value">
+                  {affiliateForm.default_commission_type === "percentage" ? "Rate (%)" : "Amount ($)"}
+                </Label>
+                <Input
+                  id="aff-comm-value"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={affiliateForm.default_commission_value}
+                  onChange={(e) =>
+                    setAffiliateForm((f) => ({ ...f, default_commission_value: e.target.value }))
+                  }
+                  placeholder={affiliateForm.default_commission_type === "percentage" ? "10" : "5.00"}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="aff-notes">Notes (optional)</Label>
+              <Input
+                id="aff-notes"
+                value={affiliateForm.notes}
+                onChange={(e) => setAffiliateForm((f) => ({ ...f, notes: e.target.value }))}
+                placeholder="Referred by John"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddAffiliateOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddAffiliate} disabled={savingAffiliate}>
+              {savingAffiliate ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+              Add Affiliate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Dialog: Add/Edit Rule ── */}
       <Dialog open={ruleDialogOpen} onOpenChange={setRuleDialogOpen}>

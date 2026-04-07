@@ -107,13 +107,15 @@ export default async function CommunityDashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // Read only columns that exist in the current community_members schema.
+  // The removed cancel_* fields were causing valid members to be redirected.
   const { data: member } = await supabase
     .from("community_members")
     .select(
-      "id, full_name, email, membership_type, membership_status, plan_type, joined_at, expires_at, pm_tier_id, current_period_end, extra_member_count, cancel_at_period_end, cancel_at"
+      "id, full_name, email, membership_type, membership_status, plan_type, joined_at, expires_at, pm_tier_id, current_period_end, extra_member_count"
     )
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!member) redirect("/join/community");
 
