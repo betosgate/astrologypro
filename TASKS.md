@@ -1,7 +1,7 @@
 # AstrologyPro — Daily Task Board
 
 > **Workflow:** Update this file each session. Check off items as you go. Push at end of day.
-> **Last updated:** 2026-04-06 (session 20 — platform v2: 8 major modules + billing + video + intake + legal)
+> **Last updated:** 2026-04-07 (session 21 — support tickets, affiliate commissions, mundane astrology, training deep-seed, 4 req docs implemented)
 > **Migrations:** All applied via `scripts/run-migration.js` — no manual SQL editor needed.
 
 ---
@@ -27,6 +27,12 @@
 | Subscription upgrade flow | ✅ Done |
 | Admin analytics dashboard | ✅ Done |
 | Affiliate tracking & detail page | ✅ Done |
+| Affiliate commission management | ✅ Done — diviner_affiliates, commissions ledger, payouts, referral links |
+| Support / job ticket system | ✅ Done — unified ticketing, SLA, internal notes, audit trail |
+| Mundane astrology dashboard | ✅ Done — entities, events, research notes, admin + community views |
+| Reading history (astro + tarot) | ✅ Done — astro_toolkit_readings + tarot_readings saved per reading |
+| Global audit/activity log | ✅ Done — user_activity_log, logActivity(), admin + diviner reports |
+| Training content & quizzes | ✅ Done — 49 lessons, 261 quiz questions, full coverage |
 | Session notes (write + API) | ✅ Done |
 | Sitemap | ✅ Done |
 | Currency bugs (global `/100` sweep) | ✅ Done — 10 files fixed |
@@ -138,7 +144,7 @@
 | Email notifications (AWS SES) | 🟡 Wired; DNS added; awaiting SES domain verification |
 | Phone readings end-to-end | 🟡 Code complete; blocked on Twilio credentials in Vercel |
 | Social auto-posting (Ayrshare) | 🟡 Code complete; needs `AYRSHARE_API_KEY` in Vercel |
-| OG social image | 🔴 Missing — needs 1200×630 branded card design |
+| OG social image | ✅ Done — og-card.svg + og-card.jpg (91KB) in /public/images/home/, wired in layout.tsx |
 | Stripe Connect webhook | 🔴 `account.updated` not yet registered in Stripe Dashboard |
 
 ---
@@ -150,7 +156,7 @@
 | A1 | **Twilio credentials** | Fix invalid keys in Vercel → phone readings return 20101 error on every load |
 | A2 | **Stripe Connect webhook** | Stripe Dashboard → Webhooks → add `account.updated` event |
 | A3 | **AYRSHARE_API_KEY** | Vercel env vars → activates social auto-posting cron |
-| A4 | **OG social image** | Design a 1200×630 branded card → `/public/images/home/og-card.jpg` |
+| ~~A4~~ | ~~**OG social image**~~ | ✅ Done — og-card.jpg + og-card.svg in /public/images/home/ |
 | A5 | **NEXT_PUBLIC_TABBY_USERNAME** | Vercel env vars → set to Tabby's AstrologyPro username → activates graduation CTA |
 | A6 | **Tabby's Google Calendar** | Connect via `/api/calendar/connect` → unblocks E3-S5 consultation booking |
 | A7 | **Stripe product IDs** | Vercel env vars → `STRIPE_PRICE_COMMUNITY_INDIVIDUAL`, `STRIPE_PRICE_COMMUNITY_FAMILY`, `STRIPE_PRICE_MYSTERY_ENROLLMENT`, `STRIPE_PRICE_MYSTERY_MONTHLY` |
@@ -164,7 +170,7 @@
 
 | # | Task | Notes |
 |---|---|---|
-| H1 | **OG image path update** | Once OG card is designed, update `layout.tsx` `OG_IMAGE` constant |
+| ~~H1~~ | ~~**OG image path update**~~ | ✅ Done — layout.tsx already points to /images/home/og-card.jpg |
 
 ---
 
@@ -187,6 +193,22 @@
 - Angular bundle optimisation (E10-S3)
 - Angular duplicate AuthService cleanup (E1-S3)
 - Angular TypeScript model interfaces (E1-S4)
+
+---
+
+## ✅ Completed This Session (session 21 — 2026-04-07)
+
+| Module | Detail |
+|---|---|
+| Seed data — all modules (migrations 059–061) | wheel_signs (12), spiritual_wisdom (6), packages (5), diviner_plans prices fixed (starter=0, pro=$49, elite=$99), 78 tarot cards + 5 spreads, 96 quiz questions — all 38 lessons now covered |
+| Training deep-seed (migrations 066–069) | 49 total lessons (11 new), 261 quiz questions, 0 lessons missing content/quiz, is_sequential enabled on Certification/Mystery School/Tarot Mastery Track programs |
+| Support/Job Ticket System (migration 062) | support_tickets + ticket_messages + ticket_history tables; auto TKT-YYYYMMDD-NNNN numbering; 5 API routes; dashboard + admin UI (list, new, detail) |
+| Diviner Affiliate Commission (migration 063) | diviner_affiliates, referral_links, clicks, commissions, payouts, payout_items tables; 10 API routes; admin + diviner dashboard UI; /api/ref/[slug] click-tracking redirect |
+| Mundane Astrology Dashboard (migration 064) | mundane_entities, mundane_events, research_notes tables; 8 API routes; admin entity/event CRUD + dashboard community view |
+| Email sequence triggers (migration 065) | email_sequence_triggers table; POST /api/admin/email-sequences/[id]/trigger; GET /api/dashboard/certification (training progress %) |
+| Build validation | ✓ 418 pages compiled, 0 TypeScript errors, all 19 migrations applied (051–069) |
+| Requirement docs | 4 gold-standard docs saved to tasks/07.04.2026/ (support tickets, affiliate commission, mundane astrology, platform v2) |
+| OG social image | Confirmed done — og-card.jpg (91KB) + og-card.svg already in /public/images/home/, wired in layout.tsx |
 
 ---
 
