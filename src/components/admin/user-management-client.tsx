@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +56,7 @@ import {
   Download,
   Mail,
   X,
+  UserPlus,
 } from "lucide-react";
 import { UserDetailSheet } from "./user-detail-sheet";
 import { InviteUserForm } from "./invite-user-form";
@@ -69,6 +71,7 @@ export interface AdminUser {
   phone?: string;
   role: string;
   roleLabel: string;
+  roles: { slug: string; label: string }[];
   status: string;
   joinedAt: string;
   blocked: boolean;
@@ -763,6 +766,12 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
             <Download className="size-4" />
             Export All (CSV)
           </Button>
+          <Button size="sm" asChild>
+            <Link href="/admin/users/add">
+              <UserPlus className="mr-2 size-4" />
+              Add User
+            </Link>
+          </Button>
           <InviteUserForm />
         </div>
       </div>
@@ -792,16 +801,6 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
             <SelectContent>
               {STATUS_OPTIONS.map((o) => (
                 <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
-            <SelectTrigger className="w-full sm:w-28">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZE_OPTIONS.map((n) => (
-                <SelectItem key={n} value={String(n)}>{n} / page</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -1036,7 +1035,21 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
 
                     {/* Role */}
                     <td className="px-4 py-2.5">
-                      <Badge variant="outline" className="text-xs capitalize">{u.roleLabel}</Badge>
+                      <div className="flex flex-wrap gap-1">
+                        {u.roles.length > 0 ? (
+                          u.roles.map((r, idx) => (
+                            <Badge
+                              key={r.slug}
+                              variant={idx === 0 ? "outline" : "secondary"}
+                              className="text-xs capitalize"
+                            >
+                              {r.label}
+                            </Badge>
+                          ))
+                        ) : (
+                          <Badge variant="outline" className="text-xs capitalize">{u.roleLabel}</Badge>
+                        )}
+                      </div>
                     </td>
 
                     {/* Status */}
@@ -1111,7 +1124,7 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => { setRoleDialogUser(u); setNewRole("client"); }}>
                             <UserCog className="mr-2 size-4" />
-                            Change Role
+                            Add / Grant New Role
                           </DropdownMenuItem>
                           {u.role === "trainee" && (
                             <DropdownMenuItem onClick={() => { setTrainingDialogUser(u); setTrainingStatus("in_progress"); }}>
@@ -1168,11 +1181,23 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
       </Card>
 
       {/* ── Pagination ──────────────────────────────────────────────────────── */}
-      {totalPages > 1 && (
-        <div className={cn("flex items-center justify-between text-sm transition-opacity duration-150", isPending && "opacity-50 pointer-events-none")}>
+      <div className={cn("flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm transition-opacity duration-150", isPending && "opacity-50 pointer-events-none")}>
+        <div className="flex items-center gap-3">
           <p className="text-muted-foreground">
             Showing {Math.min((currentPage - 1) * pageSize + 1, total)}–{Math.min(currentPage * pageSize, total)} of {total}
           </p>
+          <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+            <SelectTrigger className="h-8 w-28">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map((n) => (
+                <SelectItem key={n} value={String(n)}>{n} / page</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {totalPages > 1 && (
           <div className="flex items-center gap-1">
             <Button
               variant="outline"
@@ -1194,7 +1219,7 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
               }, [])
               .map((p, idx) =>
                 p === "…" ? (
-                  <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">…</span>
+                  <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">...</span>
                 ) : (
                   <Button
                     key={p}
@@ -1218,14 +1243,15 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
               <ChevronRight className="size-4" />
             </Button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ── Detail sheet ────────────────────────────────────────────────────── */}
       <UserDetailSheet
         user={selectedUser}
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
+        initialTab={sheetTab}
         onUserChanged={(userId, change) => {
           // Optimistic local update for block/unblock
           if (change.blocked === false) {
@@ -1234,6 +1260,8 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
           if (selectedUser?.userId === userId) {
             setSelectedUser((prev) => (prev ? { ...prev, ...change } : prev));
           }
+          // Auto-refresh the list data after any user change
+          handleRefresh();
         }}
       />
 
@@ -1430,9 +1458,9 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
       <Dialog open={!!roleDialogUser} onOpenChange={(v) => { if (!v) setRoleDialogUser(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Change Role for {roleDialogUser?.name}</DialogTitle>
+            <DialogTitle>Add / Grant New Role for {roleDialogUser?.name}</DialogTitle>
             <DialogDescription>
-              This will create a new profile record in the target role table. The existing role record will NOT be deleted (for audit purposes). Current role: <strong>{roleDialogUser?.roleLabel}</strong>.
+              The user will keep their current role(s) while gaining this new one. Current role(s): <strong>{roleDialogUser?.roles?.map((r) => r.label).join(", ") ?? roleDialogUser?.roleLabel}</strong>.
             </DialogDescription>
           </DialogHeader>
           <Select value={newRole} onValueChange={setNewRole}>
@@ -1450,9 +1478,9 @@ export function UserManagementClient({ users, total, pageSize, searchParams: sp 
             <Button variant="outline" onClick={() => setRoleDialogUser(null)} disabled={roleLoading}>
               Cancel
             </Button>
-            <Button onClick={handleRoleChangeAction} disabled={roleLoading || newRole === roleDialogUser?.role}>
+            <Button onClick={handleRoleChangeAction} disabled={roleLoading || (roleDialogUser?.roles?.some((r) => r.slug === newRole) ?? newRole === roleDialogUser?.role)}>
               {roleLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
-              Create Role Record
+              Grant New Role
             </Button>
           </DialogFooter>
         </DialogContent>
