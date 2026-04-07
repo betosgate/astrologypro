@@ -121,41 +121,54 @@ export default async function LessonViewerPage({
   const catLessonIds = catLessonList.map((l) => l.id);
 
   // Fetch completion, legacy completion, category sequential flag, global lock,
-  // and next-lesson from cache -- all in parallel
-  const [completionRowsResult, legacyRowsResult, catSeqResult, globalLockResult, catProgressResult] =
-    await Promise.all([
-      catLessonIds.length > 0
-        ? supabase
-            .from("lesson_completions")
-            .select("lesson_id")
-            .eq("user_id", user.id)
-            .in("lesson_id", catLessonIds)
-        : Promise.resolve({ data: [] as { lesson_id: string }[] }),
-      catLessonIds.length > 0
-        ? supabase
-            .from("trainee_lesson_progress")
-            .select("lesson_id")
-            .eq("trainee_id", trainee.id)
-            .not("completed_at", "is", null)
-            .in("lesson_id", catLessonIds)
-        : Promise.resolve({ data: [] as { lesson_id: string }[] }),
-      supabase
-        .from("training_categories")
-        .select("is_sequential")
-        .eq("id", categoryId)
-        .single(),
-      supabase
-        .from("training_settings")
-        .select("global_sequential_lock")
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from("user_category_progress")
-        .select("next_lesson_id")
-        .eq("user_id", user.id)
-        .eq("category_id", categoryId)
-        .maybeSingle(),
-    ]);
+  // next-lesson from cache, and program progress (for next-category routing) -- all in parallel
+  const [
+    completionRowsResult,
+    legacyRowsResult,
+    catSeqResult,
+    globalLockResult,
+    catProgressResult,
+    programProgressResult,
+  ] = await Promise.all([
+    catLessonIds.length > 0
+      ? supabase
+          .from("lesson_completions")
+          .select("lesson_id")
+          .eq("user_id", user.id)
+          .in("lesson_id", catLessonIds)
+      : Promise.resolve({ data: [] as { lesson_id: string }[] }),
+    catLessonIds.length > 0
+      ? supabase
+          .from("trainee_lesson_progress")
+          .select("lesson_id")
+          .eq("trainee_id", trainee.id)
+          .not("completed_at", "is", null)
+          .in("lesson_id", catLessonIds)
+      : Promise.resolve({ data: [] as { lesson_id: string }[] }),
+    supabase
+      .from("training_categories")
+      .select("is_sequential")
+      .eq("id", categoryId)
+      .single(),
+    supabase
+      .from("training_settings")
+      .select("global_sequential_lock")
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("user_category_progress")
+      .select("next_lesson_id")
+      .eq("user_id", user.id)
+      .eq("category_id", categoryId)
+      .maybeSingle(),
+    // Program progress cache — used to find the next unlocked category
+    supabase
+      .from("user_program_progress")
+      .select("next_category_id, next_category_name")
+      .eq("user_id", user.id)
+      .eq("program_id", programId)
+      .maybeSingle(),
+  ]);
 
   const completedSet = new Set([
     ...(completionRowsResult.data ?? []).map((r) => r.lesson_id),
@@ -184,7 +197,57 @@ export default async function LessonViewerPage({
     locked: isSidebarLessonLocked(l),
   }));
 
+  // ── Next-item routing (consistent with sidebar lock logic) ──────────────────
+  // Priority: next incomplete lesson in same category → next unlocked category → graduation
+  const nextLessonFromCache = catProgressResult.data?.next_lesson_id ?? null;
+  const nextCategoryId = programProgressResult.data?.next_category_id ?? null;
+  const nextCategoryName = programProgressResult.data?.next_category_name ?? null;
+
+  // Find the next lesson to go to: it should be after the current lesson by priority,
+  // not completed, and not locked.
+  const currentLesson = catLessonList.find((l) => l.id === lessonId);
+  const currentPriority = currentLesson?.priority ?? -1;
+
+  // Prefer the cache's next_lesson_id when it points forward from the current lesson
+  let nextLessonTarget: { id: string; title: string } | null = null;
+  if (nextLessonFromCache) {
+    const cached = catLessonList.find((l) => l.id === nextLessonFromCache);
+    if (cached && !completedSet.has(cached.id) && !isSidebarLessonLocked(cached)) {
+      nextLessonTarget = { id: cached.id, title: cached.title };
+    }
+  }
+  // Fallback: find the next incomplete, unlocked lesson after the current one by priority
+  if (!nextLessonTarget) {
+    const candidate = catLessonList.find(
+      (l) =>
+        l.priority > currentPriority &&
+        !completedSet.has(l.id) &&
+        !isSidebarLessonLocked(l)
+    );
+    if (candidate) {
+      nextLessonTarget = { id: candidate.id, title: candidate.title };
+    }
+  }
+
+  let nextRoute: string | null = null;
+  let nextLabel: string | null = null;
+
+  if (nextLessonTarget) {
+    // Next lesson in the same category
+    nextRoute = `/trainee/training/${programId}/${categoryId}/${nextLessonTarget.id}`;
+    nextLabel = nextLessonTarget.title;
+  } else if (nextCategoryId) {
+    // No more lessons in this category → go to next unlocked category
+    nextRoute = `/trainee/training/${programId}/${nextCategoryId}`;
+    nextLabel = nextCategoryName ?? "Next Module";
+  } else {
+    // No more categories → program complete, go to graduation
+    nextRoute = "/trainee/training/graduation";
+    nextLabel = "View Certificate";
+  }
+
   // Build quiz questions (correct_answer NOT included — kept server-side by API)
+  // Normalize options: DB may store string[] or { text: string }[]
   const quizQuestions = (lessonData.quiz_questions ?? []).map(
     (q: {
       id: string;
@@ -195,7 +258,9 @@ export default async function LessonViewerPage({
       id: q.id,
       question: q.question,
       options: Array.isArray(q.options)
-        ? (q.options as { text: string }[])
+        ? q.options.map((opt: unknown) =>
+            typeof opt === "string" ? { text: opt } : (opt as { text: string })
+          )
         : [],
       explanation: q.explanation ?? null,
     })
@@ -218,6 +283,8 @@ export default async function LessonViewerPage({
     quizLastScore: lessonData.quiz_last_score ?? null,
     quizLastTotal: lessonData.quiz_last_total ?? null,
     isCompleted: lessonData.completed === true,
+    nextRoute,
+    nextLabel,
     sidebarLessons,
     triggers: lessonData.triggers ?? [],
     lastPositionSeconds: lessonData.last_position_seconds ?? 0,

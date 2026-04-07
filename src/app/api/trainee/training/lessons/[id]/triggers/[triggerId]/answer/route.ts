@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { checkAndAwardTrainingGraduation } from "@/lib/training/graduation";
 
 export const dynamic = "force-dynamic";
 
@@ -287,6 +288,12 @@ export async function POST(
             }
           }
         }
+
+        // Graduation check — runs after category completion is written.
+        // Idempotent; verifies every lesson across all programs is complete.
+        checkAndAwardTrainingGraduation(user.id).catch((err) =>
+          console.error("[training-graduation] check failed:", err)
+        );
 
         return NextResponse.json({ correct: true, lesson_complete: true });
       }

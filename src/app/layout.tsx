@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Cormorant_Garamond } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/components/providers/auth-provider";
 import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 
@@ -120,9 +121,11 @@ export default function RootLayout({
           shadow="0 0 10px #f59e0b, 0 0 5px #d97706"
           zIndex={9999}
         />
-        <TooltipProvider>
-          {children}
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            {children}
+          </TooltipProvider>
+        </AuthProvider>
         <Toaster />
       </body>
     </html>

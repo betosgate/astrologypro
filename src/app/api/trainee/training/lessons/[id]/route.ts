@@ -5,6 +5,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const dynamic = "force-dynamic";
 
 /**
+ * Normalize quiz options to always be `{ text: string }[]`.
+ * The database may store options as `string[]` or `{ text: string }[]`.
+ */
+function normalizeOptions(options: unknown): { text: string }[] {
+  if (!Array.isArray(options)) return [];
+  return options.map((opt) =>
+    typeof opt === "string" ? { text: opt } : (opt as { text: string })
+  );
+}
+
+/**
  * GET /api/trainee/training/lessons/[id]
  * Returns full lesson detail: lesson fields + videos + assets + quiz questions
  * (options included, correct_answer excluded — server-side only)
@@ -200,13 +211,25 @@ export async function GET(
   }
 
   // Shape trigger data: merge question + user_progress
-  const triggers = (triggersResult.data ?? []).map((t) => ({
-    id: t.id,
-    trigger_timestamp_seconds: t.trigger_timestamp_seconds,
-    rewind_target_seconds: t.rewind_target_seconds,
-    question_id: t.question_id,
-    question: t.quiz_questions ?? null,
-    user_progress: triggerProgressMap.get(t.id) ?? null,
+  const triggers = (triggersResult.data ?? []).map((t) => {
+    const rawQ = t.quiz_questions as unknown as Record<string, unknown> | null;
+    const question = rawQ
+      ? { ...rawQ, options: normalizeOptions(rawQ.options) }
+      : null;
+    return {
+      id: t.id,
+      trigger_timestamp_seconds: t.trigger_timestamp_seconds,
+      rewind_target_seconds: t.rewind_target_seconds,
+      question_id: t.question_id,
+      question,
+      user_progress: triggerProgressMap.get(t.id) ?? null,
+    };
+  });
+
+  // Normalize quiz question options to { text: string }[] format
+  const normalizedQuestions = (questionsResult.data ?? []).map((q) => ({
+    ...q,
+    options: normalizeOptions(q.options),
   }));
 
   return NextResponse.json({
@@ -214,7 +237,7 @@ export async function GET(
       ...lessonResult.data,
       videos: videosResult.data ?? [],
       assets: assetsResult.data ?? [],
-      quiz_questions: questionsResult.data ?? [],
+      quiz_questions: normalizedQuestions,
       completed: !!completionResult.data,
       completed_at: completionResult.data?.completed_at ?? null,
       quiz_passed: quizAttemptResult.data?.passed ?? null,

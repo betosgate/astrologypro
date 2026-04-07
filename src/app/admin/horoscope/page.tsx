@@ -22,8 +22,9 @@ import {
   Loader2, ChevronDown, ChevronRight, ChevronLeft, Star, Sun, Moon,
   Calendar as CalendarIcon, Heart, Users, Briefcase, Eye, Zap,
   Sparkles, CircleDot, Clock, MapPin, Printer, ArrowUp, RotateCcw,
-  X, Maximize2,
+  X, Maximize2, Search,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -266,20 +267,29 @@ async function callNatalWheel(body: Record<string, unknown>) {
   return r.json();
 }
 async function callDecanLookup(signs: string, planet: string) {
-  const r = await fetch("/api/admin/astro/decan-lookup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signs, planet }) });
+  const r = await fetch("/api/admin/astro/decan-info", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signs, planet }) });
   if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? r.statusText); }
   return r.json() as Promise<{ results: DecanRow[] }>;
 }
 
 interface DecanRow {
-  id?: number;
+  id?: string;
+  sign_id?: string;
   sign_name: string;
   planet: string;
   decan: number;           // 1 | 2 | 3
   greek_daemon: string;
   tarot_name: string;
   description?: string;
+  decan_img?: string;
   is_active?: boolean;
+  // Cached AI descriptions (persisted by the server)
+  planet_sign_short_desc?: string | null;
+  planet_sign_long_desc?: string | null;
+  daemon_short_desc?: string | null;
+  daemon_long_desc?: string | null;
+  tarot_short_desc?: string | null;
+  tarot_long_desc?: string | null;
 }
 
 interface DecanAi {
@@ -538,66 +548,84 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
                   <AstroHeaderParts title={aspectTitle ?? title} />
                 </div>
               ) : (
-                <DialogTitle className="text-lg font-bold capitalize gold-text">{title.replace(/_/g, " ")}</DialogTitle>
+                <DialogTitle className="text-lg font-bold capitalize gold-text">{title.replace(/_/g, " ")} (Pictorial Analysis)</DialogTitle>
               )}
             </DialogHeader>
           </div>
 
-          {/* Scrollable Content Section */}
-          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-            {loading ? (
-              <div className="flex items-center gap-3 py-12 justify-center text-muted-foreground">
-                <Loader2 className="size-6 animate-spin text-amber-500" />
-                <span className="text-sm font-medium tracking-wide">Fetching Cosmic Insights...</span>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {promptType === "planet" && planetEntries && planetEntries.length > 0 ? (
-                  <div className="space-y-6">
-                    {planetEntries.map(({ planet, items }) => (
-                      <div key={planet} className="rounded-xl border border-white/5 bg-white/5 p-4 space-y-3">
-                        <div className="flex items-center gap-2">
-                          <PlanetSymbol name={planet} />
-                          <div className="h-px flex-1 bg-gradient-to-right from-amber-500/20 to-transparent" />
-                        </div>
-                        <ol className="space-y-3 list-none">
-                          {items.map((item, idx) => (
-                            <li key={idx} className="text-sm leading-relaxed text-foreground/90 flex gap-3">
-                              <span className="flex-shrink-0 size-5 flex items-center justify-center rounded-full bg-amber-500/10 text-amber-500 font-bold text-[10px] border border-amber-500/20">{idx + 1}</span>
-                              <span>{item}</span>
-                            </li>
-                          ))}
-                        </ol>
-                      </div>
-                    ))}
+          {/* Content Section — Vertical stack: Text first, then Image */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-950/50">
+            <div className="flex flex-col gap-0 h-full">
+
+              {/* Textual/Structured Content */}
+              <div className="p-6 shrink-0 border-b border-white/5">
+                {loading ? (
+                  <div className="flex flex-col items-center gap-3 py-12 justify-center text-muted-foreground">
+                    <Loader2 className="size-8 animate-spin text-amber-500 mb-2" />
+                    <span className="text-sm font-medium tracking-widest uppercase opacity-70">Cosmic Retrieval...</span>
                   </div>
                 ) : (
-                  <div className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap font-light tracking-wide bg-white/5 p-5 rounded-xl border border-white/5 italic">
-                    "{content}"
+                  <div>
+                    {promptType === "planet" && planetEntries && planetEntries.length > 0 ? (
+                      <div className="space-y-6">
+                        {planetEntries.map(({ planet, items }) => (
+                          <div key={planet} className="rounded-xl border border-amber-500/10 bg-amber-500/5 p-4 space-y-3 shadow-inner">
+                            <div className="flex items-center gap-3">
+                              <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                                <PlanetSymbol name={planet} />
+                              </div>
+                              <div className="h-px flex-1 bg-gradient-to-r from-amber-500/30 to-transparent" />
+                            </div>
+                            <ol className="space-y-3 list-none">
+                              {items.map((item, idx) => (
+                                <li key={idx} className="text-sm leading-relaxed text-foreground/90 flex gap-3 group">
+                                  <span className="flex-shrink-0 size-5 flex items-center justify-center rounded-full bg-amber-500/20 text-amber-500 font-bold text-[10px] border border-amber-500/30 group-hover:bg-amber-500 group-hover:text-amber-950 transition-all">{idx + 1}</span>
+                                  <span className="opacity-90 group-hover:opacity-100">{item}</span>
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap font-light tracking-wide bg-slate-900/40 p-6 rounded-2xl border border-white/5 italic relative overflow-hidden shadow-2xl">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-amber-500/40" />
+                        <Sparkles className="absolute top-3 right-3 size-4 text-amber-500/20" />
+                        "{content}"
+                      </div>
+                    )}
                   </div>
                 )}
+              </div>
 
-                {pictureUrl && (
-                  <div className="relative group rounded-xl border border-white/10 overflow-hidden bg-slate-900/40 shadow-2xl">
+              {/* Pictorial Representation — Below the text */}
+              {pictureUrl && (
+                <div className="p-6 flex flex-col items-center justify-center bg-slate-900/20 border-b border-white/5">
+                  <div className="relative group rounded-2xl border border-amber-500/20 overflow-hidden bg-slate-950 shadow-[0_0_50px_rgba(245,158,11,0.08)] transition-all hover:border-amber-500/40 max-w-lg w-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={pictureUrl} alt={title} className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-[1.02]" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/20 to-transparent pointer-events-none" />
+                    <img src={pictureUrl} alt={title} className="w-full h-auto max-h-[60vh] object-contain transition-transform duration-1000 group-hover:scale-[1.05]" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
 
                     {/* Maximize Icon */}
                     <button
                       onClick={() => setShowFullImage(true)}
-                      className="absolute top-3 right-3 size-8 flex items-center justify-center rounded-full bg-slate-900/80 border border-white/10 text-amber-500/80 hover:text-amber-500 hover:border-amber-500/50 transition-all shadow-lg backdrop-blur-sm z-10"
-                      title="Enlarge Image"
+                      className="absolute top-4 right-4 size-10 flex items-center justify-center rounded-xl bg-slate-950/80 border border-white/10 text-amber-500/80 hover:text-amber-500 hover:border-amber-500/50 transition-all shadow-2xl backdrop-blur-md z-10 group/btn"
+                      title="Enlarge Cosmic Map"
                     >
-                      <Maximize2 className="size-4" />
+                      <Maximize2 className="size-5 transition-transform group-hover/btn:scale-125" />
                     </button>
+
+                    <div className="absolute bottom-4 left-0 right-0 text-center px-4">
+                      <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-500/50 mix-blend-overlay">Celestial Configuration</span>
+                    </div>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
+
 
       {pictureUrl && (
         <ChartImageModal src={pictureUrl} open={showFullImage} onClose={() => setShowFullImage(false)} />
@@ -611,26 +639,42 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
 function ChartImageModal({ src, open, onClose }: { src: string; open: boolean; onClose: () => void }) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-[95vw] w-[95vw] max-h-[95vh] h-[95vh] p-0 overflow-hidden bg-slate-950 border-white/10" showCloseButton={false}>
-        {/* Custom Close Icon */}
+      <DialogContent
+        className="max-w-[100vw] w-screen max-h-[100vh] h-screen p-0 border-none rounded-none overflow-hidden bg-black/95 backdrop-blur-sm z-[100]"
+        showCloseButton={false}
+      >
+        {/* Persistent High-Visibility Close Icon */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.2)] group"
-          aria-label="Close modal"
+          className="absolute top-6 right-6 z-[110] size-12 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-white transition-all active:scale-95 shadow-[0_0_30px_rgba(245,158,11,0.3)] group"
+          aria-label="Exit Fullscreen"
         >
-          <X className="size-5 transition-transform group-hover:rotate-90" />
+          <X className="size-7 transition-transform group-hover:rotate-90" />
         </button>
 
-        <div className="h-full w-full overflow-hidden p-6 flex items-center justify-center">
+        <div className="h-full w-full overflow-auto flex items-center justify-center p-4">
           <DialogHeader className="sr-only">
-            <DialogTitle>Astrological Asset</DialogTitle>
+            <DialogTitle>Fullscreen Astrological Perception</DialogTitle>
           </DialogHeader>
+
           {src.startsWith("<svg") ? (
-            <div dangerouslySetInnerHTML={{ __html: src }} className="w-full h-full overflow-auto flex justify-center items-center" />
+            <div
+              dangerouslySetInnerHTML={{ __html: src }}
+              className="w-full h-full min-w-full min-h-full flex justify-center items-center scale-110"
+            />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={src} alt="Astrological Asset" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
+            <img
+              src={src}
+              alt="Astrological Visualization"
+              className="max-w-full max-h-full object-contain drop-shadow-[0_0_80px_rgba(245,158,11,0.1)] transition-transform duration-1000 animate-in fade-in zoom-in-95"
+            />
           )}
+
+          {/* Bottom Branding (Very Subtle) */}
+          <div className="absolute bottom-8 left-0 right-0 text-center pointer-events-none">
+            <span className="text-[10px] font-black uppercase tracking-[0.6em] text-white/10">Celestial Visualization Map</span>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -825,17 +869,24 @@ function useShowMore() {
           return { filename: parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join("-"), foldername: "aspect" };
         }
       } else if (type === "planet") {
-        // promptData has planet name + sign, e.g. { sign: "Virgo" } and title is planet name
-        const planet = title.trim();
-        const sign = promptData?.sign ?? promptData?.Sign ?? "";
+        // promptData can be the planet object directly or { planet: p } or { ascendant: { sign: '...' } }
+        const p = promptData?.planet ?? promptData;
+        const planet = p?.name ?? title.trim();
+        // Look for sign in p directly, or nested under the title (for points like ascendant)
+        const sign = p?.sign ?? p?.Sign ?? p?.[title.toLowerCase()]?.sign ?? p?.[title.toLowerCase()]?.Sign ?? "";
         if (planet && sign) {
-          return { filename: `${planet}-In-${sign}`, foldername: "planets" };
+          const capPlanet = planet.charAt(0).toUpperCase() + planet.slice(1);
+          const capSign = sign.charAt(0).toUpperCase() + sign.slice(1);
+          return { filename: `${capPlanet}-In-${capSign}`, foldername: "planets" };
         }
       } else if (type === "house") {
         // promptData has house number + sign + planet
         const house = promptData?.house ?? promptData?.House ?? "";
         const sign = promptData?.sign ?? promptData?.Sign ?? "";
-        const planet = promptData?.planet ?? promptData?.ruler ?? title.trim();
+        // Try to find a planet in this house if the direct 'planet' property is missing
+        let planet = promptData?.planet ?? promptData?.ruler;
+        if (!planet && title?.trim()) planet = title.trim();
+
         if (house && sign && planet) {
           const ordinal = String(house).replace(/\D/g, "");
           const suffix = ordinal === "1" ? "st" : ordinal === "2" ? "nd" : ordinal === "3" ? "rd" : "th";
@@ -947,6 +998,7 @@ function useShowMore() {
           }
         }
         const picUrl = await picturePromise;
+        if (!picUrl) toast.error("No Record Found", { description: `Pictorial representation for ${title} is unavailable.` });
         setModal({ title, content: "", loading: false, aspectTitle, promptType: resolvedType, planetEntries, pictureUrl: picUrl });
       } else if (resolvedType === "house") {
         // Response: {interpretations: {data: "..."}} — extract .interpretations.data
@@ -964,6 +1016,7 @@ function useShowMore() {
           text = String(parsed ?? "");
         }
         const picUrl2 = await picturePromise;
+        if (!picUrl2) toast.error("No Record Found", { description: "Pictorial map is currently unavailable." });
         setModal({ title, content: text, loading: false, aspectTitle, promptType: resolvedType, pictureUrl: picUrl2 });
       } else {
         // aspect / generic: extract .interpretation
@@ -974,6 +1027,10 @@ function useShowMore() {
           text = String(parsed ?? "");
         }
         const picUrl3 = await picturePromise;
+        if (!picUrl3) {
+          // Only show toast if it's a specific aspect, not generic text
+          if (resolvedType === "aspect") toast.error("No Record Found", { description: "Aspect pictorial representation is unavailable." });
+        }
         setModal({ title, content: text, loading: false, aspectTitle, promptType: resolvedType, pictureUrl: picUrl3 });
       }
     } catch {
@@ -1028,8 +1085,10 @@ function DecanModal({ planet, sign, open, onClose }: {
   const [sections, setSections] = useState<Record<number, DecanSection>>({});
   const [loadingRows, setLoadingRows] = useState(false);
   const [rowError, setRowError] = useState<string | null>(null);
+  const [fullscreenImg, setFullscreenImg] = useState<string | null>(null);
 
-  // Fetch decan rows + fire 3 AI calls per decan whenever modal opens
+  // Fetch decan rows from the new decan-info API which returns cached descriptions
+  // (and auto-generates + persists via AI if missing on the server side)
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -1046,64 +1105,24 @@ function DecanModal({ planet, sign, open, onClose }: {
         setRows(results);
         setLoadingRows(false);
 
-        // Fire 3 AI calls per decan row in parallel (non-fatal)
+        // Build sections from the cached (or freshly AI-generated) descriptions
+        // returned by the server. No client-side AI calls needed.
+        const newSections: Record<number, DecanSection> = {};
         for (const row of results) {
-          const decanLabel = ordinalDecan(row.decan);
-          // Initialise loading state for this decan
-          setSections((prev) => ({ ...prev, [row.decan]: { planetAi: null, daemonAi: null, tarotAi: null, loading: true } }));
-
-          const systemContent = "give response only in json format as a whole , nothing else answer as astrologer not AI BOT";
-
-          // Angular exact prompts — three parallel AI calls
-          const [planetRes, daemonRes, tarotRes] = await Promise.allSettled([
-            callAI({
-              condition: {
-                system_content: systemContent,
-                user_content: `What does it mean when you have ${planet} in the ${decanLabel} decan of ${sign} in astrology , give me response in json where two indexes are short_format (min 3 sentences) and long_format (min 5 sentences) and response should not start with 'json' ever`,
-              },
-              toolname: "other",
-              json: [{ planet, sign, decan: decanLabel, decan_data: row }],
-            } as any),
-            callAI({
-              condition: {
-                system_content: systemContent,
-                user_content: `Explain the Greek daemon ${row.greek_daemon} as the spirit of the decan in relation to the ${decanLabel} decan of ${sign} in astrology. Give response in json where two indexes are short_format (min 3 sentences) and long_format (min 5 sentences) and response should not start with 'json' ever`,
-              },
-              toolname: "other",
-              json: [{ daemon: row.greek_daemon, sign, decan: decanLabel }],
-            } as any),
-            callAI({
-              condition: {
-                system_content: systemContent,
-                user_content: `Using the Crowley's thoth decks attributions, without referencing his deck directly, explain the ${row.tarot_name} as it would relate to the ${decanLabel} decan of ${sign} in astrology. Give response in json where two indexes are short_format (min 3 sentences) and long_format (min 5 sentences) and response should not start with 'json' ever`,
-              },
-              toolname: "other",
-              json: [{ tarot: row.tarot_name, sign, decan: decanLabel }],
-            } as any),
-          ]);
-
-          if (cancelled) return;
-
-          function parseDecanAi(res: PromiseSettledResult<any>): DecanAi | null {
-            if (res.status === "rejected") return null;
-            let parsed = res.value?.ai_response;
-            if (typeof parsed === "string") { try { parsed = JSON.parse(parsed); } catch { /* keep */ } }
-            if (typeof parsed === "object" && parsed !== null) {
-              return { short_format: parsed.short_format ?? "", long_format: parsed.long_format ?? "" };
-            }
-            return null;
-          }
-
-          setSections((prev) => ({
-            ...prev,
-            [row.decan]: {
-              planetAi: parseDecanAi(planetRes),
-              daemonAi: parseDecanAi(daemonRes),
-              tarotAi: parseDecanAi(tarotRes),
-              loading: false,
-            },
-          }));
+          newSections[row.decan] = {
+            planetAi: (row.planet_sign_short_desc || row.planet_sign_long_desc)
+              ? { short_format: row.planet_sign_short_desc ?? "", long_format: row.planet_sign_long_desc ?? "" }
+              : null,
+            daemonAi: (row.daemon_short_desc || row.daemon_long_desc)
+              ? { short_format: row.daemon_short_desc ?? "", long_format: row.daemon_long_desc ?? "" }
+              : null,
+            tarotAi: (row.tarot_short_desc || row.tarot_long_desc)
+              ? { short_format: row.tarot_short_desc ?? "", long_format: row.tarot_long_desc ?? "" }
+              : null,
+            loading: false,
+          };
         }
+        if (!cancelled) setSections(newSections);
       } catch (e: unknown) {
         if (cancelled) return;
         setRowError(e instanceof Error ? e.message : "Failed to load decan data");
@@ -1116,101 +1135,123 @@ function DecanModal({ planet, sign, open, onClose }: {
   }, [open, planet, sign]);
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
-        {/* Custom Close Icon - Fixed to top-right */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.15)] group"
-          aria-label="Close modal"
-        >
-          <X className="size-5 transition-transform group-hover:rotate-90" />
-        </button>
+    <>
+      <ChartImageModal src={fullscreenImg || ""} open={!!fullscreenImg} onClose={() => setFullscreenImg(null)} />
+      <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
+          {/* Custom Close Icon - Fixed to top-right */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.15)] group"
+            aria-label="Close modal"
+          >
+            <X className="size-5 transition-transform group-hover:rotate-90" />
+          </button>
 
-        {/* Sticky Header Section */}
-        <div className="px-6 py-5 border-b border-white/5 bg-slate-900/40 pr-16 shrink-0">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-lg font-bold gold-text">
-              {PLANET_IMAGES[planet] && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={PLANET_IMAGES[planet]} alt={planet} className="size-7 object-contain drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
-              )}
-              <span>{planet} Decans in {sign}</span>
-            </DialogTitle>
-          </DialogHeader>
-        </div>
+          {/* Sticky Header Section */}
+          <div className="px-6 py-5 border-b border-white/5 bg-slate-900/40 pr-16 shrink-0">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3 text-lg font-bold gold-text">
+                {PLANET_IMAGES[planet] && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={PLANET_IMAGES[planet]} alt={planet} className="size-7 object-contain drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
+                )}
+                <span>{planet} Decans in {sign}</span>
+              </DialogTitle>
+            </DialogHeader>
+          </div>
 
-        {/* Scrollable Content Section */}
-        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+          {/* Scrollable Content Section */}
+          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
 
-          {loadingRows && (
-            <div className="flex items-center gap-3 py-8 justify-center text-muted-foreground">
-              <Loader2 className="size-5 animate-spin text-amber-500" />
-              <span className="text-sm">Loading decan data…</span>
-            </div>
-          )}
+            {loadingRows && (
+              <div className="flex items-center gap-3 py-8 justify-center text-muted-foreground">
+                <Loader2 className="size-5 animate-spin text-amber-500" />
+                <span className="text-sm">Loading decan data…</span>
+              </div>
+            )}
 
-          {rowError && (
-            <div className="py-4 text-sm text-destructive">{rowError}</div>
-          )}
+            {rowError && (
+              <div className="py-4 text-sm text-destructive">{rowError}</div>
+            )}
 
-          {rows.length > 0 && (
-            <div className="space-y-6">
-              {rows.map((row) => {
-                const sec = sections[row.decan];
-                return (
-                  <div key={row.decan} className="rounded-lg border overflow-hidden">
-                    {/* Decan header */}
-                    <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-500/10 border-b">
-                      <span className="text-xs font-bold uppercase tracking-widest text-amber-600">{ordinalDecan(row.decan)} Decan</span>
-                      <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-400 ml-auto">{planet} in {sign}</Badge>
-                    </div>
-
-                    {/* Static labels row */}
-                    <div className="grid grid-cols-2 gap-px bg-border">
-                      <div className="bg-background px-4 py-2.5 space-y-0.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Greek Daemon</p>
-                        <p className="text-sm font-medium text-foreground">{row.greek_daemon || "—"}</p>
+            {rows.length > 0 && (
+              <div className="space-y-6">
+                {rows.map((row) => {
+                  const sec = sections[row.decan];
+                  return (
+                    <div key={row.decan} className="rounded-lg border overflow-hidden bg-slate-900/20">
+                      {/* Decan header */}
+                      <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-500/10 border-b">
+                        <span className="text-xs font-bold uppercase tracking-widest text-amber-600">{ordinalDecan(row.decan)} Decan</span>
+                        <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-400 ml-auto">{planet} in {sign}</Badge>
                       </div>
-                      <div className="bg-background px-4 py-2.5 space-y-0.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tarot Card</p>
-                        <p className="text-sm font-medium text-foreground">{row.tarot_name || "—"}</p>
+
+                      {/* Decan Image if available */}
+                      {row.decan_img && (
+                        <div className="relative group/img bg-slate-950 border-b border-white/5 flex justify-center p-4">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={row.decan_img}
+                            alt={`${ordinalDecan(row.decan)} Decan Imagery`}
+                            className="max-h-[320px] w-auto object-contain rounded-lg shadow-2xl transition-transform hover:scale-[1.02]"
+                          />
+                          <button
+                            className="absolute bottom-6 right-6 p-2 rounded-full bg-slate-900/80 border border-white/10 text-amber-500 opacity-0 group-hover/img:opacity-100 transition-opacity"
+                            onClick={() => setFullscreenImg(row.decan_img || null)}
+                            title="Open Full Image"
+                          >
+                            <Maximize2 className="size-4" />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Static labels row */}
+                      <div className="grid grid-cols-2 gap-px bg-border">
+                        <div className="bg-background px-4 py-2.5 space-y-0.5">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Greek Daemon</p>
+                          <p className="text-sm font-medium text-foreground">{row.greek_daemon || "—"}</p>
+                        </div>
+                        <div className="bg-background px-4 py-2.5 space-y-0.5">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tarot Card</p>
+                          <p className="text-sm font-medium text-foreground">{row.tarot_name || "—"}</p>
+                        </div>
+                      </div>
+
+                      {/* Static description if present */}
+                      {row.description && (
+                        <div className="px-4 py-3 bg-muted/5 border-t">
+                          <p className="text-xs text-muted-foreground leading-relaxed">{row.description}</p>
+                        </div>
+                      )}
+
+                      {/* AI sections */}
+                      <div className="px-4 py-4 space-y-5 border-t">
+                        <DecanAiBlock
+                          title={`${planet} in ${ordinalDecan(row.decan)} Decan of ${sign}`}
+                          data={sec?.planetAi ?? null}
+                          loading={sec?.loading ?? true}
+                        />
+                        <DecanAiBlock
+                          title={`Greek Daemon: ${row.greek_daemon}`}
+                          data={sec?.daemonAi ?? null}
+                          loading={sec?.loading ?? true}
+                        />
+                        <DecanAiBlock
+                          title={`Tarot: ${row.tarot_name}`}
+                          data={sec?.tarotAi ?? null}
+                          loading={sec?.loading ?? true}
+                        />
                       </div>
                     </div>
-
-                    {/* Static description if present */}
-                    {row.description && (
-                      <div className="px-4 py-3 bg-muted/5 border-t">
-                        <p className="text-xs text-muted-foreground leading-relaxed">{row.description}</p>
-                      </div>
-                    )}
-
-                    {/* AI sections */}
-                    <div className="px-4 py-4 space-y-5 border-t">
-                      <DecanAiBlock
-                        title={`${planet} in ${ordinalDecan(row.decan)} Decan of ${sign}`}
-                        data={sec?.planetAi ?? null}
-                        loading={sec?.loading ?? true}
-                      />
-                      <DecanAiBlock
-                        title={`Greek Daemon: ${row.greek_daemon}`}
-                        data={sec?.daemonAi ?? null}
-                        loading={sec?.loading ?? true}
-                      />
-                      <DecanAiBlock
-                        title={`Tarot: ${row.tarot_name}`}
-                        data={sec?.tarotAi ?? null}
-                        loading={sec?.loading ?? true}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -1268,7 +1309,21 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: 
             <tbody>
               {ordered.map((p, i) => (
                 <tr key={p.name} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
-                  <td className="px-3 py-2 font-medium whitespace-nowrap"><PlanetSymbol name={p.name} /></td>
+                  <td className="px-3 py-2 font-medium whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <PlanetSymbol name={p.name} />
+                      {checkDacen(p.name, p.sign) && (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          onClick={() => setDecanPlanet({ name: p.name, sign: p.sign })}
+                          src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
+                          alt="Decan Icon"
+                          title="Decan Information (Click to view)"
+                          className="size-5 cursor-pointer hover:scale-125 transition-transform drop-shadow-[0_0_5px_rgba(245,158,11,0.4)]"
+                        />
+                      )}
+                    </div>
+                  </td>
                   <td className="px-3 py-2 whitespace-nowrap"><ZodiacSymbol sign={p.sign} /></td>
                   <td className="px-3 py-2 font-mono text-xs">{Number(p.full_degree).toFixed(2)}°</td>
                   <td className="px-3 py-2 text-center">{p.house}</td>
@@ -1301,13 +1356,14 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: 
                   <span className="text-amber-500 text-base">{PLANET_SYMBOLS[p.name] ?? "✦"}</span>
                   <h4 className="text-sm font-semibold uppercase tracking-wide">{p.name}</h4>
                   {hasDecan && (
-                    <button
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
                       onClick={() => setDecanPlanet({ name: p.name, sign: p.sign })}
-                      className="inline-flex items-center justify-center p-1 rounded-md hover:bg-purple-500/10 text-purple-600 transition-colors"
-                      title={`${p.name} Decan in ${p.sign}`}
-                    >
-                      <Sparkles className="size-4" />
-                    </button>
+                      src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
+                      alt="Decan Icon"
+                      title="Decan Information (Click to view)"
+                      className="size-5 cursor-pointer hover:scale-125 transition-transform drop-shadow-[0_0_5px_rgba(245,158,11,0.4)] ml-1.5"
+                    />
                   )}
                   <Badge variant="outline" className="ml-auto text-[10px] text-amber-600 border-amber-400">{p.sign} · House {p.house}</Badge>
                 </div>
@@ -1315,7 +1371,7 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: 
                   <p className="text-sm leading-relaxed text-foreground">{interp}</p>
                   <div className="mt-2 flex justify-center">
                     <button
-                      onClick={() => trigger(p.name, interp, { planet: p, context: "western astrology planet interpretation" }, areaOfInquiry, undefined, false, "planet")}
+                      onClick={() => trigger(p.name, interp, p, areaOfInquiry, undefined, false, "planet")}
                       className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
                     >Show More</button>
                   </div>
@@ -1736,7 +1792,7 @@ function LilithSection({ lilith, aiData, areaOfInquiry }: { lilith: any; aiData:
           <div className="px-4 py-3 border-t">
             <p className="text-sm leading-relaxed">{interp}</p>
             <div className="mt-2 flex justify-center">
-              <button onClick={() => trigger("Lilith", interp, lilith, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+              <button onClick={() => trigger("Lilith", interp, lilith, areaOfInquiry, undefined, false, "planet")} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
             </div>
           </div>
         )}
@@ -1783,7 +1839,7 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry }: { natal
               <p className="text-sm leading-relaxed">{interp ?? <span className="text-muted-foreground italic">Loading…</span>}</p>
               {interp && (
                 <div className="mt-1.5 flex justify-center">
-                  <button onClick={() => trigger(key, interp, { [key]: degree }, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                  <button onClick={() => trigger(key, interp, { [key]: degree }, areaOfInquiry, undefined, false, "planet")} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
                 </div>
               )}
             </div>
@@ -2169,11 +2225,11 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
   // Normalise transit relation rows — handles both Lambda and AstrologyAPI shapes
   const transitRows: any[] = (() => {
     if (!data) return [];
-    // Lambda: { transit_relation: [...] } or direct array
+    // Lambda: {transit_relation: [...] } or direct array
     if (Array.isArray(data?.transit_relation)) return data.transit_relation;
     if (Array.isArray(data?.transits)) return data.transits;
     if (Array.isArray(data)) return data;
-    // AstrologyAPI weekly shape: { transit_planet: { Sun: {...}, ... } } — flatten
+    // AstrologyAPI weekly shape: {transit_planet: {Sun: {...}, ... } } — flatten
     if (data?.transit_planet && typeof data.transit_planet === "object") {
       return Object.entries(data.transit_planet).flatMap(([tPlanet, aspects]: [string, any]) =>
         Object.entries(aspects ?? {}).map(([nPlanet, detail]: [string, any]) => ({
@@ -2843,12 +2899,12 @@ export default function AdminHoroscopePage() {
     setShowScrollTop(false); setShowChartBtn(false);
   }, [currentSlug]);
 
-  // Pre-fetch decan possibilities
+  // Pre-fetch decan possibilities (distinct planet+sign pairs)
   useEffect(() => {
-    fetch("/api/admin/astro-decans")
+    fetch("/api/admin/astro/decan-info")
       .then((r) => r.json())
       .then((data) => {
-        if (Array.isArray(data)) setDecanPossibilities(data);
+        if (data?.results && Array.isArray(data.results)) setDecanPossibilities(data.results);
       })
       .catch(() => { });
   }, []);
