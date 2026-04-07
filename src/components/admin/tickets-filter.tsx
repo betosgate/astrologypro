@@ -9,126 +9,225 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { X, Search } from "lucide-react";
+import { useRef, useTransition } from "react";
+
+interface Queue {
+  id: string;
+  name: string;
+}
 
 interface TicketsFilterProps {
   currentStatus: string;
   currentType: string;
   currentPriority: string;
+  currentQueue?: string;
+  currentSearch?: string;
+  currentDateFrom?: string;
+  currentDateTo?: string;
+  queues?: Queue[];
 }
 
 export function TicketsFilter({
   currentStatus,
   currentType,
   currentPriority,
+  currentQueue = "",
+  currentSearch = "",
+  currentDateFrom = "",
+  currentDateTo = "",
+  queues = [],
 }: TicketsFilterProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const [, startTransition] = useTransition();
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  function buildUrl(
-    status: string,
-    type: string,
-    priority: string
-  ) {
+  function buildUrl(overrides: Record<string, string>) {
+    const current: Record<string, string> = {
+      status: currentStatus,
+      type: currentType,
+      priority: currentPriority,
+      queue: currentQueue,
+      search: currentSearch,
+      date_from: currentDateFrom,
+      date_to: currentDateTo,
+    };
+    const merged = { ...current, ...overrides };
     const params = new URLSearchParams();
-    if (status && status !== "all") params.set("status", status);
-    if (type && type !== "all") params.set("type", type);
-    if (priority && priority !== "all") params.set("priority", priority);
+    for (const [k, v] of Object.entries(merged)) {
+      if (v && v !== "all") params.set(k, v);
+    }
     const qs = params.toString();
     return qs ? `${pathname}?${qs}` : pathname;
   }
 
-  const hasFilters = currentStatus || currentType || currentPriority;
+  function handleSearchSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const val = searchRef.current?.value.trim() ?? "";
+    startTransition(() => {
+      router.push(buildUrl({ search: val }));
+    });
+  }
+
+  const hasFilters =
+    currentStatus ||
+    currentType ||
+    currentPriority ||
+    currentQueue ||
+    currentSearch ||
+    currentDateFrom ||
+    currentDateTo;
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <Select
-        value={currentStatus || "all"}
-        onValueChange={(v) =>
-          router.push(buildUrl(v === "all" ? "" : v, currentType, currentPriority))
-        }
-      >
-        <SelectTrigger className="w-40">
-          <SelectValue placeholder="All statuses" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All statuses</SelectItem>
-          {[
-            "open",
-            "in_progress",
-            "waiting_requester",
-            "waiting_internal",
-            "escalated",
-            "resolved",
-            "closed",
-            "cancelled",
-          ].map((s) => (
-            <SelectItem key={s} value={s}>
-              {s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={currentType || "all"}
-        onValueChange={(v) =>
-          router.push(buildUrl(currentStatus, v === "all" ? "" : v, currentPriority))
-        }
-      >
-        <SelectTrigger className="w-40">
-          <SelectValue placeholder="All types" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All types</SelectItem>
-          {[
-            "support",
-            "job",
-            "incident",
-            "escalation",
-            "complaint",
-            "refund",
-            "payout",
-            "bug",
-            "moderation",
-          ].map((t) => (
-            <SelectItem key={t} value={t}>
-              {t.replace(/\b\w/g, (c) => c.toUpperCase())}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={currentPriority || "all"}
-        onValueChange={(v) =>
-          router.push(buildUrl(currentStatus, currentType, v === "all" ? "" : v))
-        }
-      >
-        <SelectTrigger className="w-40">
-          <SelectValue placeholder="All priorities" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All priorities</SelectItem>
-          {["low", "normal", "high", "urgent", "critical"].map((p) => (
-            <SelectItem key={p} value={p}>
-              {p.replace(/\b\w/g, (c) => c.toUpperCase())}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {hasFilters && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push(pathname)}
-          className="text-muted-foreground"
-        >
-          <X className="size-4 mr-1.5" />
-          Clear filters
+    <div className="space-y-3">
+      {/* Search bar */}
+      <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 max-w-md">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+          <Input
+            ref={searchRef}
+            defaultValue={currentSearch}
+            placeholder="Search tickets by subject, requester, ticket #…"
+            className="pl-8 h-9 text-sm"
+          />
+        </div>
+        <Button type="submit" size="sm" variant="outline" className="h-9 px-3">
+          Search
         </Button>
-      )}
+      </form>
+
+      {/* Filter dropdowns */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Select
+          value={currentStatus || "all"}
+          onValueChange={(v) =>
+            router.push(buildUrl({ status: v === "all" ? "" : v }))
+          }
+        >
+          <SelectTrigger className="w-40 h-9">
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            {[
+              "open",
+              "in_progress",
+              "waiting_requester",
+              "waiting_internal",
+              "escalated",
+              "resolved",
+              "closed",
+              "cancelled",
+            ].map((s) => (
+              <SelectItem key={s} value={s}>
+                {s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={currentType || "all"}
+          onValueChange={(v) =>
+            router.push(buildUrl({ type: v === "all" ? "" : v }))
+          }
+        >
+          <SelectTrigger className="w-40 h-9">
+            <SelectValue placeholder="All types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All types</SelectItem>
+            {[
+              "support",
+              "job",
+              "incident",
+              "escalation",
+              "complaint",
+              "refund",
+              "payout",
+              "bug",
+              "moderation",
+            ].map((t) => (
+              <SelectItem key={t} value={t}>
+                {t.replace(/\b\w/g, (c) => c.toUpperCase())}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={currentPriority || "all"}
+          onValueChange={(v) =>
+            router.push(buildUrl({ priority: v === "all" ? "" : v }))
+          }
+        >
+          <SelectTrigger className="w-40 h-9">
+            <SelectValue placeholder="All priorities" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All priorities</SelectItem>
+            {["low", "normal", "high", "urgent", "critical"].map((p) => (
+              <SelectItem key={p} value={p}>
+                {p.replace(/\b\w/g, (c) => c.toUpperCase())}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {queues.length > 0 && (
+          <Select
+            value={currentQueue || "all"}
+            onValueChange={(v) =>
+              router.push(buildUrl({ queue: v === "all" ? "" : v }))
+            }
+          >
+            <SelectTrigger className="w-44 h-9">
+              <SelectValue placeholder="All queues" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All queues</SelectItem>
+              {queues.map((q) => (
+                <SelectItem key={q.id} value={q.id}>
+                  {q.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Date range */}
+        <div className="flex items-center gap-1.5">
+          <Input
+            type="date"
+            value={currentDateFrom}
+            onChange={(e) => router.push(buildUrl({ date_from: e.target.value }))}
+            className="h-9 w-36 text-sm"
+            aria-label="From date"
+          />
+          <span className="text-xs text-muted-foreground">–</span>
+          <Input
+            type="date"
+            value={currentDateTo}
+            onChange={(e) => router.push(buildUrl({ date_to: e.target.value }))}
+            className="h-9 w-36 text-sm"
+            aria-label="To date"
+          />
+        </div>
+
+        {hasFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push(pathname)}
+            className="text-muted-foreground h-9"
+          >
+            <X className="size-4 mr-1.5" />
+            Clear filters
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

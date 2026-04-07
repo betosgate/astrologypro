@@ -11,6 +11,7 @@ interface AdminPatchBody {
   priority?: string;
   assigned_to?: string | null;
   assigned_team?: string | null;
+  queue_id?: string | null;
   resolution?: string;
   // For adding an internal note or public reply via PATCH
   message?: string;
@@ -169,6 +170,16 @@ export async function PATCH(
 
   if ("assigned_team" in body) {
     updates.assigned_team = body.assigned_team;
+  }
+
+  if ("queue_id" in body) {
+    updates.queue_id = body.queue_id;
+    historyEntries.push({
+      ticket_id: id,
+      actor_user_id: admin_user.id,
+      event_type: "queue_changed",
+      new_value: body.queue_id ?? undefined,
+    });
   }
 
   if (body.resolution !== undefined) {

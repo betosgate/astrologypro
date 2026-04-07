@@ -198,8 +198,40 @@ export async function POST(
     );
   }
 
-  // If passed, mark lesson as complete (upsert — idempotent)
+  // If passed, mark lesson as complete — but only if all in-video triggers are also passed.
+  // This prevents the quiz path from bypassing the trigger-based completion gate.
   if (passed) {
+    // Check trigger gate before writing lesson completion
+    const { data: activeTriggers } = await admin
+      .from("lesson_quiz_triggers")
+      .select("id")
+      .eq("lesson_id", lessonId)
+      .eq("is_active", true);
+
+    if (activeTriggers && activeTriggers.length > 0) {
+      const triggerIds = activeTriggers.map((t) => t.id);
+      const { count: passedTriggerCount } = await admin
+        .from("lesson_trigger_progress")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .in("trigger_id", triggerIds)
+        .eq("passed", true);
+
+      if ((passedTriggerCount ?? 0) < triggerIds.length) {
+        // Quiz passed but triggers pending — record the attempt as passed but don't
+        // mark the lesson complete yet. The learner must finish the in-video questions.
+        return NextResponse.json({
+          score,
+          total,
+          passed: true,
+          results,
+          lesson_complete: false,
+          pending_triggers: true,
+          message: "Quiz passed. Complete the in-video questions to finish this lesson.",
+        });
+      }
+    }
+
     const now = new Date().toISOString();
 
     // Look up lesson_progress to carry started_at / time_spent_seconds into completion record

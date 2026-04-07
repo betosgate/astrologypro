@@ -63,74 +63,88 @@ export async function GET(
 
   const lesson = lessonResult.data;
 
-  // ── Sequential lock check (category level) ────────────────────────────────
-  const { data: category } = await admin
-    .from("training_categories")
-    .select("id, training_id, is_sequential, priority")
-    .eq("id", lesson.category_id)
-    .single();
+  // ── Fetch training settings and category in parallel ─────────────────────
+  const [{ data: category }, { data: trainingSettings }] = await Promise.all([
+    admin
+      .from("training_categories")
+      .select("id, training_id, is_sequential, priority")
+      .eq("id", lesson.category_id)
+      .single(),
+    admin
+      .from("training_settings")
+      .select("global_sequential_lock")
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
-  if (category?.is_sequential) {
-    // Find all active lessons in this category with lower priority
-    const { data: prevLessons } = await admin
-      .from("training_lessons")
-      .select("id")
-      .eq("category_id", category.id)
-      .eq("is_active", true)
-      .lt("priority", lesson.priority)
-      .order("priority", { ascending: true });
+  // global_sequential_lock = false means no sequential enforcement at all.
+  // If not set, default to false (permissive).
+  const globalLock = trainingSettings?.global_sequential_lock ?? false;
 
-    if (prevLessons && prevLessons.length > 0) {
-      const prevIds = prevLessons.map((l) => l.id);
-      const { count: completedCount } = await admin
-        .from("lesson_completions")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .in("lesson_id", prevIds);
-
-      if ((completedCount ?? 0) < prevIds.length) {
-        return NextResponse.json(
-          { error: "Complete previous lessons in order first.", locked: true },
-          { status: 403 }
-        );
-      }
-    }
-  }
-
-  // ── Sequential lock check (program level) ─────────────────────────────────
-  if (category) {
-    const { data: program } = await admin
-      .from("training_programs")
-      .select("id, is_sequential")
-      .eq("id", category.training_id)
-      .single();
-
-    if (program?.is_sequential) {
-      // Find all active categories in this program with lower priority
-      const { data: prevCats } = await admin
-        .from("training_categories")
+  if (globalLock) {
+    // ── Sequential lock check (category level) ──────────────────────────────
+    // Enforced only when global lock is ON and this category has is_sequential ON.
+    if (category?.is_sequential) {
+      const { data: prevLessons } = await admin
+        .from("training_lessons")
         .select("id")
-        .eq("training_id", program.id)
+        .eq("category_id", category.id)
         .eq("is_active", true)
-        .lt("priority", category.priority)
+        .lt("priority", lesson.priority)
         .order("priority", { ascending: true });
 
-      if (prevCats && prevCats.length > 0) {
-        const prevCatIds = prevCats.map((c) => c.id);
-        const { count: completedCatCount } = await admin
-          .from("category_completions")
+      if (prevLessons && prevLessons.length > 0) {
+        const prevIds = prevLessons.map((l) => l.id);
+        const { count: completedCount } = await admin
+          .from("lesson_completions")
           .select("id", { count: "exact", head: true })
           .eq("user_id", user.id)
-          .in("category_id", prevCatIds);
+          .in("lesson_id", prevIds);
 
-        if ((completedCatCount ?? 0) < prevCatIds.length) {
+        if ((completedCount ?? 0) < prevIds.length) {
           return NextResponse.json(
-            {
-              error: "Complete previous categories in order first.",
-              locked: true,
-            },
+            { error: "Complete previous lessons in order first.", locked: true },
             { status: 403 }
           );
+        }
+      }
+    }
+
+    // ── Sequential lock check (program level) ───────────────────────────────
+    // Enforced only when global lock is ON and the program has is_sequential ON.
+    if (category) {
+      const { data: program } = await admin
+        .from("training_programs")
+        .select("id, is_sequential")
+        .eq("id", category.training_id)
+        .single();
+
+      if (program?.is_sequential) {
+        const { data: prevCats } = await admin
+          .from("training_categories")
+          .select("id")
+          .eq("training_id", program.id)
+          .eq("is_active", true)
+          .lt("priority", category.priority)
+          .order("priority", { ascending: true });
+
+        if (prevCats && prevCats.length > 0) {
+          const prevCatIds = prevCats.map((c) => c.id);
+          const { count: completedCatCount } = await admin
+            .from("category_completions")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", user.id)
+            .in("category_id", prevCatIds);
+
+          if ((completedCatCount ?? 0) < prevCatIds.length) {
+            return NextResponse.json(
+              {
+                error: "Complete previous categories in order first.",
+                locked: true,
+              },
+              { status: 403 }
+            );
+          }
         }
       }
     }
