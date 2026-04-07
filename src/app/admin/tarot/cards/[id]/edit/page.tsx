@@ -221,25 +221,25 @@ export default function EditTarotCardPage() {
       </div>
 
       <form onSubmit={handleSubmit}>
-        <Card className="max-w-3xl">
+        <Card>
           <CardHeader>
             <CardTitle>Card Details</CardTitle>
             <CardDescription>Configure the properties, meanings, and imagery for this tarot card.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
 
-            <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
-              <Input
-                id="name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g. The Fool"
-              />
-              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
-            </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name *</Label>
+                <Input
+                  id="name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="e.g. The Fool"
+                />
+                {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="arcana">Arcana *</Label>
                 <select
@@ -252,6 +252,9 @@ export default function EditTarotCardPage() {
                   <option value="minor">Minor Arcana</option>
                 </select>
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {form.arcana === "minor" && (
                 <div className="space-y-2">
                   <Label htmlFor="suit">Suit</Label>
@@ -263,9 +266,6 @@ export default function EditTarotCardPage() {
                   />
                 </div>
               )}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="number">Card Number</Label>
                 <Input
@@ -290,28 +290,30 @@ export default function EditTarotCardPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="upright_meaning">Upright Meaning</Label>
-              <Textarea
-                id="upright_meaning"
-                rows={3}
-                value={form.upright_meaning}
-                onChange={(e) => setForm({ ...form, upright_meaning: e.target.value })}
-                placeholder="Meaning when the card is drawn upright..."
-                className="resize-none"
-              />
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="upright_meaning">Upright Meaning</Label>
+                <Textarea
+                  id="upright_meaning"
+                  rows={3}
+                  value={form.upright_meaning}
+                  onChange={(e) => setForm({ ...form, upright_meaning: e.target.value })}
+                  placeholder="Meaning when the card is drawn upright..."
+                  className="resize-none"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="reversed_meaning">Reversed Meaning</Label>
-              <Textarea
-                id="reversed_meaning"
-                rows={3}
-                value={form.reversed_meaning}
-                onChange={(e) => setForm({ ...form, reversed_meaning: e.target.value })}
-                placeholder="Meaning when the card is drawn reversed..."
-                className="resize-none"
-              />
+              <div className="space-y-2">
+                <Label htmlFor="reversed_meaning">Reversed Meaning</Label>
+                <Textarea
+                  id="reversed_meaning"
+                  rows={3}
+                  value={form.reversed_meaning}
+                  onChange={(e) => setForm({ ...form, reversed_meaning: e.target.value })}
+                  placeholder="Meaning when the card is drawn reversed..."
+                  className="resize-none"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">

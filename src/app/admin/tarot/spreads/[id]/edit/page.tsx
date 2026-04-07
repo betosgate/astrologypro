@@ -181,22 +181,36 @@ export default function EditTarotSpreadPage() {
       </div>
 
       <form onSubmit={handleSubmit}>
-        <Card className="max-w-3xl">
+        <Card>
           <CardHeader>
             <CardTitle>Spread Details</CardTitle>
             <CardDescription>Configure the underlying properties for this tarot spread.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
 
-            <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
-              <Input
-                id="name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g. Celtic Cross"
-              />
-              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name *</Label>
+                <Input
+                  id="name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="e.g. Celtic Cross"
+                />
+                {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="card_count">Card Count *</Label>
+                <Input
+                  id="card_count"
+                  type="number"
+                  min="1"
+                  value={form.card_count}
+                  onChange={(e) => setForm({ ...form, card_count: String(e.target.value) })}
+                  placeholder="e.g. 10"
+                />
+                {errors.card_count && <p className="text-sm text-destructive">{errors.card_count}</p>}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -213,25 +227,13 @@ export default function EditTarotSpreadPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="card_count">Card Count *</Label>
-                <Input
-                  id="card_count"
-                  type="number"
-                  min="1"
-                  value={form.card_count}
-                  onChange={(e) => setForm({ ...form, card_count: e.target.value })}
-                  placeholder="e.g. 10"
-                />
-                {errors.card_count && <p className="text-sm text-destructive">{errors.card_count}</p>}
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="priority">Display Priority (Optional)</Label>
                 <Input
                   id="priority"
                   type="number"
                   min="0"
                   value={form.priority}
-                  onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                  onChange={(e) => setForm({ ...form, priority: String(e.target.value) })}
                   placeholder="Higher number = higher in list"
                 />
               </div>

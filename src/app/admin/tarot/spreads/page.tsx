@@ -19,6 +19,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -47,7 +56,11 @@ import {
   RefreshCw,
   Power,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ShieldCheck,
+  ShieldOff,
+  Loader2,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -232,6 +245,75 @@ export default function TarotSpreadsListPage() {
   const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
   const paged = sorted.slice((page - 1) * pageSize, page * pageSize);
 
+  // Bulk Actions
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
+  const [bulkStatusValue, setBulkStatusValue] = useState<"active" | "inactive">("active");
+  const [bulkStatusLoading, setBulkStatusLoading] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    const allPageIds = paged.map((s) => s.id);
+    const allSelected = allPageIds.length > 0 && allPageIds.every((id) => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const id of allPageIds) next.delete(id);
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const id of allPageIds) next.add(id);
+        return next;
+      });
+    }
+  }
+
+  const allOnPageSelected = paged.length > 0 && paged.every((s) => selectedIds.has(s.id));
+
+  async function handleBulkStatus() {
+    setBulkStatusLoading(true);
+    let updated = 0;
+    for (const id of selectedIds) {
+      const res = await fetch(`/api/admin/tarot/spreads/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: bulkStatusValue === "active" }),
+      });
+      if (res.ok) updated++;
+    }
+    toast.success(`Updated ${updated} spread(s)`);
+    setBulkStatusOpen(false);
+    setSelectedIds(new Set());
+    loadSpreads();
+    setBulkStatusLoading(false);
+  }
+
+  async function handleBulkDelete() {
+    setBulkDeleteLoading(true);
+    let deleted = 0;
+    for (const id of selectedIds) {
+      const res = await fetch(`/api/admin/tarot/spreads/${id}`, { method: "DELETE" });
+      if (res.ok) deleted++;
+    }
+    toast.success(`Deleted ${deleted} spread(s)`);
+    setBulkDeleteOpen(false);
+    setSelectedIds(new Set());
+    loadSpreads();
+    setBulkDeleteLoading(false);
+  }
+
   const hasActiveFilters = search.length > 0 || statusSearch !== "all" || createStart || createEnd || updateStart || updateEnd || sortBy !== "created_at" || sortDir !== "desc";
 
   return (
@@ -341,6 +423,53 @@ export default function TarotSpreadsListPage() {
           </div>
         </div>
 
+        {/* Bulk Action Toolbar */}
+        {selectedIds.size > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-background/95 px-4 py-2.5 shadow-sm">
+            <span className="text-sm font-medium text-foreground">
+              {selectedIds.size} spread{selectedIds.size !== 1 ? "s" : ""} selected
+            </span>
+            <div className="flex flex-wrap items-center gap-2 ml-auto">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    Change Status
+                    <ArrowDown className="size-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => { setBulkStatusValue("active"); setBulkStatusOpen(true); }}>
+                    <ShieldCheck className="mr-2 size-4 text-green-500" />
+                    Set Active
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setBulkStatusValue("inactive"); setBulkStatusOpen(true); }}>
+                    <ShieldOff className="mr-2 size-4 text-destructive" />
+                    Set Inactive
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setBulkDeleteOpen(true)}
+              >
+                <Trash2 className="size-4" />
+                Delete
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-muted-foreground"
+                onClick={() => setSelectedIds(new Set())}
+              >
+                <X className="size-4" />
+                Clear
+              </Button>
+            </div>
+          </div>
+        )}
+
         <Card>
           <CardContent className="p-0">
             {loading ? (
@@ -356,6 +485,13 @@ export default function TarotSpreadsListPage() {
                 <Table>
                   <TableHeader className="bg-muted/50">
                     <TableRow>
+                      <TableHead className="w-8 pl-4 pr-2">
+                        <Checkbox
+                          checked={allOnPageSelected}
+                          onCheckedChange={toggleSelectAll}
+                          aria-label="Select all on page"
+                        />
+                      </TableHead>
                       <TableHead>
                         <SortHeader label="Spread Name" column="name" currentSort={sortBy} currentDir={sortDir} onSort={handleSort} />
                       </TableHead>
@@ -375,6 +511,13 @@ export default function TarotSpreadsListPage() {
                   <TableBody>
                     {paged.map((s) => (
                       <TableRow key={s.id} className="group transition-colors hover:bg-muted/50">
+                        <TableCell className="w-8 pl-4 pr-2" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedIds.has(s.id)}
+                            onCheckedChange={() => toggleSelect(s.id)}
+                            aria-label={`Select ${s.name}`}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium text-foreground">{s.name}</TableCell>
                         <TableCell className="text-muted-foreground">{s.priority ?? "—"}</TableCell>
                         <TableCell>
@@ -495,6 +638,56 @@ export default function TarotSpreadsListPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Bulk Status Dialog */}
+      <Dialog open={bulkStatusOpen} onOpenChange={(v) => { if (!v) setBulkStatusOpen(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {bulkStatusValue === "active" ? "Set Active" : "Set Inactive"} {selectedIds.size} Spread{selectedIds.size !== 1 ? "s" : ""}?
+            </DialogTitle>
+            <DialogDescription>
+              {bulkStatusValue === "active"
+                ? `This will mark the spread(s) as active so they can be assigned.`
+                : `This will mark the spread(s) as inactive and block future assignment.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkStatusOpen(false)} disabled={bulkStatusLoading}>
+              Cancel
+            </Button>
+            <Button
+              variant={bulkStatusValue === "inactive" ? "destructive" : "default"}
+              onClick={handleBulkStatus}
+              disabled={bulkStatusLoading}
+            >
+              {bulkStatusLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {bulkStatusValue === "active" ? "Activate" : "Deactivate"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Dialog */}
+      <Dialog open={bulkDeleteOpen} onOpenChange={(v) => { if (!v) setBulkDeleteOpen(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {selectedIds.size} Spread{selectedIds.size !== 1 ? "s" : ""}</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the selected spreads? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDeleteOpen(false)} disabled={bulkDeleteLoading}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleBulkDelete} disabled={bulkDeleteLoading}>
+              {bulkDeleteLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
