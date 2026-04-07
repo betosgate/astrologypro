@@ -65,6 +65,9 @@ import {
   Search,
   Orbit,
   MapPin,
+  UserX,
+  BookOpenCheck,
+  ScrollTextIcon,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -85,6 +88,7 @@ const NAV_GROUPS = [
       { label: "Roles", href: "/admin/roles", icon: Shield },
       { label: "Invitations", href: "/admin/invitations", icon: Mail },
       { label: "Social Advocacy", href: "/admin/social-advocacy", icon: Share2 },
+      { label: "Deleted Users", href: "/admin/users/deleted", icon: UserX },
     ],
   },
   {
@@ -129,7 +133,10 @@ const NAV_GROUPS = [
   {
     label: "Programs",
     items: [
-      { label: "Mystery School", href: "/admin/mystery-school", icon: Eye },
+      { label: "Mystery School", href: "/admin/mystery-school", icon: Eye, exact: true },
+      { label: "MS Students", href: "/admin/mystery-school/students", icon: Users },
+      { label: "MS Decans", href: "/admin/mystery-school/decans", icon: BookOpenCheck },
+      { label: "MS Journals", href: "/admin/mystery-school/journals", icon: ScrollTextIcon },
       { label: "Mandalism", href: "/admin/mandalism", icon: Hexagon },
       { label: "Sunday Service", href: "/admin/sunday-service", icon: Sun },
     ],
@@ -197,6 +204,7 @@ const NAV_GROUPS = [
     label: "Engagement",
     items: [
       { label: "Giveaways", href: "/admin/giveaways", icon: Gift },
+      { label: "Testimonials", href: "/admin/testimonials", icon: MessageSquare },
     ],
   },
   {
@@ -223,6 +231,7 @@ const NAV_GROUPS = [
   {
     label: "Config",
     items: [
+      { label: "Platform Settings", href: "/admin/platform-settings", icon: Settings2 },
       { label: "Legal", href: "/admin/legal", icon: ScrollText },
     ],
   },

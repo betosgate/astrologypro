@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Sheet,
   SheetContent,
@@ -93,9 +93,12 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onUserChanged: (userId: string, change: Partial<AdminUser>) => void;
+  initialTab?: "overview" | "notes" | "logins";
 }
 
-export function UserDetailSheet({ user, open, onClose, onUserChanged }: Props) {
+export function UserDetailSheet({ user, open, onClose, onUserChanged, initialTab = "overview" }: Props) {
+  const [activeTab, setActiveTab] = useState<string>(initialTab);
+  const noteTextareaRef = React.useRef<HTMLTextAreaElement>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [logins, setLogins] = useState<LoginLog[]>([]);
   const [notesLoading, setNotesLoading] = useState(false);
@@ -146,6 +149,24 @@ export function UserDetailSheet({ user, open, onClose, onUserChanged }: Props) {
       .then((d) => { if (d?.email) setCurrentAdminEmail(d.email); })
       .catch(() => {});
   }, [currentAdminEmail]);
+
+  // Sync activeTab with initialTab when the sheet opens
+  useEffect(() => {
+    if (open) {
+      setActiveTab(initialTab);
+    }
+  }, [open, initialTab]);
+
+  // Auto-focus the note textarea when the notes tab is active
+  useEffect(() => {
+    if (open && activeTab === "notes" && !notesLoading) {
+      // Small delay to let the DOM render the tab content
+      const timer = setTimeout(() => {
+        noteTextareaRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [open, activeTab, notesLoading]);
 
   useEffect(() => {
     if (open && user) {
@@ -293,12 +314,18 @@ export function UserDetailSheet({ user, open, onClose, onUserChanged }: Props) {
                 ) : (
                   <Badge variant="default">Active</Badge>
                 )}
-                <Badge variant="outline" className="capitalize text-xs">{user.roleLabel}</Badge>
+                {user.roles && user.roles.length > 0 ? (
+                  user.roles.map((r) => (
+                    <Badge key={r.slug} variant="outline" className="capitalize text-xs">{r.label}</Badge>
+                  ))
+                ) : (
+                  <Badge variant="outline" className="capitalize text-xs">{user.roleLabel}</Badge>
+                )}
               </div>
             </div>
           </SheetHeader>
 
-          <Tabs defaultValue="overview" className="mt-4">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="overview"><User className="mr-1.5 size-3.5" />Info</TabsTrigger>
               <TabsTrigger value="notes"><StickyNote className="mr-1.5 size-3.5" />Notes {notes.length > 0 && `(${notes.length})`}</TabsTrigger>
@@ -311,7 +338,7 @@ export function UserDetailSheet({ user, open, onClose, onUserChanged }: Props) {
                 <InfoRow label="Name" value={user.name} />
                 <InfoRow label="Email" value={user.email} />
                 {user.phone && <InfoRow label="Phone" value={user.phone} />}
-                <InfoRow label="Role" value={user.roleLabel} />
+                <InfoRow label="Role" value={user.roles?.map((r) => r.label).join(", ") ?? user.roleLabel} />
                 <InfoRow label="Status" value={user.status} />
                 <InfoRow label="Joined" value={dateTime(user.joinedAt)} />
                 {Object.entries(user.extra ?? {}).map(([k, v]) => (
@@ -321,7 +348,7 @@ export function UserDetailSheet({ user, open, onClose, onUserChanged }: Props) {
 
               <div className="pt-2 space-y-2">
                 {/* Certified badge toggle — diviners only */}
-                {user.role === "diviner" && (
+                {(user.roles?.some((r) => r.slug === "diviner") ?? user.role === "diviner") && (
                   <Button
                     variant="outline"
                     className={`w-full ${user.isCertified ? "border-amber-600 text-amber-500 hover:bg-amber-950" : "border-amber-700/50 text-amber-600/80 hover:bg-amber-950/30"}`}
@@ -364,6 +391,7 @@ export function UserDetailSheet({ user, open, onClose, onUserChanged }: Props) {
             <TabsContent value="notes" className="mt-4 space-y-4">
               <div className="space-y-2">
                 <Textarea
+                  ref={noteTextareaRef}
                   placeholder="Add an admin note about this user…"
                   value={newNote}
                   onChange={(e) => setNewNote(e.target.value)}

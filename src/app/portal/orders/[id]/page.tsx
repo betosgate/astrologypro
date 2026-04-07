@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DynamicIntakeForm } from "@/components/portal/dynamic-intake-form";
 import { formatDateTime } from "@/lib/format";
-import { ArrowLeft, CheckCircle2, Circle, User } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Circle, User, FileText, BookOpen } from "lucide-react";
 import type { IntakeTemplate } from "@/lib/intake-fields";
 
 export const metadata = {
@@ -80,12 +80,28 @@ interface OrderDetail {
   delivered_at: string | null;
   created_at: string;
   service_id: string | null;
+  booking_id: string | null;
   diviners: {
     display_name: string;
     username: string;
     avatar_url: string | null;
   } | null;
   services: { name: string; intake_template_id: string | null } | null;
+}
+
+interface AstroReading {
+  id: string;
+  reading_type: string;
+  result_data: Record<string, unknown>;
+  created_at: string;
+}
+
+interface TarotReading {
+  id: string;
+  spread_type: string;
+  cards: unknown;
+  interpretation: string | null;
+  created_at: string;
 }
 
 interface IntakeSubmission {
@@ -120,7 +136,7 @@ export default async function PortalOrderDetailPage({ params }: RouteParams) {
     .from("orders")
     .select(
       `id, product_title, product_type, amount_cents, currency, status, notes,
-       paid_at, intake_submitted_at, delivered_at, created_at, service_id,
+       paid_at, intake_submitted_at, delivered_at, created_at, service_id, booking_id,
        diviners(display_name, username, avatar_url),
        services(name, intake_template_id)`
     )
@@ -132,8 +148,9 @@ export default async function PortalOrderDetailPage({ params }: RouteParams) {
 
   const order = orderRaw as unknown as OrderDetail;
 
-  // Fetch intake submission and template in parallel
-  const [intakeResult, templateResult] = await Promise.all([
+  // Fetch intake submission, template, and linked readings in parallel
+  const isDelivered = order.status === "delivered" || order.status === "completed";
+  const [intakeResult, templateResult, astroReadingsResult, tarotReadingsResult] = await Promise.all([
     supabase
       .from("order_intake_submissions")
       .select("id, fields, completed_at")
@@ -149,10 +166,34 @@ export default async function PortalOrderDetailPage({ params }: RouteParams) {
         .maybeSingle();
       return (data as IntakeTemplate | null);
     })(),
+    (async (): Promise<AstroReading[]> => {
+      if (!isDelivered || !order.booking_id) return [];
+      const { data } = await admin
+        .from("astro_toolkit_readings")
+        .select("id, reading_type, result_data, created_at")
+        .eq("booking_id", order.booking_id)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false });
+      return (data as AstroReading[] | null) ?? [];
+    })(),
+    (async (): Promise<TarotReading[]> => {
+      if (!isDelivered || !order.booking_id) return [];
+      const { data } = await admin
+        .from("tarot_readings")
+        .select("id, spread_type, cards, interpretation, created_at")
+        .eq("booking_id", order.booking_id)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false });
+      return (data as TarotReading[] | null) ?? [];
+    })(),
   ]);
 
   const intake = intakeResult.data as IntakeSubmission | null;
   const intakeTemplate = templateResult;
+  const astroReadings = astroReadingsResult;
+  const tarotReadings = tarotReadingsResult;
 
   const currentStep = STATUS_ORDER[order.status] ?? 0;
   const diviner = order.diviners;
@@ -165,9 +206,9 @@ export default async function PortalOrderDetailPage({ params }: RouteParams) {
     order.status === "delivered" ||
     order.status === "completed";
 
-  const showDeliverable =
-    (order.status === "delivered" || order.status === "completed") &&
-    !!order.notes;
+  const hasDeliverableContent =
+    !!order.notes || astroReadings.length > 0 || tarotReadings.length > 0;
+  const showDeliverable = isDelivered && hasDeliverableContent;
 
   return (
     <div className="space-y-6">
@@ -325,10 +366,100 @@ export default async function PortalOrderDetailPage({ params }: RouteParams) {
       )}
 
       {/* Deliverable section */}
-      {showDeliverable && order.notes && (
-        <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-5 space-y-3">
-          <h2 className="font-semibold text-green-400">Your Reading</h2>
-          <p className="text-sm leading-relaxed whitespace-pre-line">{order.notes}</p>
+      {showDeliverable && (
+        <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-5 space-y-5">
+          <div className="flex items-center gap-2">
+            <FileText className="size-5 text-green-400" />
+            <h2 className="font-semibold text-green-400">Your Reading</h2>
+          </div>
+
+          {/* Diviner notes */}
+          {order.notes && (
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium uppercase tracking-wider text-green-300/70">
+                Notes from Your Diviner
+              </p>
+              <p className="text-sm leading-relaxed whitespace-pre-line">{order.notes}</p>
+            </div>
+          )}
+
+          {/* Astro toolkit readings */}
+          {astroReadings.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wider text-green-300/70">
+                Astrology Readings
+              </p>
+              {astroReadings.map((reading) => (
+                <div
+                  key={reading.id}
+                  className="rounded-lg border border-green-500/10 bg-green-500/5 p-4 space-y-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="size-4 text-green-400" />
+                      <span className="text-sm font-medium capitalize">
+                        {reading.reading_type.replace(/_/g, " ")}
+                      </span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDateTime(reading.created_at)}
+                    </span>
+                  </div>
+                  {reading.result_data && typeof reading.result_data === "object" && (
+                    <div className="text-sm leading-relaxed whitespace-pre-line">
+                      {(reading.result_data as Record<string, unknown>).summary
+                        ? String((reading.result_data as Record<string, unknown>).summary)
+                        : (reading.result_data as Record<string, unknown>).interpretation
+                        ? String((reading.result_data as Record<string, unknown>).interpretation)
+                        : null}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Tarot readings */}
+          {tarotReadings.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wider text-green-300/70">
+                Tarot Readings
+              </p>
+              {tarotReadings.map((reading) => (
+                <div
+                  key={reading.id}
+                  className="rounded-lg border border-green-500/10 bg-green-500/5 p-4 space-y-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="size-4 text-green-400" />
+                      <span className="text-sm font-medium capitalize">
+                        {reading.spread_type?.replace(/_/g, " ") ?? "Tarot Spread"}
+                      </span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDateTime(reading.created_at)}
+                    </span>
+                  </div>
+                  {reading.interpretation && (
+                    <p className="text-sm leading-relaxed whitespace-pre-line">
+                      {reading.interpretation}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* No deliverables yet message for delivered orders */}
+      {isDelivered && !hasDeliverableContent && (
+        <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-5 text-sm text-green-300">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="size-4" />
+            <span>Your reading has been delivered. Content will appear here once your diviner adds notes.</span>
+          </div>
         </div>
       )}
 

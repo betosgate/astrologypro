@@ -220,9 +220,9 @@ async function getAllUsers(params: SearchParams, pageSize: number): Promise<{ us
     notesCountMap[n.user_id] = (notesCountMap[n.user_id] ?? 0) + 1;
   }
 
-  // ── Assemble unified list ─────────────────────────────────────────────────
+  // ── Assemble raw rows (one per role-table entry) ───────────────────────────
 
-  const result: AdminUser[] = [];
+  const rawRows: AdminUser[] = [];
 
   // If q is set and fetching diviners, post-filter by email match too
   const divinersFiltered = (divinersRes.data ?? []) as Array<Record<string, unknown>>;
@@ -238,7 +238,7 @@ async function getAllUsers(params: SearchParams, pageSize: number): Promise<{ us
     : divinersFiltered;
 
   for (const d of divinersWithEmail) {
-    result.push({
+    rawRows.push({
       userId: d.user_id as string,
       rowId: d.id as string,
       name: (d.display_name as string) ?? "—",
@@ -246,6 +246,7 @@ async function getAllUsers(params: SearchParams, pageSize: number): Promise<{ us
       phone: (d.phone as string) ?? undefined,
       role: "diviner",
       roleLabel: "Diviner",
+      roles: [{ slug: "diviner", label: "Diviner" }],
       status: (d.is_active as boolean) ? "Active" : "Inactive",
       joinedAt: d.created_at as string,
       blocked: bannedSet.has(d.user_id as string),
@@ -256,7 +257,7 @@ async function getAllUsers(params: SearchParams, pageSize: number): Promise<{ us
   }
 
   for (const c of (clientsRes.data ?? []) as Array<Record<string, unknown>>) {
-    result.push({
+    rawRows.push({
       userId: c.user_id as string,
       rowId: c.id as string,
       name: (c.full_name as string) ?? "—",
@@ -264,6 +265,7 @@ async function getAllUsers(params: SearchParams, pageSize: number): Promise<{ us
       phone: (c.phone as string) ?? undefined,
       role: "client",
       roleLabel: "Client",
+      roles: [{ slug: "client", label: "Client" }],
       status: "Active",
       joinedAt: c.created_at as string,
       blocked: bannedSet.has(c.user_id as string),
@@ -273,7 +275,7 @@ async function getAllUsers(params: SearchParams, pageSize: number): Promise<{ us
   }
 
   for (const a of (advocatesRes.data ?? []) as Array<Record<string, unknown>>) {
-    result.push({
+    rawRows.push({
       userId: a.user_id as string,
       rowId: a.id as string,
       name: (a.name as string) ?? "—",
@@ -281,6 +283,7 @@ async function getAllUsers(params: SearchParams, pageSize: number): Promise<{ us
       phone: (a.phone as string) ?? undefined,
       role: "advocate",
       roleLabel: "Advocate",
+      roles: [{ slug: "advocate", label: "Advocate" }],
       status: (a.is_active as boolean) ? "Active" : "Inactive",
       joinedAt: a.created_at as string,
       blocked: bannedSet.has(a.user_id as string),
@@ -294,7 +297,7 @@ async function getAllUsers(params: SearchParams, pageSize: number): Promise<{ us
   }
 
   for (const m of (communityRes.data ?? []) as Array<Record<string, unknown>>) {
-    result.push({
+    rawRows.push({
       userId: m.user_id as string,
       rowId: m.id as string,
       name: (m.full_name as string) ?? "—",
@@ -302,6 +305,7 @@ async function getAllUsers(params: SearchParams, pageSize: number): Promise<{ us
       phone: (m.phone as string) ?? undefined,
       role: "community",
       roleLabel: "Community",
+      roles: [{ slug: "community", label: "Community" }],
       status: (m.membership_status as string) ?? "active",
       joinedAt: (m.joined_at as string) ?? new Date().toISOString(),
       blocked: bannedSet.has(m.user_id as string),
@@ -317,7 +321,7 @@ async function getAllUsers(params: SearchParams, pageSize: number): Promise<{ us
   }
 
   for (const t of (traineesRes.data ?? []) as Array<Record<string, unknown>>) {
-    result.push({
+    rawRows.push({
       userId: t.user_id as string,
       rowId: t.id as string,
       name: (t.name as string) ?? "—",
@@ -325,6 +329,7 @@ async function getAllUsers(params: SearchParams, pageSize: number): Promise<{ us
       phone: (t.phone as string) ?? undefined,
       role: "trainee",
       roleLabel: "Trainee",
+      roles: [{ slug: "trainee", label: "Trainee" }],
       status: (t.training_status as string) ?? "active",
       joinedAt: t.created_at as string,
       blocked: bannedSet.has(t.user_id as string),
@@ -334,6 +339,45 @@ async function getAllUsers(params: SearchParams, pageSize: number): Promise<{ us
         Username: `@${(t.username as string) ?? ""}`,
       },
     });
+  }
+
+  // ── Consolidate by userId: merge rows with the same userId into one ───────
+
+  const userMap = new Map<string, AdminUser>();
+  for (const row of rawRows) {
+    const existing = userMap.get(row.userId);
+    if (existing) {
+      // Merge roles (avoid duplicates)
+      const existingSlugs = new Set(existing.roles.map((r) => r.slug));
+      for (const r of row.roles) {
+        if (!existingSlugs.has(r.slug)) {
+          existing.roles.push(r);
+        }
+      }
+      // Use the earliest joinedAt
+      if (new Date(row.joinedAt) < new Date(existing.joinedAt)) {
+        existing.joinedAt = row.joinedAt;
+      }
+      // Keep name/email from the first non-empty entry
+      if (existing.name === "—" && row.name !== "—") existing.name = row.name;
+      if (!existing.email && row.email) existing.email = row.email;
+      if (!existing.phone && row.phone) existing.phone = row.phone;
+      // Merge isCertified
+      if (row.isCertified) existing.isCertified = true;
+      // Merge extra
+      if (row.extra) {
+        existing.extra = { ...(existing.extra ?? {}), ...row.extra };
+      }
+    } else {
+      userMap.set(row.userId, { ...row });
+    }
+  }
+
+  // Update roleLabel to reflect primary role for sorting
+  const result: AdminUser[] = [];
+  for (const user of userMap.values()) {
+    user.roleLabel = user.roles.map((r) => r.label).join(", ");
+    result.push(user);
   }
 
   // ── Apply last-login date range filter ────────────────────────────────────

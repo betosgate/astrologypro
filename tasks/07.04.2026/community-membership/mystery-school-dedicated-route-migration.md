@@ -2,6 +2,16 @@
 Date: 2026-04-07
 Category: Community Membership Module
 
+## Status
+Superseded by the dedicated Mystery School task set in:
+
+- `tasks/07.04.2026/mystery-school/00-master-task.md`
+- `tasks/07.04.2026/mystery-school/04-dedicated-route-migration.md`
+- `tasks/07.04.2026/mystery-school/05-verification-and-user-flows.md`
+
+Use the `tasks/07.04.2026/mystery-school/` folder as the source of truth for any new implementation work.
+This file is now retained as older context/reference only.
+
 ## Problem Statement
 Mystery School and Perennial Mandalism currently share the same base portal path: `/community`.
 
