@@ -31,13 +31,13 @@ export async function getDivinerEntitlements(divinerId: string): Promise<Diviner
     subscription.status === 'active' || subscription.status === 'trialing'
 
   // Type-narrow the nested join — Supabase returns it as an object or null
-  const plan = subscription.diviner_plans as { features: string[] } | null
+  const plan = (subscription.diviner_plans as unknown) as { features: string[] } | null
   const planFeatures: string[] = Array.isArray(plan?.features) ? plan.features : []
 
   // Collect feature keys from active add-ons
   const addonFeatures: string[] = (addonsResult.data ?? [])
     .map((row) => {
-      const addon = row.diviner_plan_addons as { feature_key: string } | null
+      const addon = (row.diviner_plan_addons as unknown) as { feature_key: string } | null
       return addon?.feature_key ?? ''
     })
     .filter(Boolean)
