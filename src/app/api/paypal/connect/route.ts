@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/paypal/connect
  * Initiates PayPal Partner Referrals onboarding for the authenticated diviner.

@@ -58,11 +58,12 @@ function ToolbarButton({
 }
 
 export function RichTextEditor({
-  value,
+  value = "",
   onChange,
   placeholder = "Start typing...",
   className,
 }: RichTextEditorProps) {
+  const safeValue = value || "";
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -70,7 +71,8 @@ export function RichTextEditor({
       }),
       Placeholder.configure({ placeholder }),
     ],
-    content: value,
+    content: safeValue,
+    immediatelyRender: false,
     onUpdate({ editor: ed }) {
       onChange(ed.getHTML());
     },

@@ -5,6 +5,8 @@ import { sendSMS } from "@/lib/sms";
 import { APP_URL } from "@/lib/constants";
 import { verifyCronAuth } from "@/lib/cron-auth";
 
+export const dynamic = "force-dynamic";
+
 function generateToken(): string {
   const chars =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

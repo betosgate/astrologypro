@@ -4,6 +4,8 @@ import { sendEmail } from "@/lib/email";
 import { formatCurrency } from "@/lib/format";
 import { verifyCronAuth } from "@/lib/cron-auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   const authError = verifyCronAuth(request);
   if (authError) return authError;

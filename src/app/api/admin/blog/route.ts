@@ -221,11 +221,15 @@ async function upsertTags(
     const trimmed = name.trim();
     if (!trimmed) continue;
     const slug = toSlug(trimmed);
-    const { data } = await admin
+    const { data, error } = await admin
       .from("blog_tags")
       .upsert({ name: trimmed, slug }, { onConflict: "slug" })
       .select("id")
       .single();
+    if (error) {
+      console.error(`[blog] upsertTags error for "${trimmed}":`, error.message);
+      continue;
+    }
     if (data) ids.push(data.id);
   }
   return ids;

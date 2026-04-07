@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const dynamic = "force-dynamic";
+
 // ─── GET /api/admin/users/deleted-list ────────────────────────────────────────
 // Returns all soft-deleted users that have not been restored yet.
 

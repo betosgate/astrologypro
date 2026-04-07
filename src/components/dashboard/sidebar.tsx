@@ -55,6 +55,7 @@ const navItems = [
   { label: "Bookings", href: "/dashboard/bookings", icon: Calendar },
   { label: "Schedule", href: "/dashboard/schedule", icon: LayoutGrid },
   { label: "Availability", href: "/dashboard/availability", icon: CalendarDays },
+  { label: "Orders", href: "/dashboard/orders", icon: ClipboardList },
   { label: "Clients", href: "/dashboard/clients", icon: Users },
   { label: "Check-Ins", href: "/dashboard/check-ins", icon: UserCheck },
   { label: "Giveaways", href: "/dashboard/giveaways", icon: Gift },

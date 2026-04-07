@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { calculateSynastry } from "@/lib/astro/synastry";
 import type { NatalChartData } from "@/lib/astro/natal-chart";
 
+export const dynamic = "force-dynamic";
+
 export const runtime = "nodejs";
 
 async function getMember(supabase: Awaited<ReturnType<typeof createClient>>) {

@@ -3,6 +3,8 @@ import { createCheckoutSession } from "@/lib/stripe/billing";
 import { PLANS, type PlanId } from "@/lib/plans";
 import { APP_URL } from "@/lib/constants";
 
+export const dynamic = "force-dynamic";
+
 
 export async function POST(request: NextRequest) {
   try {

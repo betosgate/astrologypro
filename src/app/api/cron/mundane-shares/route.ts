@@ -7,6 +7,8 @@ import { getMundaneEventsForDate, selectDailyEvents } from "@/lib/mundane-events
 import { generateMundaneContent, EventType } from "@/lib/mundane-content";
 import { verifyCronAuth } from "@/lib/cron-auth";
 
+export const dynamic = "force-dynamic";
+
 function generateToken(): string {
   const chars =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

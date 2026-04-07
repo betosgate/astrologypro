@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 interface GenerateBioRequest {
   specialties: string;
   yearsExperience: string;

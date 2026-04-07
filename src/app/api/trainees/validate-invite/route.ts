@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/trainees/validate-invite?code=MENTOR-ABC123
 // Returns { valid: true, divinerId: "uuid" } or 404
 export async function GET(req: Request) {

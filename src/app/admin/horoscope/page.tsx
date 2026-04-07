@@ -22,7 +22,7 @@ import {
   Loader2, ChevronDown, ChevronRight, ChevronLeft, Star, Sun, Moon,
   Calendar as CalendarIcon, Heart, Users, Briefcase, Eye, Zap,
   Sparkles, CircleDot, Clock, MapPin, Printer, ArrowUp, RotateCcw,
-  X,
+  X, Maximize2,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -506,87 +506,103 @@ function buildAiPrompts(data: any, tab: string) {
 // aspectTitle: when set, renders the Angular-style icon header + word-association chips
 // inside the modal (mirrors Angular's showMoreModal with pictorialData image section)
 
-function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, promptType, planetEntries }: {
+function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, promptType, planetEntries, pictureUrl }: {
   title: string; content: string; loading: boolean; open: boolean; onClose: () => void;
   aspectTitle?: string;
   promptType?: "planet" | "house" | "aspect" | "generic";
   planetEntries?: { planet: string; items: string[] }[];
+  pictureUrl?: string | null;
 }) {
   const isAspect = promptType === "aspect" || !!aspectTitle;
   const { p1, aspectType, p2 } = isAspect ? parseAspectTitle(aspectTitle ?? title) : { p1: "", aspectType: "", p2: "" };
+  const [showFullImage, setShowFullImage] = useState(false);
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
-        {/* Custom Close Icon - Fixed to top-right */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.15)] group"
-          aria-label="Close modal"
-        >
-          <X className="size-5 transition-transform group-hover:rotate-90" />
-        </button>
+    <>
+      <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
+          {/* Custom Close Icon - Fixed to top-right */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.15)] group"
+            aria-label="Close modal"
+          >
+            <X className="size-5 transition-transform group-hover:rotate-90" />
+          </button>
 
-        {/* Sticky Header Section */}
-        <div className="px-6 py-5 border-b border-white/5 bg-slate-900/40 pr-16 shrink-0">
-          <DialogHeader>
-            {isAspect ? (
-              <div className="pb-1">
-                <AstroHeaderParts title={aspectTitle ?? title} />
-              </div>
-            ) : (
-              <DialogTitle className="text-lg font-bold capitalize gold-text">{title.replace(/_/g, " ")}</DialogTitle>
-            )}
-          </DialogHeader>
-        </div>
-
-        {/* Scrollable Content Section */}
-        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-          {loading ? (
-            <div className="flex items-center gap-3 py-12 justify-center text-muted-foreground">
-              <Loader2 className="size-6 animate-spin text-amber-500" />
-              <span className="text-sm font-medium tracking-wide">Fetching Cosmic Insights...</span>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {promptType === "planet" && planetEntries && planetEntries.length > 0 ? (
-                <div className="space-y-6">
-                  {planetEntries.map(({ planet, items }) => (
-                    <div key={planet} className="rounded-xl border border-white/5 bg-white/5 p-4 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <PlanetSymbol name={planet} />
-                        <div className="h-px flex-1 bg-gradient-to-right from-amber-500/20 to-transparent" />
-                      </div>
-                      <ol className="space-y-3 list-none">
-                        {items.map((item, idx) => (
-                          <li key={idx} className="text-sm leading-relaxed text-foreground/90 flex gap-3">
-                            <span className="flex-shrink-0 size-5 flex items-center justify-center rounded-full bg-amber-500/10 text-amber-500 font-bold text-[10px] border border-amber-500/20">{idx + 1}</span>
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-                  ))}
+          {/* Sticky Header Section */}
+          <div className="px-6 py-5 border-b border-white/5 bg-slate-900/40 pr-16 shrink-0">
+            <DialogHeader>
+              {isAspect ? (
+                <div className="pb-1">
+                  <AstroHeaderParts title={aspectTitle ?? title} />
                 </div>
               ) : (
-                <div className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap font-light tracking-wide bg-white/5 p-5 rounded-xl border border-white/5 italic">
-                  "{content}"
-                </div>
+                <DialogTitle className="text-lg font-bold capitalize gold-text">{title.replace(/_/g, " ")}</DialogTitle>
               )}
+            </DialogHeader>
+          </div>
 
-              {isAspect && p1 && p2 && (
-                <div className="rounded-xl border border-white/10 overflow-hidden bg-slate-900/40">
-                  <div className="px-3 py-2 bg-amber-500/10 border-b border-white/5">
-                    <p className="text-[10px] font-bold uppercase tracking-[2px] text-amber-600/80">Celestial Alignment Association</p>
+          {/* Scrollable Content Section */}
+          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+            {loading ? (
+              <div className="flex items-center gap-3 py-12 justify-center text-muted-foreground">
+                <Loader2 className="size-6 animate-spin text-amber-500" />
+                <span className="text-sm font-medium tracking-wide">Fetching Cosmic Insights...</span>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {promptType === "planet" && planetEntries && planetEntries.length > 0 ? (
+                  <div className="space-y-6">
+                    {planetEntries.map(({ planet, items }) => (
+                      <div key={planet} className="rounded-xl border border-white/5 bg-white/5 p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <PlanetSymbol name={planet} />
+                          <div className="h-px flex-1 bg-gradient-to-right from-amber-500/20 to-transparent" />
+                        </div>
+                        <ol className="space-y-3 list-none">
+                          {items.map((item, idx) => (
+                            <li key={idx} className="text-sm leading-relaxed text-foreground/90 flex gap-3">
+                              <span className="flex-shrink-0 size-5 flex items-center justify-center rounded-full bg-amber-500/10 text-amber-500 font-bold text-[10px] border border-amber-500/20">{idx + 1}</span>
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    ))}
                   </div>
-                  <WordAssociationChips aspecting={p1} type={aspectType} aspected={p2} />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+                ) : (
+                  <div className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap font-light tracking-wide bg-white/5 p-5 rounded-xl border border-white/5 italic">
+                    "{content}"
+                  </div>
+                )}
+
+                {pictureUrl && (
+                  <div className="relative group rounded-xl border border-white/10 overflow-hidden bg-slate-900/40 shadow-2xl">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={pictureUrl} alt={title} className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-[1.02]" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/20 to-transparent pointer-events-none" />
+
+                    {/* Maximize Icon */}
+                    <button
+                      onClick={() => setShowFullImage(true)}
+                      className="absolute top-3 right-3 size-8 flex items-center justify-center rounded-full bg-slate-900/80 border border-white/10 text-amber-500/80 hover:text-amber-500 hover:border-amber-500/50 transition-all shadow-lg backdrop-blur-sm z-10"
+                      title="Enlarge Image"
+                    >
+                      <Maximize2 className="size-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {pictureUrl && (
+        <ChartImageModal src={pictureUrl} open={showFullImage} onClose={() => setShowFullImage(false)} />
+      )}
+    </>
   );
 }
 
@@ -595,7 +611,7 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
 function ChartImageModal({ src, open, onClose }: { src: string; open: boolean; onClose: () => void }) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-4xl p-0 overflow-hidden bg-slate-950 border-white/10" showCloseButton={false}>
+      <DialogContent className="max-w-[95vw] w-[95vw] max-h-[95vh] h-[95vh] p-0 overflow-hidden bg-slate-950 border-white/10" showCloseButton={false}>
         {/* Custom Close Icon */}
         <button
           onClick={onClose}
@@ -605,15 +621,15 @@ function ChartImageModal({ src, open, onClose }: { src: string; open: boolean; o
           <X className="size-5 transition-transform group-hover:rotate-90" />
         </button>
 
-        <div className="max-h-[90vh] overflow-y-auto p-4 flex items-center justify-center min-h-[300px]">
+        <div className="h-full w-full overflow-hidden p-6 flex items-center justify-center">
           <DialogHeader className="sr-only">
-            <DialogTitle>Natal Chart</DialogTitle>
+            <DialogTitle>Astrological Asset</DialogTitle>
           </DialogHeader>
           {src.startsWith("<svg") ? (
-            <div dangerouslySetInnerHTML={{ __html: src }} className="w-full max-w-full overflow-auto flex justify-center" />
+            <div dangerouslySetInnerHTML={{ __html: src }} className="w-full h-full overflow-auto flex justify-center items-center" />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={src} alt="Natal Chart" className="max-w-full h-auto rounded shadow-2xl" />
+            <img src={src} alt="Astrological Asset" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
           )}
         </div>
       </DialogContent>
@@ -785,7 +801,71 @@ function useShowMore() {
     promptType?: "planet" | "house" | "aspect" | "generic";
     // For planet type: structured numbered entries extracted from response
     planetEntries?: { planet: string; items: string[] }[];
+    // Pictorial asset URL from AWS S3
+    pictureUrl?: string | null;
   } | null>(null);
+
+  /**
+   * Build the S3 filename + folder for the astro-picture-content API.
+   * Mirrors Angular's fetchPicture() payload construction:
+   *   Planets:  "Sun-In-Virgo"                        → folder "planets"
+   *   Aspects:  "Mars-Square-Pluto"                    → folder "aspect"
+   *   Houses:   "Sun-In-12th-House-With-Virgo"         → folder "planets"
+   */
+  function buildPicturePayload(
+    type: "planet" | "house" | "aspect" | "generic",
+    title: string,
+    promptData: any,
+  ): { filename: string; foldername: string } | null {
+    try {
+      if (type === "aspect") {
+        // Parse "Mars Square Pluto" → "Mars-Square-Pluto"
+        const parts = title.trim().split(/\s+/);
+        if (parts.length >= 3) {
+          return { filename: parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join("-"), foldername: "aspect" };
+        }
+      } else if (type === "planet") {
+        // promptData has planet name + sign, e.g. { sign: "Virgo" } and title is planet name
+        const planet = title.trim();
+        const sign = promptData?.sign ?? promptData?.Sign ?? "";
+        if (planet && sign) {
+          return { filename: `${planet}-In-${sign}`, foldername: "planets" };
+        }
+      } else if (type === "house") {
+        // promptData has house number + sign + planet
+        const house = promptData?.house ?? promptData?.House ?? "";
+        const sign = promptData?.sign ?? promptData?.Sign ?? "";
+        const planet = promptData?.planet ?? promptData?.ruler ?? title.trim();
+        if (house && sign && planet) {
+          const ordinal = String(house).replace(/\D/g, "");
+          const suffix = ordinal === "1" ? "st" : ordinal === "2" ? "nd" : ordinal === "3" ? "rd" : "th";
+          return { filename: `${planet}-In-${ordinal}${suffix}-House-With-${sign}`, foldername: "planets" };
+        }
+      }
+    } catch { /* ignore — will return null */ }
+    return null;
+  }
+
+  async function fetchPicture(
+    type: "planet" | "house" | "aspect" | "generic",
+    title: string,
+    promptData: any,
+  ): Promise<string | null> {
+    const payload = buildPicturePayload(type, title, promptData);
+    if (!payload) return null;
+    try {
+      const res = await fetch("/api/admin/astro/astro-picture-content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json.status === "success" ? json.data?.url ?? null : null;
+    } catch {
+      return null;
+    }
+  }
 
   // aspectTitle: pass for aspect cards → triggers Angular's exact aspect prompt
   // promptType: "planet" for planet show-more, "house" for house show-more, "aspect" for aspects, else generic
@@ -799,7 +879,10 @@ function useShowMore() {
     promptType?: "planet" | "house" | "aspect" | "generic",
   ) {
     const resolvedType = promptType ?? (aspectTitle ? "aspect" : "generic");
-    setModal({ title, content: "", loading: true, aspectTitle, promptType: resolvedType });
+    setModal({ title, content: "", loading: true, aspectTitle, promptType: resolvedType, pictureUrl: null });
+
+    // Fetch S3 pictorial image in parallel with the AI call
+    const picturePromise = fetchPicture(resolvedType, aspectTitle ?? title, promptData);
 
     try {
       let aiPayload: any;
@@ -863,7 +946,8 @@ function useShowMore() {
             planetEntries.push({ planet: planetName, items });
           }
         }
-        setModal({ title, content: "", loading: false, aspectTitle, promptType: resolvedType, planetEntries });
+        const picUrl = await picturePromise;
+        setModal({ title, content: "", loading: false, aspectTitle, promptType: resolvedType, planetEntries, pictureUrl: picUrl });
       } else if (resolvedType === "house") {
         // Response: {interpretations: {data: "..."}} — extract .interpretations.data
         let text = "";
@@ -879,7 +963,8 @@ function useShowMore() {
         } else {
           text = String(parsed ?? "");
         }
-        setModal({ title, content: text, loading: false, aspectTitle, promptType: resolvedType });
+        const picUrl2 = await picturePromise;
+        setModal({ title, content: text, loading: false, aspectTitle, promptType: resolvedType, pictureUrl: picUrl2 });
       } else {
         // aspect / generic: extract .interpretation
         let text: string;
@@ -888,10 +973,11 @@ function useShowMore() {
         } else {
           text = String(parsed ?? "");
         }
-        setModal({ title, content: text, loading: false, aspectTitle, promptType: resolvedType });
+        const picUrl3 = await picturePromise;
+        setModal({ title, content: text, loading: false, aspectTitle, promptType: resolvedType, pictureUrl: picUrl3 });
       }
     } catch {
-      setModal({ title, content: "Could not load extended interpretation. Please try again.", loading: false, aspectTitle, promptType: resolvedType });
+      setModal({ title, content: "Could not load extended interpretation. Please try again.", loading: false, aspectTitle, promptType: resolvedType, pictureUrl: null });
     }
   }
 
@@ -1156,7 +1242,7 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: 
 
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
       {/* Decan modal — opens per-planet on Decan button click */}
       <DecanModal
         planet={decanPlanet?.name ?? ""}
@@ -1269,7 +1355,7 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
 
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
 
       {/* House table */}
       <div className="rounded-lg border overflow-hidden">
@@ -1497,7 +1583,7 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
 
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
       <AspectsLegend />
 
       <div className="rounded-lg border overflow-hidden">
@@ -1566,10 +1652,6 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
                     <button onClick={() => trigger(item.title ?? `Aspect ${i + 1}`, item.interpretation, item, areaOfInquiry, item.title)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
                   </div>
                 </div>
-                {/* Word association keyword chips — 3 columns for the two planets + aspect type */}
-                {p1 && p2 && (
-                  <WordAssociationChips aspecting={p1} type={aspectType} aspected={p2} />
-                )}
               </div>
             );
           })}
@@ -1592,7 +1674,7 @@ function DharmaKarmaSection({ data, rawData, areaOfInquiry }: { data: any; rawDa
 
   return (
     <div className="space-y-3">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
       {[{ key: "dharma", label: "Dharma", text: dharma }, { key: "karma", label: "Karma", text: karma }].map(({ key, label, text }) => (
         text ? (
           <div key={key} className="rounded-lg border overflow-hidden">
@@ -1623,7 +1705,7 @@ function LilithSection({ lilith, aiData, areaOfInquiry }: { lilith: any; aiData:
 
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
       <div className="rounded-lg border overflow-hidden">
         <div className="px-4 py-2.5 bg-muted/40 border-b">
           <h3 className="text-sm font-semibold">Lilith <span className="text-amber-500 ml-1">⚸</span></h3>
@@ -1684,7 +1766,7 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry }: { natal
 
   return (
     <div className="rounded-lg border overflow-hidden">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
       <div className="px-4 py-2.5 bg-muted/40 border-b">
         <h3 className="text-sm font-semibold">Ascendant · Midheaven · Vertex</h3>
       </div>
@@ -1790,7 +1872,7 @@ function PlanetReturnInterpretation({ tab, aiData, areaOfInquiry }: { tab: strin
 
   return (
     <div className="rounded-lg border overflow-hidden">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
       <div className="px-4 py-2.5 bg-muted/40 border-b">
         <h3 className="text-sm font-semibold">{title}</h3>
       </div>
@@ -1872,7 +1954,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
 
   return (
     <div className="space-y-5">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
 
       {/* 1. Solar Return Details */}
       {details && (
@@ -2118,7 +2200,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
 
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
 
       {/* Weekly / Monthly Transit Relation Table */}
       {transitRows.length > 0 && (
@@ -2302,7 +2384,7 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
 
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
 
       {/* Recommendation on Date & Timeline */}
       {inner?.recomendation_on_date_and_timeline?.data && (
@@ -2487,7 +2569,7 @@ function RelationshipSection({ aiMap, areaOfInquiry, tabSlug }: { aiMap: Record<
 
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
       {sections.map((s) => (
         <AiBlock key={s.key} title={s.label} sectionKey={s.key} data={aiMap[s.key]} />
       ))}

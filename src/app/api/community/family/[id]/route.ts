@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 export const runtime = "nodejs";
 
 async function getMemberId(supabase: Awaited<ReturnType<typeof createClient>>) {

@@ -67,6 +67,10 @@ export default function TrainingPage() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Global search & status filter
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+
   // Category filters
   const [catCreatedFrom, setCatCreatedFrom] = useState("");
   const [catCreatedTo, setCatCreatedTo] = useState("");
@@ -140,11 +144,48 @@ export default function TrainingPage() {
   const lessonMap: Record<string, string> = {};
   for (const l of lessons) { lessonMap[l.id] = l.title; }
 
+  // Derived filtered lists
+  const s = searchTerm.toLowerCase();
+  const matchStatus = (active: boolean) =>
+    statusFilter === "all" || (statusFilter === "active" ? active : !active);
+
+  const filteredPrograms = programs.filter(
+    (p) => matchStatus(p.is_active) && (!s || p.name.toLowerCase().includes(s) || (p.description ?? "").toLowerCase().includes(s))
+  );
+  const filteredCategories = categories.filter(
+    (c) => matchStatus(c.is_active) && (!s || c.name.toLowerCase().includes(s) || (c.description ?? "").toLowerCase().includes(s))
+  );
+  const filteredLessons = lessons.filter(
+    (l) => matchStatus(l.is_active) && (!s || l.title.toLowerCase().includes(s) || (l.description ?? "").toLowerCase().includes(s))
+  );
+  const filteredQuizzes = quizzes.filter(
+    (q) => matchStatus(q.is_active) && (!s || q.title.toLowerCase().includes(s))
+  );
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Training Management</h1>
         <p className="text-muted-foreground">Manage training categories, lessons, and quizzes.</p>
+      </div>
+
+      {/* Search and Status Filter */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Input
+          placeholder="Search by title or description…"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-xs"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "inactive")}
+          className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+        >
+          <option value="all">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
       </div>
 
       {/* Program preview modal */}
@@ -253,15 +294,15 @@ export default function TrainingPage() {
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div>
             <CardTitle>Training Programs</CardTitle>
-            <CardDescription>{programs.length} program{programs.length === 1 ? "" : "s"}</CardDescription>
+            <CardDescription>{filteredPrograms.length} program{filteredPrograms.length === 1 ? "" : "s"}{searchTerm || statusFilter !== "all" ? ` (of ${programs.length})` : ""}</CardDescription>
           </div>
           <Button asChild size="sm">
             <Link href="/admin/training/programs/new">+ Add Program</Link>
           </Button>
         </CardHeader>
         <CardContent>
-          {programs.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">No programs yet. Add one before creating categories.</p>
+          {filteredPrograms.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">{programs.length === 0 ? "No programs yet. Add one before creating categories." : "No programs match the current filters."}</p>
           ) : (
             <div className="rounded-md border">
               <table className="w-full text-sm">
@@ -278,7 +319,7 @@ export default function TrainingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {programs.map((prog) => (
+                  {filteredPrograms.map((prog) => (
                     <tr key={prog.id} className="border-b last:border-0 hover:bg-muted/30">
                       <td className="px-3 py-2 font-medium">{prog.name}</td>
                       <td className="px-3 py-2">
@@ -323,7 +364,7 @@ export default function TrainingPage() {
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div>
             <CardTitle>Categories</CardTitle>
-            <CardDescription>{categories.length} categor{categories.length === 1 ? "y" : "ies"}</CardDescription>
+            <CardDescription>{filteredCategories.length} categor{filteredCategories.length === 1 ? "y" : "ies"}{searchTerm || statusFilter !== "all" ? ` (of ${categories.length})` : ""}</CardDescription>
           </div>
           <Button asChild size="sm">
             <Link href="/admin/training/categories/new">+ Add Category</Link>
@@ -346,8 +387,8 @@ export default function TrainingPage() {
             <Button size="sm" variant="outline" onClick={() => { setCatCreatedFrom(""); setCatCreatedTo(""); loadCategories({ catCreatedFrom: "", catCreatedTo: "" }); }}>Reset</Button>
           </div>
 
-          {categories.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">No categories yet. Add one to get started.</p>
+          {filteredCategories.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">{categories.length === 0 ? "No categories yet. Add one to get started." : "No categories match the current filters."}</p>
           ) : (
             <div className="rounded-md border">
               <table className="w-full text-sm">
@@ -363,7 +404,7 @@ export default function TrainingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {categories.map((cat) => (
+                  {filteredCategories.map((cat) => (
                     <tr key={cat.id} className="border-b last:border-0 hover:bg-muted/30">
                       <td className="px-3 py-2 font-medium">{cat.name}</td>
                       <td className="px-3 py-2 text-sm text-muted-foreground">{programMap[cat.training_id] ?? "—"}</td>
@@ -397,7 +438,7 @@ export default function TrainingPage() {
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div>
             <CardTitle>Lessons</CardTitle>
-            <CardDescription>{lessons.length} lesson{lessons.length === 1 ? "" : "s"}</CardDescription>
+            <CardDescription>{filteredLessons.length} lesson{filteredLessons.length === 1 ? "" : "s"}{searchTerm || statusFilter !== "all" ? ` (of ${lessons.length})` : ""}</CardDescription>
           </div>
           <Button asChild size="sm">
             <Link href="/admin/training/lessons/new">+ Add Lesson</Link>
@@ -420,8 +461,8 @@ export default function TrainingPage() {
             <Button size="sm" variant="outline" onClick={() => { setLesCreatedFrom(""); setLesCreatedTo(""); loadLessons({ lesCreatedFrom: "", lesCreatedTo: "" }); }}>Reset</Button>
           </div>
 
-          {lessons.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">No lessons yet. Add one to get started.</p>
+          {filteredLessons.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">{lessons.length === 0 ? "No lessons yet. Add one to get started." : "No lessons match the current filters."}</p>
           ) : (
             <div className="rounded-md border">
               <table className="w-full text-sm">
@@ -437,7 +478,7 @@ export default function TrainingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {lessons.map((lesson) => (
+                  {filteredLessons.map((lesson) => (
                     <tr key={lesson.id} className="border-b last:border-0 hover:bg-muted/30">
                       <td className="px-3 py-2 font-medium">{lesson.title}</td>
                       <td className="px-3 py-2 text-muted-foreground text-sm">{categoryMap[lesson.category_id] ?? "—"}</td>
@@ -471,7 +512,7 @@ export default function TrainingPage() {
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div>
             <CardTitle>Quizzes</CardTitle>
-            <CardDescription>{quizzes.length} quiz{quizzes.length === 1 ? "" : "zes"}</CardDescription>
+            <CardDescription>{filteredQuizzes.length} quiz{filteredQuizzes.length === 1 ? "" : "zes"}{searchTerm || statusFilter !== "all" ? ` (of ${quizzes.length})` : ""}</CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <Button asChild size="sm" variant="outline">
@@ -483,8 +524,8 @@ export default function TrainingPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {quizzes.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">No quizzes yet. Add one to get started.</p>
+          {filteredQuizzes.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">{quizzes.length === 0 ? "No quizzes yet. Add one to get started." : "No quizzes match the current filters."}</p>
           ) : (
             <div className="rounded-md border">
               <table className="w-full text-sm">
@@ -500,7 +541,7 @@ export default function TrainingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {quizzes.map((quiz) => (
+                  {filteredQuizzes.map((quiz) => (
                     <tr key={quiz.id} className="border-b last:border-0 hover:bg-muted/30">
                       <td className="px-3 py-2 font-medium">{quiz.title}</td>
                       <td className="px-3 py-2 text-muted-foreground text-sm">{lessonMap[quiz.lesson_id] ?? "—"}</td>
