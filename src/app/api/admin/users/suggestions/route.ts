@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   // Auth guard
   const user = await getAdminUser();
   if (!user) {
-    return NextResponse.json({ suggestions: [] }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const q = (req.nextUrl.searchParams.get("q") ?? "").trim();

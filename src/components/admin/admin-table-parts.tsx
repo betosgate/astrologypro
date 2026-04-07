@@ -10,7 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FilterX,
-  RefreshCw,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 // ─── SortHeader ───────────────────────────────────────────────────────────────
 
@@ -64,6 +65,28 @@ export function SortHeader({
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
+function buildPaginationItems(currentPage: number, totalPages: number) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const pages = new Set<number>([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+  const normalized = [...pages]
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((a, b) => a - b);
+
+  const items: Array<number | "ellipsis"> = [];
+  for (const page of normalized) {
+    const previous = items.at(-1);
+    if (typeof previous === "number" && page - previous > 1) {
+      items.push("ellipsis");
+    }
+    items.push(page);
+  }
+
+  return items;
+}
+
 interface AdminPaginationProps {
   currentPage: number;
   totalPages: number;
@@ -83,6 +106,8 @@ export function AdminPagination({
   onPageSizeChange,
   isPending,
 }: AdminPaginationProps) {
+  const items = buildPaginationItems(currentPage, totalPages);
+
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-sm text-muted-foreground">
@@ -118,6 +143,31 @@ export function AdminPagination({
           <ChevronLeft className="size-4" />
         </Button>
 
+        <div className="flex items-center gap-1">
+          {items.map((item, index) =>
+            item === "ellipsis" ? (
+              <span
+                key={`ellipsis-${index}`}
+                className="px-1 text-sm text-muted-foreground"
+              >
+                …
+              </span>
+            ) : (
+              <Button
+                key={item}
+                variant={item === currentPage ? "default" : "outline"}
+                size="icon"
+                className="size-8"
+                disabled={isPending}
+                onClick={() => onPageChange(item)}
+                aria-label={`Go to page ${item}`}
+              >
+                {item}
+              </Button>
+            ),
+          )}
+        </div>
+
         <Button
           variant="outline"
           size="icon"
@@ -127,6 +177,39 @@ export function AdminPagination({
           aria-label="Next page"
         >
           <ChevronRight className="size-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function AdminSelectionBar({
+  count,
+  label = "selected",
+  onClear,
+  actions,
+}: {
+  count: number;
+  label?: string;
+  onClear: () => void;
+  actions?: React.ReactNode;
+}) {
+  if (count <= 0) return null;
+
+  return (
+    <div className="sticky top-0 z-20 flex flex-col gap-3 rounded-lg border bg-background/95 p-3 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-2 text-sm">
+        <Badge variant="secondary">{count}</Badge>
+        <span className="font-medium">
+          {count} {label}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        {actions}
+        <Button variant="ghost" size="sm" onClick={onClear} className="gap-1.5">
+          <X className="size-4" />
+          Clear
         </Button>
       </div>
     </div>

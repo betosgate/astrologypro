@@ -11,7 +11,7 @@ type RouteParams = { params: Promise<{ diviner_id: string }> };
 
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   const user = await getAdminUser();
-  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { diviner_id } = await params;
   const admin = createAdminClient();
@@ -32,7 +32,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
 export async function PUT(req: NextRequest, { params }: RouteParams) {
   const user = await getAdminUser();
-  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { diviner_id } = await params;
 

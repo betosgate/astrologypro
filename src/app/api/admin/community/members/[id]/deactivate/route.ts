@@ -22,7 +22,7 @@ export async function POST(
 ) {
   const adminUser = await getAdminUser();
   if (!adminUser) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id } = await params;

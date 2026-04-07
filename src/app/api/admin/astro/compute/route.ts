@@ -37,7 +37,7 @@ const ALLOWED_ENDPOINTS = [
 
 export async function POST(req: NextRequest) {
   const user = await getAdminUser();
-  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
   const { endpoint, payload } = body as { endpoint: string; payload: Record<string, unknown> };

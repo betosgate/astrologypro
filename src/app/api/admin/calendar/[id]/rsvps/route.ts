@@ -12,7 +12,7 @@ type Params = { params: Promise<{ id: string }> };
 // Returns: [{ user_id, email, name, rsvp_status, attended, created_at }]
 export async function GET(_req: NextRequest, { params }: Params) {
   const user = await getAdminUser();
-  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id: event_id } = await params;
 

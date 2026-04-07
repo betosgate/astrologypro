@@ -7,26 +7,64 @@ import {
 
 export const metadata = { title: "Invitations — Admin" };
 
+interface InvitationSearchParams {
+  q?: string;
+  status?: string;
+  page?: string;
+  pageSize?: string;
+  sortBy?: string;
+  sortDir?: string;
+}
+
+const ALLOWED_PAGE_SIZES = [10, 25, 50, 100];
+const DEFAULT_PAGE_SIZE = 25;
+const ALLOWED_SORT_COLUMNS = ["email", "role_slug", "status", "invited_by", "expires_at", "created_at"];
+
 // ─── Data fetch ───────────────────────────────────────────────────────────────
 
-async function getData() {
+async function getData(params: InvitationSearchParams) {
   const admin = createAdminClient();
 
-  const [invitationsRes, rolesRes] = await Promise.all([
-    admin
-      .from("invitations")
-      .select("id, email, role_slug, status, invited_by, expires_at, resent_count, created_at")
-      .order("created_at", { ascending: false })
-      .limit(500),
+  const page = Math.max(1, parseInt(params.page ?? "1", 10));
+  const rawPageSize = parseInt(params.pageSize ?? String(DEFAULT_PAGE_SIZE), 10);
+  const pageSize = ALLOWED_PAGE_SIZES.includes(rawPageSize) ? rawPageSize : DEFAULT_PAGE_SIZE;
+  const sortBy = ALLOWED_SORT_COLUMNS.includes(params.sortBy ?? "") ? params.sortBy! : "created_at";
+  const sortDir = params.sortDir === "asc" ? "asc" : "desc";
+  const q = params.q?.trim() ?? "";
+  const status = params.status?.trim() ?? "";
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
 
-    admin
-      .from("roles")
-      .select("id, name, slug")
-      .order("name", { ascending: true }),
+  let invitationsQuery = admin
+    .from("invitations")
+    .select("id, email, role_slug, status, invited_by, expires_at, resent_count, created_at", {
+      count: "exact",
+    })
+    .order(sortBy, { ascending: sortDir === "asc", nullsFirst: false })
+    .order("id", { ascending: false })
+    .range(from, to);
+
+  if (status) {
+    invitationsQuery = invitationsQuery.eq("status", status);
+  }
+
+  if (q) {
+    invitationsQuery = invitationsQuery.or(
+      [
+        `email.ilike.%${q}%`,
+        `role_slug.ilike.%${q}%`,
+        `invited_by.ilike.%${q}%`,
+      ].join(","),
+    );
+  }
+
+  const [filteredInvitationsRes, filteredRolesRes] = await Promise.all([
+    invitationsQuery,
+    admin.from("roles").select("id, name, slug").order("name", { ascending: true }),
   ]);
 
   const invitations: InvitationRow[] = (
-    (invitationsRes.data ?? []) as Array<Record<string, unknown>>
+    (filteredInvitationsRes.data ?? []) as Array<Record<string, unknown>>
   ).map((inv) => ({
     id:           inv.id as string,
     email:        inv.email as string,
@@ -39,24 +77,50 @@ async function getData() {
   }));
 
   const roles: RoleOption[] = (
-    (rolesRes.data ?? []) as Array<Record<string, unknown>>
+    (filteredRolesRes.data ?? []) as Array<Record<string, unknown>>
   ).map((r) => ({
     id:   r.id as string,
     name: r.name as string,
     slug: r.slug as string,
   }));
 
-  return { invitations, roles };
+  return {
+    invitations,
+    roles,
+    total: filteredInvitationsRes.count ?? 0,
+    page,
+    pageSize,
+    sortBy,
+    sortDir,
+    q,
+    status: status || "all",
+  };
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default async function AdminInvitationsPage() {
-  const { invitations, roles } = await getData();
+export default async function AdminInvitationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<InvitationSearchParams>;
+}) {
+  const params = await searchParams;
+  const { invitations, roles, total, page, pageSize, sortBy, sortDir, q, status } = await getData(params);
 
   return (
     <div className="space-y-6">
-      <InvitationsClient invitations={invitations} roles={roles} />
+      <InvitationsClient
+        invitations={invitations}
+        roles={roles}
+        total={total}
+        page={page}
+        pageSize={pageSize}
+        totalPages={Math.max(1, Math.ceil(total / pageSize))}
+        sortBy={sortBy}
+        sortDir={sortDir}
+        q={q}
+        status={status}
+      />
     </div>
   );
 }

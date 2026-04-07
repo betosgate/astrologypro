@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Sheet,
   SheetContent,
@@ -24,10 +24,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Loader2,
-  Trash2,
-  Pencil,
-  Check,
-  X,
   ShieldOff,
   ShieldCheck,
   Monitor,
@@ -39,6 +35,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { AdminUser } from "./user-management-client";
+import { InfoRow } from "./admin-detail-parts";
+import { AdminNotesSection } from "./admin-notes-section";
 
 interface Note {
   id: string;
@@ -98,18 +96,10 @@ interface Props {
 
 export function UserDetailSheet({ user, open, onClose, onUserChanged, initialTab = "overview" }: Props) {
   const [activeTab, setActiveTab] = useState<string>(initialTab);
-  const noteTextareaRef = React.useRef<HTMLTextAreaElement>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [logins, setLogins] = useState<LoginLog[]>([]);
   const [notesLoading, setNotesLoading] = useState(false);
   const [loginsLoading, setLoginsLoading] = useState(false);
-  const [newNote, setNewNote] = useState("");
-  const [savingNote, setSavingNote] = useState(false);
-  const [deletingNote, setDeletingNote] = useState<string | null>(null);
-  // Edit state
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-  const [editingNoteText, setEditingNoteText] = useState("");
-  const [savingEditNote, setSavingEditNote] = useState(false);
   // Current admin email (to determine edit ownership)
   const [currentAdminEmail, setCurrentAdminEmail] = useState<string | null>(null);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
@@ -157,17 +147,6 @@ export function UserDetailSheet({ user, open, onClose, onUserChanged, initialTab
     }
   }, [open, initialTab]);
 
-  // Auto-focus the note textarea when the notes tab is active
-  useEffect(() => {
-    if (open && activeTab === "notes" && !notesLoading) {
-      // Small delay to let the DOM render the tab content
-      const timer = setTimeout(() => {
-        noteTextareaRef.current?.focus();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [open, activeTab, notesLoading]);
-
   useEffect(() => {
     if (open && user) {
       fetchNotes();
@@ -176,68 +155,40 @@ export function UserDetailSheet({ user, open, onClose, onUserChanged, initialTab
     if (!open) {
       setNotes([]);
       setLogins([]);
-      setNewNote("");
-      setEditingNoteId(null);
-      setEditingNoteText("");
     }
   }, [open, user, fetchNotes, fetchLogins]);
 
-  async function handleAddNote() {
-    if (!newNote.trim() || !user) return;
-    setSavingNote(true);
-    try {
-      const res = await fetch(`/api/admin/users/${user.userId}/notes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note: newNote, role: user.role }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
-      setNotes((prev) => [data.note, ...prev]);
-      setNewNote("");
-      toast.success("Note added");
-    } catch {
-      toast.error("Failed to add note");
-    } finally {
-      setSavingNote(false);
-    }
+  async function handleAddNote(content: string) {
+    if (!content.trim() || !user) return;
+    const res = await fetch(`/api/admin/users/${user.userId}/notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: content, role: user.role }),
+    });
+    if (!res.ok) throw new Error("Failed to add note");
+    const data = await res.json();
+    setNotes((prev) => [data.note, ...prev]);
   }
 
   async function handleDeleteNote(noteId: string) {
     if (!user) return;
-    setDeletingNote(noteId);
-    try {
-      const res = await fetch(`/api/admin/users/${user.userId}/notes/${noteId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed");
-      setNotes((prev) => prev.filter((n) => n.id !== noteId));
-      toast.success("Note deleted");
-    } catch {
-      toast.error("Failed to delete note");
-    } finally {
-      setDeletingNote(null);
-    }
+    const res = await fetch(`/api/admin/users/${user.userId}/notes/${noteId}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new Error("Failed to delete note");
+    setNotes((prev) => prev.filter((n) => n.id !== noteId));
   }
 
-  async function handleSaveEdit(noteId: string) {
-    if (!editingNoteText.trim() || !user) return;
-    setSavingEditNote(true);
-    try {
-      const res = await fetch(`/api/admin/users/${user.userId}/notes/${noteId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note: editingNoteText }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
-      setNotes((prev) => prev.map((n) => (n.id === noteId ? data.note : n)));
-      setEditingNoteId(null);
-      setEditingNoteText("");
-      toast.success("Note updated");
-    } catch {
-      toast.error("Failed to update note");
-    } finally {
-      setSavingEditNote(false);
-    }
+  async function handleSaveEdit(noteId: string, content: string) {
+    if (!content.trim() || !user) return;
+    const res = await fetch(`/api/admin/users/${user.userId}/notes/${noteId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: content }),
+    });
+    if (!res.ok) throw new Error("Failed to update note");
+    const data = await res.json();
+    setNotes((prev) => prev.map((n) => (n.id === noteId ? data.note : n)));
   }
 
   async function handleBlock() {
@@ -389,108 +340,20 @@ export function UserDetailSheet({ user, open, onClose, onUserChanged, initialTab
 
             {/* ── Notes ── */}
             <TabsContent value="notes" className="mt-4 space-y-4">
-              <div className="space-y-2">
-                <Textarea
-                  ref={noteTextareaRef}
-                  placeholder="Add an admin note about this user…"
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  rows={3}
-                  className="resize-none"
-                />
-                <Button size="sm" onClick={handleAddNote} disabled={savingNote || !newNote.trim()}>
-                  {savingNote ? <Loader2 className="mr-2 size-3.5 animate-spin" /> : null}
-                  Add Note
-                </Button>
-              </div>
-
-              {notesLoading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : notes.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No notes yet</p>
-              ) : (
-                <div className="space-y-3">
-                  {notes.map((n) => {
-                    const isOwner = currentAdminEmail && n.created_by === currentAdminEmail;
-                    const isEditing = editingNoteId === n.id;
-                    return (
-                      <div key={n.id} className="rounded-lg border p-3 text-sm space-y-2 group">
-                        {/* Note body — editable if in edit mode */}
-                        {isEditing ? (
-                          <Textarea
-                            value={editingNoteText}
-                            onChange={(e) => setEditingNoteText(e.target.value)}
-                            rows={3}
-                            className="resize-none text-sm"
-                            autoFocus
-                          />
-                        ) : (
-                          <p className="text-foreground leading-relaxed">{n.note}</p>
-                        )}
-
-                        {/* Footer: who added + controls */}
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <User className="size-3" />
-                            {n.created_by}
-                            <span className="opacity-50">·</span>
-                            {dateTime(n.created_at)}
-                          </span>
-
-                          <div className="flex items-center gap-1">
-                            {isEditing ? (
-                              <>
-                                <button
-                                  onClick={() => handleSaveEdit(n.id)}
-                                  disabled={savingEditNote || !editingNoteText.trim()}
-                                  className="flex items-center gap-1 text-green-500 hover:text-green-400 disabled:opacity-40 transition-colors"
-                                  title="Save"
-                                >
-                                  {savingEditNote ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
-                                  <span>Save</span>
-                                </button>
-                                <button
-                                  onClick={() => { setEditingNoteId(null); setEditingNoteText(""); }}
-                                  className="text-muted-foreground hover:text-foreground transition-colors ml-1"
-                                  title="Cancel"
-                                >
-                                  <X className="size-3.5" />
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                {/* Edit button — only for your own notes */}
-                                {isOwner && (
-                                  <button
-                                    onClick={() => { setEditingNoteId(n.id); setEditingNoteText(n.note); }}
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
-                                    title="Edit note"
-                                  >
-                                    <Pencil className="size-3.5" />
-                                  </button>
-                                )}
-                                {/* Delete button — any admin */}
-                                <button
-                                  onClick={() => handleDeleteNote(n.id)}
-                                  disabled={deletingNote === n.id}
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80 ml-1"
-                                  title="Delete note"
-                                >
-                                  {deletingNote === n.id
-                                    ? <Loader2 className="size-3.5 animate-spin" />
-                                    : <Trash2 className="size-3.5" />}
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              <AdminNotesSection
+                title="Add an admin note about this user…"
+                notes={notes.map((note) => ({
+                  id: note.id,
+                  content: note.note,
+                  created_by: note.created_by,
+                  created_at: note.created_at,
+                }))}
+                loading={notesLoading}
+                currentAdminEmail={currentAdminEmail}
+                onAdd={handleAddNote}
+                onDelete={handleDeleteNote}
+                onEdit={handleSaveEdit}
+              />
             </TabsContent>
 
             {/* ── Logins ── */}
@@ -587,14 +450,5 @@ export function UserDetailSheet({ user, open, onClose, onUserChanged, initialTab
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-start gap-4 px-3 py-2.5">
-      <span className="text-xs text-muted-foreground w-24 shrink-0 pt-0.5 capitalize">{label}</span>
-      <span className="text-sm text-foreground">{value}</span>
-    </div>
   );
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { randomBytes } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { checkAndAwardTrainingGraduation } from "@/lib/training/graduation";
 
 export const dynamic = "force-dynamic";
 
@@ -63,28 +63,33 @@ export async function POST() {
     });
   }
 
-  // All lessons done — stamp graduation (idempotent: re-read before writing)
-  const { data: recheck } = await admin
+  const awarded = await checkAndAwardTrainingGraduation(user.id);
+  if (!awarded) {
+    const { data: recheck } = await admin
+      .from("trainees")
+      .select("graduated_at, certificate_code")
+      .eq("id", trainee.id)
+      .single();
+
+    if (recheck?.graduated_at) {
+      return NextResponse.json({
+        graduated: true,
+        alreadyGraduated: true,
+        graduatedAt: recheck.graduated_at,
+        certificate_code: recheck.certificate_code ?? null,
+      });
+    }
+  }
+
+  const { data: updated } = await admin
     .from("trainees")
-    .select("graduated_at")
+    .select("graduated_at, certificate_code")
     .eq("id", trainee.id)
     .single();
 
-  if (recheck?.graduated_at) {
-    return NextResponse.json({ graduated: true, alreadyGraduated: true });
-  }
-
-  const now = new Date().toISOString();
-  const certCode = randomBytes(6).toString("hex").toUpperCase();
-
-  await admin
-    .from("trainees")
-    .update({
-      graduated_at: now,
-      training_status: "graduated",
-      certificate_code: certCode,
-    })
-    .eq("id", trainee.id);
-
-  return NextResponse.json({ graduated: true, graduatedAt: now, certificate_code: certCode });
+  return NextResponse.json({
+    graduated: true,
+    graduatedAt: updated?.graduated_at ?? null,
+    certificate_code: updated?.certificate_code ?? null,
+  });
 }

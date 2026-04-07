@@ -292,6 +292,12 @@ interface DecanRow {
   tarot_long_desc?: string | null;
 }
 
+type DecanPossibility = {
+  planet: string;
+  sign_name?: string | null;
+  signs?: string | null;
+};
+
 interface DecanAi {
   short_format: string;
   long_format: string;
@@ -1255,17 +1261,26 @@ function DecanModal({ planet, sign, open, onClose }: {
 
 // ─── Planets Section ──────────────────────────────────────────────────────────
 
-function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: { planets: any[]; aiData: any; areaOfInquiry?: string; decanPossibilities: any[] }) {
+function normalizeDecanValue(value: unknown): string {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: { planets: any[]; aiData: any; areaOfInquiry?: string; decanPossibilities: DecanPossibility[] }) {
   const { modal, trigger, close } = useShowMore();
   const [decanPlanet, setDecanPlanet] = useState<{ name: string; sign: string } | null>(null);
 
   if (!planets) return null;
 
   const checkDacen = (planetName: string, signName: string) => {
-    if (!decanPossibilities) return false;
-    return decanPossibilities.some((item: any) =>
-      item.planet === planetName && item.sign_name === signName
-    );
+    const normalizedPlanet = normalizeDecanValue(planetName);
+    const normalizedSign = normalizeDecanValue(signName);
+    if (!normalizedPlanet || !normalizedSign || !decanPossibilities?.length) return false;
+
+    return decanPossibilities.some((item) => {
+      const itemPlanet = normalizeDecanValue(item.planet);
+      const itemSign = normalizeDecanValue(item.sign_name ?? item.signs);
+      return itemPlanet === normalizedPlanet && itemSign === normalizedSign;
+    });
   };
 
   // Sort planets in canonical order
@@ -1311,14 +1326,20 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: 
                     <div className="flex items-center gap-2">
                       <PlanetSymbol name={p.name} />
                       {checkDacen(p.name, p.sign) && (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img
+                        <button
+                          type="button"
                           onClick={() => setDecanPlanet({ name: p.name, sign: p.sign })}
-                          src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
-                          alt="Decan Icon"
+                          className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
                           title="Decan Information (Click to view)"
-                          className="size-5 cursor-pointer hover:scale-125 transition-transform drop-shadow-[0_0_5px_rgba(245,158,11,0.4)]"
-                        />
+                          aria-label={`Open decan information for ${p.name} in ${p.sign}`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
+                            alt=""
+                            className="size-5 cursor-pointer hover:scale-125 transition-transform drop-shadow-[0_0_5px_rgba(245,158,11,0.4)]"
+                          />
+                        </button>
                       )}
                     </div>
                   </td>
@@ -1354,14 +1375,20 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: 
                   <span className="text-amber-500 text-base">{PLANET_SYMBOLS[p.name] ?? "✦"}</span>
                   <h4 className="text-sm font-semibold uppercase tracking-wide">{p.name}</h4>
                   {hasDecan && (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
+                    <button
+                      type="button"
                       onClick={() => setDecanPlanet({ name: p.name, sign: p.sign })}
-                      src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
-                      alt="Decan Icon"
+                      className="ml-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
                       title="Decan Information (Click to view)"
-                      className="size-5 cursor-pointer hover:scale-125 transition-transform drop-shadow-[0_0_5px_rgba(245,158,11,0.4)] ml-1.5"
-                    />
+                      aria-label={`Open decan information for ${p.name} in ${p.sign}`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
+                        alt=""
+                        className="size-5 cursor-pointer hover:scale-125 transition-transform drop-shadow-[0_0_5px_rgba(245,158,11,0.4)]"
+                      />
+                    </button>
                   )}
                   <Badge variant="outline" className="ml-auto text-[10px] text-amber-600 border-amber-400">{p.sign} · House {p.house}</Badge>
                 </div>
@@ -2892,7 +2919,7 @@ export default function AdminHoroscopePage() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showChartBtn, setShowChartBtn] = useState(false);
   const [chartModal, setChartModal] = useState<string | null>(null);
-  const [decanPossibilities, setDecanPossibilities] = useState<any[]>([]);
+  const [decanPossibilities, setDecanPossibilities] = useState<DecanPossibility[]>([]);
 
   // Reset on tab change
   useEffect(() => {
@@ -2906,7 +2933,9 @@ export default function AdminHoroscopePage() {
     fetch("/api/admin/astro/decan-info")
       .then((r) => r.json())
       .then((data) => {
-        if (data?.results && Array.isArray(data.results)) setDecanPossibilities(data.results);
+        if (data?.results && Array.isArray(data.results)) {
+          setDecanPossibilities(data.results as DecanPossibility[]);
+        }
       })
       .catch(() => { });
   }, []);

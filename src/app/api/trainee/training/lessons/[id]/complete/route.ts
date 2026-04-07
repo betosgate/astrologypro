@@ -5,7 +5,7 @@ import {
   sendLessonComplete,
   sendCategoryComplete,
 } from "@/lib/email";
-import { checkAndAwardTrainingGraduation } from "@/lib/training/graduation";
+import { completeLessonAndProgressForUser } from "@/lib/training/completion";
 
 export const dynamic = "force-dynamic";
 
@@ -51,8 +51,6 @@ export async function POST(
     return NextResponse.json({ error: "Lesson not found." }, { status: 404 });
   }
 
-  const now = new Date().toISOString();
-
   // ── Trigger gate ────────────────────────────────────────────────────────────
   // Lessons with active in-video quiz triggers are completed exclusively via
   // the trigger answer route. This endpoint must not bypass that requirement.
@@ -71,116 +69,22 @@ export async function POST(
     );
   }
 
-  // Look up lesson_progress to carry started_at / time_spent_seconds into completion record
-  const { data: lessonProgress } = await admin
-    .from("lesson_progress")
-    .select("id, started_at, time_spent_seconds")
-    .eq("user_id", user.id)
-    .eq("lesson_id", lessonId)
-    .maybeSingle();
-
-  // Mark lesson_progress.completed_at
-  if (lessonProgress) {
-    await admin
-      .from("lesson_progress")
-      .update({ completed_at: now })
-      .eq("id", lessonProgress.id);
-  }
-
-  // Upsert lesson completion with time tracking fields
-  // ignoreDuplicates: true — idempotent; we detect "new completion" by checking count
-  const { error: completionError, count: insertedCount } = await admin
-    .from("lesson_completions")
-    .upsert(
-      {
-        user_id: user.id,
-        lesson_id: lessonId,
-        ...(lessonProgress?.started_at ? { started_at: lessonProgress.started_at } : {}),
-        ...(lessonProgress?.time_spent_seconds != null
-          ? { time_spent_seconds: lessonProgress.time_spent_seconds }
-          : {}),
-      },
-      { onConflict: "user_id,lesson_id", ignoreDuplicates: true, count: "exact" }
-    );
-
-  if (completionError) {
-    console.error("lesson complete upsert error:", completionError.message);
+  let isNewCompletion = false;
+  let categoryCompleted = false;
+  try {
+    const result = await completeLessonAndProgressForUser(admin, user.id, lessonId);
+    isNewCompletion = result.inserted;
+    categoryCompleted = result.categoryCompleted;
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to mark lesson complete.";
+    console.error("lesson completion sync error:", message);
     return NextResponse.json(
-      { error: "Failed to mark lesson complete." },
+      { error: message },
       { status: 500 }
     );
   }
-
-  // Detect if this is a new (first-time) completion vs. a duplicate upsert
-  const isNewCompletion = (insertedCount ?? 0) > 0;
-
-  // Check if all lessons in the category are now complete
-  let categoryCompleted = false;
   const categoryId = lesson.category_id;
-
-  if (categoryId) {
-    // Count total active lessons in the category
-    const { count: totalCount } = await admin
-      .from("training_lessons")
-      .select("id", { count: "exact", head: true })
-      .eq("category_id", categoryId)
-      .eq("is_active", true);
-
-    if (totalCount && totalCount > 0) {
-      const { data: categoryLessons } = await admin
-        .from("training_lessons")
-        .select("id")
-        .eq("category_id", categoryId)
-        .eq("is_active", true);
-
-      const categoryLessonIds = (categoryLessons ?? []).map((l) => l.id);
-
-      const { count: completedCount } = await admin
-        .from("lesson_completions")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .in("lesson_id", categoryLessonIds);
-
-      if ((completedCount ?? 0) >= totalCount) {
-        // Aggregate started_at (min) and time_spent_seconds (sum) from lesson_progress
-        const { data: progressRows } = await admin
-          .from("lesson_progress")
-          .select("started_at, time_spent_seconds")
-          .eq("user_id", user.id)
-          .in("lesson_id", categoryLessonIds);
-
-        const catStartedAt =
-          progressRows && progressRows.length > 0
-            ? progressRows.reduce((min, r) =>
-                r.started_at && (!min || r.started_at < min) ? r.started_at : min,
-                null as string | null
-              )
-            : null;
-
-        const catTimeSpent =
-          progressRows && progressRows.length > 0
-            ? progressRows.reduce((sum, r) => sum + (r.time_spent_seconds ?? 0), 0)
-            : null;
-
-        // All lessons done — record category completion (idempotent)
-        const { error: catCompError, count: catInsertedCount } = await admin
-          .from("category_completions")
-          .upsert(
-            {
-              user_id: user.id,
-              category_id: categoryId,
-              ...(catStartedAt ? { started_at: catStartedAt } : {}),
-              ...(catTimeSpent != null ? { time_spent_seconds: catTimeSpent } : {}),
-            },
-            { onConflict: "user_id,category_id", ignoreDuplicates: true, count: "exact" }
-          );
-
-        if (!catCompError) {
-          categoryCompleted = (catInsertedCount ?? 0) > 0;
-        }
-      }
-    }
-  }
 
   // ── Fire-and-forget emails + graduation check ───────────────────────────────
   // Only send emails and run graduation for new completions
@@ -277,11 +181,6 @@ export async function POST(
       }
     }
 
-    // Graduation check — runs after all emails are queued
-    // Uses the shared helper which verifies all lessons complete and is idempotent.
-    checkAndAwardTrainingGraduation(user.id).catch((err) =>
-      console.error("[training-graduation] check failed:", err)
-    );
   }
 
   return NextResponse.json({ success: true, categoryCompleted });

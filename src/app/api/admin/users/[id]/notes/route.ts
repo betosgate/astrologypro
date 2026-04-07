@@ -10,7 +10,7 @@ export async function GET(
 ) {
   const adminUserObj = await getAdminUser();
   const adminEmail = adminUserObj?.email ?? null;
-  if (!adminEmail) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!adminEmail) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
   const admin = createAdminClient();
@@ -31,7 +31,7 @@ export async function POST(
 ) {
   const adminUserObj = await getAdminUser();
   const adminEmail = adminUserObj?.email ?? null;
-  if (!adminEmail) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!adminEmail) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
   const { note, role } = await req.json();
