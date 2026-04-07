@@ -29,7 +29,7 @@ export const viewport: Viewport = {
 };
 
 const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://astrologypro.com").trim();
-const OG_IMAGE = `${BASE_URL}/images/home/run_your_divination.png`;
+const OG_IMAGE = `${BASE_URL}/images/home/og-card.jpg`;
 
 export const metadata: Metadata = {
   title: {
