@@ -4,6 +4,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
+/** Compute median of a number array (excludes zero/null values). */
+function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1
+    ? sorted[mid]
+    : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
 
 // GET /api/admin/training/analytics/categories
 export async function GET(req: NextRequest) {
@@ -80,21 +89,26 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Aggregate category completions
+  // Aggregate category completions — collect individual times for median
   const categoryCompletionStats = new Map<
     string,
-    { completions: number; total_time: number }
+    { completions: number; total_time: number; completion_times: number[] }
   >();
   for (const cc of categoryCompletions) {
     if (!categoryCompletionStats.has(cc.category_id)) {
       categoryCompletionStats.set(cc.category_id, {
         completions: 0,
         total_time: 0,
+        completion_times: [],
       });
     }
     const stats = categoryCompletionStats.get(cc.category_id)!;
     stats.completions += 1;
-    stats.total_time += cc.time_spent_seconds ?? 0;
+    // Only include records with valid time data in time aggregates
+    if (cc.time_spent_seconds != null && cc.time_spent_seconds > 0) {
+      stats.total_time += cc.time_spent_seconds;
+      stats.completion_times.push(cc.time_spent_seconds);
+    }
   }
 
   // Unique users who started in each category (via lesson_progress -> lesson -> category)
@@ -112,6 +126,7 @@ export async function GET(req: NextRequest) {
     const completionStats = categoryCompletionStats.get(c.id) ?? {
       completions: 0,
       total_time: 0,
+      completion_times: [],
     };
     const unique_users_started = categoryStartedUsers.get(c.id)?.size ?? 0;
     const user_completions = completionStats.completions;
@@ -119,10 +134,18 @@ export async function GET(req: NextRequest) {
       unique_users_started > 0
         ? Math.round((user_completions / unique_users_started) * 1000) / 10
         : 0;
-    const avg_time_spent_seconds =
-      user_completions > 0
-        ? Math.round(completionStats.total_time / user_completions)
+    // mean_completion_time = arithmetic mean of valid completed durations
+    const mean_completion_time_seconds =
+      completionStats.completion_times.length > 0
+        ? Math.round(
+            completionStats.completion_times.reduce((s, n) => s + n, 0) /
+              completionStats.completion_times.length
+          )
         : 0;
+    // median_completion_time — excludes records with no valid time data
+    const median_completion_time_seconds = median(completionStats.completion_times);
+    // avg_time_spent is kept as an alias for mean for backward UI compat
+    const avg_time_spent_seconds = mean_completion_time_seconds;
 
     return {
       id: c.id,
@@ -134,6 +157,8 @@ export async function GET(req: NextRequest) {
       unique_users_started,
       completion_rate,
       avg_time_spent_seconds,
+      mean_completion_time_seconds,
+      median_completion_time_seconds,
       created_at: c.created_at,
     };
   });

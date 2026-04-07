@@ -178,9 +178,9 @@ export function DivinerHero({
             {/* Trust signals row */}
             <div className="mt-2.5 flex flex-wrap items-center gap-3 text-xs text-[#b8bcd0]/70">
               {isCertified && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#c9a84c]/15 px-2 py-0.5 text-[#c9a84c] font-semibold">
-                  <BadgeCheck className="size-3.5" />
-                  DIB Certified
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#c9a84c]/40 bg-[#c9a84c]/15 px-3 py-1 text-[#c9a84c] font-semibold text-xs shadow-sm">
+                  <BadgeCheck className="size-4" />
+                  ⭐ DIB Certified
                 </span>
               )}
               {isVerified && (

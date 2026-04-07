@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { CalendarView } from "@/components/dashboard/calendar-view";
+import { BookingLinkBanner } from "@/components/dashboard/booking-link-banner";
 
 export const metadata = {
   title: "Calendar - Dashboard",
@@ -18,7 +19,7 @@ export default async function CalendarPage() {
 
   const { data: diviner } = await admin
     .from("diviners")
-    .select("id")
+    .select("id, username")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -74,6 +75,12 @@ export default async function CalendarPage() {
           Manage your availability, bookings, and time off.
         </p>
       </div>
+
+      {diviner.username && (
+        <BookingLinkBanner
+          bookingUrl={`${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/${diviner.username}`}
+        />
+      )}
 
       <CalendarView
         divinerId={diviner.id}

@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 
-export function EmailCapture() {
+interface EmailCaptureProps {
+  /** When set, attributes the subscription to a specific diviner (newsletter attribution). */
+  divinerUsername?: string;
+}
+
+export function EmailCapture({ divinerUsername }: EmailCaptureProps = {}) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -16,7 +21,10 @@ export function EmailCapture() {
       const res = await fetch("/api/marketing/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({
+          email,
+          ...(divinerUsername ? { diviner_username: divinerUsername } : {}),
+        }),
       });
 
       if (!res.ok) {

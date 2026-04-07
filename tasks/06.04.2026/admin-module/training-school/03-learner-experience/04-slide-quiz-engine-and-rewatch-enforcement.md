@@ -1,54 +1,76 @@
 # Module 04 - Slide Quiz Engine and Rewatch Enforcement
 
 ## Objective
-Replace the current end-of-lesson quiz experience with the required slide-triggered quiz engine for video lessons.
+Implement the required slide-triggered video quiz engine with server-enforced rewind/rewatch behavior.
 
-## Current State In Repo
-- `quiz_questions` exists and is used as a lesson-level question bank.
-- `quiz_attempts` exists and records lesson-level quiz submissions.
-- `lesson-viewer-quiz.tsx` submits one combined answer set after the learner completes all questions.
-- No current implementation pauses the video at trigger timestamps or forces rewind before retry.
+## Current Repo State
+- `quiz_questions` already exists.
+- `quiz_attempts` already exists.
+- `lesson-viewer-quiz.tsx` is currently an end-of-lesson quiz flow.
+- The current lesson player does not pause at trigger timestamps and does not enforce rewatch before retry.
 
-## Required Outcome
-- The video player pauses at configured trigger points.
-- A full-screen/lightbox quiz appears at each trigger.
-- Both questions at a trigger must be answered correctly before playback continues.
-- Wrong answers show the required short redirecting notification and force the learner to rewatch the relevant segment before another answer attempt.
-- Server-side rules prevent bypassing the rewatch requirement.
+## Exact Gap
+- Module 22 requires timestamp-based quiz triggers inside video playback.
+- The current implementation only supports one aggregated lesson quiz submission.
+- Wrong-answer rewind enforcement is missing both in player behavior and in server-side validation.
 
-## Detailed Tasks
-- [ ] Design the additive schema needed for trigger-based playback without replacing current tables.
-- [ ] Introduce `lesson_quiz_triggers` if no equivalent trigger table exists yet.
-- [ ] Decide whether `quiz_questions` can absorb `slide_index` and trigger linkage safely or needs a minimal additive relation.
-- [ ] Decide how to store the "slide start timestamp" or rewind target required for wrong-answer redirects.
-- [ ] Add server-tracked rewatch evidence so the backend can enforce "no try again without rewatch."
-- [ ] Update the learner lesson API to return trigger metadata in addition to question payloads.
-- [ ] Replace or extend the current lesson viewer to:
-  - load trigger timestamps at lesson start
-  - pause at each trigger
-  - open a modal/lightbox
-  - prevent manual scrubbing past unpassed trigger points
-  - save resume position every 10 seconds
-- [ ] Implement the wrong-answer flow:
-  - show a 5-second progress-bar style notification
-  - explain the answer was wrong
-  - redirect to the relevant video point
-  - replay the segment
-  - reshow the quiz at the trigger boundary
-- [ ] Ensure server validation governs progression instead of trusting client state.
-- [ ] Preserve the existing non-trigger quiz flow only if needed for lessons that do not yet use trigger-based quizzes.
+## Required Implementation
+- Add trigger support without replacing current quiz tables.
+- Introduce `lesson_quiz_triggers` if no equivalent trigger table already exists.
+- Extend current question/attempt/progress behavior so the system can represent:
+  - trigger timestamp
+  - slide index if required
+  - question pair per trigger
+  - rewind target timestamp
+  - rewatch completion evidence before retry
+- Update learner lesson data loading to return:
+  - video trigger metadata
+  - trigger questions
+  - learner pass/retry status per trigger
+- Update the learner player so it:
+  - pauses at trigger timestamps
+  - opens a blocking lightbox/modal
+  - prevents scrubbing past unanswered triggers
+  - saves position every 10 seconds
+- Implement this wrong-answer behavior:
+  - show a 5-second progress-style notification
+  - rewind to the configured segment start
+  - require the learner to replay the segment before another answer submission is accepted
+- Enforce the retry gate on the server. Client-only enforcement is not sufficient.
+- Keep the current end-of-lesson quiz flow only as a fallback for lessons that have no trigger records.
+
+## Likely Affected Files
+- `src/components/trainee/lesson-viewer-quiz.tsx`
+- lesson playback UI/component file(s)
+- `src/app/api/trainee/training/lessons/[id]/route.ts`
+- `src/app/api/trainee/training/lessons/[id]/quiz/route.ts`
+- `src/app/api/trainee/training/lessons/[id]/heartbeat/route.ts`
+- Supabase migration(s) for quiz triggers and rewatch state
+- admin quiz-authoring endpoints/pages if trigger authoring is included in the same pass
+
+## API and Schema Constraints
+- Keep `quiz_questions`, `quiz_attempts`, and `lesson_progress`.
+- Additive schema is allowed where current tables cannot represent trigger/rewatch state.
+- Do not rename current quiz APIs just to match external documentation names.
+
+## Dependencies
+- Execute after Modules 02 and 03.
 
 ## Acceptance Criteria
-- Trigger-based questions interrupt playback at the configured timestamps.
-- Learners cannot skip ahead past unanswered triggers.
-- Wrong answers require a rewatch before a retry is accepted.
-- Playback resume state survives refresh/re-entry.
+- Video pauses at configured trigger points.
+- Learners cannot skip unpassed triggers.
+- Wrong answers force rewind and replay before retry.
+- Trigger progress survives refresh and re-entry.
 
 ## Verification Test Plan
-- [ ] Configure a lesson with at least two trigger points and confirm the video pauses at each timestamp.
-- [ ] Confirm the trigger modal shows the correct question pair and prevents background interaction.
-- [ ] Answer both questions correctly and confirm playback resumes to the next segment.
-- [ ] Answer a question incorrectly and confirm the 5-second redirect notification appears and rewinds to the configured segment start.
-- [ ] Attempt to resubmit without completing the required rewatch and confirm the server rejects it.
-- [ ] Attempt to scrub past an unpassed trigger and confirm the player blocks the action.
-- [ ] Refresh the page mid-lesson and confirm playback resumes from the saved progress point.
+- [ ] Configure a lesson with multiple trigger points and verify pause behavior.
+- [ ] Verify the trigger lightbox blocks playback progression until the trigger is cleared.
+- [ ] Answer correctly and verify playback resumes.
+- [ ] Answer incorrectly and verify the 5-second redirect notification and rewind behavior.
+- [ ] Attempt to answer again without required replay and verify server rejection.
+- [ ] Attempt to scrub past an unanswered trigger and verify blocking behavior.
+- [ ] Refresh mid-lesson and verify trigger/progress state persists.
+
+## Out Of Scope
+- final reporting dashboards
+- certificate email

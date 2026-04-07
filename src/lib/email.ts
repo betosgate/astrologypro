@@ -7,6 +7,7 @@ import {
   sectionHeading,
   starRating,
 } from "./email-base";
+import { logEmail, isSequencePaused } from "./email-log";
 
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
@@ -16,18 +17,12 @@ const FROM_ADDRESS =
   "AstrologyPro <noreply@divineinfinitebeing.com>";
 
 function getSESClient() {
-  const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.AWS_SES_SECRET_ACCESS_KEY;
-  const region = process.env.AWS_SES_REGION ?? "us-east-1";
+  const region = process.env.AWS_SES_REGION ?? process.env.AWS_REGION ?? "us-east-1";
 
-  if (!accessKeyId || !secretAccessKey) {
-    return null;
-  }
-
-  return new SESClient({
-    region,
-    credentials: { accessKeyId, secretAccessKey },
-  });
+  // Use default credential chain — picks up AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY/
+  // AWS_SESSION_TOKEN env vars, IAM instance role, or OIDC role automatically.
+  // Never hardcode credentials.
+  return new SESClient({ region });
 }
 
 interface SendEmailParams {
@@ -38,11 +33,6 @@ interface SendEmailParams {
 
 export async function sendEmail({ to, subject, html }: SendEmailParams) {
   const ses = getSESClient();
-
-  if (!ses) {
-    console.log("[Email] AWS SES not configured — logging instead:", { to, subject });
-    return { success: true, id: "dev-placeholder" };
-  }
 
   const command = new SendEmailCommand({
     Source: FROM_ADDRESS,
@@ -1124,6 +1114,12 @@ export async function sendCommunityPaymentFailed({
   retryDate,
   billingPortalUrl,
 }: CommunityPaymentFailedParams) {
+  if (await isSequencePaused("community_payment_failed")) {
+    console.log("[email] community_payment_failed sequence is paused — skipping send to", to);
+    return { success: false, id: "" };
+  }
+
+  const subject = `Action required: Community membership payment failed`;
   const content = `
     <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
 
@@ -1137,9 +1133,9 @@ export async function sendCommunityPaymentFailed({
     <p style="margin:16px 0 0;color:#a1a1aa;">Questions? Reply to this email or contact us at <a href="mailto:support@astrologypro.com" style="color:#8b5cf6;">support@astrologypro.com</a>.</p>
   `;
 
-  return sendEmail({
+  const result = await sendEmail({
     to,
-    subject: `Action required: Community membership payment failed`,
+    subject,
     html: buildEmailHtml({
       title: "Payment Unsuccessful",
       preheader: `Your community membership payment of ${currency} ${amount} could not be processed.`,
@@ -1149,6 +1145,9 @@ export async function sendCommunityPaymentFailed({
       footer: `AstrologyPro &mdash; Divine Infinite Being`,
     }),
   });
+
+  await logEmail({ emailTo: to, templateName: "community_payment_failed", subject });
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -1172,6 +1171,12 @@ export async function sendCommunityRenewalReminder({
   planName,
   billingPortalUrl,
 }: CommunityRenewalReminderParams) {
+  if (await isSequencePaused("community_renewal_reminder")) {
+    console.log("[email] community_renewal_reminder sequence is paused — skipping send to", to);
+    return { success: false, id: "" };
+  }
+
+  const subject = `Your community membership renews on ${renewalDate}`;
   const content = `
     <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
 
@@ -1186,9 +1191,9 @@ export async function sendCommunityRenewalReminder({
     <p style="margin:16px 0 0;color:#a1a1aa;">Need to make changes or cancel? Visit your billing portal before the renewal date.</p>
   `;
 
-  return sendEmail({
+  const result = await sendEmail({
     to,
-    subject: `Your community membership renews on ${renewalDate}`,
+    subject,
     html: buildEmailHtml({
       title: "Membership Renewal Reminder",
       preheader: `Your ${planName} membership renews on ${renewalDate}`,
@@ -1198,6 +1203,9 @@ export async function sendCommunityRenewalReminder({
       footer: `AstrologyPro &mdash; Divine Infinite Being`,
     }),
   });
+
+  await logEmail({ emailTo: to, templateName: "community_renewal_reminder", subject });
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -1583,6 +1591,511 @@ export async function sendSessionReminder({
   });
 }
 
+// ── Community — Membership Welcome ───────────────────────────────────────────
+
+export async function sendCommunityMembershipWelcome({
+  to,
+  name,
+  membershipType,
+  planType,
+}: {
+  to: string;
+  name: string;
+  membershipType: "perennial_mandalism" | "mystery_school" | string;
+  planType?: string | null;
+}) {
+  const portalUrl = `${APP_URL}/community`;
+
+  const isMysterySchool = membershipType === "mystery_school";
+  const displayType = isMysterySchool
+    ? "Mystery School"
+    : "Perennial Mandalism";
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Welcome, ${name}.</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">Your <strong style="color:#f4f4f5;">${displayType}</strong> membership is now active.${planType ? ` You are enrolled on the <strong style="color:#f4f4f5;">${planType}</strong> plan.` : ""} The community portal is ready for you.</p>
+
+    ${sectionHeading("What You Have Access To")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">Monthly planetary transit reports for your family members</li>
+      <li style="margin-bottom:6px;">Community broadcasts, events, and live streams</li>
+      <li style="margin-bottom:6px;">Astrological training library and Sunday Service recordings</li>
+      ${isMysterySchool ? `<li style="margin-bottom:6px;">Mystery School curriculum — Foundation Weeks and all 36 Decans</li>` : ""}
+    </ul>
+
+    <p style="margin:16px 0 0;color:#a1a1aa;font-size:13px;">Enter your community portal to get started.</p>
+  `;
+
+  if (await isSequencePaused("community_welcome")) {
+    console.log("[email] community_welcome sequence is paused — skipping send to", to);
+    return { success: false, id: "" };
+  }
+
+  const subject = `Welcome to ${displayType} — Your membership is active`;
+  const result = await sendEmail({
+    to,
+    subject,
+    html: buildEmailHtml({
+      title: `Welcome to ${displayType}`,
+      badge: "Active",
+      preheader: `Your ${displayType} membership is confirmed and active. Your portal is ready.`,
+      content,
+      ctaText: "Enter the Community Portal",
+      ctaUrl: portalUrl,
+      footer: "AstrologyPro &mdash; Divine Infinite Being",
+    }),
+  });
+
+  await logEmail({ emailTo: to, templateName: "community_welcome", subject });
+  return result;
+}
+
+// ── Community — Monthly Transit Ready ────────────────────────────────────────
+
+export async function sendMonthlyTransitReady({
+  to,
+  name,
+  month,
+  familyMemberName,
+}: {
+  to: string;
+  name: string;
+  month: string; // YYYY-MM
+  familyMemberName: string;
+}) {
+  const [year, monthNum] = month.split("-");
+  const monthLabel = new Date(
+    parseInt(year, 10),
+    parseInt(monthNum, 10) - 1,
+    1
+  ).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+  const transitsUrl = `${APP_URL}/community/transits`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hello, ${name}.</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">The <strong style="color:#f4f4f5;">${monthLabel}</strong> planetary transit report for <strong style="color:#f4f4f5;">${familyMemberName}</strong> is ready in your community portal.</p>
+
+    ${sectionHeading("What's in Your Transit Report")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">Planetary transits to natal chart positions for the month</li>
+      <li style="margin-bottom:6px;">Key dates and astrological windows to watch</li>
+      <li style="margin-bottom:6px;">Aspect interpretations based on your natal chart</li>
+    </ul>
+
+    <p style="margin:16px 0 0;color:#a1a1aa;font-size:13px;">New reports are generated at the start of each month for all family members with natal charts on file.</p>
+  `;
+
+  if (await isSequencePaused("monthly_transit_ready")) {
+    console.log("[email] monthly_transit_ready sequence is paused — skipping send to", to);
+    return { success: false, id: "" };
+  }
+
+  const subject = `Your ${monthLabel} transit report is ready — ${familyMemberName}`;
+  const result = await sendEmail({
+    to,
+    subject,
+    html: buildEmailHtml({
+      title: `${monthLabel} Transits Ready`,
+      badge: familyMemberName,
+      preheader: `The ${monthLabel} planetary transit report for ${familyMemberName} is now available in your portal.`,
+      content,
+      ctaText: "View Transit Report",
+      ctaUrl: transitsUrl,
+      footer: "AstrologyPro &mdash; Perennial Mandalism",
+    }),
+  });
+
+  await logEmail({ emailTo: to, templateName: "monthly_transit_ready", subject });
+  return result;
+}
+
+// ── Mystery School — Enrollment Confirmation ─────────────────────────────────
+
+export async function sendMysterySchoolEnrollmentConfirmation({
+  to,
+  name,
+  quarter,
+  entryDate,
+  startDate,
+}: {
+  to: string;
+  name: string;
+  quarter: string | null;
+  entryDate: string;
+  startDate?: string | null;
+}) {
+  const portalUrl = `${APP_URL}/community/mystery-school`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Welcome, ${name}.</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">You have been enrolled in the <strong style="color:#f4f4f5;">Mystery School</strong>. The path of the 36 Decans is now open to you.</p>
+
+    ${detailRow("Entry Quarter", quarter ?? "Forthcoming")}
+    ${detailRow("Enrollment Date", new Date(entryDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }))}
+    ${startDate ? detailRow("Foundation Begins", new Date(startDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })) : ""}
+
+    ${sectionHeading("What Happens Next")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">Your Foundation Weeks become available in sequence — one per week</li>
+      <li style="margin-bottom:6px;">Decan windows open according to the astrological calendar</li>
+      <li style="margin-bottom:6px;">Each decan requires a ritual, scrying journal, and mundane impact journal</li>
+      <li style="margin-bottom:6px;">You will receive email reminders as windows open and approach their close</li>
+    </ul>
+
+    <p style="margin:16px 0 0;color:#a1a1aa;font-size:13px;">Enter your student portal to begin.</p>
+  `;
+
+  if (await isSequencePaused("mystery_school_enrollment")) {
+    console.log("[email] mystery_school_enrollment sequence is paused — skipping send to", to);
+    return { success: false, id: "" };
+  }
+
+  const subject = "Welcome to the Mystery School — Your journey begins";
+  const result = await sendEmail({
+    to,
+    subject,
+    html: buildEmailHtml({
+      title: "Mystery School",
+      badge: "Enrolled",
+      preheader: "Your enrollment is confirmed. The path of the 36 Decans is open.",
+      content,
+      ctaText: "Enter the Mystery School",
+      ctaUrl: portalUrl,
+      footer: "AstrologyPro &mdash; Mystery School",
+    }),
+  });
+
+  await logEmail({ emailTo: to, templateName: "mystery_school_enrollment", subject });
+  return result;
+}
+
+// ── Mystery School — Decan Lifecycle Emails ───────────────────────────────────
+
+function formatDecanWindow(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+export async function sendDecanOpened({
+  to,
+  name,
+  decanTitle,
+  decanNumber,
+  sign,
+  planet,
+  tarotCard,
+  windowClose,
+  actionUrl,
+}: {
+  to: string;
+  name: string;
+  decanTitle: string;
+  decanNumber: number;
+  sign: string;
+  planet: string;
+  tarotCard: string | null;
+  windowClose: string;
+  actionUrl: string;
+}) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Greetings, ${name}.</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">
+      Your next decan window is now <strong style="color:#f4f4f5;">open</strong>.
+      The stars are aligned — enter the work before the window closes.
+    </p>
+
+    ${detailRow("Decan", `${decanNumber}. ${decanTitle}`)}
+    ${detailRow("Sign", sign)}
+    ${detailRow("Planet", planet)}
+    ${tarotCard ? detailRow("Tarot Card", tarotCard) : ""}
+    ${detailRow("Window Closes", formatDecanWindow(windowClose))}
+
+    ${sectionHeading("Your Work This Decan")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">Complete the guided ritual</li>
+      <li style="margin-bottom:6px;">Submit your scrying journal${tarotCard ? ` (assigned card: ${tarotCard})` : ""}</li>
+      <li style="margin-bottom:6px;">Submit your mundane impact journal</li>
+    </ul>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Decan ${decanNumber} is open — ${decanTitle}`,
+    html: buildEmailHtml({
+      title: decanTitle,
+      badge: `Decan ${decanNumber}`,
+      preheader: `Your ${sign} decan window is now open. Complete your work by ${formatDecanWindow(windowClose)}.`,
+      content,
+      ctaText: "Begin This Decan",
+      ctaUrl: actionUrl,
+      footer: "AstrologyPro &mdash; Mystery School",
+    }),
+  });
+}
+
+export async function sendDecanUrgency3Days({
+  to,
+  name,
+  decanTitle,
+  decanNumber,
+  windowClose,
+  incompleteItems,
+  actionUrl,
+}: {
+  to: string;
+  name: string;
+  decanTitle: string;
+  decanNumber: number;
+  windowClose: string;
+  incompleteItems: string[];
+  actionUrl: string;
+}) {
+  const itemList = incompleteItems
+    .map((item) => `<li style="margin-bottom:6px;">${item}</li>`)
+    .join("");
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">
+      The action window for <strong style="color:#f4f4f5;">Decan ${decanNumber}: ${decanTitle}</strong> closes in
+      <strong style="color:#f59e0b;">3 days</strong>.
+      Complete the remaining work before the window closes — a 2-day grace period follows, but the primary window is ending soon.
+    </p>
+
+    ${detailRow("Window Closes", formatDecanWindow(windowClose))}
+
+    ${sectionHeading("Remaining Items")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      ${itemList}
+    </ul>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `3 days left — Decan ${decanNumber}: ${decanTitle}`,
+    html: buildEmailHtml({
+      title: "Window Closing Soon",
+      badge: `Decan ${decanNumber}`,
+      preheader: `3 days remain to complete Decan ${decanNumber}: ${decanTitle}.`,
+      content,
+      ctaText: "Continue My Work",
+      ctaUrl: actionUrl,
+      footer: "AstrologyPro &mdash; Mystery School",
+    }),
+  });
+}
+
+export async function sendGracePeriodStarted({
+  to,
+  name,
+  decanTitle,
+  decanNumber,
+  graceClose,
+  incompleteItems,
+  actionUrl,
+}: {
+  to: string;
+  name: string;
+  decanTitle: string;
+  decanNumber: number;
+  graceClose: string;
+  incompleteItems: string[];
+  actionUrl: string;
+}) {
+  const itemList = incompleteItems
+    .map((item) => `<li style="margin-bottom:6px;">${item}</li>`)
+    .join("");
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">
+      The primary action window for <strong style="color:#f4f4f5;">Decan ${decanNumber}: ${decanTitle}</strong> has closed.
+      You are now in a <strong style="color:#f59e0b;">2-day grace period</strong>. Complete all remaining items before the grace window ends.
+    </p>
+
+    ${detailRow("Grace Period Ends", formatDecanWindow(graceClose))}
+
+    ${sectionHeading("Remaining Items")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      ${itemList}
+    </ul>
+
+    <p style="margin:16px 0 0;font-size:13px;color:#9ca3af;">After the grace period ends this decan will be marked missed and cannot be completed until the next cycle.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Grace period started — Decan ${decanNumber}: ${decanTitle}`,
+    html: buildEmailHtml({
+      title: "Grace Period Active",
+      badge: `Decan ${decanNumber}`,
+      preheader: `Grace period for Decan ${decanNumber} started. Ends ${formatDecanWindow(graceClose)}.`,
+      content,
+      ctaText: "Complete My Work Now",
+      ctaUrl: actionUrl,
+      footer: "AstrologyPro &mdash; Mystery School",
+    }),
+  });
+}
+
+export async function sendGrace24HourWarning({
+  to,
+  name,
+  decanTitle,
+  decanNumber,
+  graceClose,
+  incompleteItems,
+  actionUrl,
+}: {
+  to: string;
+  name: string;
+  decanTitle: string;
+  decanNumber: number;
+  graceClose: string;
+  incompleteItems: string[];
+  actionUrl: string;
+}) {
+  const itemList = incompleteItems
+    .map((item) => `<li style="margin-bottom:6px;">${item}</li>`)
+    .join("");
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">
+      The grace period for <strong style="color:#f4f4f5;">Decan ${decanNumber}: ${decanTitle}</strong> ends in
+      <strong style="color:#ef4444;">less than 24 hours</strong>. After this point the decan will be marked missed.
+    </p>
+
+    ${detailRow("Grace Ends", formatDecanWindow(graceClose))}
+
+    ${sectionHeading("Still Needed")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      ${itemList}
+    </ul>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Last 24 hours — Decan ${decanNumber} grace period ending`,
+    html: buildEmailHtml({
+      title: "Final Warning",
+      badge: `Decan ${decanNumber}`,
+      preheader: `Grace period for Decan ${decanNumber} ends in under 24 hours.`,
+      content,
+      ctaText: "Complete Now",
+      ctaUrl: actionUrl,
+      footer: "AstrologyPro &mdash; Mystery School",
+    }),
+  });
+}
+
+export async function sendDecanMissed({
+  to,
+  name,
+  decanTitle,
+  decanNumber,
+  retryWindowOpen,
+  retryYear,
+}: {
+  to: string;
+  name: string;
+  decanTitle: string;
+  decanNumber: number;
+  retryWindowOpen: string | null;
+  retryYear: number | null;
+}) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">
+      The grace period for <strong style="color:#f4f4f5;">Decan ${decanNumber}: ${decanTitle}</strong> has passed without completion.
+      This decan has been marked <strong style="color:#ef4444;">missed</strong>.
+    </p>
+
+    ${retryWindowOpen ? detailRow("Retry Window Opens", formatDecanWindow(retryWindowOpen)) : ""}
+    ${retryYear ? detailRow("Retry Year", String(retryYear)) : ""}
+
+    ${sectionHeading("What This Means")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">Your progress toward completion is paused for this decan</li>
+      <li style="margin-bottom:6px;">You can retry when the decan window reopens next cycle</li>
+      <li style="margin-bottom:6px;">Contact your administrator if you believe an excusal applies</li>
+    </ul>
+
+    <p style="margin:16px 0 0;font-size:13px;color:#9ca3af;">Your journey continues — missed decans can be retried in the next cycle.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Decan ${decanNumber} missed — ${decanTitle}`,
+    html: buildEmailHtml({
+      title: "Decan Missed",
+      badge: `Decan ${decanNumber}`,
+      preheader: `Decan ${decanNumber}: ${decanTitle} has been marked missed. Retry window opens next cycle.`,
+      content,
+      footer: "AstrologyPro &mdash; Mystery School",
+    }),
+  });
+}
+
+export async function sendDecanReopened({
+  to,
+  name,
+  decanTitle,
+  decanNumber,
+  retryWindowOpen,
+  retryWindowClose,
+  actionUrl,
+}: {
+  to: string;
+  name: string;
+  decanTitle: string;
+  decanNumber: number;
+  retryWindowOpen: string;
+  retryWindowClose: string;
+  actionUrl: string;
+}) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">
+      <strong style="color:#f4f4f5;">Decan ${decanNumber}: ${decanTitle}</strong> that you missed in a previous cycle has reopened.
+      This is your opportunity to complete it.
+    </p>
+
+    ${detailRow("Retry Window Opens", formatDecanWindow(retryWindowOpen))}
+    ${detailRow("Retry Window Closes", formatDecanWindow(retryWindowClose))}
+
+    <p style="margin:16px 0 0;color:#a1a1aa;">The same three tasks apply — ritual, scrying journal, and mundane impact journal.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Retry window open — Decan ${decanNumber}: ${decanTitle}`,
+    html: buildEmailHtml({
+      title: "Decan Reopened",
+      badge: `Decan ${decanNumber} · Retry`,
+      preheader: `A second chance: Decan ${decanNumber} is open again. Window closes ${formatDecanWindow(retryWindowClose)}.`,
+      content,
+      ctaText: "Begin Retry",
+      ctaUrl: actionUrl,
+      footer: "AstrologyPro &mdash; Mystery School",
+    }),
+  });
+}
+
 // ── Family Member Login Invite ────────────────────────────────────────────────
 export async function sendFamilyMemberInvite({
   to,
@@ -1615,4 +2128,331 @@ export async function sendFamilyMemberInvite({
       footer: `AstrologyPro &mdash; Explore Your Cosmic Blueprint`,
     }),
   });
+}
+
+// ---------------------------------------------------------------------------
+// Mystery School: Graduation Congratulations (with Ritual Builder CTA)
+// ---------------------------------------------------------------------------
+
+interface GraduationCongratulationsParams {
+  to: string;
+  name: string;
+  graduationDate: string;
+  graduationUrl: string;
+}
+
+export async function sendGraduationCongratulations({
+  to,
+  name,
+  graduationDate,
+  graduationUrl,
+}: GraduationCongratulationsParams) {
+  const ritualBuilderUrl = `${APP_URL}/community/training/ritual-builder`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">
+      Congratulations, <strong style="color:#f4f4f5;">${name}</strong>!
+    </p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">
+      You have completed all 36 decan rituals and your full Q1 foundation work.
+      You are now a <strong style="color:#e4e4e7;">Priest / Priestess of the Mystery School</strong>.
+    </p>
+
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0;background-color:#1e1b2e;border:1px solid #3b2f6e;border-radius:12px;">
+      <tr>
+        <td align="center" style="padding:24px 20px;">
+          <p style="margin:0;font-family:system-ui,-apple-system,sans-serif;font-size:12px;color:#a78bfa;text-transform:uppercase;letter-spacing:1px;">Graduated</p>
+          <p style="margin:8px 0 0;font-family:system-ui,-apple-system,sans-serif;font-size:18px;font-weight:700;color:#e9d5ff;">${graduationDate}</p>
+          <p style="margin:8px 0 0;font-family:system-ui,-apple-system,sans-serif;font-size:13px;color:#71717a;">36 Decans Complete &bull; All Foundation Work Complete</p>
+        </td>
+      </tr>
+    </table>
+
+    ${sectionHeading("Post-Graduation: Ritual Builder")}
+    <p style="margin:0 0 16px;color:#a1a1aa;">
+      As a graduate, you now have access to the personal ritual builder &mdash;
+      design your own rituals using the full component library: planetary invocations,
+      decan workings, seasonal rites, and custom steps.
+    </p>
+
+    ${secondaryCta("Open Ritual Builder", ritualBuilderUrl)}
+  `;
+
+  return sendEmail({
+    to,
+    subject: `You have graduated from the Mystery School`,
+    html: buildEmailHtml({
+      title: `Congratulations, ${name} &mdash; Mystery School Graduate`,
+      preheader: "You completed all 36 decans and your full foundation. You have graduated.",
+      content,
+      ctaText: "View Your Graduation",
+      ctaUrl: graduationUrl,
+      footer: `AstrologyPro &mdash; Divine Infinite Being`,
+    }),
+  });
+}
+
+
+// ---------------------------------------------------------------------------
+// Sunday Service — New Episode Notification
+// Sent to all active community members when an episode is published live.
+// ---------------------------------------------------------------------------
+
+interface SundayServiceNewEpisodeParams {
+  to: string;
+  episodeTitle: string;
+  episodeDescription: string | null;
+  watchUrl: string;
+}
+
+export async function sendSundayServiceNewEpisode({
+  to,
+  episodeTitle,
+  episodeDescription,
+  watchUrl,
+}: SundayServiceNewEpisodeParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">A new Sunday Service episode is now live and ready to watch.</p>
+
+    ${infoCard(`<strong style="color:#e4e4e7;">${episodeTitle}</strong>${episodeDescription ? `<br/><span style="color:#a1a1aa;font-size:14px;">${episodeDescription}</span>` : ""}`)}
+
+    <p style="margin:0;color:#a1a1aa;">Join the community every Sunday for guided teachings, ritual, and divine connection.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `New Sunday Service: ${episodeTitle}`,
+    html: buildEmailHtml({
+      title: "New Sunday Service Episode",
+      preheader: `${episodeTitle} is now available to watch`,
+      content,
+      ctaText: "Watch Now",
+      ctaUrl: watchUrl,
+      footer: `You are receiving this because you are an active community member on AstrologyPro. <a href="${APP_URL}/community/settings" style="color:#71717a;text-decoration:underline;">Manage preferences</a><br/>AstrologyPro &mdash; Divine Infinite Being`,
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Return Event Reminders — Saturn Return, Jupiter Return, Solar Return
+// Triggered by the /api/cron/return-event-reminders daily cron.
+// Each function builds subject + body based on how many days until the event.
+// ---------------------------------------------------------------------------
+
+function buildReturnReminderSubject(eventName: string, daysUntil: number): string {
+  if (daysUntil >= 28) return `Your ${eventName} is in 30 days — prepare now`;
+  if (daysUntil >= 5) return `7 days until your ${eventName} — don't miss this window`;
+  if (daysUntil >= 1) return `Tomorrow is your ${eventName} — it's time`;
+  return `Today is your ${eventName} — a powerful moment is here`;
+}
+
+// ---------------------------------------------------------------------------
+// Saturn Return Reminder
+// ---------------------------------------------------------------------------
+
+interface SaturnReturnReminderParams {
+  to: string;
+  name: string;
+  eventDate: string;       // pre-formatted display date, e.g. "April 18, 2026"
+  daysUntil: number;
+  occurrenceNumber: number;
+  landingPageUrl: string;  // e.g. /readings/saturn-return
+}
+
+export async function sendSaturnReturnReminder({
+  to,
+  name,
+  eventDate,
+  daysUntil,
+  occurrenceNumber,
+  landingPageUrl,
+}: SaturnReturnReminderParams) {
+  if (await isSequencePaused("return_reminders")) {
+    console.log("[email] return_reminders sequence is paused — skipping Saturn Return send to", to);
+    return { success: false, id: "" };
+  }
+
+  const ordinal = occurrenceNumber === 1 ? "1st" : occurrenceNumber === 2 ? "2nd" : `${occurrenceNumber}th`;
+  const subject = buildReturnReminderSubject("Saturn Return", daysUntil);
+
+  const urgencyLine =
+    daysUntil <= 0
+      ? `<p style="margin:0 0 16px;color:#d4d4d8;">Today is your ${ordinal} Saturn Return — one of the most significant astrological thresholds of your life.</p>`
+      : daysUntil === 1
+      ? `<p style="margin:0 0 16px;color:#d4d4d8;">Tomorrow your ${ordinal} Saturn Return arrives. This is a threshold you have been building toward for ~29.5 years.</p>`
+      : `<p style="margin:0 0 16px;color:#d4d4d8;">Your ${ordinal} Saturn Return arrives on <strong style="color:#e4e4e7;">${eventDate}</strong> — in <strong style="color:#e4e4e7;">${daysUntil} days</strong>.</p>`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    ${urgencyLine}
+
+    ${infoCard(`<strong style="color:#e4e4e7;">What is a Saturn Return?</strong><br/><span style="color:#a1a1aa;">Saturn takes ~29.5 years to complete its orbit and return to the exact position it held at your birth. This is a moment of reckoning, maturation, and profound restructuring — one of the most significant transits in a lifetime. The themes of responsibility, identity, and purpose come sharply into focus.</span>`)}
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">Many people feel its effects in the months leading up to and following the exact date. Working with a skilled diviner during this window can help you navigate the transition consciously and with clarity.</p>
+
+    ${secondaryCta("Book a Reading for Your Saturn Return", `${APP_URL}${landingPageUrl}`)}
+  `;
+
+  const result = await sendEmail({
+    to,
+    subject,
+    html: buildEmailHtml({
+      title: `Your ${ordinal} Saturn Return`,
+      preheader: `Saturn Return arrives on ${eventDate} — a pivotal threshold is approaching.`,
+      content,
+      ctaText: "Book a Saturn Return Reading",
+      ctaUrl: `${APP_URL}${landingPageUrl}`,
+      footer: `AstrologyPro &mdash; Divine Infinite Being`,
+    }),
+  });
+
+  await logEmail({
+    emailTo: to,
+    templateName: "saturn_return_reminder",
+    subject,
+    metadata: { daysUntil, occurrenceNumber, eventDate },
+  });
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Jupiter Return Reminder
+// ---------------------------------------------------------------------------
+
+interface JupiterReturnReminderParams {
+  to: string;
+  name: string;
+  eventDate: string;
+  daysUntil: number;
+  occurrenceNumber: number;
+  landingPageUrl: string;
+}
+
+export async function sendJupiterReturnReminder({
+  to,
+  name,
+  eventDate,
+  daysUntil,
+  occurrenceNumber,
+  landingPageUrl,
+}: JupiterReturnReminderParams) {
+  if (await isSequencePaused("return_reminders")) {
+    console.log("[email] return_reminders sequence is paused — skipping Jupiter Return send to", to);
+    return { success: false, id: "" };
+  }
+
+  const ordinal = occurrenceNumber === 1 ? "1st" : occurrenceNumber === 2 ? "2nd" : occurrenceNumber === 3 ? "3rd" : `${occurrenceNumber}th`;
+  const subject = buildReturnReminderSubject("Jupiter Return", daysUntil);
+
+  const urgencyLine =
+    daysUntil <= 0
+      ? `<p style="margin:0 0 16px;color:#d4d4d8;">Today is your ${ordinal} Jupiter Return — a rare window of expansion and aligned opportunity opens now.</p>`
+      : daysUntil === 1
+      ? `<p style="margin:0 0 16px;color:#d4d4d8;">Tomorrow your ${ordinal} Jupiter Return arrives. This cycle of abundance and growth begins on <strong style="color:#e4e4e7;">${eventDate}</strong>.</p>`
+      : `<p style="margin:0 0 16px;color:#d4d4d8;">Your ${ordinal} Jupiter Return arrives on <strong style="color:#e4e4e7;">${eventDate}</strong> — in <strong style="color:#e4e4e7;">${daysUntil} days</strong>.</p>`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    ${urgencyLine}
+
+    ${infoCard(`<strong style="color:#e4e4e7;">What is a Jupiter Return?</strong><br/><span style="color:#a1a1aa;">Jupiter orbits the sun every ~12 years, returning to its exact birth position and initiating a new cycle of expansion, opportunity, and abundance. Each return brings a fresh chapter of growth — in finances, relationships, spirituality, or career depending on your chart. This is one of the most auspicious transits in the astrological calendar.</span>`)}
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">Knowing what Jupiter activates in your natal chart can help you lean into the right areas of life during this window. A Jupiter Return reading gives you a personalised roadmap for the 12-year cycle ahead.</p>
+
+    ${secondaryCta("Book a Reading for Your Jupiter Return", `${APP_URL}${landingPageUrl}`)}
+  `;
+
+  const result = await sendEmail({
+    to,
+    subject,
+    html: buildEmailHtml({
+      title: `Your ${ordinal} Jupiter Return`,
+      preheader: `Jupiter Return arrives on ${eventDate} — a new cycle of expansion is beginning.`,
+      content,
+      ctaText: "Book a Jupiter Return Reading",
+      ctaUrl: `${APP_URL}${landingPageUrl}`,
+      footer: `AstrologyPro &mdash; Divine Infinite Being`,
+    }),
+  });
+
+  await logEmail({
+    emailTo: to,
+    templateName: "jupiter_return_reminder",
+    subject,
+    metadata: { daysUntil, occurrenceNumber, eventDate },
+  });
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Solar Return Reminder
+// ---------------------------------------------------------------------------
+
+interface SolarReturnReminderParams {
+  to: string;
+  name: string;
+  eventDate: string;
+  daysUntil: number;
+  landingPageUrl: string;
+}
+
+export async function sendSolarReturnReminder({
+  to,
+  name,
+  eventDate,
+  daysUntil,
+  landingPageUrl,
+}: SolarReturnReminderParams) {
+  if (await isSequencePaused("return_reminders")) {
+    console.log("[email] return_reminders sequence is paused — skipping Solar Return send to", to);
+    return { success: false, id: "" };
+  }
+
+  const subject = buildReturnReminderSubject("Solar Return", daysUntil);
+
+  const urgencyLine =
+    daysUntil <= 0
+      ? `<p style="margin:0 0 16px;color:#d4d4d8;">Today is your Solar Return — your personal new year begins now.</p>`
+      : daysUntil === 1
+      ? `<p style="margin:0 0 16px;color:#d4d4d8;">Tomorrow is your Solar Return — your personal new year arrives on <strong style="color:#e4e4e7;">${eventDate}</strong>.</p>`
+      : `<p style="margin:0 0 16px;color:#d4d4d8;">Your Solar Return arrives on <strong style="color:#e4e4e7;">${eventDate}</strong> — in <strong style="color:#e4e4e7;">${daysUntil} days</strong>.</p>`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${name},</p>
+
+    ${urgencyLine}
+
+    ${infoCard(`<strong style="color:#e4e4e7;">What is a Solar Return?</strong><br/><span style="color:#a1a1aa;">Each year, the Sun returns to the exact degree it occupied at the moment of your birth. This Solar Return is your personal new year — a powerful reset point that sets the energetic tone for the 12 months ahead. The Solar Return chart reveals the themes, opportunities, and challenges that will define your coming year.</span>`)}
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">A Solar Return reading is one of the most practical astrological tools available — it gives you a precise, personalised preview of the year ahead so you can prepare, prioritise, and move with intention.</p>
+
+    ${secondaryCta("Book a Reading for Your Solar Return", `${APP_URL}${landingPageUrl}`)}
+  `;
+
+  const result = await sendEmail({
+    to,
+    subject,
+    html: buildEmailHtml({
+      title: `Your Solar Return`,
+      preheader: `Your Solar Return is on ${eventDate} — your personal new year is almost here.`,
+      content,
+      ctaText: "Book a Solar Return Reading",
+      ctaUrl: `${APP_URL}${landingPageUrl}`,
+      footer: `AstrologyPro &mdash; Divine Infinite Being`,
+    }),
+  });
+
+  await logEmail({
+    emailTo: to,
+    templateName: "solar_return_reminder",
+    subject,
+    metadata: { daysUntil, eventDate },
+  });
+
+  return result;
 }

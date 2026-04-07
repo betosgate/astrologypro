@@ -34,7 +34,9 @@ import {
   RefreshCcw,
   ShoppingBag,
   BarChart3,
+  BarChart2,
   Radio,
+  ClipboardList,
   Shuffle,
   Flame,
   Settings2,
@@ -46,6 +48,16 @@ import {
   ChevronRight,
   LayoutGrid,
   Star,
+  Globe,
+  Building2,
+  MailCheck,
+  History,
+  FileCode2,
+  Mail,
+  Gift,
+  ScrollText,
+  ListChecks,
+  MessageSquare,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -61,15 +73,23 @@ const NAV_GROUPS = [
     label: "People",
     items: [
       { label: "Users", href: "/admin/users", icon: Users },
+      { label: "Diviners", href: "/admin/diviners", icon: Star },
+      { label: "Affiliates", href: "/admin/affiliates", icon: Users },
       { label: "Roles", href: "/admin/roles", icon: Shield },
+      { label: "Invitations", href: "/admin/invitations", icon: Mail },
       { label: "Social Advocacy", href: "/admin/social-advocacy", icon: Share2 },
     ],
   },
   {
     label: "Content",
     items: [
-      { label: "Blog", href: "/admin/blog", icon: FileText },
+      { label: "Blog Posts", href: "/admin/blog", icon: FileText },
+      { label: "Blog Categories", href: "/admin/blog/categories", icon: Layers },
+      { label: "Blog Authors", href: "/admin/blog/authors", icon: Users },
+      { label: "Blog Series", href: "/admin/blog/series", icon: BookOpen },
+      { label: "Media Items", href: "/admin/media-items", icon: Film },
       { label: "Videos", href: "/admin/videos", icon: Video },
+      { label: "Video Sessions", href: "/admin/video-sessions", icon: Video },
       { label: "Webinars", href: "/admin/webinars", icon: Monitor },
       { label: "Spiritual Wisdom", href: "/admin/spiritual-wisdom", icon: Sparkles },
       { label: "General Content", href: "/admin/general-content", icon: Layers },
@@ -80,7 +100,12 @@ const NAV_GROUPS = [
     label: "Astrology",
     items: [
       { label: "Wheel Signs", href: "/admin/wheel-signs", icon: CircleDot },
+      { label: "Mundane Hub", href: "/admin/mundane-dashboard", icon: Globe },
+      { label: "Mundane", href: "/admin/mundane", icon: Globe },
       { label: "Ingress Charts", href: "/admin/ingress-charts", icon: Navigation },
+      { label: "Entities", href: "/admin/mundane-entities", icon: Building2 },
+      { label: "Forecasts", href: "/admin/mundane-forecasts", icon: TrendingUp },
+      { label: "Mundane Access", href: "/admin/mundane-access", icon: Shield },
       { label: "Decan Journals", href: "/admin/decan-journals", icon: BookOpen },
       { label: "Decan Media", href: "/admin/decan-media", icon: Film },
       { label: "Quarters", href: "/admin/quarters", icon: Grid2X2 },
@@ -96,11 +121,20 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: "Live",
+    items: [
+      { label: "Live Sessions", href: "/admin/live-sessions", icon: Radio },
+      { label: "Check-ins", href: "/admin/check-ins", icon: ClipboardList },
+    ],
+  },
+  {
     label: "Community",
     items: [
       { label: "PM Plan Tiers", href: "/admin/pm-plan-tiers", icon: Layers },
       { label: "Broadcasts", href: "/admin/broadcasting", icon: Radio },
       { label: "Calendar", href: "/admin/calendar", icon: CalendarDays },
+      { label: "Holy Books", href: "/admin/holy-books", icon: BookOpen },
+      { label: "Doctrine Links", href: "/admin/doctrine-links", icon: Star },
     ],
   },
   {
@@ -113,6 +147,12 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: "Plans",
+    items: [
+      { label: "Diviner Plans", href: "/admin/diviner-plans", icon: Layers },
+    ],
+  },
+  {
     label: "Commerce",
     items: [
       { label: "Packages", href: "/admin/packages", icon: Package },
@@ -120,6 +160,21 @@ const NAV_GROUPS = [
       { label: "Refunds", href: "/admin/refunds", icon: RefreshCcw },
       { label: "Orders", href: "/admin/orders", icon: ShoppingBag },
       { label: "Reports", href: "/admin/reports", icon: BarChart3 },
+      { label: "Activity Log", href: "/admin/reports/activity", icon: ListChecks },
+    ],
+  },
+  {
+    label: "Email",
+    items: [
+      { label: "Email Sequences", href: "/admin/email-sequences", icon: MailCheck },
+      { label: "Email History", href: "/admin/email-history", icon: History },
+      { label: "Email Preview", href: "/admin/email-preview", icon: FileCode2 },
+    ],
+  },
+  {
+    label: "Engagement",
+    items: [
+      { label: "Giveaways", href: "/admin/giveaways", icon: Gift },
     ],
   },
   {
@@ -127,6 +182,24 @@ const NAV_GROUPS = [
     items: [
       { label: "Tarot", href: "/admin/tarot", icon: Shuffle },
       { label: "Rituals", href: "/admin/rituals", icon: Flame },
+    ],
+  },
+  {
+    label: "Reports",
+    items: [
+      { label: "Readings", href: "/admin/reports/readings", icon: BarChart2 },
+    ],
+  },
+  {
+    label: "Support",
+    items: [
+      { label: "Tickets", href: "/admin/tickets", icon: MessageSquare },
+    ],
+  },
+  {
+    label: "Config",
+    items: [
+      { label: "Legal", href: "/admin/legal", icon: ScrollText },
     ],
   },
 ];

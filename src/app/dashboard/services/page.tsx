@@ -23,6 +23,7 @@ import {
   FeaturedToggle,
 } from "@/components/dashboard/service-toggles";
 import { ServiceEditSheet } from "@/components/dashboard/service-edit-sheet";
+import { Sparkles } from "lucide-react";
 
 export const metadata = {
   title: "Services",
@@ -72,10 +73,18 @@ export default async function ServicesPage() {
         </CardHeader>
         <CardContent>
           {!services || services.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No services yet. Add your first service to start accepting
-              bookings.
-            </p>
+            <div className="flex flex-col items-center gap-4 py-16 text-center">
+              <div className="flex size-14 items-center justify-center rounded-full bg-muted">
+                <Sparkles className="size-7 text-muted-foreground" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium">No services yet</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Add your first service to start accepting client bookings.
+                </p>
+              </div>
+              <ServiceEditSheet mode="create" divinerId={diviner.id} />
+            </div>
           ) : (
             <Table>
               <TableHeader>

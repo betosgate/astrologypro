@@ -1,36 +1,58 @@
 # Module 08 - Certificate Award, Email, and Verification
 
 ## Objective
-Ensure certificate issuance matches the true final completion rule for Training School and that the learner receives the downloadable certificate by email.
+Finalize the certificate lifecycle so certificates are issued only after true final training completion and remain downloadable and verifiable.
 
-## Current State In Repo
-- The app already has a trainee certificate page.
-- Certificate verification already exists via certificate code.
-- Lesson-completion flow currently contains auto-graduation and certificate notification behavior.
-- The final graduation rule must be revalidated after the program/category/triggered-quiz completion logic is settled.
+## Current Repo State
+- Trainee certificate page already exists.
+- Certificate verification by code already exists.
+- Current lesson-completion flow contains graduation/certificate behavior.
 
-## Required Outcome
-- When a learner completes all required training, the system issues the certificate and emails it to the learner.
-- The certificate remains downloadable and verifiable.
-- Graduation is not triggered early by the legacy quiz-complete path.
+## Exact Gap
+- Current certificate issuance may still be tied to older lesson-quiz completion behavior.
+- Final graduation must be aligned with the post-trigger-quiz completion model, not the legacy path.
 
-## Detailed Tasks
-- [ ] Audit the current graduation trigger points and confirm whether they depend on the old lesson quiz model.
-- [ ] Reconcile certificate issuance with the final definition of "training complete" after trigger-based quizzes and program/category completion rules are finalized.
-- [ ] Validate whether `trainees.training_status`, `graduated_at`, and `certificate_code` already fully support the required lifecycle.
-- [ ] Ensure the certificate email is sent exactly once per true completion event or is otherwise idempotent.
-- [ ] Ensure the learner email contains a reliable download path.
-- [ ] Validate the certificate verification route and code generation behavior for newly graduated users.
-- [ ] Decide whether admin-side certificate resend tooling is needed if email delivery fails.
+## Required Implementation
+- Revalidate and update the final graduation trigger so it fires only when:
+  - all required lessons are complete
+  - all required categories are complete
+  - the required program/training completion state is satisfied
+- Keep using the current graduation and certificate fields where possible:
+  - `training_status`
+  - `graduated_at`
+  - `certificate_code`
+- Make certificate issuance idempotent so repeated completion route calls do not send duplicate graduation events.
+- Ensure the completion email contains a stable certificate download path.
+- Keep current certificate verification behavior working for newly completed users.
+
+## Likely Affected Files
+- `src/app/api/trainee/training/lessons/[id]/complete/route.ts`
+- `src/app/api/trainee/training/lessons/[id]/quiz/route.ts`
+- `src/app/api/trainee/check-graduation/route.ts`
+- `src/app/trainee/certificate/page.tsx`
+- `src/app/api/certificate/verify/[code]/route.ts`
+- email helper(s) tied to graduation/certificate sending
+
+## API and Schema Constraints
+- Keep current certificate verification route.
+- Keep current certificate-related columns unless a true missing field blocks the requirement.
+- Do not create a second certificate system.
+
+## Dependencies
+- Execute after Modules 04 and 05.
 
 ## Acceptance Criteria
-- Completing all required training issues the certificate under the correct final rule.
-- The learner receives an email with a usable certificate download path.
-- Certificate verification remains functional for completed learners.
+- Certificate is issued only after true final completion.
+- Certificate email is delivered with a valid download path.
+- Verification continues to work for issued certificates.
 
 ## Verification Test Plan
-- [ ] Complete the final required training path for a test learner and confirm certificate issuance.
-- [ ] Confirm only one graduation/certificate event is recorded for repeated completion-route calls.
-- [ ] Verify the learner receives the expected email content and download link.
-- [ ] Open the certificate page as the learner and confirm the certificate renders.
-- [ ] Verify the public certificate verification route works with the issued code.
+- [ ] Complete the final required training path and confirm one certificate issuance event.
+- [ ] Repeat the completion-triggering request and confirm no duplicate issuance occurs.
+- [ ] Verify the learner receives the expected email with a working download link.
+- [ ] Verify the learner certificate page renders correctly.
+- [ ] Verify public certificate code validation still works.
+
+## Out Of Scope
+- redesign of certificate visuals
+- admin resend tooling unless required during implementation

@@ -136,23 +136,57 @@ export async function GET(
     }
   }
 
-  // Fetch user's completion + latest quiz attempt status
-  const [completionResult, quizAttemptResult] = await Promise.all([
-    admin
-      .from("lesson_completions")
-      .select("completed_at")
-      .eq("user_id", user.id)
-      .eq("lesson_id", id)
-      .maybeSingle(),
-    admin
-      .from("quiz_attempts")
-      .select("passed, score, total_questions, attempted_at")
-      .eq("user_id", user.id)
-      .eq("lesson_id", id)
-      .order("attempted_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
+  // Fetch user's completion + latest quiz attempt status + quiz triggers
+  const [completionResult, quizAttemptResult, triggersResult, triggerProgressResult] =
+    await Promise.all([
+      admin
+        .from("lesson_completions")
+        .select("completed_at")
+        .eq("user_id", user.id)
+        .eq("lesson_id", id)
+        .maybeSingle(),
+      admin
+        .from("quiz_attempts")
+        .select("passed, score, total_questions, attempted_at")
+        .eq("user_id", user.id)
+        .eq("lesson_id", id)
+        .order("attempted_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      // Active quiz triggers for this lesson, with joined question data
+      admin
+        .from("lesson_quiz_triggers")
+        .select(
+          "id, trigger_timestamp_seconds, rewind_target_seconds, question_id, priority, quiz_questions(id, question, options, explanation)"
+        )
+        .eq("lesson_id", id)
+        .eq("is_active", true)
+        .order("trigger_timestamp_seconds", { ascending: true }),
+      // User's trigger progress for this lesson
+      admin
+        .from("lesson_trigger_progress")
+        .select(
+          "trigger_id, passed, attempts, last_rewind_at, rewatch_required_until_seconds, rewatch_completed, passed_at"
+        )
+        .eq("user_id", user.id)
+        .eq("lesson_id", id),
+    ]);
+
+  // Build a map of trigger_id -> user_progress for quick lookup
+  const triggerProgressMap = new Map<string, Record<string, unknown>>();
+  for (const tp of triggerProgressResult.data ?? []) {
+    triggerProgressMap.set(tp.trigger_id, tp);
+  }
+
+  // Shape trigger data: merge question + user_progress
+  const triggers = (triggersResult.data ?? []).map((t) => ({
+    id: t.id,
+    trigger_timestamp_seconds: t.trigger_timestamp_seconds,
+    rewind_target_seconds: t.rewind_target_seconds,
+    question_id: t.question_id,
+    question: t.quiz_questions ?? null,
+    user_progress: triggerProgressMap.get(t.id) ?? null,
+  }));
 
   return NextResponse.json({
     lesson: {
@@ -166,6 +200,7 @@ export async function GET(
       quiz_last_score: quizAttemptResult.data?.score ?? null,
       quiz_last_total: quizAttemptResult.data?.total_questions ?? null,
       quiz_last_attempted_at: quizAttemptResult.data?.attempted_at ?? null,
+      triggers,
     },
   });
 }

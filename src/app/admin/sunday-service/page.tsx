@@ -24,6 +24,7 @@ type Session = {
   recorded_at: string;
   is_live: boolean;
   live_starts_at: string | null;
+  book_name: string | null;
 };
 
 const EMPTY_FORM = {
@@ -34,6 +35,7 @@ const EMPTY_FORM = {
   recorded_at: new Date().toISOString().slice(0, 16),
   is_live: false,
   live_starts_at: "",
+  book_name: "",
 };
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric" });
@@ -77,6 +79,7 @@ export default function AdminSundayServicePage() {
         live_starts_at: form.live_starts_at ? new Date(form.live_starts_at).toISOString() : null,
         thumbnail_url: form.thumbnail_url || null,
         description: form.description || null,
+        book_name: form.book_name.trim() || null,
       };
       const res = await fetch("/api/admin/sunday-service", {
         method: "POST",
@@ -185,14 +188,24 @@ export default function AdminSundayServicePage() {
                   rows={2}
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label>Video URL * (YouTube, Vimeo, or embed URL)</Label>
-                <Input
-                  value={form.video_url}
-                  onChange={(e) => setForm((f) => ({ ...f, video_url: e.target.value }))}
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  required
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Video URL * (YouTube, Vimeo, or embed URL)</Label>
+                  <Input
+                    value={form.video_url}
+                    onChange={(e) => setForm((f) => ({ ...f, video_url: e.target.value }))}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Book Name (optional filter tag)</Label>
+                  <Input
+                    value={form.book_name}
+                    onChange={(e) => setForm((f) => ({ ...f, book_name: e.target.value }))}
+                    placeholder="e.g. Bhagavad Gita"
+                  />
+                </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
@@ -270,9 +283,10 @@ export default function AdminSundayServicePage() {
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div>
-                    <CardTitle className="text-base flex items-center gap-2">
+                    <CardTitle className="text-base flex items-center gap-2 flex-wrap">
                       {s.title}
                       {s.is_live && <Badge variant="destructive">LIVE</Badge>}
+                      {s.book_name && <Badge variant="outline" className="text-xs font-normal">{s.book_name}</Badge>}
                     </CardTitle>
                     <CardDescription>
                       {new Date(s.recorded_at).toLocaleDateString("en-US", {

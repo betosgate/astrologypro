@@ -1,7 +1,7 @@
 # AstrologyPro — Daily Task Board
 
 > **Workflow:** Update this file each session. Check off items as you go. Push at end of day.
-> **Last updated:** 2026-04-06 (session 13 — training analytics, PM plan tiers, community features, notifications, admin global search, certificate, quiz cooldown)
+> **Last updated:** 2026-04-07 (session 23 — gold-standard deep fill: ticket queues/tasks/CSAT/SLA policies, commission rules engine+adjustments+affiliate dashboard, mundane leader registry+forecasts+watchlists+astro calendar, platform v2 gap audit, newsletter diviner attribution)
 > **Migrations:** All applied via `scripts/run-migration.js` — no manual SQL editor needed.
 
 ---
@@ -27,6 +27,22 @@
 | Subscription upgrade flow | ✅ Done |
 | Admin analytics dashboard | ✅ Done |
 | Affiliate tracking & detail page | ✅ Done |
+| Affiliate commission management | ✅ Done — diviner_affiliates, commissions ledger, payouts, referral links |
+| Support / job ticket system | ✅ Done — unified ticketing, SLA, internal notes, audit trail |
+| Mundane astrology dashboard | ✅ Done — entities, events, research notes, admin + community views |
+| Reading history (astro + tarot) | ✅ Done — astro_toolkit_readings + tarot_readings saved per reading |
+| Global audit/activity log | ✅ Done — user_activity_log, logActivity(), admin + diviner reports |
+| Training content & quizzes | ✅ Done — 49 lessons, 261 quiz questions, full coverage |
+| Training video quiz trigger engine | ✅ Done — lesson_quiz_triggers, lesson_trigger_progress, server rewatch gate, client pause/rewind/retry |
+| Support ticket SLA automation | ✅ Done — sla_breached_at column, pg_cron every 5 min, notify stub, status badge |
+| Affiliate disputes & CSV export | ✅ Done — affiliate_commission_disputes, dashboard+admin routes, CSV export endpoint, Export button |
+| Perennial rituals (presets + configurator + playback) | ✅ Done — correct tag arrays, URL param configurator, canonical sort, sacred space overlay |
+| Mundane astrology chart calculation | ✅ Done — calculate-chart route, Calculate Chart button, natal chart display component |
+| Support ticket gold standard | ✅ Done — ticket_queues (12), ticket_tasks, ticket_csat, ticket_sla_policies (5), ticket_watchers, internal-notes API, CSAT submission, job ticket checklist UI |
+| Affiliate commission gold standard | ✅ Done — commission_rules engine, status machine+history, adjustments, refund recalc, affiliate self-service dashboard (layout+3 pages+3 APIs) |
+| Mundane astrology gold standard | ✅ Done — leader registry, forecast journal (+outcome tracking), research projects+notes, watchlists, astronomical events calendar, admin UIs, community page enhancements |
+| Platform v2 gap audit | ✅ Done — all 6 gaps already implemented; newsletter attribution to diviner was only gap (fixed) |
+| Calendar module (Outlook event ID + booking link banner) | ✅ Done — outlook_calendar_event_id, BookingLinkBanner on calendar page |
 | Session notes (write + API) | ✅ Done |
 | Sitemap | ✅ Done |
 | Currency bugs (global `/100` sweep) | ✅ Done — 10 files fixed |
@@ -74,10 +90,39 @@
 | Community portal — Horoscope calculator | ✅ Done — proxies to AstrologyAPI |
 | Mystery School auto-graduation | ✅ Done — triggers on 36th decan completion + graduation email |
 | Join pages (all roles) | ✅ Done — /join, /join/advocate, /join/community, /join/trainee |
-| Admin: blog CRUD | ✅ Done — create/edit/publish/unpublish/delete |
-| Blog: live posts from DB | ✅ Done — /blog/[slug] page; listing switches from static to live automatically |
+| Discover page v2 | ✅ Done — sub-type filters (Astrologer/Tarot/Oracle), certified-first sort, URL-synced filters, richer cards, /api/public/diviners cursor-paginated API |
+| Return event lifecycle emails | ✅ Done — migration 038; lifecycle_return_events table; return-events.ts math utils; 3 email functions; daily cron (30d/7d/1d/day-of reminders for Saturn/Jupiter/Solar returns) |
+| Milestone reading landing pages | ✅ Done — /readings hub + /readings/saturn-return + /readings/jupiter-return + /readings/solar-return; ISR, SEO metadata, diviner grids, FAQ, sitemap |
+| Blog v2 — editorial core | ✅ Done — migration 036; 9 tables; status machine (7 states); content_blocks JSONB; block editor; categories/authors/series/tags admin |
+| Blog v2 — public experience | ✅ Done — homepage (hero/featured/latest/categories); post detail (TOC/author/series/share/related); category/tag/author/series/search listing pages; RSS feed; sitemap |
+| User Management v2 | ✅ Done — migration 037; permissions (29); role_permissions; invitations; user_relationships; user_security_events; comm_prefs; impersonation log; 12 new API routes; rich 7-tab user detail; permission matrix; invitations page; diviners page |
 | Admin: payments history | ✅ Done — paginated table from bookings |
 | Admin: social advocacy CRUD | ✅ Done |
+| Perennial: community welcome email | ✅ Done — wired to Stripe webhook on checkout success |
+| Perennial: monthly transit ready email | ✅ Done — fires from cron after generation, deduped per cycle |
+| Perennial: subscription cancel/uncancel | ✅ Done — cancel_at_period_end flow + plan page UI |
+| Perennial: member discount token (5% cross-sell) | ✅ Done — token issuance/validation, transit CTA, booking payment 20%→15% |
+| Perennial: holy books admin CMS | ✅ Done — CRUD, sort, active toggle, library page now DB-driven |
+| Perennial: doctrine links admin CMS | ✅ Done — CRUD, sort, active toggle, library page now DB-driven |
+| Perennial: Sunday Service book filter + new-episode email | ✅ Done — filter pills, book_name field, publish triggers email blast |
+| Perennial: email sequence admin (pause/resume) | ✅ Done — /admin/email-sequences with subscriber counts |
+| Perennial: email history + template preview | ✅ Done — /admin/email-history, /admin/email-preview |
+| Perennial: dashboard visual hierarchy (tasks 12–15) | ✅ Done — section groups, quick actions, empty states, mobile, cancel banners |
+| Calendar module (dual-calendar, booking mgmt) | ✅ Done — Microsoft + Google, availability templates, token-based booking page |
+| Admin login (DB-based, no env var dependency) | ✅ Done — admin_users table, requireAdmin(), bootstrap fallback |
+| Admin PM content management (gold standard) | ✅ Done — stats, filters, rich create/edit, seed script |
+| PM community dashboard enrichment | ✅ Done — donate banner, membership details, chart highlights, family rings, content library cards |
+| Family member management + invite login | ✅ Done — rich astro form, profile completion, invite-to-login flow |
+| Mystery school enrollment lifecycle | ✅ Done — 4-step upgrade flow, quarter selection, PM→MS upgrade, access guards |
+| Mundane Astrology admin (ingress charts) | ✅ Done — gold standard admin, sector filter, rich create/edit, mundane access control |
+| Mystery school Foundation Q1 task system | ✅ Done — task-level completion, checklist UI, week unlock logic |
+| Mystery school decan curriculum + timeline | ✅ Done — metadata fields, lifecycle dates, grace state, enriched dashboard |
+| Mystery school ritual praxis runner | ✅ Done — sequential step enforcement, execution tracking |
+| Mystery school scry + mundane journals | ✅ Done — card association, 3-section mundane, server validation |
+| Nativity Birth Chart V2 | ✅ Done — city autocomplete, natal wheel, planets/houses/aspects, AI interpretations (20/day limit), chart history |
+| Affiliate Commission MVP | ✅ Done — commission rules (% or fixed), immutable ledger, payout records, 3-role dashboards, cursor pagination, full audit trail |
+| Mundane Astrology Dashboard Phase 1 | ✅ Done — entity/country registry, entity charts, forecasts CRUD, community hub, admin hub, navigation wired |
+| Mystery school tasks 08–11 (missed decan, graduation, tarot, emails) | ✅ Done — see session 15 |
 | Admin: spiritual wisdom CRUD | ✅ Done |
 | Admin: decan journals CRUD | ✅ Done |
 | Admin: decan media CRUD | ✅ Done |
@@ -94,10 +139,22 @@
 | Certified badge (discover page) | ✅ Done — is_certified column + BadgeCheck icon |
 | Policy acknowledgement at checkout | ✅ Done — checkbox + policyAcknowledgedAt saved |
 | Policy display on diviner profile | ✅ Done |
+| Check-in system | ✅ Done — live-gated form, check_ins + live_sessions tables, admin mgmt |
+| Giveaway system | ✅ Done — giveaways/entries/winners, Fisher-Yates selection, public entry page |
+| Media items gallery | ✅ Done — media_items per diviner, public gallery on profile, admin mgmt |
+| Weekly subscription schema | ✅ Done — tables created, Stripe checkout wired (migration 042+048) |
+| Multi-platform live module | ✅ Done — stream_platform_configs, dashboard rebuilt, public platform switcher |
+| Diviner SaaS plans | ✅ Done — plans/addons/invoices tables, feature gating, Stripe checkout + webhooks |
+| Testimonial enhancements | ✅ Done — public form, spam scoring, moderation workflow, diviner dashboard |
+| Customer portal v2 | ✅ Done — orders, intake forms, subscription management |
+| Diviner stickiness cookie | ✅ Done — preferred_diviner cookie, Your Astrologer banner on /discover |
+| Video reading system | ✅ Done — video_sessions table, VideoSDK integration, diviner room + client join page |
+| Dynamic intake templates | ✅ Done — intake_templates table, field builder, dynamic form renderer |
+| Legal policy management | ✅ Done — legal_documents + legal_acceptances, admin CMS, public /legal/[type] |
 | Email notifications (AWS SES) | 🟡 Wired; DNS added; awaiting SES domain verification |
 | Phone readings end-to-end | 🟡 Code complete; blocked on Twilio credentials in Vercel |
 | Social auto-posting (Ayrshare) | 🟡 Code complete; needs `AYRSHARE_API_KEY` in Vercel |
-| OG social image | 🔴 Missing — needs 1200×630 branded card design |
+| OG social image | ✅ Done — og-card.svg + og-card.jpg (91KB) in /public/images/home/, wired in layout.tsx |
 | Stripe Connect webhook | 🔴 `account.updated` not yet registered in Stripe Dashboard |
 
 ---
@@ -109,7 +166,7 @@
 | A1 | **Twilio credentials** | Fix invalid keys in Vercel → phone readings return 20101 error on every load |
 | A2 | **Stripe Connect webhook** | Stripe Dashboard → Webhooks → add `account.updated` event |
 | A3 | **AYRSHARE_API_KEY** | Vercel env vars → activates social auto-posting cron |
-| A4 | **OG social image** | Design a 1200×630 branded card → `/public/images/home/og-card.jpg` |
+| ~~A4~~ | ~~**OG social image**~~ | ✅ Done — og-card.jpg + og-card.svg in /public/images/home/ |
 | A5 | **NEXT_PUBLIC_TABBY_USERNAME** | Vercel env vars → set to Tabby's AstrologyPro username → activates graduation CTA |
 | A6 | **Tabby's Google Calendar** | Connect via `/api/calendar/connect` → unblocks E3-S5 consultation booking |
 | A7 | **Stripe product IDs** | Vercel env vars → `STRIPE_PRICE_COMMUNITY_INDIVIDUAL`, `STRIPE_PRICE_COMMUNITY_FAMILY`, `STRIPE_PRICE_MYSTERY_ENROLLMENT`, `STRIPE_PRICE_MYSTERY_MONTHLY` |
@@ -123,7 +180,7 @@
 
 | # | Task | Notes |
 |---|---|---|
-| H1 | **OG image path update** | Once OG card is designed, update `layout.tsx` `OG_IMAGE` constant |
+| ~~H1~~ | ~~**OG image path update**~~ | ✅ Done — layout.tsx already points to /images/home/og-card.jpg |
 
 ---
 
@@ -146,6 +203,77 @@
 - Angular bundle optimisation (E10-S3)
 - Angular duplicate AuthService cleanup (E1-S3)
 - Angular TypeScript model interfaces (E1-S4)
+
+---
+
+## ✅ Completed This Session (session 21 — 2026-04-07)
+
+| Module | Detail |
+|---|---|
+| Seed data — all modules (migrations 059–061) | wheel_signs (12), spiritual_wisdom (6), packages (5), diviner_plans prices fixed (starter=0, pro=$49, elite=$99), 78 tarot cards + 5 spreads, 96 quiz questions — all 38 lessons now covered |
+| Training deep-seed (migrations 066–069) | 49 total lessons (11 new), 261 quiz questions, 0 lessons missing content/quiz, is_sequential enabled on Certification/Mystery School/Tarot Mastery Track programs |
+| Support/Job Ticket System (migration 062) | support_tickets + ticket_messages + ticket_history tables; auto TKT-YYYYMMDD-NNNN numbering; 5 API routes; dashboard + admin UI (list, new, detail) |
+| Diviner Affiliate Commission (migration 063) | diviner_affiliates, referral_links, clicks, commissions, payouts, payout_items tables; 10 API routes; admin + diviner dashboard UI; /api/ref/[slug] click-tracking redirect |
+| Mundane Astrology Dashboard (migration 064) | mundane_entities, mundane_events, research_notes tables; 8 API routes; admin entity/event CRUD + dashboard community view |
+| Email sequence triggers (migration 065) | email_sequence_triggers table; POST /api/admin/email-sequences/[id]/trigger; GET /api/dashboard/certification (training progress %) |
+| Build validation | ✓ 418 pages compiled, 0 TypeScript errors, all 19 migrations applied (051–069) |
+| Requirement docs | 4 gold-standard docs saved to tasks/07.04.2026/ (support tickets, affiliate commission, mundane astrology, platform v2) |
+| OG social image | Confirmed done — og-card.jpg (91KB) + og-card.svg already in /public/images/home/, wired in layout.tsx |
+
+---
+
+## ✅ Completed This Session (session 20 — 2026-04-06)
+
+| Module | Detail |
+|---|---|
+| Check-In System (migration 039) | check_ins + live_sessions tables, public /check-in/[username], admin live sessions management, CSV export |
+| Giveaway System (migration 040) | giveaways/entries/winners tables, public entry page, Fisher-Yates winner selection, admin management |
+| Media Items Gallery (migration 041) | media_items per diviner, public gallery on /[username], URL-param type filter, admin reorder + soft delete |
+| Weekly Subscription Schema (migration 042) | weekly_subscription_products/subscribers/deliveries tables, stub Stripe routes |
+| Diviner Stickiness Cookie | preferred_diviner cookie set on /[username], prominent banner on /discover with dismiss |
+| Multi-Platform Live Module (migration 043) | stream_platform_configs table, migrated YouTube+Facebook data, dashboard rebuilt with Go Live toggle + per-platform config, public LiveStreamSection with tab switcher |
+| Diviner SaaS Plans + Feature Gating (migration 044) | diviner_plans/addons/subscriptions/invoices/telephony tables, feature-gate.ts, admin plans UI, diviner billing page |
+| Testimonial Enhancements (migration 045) | spam-check.ts, public submission API + form, TestimonialsSection on /[username], diviner dashboard moderation |
+| Customer Portal v2 (migration 046) | orders + order_intake_submissions + client_subscriptions tables, portal /orders, /orders/[id], /subscriptions pages |
+| Stripe SaaS Billing (migration 048) | stripe_saas.ts helpers, /dashboard/billing/checkout + /portal APIs, webhook handlers for subscription events |
+| Video Reading System (migration 047) | video_sessions + participants tables, VideoSDK JWT auth, diviner room page, client join page, admin videos page |
+| Dynamic Intake Templates (migration 049) | intake_templates table, PRESET_TEMPLATES, field builder UI, DynamicIntakeForm renderer, wired to portal orders |
+| Legal Policy Management (migration 050) | legal_documents + legal_acceptances tables, admin CMS with version history, public /legal/[type], acceptance API |
+| Migration fixes | Wrapped all CREATE POLICY in DO guards (migrations 026-046), IF NOT EXISTS on all CREATE INDEX |
+
+---
+
+## ✅ Completed This Session (session 15 — 2026-04-06)
+
+| Feature | Detail |
+|---|---|
+| Mystery school task 08 — missed decan retry | Migration 026; `retried_at` + `retry_reason` on student_decan_progress; decan-unlock cron adds retry pass; admin student detail page with full progress + excuse modal |
+| Mystery school task 09 — graduation + ritual builder | Migration 027; `graduation.ts` service; graduation-check cron; `/community/training/graduation` ceremony page; post-grad personal ritual builder (`/community/training/ritual-builder`) with CRUD API |
+| Mystery school task 10 — tarot seed | Migration 028; tarot card seed data for all 36 decans wired to decan detail pages |
+| Mystery school task 11 — lifecycle emails | `ms-email-reminders` cron: enrollment welcome, decan-unlock notification, inactivity warning (7d), graduation congratulations; registered in vercel.json |
+| PM content library | `mandalism-content` API; `MandalismContentPreview` component; type-specific cards (video/youtube/live/announcement/doc); `/community/library` rewritten server-first with type filter pills |
+| CRON_SECRET whitespace fix | `instrumentation.ts` trims env var at startup + Vercel env var updated directly to clean value via browser; Vercel redeployment triggered |
+| Affiliate Commission task docs | Diviner Affiliate Commission Requirements.docx + overview.md saved to `tasks/06.04.2026/affiliate-commission/` |
+
+---
+
+## ✅ Completed This Session (session 14 — 2026-04-06)
+
+| Feature | Detail |
+|---|---|
+| Calendar module | Microsoft/Outlook OAuth + Google Calendar update/delete; availability templates; booking management page; reschedule/cancel APIs (dual-auth: booking_token + session); 24h/1h reminder cron; booking notes + metadata capture; CopyBookingLink; CalendarConnections; booking wizard skeleton + timezone display |
+| Admin test user | admin@astrologypro.com / Admin@AstroPro2026! seeded in admin_users table + docs/test-users.md |
+| CRON_SECRET fix | Shared verifyCronAuth helper — trims whitespace before comparison; all 15 cron/twilio routes updated |
+| Admin login overhaul | DB-based admin_users table; requireAdmin() lib; 113 admin routes migrated from inline ADMIN_EMAILS check |
+| Admin PM content (gold standard) | Stats bar, type/status/access/search filters, rich create/edit forms (YouTube embed preview, thumbnail, duration), AlertDialog deletes, seed script (10 items) |
+| PM community dashboard enrichment | Donate banner (top), rich membership details + member slot progress, own chart readiness + family chart rings, MS join banner (bottom) |
+| Family member management | Rich add-member form (all astro fields + live completion ring), edit form, detail page enrichment, invite-to-login flow (invite_token), sendFamilyMemberInvite email |
+| Mystery school enrollment lifecycle | Migration 020 (12 lifecycle columns on mystery_school_students); quarter utility (2026–2030 dates); 4-step upgrade flow; access guard requireMysterySchoolAccess; training layout guard |
+| Mundane Astrology admin | Gold standard ingress charts admin (stats, filters, sector multi-select, rich create/edit with interpretation/chart ruler/challenges+strengths); admin mundane access control page; community detail enrichment; seed script |
+| Mystery school foundation Q1 | Task-level completion system; per-task check API; week unlock based on all-tasks-done; admin foundation task authoring |
+| Mystery school decan curriculum | Metadata fields (decan_name, tarot_card_ref, artwork_url); student_decan_progress lifecycle (window_open/close, grace_close); enriched decan grid + detail; admin student progress overview |
+| Mystery school ritual runner | Step-by-step guided runner with sequential enforcement; ritual_executions table; 3-second read delay per step; admin publish/version controls |
+| Mystery school journals | scry_journals (card association, experience text); mundane_journals (3 required sections, 100-char minimum); server-side validation; admin journal review |
 
 ---
 

@@ -21,6 +21,7 @@ import {
   ChevronRight,
   Check,
   RotateCcw,
+  Sparkles,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
 
@@ -44,6 +45,21 @@ type Invocation = {
   priority: number;
 };
 
+// Canonical ordering: Opening → Gate → Invocation/Banishing → Closing
+function canonicalSort(invocations: Invocation[]): Invocation[] {
+  const rank = (name: string): number => {
+    if (name.includes("Opening")) return 0;
+    if (name.includes("Gate")) return 1;
+    if (name.includes("Closing")) return 3;
+    return 2; // Invocation / Banishing core steps
+  };
+  return [...invocations].sort((a, b) => {
+    const diff = rank(a.name) - rank(b.name);
+    if (diff !== 0) return diff;
+    return (a.priority ?? 0) - (b.priority ?? 0);
+  });
+}
+
 export default function RitualDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -55,6 +71,8 @@ export default function RitualDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(0); // 0 = preparation, 1..N = active step, N+1 = complete
   const [saving, setSaving] = useState(false);
+  // Show "Prepare Sacred Space" overlay before multi-step ritual begins
+  const [showSacredSpaceOverlay, setShowSacredSpaceOverlay] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -67,7 +85,7 @@ export default function RitualDetailPage() {
       }
       const data = await res.json();
       setRitual(data.ritual);
-      setInvocations(data.invocations ?? []);
+      setInvocations(canonicalSort(data.invocations ?? []));
 
       // Restore persisted step. If previously complete, stay at complete phase.
       const r: RitualConfig = data.ritual;
@@ -102,6 +120,18 @@ export default function RitualDetailPage() {
   }
 
   async function handleBegin() {
+    if (invocations.length > 1) {
+      // Multi-step: show full-screen "Prepare Sacred Space" overlay first
+      setShowSacredSpaceOverlay(true);
+    } else {
+      // Single step: start immediately
+      setStep(1);
+      await patchStep({ current_step: 1 });
+    }
+  }
+
+  async function handleBeginAfterOverlay() {
+    setShowSacredSpaceOverlay(false);
     setStep(1);
     await patchStep({ current_step: 1 });
   }
@@ -132,8 +162,9 @@ export default function RitualDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <Loader2 className="size-8 animate-spin text-amber-400/60" />
+        <p className="text-sm text-muted-foreground">Loading ritual…</p>
       </div>
     );
   }
@@ -148,6 +179,88 @@ export default function RitualDetailPage() {
         <Button variant="outline" asChild>
           <Link href="/community/rituals">← Back to My Rituals</Link>
         </Button>
+      </div>
+    );
+  }
+
+  // ── Phase: Prepare Sacred Space — FULL-SCREEN overlay ───────────────────────
+  // Per gold-standard spec: full-screen with candle icon, atmospheric
+
+  if (showSacredSpaceOverlay) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-background">
+        {/* Deep atmospheric background */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-950/60 via-background to-purple-950/40" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(245,158,11,0.12),transparent_65%)]" />
+
+        {/* Animated soft pulse ring */}
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+          <div className="size-72 rounded-full border border-amber-500/10 animate-ping" style={{ animationDuration: "3s" }} />
+        </div>
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+          <div className="size-96 rounded-full border border-amber-500/5 animate-ping" style={{ animationDuration: "4.5s" }} />
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center gap-8 px-6 text-center max-w-lg">
+          {/* Large candle icon */}
+          <div className="flex size-24 items-center justify-center rounded-3xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 ring-2 ring-amber-500/20 shadow-2xl shadow-amber-500/10">
+            <span className="text-5xl" role="img" aria-label="Candle">
+              🕯️
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="text-3xl font-bold tracking-tight text-white">
+              Prepare Sacred Space
+            </h2>
+            <p className="text-muted-foreground max-w-sm mx-auto leading-relaxed">
+              Take a moment to center yourself and prepare your space before beginning{" "}
+              <span className="font-semibold text-amber-300">{ritual.ritual_name}</span>.
+            </p>
+            <p className="text-sm text-muted-foreground/60">
+              This ritual has{" "}
+              <span className="text-foreground/60 font-medium">
+                {invocations.length} step{invocations.length !== 1 ? "s" : ""}
+              </span>
+              . Complete them in sacred order.
+            </p>
+          </div>
+
+          {/* Steps preview in overlay */}
+          <div className="w-full rounded-2xl border border-amber-500/10 bg-white/5 backdrop-blur-md p-4 space-y-2 max-h-40 overflow-y-auto">
+            {invocations.map((inv, i) => (
+              <div
+                key={inv.id}
+                className="flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm text-left"
+              >
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-xs font-bold text-amber-400">
+                  {i + 1}
+                </span>
+                <span className="text-white/70 truncate">{inv.name.replace(/_/g, " ")}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap gap-3 justify-center">
+            <Button
+              size="lg"
+              onClick={handleBeginAfterOverlay}
+              className="bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-400 hover:to-orange-400 shadow-xl shadow-amber-500/20 px-8 text-base font-semibold"
+            >
+              <Flame className="mr-2 size-5" />
+              Begin the Ritual
+            </Button>
+            <Button
+              variant="ghost"
+              size="lg"
+              onClick={() => setShowSacredSpaceOverlay(false)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Not Yet
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -174,27 +287,38 @@ export default function RitualDetailPage() {
       <div className="space-y-6 max-w-2xl">
         <Link
           href="/community/rituals"
-          className="text-sm text-muted-foreground hover:text-foreground"
+          className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           ← My Rituals
         </Link>
 
-        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
-          <CardContent className="flex flex-col items-center gap-6 py-12 text-center">
-            <div className="text-5xl">✨</div>
+        <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-950/30 via-background to-purple-950/20 px-8 py-14 text-center shadow-xl">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(245,158,11,0.1),transparent_70%)]" />
+          <div className="relative flex flex-col items-center gap-6">
+            <div className="flex size-20 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500/20 to-yellow-500/10 ring-2 ring-amber-500/20">
+              <Sparkles className="size-9 text-amber-400" />
+            </div>
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">Ritual Complete</h2>
+              <h2 className="text-3xl font-bold tracking-tight">Ritual Complete</h2>
               <p className="mt-2 text-muted-foreground">
-                You have completed <span className="font-semibold">{ritual.ritual_name}</span>
+                You have completed{" "}
+                <span className="font-semibold text-foreground">{ritual.ritual_name}</span>
               </p>
               {completionCount > 0 && (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  This is your {ordinal(completionCount)} completion.
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  This is your{" "}
+                  <span className="text-amber-400 font-semibold">{ordinal(completionCount)}</span>{" "}
+                  completion.
                 </p>
               )}
             </div>
             <div className="flex flex-wrap gap-3 justify-center">
-              <Button onClick={handleReset} disabled={saving} variant="outline">
+              <Button
+                onClick={handleReset}
+                disabled={saving}
+                variant="outline"
+                className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+              >
                 {saving ? (
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 ) : (
@@ -202,12 +326,15 @@ export default function RitualDetailPage() {
                 )}
                 Perform Again
               </Button>
-              <Button asChild>
+              <Button
+                asChild
+                className="bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:from-amber-500 hover:to-orange-500"
+              >
                 <Link href="/community/rituals">Back to My Rituals</Link>
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -220,33 +347,43 @@ export default function RitualDetailPage() {
       <div className="space-y-6 max-w-2xl">
         <Link
           href="/community/rituals"
-          className="text-sm text-muted-foreground hover:text-foreground"
+          className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           ← My Rituals
         </Link>
 
-        <Card>
+        <Card className="border-amber-500/20 bg-gradient-to-br from-amber-950/10 to-card overflow-hidden">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Step {step} of {totalSteps}
-              </CardTitle>
-              <span className="text-xs text-muted-foreground">{progressPct}%</span>
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className="text-[10px] px-1.5 border-amber-500/30 text-amber-400 bg-amber-950/20"
+                >
+                  Step {step} of {totalSteps}
+                </Badge>
+              </div>
+              <span className="text-xs font-semibold text-amber-400/80">{progressPct}%</span>
             </div>
-            <Progress value={progressPct} className="h-2" />
+            <Progress
+              value={progressPct}
+              className="h-1.5 bg-muted/40 [&>div]:bg-gradient-to-r [&>div]:from-amber-500 [&>div]:to-orange-500"
+            />
           </CardHeader>
 
           <CardContent className="space-y-5">
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl">🌟</span>
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 ring-1 ring-amber-500/20">
+                  <Flame className="size-4 text-amber-400" />
+                </div>
                 <h2 className="text-xl font-bold tracking-tight">
                   {currentInvocation?.name?.replace(/_/g, " ") ?? `Step ${step}`}
                 </h2>
               </div>
 
               {currentInvocation?.description && (
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="mt-3 text-sm text-muted-foreground pl-12">
                   {currentInvocation.description}
                 </p>
               )}
@@ -254,42 +391,51 @@ export default function RitualDetailPage() {
 
             {currentInvocation?.instructions && (
               <>
-                <Separator />
+                <Separator className="bg-amber-500/10" />
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-amber-400/60 mb-3">
                     Instructions
                   </p>
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">
                     {currentInvocation.instructions}
                   </p>
                 </div>
               </>
             )}
 
-            <Separator />
+            <Separator className="bg-amber-500/10" />
 
             <div className="flex items-center justify-between gap-3">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={handlePrevious}
                 disabled={step <= 1}
+                className="text-muted-foreground"
               >
                 <ChevronLeft className="mr-1.5 size-4" />
                 Previous
               </Button>
 
               {isLastStep ? (
-                <Button onClick={handleComplete} disabled={saving}>
+                <Button
+                  onClick={handleComplete}
+                  disabled={saving}
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500 shadow-md"
+                >
                   {saving ? (
                     <Loader2 className="mr-2 size-4 animate-spin" />
                   ) : (
                     <Check className="mr-2 size-4" />
                   )}
-                  Complete
+                  Complete Ritual
                 </Button>
               ) : (
-                <Button onClick={handleNext} disabled={saving}>
+                <Button
+                  onClick={handleNext}
+                  disabled={saving}
+                  className="bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:from-amber-500 hover:to-orange-500 shadow"
+                >
                   {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
                   Next Step
                   <ChevronRight className="ml-1.5 size-4" />
@@ -304,6 +450,8 @@ export default function RitualDetailPage() {
 
   // ── Phase: Preparation (step === 0) ───────────────────────────────────────
 
+  void isPrep; // used implicitly as the default branch
+
   const lastPerformedLabel = ritual.last_executed_at
     ? formatDate(ritual.last_executed_at)
     : "Never";
@@ -313,29 +461,33 @@ export default function RitualDetailPage() {
       <div>
         <Link
           href="/community/rituals"
-          className="text-sm text-muted-foreground hover:text-foreground"
+          className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           ← My Rituals
         </Link>
-        <div className="mt-2 flex items-center gap-2">
-          <span className="text-xl">🔥</span>
-          <h1 className="text-2xl font-bold tracking-tight">{ritual.ritual_name}</h1>
-        </div>
-        <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          <span>{totalSteps} component{totalSteps !== 1 ? "s" : ""}</span>
-          <span>·</span>
-          <span>Last performed: {lastPerformedLabel}</span>
-          {ritual.execution_count > 0 && (
-            <>
+        <div className="mt-3 flex items-center gap-3">
+          <div className="flex size-11 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/25 to-orange-500/15 ring-1 ring-amber-500/20">
+            <Flame className="size-5 text-amber-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{ritual.ritual_name}</h1>
+            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span>{totalSteps} component{totalSteps !== 1 ? "s" : ""}</span>
               <span>·</span>
-              <span>Performed {ritual.execution_count} time{ritual.execution_count !== 1 ? "s" : ""}</span>
-            </>
-          )}
+              <span>Last performed: {lastPerformedLabel}</span>
+              {ritual.execution_count > 0 && (
+                <>
+                  <span>·</span>
+                  <span>{ritual.execution_count}× performed</span>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Ritual sequence preview */}
-      <Card>
+      <Card className="border-border/60">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Ritual Sequence</CardTitle>
           {totalSteps === 0 ? (
@@ -344,7 +496,7 @@ export default function RitualDetailPage() {
             </p>
           ) : (
             <p className="text-sm text-muted-foreground mt-1">
-              This ritual has {totalSteps} step{totalSteps !== 1 ? "s" : ""}. Complete them in order:
+              {totalSteps} step{totalSteps !== 1 ? "s" : ""} — complete them in order:
             </p>
           )}
         </CardHeader>
@@ -355,9 +507,9 @@ export default function RitualDetailPage() {
               {invocations.map((inv, i) => (
                 <li
                   key={inv.id}
-                  className="flex items-start gap-3 rounded-md border px-3 py-2.5 text-sm"
+                  className="flex items-start gap-3 rounded-xl border border-border/40 px-3 py-2.5 text-sm bg-muted/10"
                 >
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary mt-0.5">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-xs font-bold text-amber-400 mt-0.5 ring-1 ring-amber-500/20">
                     {i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -369,7 +521,10 @@ export default function RitualDetailPage() {
                     )}
                   </div>
                   {(inv.name.includes("Opening") || inv.name.includes("Closing")) && (
-                    <Badge variant="secondary" className="ml-auto text-[10px] shrink-0 self-center">
+                    <Badge
+                      variant="secondary"
+                      className="ml-auto text-[10px] shrink-0 self-center bg-amber-500/10 text-amber-400/80"
+                    >
                       {inv.name.includes("Opening") ? "Opening" : "Closing"}
                     </Badge>
                   )}
@@ -383,7 +538,11 @@ export default function RitualDetailPage() {
           <CardContent>
             <div className="flex flex-wrap gap-1.5">
               {ritual.ritual_tags.map((tag) => (
-                <Badge key={tag} variant="outline" className="text-xs">
+                <Badge
+                  key={tag}
+                  variant="outline"
+                  className="text-xs border-amber-500/20 bg-amber-500/5 text-amber-300/70"
+                >
                   {tag.replace(/_/g, " ")}
                 </Badge>
               ))}
@@ -392,11 +551,16 @@ export default function RitualDetailPage() {
         )}
       </Card>
 
-      <Button size="lg" onClick={handleBegin} disabled={saving}>
+      <Button
+        size="lg"
+        onClick={handleBegin}
+        disabled={saving}
+        className="bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:from-amber-500 hover:to-orange-500 shadow-xl shadow-amber-500/15 px-8 text-base font-semibold"
+      >
         {saving ? (
           <Loader2 className="mr-2 size-5 animate-spin" />
         ) : (
-          <span className="mr-2">🔥</span>
+          <Flame className="mr-2 size-5" />
         )}
         Begin the Ritual
       </Button>

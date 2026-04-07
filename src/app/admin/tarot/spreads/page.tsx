@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 10;
@@ -123,7 +124,11 @@ export default function TarotSpreadsListPage() {
           </div>
 
           {loading ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full rounded-md" />
+              ))}
+            </div>
           ) : paged.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">No spreads found.</p>
           ) : (

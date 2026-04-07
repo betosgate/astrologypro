@@ -25,12 +25,15 @@ type Testimonial = {
   id: string;
   diviner_id: string;
   client_name: string | null;
+  display_alias: string | null;
   rating: number | null;
   text: string;
   service_type: string | null;
+  service_name: string | null;
   title: string | null;
-  status: "pending" | "approved" | "rejected";
+  status: "submitted" | "pending_review" | "approved" | "rejected" | "hidden" | "pending";
   is_featured: boolean;
+  spam_score: number | null;
   created_at: string;
   diviners: { display_name: string } | null;
 };
@@ -56,9 +59,12 @@ function Stars({ rating }: { rating: number | null }) {
 
 function StatusBadge({ status }: { status: string }) {
   const variants: Record<string, string> = {
+    submitted: "bg-blue-100 text-blue-800 border-blue-200",
+    pending_review: "bg-yellow-100 text-yellow-800 border-yellow-200",
     pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
     approved: "bg-green-100 text-green-800 border-green-200",
     rejected: "bg-red-100 text-red-800 border-red-200",
+    hidden: "bg-gray-100 text-gray-700 border-gray-200",
   };
   return (
     <span
@@ -189,9 +195,12 @@ export default function TestimonialsListPage() {
               className="rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="">All Statuses</option>
+              <option value="submitted">New (Submitted)</option>
+              <option value="pending_review">Pending Review</option>
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
+              <option value="hidden">Hidden</option>
             </select>
           </div>
 
@@ -258,6 +267,25 @@ export default function TestimonialsListPage() {
                             >
                               Reject
                             </Button>
+                          )}
+                          {t.status !== "hidden" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-gray-500 hover:text-gray-600"
+                              onClick={() => handleStatusChange(t.id, "hidden")}
+                            >
+                              Hide
+                            </Button>
+                          )}
+                          {t.spam_score != null && t.spam_score > 0.5 && (
+                            <span
+                              title={`Spam score: ${t.spam_score}`}
+                              className="text-base"
+                              aria-label="High spam score"
+                            >
+                              🚨
+                            </span>
                           )}
                           <Button
                             variant="ghost"

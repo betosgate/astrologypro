@@ -1,119 +1,257 @@
-import Link from "next/link";
+import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Star, ArrowRight, BadgeCheck } from "lucide-react";
 import { DiscoverFilters } from "./discover-filters";
+import { APP_URL } from "@/lib/constants";
 
-export const metadata = {
-  title: "Find a Reader - AstrologyPro",
-  description:
-    "Browse our community of verified astrologers and tarot readers. Book a personal reading today.",
-  openGraph: {
-    title: "Find an Astrologer or Tarot Reader | AstrologyPro",
-    description:
-      "Browse verified astrologers and tarot readers. Book a natal chart reading, compatibility report, tarot spread, and more.",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Find an Astrologer or Tarot Reader | AstrologyPro",
-    description:
-      "Browse verified astrologers and tarot readers. Book a natal chart reading, compatibility report, tarot spread, and more.",
-  },
-};
+// Cookie read requires dynamic rendering — cannot use ISR
+export const dynamic = "force-dynamic";
 
-interface DivinerCard {
-  id: string;
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: "Find a Diviner | AstrologyPro",
+    description:
+      "Browse certified astrologers, tarot readers, and oracle practitioners. Book a personal reading today.",
+    openGraph: {
+      title: "Find a Diviner | AstrologyPro",
+      description:
+        "Browse certified astrologers, tarot readers, and oracle practitioners. Book a natal chart reading, compatibility report, tarot spread, and more.",
+      type: "website",
+      url: `${APP_URL}/discover`,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Find a Diviner | AstrologyPro",
+      description:
+        "Browse certified astrologers, tarot readers, and oracle practitioners. Book a personal reading today.",
+    },
+  };
+}
+
+export type DivinerSubType = "astrologer" | "tarot" | "oracle";
+
+export interface DivinerCard {
   username: string;
-  display_name: string;
+  displayName: string;
   tagline: string | null;
-  avatar_url: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  coverImageUrl: string | null;
+  isCertified: boolean;
   specialties: string[];
-  completedSessions: number;
-  averageRating: number | null;
-  reviewCount: number;
+  subType: DivinerSubType;
   startingPrice: number | null;
-  is_certified: boolean;
+  reviewCount: number;
+  averageRating: number | null;
+  completedSessions: number;
 }
 
 async function getActiveDiviners(): Promise<DivinerCard[]> {
   const admin = createAdminClient();
 
-  const { data: diviners } = await admin
+  // Fetch all active, onboarding-complete diviners
+  const { data: diviners, error } = await admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
+    .select(
+      "id, username, display_name, tagline, bio, avatar_url, cover_image_url, specialties, is_certified"
+    )
     .eq("is_active", true)
-    .eq("onboarding_completed", true);
+    .eq("onboarding_completed", true)
+    .eq("account_status", "active")
+    .eq("charges_enabled", true);
 
-  if (!diviners || diviners.length === 0) return [];
+  if (error || !diviners || diviners.length === 0) return [];
 
-  // Fetch stats for each diviner in parallel
-  const cards = await Promise.all(
-    diviners.map(async (diviner) => {
-      const [sessionsResult, ratingsResult, priceResult] = await Promise.all([
-        admin
-          .from("bookings")
-          .select("*", { count: "exact", head: true })
-          .eq("diviner_id", diviner.id)
-          .eq("status", "completed"),
-        admin
-          .from("testimonials")
-          .select("rating")
-          .eq("diviner_id", diviner.id)
-          .eq("status", "approved"),
-        admin
-          .from("services")
-          .select("base_price")
-          .eq("diviner_id", diviner.id)
-          .eq("is_active", true)
-          .order("base_price", { ascending: true })
-          .limit(1),
-      ]);
+  const divinerIds = diviners.map((d) => d.id as string);
 
-      const ratings = (ratingsResult.data ?? []).filter(
-        (r: { rating: number | null }) => r.rating != null
-      );
-      const averageRating =
-        ratings.length > 0
-          ? ratings.reduce(
-              (sum: number, r: { rating: number | null }) =>
-                sum + (r.rating ?? 0),
-              0
-            ) / ratings.length
-          : null;
+  // Fetch all services for these diviners in one query
+  const { data: allServices } = await admin
+    .from("services")
+    .select("diviner_id, category, base_price")
+    .in("diviner_id", divinerIds)
+    .eq("is_active", true);
 
-      return {
-        id: diviner.id,
-        username: diviner.username,
-        display_name: diviner.display_name,
-        tagline: diviner.tagline,
-        avatar_url: diviner.avatar_url,
-        specialties: (diviner.specialties as string[]) ?? [],
-        completedSessions: sessionsResult.count ?? 0,
-        averageRating,
-        reviewCount: ratings.length,
-        startingPrice: priceResult.data?.[0]
-          ? Number(priceResult.data[0].base_price)
-          : null,
-        is_certified: !!(diviner as Record<string, unknown>).is_certified,
-      };
-    })
-  );
+  // Fetch all approved testimonials (with ratings) in one query
+  const { data: allTestimonials } = await admin
+    .from("testimonials")
+    .select("diviner_id, rating")
+    .in("diviner_id", divinerIds)
+    .eq("status", "approved");
+
+  // Fetch completed session counts in one query via a group-by approach
+  // We use a count per diviner via individual select with count — batch them
+  const { data: allBookings } = await admin
+    .from("bookings")
+    .select("diviner_id")
+    .in("diviner_id", divinerIds)
+    .eq("status", "completed");
+
+  // Build lookup maps
+  const servicesByDiviner = new Map<string, { category: string; base_price: number }[]>();
+  for (const svc of allServices ?? []) {
+    const id = svc.diviner_id as string;
+    if (!servicesByDiviner.has(id)) servicesByDiviner.set(id, []);
+    servicesByDiviner.get(id)!.push({
+      category: svc.category as string,
+      base_price: Number(svc.base_price),
+    });
+  }
+
+  const testimonialsByDiviner = new Map<string, number[]>();
+  for (const t of allTestimonials ?? []) {
+    const id = t.diviner_id as string;
+    if (!testimonialsByDiviner.has(id)) testimonialsByDiviner.set(id, []);
+    if (t.rating != null) testimonialsByDiviner.get(id)!.push(t.rating as number);
+  }
+
+  const sessionCountByDiviner = new Map<string, number>();
+  for (const b of allBookings ?? []) {
+    const id = b.diviner_id as string;
+    sessionCountByDiviner.set(id, (sessionCountByDiviner.get(id) ?? 0) + 1);
+  }
+
+  const cards: DivinerCard[] = diviners.map((diviner) => {
+    const id = diviner.id as string;
+    const services = servicesByDiviner.get(id) ?? [];
+    const ratings = testimonialsByDiviner.get(id) ?? [];
+    const completedSessions = sessionCountByDiviner.get(id) ?? 0;
+
+    // Derive sub-type from service categories
+    const hasAstrology = services.some((s) => s.category === "astrology");
+    const hasTarot = services.some((s) => s.category === "tarot");
+    let subType: DivinerSubType = "astrologer";
+    if (hasAstrology && hasTarot) subType = "oracle";
+    else if (hasTarot) subType = "tarot";
+    else subType = "astrologer"; // default / astrology-only
+
+    // Starting price: minimum base_price across active services
+    const startingPrice =
+      services.length > 0
+        ? Math.min(...services.map((s) => s.base_price))
+        : null;
+
+    // Average rating
+    const averageRating =
+      ratings.length > 0
+        ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+        : null;
+
+    return {
+      username: diviner.username as string,
+      displayName: diviner.display_name as string,
+      tagline: (diviner.tagline as string | null) ?? null,
+      bio: (diviner.bio as string | null) ?? null,
+      avatarUrl: (diviner.avatar_url as string | null) ?? null,
+      coverImageUrl: (diviner.cover_image_url as string | null) ?? null,
+      isCertified: !!(diviner.is_certified as boolean | null),
+      specialties: (diviner.specialties as string[]) ?? [],
+      subType,
+      startingPrice,
+      reviewCount: ratings.length,
+      averageRating,
+      completedSessions,
+    };
+  });
+
+  // Default sort: certified first, then by review count desc, then by sessions desc
+  cards.sort((a, b) => {
+    if (a.isCertified !== b.isCertified) return a.isCertified ? -1 : 1;
+    if (b.reviewCount !== a.reviewCount) return b.reviewCount - a.reviewCount;
+    return b.completedSessions - a.completedSessions;
+  });
 
   return cards;
 }
 
-export default async function DiscoverPage() {
-  const diviners = await getActiveDiviners();
+async function getPreferredDiviner(username: string): Promise<DivinerCard | null> {
+  const admin = createAdminClient();
 
-  // Featured: top-rated with at least 1 review
-  const featured = [...diviners]
-    .filter((d) => d.averageRating !== null && d.reviewCount > 0)
-    .sort((a, b) => (b.averageRating ?? 0) - (a.averageRating ?? 0))
-    .slice(0, 3);
+  const { data: diviner } = await admin
+    .from("diviners")
+    .select(
+      "id, username, display_name, tagline, bio, avatar_url, cover_image_url, specialties, is_certified"
+    )
+    .eq("username", username)
+    .eq("is_active", true)
+    .eq("onboarding_completed", true)
+    .eq("account_status", "active")
+    .eq("charges_enabled", true)
+    .single();
+
+  if (!diviner) return null;
+
+  const id = diviner.id as string;
+
+  const [servicesResult, testimonialsResult, bookingsResult] = await Promise.all([
+    admin
+      .from("services")
+      .select("diviner_id, category, base_price")
+      .eq("diviner_id", id)
+      .eq("is_active", true),
+    admin
+      .from("testimonials")
+      .select("rating")
+      .eq("diviner_id", id)
+      .eq("status", "approved"),
+    admin
+      .from("bookings")
+      .select("diviner_id", { count: "exact", head: true })
+      .eq("diviner_id", id)
+      .eq("status", "completed"),
+  ]);
+
+  const services = (servicesResult.data ?? []).map((s) => ({
+    category: s.category as string,
+    base_price: Number(s.base_price),
+  }));
+  const ratings = (testimonialsResult.data ?? [])
+    .filter((t) => t.rating != null)
+    .map((t) => t.rating as number);
+  const completedSessions = bookingsResult.count ?? 0;
+
+  const hasAstrology = services.some((s) => s.category === "astrology");
+  const hasTarot = services.some((s) => s.category === "tarot");
+  let subType: DivinerSubType = "astrologer";
+  if (hasAstrology && hasTarot) subType = "oracle";
+  else if (hasTarot) subType = "tarot";
+
+  const startingPrice =
+    services.length > 0
+      ? Math.min(...services.map((s) => s.base_price))
+      : null;
+
+  const averageRating =
+    ratings.length > 0
+      ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+      : null;
+
+  return {
+    username: diviner.username as string,
+    displayName: diviner.display_name as string,
+    tagline: (diviner.tagline as string | null) ?? null,
+    bio: (diviner.bio as string | null) ?? null,
+    avatarUrl: (diviner.avatar_url as string | null) ?? null,
+    coverImageUrl: (diviner.cover_image_url as string | null) ?? null,
+    isCertified: !!(diviner.is_certified as boolean | null),
+    specialties: (diviner.specialties as string[]) ?? [],
+    subType,
+    startingPrice,
+    reviewCount: ratings.length,
+    averageRating,
+    completedSessions,
+  };
+}
+
+export default async function DiscoverPage() {
+  const cookieStore = await cookies();
+  const preferredUsername = cookieStore.get("preferred_diviner")?.value ?? null;
+
+  const [diviners, preferredDiviner] = await Promise.all([
+    getActiveDiviners(),
+    preferredUsername ? getPreferredDiviner(preferredUsername) : Promise.resolve(null),
+  ]);
 
   return (
     <div className="min-h-screen bg-[#06080f]">
@@ -124,161 +262,25 @@ export default async function DiscoverPage() {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(201,168,76,0.08)_0%,transparent_60%)]" />
         <div className="relative mx-auto max-w-4xl px-4 text-center">
           <h1 className="font-display text-4xl font-bold text-[#f5f0e8] md:text-5xl">
-            Find Your Reader
+            Find a Diviner
           </h1>
           <p className="mx-auto mt-4 max-w-lg text-lg text-[#b8bcd0]/70">
-            Browse our community of verified astrologers and tarot readers.
+            Browse certified astrologers, tarot readers, and oracle practitioners.
             Book a personal reading today.
           </p>
         </div>
       </section>
 
-      {/* Featured Practitioners */}
-      {featured.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
-          <h2 className="mb-6 font-display text-2xl font-semibold text-[#c9a84c]">
-            Featured Practitioners
-          </h2>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {featured.map((diviner) => (
-              <DivinerCardComponent
-                key={diviner.id}
-                diviner={diviner}
-                featured
-              />
-            ))}
-          </div>
-          <div className="cosmic-divider mx-auto mt-12" />
-        </section>
-      )}
-
       {/* All diviners with filters */}
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <h2 className="mb-6 font-display text-2xl font-semibold text-[#f5f0e8]">
-          All Readers
-        </h2>
-        <DiscoverFilters diviners={diviners} />
+      <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
+        <DiscoverFilters
+          diviners={diviners}
+          total={diviners.length}
+          preferredDiviner={preferredDiviner}
+        />
       </section>
 
       <MarketingFooter />
     </div>
   );
 }
-
-function DivinerCardComponent({
-  diviner,
-  featured = false,
-}: {
-  diviner: DivinerCard;
-  featured?: boolean;
-}) {
-  return (
-    <div
-      className={`group rounded-2xl border p-6 transition-all hover:border-[#c9a84c]/30 hover:shadow-[0_0_30px_rgba(201,168,76,0.05)] ${
-        featured
-          ? "border-[#c9a84c]/20 bg-[#0d1117]/80"
-          : "border-white/5 bg-[#0d1117]/60"
-      }`}
-    >
-      <div className="flex items-start gap-4">
-        {diviner.avatar_url ? (
-          <img
-            src={diviner.avatar_url}
-            alt={diviner.display_name}
-            className="size-14 rounded-full border border-[#c9a84c]/20 object-cover"
-          />
-        ) : (
-          <div className="flex size-14 items-center justify-center rounded-full bg-[#c9a84c]/10 text-lg font-semibold text-[#c9a84c]">
-            {diviner.display_name
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .slice(0, 2)}
-          </div>
-        )}
-        <div className="flex-1">
-          <div className="flex items-center gap-1.5">
-            <h3 className="font-semibold text-[#f5f0e8]">
-              {diviner.display_name}
-            </h3>
-            {diviner.is_certified && (
-              <span
-                title="Divine Infinite Being Certified"
-                className="inline-flex items-center gap-1 rounded-full bg-[#c9a84c]/15 px-1.5 py-0.5 text-[10px] font-semibold text-[#c9a84c]"
-              >
-                <BadgeCheck className="size-3" />
-                DIB Certified
-              </span>
-            )}
-          </div>
-          {diviner.tagline && (
-            <p className="mt-0.5 line-clamp-2 text-sm text-[#b8bcd0]/60">
-              {diviner.tagline}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Specialties */}
-      {diviner.specialties.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-1.5">
-          {diviner.specialties.slice(0, 3).map((spec) => (
-            <Badge
-              key={spec}
-              variant="outline"
-              className="border-[#c9a84c]/10 bg-[#c9a84c]/5 text-[10px] text-[#c9a84c]/80"
-            >
-              {spec}
-            </Badge>
-          ))}
-          {diviner.specialties.length > 3 && (
-            <Badge
-              variant="outline"
-              className="border-white/5 text-[10px] text-[#b8bcd0]/40"
-            >
-              +{diviner.specialties.length - 3} more
-            </Badge>
-          )}
-        </div>
-      )}
-
-      {/* Stats row */}
-      <div className="mt-4 flex items-center gap-4 text-sm">
-        {diviner.averageRating !== null && (
-          <span className="flex items-center gap-1 text-[#c9a84c]">
-            <Star className="size-3.5 fill-current" />
-            {diviner.averageRating.toFixed(1)}
-            <span className="text-[#b8bcd0]/40">({diviner.reviewCount})</span>
-          </span>
-        )}
-        {diviner.completedSessions > 0 && (
-          <span className="text-[#b8bcd0]/50">
-            {diviner.completedSessions} session
-            {diviner.completedSessions !== 1 ? "s" : ""}
-          </span>
-        )}
-        {diviner.startingPrice !== null && (
-          <span className="ml-auto text-[#f5f0e8]">
-            From ${diviner.startingPrice}
-          </span>
-        )}
-      </div>
-
-      {/* CTA */}
-      <div className="mt-5">
-        <Button
-          asChild
-          variant="outline"
-          className="w-full border-[#c9a84c]/20 text-[#c9a84c] hover:bg-[#c9a84c]/5 hover:border-[#c9a84c]/40"
-        >
-          <Link href={`/${diviner.username}`}>
-            View Profile
-            <ArrowRight className="ml-1 size-3.5" />
-          </Link>
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-export { DivinerCardComponent };

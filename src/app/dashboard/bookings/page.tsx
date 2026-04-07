@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -22,6 +23,8 @@ import {
 import { BookingsFilter } from "@/components/dashboard/bookings-filter";
 import { BookingDetailSheet } from "@/components/dashboard/booking-detail-sheet";
 import { SessionPrepSheet } from "@/components/dashboard/session-prep";
+import { CalendarX2 } from "lucide-react";
+import Link from "next/link";
 
 export const metadata = {
   title: "Bookings",
@@ -152,9 +155,28 @@ export default async function BookingsPage({
         </CardHeader>
         <CardContent>
           {!bookings || bookings.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No bookings found.
-            </p>
+            <div className="flex flex-col items-center gap-4 py-16 text-center">
+              <div className="flex size-14 items-center justify-center rounded-full bg-muted">
+                <CalendarX2 className="size-7 text-muted-foreground" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium">
+                  {status && status !== "all"
+                    ? `No ${status} bookings`
+                    : "No bookings yet"}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {status && status !== "all"
+                    ? "Try a different status filter to find what you're looking for."
+                    : "When clients book sessions with you, they will appear here."}
+                </p>
+              </div>
+              {(!status || status === "all") && (
+                <Button asChild variant="outline">
+                  <Link href="/dashboard/services">Manage Services</Link>
+                </Button>
+              )}
+            </div>
           ) : (
             <Table>
               <TableHeader>

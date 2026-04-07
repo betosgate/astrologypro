@@ -121,25 +121,51 @@ export async function PATCH(
 
   const { id } = await params;
 
-  let body: { status?: string };
+  const VALID_STATUSES = [
+    "submitted",
+    "pending_review",
+    "approved",
+    "rejected",
+    "hidden",
+    "pending",
+  ];
+
+  let body: {
+    status?: string;
+    is_featured?: boolean;
+    moderation_notes?: string | null;
+  };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { status } = body;
-  if (!status || !["pending", "approved", "rejected"].includes(status)) {
+  const { status, is_featured, moderation_notes } = body;
+
+  if (
+    status !== undefined &&
+    !VALID_STATUSES.includes(status)
+  ) {
     return NextResponse.json(
-      { error: "Status must be pending, approved, or rejected." },
+      {
+        error: `Status must be one of: ${VALID_STATUSES.join(", ")}.`,
+      },
       { status: 422 }
     );
   }
 
+  const updates: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+  if (status !== undefined) updates.status = status;
+  if (is_featured !== undefined) updates.is_featured = is_featured;
+  if (moderation_notes !== undefined) updates.moderation_notes = moderation_notes ?? null;
+
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("testimonials")
-    .update({ status, updated_at: new Date().toISOString() })
+    .update(updates)
     .eq("id", id)
     .select()
     .single();

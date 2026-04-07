@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, Star, Zap } from "lucide-react";
 import Link from "next/link";
+import { BookReadingButton } from "./BookReadingButton";
 
 export const metadata = { title: "Monthly Transits - AstrologyPro Community" };
 export const dynamic = "force-dynamic";
@@ -98,6 +99,19 @@ export default async function TransitsPage() {
           How the current sky affects your family — {monthLabel}
         </p>
       </div>
+
+      {/* Community member cross-sell CTA */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold">Get a professional reading</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              As a community member you receive a 5% discount on platform fees when you book an AstrologyPro reading.
+            </p>
+          </div>
+          <BookReadingButton />
+        </CardContent>
+      </Card>
 
       {(familyCount ?? 0) === 0 && (
         <Card>
