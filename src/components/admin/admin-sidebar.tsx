@@ -210,7 +210,8 @@ const NAV_GROUPS = [
   {
     label: "Tools",
     items: [
-      { label: "Tarot", href: "/admin/tarot", icon: Shuffle },
+      { label: "Tarot Spreads", href: "/admin/tarot/spreads", icon: Shuffle },
+      { label: "Tarot Cards", href: "/admin/tarot/cards", icon: LayoutGrid },
       { label: "Rituals", href: "/admin/rituals", icon: Flame },
     ],
   },
