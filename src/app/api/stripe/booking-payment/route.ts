@@ -11,6 +11,8 @@ import {
   sendGuestBookingInvite,
 } from "@/lib/email";
 
+export const dynamic = "force-dynamic";
+
 interface BookingPaymentBody {
   divinerId: string;
   serviceId: string;

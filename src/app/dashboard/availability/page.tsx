@@ -80,23 +80,39 @@ const defaultForm = (): FormState => ({
 });
 
 function formatDateRange(start: string, end: string): string {
-  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-  const startDate = new Date(start + "T12:00:00");
-  const endDate = new Date(end + "T12:00:00");
-  const startStr = startDate.toLocaleDateString("en-US", opts);
-  const endStr = endDate.toLocaleDateString("en-US", {
-    ...opts,
-    year: "numeric",
-  });
-  return `${startStr} – ${endStr}`;
+  if (!start || !end) return "No date set";
+  try {
+    const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+    const startDate = new Date(start + "T12:00:00");
+    const endDate = new Date(end + "T12:00:00");
+    
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return "Invalid date";
+
+    const startStr = startDate.toLocaleDateString("en-US", opts);
+    const endStr = endDate.toLocaleDateString("en-US", {
+      ...opts,
+      year: "numeric",
+    });
+    return `${startStr} – ${endStr}`;
+  } catch {
+    return "Date error";
+  }
 }
 
 function formatTimeRange(start: string, end: string): string {
+  if (!start || !end) return "—";
   const toAmPm = (t: string) => {
-    const [h, m] = t.split(":").map(Number);
-    const period = h >= 12 ? "PM" : "AM";
-    const hour = h % 12 === 0 ? 12 : h % 12;
-    return `${hour}:${String(m).padStart(2, "0")} ${period}`;
+    try {
+      const parts = (t || "").split(":");
+      if (parts.length < 2) return t;
+      const [h, m] = parts.map(Number);
+      if (isNaN(h) || isNaN(m)) return t;
+      const period = h >= 12 ? "PM" : "AM";
+      const hour = h % 12 === 0 ? 12 : h % 12;
+      return `${hour}:${String(m).padStart(2, "0")} ${period}`;
+    } catch {
+      return t;
+    }
   };
   return `${toAmPm(start)} – ${toAmPm(end)}`;
 }
@@ -123,12 +139,17 @@ export default function AvailabilityPage() {
 
   const loadTemplates = useCallback(async () => {
     setLoading(true);
-    const res = await fetch("/api/dashboard/availability");
-    if (res.ok) {
-      const json = await res.json();
-      setTemplates(json.templates ?? []);
+    try {
+      const res = await fetch("/api/dashboard/availability");
+      if (res.ok) {
+        const json = await res.json();
+        setTemplates(json.templates ?? []);
+      }
+    } catch (err) {
+      console.error("[AvailabilityPage] Failed to load templates:", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const dynamic = "force-dynamic";
+
 const BASE_URL = "https://astrologypro.com";
 const BLOG_TITLE = "AstrologyPro Blog";
 const BLOG_DESCRIPTION =

@@ -5,6 +5,8 @@ import {
 } from "@/lib/stripe/connect";
 import { APP_URL } from "@/lib/constants";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: NextRequest) {
   try {
     const { email, divinerId } = await request.json();

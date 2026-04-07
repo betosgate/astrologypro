@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Called by the session-room client when a participant gives recording consent
  * and joins the Daily.co room.  Marks diviner_joined_at or client_joined_at on

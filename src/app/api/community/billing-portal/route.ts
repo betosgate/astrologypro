@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import { APP_URL } from "@/lib/constants";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/community/billing-portal
  *

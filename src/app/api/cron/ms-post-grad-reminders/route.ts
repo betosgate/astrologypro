@@ -3,6 +3,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyCronAuth } from "@/lib/cron-auth";
 import { sendPostGraduationConsultationReminder } from "@/lib/email";
 
+export const dynamic = "force-dynamic";
+
 export const runtime = "nodejs";
 export const maxDuration = 60;
 

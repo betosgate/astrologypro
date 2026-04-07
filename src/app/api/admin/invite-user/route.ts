@@ -3,6 +3,8 @@ import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
 
+export const dynamic = "force-dynamic";
+
 const ROLE_DESTINATIONS: Record<string, string> = {
   diviner: "/onboarding",
   client: "/portal",
