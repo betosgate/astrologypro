@@ -2,6 +2,14 @@
 Date: 2026-04-07
 Category: Mystery School Module
 
+## Status
+
+- Partially implemented
+- Standard Mystery School Stripe prices already exist and are recorded here
+- The PM-discount Stripe price is still pending manual creation
+- Inspect current env/config before changing code
+- Do not recreate prices that already exist
+
 ## Execution Note For AI Agent
 
 - After creating or verifying the Stripe prices, update this file with the real Stripe `price_...` IDs.
@@ -41,30 +49,25 @@ Define and prepare the Stripe product/price catalog required for Mystery School 
 |---|---|---|---|---|
 | `STRIPE_PRICE_MYSTERY_ENROLLMENT` | `97.00 USD` | One-time | `price_1TJOXjBcRXKECv5fQ4dz7W4z` | **Exists in .env.local** |
 | `STRIPE_PRICE_MYSTERY_MONTHLY` | `27.00 USD/month` | Monthly recurring | `price_1TJOXlBcRXKECv5f64n37Za2` | **Exists in .env.local** |
-| `STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT` | `17.03 USD/month` | Monthly recurring | `TBD` | **MANUAL ACTION REQUIRED** |
+| `STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT` | `17.03 USD/month` | Monthly recurring | `price_1TJZCPBcRXKECv5fhwdSCyXL` | **Created in Stripe test mode** |
 
 ## Manual Action Required
 
-The PM-discount price (`STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT`) does **not** exist yet.
-Stripe CLI is not installed, so this price must be created manually.
+The PM-discount price now exists in Stripe test mode:
 
-### Steps to create in Stripe Dashboard (test mode):
+- `STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT=price_1TJZCPBcRXKECv5fhwdSCyXL`
 
-1. Go to Stripe Dashboard > Products
-2. Find the existing Mystery School product (the one that owns `price_1TJOXjBcRXKECv5fQ4dz7W4z` and `price_1TJOXlBcRXKECv5f64n37Za2`)
-3. Click "Add another price"
-4. Set: **$17.03 USD / month**, recurring
-5. Optionally set nickname: "Mystery School Monthly - PM Discount"
-6. Save the new price
-7. Copy the `price_...` ID
-8. Add to `.env.local` as: `STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT=price_XXXXXXXXX`
+Manual step remaining:
 
-Once the price is created and the env var is set, the checkout logic (Task 03) will automatically
+1. Add to your local env manually:
+   - `STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT=price_1TJZCPBcRXKECv5fhwdSCyXL`
+
+Once the env var is set, the checkout logic (Task 03) will automatically
 select this price for eligible PM users when the admin discount toggle is enabled.
 
 ## Success Criteria
 
 - [x] Enrollment price exists: `price_1TJOXjBcRXKECv5fQ4dz7W4z`
 - [x] Monthly price exists: `price_1TJOXlBcRXKECv5f64n37Za2`
-- [ ] PM discount price: needs manual creation in Stripe Dashboard at $17.03/month
+- [x] PM discount price exists: `price_1TJZCPBcRXKECv5fhwdSCyXL`
 - [ ] Env var `STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT` added to `.env.local` after creation
