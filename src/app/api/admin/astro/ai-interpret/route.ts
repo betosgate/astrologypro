@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
   let lastError: unknown;
   const maxRetries = 10;
-  const delayMs = 15000; // 15 seconds
+  const delayMs = 10000; // 10 seconds
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {

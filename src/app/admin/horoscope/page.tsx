@@ -63,32 +63,32 @@ const PLANET_IMAGES: Record<string, string> = {
 // Maps each word in an aspect title (planet OR aspect type) to its S3 sign image
 const ASTRO_HEADER_IMAGES: Record<string, string> = {
   // Planets (planet_singn/ folder — exact filenames from astroHeaderModifierPipe)
-  Sun:        "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/sun+(2).png",
-  Moon:       "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/moon+(3).png",
-  Mercury:    "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/mercury+(2).png",
-  Venus:      "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/vinus_sign.png",
-  Mars:       "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/mars+(2).png",
-  Jupiter:    "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/jupiton_sign.png",
-  Saturn:     "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/satarn+(1).png",
-  Uranus:     "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/urenus_sign.png",
-  Neptune:    "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/neptune_sign.png",
-  Pluto:      "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/pluto_sign.png",
+  Sun: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/sun+(2).png",
+  Moon: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/moon+(3).png",
+  Mercury: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/mercury+(2).png",
+  Venus: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/vinus_sign.png",
+  Mars: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/mars+(2).png",
+  Jupiter: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/jupiton_sign.png",
+  Saturn: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/satarn+(1).png",
+  Uranus: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/urenus_sign.png",
+  Neptune: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/neptune_sign.png",
+  Pluto: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_singn/pluto_sign.png",
   // Aspect types (connection_singn/ folder — exact filenames from astroHeaderModifierPipe)
   Conjunction: "https://all-frontend-assets.s3.us-east-1.amazonaws.com/divine_astro_assates/connection_singn/conjuction_sign.png",
-  Conjunct:    "https://all-frontend-assets.s3.us-east-1.amazonaws.com/divine_astro_assates/connection_singn/conjuction_sign.png",
+  Conjunct: "https://all-frontend-assets.s3.us-east-1.amazonaws.com/divine_astro_assates/connection_singn/conjuction_sign.png",
   Opposition: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/opposit.png",
-  Square:     "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/squar.png",
-  Trine:      "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/trine.png",
-  Sextile:    "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/sextile.png",
+  Square: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/squar.png",
+  Trine: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/trine.png",
+  Sextile: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/sextile.png",
 };
 
 // Keep ASPECT_IMAGES alias for table column aspect-type icon (same URLs as above)
 const ASPECT_IMAGES: Record<string, string> = {
   Conjunction: ASTRO_HEADER_IMAGES.Conjunction,
-  Opposition:  ASTRO_HEADER_IMAGES.Opposition,
-  Square:      ASTRO_HEADER_IMAGES.Square,
-  Trine:       ASTRO_HEADER_IMAGES.Trine,
-  Sextile:     ASTRO_HEADER_IMAGES.Sextile,
+  Opposition: ASTRO_HEADER_IMAGES.Opposition,
+  Square: ASTRO_HEADER_IMAGES.Square,
+  Trine: ASTRO_HEADER_IMAGES.Trine,
+  Sextile: ASTRO_HEADER_IMAGES.Sextile,
 };
 
 // ─── Word association keyword maps (ported from Angular's AI-generated keyword logic) ─
@@ -287,9 +287,9 @@ interface DecanAi {
 interface DecanSection {
   planetAi: DecanAi | null;
   daemonAi: DecanAi | null;
-  tarotAi:  DecanAi | null;
-  loading:  boolean;
-  error?:   string;
+  tarotAi: DecanAi | null;
+  loading: boolean;
+  error?: string;
 }
 
 // ─── AI prompt builders ───────────────────────────────────────────────────────
@@ -448,13 +448,13 @@ function buildAiPrompts(data: any, tab: string) {
     const synJson = [data.synastry ?? data];
     const selfPartnerJson = [{ mydetails: { ...p1 }, fiend_details: { ...p2 } }];
 
-    prompts.push({ key: "synastry_horoscope",             system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our synastry chart of this partnership${suffix}`, json: synJson });
-    prompts.push({ key: "composite_horoscope",            system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our composite chart of this partnership${suffix}`, json: synJson });
-    prompts.push({ key: "davison_relationship",           system: sys, user: `${b1Str.replace("I was born on", `I was born on `)} ${b2Str.replace(`my ${relationshipContext} was born on  `, `my ${relationshipContext} was born on  `)} I have added birth chart details of mine and my ${relationshipContext} both now calculate Aspect and Conjunction of this partnership${suffix.replace("atleast 3 sentences", "atleast 5 sentences")}`, json: selfPartnerJson });
-    prompts.push({ key: "major_aspects_and_connections",  system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our davison relation ship chart of this partnership${suffix}`, json: selfPartnerJson });
+    prompts.push({ key: "synastry_horoscope", system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our synastry chart of this partnership${suffix}`, json: synJson });
+    prompts.push({ key: "composite_horoscope", system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our composite chart of this partnership${suffix}`, json: synJson });
+    prompts.push({ key: "davison_relationship", system: sys, user: `${b1Str.replace("I was born on", `I was born on `)} ${b2Str.replace(`my ${relationshipContext} was born on  `, `my ${relationshipContext} was born on  `)} I have added birth chart details of mine and my ${relationshipContext} both now calculate Aspect and Conjunction of this partnership${suffix.replace("atleast 3 sentences", "atleast 5 sentences")}`, json: selfPartnerJson });
+    prompts.push({ key: "major_aspects_and_connections", system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our davison relation ship chart of this partnership${suffix}`, json: selfPartnerJson });
     prompts.push({ key: "compatibility_score_or_summary", system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate compatibility score or summery of this partnership${suffix}`, json: selfPartnerJson });
-    prompts.push({ key: "elemental_balance",              system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate elemental balance of this partnership${suffix}`, json: selfPartnerJson });
-    prompts.push({ key: "timing_and_transits",            system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate timing and transit of this partnership${suffix}`, json: selfPartnerJson });
+    prompts.push({ key: "elemental_balance", system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate elemental balance of this partnership${suffix}`, json: selfPartnerJson });
+    prompts.push({ key: "timing_and_transits", system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate timing and transit of this partnership${suffix}`, json: selfPartnerJson });
     if (tab === "business_partner_v2") {
       prompts.push({ key: "professional_alignment_and_goals", system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate professional alignment and goals of this partnership${suffix}`, json: selfPartnerJson });
     } else {
@@ -907,7 +907,7 @@ function DecanAiBlock({ title, data, loading }: { title: string; data: DecanAi |
 function DecanModal({ planet, sign, open, onClose }: {
   planet: string; sign: string; open: boolean; onClose: () => void;
 }) {
-  const [rows, setRows]       = useState<DecanRow[]>([]);
+  const [rows, setRows] = useState<DecanRow[]>([]);
   const [sections, setSections] = useState<Record<number, DecanSection>>({});
   const [loadingRows, setLoadingRows] = useState(false);
   const [rowError, setRowError] = useState<string | null>(null);
@@ -982,7 +982,7 @@ function DecanModal({ planet, sign, open, onClose }: {
             [row.decan]: {
               planetAi: parseDecanAi(planetRes),
               daemonAi: parseDecanAi(daemonRes),
-              tarotAi:  parseDecanAi(tarotRes),
+              tarotAi: parseDecanAi(tarotRes),
               loading: false,
             },
           }));
@@ -995,7 +995,7 @@ function DecanModal({ planet, sign, open, onClose }: {
     })();
 
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, planet, sign]);
 
   return (
@@ -1084,11 +1084,18 @@ function DecanModal({ planet, sign, open, onClose }: {
 
 // ─── Planets Section ──────────────────────────────────────────────────────────
 
-function PlanetsSection({ planets, aiData, areaOfInquiry }: { planets: any[]; aiData: any; areaOfInquiry?: string }) {
+function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: { planets: any[]; aiData: any; areaOfInquiry?: string; decanPossibilities: any[] }) {
   const { modal, trigger, close } = useShowMore();
   const [decanPlanet, setDecanPlanet] = useState<{ name: string; sign: string } | null>(null);
 
   if (!planets) return null;
+
+  const checkDacen = (planetName: string, signName: string) => {
+    if (!decanPossibilities) return false;
+    return decanPossibilities.some((item: any) =>
+      item.planet === planetName && item.sign_name === signName
+    );
+  };
 
   // Sort planets in canonical order
   const ordered = [...planets].sort((a, b) => PLANET_ORDER.indexOf(a.name) - PLANET_ORDER.indexOf(b.name));
@@ -1155,27 +1162,30 @@ function PlanetsSection({ planets, aiData, areaOfInquiry }: { planets: any[]; ai
           {ordered.map((p) => {
             const interp = aiMap[p.name];
             if (!interp) return null;
+            const hasDecan = checkDacen(p.name, p.sign);
             return (
               <div key={p.name} className="rounded-lg border overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/40 border-b">
                   <span className="text-amber-500 text-base">{PLANET_SYMBOLS[p.name] ?? "✦"}</span>
                   <h4 className="text-sm font-semibold uppercase tracking-wide">{p.name}</h4>
+                  {hasDecan && (
+                    <button
+                      onClick={() => setDecanPlanet({ name: p.name, sign: p.sign })}
+                      className="inline-flex items-center justify-center p-1 rounded-md hover:bg-purple-500/10 text-purple-600 transition-colors"
+                      title={`${p.name} Decan in ${p.sign}`}
+                    >
+                      <Sparkles className="size-4" />
+                    </button>
+                  )}
                   <Badge variant="outline" className="ml-auto text-[10px] text-amber-600 border-amber-400">{p.sign} · House {p.house}</Badge>
                 </div>
                 <div className="px-4 py-3">
                   <p className="text-sm leading-relaxed text-foreground">{interp}</p>
-                  <div className="mt-2 flex items-center gap-3">
+                  <div className="mt-2 flex justify-center">
                     <button
                       onClick={() => trigger(p.name, interp, { planet: p, context: "western astrology planet interpretation" }, areaOfInquiry, undefined, false, "planet")}
                       className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
                     >Show More</button>
-                    {/* Decan button — mirrors Angular decan detail section */}
-                    {p.sign && (
-                      <button
-                        onClick={() => setDecanPlanet({ name: p.name, sign: p.sign })}
-                        className="text-xs text-purple-600 hover:text-purple-700 font-medium underline underline-offset-2"
-                      >Decan</button>
-                    )}
                   </div>
                 </div>
               </div>
@@ -1295,7 +1305,9 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
               </div>
               <div className="px-4 py-3">
                 <p className="text-sm leading-relaxed">{item.interpretation}</p>
-                <button onClick={() => trigger(`House ${item.house}`, item.interpretation, item, areaOfInquiry, undefined, false, "house")} className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                <div className="mt-2 flex justify-center">
+                  <button onClick={() => trigger(`House ${item.house}`, item.interpretation, item, areaOfInquiry, undefined, false, "house")} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                </div>
               </div>
             </div>
           ))}
@@ -1393,7 +1405,9 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
                 </div>
                 <div className="px-4 py-3">
                   <p className="text-sm leading-relaxed">{item.interpretation}</p>
-                  <button onClick={() => trigger(item.title ?? `Aspect ${i + 1}`, item.interpretation, item, areaOfInquiry, item.title)} className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                  <div className="mt-2 flex justify-center">
+                    <button onClick={() => trigger(item.title ?? `Aspect ${i + 1}`, item.interpretation, item, areaOfInquiry, item.title)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                  </div>
                 </div>
                 {/* Word association keyword chips — 3 columns for the two planets + aspect type */}
                 {p1 && p2 && (
@@ -1430,7 +1444,9 @@ function DharmaKarmaSection({ data, rawData, areaOfInquiry }: { data: any; rawDa
             </div>
             <div className="px-4 py-3">
               <p className="text-sm leading-relaxed">{text}</p>
-              <button onClick={() => trigger(label, text, rawData ?? data, areaOfInquiry)} className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+              <div className="mt-2 flex justify-center">
+                <button onClick={() => trigger(label, text, rawData ?? data, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+              </div>
             </div>
           </div>
         ) : null
@@ -1480,7 +1496,9 @@ function LilithSection({ lilith, aiData, areaOfInquiry }: { lilith: any; aiData:
         {interp && (
           <div className="px-4 py-3 border-t">
             <p className="text-sm leading-relaxed">{interp}</p>
-            <button onClick={() => trigger("Lilith", interp, lilith, areaOfInquiry)} className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+            <div className="mt-2 flex justify-center">
+              <button onClick={() => trigger("Lilith", interp, lilith, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+            </div>
           </div>
         )}
         {!aiData && <div className="px-4 py-3 border-t"><div className="h-3 bg-muted rounded w-3/4 animate-pulse" /></div>}
@@ -1525,7 +1543,9 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry }: { natal
               </div>
               <p className="text-sm leading-relaxed">{interp ?? <span className="text-muted-foreground italic">Loading…</span>}</p>
               {interp && (
-                <button onClick={() => trigger(key, interp, { [key]: degree }, areaOfInquiry)} className="mt-1.5 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                <div className="mt-1.5 flex justify-center">
+                  <button onClick={() => trigger(key, interp, { [key]: degree }, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                </div>
               )}
             </div>
           );
@@ -1623,7 +1643,9 @@ function PlanetReturnInterpretation({ tab, aiData, areaOfInquiry }: { tab: strin
             <div key={k} className="px-4 py-3">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1.5">{k}</h4>
               <p className="text-sm leading-relaxed">{String(v)}</p>
-              <button onClick={() => trigger(k, String(v), interp, areaOfInquiry)} className="mt-1.5 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+              <div className="mt-1.5 flex justify-center">
+                <button onClick={() => trigger(k, String(v), interp, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+              </div>
             </div>
           ))
         ) : interp ? (
@@ -1656,7 +1678,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
   // aiData: only solar_return_details comes from AI Lambda now
   const detailsAi = aiData?.solar_return_details ?? null;
   // planet/aspects data come from AstrologyAPI results directly
-  const planetAi  = null; // not used anymore — see planetReport prop
+  const planetAi = null; // not used anymore — see planetReport prop
   const aspectsAi = null; // not used anymore — see aspectsReport prop
 
   function AiCards({ data, title }: { data: any; title: string }) {
@@ -1676,7 +1698,9 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
             </div>
             <div className="px-4 py-3">
               <p className="text-sm leading-relaxed">{item.interpretation ?? item.data ?? item.forecast}</p>
-              <button onClick={() => trigger(item.title ?? item.name ?? title, item.interpretation ?? item.data ?? "", item, areaOfInquiry)} className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+              <div className="mt-2 flex justify-center">
+                <button onClick={() => trigger(item.title ?? item.name ?? title, item.interpretation ?? item.data ?? "", item, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+              </div>
             </div>
           </div>
         ))}
@@ -1862,11 +1886,11 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
           <div className="space-y-2">
             <h3 className="text-sm font-semibold px-1">Solar Return Planet Aspects Interpretations</h3>
             {items.map((a: any, i: number) => {
-              const srPlanet  = a.solar_return_planet ?? a.aspecting_planet ?? "";
-              const nPlanet   = a.natal_planet ?? a.aspected_planet ?? "";
-              const aType     = a.type ?? "";
-              const header    = [srPlanet, aType, nPlanet].filter(Boolean).join(" ");
-              const forecast  = a.forecast ?? a.interpretation ?? "";
+              const srPlanet = a.solar_return_planet ?? a.aspecting_planet ?? "";
+              const nPlanet = a.natal_planet ?? a.aspected_planet ?? "";
+              const aType = a.type ?? "";
+              const header = [srPlanet, aType, nPlanet].filter(Boolean).join(" ");
+              const forecast = a.forecast ?? a.interpretation ?? "";
               return (
                 <div key={i} className="rounded-lg border overflow-hidden">
                   <div className="px-4 py-2 bg-muted/30 border-b flex items-center gap-2 flex-wrap">
@@ -2023,7 +2047,9 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
           </div>
           <div className="px-4 py-3">
             <p className="text-sm leading-relaxed">{item.interpretation ?? item.data}</p>
-            <button onClick={() => trigger(item.title ?? label, item.interpretation ?? "", item, areaOfInquiry)} className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+            <div className="mt-2 flex justify-center">
+              <button onClick={() => trigger(item.title ?? label, item.interpretation ?? "", item, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+            </div>
           </div>
         </div>
       ))}
@@ -2041,7 +2067,9 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                 </div>
                 <div className="px-4 py-3">
                   <p className="text-sm leading-relaxed">{item.interpretation ?? item.data ?? JSON.stringify(item)}</p>
-                  <button onClick={() => trigger(item.title ?? "Lunar Return", item.interpretation ?? "", item, areaOfInquiry)} className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                  <div className="mt-2 flex justify-center">
+                    <button onClick={() => trigger(item.title ?? "Lunar Return", item.interpretation ?? "", item, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -2083,7 +2111,9 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
         </div>
         <div className="px-4 py-3">
           <p className="text-sm leading-relaxed">{text}</p>
-          <button onClick={() => trigger(title, text, { title, data: text }, areaOfInquiry)} className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+          <div className="mt-2 flex justify-center">
+            <button onClick={() => trigger(title, text, { title, data: text }, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+          </div>
         </div>
       </div>
     );
@@ -2101,7 +2131,9 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
             <div key={k} className="px-4 py-3">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{k.replace(/_/g, " ")}</h4>
               <p className="text-sm leading-relaxed">{String(v)}</p>
-              <button onClick={() => trigger(k, String(v), obj, areaOfInquiry)} className="mt-1.5 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+              <div className="mt-1.5 flex justify-center">
+                <button onClick={() => trigger(k, String(v), obj, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+              </div>
             </div>
           ))}
         </div>
@@ -2141,7 +2173,9 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
               <div key={i} className="px-4 py-3">
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{s.timeline_title}</h4>
                 <p className="text-sm leading-relaxed">{s.timeline_data}</p>
-                <button onClick={() => trigger(s.timeline_title, s.timeline_data, s, areaOfInquiry)} className="mt-1.5 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                <div className="mt-1.5 flex justify-center">
+                  <button onClick={() => trigger(s.timeline_title, s.timeline_data, s, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                </div>
               </div>
             ))}
           </div>
@@ -2187,7 +2221,9 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
               <div key={i} className="px-4 py-3">
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{h.title}</h4>
                 <p className="text-sm leading-relaxed">{h.data}</p>
-                <button onClick={() => trigger(h.title, h.data, h, areaOfInquiry)} className="mt-1.5 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                <div className="mt-1.5 flex justify-center">
+                  <button onClick={() => trigger(h.title, h.data, h, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                </div>
               </div>
             ))}
           </div>
@@ -2208,7 +2244,9 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
                     <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600">{p.title}</h4>
                   </div>
                   <p className="text-sm leading-relaxed">{p.data}</p>
-                  <button onClick={() => trigger(p.title, p.data, p, areaOfInquiry)} className="mt-1.5 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                  <div className="mt-1.5 flex justify-center">
+                    <button onClick={() => trigger(p.title, p.data, p, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                  </div>
                 </div>
               );
             })}
@@ -2245,14 +2283,14 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
 // ─── Relationship Section — all 8 Angular AI sections ────────────────────────
 
 const RELATIONSHIP_AI_SECTIONS = [
-  { key: "synastry_horoscope",            label: "Synastry Horoscope" },
-  { key: "composite_horoscope",           label: "Composite Horoscope" },
-  { key: "davison_relationship",          label: "Davison Relationship" },
+  { key: "synastry_horoscope", label: "Synastry Horoscope" },
+  { key: "composite_horoscope", label: "Composite Horoscope" },
+  { key: "davison_relationship", label: "Davison Relationship" },
   { key: "major_aspects_and_connections", label: "Major Aspects & Connections" },
-  { key: "compatibility_score_or_summary",label: "Compatibility Score / Summary" },
-  { key: "elemental_balance",             label: "Elemental Balance" },
-  { key: "timing_and_transits",           label: "Timing & Transits" },
-  { key: "karmic_and_soulmate_indicators",label: "Karmic & Soulmate Indicators" },
+  { key: "compatibility_score_or_summary", label: "Compatibility Score / Summary" },
+  { key: "elemental_balance", label: "Elemental Balance" },
+  { key: "timing_and_transits", label: "Timing & Transits" },
+  { key: "karmic_and_soulmate_indicators", label: "Karmic & Soulmate Indicators" },
   // business only
   { key: "professional_alignment_and_goals", label: "Professional Alignment & Goals" },
 ];
@@ -2274,7 +2312,9 @@ function RelationshipSection({ aiMap, areaOfInquiry, tabSlug }: { aiMap: Record<
             <div key={i} className="px-4 py-3">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{item.title ?? item.name}</h4>
               <p className="text-sm leading-relaxed">{item.data ?? item.interpretation ?? item.description}</p>
-              <button onClick={() => trigger(item.title ?? title, item.data ?? item.interpretation ?? "", item, areaOfInquiry)} className="mt-1.5 text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+              <div className="mt-1.5 flex justify-center">
+                <button onClick={() => trigger(item.title ?? title, item.data ?? item.interpretation ?? "", item, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+              </div>
             </div>
           ))}
         </div>
@@ -2555,6 +2595,7 @@ export default function AdminHoroscopePage() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showChartBtn, setShowChartBtn] = useState(false);
   const [chartModal, setChartModal] = useState<string | null>(null);
+  const [decanPossibilities, setDecanPossibilities] = useState<any[]>([]);
 
   // Reset on tab change
   useEffect(() => {
@@ -2562,6 +2603,16 @@ export default function AdminHoroscopePage() {
     setReturnDate(null); setError(null); setProgress([]); setForm(defaultForm());
     setShowScrollTop(false); setShowChartBtn(false);
   }, [currentSlug]);
+
+  // Pre-fetch decan possibilities
+  useEffect(() => {
+    fetch("/api/admin/astro-decans")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setDecanPossibilities(data);
+      })
+      .catch(() => { });
+  }, []);
 
   // Scroll listener
   useEffect(() => {
@@ -2620,10 +2671,18 @@ export default function AdminHoroscopePage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const validationError = validateForm();
-    if (validationError) { setError(validationError); return; }
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
 
-    setLoading(true); setError(null); setResults(null); setNatalSvg(null);
-    setNatalSvgTransit(null); setReturnDate(null); setProgress([]);
+    setLoading(true);
+    setError(null);
+    setResults({}); // Initialize results so the section shows up immediately
+    setNatalSvg(null);
+    setNatalSvgTransit(null);
+    setReturnDate(null);
+    setProgress([]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const collected: Record<string, any> = {};
@@ -2633,186 +2692,421 @@ export default function AdminHoroscopePage() {
 
       // ── Single person ─────────────────────────────────────────────────────
       if (currentTab.type === "single") {
-        // Store birth1 fields and city so buildAiPrompts can interpolate into prompts
-        // (Angular uses formData.year, formData.month, etc. directly in prompt strings)
-        Object.assign(collected, birth1);
-        collected.city = form.person1?.city ?? "";
+        const initialData = { ...birth1, city: form.person1?.city ?? "" };
+        Object.assign(collected, initialData);
+        setResults({ ...initialData });
 
         addProgress("Calculating natal chart…");
-        const natalData = await callCompute("western_horoscope", birth1 as unknown as Record<string, unknown>);
+        const natalData = await callCompute(
+          "western_horoscope",
+          birth1 as unknown as Record<string, unknown>
+        );
         collected.natal_chart_data = natalData;
+        setResults((prev) => ({ ...prev, natal_chart_data: natalData }));
 
-        // Fetch both natal wheels in parallel — matching Angular's imgFetch + newNatalImagFetch
-        addProgress("Generating natal wheels…");
-        await Promise.allSettled([
-          // Wheel 1: AstrologyAPI natal_wheel_chart → chart_url (PNG)
+        addProgress("Parallel fetching wheels and data…");
+
+        // Use a task array for non-dependent parallel operations
+        const tasks: Promise<unknown>[] = [];
+
+        // Wheels
+        tasks.push(
           callCompute("natal_wheel_chart", birth1 as unknown as Record<string, unknown>)
-            .then((w) => { if (w?.chart_url) { setNatalSvg(w.chart_url); setShowChartBtn(true); } })
-            .catch(() => { /* non-fatal */ }),
-          // Wheel 2: FreeAstrologyAPI via NestJS → SVG/URL
-          callNatalWheel(freeWheelBody(form.person1) as unknown as Record<string, unknown>)
-            .then((freeResp) => { const svg = freeResp?.results?.output; if (svg) { setNatalSvgTransit(svg); setShowChartBtn(true); } })
-            .catch(() => { /* non-fatal */ }),
-        ]);
+            .then((w) => {
+              if (w?.chart_url) {
+                setNatalSvg(w.chart_url);
+                setShowChartBtn(true);
+              }
+            })
+            .catch(() => { })
+        );
+        tasks.push(
+          callNatalWheel(
+            freeWheelBody(form.person1) as unknown as Record<string, unknown>
+          )
+            .then((freeResp) => {
+              const svg = freeResp?.results?.output;
+              if (svg) {
+                setNatalSvgTransit(svg);
+                setShowChartBtn(true);
+              }
+            })
+            .catch(() => { })
+        );
 
         // Tab-specific data
         if (currentTab.slug === "solar_return_v2") {
-          addProgress("Fetching solar return data…");
-          const [det, pla, cup, asp, planRep, aspRep] = await Promise.allSettled([
-            callCompute("solar_return_details", birth1 as unknown as Record<string, unknown>),
-            callCompute("solar_return_planets", birth1 as unknown as Record<string, unknown>),
-            callCompute("solar_return_house_cusps", birth1 as unknown as Record<string, unknown>),
-            callCompute("solar_return_planet_aspects", birth1 as unknown as Record<string, unknown>),
-            // These come from AstrologyAPI (not AI Lambda) — ported from Angular solar-return-v2 getHttpHoroscopePost()
-            callCompute("solar_return_planet_report", birth1 as unknown as Record<string, unknown>),
-            callCompute("solar_return_aspects_report", birth1 as unknown as Record<string, unknown>),
-          ]);
-          collected.solar_return_details = det.status === "fulfilled" ? det.value : null;
-          collected.solar_return_planets = pla.status === "fulfilled" ? pla.value : null;
-          collected.solar_return_cusps = cup.status === "fulfilled" ? cup.value : null;
-          collected.solar_return_aspects = asp.status === "fulfilled" ? asp.value : null;
-          collected.solar_return_planet_report = planRep.status === "fulfilled" ? planRep.value : null;
-          collected.solar_return_aspects_report = aspRep.status === "fulfilled" ? aspRep.value : null;
+          const endpoints = [
+            { key: "solar_return_details", endpoint: "solar_return_details" },
+            { key: "solar_return_planets", endpoint: "solar_return_planets" },
+            { key: "solar_return_cusps", endpoint: "solar_return_house_cusps" },
+            { key: "solar_return_aspects", endpoint: "solar_return_planet_aspects" },
+            { key: "solar_return_planet_report", endpoint: "solar_return_planet_report" },
+            { key: "solar_return_aspects_report", endpoint: "solar_return_aspects_report" },
+          ];
+          tasks.push(
+            ...endpoints.map(async ({ key, endpoint }) => {
+              try {
+                const val = await callCompute(
+                  endpoint,
+                  birth1 as unknown as Record<string, unknown>
+                );
+                collected[key] = val;
+                setResults((prev) => ({ ...prev, [key]: val }));
+              } catch {
+                collected[key] = "error";
+                setResults((prev) => ({ ...prev, [key]: "error" }));
+              }
+            })
+          );
         }
 
         if (currentTab.slug === "tropical_transits_weekly_v2") {
-          addProgress("Fetching weekly transits…");
-          if (form.futureWeek) {
-            const wd = await callPlanetReturn({ steps: "astrology_report_weekly", birth_details: birth1, week_start_date: form.futureWeek });
-            collected.transit_data = wd?.astrology_report_weekly ?? wd;
-            collected.is_future_transit = true;
-            collected.future_transit_date = form.futureWeek; // "YYYY-MM-DD"
-          } else {
-            collected.transit_data = await callCompute("tropical_transits/weekly", birth1 as unknown as Record<string, unknown>);
-            collected.is_future_transit = false;
-          }
+          tasks.push(
+            (async () => {
+              if (form.futureWeek) {
+                const wd = await callPlanetReturn({
+                  steps: "astrology_report_weekly",
+                  birth_details: birth1,
+                  week_start_date: form.futureWeek,
+                });
+                const val = wd?.astrology_report_weekly ?? wd;
+                collected.transit_data = val;
+                collected.is_future_transit = true;
+                collected.future_transit_date = form.futureWeek;
+                setResults((prev) => ({
+                  ...prev,
+                  transit_data: val,
+                  is_future_transit: true,
+                  future_transit_date: form.futureWeek,
+                }));
+              } else {
+                const val = await callCompute(
+                  "tropical_transits/weekly",
+                  birth1 as unknown as Record<string, unknown>
+                );
+                collected.transit_data = val;
+                collected.is_future_transit = false;
+                setResults((prev) => ({
+                  ...prev,
+                  transit_data: val,
+                  is_future_transit: false,
+                }));
+              }
+            })()
+          );
         }
 
         if (currentTab.slug === "tropical_transits_monthly_v3") {
-          addProgress("Fetching monthly transits + lunar return…");
-          if (form.futureMonth) {
-            const [mYear, mMonth] = form.futureMonth.split("-").map(Number);
-            const md = await callPlanetReturn({ steps: "astrology_report_monthly", birth_details: birth1, target_year: mYear, target_month: mMonth });
-            collected.transit_data = md?.astrology_report_monthly ?? md;
-            collected.lunar_metrics = md?.astrology_report_monthly?.lunar_data ?? null;
-            collected.is_future_transit = true;
-            collected.future_transit_date = form.futureMonth; // "YYYY-MM"
-          } else {
-            const [mt, lu] = await Promise.allSettled([
-              callCompute("tropical_transits/monthly", birth1 as unknown as Record<string, unknown>),
-              callCompute("lunar_metrics", birth1 as unknown as Record<string, unknown>),
-            ]);
-            collected.transit_data = mt.status === "fulfilled" ? mt.value : null;
-            collected.lunar_metrics = lu.status === "fulfilled" ? lu.value : null;
-            collected.is_future_transit = false;
-          }
+          tasks.push(
+            (async () => {
+              if (form.futureMonth) {
+                const [mYear, mMonth] = form.futureMonth.split("-").map(Number);
+                const md = await callPlanetReturn({
+                  steps: "astrology_report_monthly",
+                  birth_details: birth1,
+                  target_year: mYear,
+                  target_month: mMonth,
+                });
+                const val = md?.astrology_report_monthly ?? md;
+                const lu = md?.astrology_report_monthly?.lunar_data ?? null;
+                collected.transit_data = val;
+                collected.lunar_metrics = lu;
+                collected.is_future_transit = true;
+                collected.future_transit_date = form.futureMonth;
+                setResults((prev) => ({
+                  ...prev,
+                  transit_data: val,
+                  lunar_metrics: lu,
+                  is_future_transit: true,
+                  future_transit_date: form.futureMonth,
+                }));
+              } else {
+                const [mt, lu] = await Promise.allSettled([
+                  callCompute(
+                    "tropical_transits/monthly",
+                    birth1 as unknown as Record<string, unknown>
+                  ),
+                  callCompute("lunar_metrics", birth1 as unknown as Record<string, unknown>),
+                ]);
+                const mtV = mt.status === "fulfilled" ? mt.value : null;
+                const luV = lu.status === "fulfilled" ? lu.value : null;
+                collected.transit_data = mtV;
+                collected.lunar_metrics = luV;
+                collected.is_future_transit = false;
+                setResults((prev) => ({
+                  ...prev,
+                  transit_data: mtV,
+                  lunar_metrics: luV,
+                  is_future_transit: false,
+                }));
+              }
+            })()
+          );
         }
 
         if (currentTab.slug === "horary_chart_v2") {
-          addProgress("Calculating horary chart…");
-          collected.horary_chart_data = await callCompute("horary_chart", { ...birth1, question: form.question } as unknown as Record<string, unknown>);
-          // Store question and city so buildAiPrompts can interpolate into horary prompt
-          collected.question = form.question;
-          collected.city = form.person1?.city ?? "";
+          tasks.push(
+            (async () => {
+              const val = await callCompute("horary_chart", {
+                ...birth1,
+                question: form.question,
+              } as unknown as Record<string, unknown>);
+              collected.horary_chart_data = val;
+              collected.question = form.question;
+              collected.city = form.person1?.city ?? "";
+              setResults((prev) => ({
+                ...prev,
+                horary_chart_data: val,
+                question: form.question,
+                city: form.person1?.city ?? "",
+              }));
+            })()
+          );
         }
 
-        // Planet return tabs
-        const planetReturnMap: Record<string, string> = { "jupiter_return_v2": "jupiter_return", "saturn_return_v2": "saturn_return", "mars_return_v2": "mars_return", "uranus_return_v2": "uranus_return" };
+        const planetReturnMap: Record<string, string> = {
+          jupiter_return_v2: "jupiter_return",
+          saturn_return_v2: "saturn_return",
+          mars_return_v2: "mars_return",
+          uranus_return_v2: "uranus_return",
+        };
         if (planetReturnMap[currentTab.slug]) {
-          const steps = planetReturnMap[currentTab.slug];
-          const planetName = steps.split("_")[0];
-          addProgress(`Calculating ${planetName} natal degree…`);
-          const natalDeg = getPlanetDegree(natalData?.planets, planetName.charAt(0).toUpperCase() + planetName.slice(1));
-          addProgress(`Calculating ${planetName} return date…`);
-          const bod = `${pad(birth1.year)}-${pad(birth1.month)}-${pad(birth1.day)} ${pad(birth1.hour)}:${pad(birth1.min)}:00`;
-          const returnData = await callPlanetReturn({ steps, date_of_birth_with_time: bod, natal_deg: natalDeg });
-          const rdVal = returnData?.[`${planetName}_return`];
-          if (rdVal) setReturnDate(rdVal);
-          collected.planet_return_data = returnData;
+          tasks.push(
+            (async () => {
+              const steps = planetReturnMap[currentTab.slug];
+              const planetName = steps.split("_")[0];
+              const planetCap = planetName.charAt(0).toUpperCase() + planetName.slice(1);
+              const nDeg = getPlanetDegree(natalData?.planets, planetCap);
+              const bod = `${pad(birth1.year)}-${pad(birth1.month)}-${pad(
+                birth1.day
+              )} ${pad(birth1.hour)}:${pad(birth1.min)}:00`;
+              const retData = await callPlanetReturn({
+                steps,
+                date_of_birth_with_time: bod,
+                natal_deg: nDeg,
+              });
+              const rdVal = retData?.[`${planetName}_return`];
+              if (rdVal) {
+                setReturnDate(rdVal);
+                collected.returnDate = rdVal;
+              }
+              collected.planet_return_data = retData;
+              setResults((prev) => ({ ...prev, planet_return_data: retData }));
 
-          // Saturn also needs solar return details
-          if (currentTab.slug === "saturn_return_v2") {
-            addProgress("Fetching solar return details for Saturn…");
-            try {
-              const [det, pla, cup, asp] = await Promise.allSettled([
-                callCompute("solar_return_details", birth1 as unknown as Record<string, unknown>),
-                callCompute("solar_return_planets", birth1 as unknown as Record<string, unknown>),
-                callCompute("solar_return_house_cusps", birth1 as unknown as Record<string, unknown>),
-                callCompute("solar_return_planet_aspects", birth1 as unknown as Record<string, unknown>),
-              ]);
-              collected.solar_return_details = det.status === "fulfilled" ? det.value : null;
-              collected.solar_return_planets = pla.status === "fulfilled" ? pla.value : null;
-              collected.solar_return_cusps = cup.status === "fulfilled" ? cup.value : null;
-              collected.solar_return_aspects = asp.status === "fulfilled" ? asp.value : null;
-            } catch { /* non-fatal */ }
-          }
+              if (currentTab.slug === "saturn_return_v2") {
+                const [det, pla, cup, asp] = await Promise.allSettled([
+                  callCompute(
+                    "solar_return_details",
+                    birth1 as unknown as Record<string, unknown>
+                  ),
+                  callCompute(
+                    "solar_return_planets",
+                    birth1 as unknown as Record<string, unknown>
+                  ),
+                  callCompute(
+                    "solar_return_house_cusps",
+                    birth1 as unknown as Record<string, unknown>
+                  ),
+                  callCompute(
+                    "solar_return_planet_aspects",
+                    birth1 as unknown as Record<string, unknown>
+                  ),
+                ]);
+                const detV = det.status === "fulfilled" ? det.value : null;
+                const plaV = pla.status === "fulfilled" ? pla.value : null;
+                const cupV = cup.status === "fulfilled" ? cup.value : null;
+                const aspV = asp.status === "fulfilled" ? asp.value : null;
+                collected.solar_return_details = detV;
+                collected.solar_return_planets = plaV;
+                collected.solar_return_cusps = cupV;
+                collected.solar_return_aspects = aspV;
+                setResults((prev) => ({
+                  ...prev,
+                  solar_return_details: detV,
+                  solar_return_planets: plaV,
+                  solar_return_cusps: cupV,
+                  solar_return_aspects: aspV,
+                }));
+              }
+            })()
+          );
         }
 
-        // AI interpretations
+        await Promise.allSettled(tasks);
+
+        // AI Interpretations — run in parallel and update state individually
         addProgress("Running AI interpretations…");
-        const combinedData = { ...natalData, ...collected, returnDate: returnDate ?? "calculated" };
+        const combinedData = {
+          ...natalData,
+          ...collected,
+          returnDate: collected.returnDate ?? returnDate ?? "calculated",
+        };
         const prompts = buildAiPrompts(combinedData, currentTab.slug);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const aiResults = await Promise.allSettled(prompts.map(async (p) => {
-          const aiPayload = { condition: { system_content: p.system, user_content: p.user }, toolname: "other", json: p.json };
-          const res = await callAI(aiPayload, form.areaOfInquiry || undefined);
-          let parsed = res.ai_response;
-          if (typeof parsed === "string") { try { parsed = JSON.parse(parsed); } catch { /* keep */ } }
-          return { key: p.key, value: parsed };
-        }));
-        const aiSection: Record<string, unknown> = {};
-        for (const r of aiResults) { if (r.status === "fulfilled") aiSection[r.value.key] = r.value.value; }
-        collected.ai_interpretations = aiSection;
+
+        const aiPromises = prompts.map(async (p) => {
+          try {
+            const aiPayload = {
+              condition: { system_content: p.system, user_content: p.user },
+              toolname: "other",
+              json: p.json,
+            };
+            const aiRes = await callAI(aiPayload, form.areaOfInquiry || undefined);
+            let parsed = aiRes.ai_response;
+            if (typeof parsed === "string") {
+              try {
+                parsed = JSON.parse(parsed);
+              } catch {
+                /* keep string */
+              }
+            }
+            setResults((prev) => {
+              const prevAi = prev?.ai_interpretations ?? {};
+              return {
+                ...prev!,
+                ai_interpretations: { ...prevAi, [p.key]: parsed },
+              };
+            });
+          } catch {
+            setResults((prev) => {
+              const prevAi = prev?.ai_interpretations ?? {};
+              return {
+                ...prev!,
+                ai_interpretations: { ...prevAi, [p.key]: "error" },
+              };
+            });
+          }
+        });
+        await Promise.allSettled(aiPromises);
       }
 
       // ── Two person ────────────────────────────────────────────────────────
       if (currentTab.type === "two-person") {
         const birth2 = parseBirth(form.person2);
+        const relBase = {
+          person1_birth: birth1,
+          person2_birth: birth2,
+          persona_city: form.person1?.city ?? "",
+          partner_city: form.person2?.city ?? "",
+        };
+        Object.assign(collected, relBase);
+        setResults({ ...relBase });
 
-        addProgress("Calculating synastry chart…");
-        const synastry = await callCompute("synastry_horoscope", { ...birth1, p_day: birth2.day, p_month: birth2.month, p_year: birth2.year, p_hour: birth2.hour, p_min: birth2.min, p_lat: birth2.lat, p_lon: birth2.lon, p_tzone: birth2.tzone } as unknown as Record<string, unknown>);
-        collected.synastry = synastry;
-        // Also get natal data for person1 for planets/houses rendering
-        addProgress("Calculating natal chart (self)…");
-        const natalData1 = await callCompute("western_horoscope", birth1 as unknown as Record<string, unknown>);
-        collected.natal_chart_data = natalData1;
+        addProgress("Fetching relationship charts…");
+        const relTasks: Promise<unknown>[] = [];
 
-        addProgress("Calculating composite horoscope…");
-        try {
-          const comp = await callCompute("composite_horoscope", { ...birth1, p_day: birth2.day, p_month: birth2.month, p_year: birth2.year, p_hour: birth2.hour, p_min: birth2.min, p_lat: birth2.lat, p_lon: birth2.lon, p_tzone: birth2.tzone } as unknown as Record<string, unknown>);
-          collected.composite = comp;
-        } catch { /* non-fatal */ }
+        // Natal data for Person 1
+        relTasks.push(
+          callCompute(
+            "western_horoscope",
+            birth1 as unknown as Record<string, unknown>
+          ).then((d) => {
+            collected.natal_chart_data = d;
+            setResults((prev) => ({ ...prev, natal_chart_data: d }));
+          })
+        );
 
-        addProgress("Generating natal wheels…");
-        await Promise.allSettled([
-          callNatalWheel(freeWheelBody(form.person1) as unknown as Record<string, unknown>).then((r) => { const svg = r?.results?.output; if (svg) { setNatalSvg(svg); setShowChartBtn(true); } }),
-          callNatalWheel(freeWheelBody(form.person2) as unknown as Record<string, unknown>).then((r) => { const svg = r?.results?.output; if (svg) setNatalSvgTransit(svg); }),
-        ]);
+        // Synastry
+        relTasks.push(
+          callCompute("synastry_horoscope", {
+            ...birth1,
+            p_day: birth2.day,
+            p_month: birth2.month,
+            p_year: birth2.year,
+            p_hour: birth2.hour,
+            p_min: birth2.min,
+            p_lat: birth2.lat,
+            p_lon: birth2.lon,
+            p_tzone: birth2.tzone,
+          } as unknown as Record<string, unknown>).then((d) => {
+            collected.synastry = d;
+            setResults((prev) => ({ ...prev, synastry: d }));
+          })
+        );
 
-        // Store birth data so buildAiPrompts can interpolate it into relationship prompts
-        // Matches Angular formData.s_* (self) and formData.p_* (partner) fields
-        collected.person1_birth = birth1;
-        collected.person2_birth = birth2;
-        collected.persona_city = form.person1?.city ?? "";
-        collected.partner_city = form.person2?.city ?? "";
+        // Composite
+        relTasks.push(
+          callCompute("composite_horoscope", {
+            ...birth1,
+            p_day: birth2.day,
+            p_month: birth2.month,
+            p_year: birth2.year,
+            p_hour: birth2.hour,
+            p_min: birth2.min,
+            p_lat: birth2.lat,
+            p_lon: birth2.lon,
+            p_tzone: birth2.tzone,
+          } as unknown as Record<string, unknown>)
+            .then((d) => {
+              collected.composite = d;
+              setResults((prev) => ({ ...prev, composite: d }));
+            })
+            .catch(() => { })
+        );
 
-        addProgress("Running AI interpretations…");
-        const combinedData = { ...synastry, ...collected };
+        // Wheels
+        relTasks.push(
+          callNatalWheel(
+            freeWheelBody(form.person1) as unknown as Record<string, unknown>
+          ).then((r) => {
+            const svg = r?.results?.output;
+            if (svg) {
+              setNatalSvg(svg);
+              setShowChartBtn(true);
+            }
+          })
+        );
+        relTasks.push(
+          callNatalWheel(
+            freeWheelBody(form.person2) as unknown as Record<string, unknown>
+          ).then((r) => {
+            const svg = r?.results?.output;
+            if (svg) setNatalSvgTransit(svg);
+          })
+        );
+
+        await Promise.allSettled(relTasks);
+
+        // AI Interpretations
+        addProgress("Running relationship AI…");
+        const combinedData = { ...(collected.synastry ?? {}), ...collected };
         const prompts = buildAiPrompts(combinedData, currentTab.slug);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const aiResults = await Promise.allSettled(prompts.map(async (p) => {
-          const aiPayload = { condition: { system_content: p.system, user_content: p.user }, toolname: "other", json: p.json };
-          const res = await callAI(aiPayload, form.areaOfInquiry || undefined);
-          let parsed = res.ai_response;
-          if (typeof parsed === "string") { try { parsed = JSON.parse(parsed); } catch { /* keep */ } }
-          return { key: p.key, value: parsed };
-        }));
-        const aiSection: Record<string, unknown> = {};
-        for (const r of aiResults) { if (r.status === "fulfilled") aiSection[r.value.key] = r.value.value; }
-        collected.ai_interpretations = aiSection;
+        const aiPromises = prompts.map(async (p) => {
+          try {
+            const aiPayload = {
+              condition: { system_content: p.system, user_content: p.user },
+              toolname: "other",
+              json: p.json,
+            };
+            const aiRes = await callAI(aiPayload, form.areaOfInquiry || undefined);
+            let parsed = aiRes.ai_response;
+            if (typeof parsed === "string") {
+              try {
+                parsed = JSON.parse(parsed);
+              } catch {
+                /* keep */
+              }
+            }
+            setResults((prev) => {
+              const prevAi = prev?.ai_interpretations ?? {};
+              return {
+                ...prev!,
+                ai_interpretations: { ...prevAi, [p.key]: parsed },
+              };
+            });
+          } catch {
+            setResults((prev) => {
+              const prevAi = prev?.ai_interpretations ?? {};
+              return {
+                ...prev!,
+                ai_interpretations: { ...prevAi, [p.key]: "error" },
+              };
+            });
+          }
+        });
+        await Promise.allSettled(aiPromises);
       }
 
-      setResults(collected);
       addProgress("Done ✓");
       setShowScrollTop(true);
     } catch (err: unknown) {
@@ -2978,7 +3272,7 @@ export default function AdminHoroscopePage() {
               {/* ─── Natal chart sections (all single tabs + planet return tabs) ─ */}
               {natalData && (
                 <div className="space-y-6">
-                  <PlanetsSection planets={natalData.planets} aiData={ai.western_horoscope_planets} areaOfInquiry={form.areaOfInquiry} />
+                  <PlanetsSection planets={natalData.planets} aiData={ai.western_horoscope_planets} areaOfInquiry={form.areaOfInquiry} decanPossibilities={decanPossibilities} />
                   <div className="rounded-lg border overflow-hidden">
                     <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">House Information</h2></div>
                     <div className="p-4">
