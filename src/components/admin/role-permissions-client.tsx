@@ -1,10 +1,33 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -13,7 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Shield, Loader2, Info } from "lucide-react";
+import { Shield, Loader2, Info, Copy, Trash2, Users } from "lucide-react";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -47,8 +70,14 @@ export function RolePermissionsClient({
   allPermissions,
   grantedCodes: initialGrantedCodes,
 }: RolePermissionsClientProps) {
+  const router = useRouter();
   const [checked, setChecked] = useState<Set<string>>(new Set(initialGrantedCodes));
   const [saving, setSaving] = useState(false);
+  const [cloneOpen, setCloneOpen] = useState(false);
+  const [cloneName, setCloneName] = useState("");
+  const [cloneCode, setCloneCode] = useState("");
+  const [cloning, setCloning] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Group permissions by module
   const byModule = useMemo(() => {
@@ -94,7 +123,8 @@ export function RolePermissionsClient({
       const res = await fetch(`/api/admin/roles/${role.id}/permissions`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ codes: [...checked] }),
+        // API expects "permissionCodes" — not "codes"
+        body: JSON.stringify({ permissionCodes: [...checked] }),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
@@ -105,6 +135,54 @@ export function RolePermissionsClient({
       toast.error(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleClone() {
+    if (!cloneName.trim() || !cloneCode.trim()) return;
+    setCloning(true);
+    try {
+      const res = await fetch(`/api/admin/roles/${role.id}/clone`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: cloneName.trim(), code: cloneCode.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          (data as { detail?: string; error?: string }).detail ??
+            (data as { error?: string }).error ??
+            "Failed to clone role"
+        );
+      }
+      toast.success("Role cloned successfully");
+      setCloneOpen(false);
+      setCloneName("");
+      setCloneCode("");
+      router.push(`/admin/roles/${(data as { id: string }).id}`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to clone role");
+    } finally {
+      setCloning(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/roles/${role.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error((d as { error?: string }).error ?? "Failed to delete role");
+      }
+      toast.success("Role deleted");
+      router.push("/admin/roles");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete role");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -125,7 +203,7 @@ export function RolePermissionsClient({
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {role.status && (
                 <Badge
                   variant="outline"
@@ -145,6 +223,79 @@ export function RolePermissionsClient({
               )}
               {role.user_count !== undefined && (
                 <Badge variant="secondary">{role.user_count} users</Badge>
+              )}
+
+              {/* View Users link */}
+              <Button size="sm" variant="outline" asChild>
+                <Link href={`/admin/users?role=${role.slug}`}>
+                  <Users className="mr-1.5 size-3.5" />
+                  View Users
+                </Link>
+              </Button>
+
+              {/* Clone button */}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setCloneName(`${role.name} (Copy)`);
+                  setCloneCode(`${role.slug}_copy`);
+                  setCloneOpen(true);
+                }}
+              >
+                <Copy className="mr-1.5 size-3.5" />
+                Clone Role
+              </Button>
+
+              {/* Delete button — disabled for system roles */}
+              {isSystem ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled
+                  title="System roles cannot be deleted"
+                  className="text-muted-foreground"
+                >
+                  <Trash2 className="mr-1.5 size-3.5" />
+                  Delete
+                </Button>
+              ) : (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                      disabled={deleting}
+                    >
+                      {deleting ? (
+                        <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="mr-1.5 size-3.5" />
+                      )}
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete role &quot;{role.name}&quot;?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {(role.user_count ?? 0) > 0
+                          ? `This role has ${role.user_count} users assigned. Deleting it will remove the role assignment. This action cannot be undone.`
+                          : "This action cannot be undone."}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-red-600 hover:bg-red-700"
+                        onClick={handleDelete}
+                      >
+                        Delete Role
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
           </div>
@@ -275,6 +426,59 @@ export function RolePermissionsClient({
           </Button>
         </div>
       )}
+
+      {/* ── Clone dialog ─────────────────────────────────────────────────── */}
+      <Dialog open={cloneOpen} onOpenChange={setCloneOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clone Role</DialogTitle>
+            <DialogDescription>
+              Create a new role with all the same permissions as &quot;{role.name}&quot;.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="clone-name">New Role Name</Label>
+              <Input
+                id="clone-name"
+                value={cloneName}
+                onChange={(e) => setCloneName(e.target.value)}
+                placeholder="e.g. Senior Diviner"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="clone-code">Role Code (slug)</Label>
+              <Input
+                id="clone-code"
+                value={cloneCode}
+                onChange={(e) =>
+                  setCloneCode(e.target.value.toLowerCase().replace(/\s+/g, "_"))
+                }
+                placeholder="e.g. senior_diviner"
+              />
+              <p className="text-xs text-muted-foreground">
+                Lowercase, underscores only. Must be unique.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCloneOpen(false)} disabled={cloning}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleClone}
+              disabled={cloning || !cloneName.trim() || !cloneCode.trim()}
+            >
+              {cloning ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <Copy className="mr-2 size-4" />
+              )}
+              Clone Role
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -58,6 +58,8 @@ import {
   ScrollText,
   ListChecks,
   MessageSquare,
+  MousePointerClick,
+  UserCog,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -83,7 +85,9 @@ const NAV_GROUPS = [
   {
     label: "Content",
     items: [
-      { label: "Blog Posts", href: "/admin/blog", icon: FileText },
+      { label: "Blog Posts", href: "/admin/blog", icon: FileText, exact: true },
+      { label: "Blog Analytics", href: "/admin/blog/analytics", icon: BarChart2 },
+      { label: "Blog CTA Blocks", href: "/admin/blog/cta-blocks", icon: MousePointerClick },
       { label: "Blog Categories", href: "/admin/blog/categories", icon: Layers },
       { label: "Blog Authors", href: "/admin/blog/authors", icon: Users },
       { label: "Blog Series", href: "/admin/blog/series", icon: BookOpen },
@@ -125,6 +129,14 @@ const NAV_GROUPS = [
     items: [
       { label: "Live Sessions", href: "/admin/live-sessions", icon: Radio },
       { label: "Check-ins", href: "/admin/check-ins", icon: ClipboardList },
+    ],
+  },
+  {
+    label: "My Schedule",
+    items: [
+      { label: "My Schedule", href: "/admin/my-schedule", icon: UserCog },
+      { label: "Bookings", href: "/admin/bookings", icon: CalendarDays },
+      { label: "My Availability", href: "/admin/availability", icon: ClipboardList },
     ],
   },
   {

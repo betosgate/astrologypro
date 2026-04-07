@@ -22,6 +22,7 @@ import {
   Printer,
   Video,
   CalendarRange,
+  CalendarPlus,
   XCircle,
   Loader2,
   CheckCircle2,
@@ -310,6 +311,17 @@ export function BookingManageClient({ booking, bookingToken }: BookingManageClie
                 Reschedule
               </Link>
             )}
+
+            {/* Add to Calendar */}
+            <a
+              href={`/api/bookings/${booking.id}/ics?token=${booking.booking_token}`}
+              download={`booking-${booking.id}.ics`}
+              className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl border border-purple-500/30 hover:bg-purple-500/10 text-purple-300 hover:text-purple-200 text-sm font-semibold transition-colors"
+              aria-label="Download ICS file to add this booking to your calendar"
+            >
+              <CalendarPlus className="size-4" />
+              Add to Calendar
+            </a>
 
             {/* Cancel */}
             <AlertDialog>

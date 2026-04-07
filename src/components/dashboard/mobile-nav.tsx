@@ -15,6 +15,9 @@ import {
   Radio,
   Users2,
   Megaphone,
+  LayoutGrid,
+  UserCheck,
+  Gift,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -33,12 +36,15 @@ const primaryNavItems = [
 ];
 
 const moreNavItems = [
+  { label: "Schedule", href: "/dashboard/schedule", icon: LayoutGrid },
   { label: "Profile", href: "/dashboard/profile", icon: User },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
   { label: "Testimonials", href: "/dashboard/testimonials", icon: MessageSquare },
   { label: "Affiliates", href: "/dashboard/affiliates", icon: Users2 },
   { label: "Marketing", href: "/dashboard/marketing", icon: Megaphone },
   { label: "Live", href: "/dashboard/live", icon: Radio },
+  { label: "Check-Ins", href: "/dashboard/check-ins", icon: UserCheck },
+  { label: "Giveaways", href: "/dashboard/giveaways", icon: Gift },
 ];
 
 export function MobileNav() {

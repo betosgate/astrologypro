@@ -1,8 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { CalendarView } from "@/components/dashboard/calendar-view";
 import { BookingLinkBanner } from "@/components/dashboard/booking-link-banner";
+import { Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const metadata = {
   title: "Calendar - Dashboard",
@@ -19,7 +22,7 @@ export default async function CalendarPage() {
 
   const { data: diviner } = await admin
     .from("diviners")
-    .select("id, username")
+    .select("id, username, google_calendar_connected, outlook_calendar_connected")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -67,14 +70,41 @@ export default async function CalendarPage() {
       .order("scheduled_at", { ascending: true }),
   ]);
 
+  const hasExternalCalendar =
+    diviner.google_calendar_connected || diviner.outlook_calendar_connected;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Calendar</h1>
-        <p className="text-muted-foreground">
-          Manage your availability, bookings, and time off.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Availability</h1>
+          <p className="text-muted-foreground">
+            Set your weekly schedule, block days off, and add special hours.
+          </p>
+        </div>
+        <Link href="/dashboard/availability">
+          <Button variant="outline" size="sm">
+            Manage Weekly Schedule
+          </Button>
+        </Link>
       </div>
+
+      {/* No-calendar info banner — shown when neither Google nor Outlook is connected */}
+      {!hasExternalCalendar && (
+        <div className="flex items-start gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3 text-sm text-blue-400">
+          <Info className="mt-0.5 size-4 shrink-0" />
+          <span>
+            Your schedule is managed entirely within AstrologyPro — no external
+            calendar required.{" "}
+            <Link
+              href="/dashboard/calendar-connections"
+              className="underline underline-offset-2 hover:text-blue-300"
+            >
+              Optional: sync with Google or Outlook Calendar
+            </Link>
+          </span>
+        </div>
+      )}
 
       {diviner.username && (
         <BookingLinkBanner

@@ -41,10 +41,10 @@ export async function GET(
     const supabase = await createClient();
     const admin = createAdminClient();
 
-    // Fetch diviner timezone
+    // Fetch diviner timezone and calendar connection flags
     const { data: diviner } = await supabase
       .from("diviners")
-      .select("timezone")
+      .select("timezone, google_calendar_connected, outlook_calendar_connected")
       .eq("id", divinerId)
       .single();
 
@@ -90,12 +90,23 @@ export async function GET(
       .gte("scheduled_at", dayStart)
       .lte("scheduled_at", dayEnd);
 
-    // Fetch external calendar busy slots in parallel (Google + Outlook)
-    const [googleBusy, outlookBusy] = await Promise.all([
-      getAvailableSlotsFromGoogle(divinerId, new Date(date)).catch(() => []),
-      getMsFreeBusy(divinerId, date).catch(() => []),
-    ]);
-    const externalBusy = [...googleBusy, ...outlookBusy];
+    // Fetch external calendar busy slots only when the diviner has connected
+    // Each call is individually guarded and caught so a missing token never
+    // blocks the internal availability calculation.
+    let externalBusy: { start: string; end: string }[] = [];
+    try {
+      const [googleBusy, outlookBusy] = await Promise.all([
+        diviner.google_calendar_connected
+          ? getAvailableSlotsFromGoogle(divinerId, new Date(date)).catch(() => [] as { start: string; end: string }[])
+          : Promise.resolve([] as { start: string; end: string }[]),
+        diviner.outlook_calendar_connected
+          ? getMsFreeBusy(divinerId, date).catch(() => [] as { start: string; end: string }[])
+          : Promise.resolve([] as { start: string; end: string }[]),
+      ]);
+      externalBusy = [...googleBusy, ...outlookBusy];
+    } catch {
+      // External calendar unavailable — proceed with internal data only
+    }
 
     const allBlockedSlots = [
       ...(bookings ?? []).map((b) => ({

@@ -3,6 +3,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   UserDetailClient,
   type UserDetailData,
+  type BusinessData,
+  type AffiliateBusinessData,
+  type DivinerBusinessData,
+  type DivinerAffiliate,
 } from "@/components/admin/user-detail-client";
 
 export const metadata = { title: "User Detail — Admin" };
@@ -97,6 +101,29 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
       .order("created_at", { ascending: false })
       .limit(50)
   ).catch(() => ({ data: [] as unknown[] }));
+
+  // Sessions & account lock — may not exist before migration; swallow errors
+  const [sessionsRes, accountLockRes] = await Promise.all([
+    Promise.resolve(
+      admin
+        .from("user_sessions")
+        .select(
+          "id, session_ref, device_type, browser, os, ip_address, country_code, " +
+          "last_seen_at, created_at, revoked_at, is_current"
+        )
+        .eq("user_id", userId)
+        .order("last_seen_at", { ascending: false })
+        .limit(20)
+    ).catch(() => ({ data: [] as unknown[] })),
+
+    Promise.resolve(
+      admin
+        .from("user_account_locks")
+        .select("id, locked_at, locked_reason, locked_by, unlocked_at, unlocked_by")
+        .eq("user_id", userId)
+        .maybeSingle()
+    ).catch(() => ({ data: null as unknown })),
+  ]);
 
   // Optional tables — may not exist; swallow errors using Promise.resolve wrapper
   const [securityEventsRes, relationshipsRes] = await Promise.all([
@@ -217,6 +244,20 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
 
   } else {
     notFound();
+  }
+
+  // ── Login attempts — fetch now that email is resolved ────────────────────
+  let loginAttemptsData: unknown[] = [];
+  if (email) {
+    const attRes = await Promise.resolve(
+      admin
+        .from("user_login_attempts")
+        .select("id, email, ip_address, attempted_at, success")
+        .eq("email", email)
+        .order("attempted_at", { ascending: false })
+        .limit(10)
+    ).catch(() => ({ data: [] as unknown[] }));
+    loginAttemptsData = (attRes.data as unknown[]) ?? [];
   }
 
   // ── Last login ────────────────────────────────────────────────────────────
@@ -342,7 +383,132 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
       created_at:     a.created_at as string,
     })),
     commPrefs: null,
+    businessData: await fetchBusinessData(admin, userId, role),
+    sessions: safeTable((sessionsRes as { data?: unknown }).data).map((s) => ({
+      id:           s.id as string,
+      session_ref:  s.session_ref as string | undefined,
+      device_type:  s.device_type as string | undefined,
+      browser:      s.browser as string | undefined,
+      os:           s.os as string | undefined,
+      ip_address:   s.ip_address as string | undefined,
+      country_code: s.country_code as string | undefined,
+      last_seen_at: s.last_seen_at as string,
+      created_at:   s.created_at as string,
+      revoked_at:   s.revoked_at as string | undefined,
+      is_current:   !!(s.is_current as boolean),
+    })),
+    accountLock: (() => {
+      const lock = (accountLockRes as { data?: unknown }).data as Record<string, unknown> | null;
+      if (!lock || lock.unlocked_at) return null;
+      return {
+        locked_at:     lock.locked_at as string,
+        locked_reason: lock.locked_reason as string | undefined,
+        locked_by:     lock.locked_by as string | undefined,
+      };
+    })(),
+    loginAttempts: safeTable(loginAttemptsData).map((a) => ({
+      id:           a.id as string,
+      email:        a.email as string,
+      ip_address:   a.ip_address as string | undefined,
+      attempted_at: a.attempted_at as string,
+      success:      !!(a.success as boolean),
+    })),
   };
+}
+
+// ─── Business data fetch ──────────────────────────────────────────────────────
+
+async function fetchBusinessData(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  role: string
+): Promise<BusinessData> {
+  if (role === "advocate") {
+    // Advocate = an entry in diviner_affiliates where user_id = userId
+    const { data: affRow } = await admin
+      .from("diviner_affiliates")
+      .select(
+        "id, diviner_id, status, default_commission_type, default_commission_value, created_at"
+      )
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!affRow) return null;
+
+    const affRec = affRow as Record<string, unknown>;
+
+    // Resolve parent diviner name
+    let parentDivinerName = affRec.diviner_id as string;
+    const { data: divinerRow } = await admin
+      .from("diviners")
+      .select("display_name")
+      .eq("user_id", affRec.diviner_id as string)
+      .maybeSingle();
+    if (divinerRow) {
+      parentDivinerName =
+        (divinerRow as Record<string, unknown>).display_name as string ?? parentDivinerName;
+    }
+
+    const affiliateData: AffiliateBusinessData = {
+      affiliate_row_id:   affRec.id as string,
+      parent_diviner_id:  affRec.diviner_id as string,
+      parent_diviner_name: parentDivinerName,
+      commission_type:    affRec.default_commission_type as string | undefined,
+      commission_value:   affRec.default_commission_value as number | undefined,
+      status:             affRec.status as string,
+      created_at:         affRec.created_at as string,
+    };
+
+    return { kind: "affiliate", data: affiliateData };
+  }
+
+  if (role === "diviner") {
+    const startOfMonth = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      1
+    ).toISOString();
+
+    // Fetch affiliates + service count + bookings this month in parallel
+    const [affiliatesRes, serviceCountRes, bookingsRes] = await Promise.all([
+      admin
+        .from("diviner_affiliates")
+        .select("id, name, email, status, created_at", { count: "exact" })
+        .eq("diviner_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(10),
+
+      admin
+        .from("diviner_services")
+        .select("id", { count: "exact", head: true })
+        .eq("diviner_id", userId),
+
+      admin
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("diviner_id", userId)
+        .gte("created_at", startOfMonth),
+    ]);
+
+    const affiliates: DivinerAffiliate[] = safeTable(affiliatesRes.data).map((a) => ({
+      id:         a.id as string,
+      name:       a.name as string,
+      email:      a.email as string | undefined,
+      status:     a.status as string,
+      created_at: a.created_at as string,
+    }));
+
+    const divinerData: DivinerBusinessData = {
+      service_count:        serviceCountRes.count ?? 0,
+      bookings_this_month:  bookingsRes.count ?? 0,
+      affiliates,
+      total_affiliates:     affiliatesRes.count ?? affiliates.length,
+    };
+
+    return { kind: "diviner", data: divinerData };
+  }
+
+  return null;
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
