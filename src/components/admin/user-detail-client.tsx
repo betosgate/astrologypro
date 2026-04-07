@@ -54,6 +54,8 @@ import {
   Tablet,
   CheckCircle2,
   XCircle,
+  Briefcase,
+  ExternalLink,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -81,6 +83,7 @@ export interface AffiliateBusinessData {
   affiliate_row_id: string;
   parent_diviner_id: string;
   parent_diviner_name: string;
+  referral_code?: string;
   commission_type?: string;
   commission_value?: number;
   status: string;
@@ -357,7 +360,9 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
         body: JSON.stringify({ note: noteText.trim() }),
       });
       if (!res.ok) throw new Error("Failed to save note");
-      const saved = await res.json();
+      const payload = await res.json();
+      // API returns { note: {...} } — unwrap the note object
+      const saved = (payload as { note?: AdminNote }).note ?? (payload as AdminNote);
       setNotes((prev) => [saved, ...prev]);
       setNoteText("");
       toast.success("Note saved");
@@ -617,6 +622,12 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
           <TabsTrigger value="notes">
             Notes {notes.length > 0 && `(${notes.length})`}
           </TabsTrigger>
+          {(user.role === "affiliate" || user.role === "advocate" || user.role === "diviner") && (
+            <TabsTrigger value="business">
+              <Briefcase className="mr-1.5 size-3.5" />
+              Business
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* ── Tab 1: Overview ──────────────────────────────────────────────── */}
@@ -1389,6 +1400,162 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* ── Tab 8: Business (affiliates / diviners) ──────────────────────── */}
+        {(user.role === "affiliate" || user.role === "advocate" || user.role === "diviner") && (
+          <TabsContent value="business" className="space-y-4">
+            {!user.businessData ? (
+              <Card>
+                <CardContent className="py-16 text-center">
+                  <Briefcase className="mx-auto size-8 text-muted-foreground/30 mb-3" />
+                  <p className="text-sm text-muted-foreground">No business data available.</p>
+                </CardContent>
+              </Card>
+            ) : user.businessData.kind === "affiliate" ? (
+              /* ── Affiliate view ── */
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Briefcase className="size-4" />
+                    Affiliate Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <dt className="text-xs text-muted-foreground uppercase tracking-wide">Parent Diviner</dt>
+                      <dd className="mt-0.5 text-sm font-medium flex items-center gap-1.5">
+                        <Link
+                          href={`/admin/users/${user.businessData.data.parent_diviner_id}`}
+                          className="hover:underline text-primary"
+                        >
+                          {user.businessData.data.parent_diviner_name || user.businessData.data.parent_diviner_id}
+                        </Link>
+                        <Link href={`/admin/users/${user.businessData.data.parent_diviner_id}`}>
+                          <ExternalLink className="size-3 text-muted-foreground" />
+                        </Link>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground uppercase tracking-wide">Referral Code</dt>
+                      <dd className="mt-0.5 text-sm font-medium">
+                        {user.businessData.data.referral_code ? (
+                          <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
+                            {user.businessData.data.referral_code}
+                          </code>
+                        ) : "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground uppercase tracking-wide">Commission</dt>
+                      <dd className="mt-0.5 text-sm font-medium">
+                        {user.businessData.data.commission_type && user.businessData.data.commission_value != null
+                          ? `${user.businessData.data.commission_value}${user.businessData.data.commission_type === "percentage" ? "%" : " flat"}`
+                          : "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground uppercase tracking-wide">Affiliate Status</dt>
+                      <dd className="mt-0.5">
+                        <StatusBadge status={user.businessData.data.status} />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground uppercase tracking-wide">Joined as Affiliate</dt>
+                      <dd className="mt-0.5 text-sm font-medium">{fmtDate(user.businessData.data.created_at)}</dd>
+                    </div>
+                  </dl>
+                  <div className="pt-2 border-t">
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href={`/admin/affiliates/${user.businessData.data.affiliate_row_id}`}>
+                        <ExternalLink className="mr-1.5 size-3.5" />
+                        Full Affiliate Management
+                      </Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              /* ── Diviner view ── */
+              <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Services</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-2xl font-bold">{user.businessData.data.service_count}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Bookings (this month)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-2xl font-bold">{user.businessData.data.bookings_this_month}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Total Affiliates</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-2xl font-bold">{user.businessData.data.total_affiliates}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Link2 className="size-4" />
+                      Affiliates (top 10)
+                    </CardTitle>
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href={`/admin/affiliates?diviner=${user.userId}`}>
+                        <ExternalLink className="mr-1.5 size-3.5" />
+                        View All
+                      </Link>
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    {user.businessData.data.affiliates.length === 0 ? (
+                      <p className="py-6 text-center text-sm text-muted-foreground">No affiliates yet.</p>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Joined</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {user.businessData.data.affiliates.map((aff) => (
+                            <TableRow key={aff.id}>
+                              <TableCell>
+                                <div>
+                                  <p className="text-sm font-medium">{aff.name}</p>
+                                  {aff.email && (
+                                    <p className="text-xs text-muted-foreground">{aff.email}</p>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <StatusBadge status={aff.status} />
+                              </TableCell>
+                              <TableCell className="text-xs">{fmtDate(aff.created_at)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
