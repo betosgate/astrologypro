@@ -1300,7 +1300,7 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: 
             <thead>
               <tr className="border-b bg-muted/20">
                 {["Planet", "Sign", "Full Degree", "House", "Norm Degree", "Speed", "Retro?"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -1324,7 +1324,7 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: 
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap"><ZodiacSymbol sign={p.sign} /></td>
                   <td className="px-3 py-2 font-mono text-xs">{Number(p.full_degree).toFixed(2)}°</td>
-                  <td className="px-3 py-2 text-center">{p.house}</td>
+                  <td className="px-3 py-2">{p.house}</td>
                   <td className="px-3 py-2 font-mono text-xs">{Number(p.norm_degree).toFixed(2)}°</td>
                   <td className="px-3 py-2 font-mono text-xs">{Number(p.speed).toFixed(4)}</td>
                   <td className="px-3 py-2">
@@ -1653,7 +1653,7 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
             <thead>
               <tr className="border-b bg-muted/20">
                 {["Aspected Planet", "Aspecting Planet", "Orb", "Type", "Diff", "Aspected °", "Aspecting °"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -1773,7 +1773,7 @@ function LilithSection({ lilith, aiData, areaOfInquiry }: { lilith: any; aiData:
             <thead>
               <tr className="border-b bg-muted/20">
                 {["Planet", "Sign", "Full Degree", "House", "Norm Degree", "Speed", "Retro?"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -1782,7 +1782,7 @@ function LilithSection({ lilith, aiData, areaOfInquiry }: { lilith: any; aiData:
                 <td className="px-3 py-2 font-medium"><PlanetSymbol name={lilith.name ?? "Lilith"} /></td>
                 <td className="px-3 py-2"><ZodiacSymbol sign={lilith.sign} /></td>
                 <td className="px-3 py-2 font-mono text-xs">{Number(lilith.full_degree).toFixed(2)}°</td>
-                <td className="px-3 py-2 text-center">{lilith.house}</td>
+                <td className="px-3 py-2">{lilith.house}</td>
                 <td className="px-3 py-2 font-mono text-xs">{Number(lilith.norm_degree).toFixed(2)}°</td>
                 <td className="px-3 py-2 font-mono text-xs">{Number(lilith.speed).toFixed(4)}</td>
                 <td className="px-3 py-2"><Badge variant={lilith.is_retro === "true" ? "destructive" : "outline"} className="text-[10px]">{lilith.is_retro === "true" ? "R" : "—"}</Badge></td>
@@ -2150,7 +2150,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
             <table className="w-full text-sm">
               <thead><tr className="border-b bg-muted/20">
                 {["SR Planet", "Natal Planet", "Type", "Orb"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr></thead>
               <tbody>
@@ -2271,7 +2271,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
               <thead>
                 <tr className="border-b bg-muted/20">
                   {["Transit Planet", "Aspect", "Natal Planet", "Orb", "Date"].map((h) => (
-                    <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
