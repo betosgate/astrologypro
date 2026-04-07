@@ -140,7 +140,7 @@ export async function processGraduation(
       (meta.name as string) ??
       authUser.email.split("@")[0];
 
-    const graduationUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/community/training/graduation`;
+    const graduationUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/mystery-school/training/graduation`;
 
     // Fire-and-forget — graduation email should not block the cron
     sendGraduationCongratulations({

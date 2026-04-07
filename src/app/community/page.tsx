@@ -854,7 +854,7 @@ export default async function CommunityDashboardPage() {
         </section>
       )}
 
-      {/* Mystery School nav for existing MS members */}
+      {/* Mystery School nav for existing MS members — redirect to dedicated portal */}
       {isMysterySchool && (
         <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-violet-500/10">
           <CardContent className="space-y-3 py-6">
@@ -862,13 +862,13 @@ export default async function CommunityDashboardPage() {
               <GraduationCap className="size-5 text-primary" />
             </div>
             <div>
-              <p className="font-semibold text-base">Continue Your Studies</p>
+              <p className="font-semibold text-base">Go to Mystery School</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Access your Mystery School curriculum, decan work, and live training sessions.
+                Your dedicated Mystery School portal has your decan calendar, training, and curriculum.
               </p>
             </div>
             <Button asChild size="sm">
-              <Link href="/community/training">Go to Training →</Link>
+              <Link href="/mystery-school">Open Mystery School →</Link>
             </Button>
           </CardContent>
         </Card>
