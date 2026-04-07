@@ -407,6 +407,12 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
   const [auditHasMore, setAuditHasMore] = useState(true);
   const [auditLoaded, setAuditLoaded] = useState(false);
 
+  // Community member deactivation
+  const [deactivating, setDeactivating] = useState(false);
+  const [communityStatus, setCommunityStatus] = useState<string | null>(
+    user.profileFields?.membership_status ?? null
+  );
+
   const displayStatus = user.accountStatus ?? (user.isActive ? "active" : "inactive");
 
   // ── Check impersonation state ──────────────────────────────────────────────
@@ -493,6 +499,31 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
       toast.error("Action failed");
     } finally {
       setSuspending(false);
+    }
+  }
+
+  // ── Deactivate community member ───────────────────────────────────────────
+  async function handleDeactivateCommunityMember() {
+    if (!user.rowId) return;
+    setDeactivating(true);
+    try {
+      const res = await fetch(
+        `/api/admin/community/members/${user.rowId}/deactivate`,
+        { method: "POST" }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          (data as { error?: string }).error ?? "Failed to deactivate member"
+        );
+      }
+      setCommunityStatus("deactivated");
+      toast.success("Community membership deactivated");
+      router.refresh();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Deactivation failed");
+    } finally {
+      setDeactivating(false);
     }
   }
 
@@ -1121,6 +1152,60 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
+
+              {/* Community member deactivation — only shown for role=community */}
+              {user.role === "community" && (
+                <div className="rounded-lg border border-red-500/30 p-4 space-y-2">
+                  <p className="text-sm font-medium">Deactivate Community Membership</p>
+                  <p className="text-xs text-muted-foreground">
+                    Cancels their Stripe subscription at period end and marks the
+                    membership as deactivated. The member retains access until
+                    their billing period ends.
+                  </p>
+                  {communityStatus === "deactivated" ? (
+                    <Badge variant="secondary" className="text-xs">Already Deactivated</Badge>
+                  ) : (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={deactivating}
+                        >
+                          {deactivating ? (
+                            <>
+                              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                              Deactivating…
+                            </>
+                          ) : (
+                            "Deactivate Member"
+                          )}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Deactivate community membership?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will cancel their Stripe subscription at period end and
+                            set their membership status to &ldquo;deactivated&rdquo;. The member
+                            keeps access until their current billing period ends.
+                            This action is logged.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleDeactivateCommunityMember}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Yes, Deactivate
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

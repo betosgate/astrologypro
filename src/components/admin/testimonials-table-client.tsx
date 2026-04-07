@@ -1,8 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { MoreHorizontal, Pencil, Check, X, EyeOff, Trash2 } from "lucide-react";
+import {
+  MoreHorizontal,
+  Pencil,
+  Check,
+  X,
+  EyeOff,
+  Trash2,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -18,6 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -62,6 +71,10 @@ export type TestimonialRow = {
   is_featured: boolean;
   spam_score: number | null;
   created_at: string;
+  requested_to_email: string | null;
+  requested_to_phone_no: string | null;
+  added_by_name: string | null;
+  added_by_id: string | null;
   diviners: { display_name: string } | null;
 };
 
@@ -70,7 +83,10 @@ interface TestimonialsTableClientProps {
   total: number;
   searchParams: {
     q?: string;
+    client?: string;
     status?: string;
+    createdFrom?: string;
+    createdTo?: string;
     page?: string;
     pageSize?: string;
     sortBy?: string;
@@ -89,16 +105,6 @@ const STATUS_OPTIONS = [
   { value: "rejected", label: "Rejected" },
   { value: "hidden", label: "Hidden" },
 ];
-
-function Stars({ rating }: { rating: number | null }) {
-  if (!rating) return <span className="text-muted-foreground">--</span>;
-  return (
-    <span className="text-yellow-500">
-      {"★".repeat(rating)}
-      {"☆".repeat(5 - rating)}
-    </span>
-  );
-}
 
 function StatusBadge({ status }: { status: string }) {
   const variants: Record<string, string> = {
@@ -144,10 +150,56 @@ export function TestimonialsTableClient({
     isPending,
   } = useAdminTableParams({ sort: "created_at", dir: "desc" });
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
   const currentStatus = searchParams.status ?? "all";
+  const currentClient = searchParams.client ?? "";
+  const currentCreatedFrom = searchParams.createdFrom ?? "";
+  const currentCreatedTo = searchParams.createdTo ?? "";
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  const hasActiveFilters = !!(currentQ || currentStatus !== "all");
+  const hasActiveFilters = !!(
+    currentQ ||
+    currentClient ||
+    currentStatus !== "all" ||
+    currentCreatedFrom ||
+    currentCreatedTo
+  );
+
+  // Showing X to Y of Z
+  const fromRecord = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const toRecord = Math.min(currentPage * pageSize, total);
+
+  // ── Bulk selection ──────────────────────────────────────────────────────────
+
+  const allPageIds = testimonials.map((t) => t.id);
+  const allSelected =
+    allPageIds.length > 0 && allPageIds.every((id) => selectedIds.has(id));
+
+  function toggleAll(checked: boolean) {
+    if (checked) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        allPageIds.forEach((id) => next.add(id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        allPageIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    }
+  }
+
+  function toggleOne(id: string, checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
 
   // ── Actions ─────────────────────────────────────────────────────────────────
 
@@ -164,7 +216,6 @@ export function TestimonialsTableClient({
         return;
       }
       toast.success(`Testimonial ${newStatus}.`);
-      // Refresh via URL push to re-run server query
       pushParams({ page: String(currentPage) });
     } catch {
       toast.error("Failed to update status.");
@@ -184,6 +235,11 @@ export function TestimonialsTableClient({
         return;
       }
       toast.success("Testimonial deleted.");
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       pushParams({ page: String(currentPage) });
     } catch {
       toast.error("Failed to delete.");
@@ -209,7 +265,7 @@ export function TestimonialsTableClient({
         <h1 className="text-xl font-bold tracking-tight">Testimonials</h1>
         <div className="flex gap-2">
           <Button asChild variant="outline" size="sm">
-            <Link href="/admin/testimonials/requests">View Requests</Link>
+            <Link href="/admin/testimonials/requests">Request Testimonial</Link>
           </Button>
           <Button asChild size="sm">
             <Link href="/admin/testimonials/create">+ Add Testimonial</Link>
@@ -224,21 +280,32 @@ export function TestimonialsTableClient({
         <CardContent className="space-y-4">
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-3">
-            <div className="w-full max-w-xs">
+            {/* Search by title */}
+            <div className="w-full max-w-[220px]">
               <AdminTableSearch
                 defaultValue={currentQ}
                 onSearch={(v) => pushParams({ q: v })}
-                placeholder="Search by client name or text..."
+                placeholder="Search by title…"
               />
             </div>
 
+            {/* Search by client name */}
+            <div className="w-full max-w-[220px]">
+              <AdminTableSearch
+                defaultValue={currentClient}
+                onSearch={(v) => pushParams({ client: v })}
+                placeholder="Search by client name…"
+              />
+            </div>
+
+            {/* Status */}
             <Select
               value={currentStatus}
               onValueChange={(v) =>
                 pushParams({ status: v === "all" ? "" : v })
               }
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
@@ -250,9 +317,45 @@ export function TestimonialsTableClient({
               </SelectContent>
             </Select>
 
+            {/* Created From */}
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">
+                From
+              </label>
+              <input
+                type="date"
+                value={currentCreatedFrom}
+                onChange={(e) => pushParams({ createdFrom: e.target.value })}
+                className="rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+
+            {/* Created To */}
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">
+                To
+              </label>
+              <input
+                type="date"
+                value={currentCreatedTo}
+                onChange={(e) => pushParams({ createdTo: e.target.value })}
+                className="rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+
             <AdminResetButton
               hasActiveFilters={hasActiveFilters}
-              onReset={() => pushParams({ q: "", status: "", sortBy: "", sortDir: "" })}
+              onReset={() =>
+                pushParams({
+                  q: "",
+                  client: "",
+                  status: "",
+                  createdFrom: "",
+                  createdTo: "",
+                  sortBy: "",
+                  sortDir: "",
+                })
+              }
             />
           </div>
 
@@ -267,10 +370,20 @@ export function TestimonialsTableClient({
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={allSelected}
+                          onCheckedChange={(checked) =>
+                            toggleAll(checked === true)
+                          }
+                          aria-label="Select all on this page"
+                        />
+                      </TableHead>
+                      <TableHead className="w-10 text-muted-foreground">#</TableHead>
                       <TableHead>
                         <SortHeader
-                          label="Diviner"
-                          column="diviners(display_name)"
+                          label="Title"
+                          column="title"
                           currentSort={currentSort}
                           currentDir={currentDir}
                           onSort={handleSort}
@@ -278,22 +391,24 @@ export function TestimonialsTableClient({
                       </TableHead>
                       <TableHead>
                         <SortHeader
-                          label="Client"
+                          label="Client Email"
+                          column="requested_to_email"
+                          currentSort={currentSort}
+                          currentDir={currentDir}
+                          onSort={handleSort}
+                        />
+                      </TableHead>
+                      <TableHead>Added By</TableHead>
+                      <TableHead>
+                        <SortHeader
+                          label="Client Name"
                           column="client_name"
                           currentSort={currentSort}
                           currentDir={currentDir}
                           onSort={handleSort}
                         />
                       </TableHead>
-                      <TableHead>
-                        <SortHeader
-                          label="Rating"
-                          column="rating"
-                          currentSort={currentSort}
-                          currentDir={currentDir}
-                          onSort={handleSort}
-                        />
-                      </TableHead>
+                      <TableHead>Phone</TableHead>
                       <TableHead>
                         <SortHeader
                           label="Status"
@@ -305,7 +420,7 @@ export function TestimonialsTableClient({
                       </TableHead>
                       <TableHead>
                         <SortHeader
-                          label="Created"
+                          label="Created On"
                           column="created_at"
                           currentSort={currentSort}
                           currentDir={currentDir}
@@ -316,35 +431,51 @@ export function TestimonialsTableClient({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {testimonials.map((t) => (
+                    {testimonials.map((t, idx) => (
                       <TableRow
                         key={t.id}
                         className={isPending ? "opacity-60" : undefined}
                       >
-                        <TableCell className="font-medium">
-                          {t.diviners?.display_name ?? "--"}
-                        </TableCell>
                         <TableCell>
-                          <div>
-                            <span>{t.client_name ?? "--"}</span>
-                            {t.spam_score != null && t.spam_score > 0.5 && (
-                              <span
-                                title={`Spam score: ${t.spam_score}`}
-                                className="ml-1.5 text-xs text-red-500"
-                                aria-label="High spam score"
-                              >
-                                SPAM
-                              </span>
-                            )}
-                          </div>
-                          {t.title && (
-                            <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                              {t.title}
-                            </p>
+                          <Checkbox
+                            checked={selectedIds.has(t.id)}
+                            onCheckedChange={(checked) =>
+                              toggleOne(t.id, checked === true)
+                            }
+                            aria-label={`Select testimonial ${t.id}`}
+                          />
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {(currentPage - 1) * pageSize + idx + 1}
+                        </TableCell>
+                        <TableCell className="font-medium max-w-[160px]">
+                          <span
+                            className="block truncate"
+                            title={t.title ?? undefined}
+                          >
+                            {t.title ?? "--"}
+                          </span>
+                          {t.spam_score != null && t.spam_score > 0.5 && (
+                            <span
+                              title={`Spam score: ${t.spam_score}`}
+                              className="text-xs text-red-500"
+                              aria-label="High spam score"
+                            >
+                              SPAM
+                            </span>
                           )}
                         </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {t.requested_to_email ?? "--"}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {t.added_by_name ?? t.diviners?.display_name ?? "--"}
+                        </TableCell>
                         <TableCell>
-                          <Stars rating={t.rating} />
+                          {t.client_name ?? "--"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                          {t.requested_to_phone_no ?? "--"}
                         </TableCell>
                         <TableCell>
                           <StatusBadge status={t.status} />
@@ -430,7 +561,18 @@ export function TestimonialsTableClient({
                 </Table>
               </div>
 
-              {/* Pagination */}
+              {/* Showing X to Y of Z + pagination */}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Showing {fromRecord} to {toRecord} of {total} records
+                  {selectedIds.size > 0 && (
+                    <span className="ml-2 text-amber-600 font-medium">
+                      ({selectedIds.size} selected)
+                    </span>
+                  )}
+                </p>
+              </div>
+
               <AdminPagination
                 currentPage={currentPage}
                 totalPages={totalPages}

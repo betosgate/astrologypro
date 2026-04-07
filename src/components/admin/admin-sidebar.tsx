@@ -216,7 +216,13 @@ const NAV_GROUPS = [
     label: "Engagement",
     items: [
       { label: "Giveaways", href: "/admin/giveaways", icon: Gift },
-      { label: "Testimonials", href: "/admin/testimonials", icon: MessageSquare },
+    ],
+  },
+  {
+    label: "Manage Testimonial",
+    items: [
+      { label: "Testimonials List", href: "/admin/testimonials", icon: MessageSquare, exact: true },
+      { label: "Request Testimonial", href: "/admin/testimonials/requests", icon: ScrollText },
     ],
   },
   {
