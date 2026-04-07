@@ -28,8 +28,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-export const metadata = { title: "Check-In Leads" };
-
 interface CheckIn {
   id: string;
   first_name: string;

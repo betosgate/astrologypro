@@ -54,6 +54,8 @@ import {
   Tablet,
   CheckCircle2,
   XCircle,
+  Briefcase,
+  ExternalLink,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -81,6 +83,7 @@ export interface AffiliateBusinessData {
   affiliate_row_id: string;
   parent_diviner_id: string;
   parent_diviner_name: string;
+  referral_code?: string;
   commission_type?: string;
   commission_value?: number;
   status: string;
@@ -357,7 +360,9 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
         body: JSON.stringify({ note: noteText.trim() }),
       });
       if (!res.ok) throw new Error("Failed to save note");
-      const saved = await res.json();
+      const payload = await res.json();
+      // API returns { note: {...} } — unwrap the note object
+      const saved = (payload as { note?: AdminNote }).note ?? (payload as AdminNote);
       setNotes((prev) => [saved, ...prev]);
       setNoteText("");
       toast.success("Note saved");
@@ -617,6 +622,12 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
           <TabsTrigger value="notes">
             Notes {notes.length > 0 && `(${notes.length})`}
           </TabsTrigger>
+          {(user.role === "affiliate" || user.role === "advocate" || user.role === "diviner") && (
+            <TabsTrigger value="business">
+              <Briefcase className="mr-1.5 size-3.5" />
+              Business
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* ── Tab 1: Overview ──────────────────────────────────────────────── */}
@@ -869,30 +880,215 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
 
         {/* ── Tab 5: Sessions & Security ───────────────────────────────────── */}
         <TabsContent value="sessions" className="space-y-4">
+
+          {/* ── Account lock status ─────────────────────────────────────────── */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Shield className="size-4" />
+                Account Lock
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {accountLock ? (
+                <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900 p-4">
+                  <Lock className="size-5 shrink-0 text-red-600 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-red-700 dark:text-red-400">
+                      Account Locked
+                    </p>
+                    {accountLock.locked_reason && (
+                      <p className="mt-0.5 text-sm text-red-600 dark:text-red-500">
+                        Reason: {accountLock.locked_reason}
+                      </p>
+                    )}
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Locked at: {fmt(accountLock.locked_at)}
+                    </p>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="shrink-0" disabled={lockLoading}>
+                        {lockLoading ? (
+                          <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                        ) : (
+                          <Unlock className="mr-1.5 size-3.5" />
+                        )}
+                        Unlock
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Unlock account?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will restore platform access for {user.name || user.email}.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleUnlockAccount}>Unlock</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Account is not locked. Use the form below to lock it.
+                  </p>
+                  <div className="space-y-2">
+                    <Label htmlFor="lock-reason" className="text-sm">
+                      Lock reason <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="lock-reason"
+                      placeholder="Enter reason for locking this account"
+                      value={lockReason}
+                      onChange={(e) => setLockReason(e.target.value)}
+                    />
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={lockLoading || !lockReason.trim()}
+                      >
+                        {lockLoading ? (
+                          <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                        ) : (
+                          <Lock className="mr-1.5 size-3.5" />
+                        )}
+                        Lock Account
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Lock account?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {user.name || user.email} will immediately lose platform access.
+                          Reason: {lockReason}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-red-600 hover:bg-red-700"
+                          onClick={handleLockAccount}
+                        >
+                          Lock Account
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* ── Active sessions ──────────────────────────────────────────────── */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <History className="size-4" />
-                Login History
+                Active Sessions
               </CardTitle>
               <Button
                 size="sm"
                 variant="outline"
                 className="text-red-600 hover:text-red-700"
-                onClick={async () => {
-                  try {
-                    await fetch(`/api/admin/users/${user.userId}/revoke-sessions`, {
-                      method: "POST",
-                    });
-                    toast.success("All sessions revoked");
-                    router.refresh();
-                  } catch {
-                    toast.error("Failed to revoke sessions");
-                  }
-                }}
+                disabled={revokingAll}
+                onClick={handleRevokeAllSessions}
               >
+                {revokingAll && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
                 Revoke All Sessions
               </Button>
+            </CardHeader>
+            <CardContent>
+              {sessions.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  No sessions tracked
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Device</TableHead>
+                      <TableHead>Browser / OS</TableHead>
+                      <TableHead>IP</TableHead>
+                      <TableHead>Last Seen</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sessions.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5 text-xs">
+                            {s.device_type === "mobile" ? (
+                              <Smartphone className="size-3.5 shrink-0" />
+                            ) : s.device_type === "tablet" ? (
+                              <Tablet className="size-3.5 shrink-0" />
+                            ) : (
+                              <Monitor className="size-3.5 shrink-0" />
+                            )}
+                            <span className="capitalize">{s.device_type ?? "desktop"}</span>
+                            {s.is_current && (
+                              <span className="text-green-600 font-medium">(current)</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {[s.browser, s.os].filter(Boolean).join(" / ") || "—"}
+                        </TableCell>
+                        <TableCell className="text-xs font-mono">{s.ip_address ?? "—"}</TableCell>
+                        <TableCell className="text-xs">{fmt(s.last_seen_at)}</TableCell>
+                        <TableCell>
+                          {s.revoked_at ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                              <XCircle className="size-3.5 text-red-400" />
+                              Revoked
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs text-green-600">
+                              <CheckCircle2 className="size-3.5" />
+                              Active
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {!s.revoked_at && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                              disabled={revokingSession === s.id}
+                              onClick={() => handleRevokeSession(s.id)}
+                            >
+                              {revokingSession === s.id ? (
+                                <Loader2 className="size-3.5 animate-spin" />
+                              ) : (
+                                "Revoke"
+                              )}
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* ── Login history ────────────────────────────────────────────────── */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="size-4" />
+                Login History
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {user.loginLogs.length === 0 ? (
@@ -926,6 +1122,51 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
             </CardContent>
           </Card>
 
+          {/* ── Login attempts ───────────────────────────────────────────────── */}
+          {(user.loginAttempts ?? []).length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Shield className="size-4" />
+                  Recent Login Attempts (last 10)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Time</TableHead>
+                      <TableHead>IP</TableHead>
+                      <TableHead>Result</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(user.loginAttempts ?? []).map((a) => (
+                      <TableRow key={a.id}>
+                        <TableCell className="text-xs">{fmt(a.attempted_at)}</TableCell>
+                        <TableCell className="text-xs font-mono">{a.ip_address ?? "—"}</TableCell>
+                        <TableCell>
+                          {a.success ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-green-600">
+                              <CheckCircle2 className="size-3.5" />
+                              Success
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs text-red-500">
+                              <XCircle className="size-3.5" />
+                              Failed
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ── Security events ──────────────────────────────────────────────── */}
           {user.securityEvents.length > 0 && (
             <Card>
               <CardHeader>
@@ -1159,6 +1400,162 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* ── Tab 8: Business (affiliates / diviners) ──────────────────────── */}
+        {(user.role === "affiliate" || user.role === "advocate" || user.role === "diviner") && (
+          <TabsContent value="business" className="space-y-4">
+            {!user.businessData ? (
+              <Card>
+                <CardContent className="py-16 text-center">
+                  <Briefcase className="mx-auto size-8 text-muted-foreground/30 mb-3" />
+                  <p className="text-sm text-muted-foreground">No business data available.</p>
+                </CardContent>
+              </Card>
+            ) : user.businessData.kind === "affiliate" ? (
+              /* ── Affiliate view ── */
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Briefcase className="size-4" />
+                    Affiliate Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <dt className="text-xs text-muted-foreground uppercase tracking-wide">Parent Diviner</dt>
+                      <dd className="mt-0.5 text-sm font-medium flex items-center gap-1.5">
+                        <Link
+                          href={`/admin/users/${user.businessData.data.parent_diviner_id}`}
+                          className="hover:underline text-primary"
+                        >
+                          {user.businessData.data.parent_diviner_name || user.businessData.data.parent_diviner_id}
+                        </Link>
+                        <Link href={`/admin/users/${user.businessData.data.parent_diviner_id}`}>
+                          <ExternalLink className="size-3 text-muted-foreground" />
+                        </Link>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground uppercase tracking-wide">Referral Code</dt>
+                      <dd className="mt-0.5 text-sm font-medium">
+                        {user.businessData.data.referral_code ? (
+                          <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
+                            {user.businessData.data.referral_code}
+                          </code>
+                        ) : "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground uppercase tracking-wide">Commission</dt>
+                      <dd className="mt-0.5 text-sm font-medium">
+                        {user.businessData.data.commission_type && user.businessData.data.commission_value != null
+                          ? `${user.businessData.data.commission_value}${user.businessData.data.commission_type === "percentage" ? "%" : " flat"}`
+                          : "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground uppercase tracking-wide">Affiliate Status</dt>
+                      <dd className="mt-0.5">
+                        <StatusBadge status={user.businessData.data.status} />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground uppercase tracking-wide">Joined as Affiliate</dt>
+                      <dd className="mt-0.5 text-sm font-medium">{fmtDate(user.businessData.data.created_at)}</dd>
+                    </div>
+                  </dl>
+                  <div className="pt-2 border-t">
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href={`/admin/affiliates/${user.businessData.data.affiliate_row_id}`}>
+                        <ExternalLink className="mr-1.5 size-3.5" />
+                        Full Affiliate Management
+                      </Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              /* ── Diviner view ── */
+              <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Services</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-2xl font-bold">{user.businessData.data.service_count}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Bookings (this month)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-2xl font-bold">{user.businessData.data.bookings_this_month}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Total Affiliates</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-2xl font-bold">{user.businessData.data.total_affiliates}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Link2 className="size-4" />
+                      Affiliates (top 10)
+                    </CardTitle>
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href={`/admin/affiliates?diviner=${user.userId}`}>
+                        <ExternalLink className="mr-1.5 size-3.5" />
+                        View All
+                      </Link>
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    {user.businessData.data.affiliates.length === 0 ? (
+                      <p className="py-6 text-center text-sm text-muted-foreground">No affiliates yet.</p>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Joined</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {user.businessData.data.affiliates.map((aff) => (
+                            <TableRow key={aff.id}>
+                              <TableCell>
+                                <div>
+                                  <p className="text-sm font-medium">{aff.name}</p>
+                                  {aff.email && (
+                                    <p className="text-xs text-muted-foreground">{aff.email}</p>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <StatusBadge status={aff.status} />
+                              </TableCell>
+                              <TableCell className="text-xs">{fmtDate(aff.created_at)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
