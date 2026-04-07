@@ -185,6 +185,7 @@ export default async function LessonViewerPage({
   }));
 
   // Build quiz questions (correct_answer NOT included — kept server-side by API)
+  // Normalize options: DB may store string[] or { text: string }[]
   const quizQuestions = (lessonData.quiz_questions ?? []).map(
     (q: {
       id: string;
@@ -195,7 +196,9 @@ export default async function LessonViewerPage({
       id: q.id,
       question: q.question,
       options: Array.isArray(q.options)
-        ? (q.options as { text: string }[])
+        ? q.options.map((opt: unknown) =>
+            typeof opt === "string" ? { text: opt } : (opt as { text: string })
+          )
         : [],
       explanation: q.explanation ?? null,
     })

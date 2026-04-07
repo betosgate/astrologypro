@@ -1,158 +1,114 @@
-"use client";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { PaymentsTableClient, type PaymentRow } from "@/components/admin/payments-table-client";
 
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { CreditCard } from "lucide-react";
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Payments — Admin" };
 
-type Payment = {
-  id: string;
-  client_name: string | null;
-  client_email: string | null;
-  service_name: string | null;
-  scheduled_at: string | null;
-  amount_charged: number;
-  stripe_payment_id: string | null;
-  status: string | null;
-  created_at: string;
-  diviner_id: string | null;
-};
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-type Response = { payments: Payment[]; total: number; page: number; hasMore: boolean };
-
-function fmtAmount(cents: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
+interface PaymentsSearchParams {
+  page?: string;
+  pageSize?: string;
+  sortBy?: string;
+  sortDir?: string;
+  paymentFrom?: string;
+  paymentTo?: string;
 }
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const ALLOWED_PAGE_SIZES = [10, 25, 50, 100];
+const DEFAULT_PAGE_SIZE = 25;
+
+const ALLOWED_SORT_COLUMNS = [
+  "created_at",
+  "client_name",
+  "client_email",
+  "service_name",
+  "amount_charged",
+  "status",
+];
+
+// ─── Data fetch ───────────────────────────────────────────────────────────────
+
+async function getPayments(params: PaymentsSearchParams) {
+  const admin = createAdminClient();
+
+  const page = Math.max(1, parseInt(params.page ?? "1", 10));
+  const rawPageSize = parseInt(params.pageSize ?? String(DEFAULT_PAGE_SIZE), 10);
+  const pageSize = ALLOWED_PAGE_SIZES.includes(rawPageSize)
+    ? rawPageSize
+    : DEFAULT_PAGE_SIZE;
+
+  const sortBy = ALLOWED_SORT_COLUMNS.includes(params.sortBy ?? "")
+    ? params.sortBy!
+    : "created_at";
+  const sortDir = params.sortDir === "asc" ? "asc" : "desc";
+  const ascending = sortDir === "asc";
+
+  const paymentFrom = params.paymentFrom?.trim() ?? "";
+  const paymentTo = params.paymentTo?.trim() ?? "";
+
+  const offset = (page - 1) * pageSize;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query: any = admin
+    .from("bookings")
+    .select(
+      "id, client_name, client_email, service_name, scheduled_at, amount_charged, stripe_payment_id, status, created_at, diviner_id",
+      { count: "exact" },
+    )
+    .order(sortBy, { ascending })
+    .order("id", { ascending: false })
+    .range(offset, offset + pageSize - 1);
+
+  // Date filters on created_at
+  if (paymentFrom) {
+    query = query.gte("created_at", paymentFrom);
+  }
+  if (paymentTo) {
+    query = query.lte("created_at", paymentTo + "T23:59:59Z");
+  }
+
+  const { data, count, error } = await query;
+  if (error) {
+    console.error("[admin/payments page]", error);
+  }
+
+  return {
+    payments: (data ?? []) as PaymentRow[],
+    total: count ?? 0,
+    page,
+    pageSize,
+    sortBy,
+    sortDir,
+    paymentFrom,
+    paymentTo,
+  };
 }
 
-export default function AdminPaymentsPage() {
-  const [data, setData] = useState<Response | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
-  // Date range filters
-  const [paymentFrom, setPaymentFrom] = useState("");
-  const [paymentTo, setPaymentTo] = useState("");
+export default async function AdminPaymentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<PaymentsSearchParams>;
+}) {
+  const params = await searchParams;
+  const { payments, total, page, pageSize, sortBy, sortDir, paymentFrom, paymentTo } =
+    await getPayments(params);
 
-  async function load(p: number) {
-    setLoading(true);
-    const params = new URLSearchParams();
-    params.set("page", String(p));
-    if (paymentFrom) params.set("payment_from", paymentFrom);
-    if (paymentTo) params.set("payment_to", paymentTo);
-    const res = await fetch(`/api/admin/payments?${params}`);
-    if (res.ok) setData(await res.json());
-    setLoading(false);
-  }
-
-  function resetFilters() {
-    setPaymentFrom(""); setPaymentTo("");
-  }
-
-  useEffect(() => { load(page); }, [page]);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Payments</h1>
-        <p className="text-muted-foreground">
-          All completed booking payments. {data ? `${data.total} total.` : ""}
-        </p>
-      </div>
-
-      {/* Date range filters */}
-      <Card>
-        <CardContent className="pt-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1">
-              <Label className="text-xs">Payment from</Label>
-              <Input type="date" value={paymentFrom} onChange={(e) => setPaymentFrom(e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Payment to</Label>
-              <Input type="date" value={paymentTo} onChange={(e) => setPaymentTo(e.target.value)} />
-            </div>
-          </div>
-          <div className="mt-3 flex gap-2">
-            <Button size="sm" onClick={() => { setPage(1); load(1); }}>Search</Button>
-            <Button size="sm" variant="outline" onClick={() => { resetFilters(); setTimeout(() => load(1), 0); }}>Reset</Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : !data || data.payments.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <CreditCard className="mx-auto mb-3 size-10 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">No payment records yet.</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                Page {data.page} — {data.payments.length} of {data.total} payments
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/40 text-xs text-muted-foreground">
-                      <th className="px-4 py-2 text-left font-medium">Date</th>
-                      <th className="px-4 py-2 text-left font-medium">Client</th>
-                      <th className="px-4 py-2 text-left font-medium">Service</th>
-                      <th className="px-4 py-2 text-left font-medium">Amount</th>
-                      <th className="px-4 py-2 text-left font-medium">Status</th>
-                      <th className="px-4 py-2 text-left font-medium">Stripe ID</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.payments.map((p) => (
-                      <tr key={p.id} className="border-b last:border-0 hover:bg-muted/20">
-                        <td className="px-4 py-2 text-muted-foreground">{fmtDate(p.created_at)}</td>
-                        <td className="px-4 py-2">
-                          <div className="font-medium">{p.client_name ?? "—"}</div>
-                          {p.client_email && <div className="text-xs text-muted-foreground">{p.client_email}</div>}
-                        </td>
-                        <td className="px-4 py-2 text-muted-foreground">{p.service_name ?? "—"}</td>
-                        <td className="px-4 py-2 font-medium tabular-nums">{fmtAmount(p.amount_charged)}</td>
-                        <td className="px-4 py-2">
-                          <Badge variant={p.status === "confirmed" || p.status === "completed" ? "default" : "secondary"} className="text-xs capitalize">
-                            {p.status ?? "—"}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
-                          {p.stripe_payment_id ? p.stripe_payment_id.slice(0, 20) + "…" : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex items-center justify-between">
-            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
-              Previous
-            </Button>
-            <span className="text-sm text-muted-foreground">Page {page}</span>
-            <Button variant="outline" size="sm" disabled={!data.hasMore} onClick={() => setPage((p) => p + 1)}>
-              Next
-            </Button>
-          </div>
-        </>
-      )}
-    </div>
+    <PaymentsTableClient
+      payments={payments}
+      total={total}
+      page={page}
+      pageSize={pageSize}
+      totalPages={totalPages}
+      sortBy={sortBy}
+      sortDir={sortDir}
+      paymentFrom={paymentFrom}
+      paymentTo={paymentTo}
+    />
   );
 }

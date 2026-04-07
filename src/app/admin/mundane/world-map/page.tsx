@@ -1,24 +1,11 @@
 import { redirect } from "next/navigation";
-import nextDynamic from "next/dynamic";
+import { Suspense } from "react";
 import { requireAdmin } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Globe, Loader2 } from "lucide-react";
+import { WorldMapWrapper } from "@/components/mundane/world-map-wrapper";
 
 export const dynamic = "force-dynamic";
-
-// Dynamic import — Leaflet cannot run during SSR
-const WorldMapClient = nextDynamic(
-  () => import("@/components/mundane/world-map-client").then((m) => m.WorldMapClient),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-[600px] items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-amber-500" />
-        <span className="ml-3 text-sm text-muted-foreground">Loading map...</span>
-      </div>
-    ),
-  }
-);
 
 export default async function WorldMapPage() {
   const user = await requireAdmin();
@@ -132,12 +119,14 @@ export default async function WorldMapPage() {
         </div>
       </div>
 
-      {/* Map client */}
-      <WorldMapClient
-        entities={entities}
-        events={events}
-        forecasts={forecasts}
-      />
+      {/* Map client — wrapped for SSR-safe Leaflet loading */}
+      <Suspense fallback={<div className="flex h-[600px] items-center justify-center"><Loader2 className="size-8 animate-spin text-amber-500" /><span className="ml-3 text-sm text-muted-foreground">Loading map...</span></div>}>
+        <WorldMapWrapper
+          entities={entities}
+          events={events}
+          forecasts={forecasts}
+        />
+      </Suspense>
     </div>
   );
 }
