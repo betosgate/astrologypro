@@ -94,13 +94,26 @@ function isWithinDays(iso: string | null, days: number): boolean {
 }
 
 // ── Section heading component ──────────────────────────────────────────────
-function SectionHeading({ children }: { children: React.ReactNode }) {
+function SectionHeading({
+  icon: Icon,
+  title,
+  subtitle,
+}: {
+  icon: React.ElementType;
+  title: string;
+  subtitle?: string;
+}) {
   return (
-    <div className="flex items-center gap-3 mb-3">
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-        {children}
-      </h2>
-      <div className="h-px flex-1 bg-border" />
+    <div className="flex items-center gap-3 mb-4">
+      <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+        <Icon className="size-4 text-primary" aria-hidden="true" />
+      </div>
+      <div className="min-w-0">
+        <h2 className="text-lg font-semibold leading-tight">{title}</h2>
+        {subtitle && (
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -556,23 +569,29 @@ export default async function CommunityDashboardPage() {
           </div>
         </div>
         {/* Quick action buttons */}
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button asChild variant="outline" size="sm">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
             <Link href="/community/profile">
               <User className="mr-1.5 size-3.5" />
               My Profile
             </Link>
           </Button>
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
             <Link href="/community/plan">
               <CreditCard className="mr-1.5 size-3.5" />
               My Plan
             </Link>
           </Button>
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
             <Link href="/astrologers">
               <Compass className="mr-1.5 size-3.5" />
-              Get Reading
+              Get a Reading
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
+            <Link href="/community/library">
+              <BookMarked className="mr-1.5 size-3.5" />
+              Sacred Library
             </Link>
           </Button>
         </div>
@@ -582,24 +601,26 @@ export default async function CommunityDashboardPage() {
           SECTION 1 — YOUR MEMBERSHIP
       ════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
-        <SectionHeading>Your Membership</SectionHeading>
+        <SectionHeading icon={CreditCard} title="Your Membership" subtitle="Plan, billing, and profile status" />
 
         {/* Cancellation warning — access-ends alert */}
         {isCancelling && cancelAt && (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-3 flex items-start gap-3">
-            <AlertTriangle className="size-4 shrink-0 text-red-500 mt-0.5" aria-hidden="true" />
-            <p className="text-sm text-red-700 dark:text-red-400">
-              Access ends on{" "}
-              <strong>
-                {new Date(cancelAt).toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </strong>
-              . Reactivate to keep full access.
-            </p>
-            <Button asChild size="sm" variant="outline" className="shrink-0 border-red-500/40 text-red-700 hover:bg-red-500/10 ml-auto">
+          <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-start">
+            <div className="flex items-start gap-3 flex-1 min-w-0">
+              <AlertTriangle className="size-4 shrink-0 text-red-500 mt-0.5" aria-hidden="true" />
+              <p className="text-sm text-red-700 dark:text-red-400">
+                Access ends on{" "}
+                <strong>
+                  {new Date(cancelAt).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </strong>
+                . Reactivate to keep full access.
+              </p>
+            </div>
+            <Button asChild size="sm" variant="outline" className="shrink-0 w-full sm:w-auto border-red-500/40 text-red-700 hover:bg-red-500/10">
               <Link href="/community/plan">Reactivate</Link>
             </Button>
           </div>
@@ -607,17 +628,19 @@ export default async function CommunityDashboardPage() {
 
         {/* Renewing soon — amber notice */}
         {renewingSoon && renewalDate && (
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 flex items-center gap-3">
-            <AlertTriangle className="size-4 shrink-0 text-amber-600" aria-hidden="true" />
-            <p className="text-sm text-amber-700 dark:text-amber-400 flex-1">
-              Renewing soon —{" "}
-              {new Date(renewalDate).toLocaleDateString("en-US", {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </p>
-            <Badge className="shrink-0 bg-amber-500/15 text-amber-700 border-amber-500/30 text-xs">
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <AlertTriangle className="size-4 shrink-0 text-amber-600" aria-hidden="true" />
+              <p className="text-sm text-amber-700 dark:text-amber-400">
+                Renewing soon —{" "}
+                {new Date(renewalDate).toLocaleDateString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </p>
+            </div>
+            <Badge className="shrink-0 self-start sm:self-auto bg-amber-500/15 text-amber-700 border-amber-500/30 text-xs">
               Renewing Soon
             </Badge>
           </div>
@@ -673,14 +696,14 @@ export default async function CommunityDashboardPage() {
         {/* Mystery School upgrade — secondary CTA, only for Perennial members */}
         {isPerennial && (
           <Card className="border-dashed border-purple-500/30">
-            <CardContent className="py-3 flex items-center justify-between gap-4 flex-wrap">
+            <CardContent className="py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2 min-w-0">
-                <GraduationCap className="size-4 shrink-0 text-purple-500" />
+                <GraduationCap className="size-4 shrink-0 text-purple-500" aria-hidden="true" />
                 <p className="text-sm text-muted-foreground truncate">
                   Deepen your practice with the Mystery School curriculum
                 </p>
               </div>
-              <Button asChild size="sm" variant="outline" className="shrink-0 border-purple-500/40 text-purple-700 hover:bg-purple-500/10">
+              <Button asChild size="sm" variant="outline" className="shrink-0 w-full sm:w-auto border-purple-500/40 text-purple-700 hover:bg-purple-500/10">
                 <Link href="/community/upgrade">Upgrade to Mystery School</Link>
               </Button>
             </CardContent>
@@ -692,7 +715,7 @@ export default async function CommunityDashboardPage() {
           QUICK ACTIONS ROW
       ════════════════════════════════════════════════════════════════════ */}
       <section>
-        <SectionHeading>Quick Actions</SectionHeading>
+        <SectionHeading icon={Sparkles} title="Quick Actions" subtitle="Jump into your most-used features" />
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
           {quickActions.map((action) => {
             const Icon = action.icon;
@@ -722,7 +745,7 @@ export default async function CommunityDashboardPage() {
           SECTION 2 — ASTROLOGY
       ════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
-        <SectionHeading>Your Charts &amp; Astrology</SectionHeading>
+        <SectionHeading icon={Compass} title="Your Charts & Astrology" subtitle="Birth charts, transits, and cosmic insights" />
 
         {/* Profile Progress + Astro Charts */}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -754,24 +777,25 @@ export default async function CommunityDashboardPage() {
               </CardContent>
             </Card>
           ) : (
-            <Card className="border-amber-500/20">
-              <CardContent className="flex flex-col gap-3 py-5">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-500/15">
-                    <Sparkles className="size-5 text-amber-600" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold leading-tight">Generate Your Birth Chart</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Add your birth data to unlock your natal chart and planetary transits.
-                    </p>
-                  </div>
+            <Card className="border-dashed border-amber-500/20">
+              <CardContent className="flex flex-col items-center gap-3 py-6 text-center">
+                <div className="flex size-12 items-center justify-center rounded-full bg-amber-500/15">
+                  <Sparkles className="size-6 text-amber-600" aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold leading-tight">Discover your cosmic blueprint</p>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                    Generate your birth chart to unlock personalized insights, planetary transits, and cosmic guidance.
+                  </p>
                 </div>
                 <p className="text-xs text-amber-600">
                   Missing: {ownChartMissingFields.join(", ")}
                 </p>
                 <Button asChild size="sm" className="w-full sm:w-auto">
-                  <Link href="/community/profile">Complete Birth Data →</Link>
+                  <Link href="/community/profile">
+                    <Sparkles className="mr-1.5 size-3.5" />
+                    Complete Birth Data
+                  </Link>
                 </Button>
               </CardContent>
             </Card>
@@ -800,20 +824,21 @@ export default async function CommunityDashboardPage() {
             </Card>
           ) : (
             <Card className="border-dashed">
-              <CardContent className="flex flex-col gap-3 py-5">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-violet-500/10">
-                    <Heart className="size-5 text-violet-600" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold leading-tight">Relationship Charts</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Generate a synastry or composite chart with a family member.
-                    </p>
-                  </div>
+              <CardContent className="flex flex-col items-center gap-3 py-5 text-center">
+                <div className="flex size-10 items-center justify-center rounded-full bg-violet-500/10">
+                  <Heart className="size-5 text-violet-600" aria-hidden="true" />
                 </div>
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/community/charts">Generate a Chart →</Link>
+                <div>
+                  <p className="text-sm font-semibold leading-tight">Explore your cosmic connections</p>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                    Generate a synastry or composite chart to reveal the unique dynamics between you and a loved one.
+                  </p>
+                </div>
+                <Button asChild size="sm" variant="outline">
+                  <Link href="/community/charts">
+                    <Heart className="mr-1.5 size-3.5" />
+                    Generate Chart
+                  </Link>
                 </Button>
               </CardContent>
             </Card>
@@ -826,7 +851,7 @@ export default async function CommunityDashboardPage() {
       ════════════════════════════════════════════════════════════════════ */}
       {isPerennial && (
         <section className="space-y-4">
-          <SectionHeading>Sacred Study</SectionHeading>
+          <SectionHeading icon={BookOpen} title="Sacred Study" subtitle="Rituals, services, and spiritual practice" />
 
           {/* My Rituals */}
           <div className="space-y-3">
@@ -853,19 +878,22 @@ export default async function CommunityDashboardPage() {
             </div>
 
             {rituals.length === 0 ? (
-              <Card>
+              <Card className="border-dashed">
                 <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
                   <div className="flex size-12 items-center justify-center rounded-full bg-orange-500/10">
-                    <Flame className="size-6 text-orange-500" />
+                    <Flame className="size-6 text-orange-500" aria-hidden="true" />
                   </div>
                   <div>
-                    <p className="font-medium text-sm">No rituals yet</p>
+                    <p className="font-semibold text-sm">Begin your sacred practice</p>
                     <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                      Create your first ritual invocation to begin weaving sacred intention into your practice.
+                      Create your first ritual to deepen your spiritual journey and weave sacred intention into daily life.
                     </p>
                   </div>
                   <Button asChild size="sm">
-                    <Link href="/community/rituals/new">Create Your First Ritual</Link>
+                    <Link href="/community/rituals/new">
+                      <Flame className="mr-1.5 size-3.5" />
+                      Create Ritual
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -902,7 +930,7 @@ export default async function CommunityDashboardPage() {
 
           {/* Sunday Service entry point */}
           <Card className="border-amber-500/20 bg-amber-500/5">
-            <CardContent className="flex items-center justify-between gap-4 py-4 flex-wrap">
+            <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-amber-500/20">
                   <Sparkles className="size-4 text-amber-600" aria-hidden="true" />
@@ -914,7 +942,7 @@ export default async function CommunityDashboardPage() {
                   </p>
                 </div>
               </div>
-              <Button asChild size="sm" variant="outline" className="shrink-0">
+              <Button asChild size="sm" variant="outline" className="shrink-0 w-full sm:w-auto">
                 <Link href="/community/sessions">View Schedule</Link>
               </Button>
             </CardContent>
@@ -947,7 +975,7 @@ export default async function CommunityDashboardPage() {
       ════════════════════════════════════════════════════════════════════ */}
       {isPerennial && (
         <section className="space-y-4">
-          <SectionHeading>Your Circle</SectionHeading>
+          <SectionHeading icon={Heart} title="Your Circle" subtitle="Family members and community connections" />
 
           {/* Family Members */}
           <div className="space-y-3">
@@ -967,19 +995,22 @@ export default async function CommunityDashboardPage() {
             </div>
 
             {familyMembers.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col sm:flex-row items-start sm:items-center gap-4 py-5">
-                  <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-rose-500/10">
-                    <Heart className="size-6 text-rose-500" />
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
+                  <div className="flex size-12 items-center justify-center rounded-full bg-rose-500/10">
+                    <Heart className="size-6 text-rose-500" aria-hidden="true" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold">No family members yet</p>
-                    <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                      Add family members to include their charts and transits in your Perennial journey — and generate relationship charts together.
+                  <div>
+                    <p className="font-semibold text-sm">Share the stars with your loved ones</p>
+                    <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                      Add family members to explore their charts together and generate relationship compatibility insights.
                     </p>
                   </div>
-                  <Button asChild size="sm" className="shrink-0">
-                    <Link href="/community/family">Add Family Member</Link>
+                  <Button asChild size="sm">
+                    <Link href="/community/family">
+                      <Heart className="mr-1.5 size-3.5" />
+                      Add Family Member
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -1135,7 +1166,7 @@ export default async function CommunityDashboardPage() {
           SECTION 5 — SACRED STUDY (library / wisdom / articles)
       ════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
-        <SectionHeading>Sacred Library</SectionHeading>
+        <SectionHeading icon={BookMarked} title="Sacred Library" subtitle="Wisdom teachings, articles, and study materials" />
 
         {/* Content Library */}
         <div className="space-y-3">
@@ -1237,7 +1268,7 @@ export default async function CommunityDashboardPage() {
           SECTION 6 — COMMUNITY (events, sessions, broadcasts)
       ════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
-        <SectionHeading>Community</SectionHeading>
+        <SectionHeading icon={Users} title="Community" subtitle="Events, sessions, and fellow seekers" />
 
         {/* Feature quick links */}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -1270,7 +1301,7 @@ export default async function CommunityDashboardPage() {
       ════════════════════════════════════════════════════════════════════ */}
       {isPerennial && (
         <section>
-          <SectionHeading>Mystery School</SectionHeading>
+          <SectionHeading icon={GraduationCap} title="Mystery School" subtitle="Deepen your practice with structured study" />
           <div className="rounded-2xl bg-gradient-to-br from-indigo-950 via-purple-950 to-violet-900 border border-purple-500/30 px-6 py-8 space-y-5">
             <div className="flex items-center gap-3">
               <div className="flex size-12 items-center justify-center rounded-full bg-purple-500/20">
@@ -1310,7 +1341,7 @@ export default async function CommunityDashboardPage() {
       {/* ═══════════════════════════════════════════════════════════════════
           DONATE BANNER — bottom, after all content
       ════════════════════════════════════════════════════════════════════ */}
-      <div className="rounded-xl bg-gradient-to-r from-amber-500/20 via-orange-500/10 to-yellow-500/20 border border-amber-500/30 px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+      <div className="rounded-xl bg-gradient-to-r from-amber-500/20 via-orange-500/10 to-yellow-500/20 border border-amber-500/30 px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-amber-500/20">
             <HandHeart className="size-5 text-amber-600" aria-hidden="true" />
@@ -1319,18 +1350,18 @@ export default async function CommunityDashboardPage() {
             <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 leading-tight">
               Support the Sacred Journey
             </p>
-            <p className="text-xs text-amber-700 dark:text-amber-300/80 leading-snug mt-0.5 line-clamp-1">
-              Your generosity sustains this community, funds new content, and keeps the wisdom flowing. Every gift matters.
+            <p className="text-xs text-amber-700 dark:text-amber-300/80 leading-snug mt-0.5 line-clamp-2 sm:line-clamp-1">
+              Your generosity sustains this community, funds new content, and keeps the wisdom flowing.
             </p>
           </div>
         </div>
         <Button
           asChild
           size="sm"
-          className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white"
+          className="shrink-0 w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white"
         >
           <a href="https://divineinfinitebeing.com/donate" target="_blank" rel="noopener noreferrer">
-            Donate Now ❤
+            Donate Now
           </a>
         </Button>
       </div>
