@@ -185,12 +185,20 @@ export default function AdminMandalismPage() {
           <h1 className="text-2xl font-bold tracking-tight">Mandalism Content</h1>
           <p className="text-muted-foreground">Manage Perennial Mandalism content library</p>
         </div>
-        <Button asChild>
-          <Link href="/admin/mandalism/new">
-            <Plus className="mr-2 size-4" />
-            New Content
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href="/admin/mandalism/add">
+              <Plus className="mr-2 size-4" />
+              Add Member
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/admin/mandalism/new">
+              <Plus className="mr-2 size-4" />
+              New Content
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Stats bar */}
