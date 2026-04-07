@@ -58,6 +58,7 @@ import {
   ScrollText,
   ListChecks,
   MessageSquare,
+  MousePointerClick,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -83,7 +84,9 @@ const NAV_GROUPS = [
   {
     label: "Content",
     items: [
-      { label: "Blog Posts", href: "/admin/blog", icon: FileText },
+      { label: "Blog Posts", href: "/admin/blog", icon: FileText, exact: true },
+      { label: "Blog Analytics", href: "/admin/blog/analytics", icon: BarChart2 },
+      { label: "Blog CTA Blocks", href: "/admin/blog/cta-blocks", icon: MousePointerClick },
       { label: "Blog Categories", href: "/admin/blog/categories", icon: Layers },
       { label: "Blog Authors", href: "/admin/blog/authors", icon: Users },
       { label: "Blog Series", href: "/admin/blog/series", icon: BookOpen },

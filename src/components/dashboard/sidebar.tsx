@@ -27,6 +27,9 @@ import {
   Video,
   LifeBuoy,
   Globe,
+  Play,
+  Rss,
+  UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -52,6 +55,8 @@ const navItems = [
   { label: "Bookings", href: "/dashboard/bookings", icon: Calendar },
   { label: "Schedule", href: "/dashboard/schedule", icon: LayoutGrid },
   { label: "Clients", href: "/dashboard/clients", icon: Users },
+  { label: "Check-Ins", href: "/dashboard/check-ins", icon: UserCheck },
+  { label: "Giveaways", href: "/dashboard/giveaways", icon: Gift },
   { label: "Testimonials", href: "/dashboard/testimonials", icon: MessageSquare },
   { label: "Calendar", href: "/dashboard/calendar", icon: CalendarDays },
   { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
@@ -62,6 +67,8 @@ const navItems = [
   { label: "Reading Reports", href: "/dashboard/reports/readings", icon: BarChart2 },
   { label: "Mundane Astrology", href: "/dashboard/mundane", icon: Globe },
   { label: "Services", href: "/dashboard/services", icon: Sparkles },
+  { label: "Media Gallery", href: "/dashboard/media", icon: Play },
+  { label: "Subscriptions", href: "/dashboard/subscriptions", icon: Rss },
   { label: "Gift Certificates", href: "/dashboard/gift-certificates", icon: Gift },
   { label: "Discounts", href: "/dashboard/discounts", icon: Tag },
   { label: "Follow-ups", href: "/dashboard/follow-ups", icon: Mail },
