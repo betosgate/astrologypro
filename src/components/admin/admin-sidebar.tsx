@@ -231,6 +231,7 @@ const NAV_GROUPS = [
   {
     label: "Config",
     items: [
+      { label: "Platform Settings", href: "/admin/platform-settings", icon: Settings2 },
       { label: "Legal", href: "/admin/legal", icon: ScrollText },
     ],
   },
