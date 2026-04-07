@@ -26,9 +26,7 @@ export default async function CommunityLayout({ children }: { children: React.Re
   if (member.membership_status !== "active") redirect("/join/community?status=inactive");
 
   const portals = await getUserPortals(supabase, user.id);
-  const membershipLabel = member.membership_type === "mystery_school" ? "Mystery School" : "Perennial Mandalism";
-
-  const isMysterySchool = member.membership_type === "mystery_school";
+  const membershipLabel = "Perennial Mandalism";
 
   const navLinks = [
     { label: "Home", href: "/community" },
@@ -36,18 +34,12 @@ export default async function CommunityLayout({ children }: { children: React.Re
     { label: "Broadcasts", href: "/community/broadcasts" },
     { label: "Events", href: "/community/events" },
     { label: "Resources", href: "/community/resources" },
-    ...(member.membership_type !== "mystery_school" ? [
-      { label: "My Plan", href: "/community/plan" },
-      { label: "Family", href: "/community/family" },
-      { label: "Charts", href: "/community/charts" },
-      { label: "Transits", href: "/community/transits" },
-      { label: "Rituals", href: "/community/rituals" },
-      { label: "Tarot", href: "/community/tarot" },
-    ] : []),
-    ...(isMysterySchool ? [
-      { label: "Training", href: "/community/training" },
-      { label: "Decans", href: "/community/decans" },
-    ] : []),
+    { label: "My Plan", href: "/community/plan" },
+    { label: "Family", href: "/community/family" },
+    { label: "Charts", href: "/community/charts" },
+    { label: "Transits", href: "/community/transits" },
+    { label: "Rituals", href: "/community/rituals" },
+    { label: "Tarot", href: "/community/tarot" },
     { label: "Mundane", href: "/community/mundane" },
     { label: "Ingress Charts", href: "/community/ingress-charts" },
     { label: "Horoscope", href: "/community/horoscope" },

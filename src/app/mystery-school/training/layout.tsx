@@ -1,0 +1,32 @@
+/**
+ * Mystery School Training — Nested Layout
+ *
+ * Guards all /mystery-school/training/* routes.
+ *
+ * Access requires:
+ *   - community_members.membership_type = 'mystery_school'  AND  membership_status = 'active'
+ *   - mystery_school_students.status = 'active'  (or cancelled-but-within-access window)
+ *
+ * Non-qualifying users are redirected to /community/upgrade.
+ *
+ * The parent /mystery-school/layout.tsx already ensures the user is authenticated
+ * and has an active community_members row with mystery_school membership_type,
+ * so we only need to check the Mystery School student lifecycle here.
+ */
+
+import { redirect } from "next/navigation";
+import { requireMysterySchoolAccess } from "@/lib/mystery-school/access";
+
+export default async function MysterySchoolTrainingLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const result = await requireMysterySchoolAccess();
+
+  if (!result) {
+    redirect("/community/upgrade");
+  }
+
+  return <>{children}</>;
+}

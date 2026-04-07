@@ -41,11 +41,20 @@ export async function getUserPortals(
   if (advocate.data)
     portals.push({ role: "advocate", label: "Advocate Portal", href: "/advocate" });
   if (community.data) {
-    const badge =
-      community.data.membership_type === "mystery_school"
-        ? "Mystery School"
-        : "Perennial Mandalism";
-    portals.push({ role: "community", label: "Community", href: "/community", badge });
+    if (community.data.membership_type === "mystery_school") {
+      portals.push({
+        role: "mystery_school",
+        label: "Mystery School",
+        href: "/mystery-school",
+      });
+    } else {
+      portals.push({
+        role: "community",
+        label: "Community",
+        href: "/community",
+        badge: "Perennial Mandalism",
+      });
+    }
   }
   if (trainee.data)
     portals.push({ role: "trainee", label: "Trainee Portal", href: "/trainee" });

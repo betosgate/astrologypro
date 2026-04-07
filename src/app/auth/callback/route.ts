@@ -36,7 +36,7 @@ const INVITE_DESTINATIONS: Record<string, string> = {
   diviner: "/onboarding",
   client: "/portal",
   perennial_mandalism: "/community",
-  mystery_school: "/community",
+  mystery_school: "/mystery-school",
 };
 
 export async function GET(request: NextRequest) {

@@ -222,6 +222,16 @@ export async function GET() {
         }),
   ]);
 
+  // ── 5b. Fetch global sequential lock setting ─────────────────────────────
+  const { data: trainingSettings } = await admin
+    .from("training_settings")
+    .select("global_sequential_lock")
+    .limit(1)
+    .maybeSingle();
+
+  // If global_sequential_lock = false (or not set), bypass all sequential enforcement
+  const globalLock = trainingSettings?.global_sequential_lock ?? false;
+
   // ── 6. Build lookup maps ───────────────────────────────────────────────────
 
   const completedLessons = new Set(
@@ -277,10 +287,14 @@ export async function GET() {
       const nextLessonId = catCache?.next_lesson_id ?? null;
 
       // ── Category sequential lock ─────────────────────────────────────────
-      // A category is locked when the program is sequential AND this category
-      // is not completed AND it is not the immediate next one AND there is
-      // at least one lower-priority category that is not yet completed.
+      // A category is locked when:
+      //   - global_sequential_lock is ON
+      //   - the program is sequential
+      //   - this category is not completed
+      //   - it is not the immediate next one
+      //   - there is at least one lower-priority category that is not yet completed
       const isCatLocked =
+        globalLock &&
         !!(prog as { is_sequential?: boolean }).is_sequential &&
         !catCompleted &&
         cat.id !== (nextCategoryId ?? cat.id) &&
@@ -297,11 +311,13 @@ export async function GET() {
         const lessonCompleted = completedLessons.has(l.id);
 
         // A lesson is locked when:
+        //   - global_sequential_lock is ON
         //   - the category is sequential
         //   - it is not completed
         //   - it is not the immediate next lesson for this category
         //   - there is at least one lower-priority incomplete lesson before it
         const isLessonLocked =
+          globalLock &&
           !lessonCompleted &&
           !!(cat as { is_sequential?: boolean }).is_sequential &&
           l.id !== (nextLessonId ?? l.id) &&

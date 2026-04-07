@@ -85,8 +85,8 @@ export default async function CategoryLessonsPage({
   const lessonList = lessons ?? [];
   const lessonIds = lessonList.map((l) => l.id);
 
-  // Fetch completion progress + category progress cache in parallel
-  const [progressResult, legacyProgressResult, catProgressResult] =
+  // Fetch completion progress + category progress cache + global lock setting in parallel
+  const [progressResult, legacyProgressResult, catProgressResult, globalLockResult] =
     await Promise.all([
       lessonIds.length > 0
         ? supabase
@@ -109,6 +109,11 @@ export default async function CategoryLessonsPage({
         .eq("user_id", user.id)
         .eq("category_id", categoryId)
         .maybeSingle(),
+      supabase
+        .from("training_settings")
+        .select("global_sequential_lock")
+        .limit(1)
+        .maybeSingle(),
     ]);
 
   const completedSet = new Set([
@@ -119,15 +124,19 @@ export default async function CategoryLessonsPage({
   // The immediate-next lesson according to the progress cache
   const nextLessonId = catProgressResult.data?.next_lesson_id ?? null;
 
+  // Global sequential lock — if false, no sequential enforcement at all
+  const globalLock = globalLockResult.data?.global_sequential_lock ?? false;
+
   const total = lessonList.length;
   const completed = lessonList.filter((l) => completedSet.has(l.id)).length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   // Priority-based sequential lock:
-  // A lesson is locked when the category is sequential, the lesson is not
-  // completed, it is not the immediate next lesson, and there is at least one
-  // lower-priority incomplete lesson before it.
+  // A lesson is locked when global lock is ON, the category is sequential,
+  // the lesson is not completed, it is not the immediate next lesson, and
+  // there is at least one lower-priority incomplete lesson before it.
   function isLocked(lesson: (typeof lessonList)[0]): boolean {
+    if (!globalLock) return false;
     if (completedSet.has(lesson.id)) return false;
     if (!category?.is_sequential) return false;
     if (lesson.id === (nextLessonId ?? lesson.id)) return false;

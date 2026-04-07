@@ -77,7 +77,10 @@ Before planning, always verify:
 
 ## Developer Workflow Rules
 
-- **Never start the local dev server** (`npm run dev`, `next dev`, etc.) without explicitly asking the user first.
+- **Never start the local dev server** (`npm run dev`, `next dev`, `npm start`, etc.) without explicitly asking the user first.
+- **Never open or run a local server** for any reason without user confirmation.
+- **Testing strategy**: Deploy to production/preview and test there. Do not use local dev server for testing.
+- If testing is needed, deploy first, then test on the deployed URL.
 
 ---
 

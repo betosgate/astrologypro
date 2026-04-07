@@ -104,6 +104,9 @@ export type LessonViewerProps = {
   // Video quiz triggers
   triggers?: LessonQuizTrigger[];
 
+  // Playback resume
+  lastPositionSeconds?: number;
+
   // Completion
   isCompleted: boolean;
 
@@ -208,6 +211,8 @@ type TriggerVideoPlayerProps = {
   video: { title: string | null; video_url: string; duration_mins: number | null };
   lessonId: string;
   triggers: LessonQuizTrigger[];
+  initialPosition?: number;
+  onPositionUpdate?: (seconds: number) => void;
   onEnded?: () => void;
 };
 
@@ -215,6 +220,8 @@ function TriggerVideoPlayer({
   video,
   lessonId,
   triggers,
+  initialPosition = 0,
+  onPositionUpdate,
   onEnded,
 }: TriggerVideoPlayerProps) {
   const embedUrl = getVideoEmbed(video.video_url);
@@ -248,6 +255,41 @@ function TriggerVideoPlayer({
   // Rewatch polling: once in rewind mode, poll rewatch endpoint as video plays
   const rewatchTriggerId = useRef<string | null>(null);
   const rewatchPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Set initial position when video loads (resume behavior)
+  const initialPositionApplied = useRef(false);
+  useEffect(() => {
+    if (initialPositionApplied.current || initialPosition <= 0) return;
+    const vid = videoRef.current;
+    if (!vid) return;
+    const handleCanPlay = () => {
+      if (!initialPositionApplied.current && vid.readyState >= 2) {
+        // Only resume to a position that is before the first unpassed trigger
+        const firstUnpassed = triggers
+          .filter((t) => !localPassedIds.has(t.id))
+          .sort((a, b) => a.trigger_timestamp_seconds - b.trigger_timestamp_seconds)[0];
+        const maxPos = firstUnpassed ? firstUnpassed.trigger_timestamp_seconds : Infinity;
+        vid.currentTime = Math.min(initialPosition, maxPos);
+        initialPositionApplied.current = true;
+      }
+    };
+    vid.addEventListener("canplay", handleCanPlay);
+    // Also try immediately in case already loaded
+    handleCanPlay();
+    return () => vid.removeEventListener("canplay", handleCanPlay);
+  }, [initialPosition, triggers, localPassedIds]);
+
+  // Report position to parent at ~10s cadence for heartbeat
+  useEffect(() => {
+    if (!onPositionUpdate) return;
+    const interval = setInterval(() => {
+      const vid = videoRef.current;
+      if (vid && !vid.paused) {
+        onPositionUpdate(Math.floor(vid.currentTime));
+      }
+    }, 10_000);
+    return () => clearInterval(interval);
+  }, [onPositionUpdate]);
 
   // Sort unpassed triggers by timestamp
   const unpassedTriggers = triggers
@@ -518,6 +560,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
     isCompleted: initialCompleted,
     sidebarLessons,
     triggers = [],
+    lastPositionSeconds = 0,
   } = props;
 
   // Combine legacy single video + lesson_videos table entries
@@ -572,6 +615,12 @@ export function LessonViewerClient(props: LessonViewerProps) {
       .catch(() => {}); // fire-and-forget, don't block UI
   }, [lessonId]);
 
+  // Track the latest video position for heartbeat reporting
+  const latestPositionRef = useRef<number>(lastPositionSeconds);
+  const handlePositionUpdate = useCallback((seconds: number) => {
+    latestPositionRef.current = seconds;
+  }, []);
+
   // Heartbeat every 30 seconds while the component is mounted
   useEffect(() => {
     let lastTick = Date.now();
@@ -584,7 +633,10 @@ export function LessonViewerClient(props: LessonViewerProps) {
       fetch(`/api/trainee/training/lessons/${lessonId}/heartbeat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ delta_seconds: delta }),
+        body: JSON.stringify({
+          delta_seconds: delta,
+          last_position_seconds: latestPositionRef.current,
+        }),
       }).catch(() => {}); // fire-and-forget
     }, 30_000);
 
@@ -674,6 +726,8 @@ export function LessonViewerClient(props: LessonViewerProps) {
                 video={allVideos[activeVideoIdx]}
                 lessonId={lessonId}
                 triggers={triggers}
+                initialPosition={activeVideoIdx === 0 ? lastPositionSeconds : 0}
+                onPositionUpdate={handlePositionUpdate}
                 onEnded={handleVideoEnded}
               />
             </div>

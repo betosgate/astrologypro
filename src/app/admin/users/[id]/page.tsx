@@ -7,6 +7,7 @@ import {
   type AffiliateBusinessData,
   type DivinerBusinessData,
   type DivinerAffiliate,
+  type ReferralEntry,
 } from "@/components/admin/user-detail-client";
 
 export const metadata = { title: "User Detail — Admin" };
@@ -260,6 +261,37 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
     loginAttemptsData = (attRes.data as unknown[]) ?? [];
   }
 
+  // ── Training status (trainee role) ─────────────────────────────────────────
+  const trainingStatus = trainee
+    ? (trainee.training_status as string) ?? "in_progress"
+    : undefined;
+
+  // ── Referrals (affiliate/diviner) ─────────────────────────────────────────
+  let referrals: ReferralEntry[] = [];
+  let totalReferrals = 0;
+
+  if (role === "diviner" || role === "affiliate") {
+    const refRes = await Promise.resolve(
+      admin
+        .from("diviner_affiliates")
+        .select("id, user_id, name, email, status, created_at", { count: "exact" })
+        .eq("diviner_id", userId)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(50)
+    ).catch(() => ({ data: [] as unknown[], count: 0 }));
+
+    totalReferrals = (refRes as { count?: number | null }).count ?? 0;
+    referrals = safeTable((refRes as { data?: unknown }).data).map((r) => ({
+      id: r.id as string,
+      referred_user_id: (r.user_id as string) ?? "",
+      referred_name: (r.name as string) ?? undefined,
+      referred_email: (r.email as string) ?? undefined,
+      referral_date: r.created_at as string,
+      status: (r.status as string) ?? "active",
+    }));
+  }
+
   // ── Last login ────────────────────────────────────────────────────────────
   const loginLogsRaw = safeTable(loginLogsRes.data);
   const lastLoginAt  = loginLogsRaw[0]?.created_at as string | undefined;
@@ -413,6 +445,9 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
       attempted_at: a.attempted_at as string,
       success:      !!(a.success as boolean),
     })),
+    trainingStatus,
+    referrals,
+    totalReferrals,
   };
 }
 

@@ -21,13 +21,22 @@ type ProgramCategory = {
   description: string | null;
   priority: number;
   completed: boolean;
-  progress: { completed: number; total: number };
+  is_locked: boolean;
+  lock_reason: string | null;
+  is_sequential: boolean;
+  progress_pct: number;
+  completed_lessons: number;
+  total_lessons: number;
+  next_lesson_id: string | null;
+  next_lesson_title: string | null;
   lessons: {
     id: string;
     title: string;
     priority: number;
     completed: boolean;
     quiz_passed: boolean | null;
+    is_locked: boolean;
+    lock_reason: string | null;
   }[];
 };
 
@@ -36,7 +45,13 @@ type Program = {
   name: string;
   description: string | null;
   priority: number;
-  progress: number; // 0–100
+  progress_pct: number;
+  completed_lessons: number;
+  total_lessons: number;
+  completed_categories: number;
+  total_categories: number;
+  next_category_id: string | null;
+  next_category_name: string | null;
   categories: ProgramCategory[];
 };
 
@@ -91,23 +106,16 @@ function ProgramCardSkeleton() {
 // Program Card
 // ---------------------------------------------------------------------------
 function ProgramCard({ program }: { program: Program }) {
-  const totalLessons = program.categories.reduce(
-    (s, c) => s + c.progress.total,
-    0
-  );
-  const completedLessons = program.categories.reduce(
-    (s, c) => s + c.progress.completed,
-    0
-  );
-  const completedCategories = program.categories.filter((c) => c.completed)
-    .length;
+  const totalLessons = program.total_lessons;
+  const completedLessons = program.completed_lessons;
+  const completedCategories = program.completed_categories;
 
   // Find the current in-progress category (first not fully done)
   const currentCategory = program.categories.find(
-    (c) => !c.completed && c.progress.total > 0
+    (c) => !c.completed && c.total_lessons > 0
   );
 
-  const isComplete = program.progress === 100 && totalLessons > 0;
+  const isComplete = program.progress_pct >= 100 && totalLessons > 0;
   const isStarted = completedLessons > 0;
 
   const ctaHref = currentCategory
@@ -135,7 +143,7 @@ function ProgramCard({ program }: { program: Program }) {
         <div className="flex items-start gap-4">
           {/* Circular progress ring */}
           <CircularProgress
-            percentage={program.progress}
+            percentage={program.progress_pct}
             size={72}
             strokeWidth={6}
             className="shrink-0"
@@ -184,9 +192,9 @@ function ProgramCard({ program }: { program: Program }) {
             <span>
               {completedLessons}/{totalLessons} lessons complete
             </span>
-            <span>{program.progress}%</span>
+            <span>{program.progress_pct}%</span>
           </div>
-          <Progress value={program.progress} className="h-1.5" />
+          <Progress value={program.progress_pct} className="h-1.5" />
         </div>
 
         {/* CTA */}
@@ -248,15 +256,15 @@ export default async function TrainingCenterPage() {
 
   // Overall summary stats
   const totalLessons = programs.reduce(
-    (s, p) => s + p.categories.reduce((cs, c) => cs + c.progress.total, 0),
+    (s, p) => s + p.total_lessons,
     0
   );
   const completedLessons = programs.reduce(
-    (s, p) => s + p.categories.reduce((cs, c) => cs + c.progress.completed, 0),
+    (s, p) => s + p.completed_lessons,
     0
   );
   const completedCategories = programs.reduce(
-    (s, p) => s + p.categories.filter((c) => c.completed).length,
+    (s, p) => s + p.completed_categories,
     0
   );
   const overallPct =
