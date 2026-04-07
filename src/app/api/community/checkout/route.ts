@@ -22,12 +22,16 @@ export const dynamic = "force-dynamic";
  *   planType?: "individual",
  *   entry_quarter: "spring" | "summer" | "autumn" | "winter",
  *   entry_year: number,
- *   upgrade_from_pm?: boolean   // true when the user currently has a PM subscription
  * }
  *
- * When upgrade_from_pm is true the current PM Stripe subscription is cancelled
- * immediately so the user is not double-charged.  The webhook then provisions
- * the Mystery School record after the new checkout completes.
+ * PM and MS memberships coexist (parallel entitlement model).
+ * Buying MS does NOT cancel an existing PM subscription.
+ * The webhook provisions mystery_school_students as the MS entitlement;
+ * community_members continues to track PM membership separately.
+ *
+ * When the admin PM-discount toggle is enabled and the user is an active PM
+ * member, the discounted monthly price (STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT)
+ * is used instead of the standard price.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -46,13 +50,11 @@ export async function POST(request: NextRequest) {
       planType,
       entry_quarter,
       entry_year,
-      upgrade_from_pm = false,
     } = body as {
       membershipType: string;
       planType?: string;
       entry_quarter?: string;
       entry_year?: number;
-      upgrade_from_pm?: boolean;
     };
 
     // --- Input validation ---
@@ -80,33 +82,6 @@ export async function POST(request: NextRequest) {
 
     const isFamily = planType === "family" && !isMysterySchool;
 
-    // --- Cancel existing PM subscription if this is an upgrade ---
-    if (isMysterySchool && upgrade_from_pm) {
-      try {
-        const admin = createAdminClient();
-        const { data: existingMember } = await admin
-          .from("community_members")
-          .select("stripe_subscription_id, membership_type, membership_status")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (
-          existingMember?.stripe_subscription_id &&
-          existingMember.membership_type === "perennial_mandalism" &&
-          existingMember.membership_status === "active"
-        ) {
-          // Cancel at period end so the member keeps access through the paid period.
-          // The new MS subscription will become the authoritative billing record.
-          await stripe.subscriptions.update(existingMember.stripe_subscription_id, {
-            cancel_at_period_end: true,
-          });
-        }
-      } catch (cancelErr) {
-        // Log but do not block checkout — the webhook / admin can clean up manually.
-        console.error("[community/checkout] Failed to cancel PM subscription:", cancelErr);
-      }
-    }
-
     // --- Build Stripe line items ---
     let lineItems: Array<
       | { price: string; quantity: 1 }
@@ -115,13 +90,46 @@ export async function POST(request: NextRequest) {
 
     if (isMysterySchool) {
       const enrollmentPriceId = process.env.STRIPE_PRICE_MYSTERY_ENROLLMENT;
-      const monthlyPriceId = process.env.STRIPE_PRICE_MYSTERY_MONTHLY;
-      if (!enrollmentPriceId || !monthlyPriceId) {
+      const standardMonthlyPriceId = process.env.STRIPE_PRICE_MYSTERY_MONTHLY;
+      const discountMonthlyPriceId = process.env.STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT;
+      if (!enrollmentPriceId || !standardMonthlyPriceId) {
         return NextResponse.json(
           { error: "Mystery School Stripe prices not configured." },
           { status: 500 }
         );
       }
+
+      // Determine if PM-discount applies: user must be active PM member AND
+      // admin toggle must be enabled AND the discount price must be configured.
+      let monthlyPriceId = standardMonthlyPriceId;
+
+      if (discountMonthlyPriceId) {
+        const admin = createAdminClient();
+
+        // Check both conditions in parallel
+        const [memberResult, settingsResult] = await Promise.all([
+          admin
+            .from("community_members")
+            .select("id, membership_type, membership_status")
+            .eq("user_id", user.id)
+            .eq("membership_type", "perennial_mandalism")
+            .eq("membership_status", "active")
+            .maybeSingle(),
+          admin
+            .from("platform_settings")
+            .select("ms_pm_discount_enabled")
+            .limit(1)
+            .single(),
+        ]);
+
+        const isActivePm = !!memberResult.data;
+        const discountEnabled = settingsResult.data?.ms_pm_discount_enabled ?? true;
+
+        if (isActivePm && discountEnabled) {
+          monthlyPriceId = discountMonthlyPriceId;
+        }
+      }
+
       lineItems = [
         { price: enrollmentPriceId, quantity: 1 },
         { price: monthlyPriceId, quantity: 1 },
@@ -150,16 +158,23 @@ export async function POST(request: NextRequest) {
     if (isMysterySchool && entry_quarter && entry_year) {
       metadata.entry_quarter = entry_quarter;
       metadata.entry_year = String(entry_year);
-      metadata.upgrade_from_pm = String(upgrade_from_pm);
     }
+
+    // Route success/cancel URLs to the correct portal context
+    const successUrl = isMysterySchool
+      ? `${APP_URL}/mystery-school?subscribed=true`
+      : `${APP_URL}/community?subscribed=true`;
+    const cancelUrl = isMysterySchool
+      ? `${APP_URL}/mystery-school/enroll`
+      : `${APP_URL}/community/upgrade`;
 
     const session = await stripe.checkout.sessions.create({
       customer_email: user.email,
       mode: "subscription",
       line_items: lineItems,
       metadata,
-      success_url: `${APP_URL}/community?subscribed=true`,
-      cancel_url: `${APP_URL}/community/upgrade`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
     });
 
     return NextResponse.json({ url: session.url });

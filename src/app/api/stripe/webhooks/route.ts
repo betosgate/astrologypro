@@ -105,23 +105,71 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
   const email = authUser?.email ?? "";
   const fullName = (authUser?.user_metadata?.full_name ?? authUser?.user_metadata?.name ?? null) as string | null;
 
-  const { data: member } = await supabase
-    .from("community_members")
-    .upsert(
-      {
-        user_id: userId,
-        email,
-        full_name: fullName,
-        membership_type: membershipType,
-        membership_status: "active",
-        plan_type: planType,
-        stripe_subscription_id: subscriptionId ?? null,
-        joined_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" }
-    )
-    .select("id")
-    .single();
+  const isMysterySchool = membershipType === "mystery_school";
+
+  // --- Parallel membership model ---
+  // PM and MS are independent entitlements:
+  //   community_members   → PM membership (perennial_mandalism)
+  //   mystery_school_students → MS entitlement
+  //
+  // For PM checkout: upsert community_members as before.
+  // For MS checkout: provision mystery_school_students WITHOUT touching
+  //   an existing PM community_members row.
+
+  let communityMemberId: string | null = null;
+
+  if (!isMysterySchool) {
+    // PM checkout — upsert community_members as the PM record
+    const { data: member } = await supabase
+      .from("community_members")
+      .upsert(
+        {
+          user_id: userId,
+          email,
+          full_name: fullName,
+          membership_type: membershipType,
+          membership_status: "active",
+          plan_type: planType,
+          stripe_subscription_id: subscriptionId ?? null,
+          joined_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      )
+      .select("id")
+      .single();
+
+    communityMemberId = member?.id ?? null;
+  } else {
+    // MS checkout — look up existing community_members row (may be PM) but do NOT overwrite it
+    const { data: existingMember } = await supabase
+      .from("community_members")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    communityMemberId = existingMember?.id ?? null;
+
+    // If user has no community_members row at all, create one for MS tracking
+    // (new users who go straight to MS without PM)
+    if (!communityMemberId) {
+      const { data: newMember } = await supabase
+        .from("community_members")
+        .insert({
+          user_id: userId,
+          email,
+          full_name: fullName,
+          membership_type: "mystery_school",
+          membership_status: "active",
+          plan_type: "individual",
+          stripe_subscription_id: subscriptionId ?? null,
+          joined_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+
+      communityMemberId = newMember?.id ?? null;
+    }
+  }
 
   logActivity({
     userId: userId,
@@ -143,7 +191,7 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
   }
 
   // Provision mystery school student record on enrollment
-  if (membershipType === "mystery_school") {
+  if (isMysterySchool) {
     const entryQuarter = session.metadata?.entry_quarter ?? null;
     const entryYearRaw = session.metadata?.entry_year;
     const entryYear = entryYearRaw ? parseInt(entryYearRaw, 10) : null;
@@ -155,7 +203,7 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
       .upsert(
         {
           user_id: userId,
-          community_member_id: member?.id ?? null,
+          community_member_id: communityMemberId,
           enrolled_at: enrollmentDate,
           enrollment_date: enrollmentDate,
           training_status: "foundation",
@@ -186,16 +234,8 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
       );
     }
 
-    // If this was a PM → MS upgrade, ensure the community_members row reflects
-    // the new membership type (it was already set above via the upsert, but
-    // explicitly confirm in case a pre-existing row conflicted).
-    const upgradeFromPm = session.metadata?.upgrade_from_pm === "true";
-    if (upgradeFromPm && member?.id) {
-      await supabase
-        .from("community_members")
-        .update({ membership_type: "mystery_school", membership_status: "active" })
-        .eq("id", member.id);
-    }
+    // NOTE: We intentionally do NOT update community_members.membership_type
+    // to 'mystery_school'. PM membership stays intact (parallel entitlement).
   }
 }
 
