@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/lib/supabase/client";
+import { ArrowLeft, Loader2, ImagePlus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const BUCKET = "all-frontend-assets";
@@ -33,7 +35,7 @@ export default function EditTarotCardPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [spreads, setSpreads] = useState<Spread[]>([]);
 
   const [form, setForm] = useState({
@@ -63,7 +65,7 @@ export default function EditTarotCardPage() {
       }
 
       if (!cardRes.ok) {
-        setError("Card not found");
+        toast.error("Card not found");
         setLoading(false);
         return;
       }
@@ -87,20 +89,27 @@ export default function EditTarotCardPage() {
     load();
   }, [id]);
 
+  function validate() {
+    const e: Record<string, string> = {};
+    if (!form.name.trim()) e.name = "Name is required";
+    if (!form.priority.trim()) e.priority = "Priority is required";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!ALLOWED_TYPES.includes(file.type)) {
-      setError("Invalid file type. Allowed: JPEG, PNG, WebP, GIF.");
+      toast.error("Invalid file type. Allowed: JPEG, PNG, WebP, GIF.");
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
-      setError("File too large. Maximum size is 10 MB.");
+      toast.error("File too large. Maximum size is 10 MB.");
       return;
     }
 
-    setError(null);
     setUploading(true);
 
     const ext = file.name.split(".").pop() ?? "jpg";
@@ -112,7 +121,7 @@ export default function EditTarotCardPage() {
       .upload(path, file, { upsert: false });
 
     if (uploadError) {
-      setError(`Upload failed: ${uploadError.message}`);
+      toast.error(`Upload failed: ${uploadError.message}`);
       setUploading(false);
       return;
     }
@@ -130,12 +139,9 @@ export default function EditTarotCardPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.priority) {
-      setError("Priority is required.");
-      return;
-    }
+    if (!validate()) return;
     setSaving(true);
-    setError(null);
+    setErrors({});
 
     const res = await fetch(`/api/admin/tarot/cards/${id}`, {
       method: "PUT",
@@ -157,12 +163,12 @@ export default function EditTarotCardPage() {
 
     if (!res.ok) {
       const body = await res.json();
-      setError(body.error ?? "Failed to save changes");
+      toast.error(body.error ?? "Failed to save changes");
       setSaving(false);
       return;
     }
 
-    toast.success("Card saved successfully");
+    toast.success("Card updated successfully");
     router.push("/admin/tarot/cards");
   }
 
@@ -173,7 +179,7 @@ export default function EditTarotCardPage() {
     const res = await fetch(`/api/admin/tarot/cards/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const body = await res.json();
-      setError(body.error ?? "Failed to delete card");
+      toast.error(body.error ?? "Failed to delete card");
       setDeleting(false);
       return;
     }
@@ -185,38 +191,55 @@ export default function EditTarotCardPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
-          <Link href="/admin/tarot" className="text-sm text-muted-foreground hover:text-foreground">
-            ← Back to Tarot
-          </Link>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight">Edit Tarot Card</h1>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" disabled>
+            <ArrowLeft className="size-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Edit Card</h1>
+            <p className="text-muted-foreground text-sm">Loading card data…</p>
+          </div>
         </div>
-        <p className="text-sm text-muted-foreground">Loading…</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/admin/tarot/cards" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Back to Cards
-        </Link>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">Edit Tarot Card</h1>
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" asChild>
+          <Link href="/admin/tarot/cards">
+            <ArrowLeft className="size-5" />
+            <span className="sr-only">Back to cards</span>
+          </Link>
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Edit Card</h1>
+          <p className="text-muted-foreground text-sm">Update the properties and imagery for {form.name}</p>
+        </div>
       </div>
 
-      <Card className="max-w-2xl">
-        <CardHeader>
-          <CardTitle>Card Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit}>
+        <Card className="max-w-3xl">
+          <CardHeader>
+            <CardTitle>Card Details</CardTitle>
+            <CardDescription>Configure the properties, meanings, and imagery for this tarot card.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+
             <div className="space-y-2">
               <Label htmlFor="name">Name *</Label>
-              <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+              <Input
+                id="name"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="e.g. The Fool"
+              />
+              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="arcana">Arcana *</Label>
                 <select
@@ -225,54 +248,127 @@ export default function EditTarotCardPage() {
                   onChange={(e) => setForm({ ...form, arcana: e.target.value })}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <option value="major">Major</option>
-                  <option value="minor">Minor</option>
+                  <option value="major">Major Arcana</option>
+                  <option value="minor">Minor Arcana</option>
                 </select>
               </div>
               {form.arcana === "minor" && (
                 <div className="space-y-2">
                   <Label htmlFor="suit">Suit</Label>
-                  <Input id="suit" placeholder="e.g. Wands, Cups" value={form.suit} onChange={(e) => setForm({ ...form, suit: e.target.value })} />
+                  <Input
+                    id="suit"
+                    placeholder="e.g. Wands, Cups"
+                    value={form.suit}
+                    onChange={(e) => setForm({ ...form, suit: e.target.value })}
+                  />
                 </div>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="number">Number</Label>
-                <Input id="number" type="number" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} />
+                <Label htmlFor="number">Card Number</Label>
+                <Input
+                  id="number"
+                  type="number"
+                  value={form.number}
+                  onChange={(e) => setForm({ ...form, number: e.target.value })}
+                  placeholder="e.g. 0"
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="priority">Priority *</Label>
+                <Label htmlFor="priority">Display Priority *</Label>
                 <Input
                   id="priority"
                   type="number"
                   min="0"
                   value={form.priority}
                   onChange={(e) => setForm({ ...form, priority: e.target.value })}
-                  required
+                  placeholder="Higher number = higher in list"
                 />
+                {errors.priority && <p className="text-sm text-destructive">{errors.priority}</p>}
               </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="upright_meaning">Upright Meaning</Label>
-              <Textarea id="upright_meaning" rows={3} value={form.upright_meaning} onChange={(e) => setForm({ ...form, upright_meaning: e.target.value })} />
+              <Textarea
+                id="upright_meaning"
+                rows={3}
+                value={form.upright_meaning}
+                onChange={(e) => setForm({ ...form, upright_meaning: e.target.value })}
+                placeholder="Meaning when the card is drawn upright..."
+                className="resize-none"
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="reversed_meaning">Reversed Meaning</Label>
-              <Textarea id="reversed_meaning" rows={3} value={form.reversed_meaning} onChange={(e) => setForm({ ...form, reversed_meaning: e.target.value })} />
+              <Textarea
+                id="reversed_meaning"
+                rows={3}
+                value={form.reversed_meaning}
+                onChange={(e) => setForm({ ...form, reversed_meaning: e.target.value })}
+                placeholder="Meaning when the card is drawn reversed..."
+                className="resize-none"
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="image_url">Image URL</Label>
-              <Input id="image_url" type="url" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
+              <Label htmlFor="image_url">External Image URL (Optional)</Label>
+              <Input
+                id="image_url"
+                type="url"
+                value={form.image_url}
+                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                placeholder="https://..."
+              />
             </div>
 
             <div className="space-y-2">
               <Label>Card Image Upload</Label>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div
+                  className="relative flex h-32 w-24 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-dashed border-muted-foreground/50 bg-muted/30 transition-colors hover:bg-muted/50"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {cardImageUrl ? (
+                    <img src={cardImageUrl} alt="Card preview" className="h-full w-full object-cover" />
+                  ) : (
+                    <ImagePlus className="size-6 text-muted-foreground opacity-50" />
+                  )}
+                  {uploading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm">
+                      <Loader2 className="size-5 animate-spin" />
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Upload Card Image</p>
+                  <p className="text-xs text-muted-foreground">JPEG, PNG, WebP up to 10MB.</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={uploading}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {cardImageUrl ? "Change image" : "Select image"}
+                    </Button>
+                    {cardImageUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => setCardImageUrl("")}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                </div>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -280,30 +376,13 @@ export default function EditTarotCardPage() {
                   className="hidden"
                   onChange={handleFileChange}
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={uploading}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  {uploading ? "Uploading…" : "Choose Image"}
-                </Button>
-                {cardImageUrl && (
-                  <a href={cardImageUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline break-all max-w-xs truncate">
-                    {cardImageUrl}
-                  </a>
-                )}
               </div>
-              {cardImageUrl && (
-                <img src={cardImageUrl} alt="Card preview" className="mt-2 h-24 w-auto rounded border object-contain" />
-              )}
             </div>
 
             {spreads.length > 0 && (
               <div className="space-y-2">
                 <Label>Related Spreads</Label>
-                <div className="rounded-md border border-input p-3 space-y-2 max-h-48 overflow-y-auto">
+                <div className="rounded-md border border-input p-3 space-y-2 max-h-48 overflow-y-auto bg-muted/20">
                   {spreads.map((s) => (
                     <div key={s.id} className="flex items-center gap-2">
                       <Checkbox
@@ -311,7 +390,7 @@ export default function EditTarotCardPage() {
                         checked={relatedSpreadIds.includes(s.id)}
                         onCheckedChange={() => toggleSpread(s.id)}
                       />
-                      <Label htmlFor={`spread-${s.id}`} className="font-normal cursor-pointer">
+                      <Label htmlFor={`spread-${s.id}`} className="font-normal cursor-pointer leading-none">
                         {s.name}
                       </Label>
                     </div>
@@ -321,27 +400,50 @@ export default function EditTarotCardPage() {
             )}
 
             <div className="flex items-center gap-2">
-              <Checkbox id="is_active" checked={form.is_active} onCheckedChange={(checked) => setForm({ ...form, is_active: !!checked })} />
-              <Label htmlFor="is_active">Active</Label>
+              <Checkbox
+                id="is_active"
+                checked={form.is_active}
+                onCheckedChange={(checked) => setForm({ ...form, is_active: !!checked })}
+              />
+              <Label htmlFor="is_active" className="cursor-pointer">Active</Label>
             </div>
 
-            {error && <p className="text-sm text-red-500">{error}</p>}
-
-            <div className="flex gap-3 pt-2">
-              <Button type="submit" disabled={saving || uploading}>{saving ? "Saving…" : "Save Changes"}</Button>
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t">
               <Button
                 type="button"
                 variant="destructive"
-                disabled={deleting}
                 onClick={handleDelete}
+                disabled={saving || uploading || deleting}
+                className="w-full sm:w-auto"
               >
-                {deleting ? "Deleting…" : "Delete"}
+                <Trash2 className="mr-2 size-4" />
+                {deleting ? "Deleting…" : "Delete Card"}
               </Button>
-              <Button type="button" variant="outline" onClick={() => router.push("/admin/tarot/cards")}>Cancel</Button>
+              <div className="flex gap-3 w-full sm:w-auto">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.push("/admin/tarot/cards")}
+                  disabled={saving || uploading || deleting}
+                  className="flex-1 sm:flex-none"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={saving || uploading || deleting}
+                  className="flex-1 sm:flex-none"
+                >
+                  {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
+                  Save Changes
+                </Button>
+              </div>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+
+          </CardContent>
+        </Card>
+      </form>
     </div>
   );
 }
