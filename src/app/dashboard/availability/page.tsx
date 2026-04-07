@@ -21,6 +21,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Pencil, Trash2, Plus, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -527,18 +534,21 @@ export default function AvailabilityPage() {
             {/* Timezone */}
             <div className="space-y-1.5">
               <Label htmlFor="av-timezone">Timezone</Label>
-              <select
-                id="av-timezone"
+              <Select
                 value={form.timezone}
-                onChange={(e) => setForm((p) => ({ ...p, timezone: e.target.value }))}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                onValueChange={(v) => setForm((p) => ({ ...p, timezone: v }))}
               >
-                {TIMEZONE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="av-timezone" className="w-full">
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIMEZONE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Description */}

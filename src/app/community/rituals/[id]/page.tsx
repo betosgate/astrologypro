@@ -24,6 +24,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
+import { RitualVideoPlayer } from "@/components/community/ritual-video-player";
 
 type RitualConfig = {
   id: string;
@@ -43,6 +44,7 @@ type Invocation = {
   description: string | null;
   instructions: string | null;
   priority: number;
+  video_url: string | null;
 };
 
 // Canonical ordering: Opening → Gate → Invocation/Banishing → Closing
@@ -388,6 +390,16 @@ export default function RitualDetailPage() {
                 </p>
               )}
             </div>
+
+            {/* Video player — auto-advances on completion */}
+            {currentInvocation?.video_url && (
+              <RitualVideoPlayer
+                videoUrl={currentInvocation.video_url}
+                stepName={currentInvocation.name.replace(/_/g, " ")}
+                isLastStep={isLastStep}
+                onEnded={isLastStep ? handleComplete : handleNext}
+              />
+            )}
 
             {currentInvocation?.instructions && (
               <>

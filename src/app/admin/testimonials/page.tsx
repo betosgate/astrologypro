@@ -11,7 +11,10 @@ export const metadata = { title: "Testimonials — Admin" };
 
 interface SearchParams {
   q?: string;
+  client?: string;
   status?: string;
+  createdFrom?: string;
+  createdTo?: string;
   page?: string;
   pageSize?: string;
   sortBy?: string;
@@ -30,13 +33,16 @@ async function getTestimonials(
   const admin = createAdminClient();
 
   const q = params.q?.trim() ?? "";
+  const clientName = params.client?.trim() ?? "";
   const status = params.status ?? "";
+  const createdFrom = params.createdFrom ?? "";
+  const createdTo = params.createdTo ?? "";
   const sortBy = params.sortBy ?? "created_at";
   const sortDir = (params.sortDir ?? "desc") as "asc" | "desc";
   const page = Math.max(1, parseInt(params.page ?? "1", 10));
 
   const columns =
-    "id, diviner_id, client_name, display_alias, rating, text, service_type, service_name, title, status, is_featured, spam_score, created_at, diviners(display_name)";
+    "id, diviner_id, client_name, display_alias, rating, text, service_type, service_name, title, status, is_featured, spam_score, created_at, requested_to_email, requested_to_phone_no, added_by_name, added_by_id, diviners(display_name)";
 
   // Build count query
   let countQuery = admin
@@ -53,9 +59,24 @@ async function getTestimonials(
   }
 
   if (q) {
-    const filter = `client_name.ilike.%${q}%,text.ilike.%${q}%`;
+    const filter = `title.ilike.%${q}%,text.ilike.%${q}%`;
     countQuery = countQuery.or(filter);
     dataQuery = dataQuery.or(filter);
+  }
+
+  if (clientName) {
+    countQuery = countQuery.ilike("client_name", `%${clientName}%`);
+    dataQuery = dataQuery.ilike("client_name", `%${clientName}%`);
+  }
+
+  if (createdFrom) {
+    countQuery = countQuery.gte("created_at", createdFrom);
+    dataQuery = dataQuery.gte("created_at", createdFrom);
+  }
+
+  if (createdTo) {
+    countQuery = countQuery.lte("created_at", `${createdTo}T23:59:59`);
+    dataQuery = dataQuery.lte("created_at", `${createdTo}T23:59:59`);
   }
 
   // Sort — deterministic tie-breaker with id
@@ -73,10 +94,12 @@ async function getTestimonials(
   const [countRes, dataRes] = await Promise.all([countQuery, dataQuery]);
 
   return {
-    testimonials: ((dataRes.data ?? []) as unknown as TestimonialRow[]).map((t) => ({
-      ...t,
-      diviners: Array.isArray(t.diviners) ? t.diviners[0] ?? null : t.diviners,
-    })),
+    testimonials: ((dataRes.data ?? []) as unknown as TestimonialRow[]).map(
+      (t) => ({
+        ...t,
+        diviners: Array.isArray(t.diviners) ? t.diviners[0] ?? null : t.diviners,
+      })
+    ),
     total: countRes.count ?? 0,
   };
 }

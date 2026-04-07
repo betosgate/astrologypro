@@ -21,6 +21,7 @@ interface RitualForm {
   instructions: string;
   priority: string;
   is_active: boolean;
+  video_url: string;
 }
 
 export default function EditRitualPage() {
@@ -35,6 +36,7 @@ export default function EditRitualPage() {
     instructions: "",
     priority: "",
     is_active: true,
+    video_url: "",
   });
 
   useEffect(() => {
@@ -47,6 +49,7 @@ export default function EditRitualPage() {
           instructions: data.instructions ?? "",
           priority: data.priority != null ? String(data.priority) : "",
           is_active: data.is_active ?? true,
+          video_url: data.video_url ?? "",
         });
         setLoading(false);
       })
@@ -67,6 +70,7 @@ export default function EditRitualPage() {
         instructions: form.instructions,
         priority: form.priority ? parseInt(form.priority) : 0,
         is_active: form.is_active,
+        video_url: form.video_url || null,
       }),
     });
 
@@ -121,6 +125,20 @@ export default function EditRitualPage() {
             <div className="space-y-2">
               <Label htmlFor="priority">Priority</Label>
               <Input id="priority" type="number" min="0" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="video_url">Video URL</Label>
+              <Input
+                id="video_url"
+                type="url"
+                placeholder="https://example.com/ritual-step.mp4"
+                value={form.video_url}
+                onChange={(e) => setForm({ ...form, video_url: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional. Direct video URL (mp4/webm). When present, shown to the practitioner with auto-advance on completion.
+              </p>
             </div>
 
             <div className="flex items-center gap-2">
