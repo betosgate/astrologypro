@@ -3,6 +3,8 @@ import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendSundayServiceNewEpisode } from "@/lib/email";
 
+export const dynamic = "force-dynamic";
+
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
 

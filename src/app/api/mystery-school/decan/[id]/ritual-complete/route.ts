@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendMysterySchoolGraduation } from "@/lib/email";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/mystery-school/decan/[id]/ritual-complete
  * Marks the ritual as done for this decan. Checks overall completion.

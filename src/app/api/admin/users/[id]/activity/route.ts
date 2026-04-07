@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const dynamic = "force-dynamic";
+
 // ─── GET /api/admin/users/[id]/activity ───────────────────────────────────────
 // Returns combined, merged activity timeline for ONE user:
 //   - user_activity_log  (user_id = id)

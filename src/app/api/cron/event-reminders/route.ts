@@ -3,6 +3,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEventReminder } from "@/lib/email";
 import { verifyCronAuth } from "@/lib/cron-auth";
 
+export const dynamic = "force-dynamic";
+
 // Map event types to recommended service trigger_event slugs
 const EVENT_SERVICE_MAP: Record<string, string> = {
   solar_return: "solar-return",

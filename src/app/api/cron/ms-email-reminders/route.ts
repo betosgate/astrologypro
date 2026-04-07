@@ -10,6 +10,7 @@ import {
   sendDecanReopened,
 } from "@/lib/email";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
@@ -163,7 +164,7 @@ export async function GET(request: NextRequest) {
       const decan = decanMap.get(progress.decan_id);
       if (!decan) continue;
 
-      const decanUrl = `${appUrl}/community/decans/${progress.decan_id}`;
+      const decanUrl = `${appUrl}/mystery-school/decans/${progress.decan_id}`;
 
       const allDone =
         progress.ritual_done && progress.scry_done && progress.journal_done;

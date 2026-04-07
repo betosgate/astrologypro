@@ -3,6 +3,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import { PRICING } from "@/lib/constants";
 
+export const dynamic = "force-dynamic";
+
 function generateGiftCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "GIFT-";

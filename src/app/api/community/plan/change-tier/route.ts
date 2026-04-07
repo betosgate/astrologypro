@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import { updateStripeExtraSeats } from "@/lib/stripe/plan-seats";
 
+export const dynamic = "force-dynamic";
+
 export const runtime = "nodejs";
 
 /**

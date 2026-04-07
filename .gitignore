@@ -43,6 +43,7 @@ next-env.d.ts
 .vercel
 .env*.local
 .claude/worktrees/
+.codex
 
 # Duplicate project copy — must not be tracked or Next.js will use it as app dir
 /app/

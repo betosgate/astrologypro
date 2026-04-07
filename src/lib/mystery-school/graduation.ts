@@ -35,11 +35,15 @@ export async function checkGraduationEligibility(
 ): Promise<GraduationEligibilityResult> {
   const admin = createAdminClient();
 
-  // 1. Q1 foundation check — count completed foundation weeks
+  // 1. Q1 foundation check — count weeks where all tasks are marked done.
+  // Filter by week_completed_at IS NOT NULL to avoid counting partial weeks
+  // (student_foundation_progress rows are created when the first task is
+  //  completed, not when the week is fully done).
   const { count: foundationCount } = await admin
     .from("student_foundation_progress")
     .select("id", { count: "exact", head: true })
-    .eq("student_id", studentId);
+    .eq("student_id", studentId)
+    .not("week_completed_at", "is", null);
 
   const q1Complete = (foundationCount ?? 0) >= TOTAL_FOUNDATION_WEEKS;
 
@@ -136,7 +140,7 @@ export async function processGraduation(
       (meta.name as string) ??
       authUser.email.split("@")[0];
 
-    const graduationUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/community/training/graduation`;
+    const graduationUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/mystery-school/training/graduation`;
 
     // Fire-and-forget — graduation email should not block the cron
     sendGraduationCongratulations({

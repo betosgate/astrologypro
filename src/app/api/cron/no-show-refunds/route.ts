@@ -4,6 +4,8 @@ import { stripe } from "@/lib/stripe/client";
 import { sendRefundProcessed } from "@/lib/email";
 import { verifyCronAuth } from "@/lib/cron-auth";
 
+export const dynamic = "force-dynamic";
+
 export const runtime = "nodejs";
 export const maxDuration = 60;
 

@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { welcomeDivinerEmail } from "@/lib/email-templates";
 
+export const dynamic = "force-dynamic";
+
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
 
 /**

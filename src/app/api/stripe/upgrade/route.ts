@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe/client";
 import { PLANS, type PlanId } from "@/lib/plans";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/stripe/upgrade
  * Upgrades (or switches) a diviner's subscription to a new plan with proration.

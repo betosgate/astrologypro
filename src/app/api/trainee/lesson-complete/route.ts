@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 // POST /api/trainee/lesson-complete
 // Body: { lessonId: string, quizScore?: number, quizPassed?: boolean }
 export async function POST(req: Request) {

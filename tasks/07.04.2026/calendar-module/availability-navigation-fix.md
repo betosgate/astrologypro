@@ -23,6 +23,15 @@ Users are currently unable to find the **Weekly Recurring Availability** form. T
 - [ ] **Calendar CTA**: The header on the grid view (`/dashboard/calendar`) is missing a **"Manage Weekly Schedule"** call-to-action button.
 - [ ] **Navigation Loop**: There is no "Back to Calendar" button on the Availability page to return to the grid.
 
+### 📝 FORM UPGRADE (Required Fields)
+- [ ] **Event Title**: Name of the availability block (e.g., "Weekly Sessions").
+- [ ] **Date Range**: Start and End Date pickers for validity period.
+- [ ] **Weekday Selection**: Multi-select pills/checkboxes for Sun–Sat.
+- [ ] **Time Slot Config**: Start and End time pickers.
+- [ ] **Time Span (Duration)**: Dropdown for session length (15m, 30m, 60m, etc.).
+- [ ] **Premium Timezone Picker**: Searchable dropdown supporting **IST** and all **6 US Timezones**.
+- [ ] **Event Details (WYSIWYG)**: Upgrade textarea to a Rich Text Editor.
+
 ### 🛠️ FIXES/REFINEMENTS
 - [ ] **Overlapping Validation**: Add front-end and back-end checks to prevent creating overlapping time slots on the same days.
 - [ ] **Empty State Handling**: Ensure a clean "No Availability" message with a clear CTA if no templates exist.

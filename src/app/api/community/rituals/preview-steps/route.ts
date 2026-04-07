@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/community/rituals/preview-steps?tags=tag1,tag2,tag3
 // Returns count of matching active ritual_invocations for the given tags.
 // Requires authenticated community member — not admin-only, but does not expose instructions.

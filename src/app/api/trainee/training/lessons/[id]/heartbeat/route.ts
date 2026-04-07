@@ -21,7 +21,7 @@ export async function POST(
 
   const { id: lessonId } = await params;
 
-  let body: { delta_seconds?: unknown };
+  let body: { delta_seconds?: unknown; last_position_seconds?: unknown };
   try { body = await req.json(); } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
@@ -33,6 +33,13 @@ export async function POST(
       { status: 422 }
     );
   }
+
+  // Optional: exact playback position for resume behavior
+  const rawPosition = body.last_position_seconds;
+  const lastPositionSeconds: number | null =
+    typeof rawPosition === "number" && Number.isFinite(rawPosition) && rawPosition >= 0
+      ? Math.round(rawPosition)
+      : null;
 
   const admin = createAdminClient();
   const now = new Date().toISOString();
@@ -51,6 +58,7 @@ export async function POST(
       .update({
         last_active_at: now,
         time_spent_seconds: (progress.time_spent_seconds ?? 0) + Math.round(delta),
+        ...(lastPositionSeconds !== null ? { last_position_seconds: lastPositionSeconds } : {}),
       })
       .eq("id", progress.id);
   }

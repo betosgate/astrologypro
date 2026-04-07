@@ -86,3 +86,43 @@ function getOffset(date: Date, timezone: string): number {
   const tzDate = new Date(date.toLocaleString("en-US", { timeZone: timezone }));
   return (utcDate.getTime() - tzDate.getTime()) / 60000;
 }
+
+/**
+ * Detect whether DST is currently active for a given timezone and date.
+ * Compares the UTC offset on the given date against the standard (non-DST) offset.
+ */
+export function isDSTActive(timezone: string, date: Date = new Date()): boolean {
+  const jan = new Date(date.getFullYear(), 0, 1);
+  const jul = new Date(date.getFullYear(), 6, 1);
+  const janOffset = getOffset(jan, timezone);
+  const julOffset = getOffset(jul, timezone);
+  const currentOffset = getOffset(date, timezone);
+  // Standard offset is the one farthest from UTC (most negative or largest absolute)
+  const stdOffset = Math.min(janOffset, julOffset);
+  return currentOffset !== stdOffset;
+}
+
+/**
+ * Get the current UTC offset string for a timezone (e.g. "-05:00", "+05:30").
+ */
+export function getUTCOffset(timezone: string, date: Date = new Date()): string {
+  const offsetMinutes = getOffset(date, timezone);
+  // offsetMinutes is (UTC - local) in minutes, so negative means behind UTC
+  // We want the conventional sign: UTC-5 means local is 5 hours behind
+  const totalMinutes = -offsetMinutes;
+  const sign = totalMinutes >= 0 ? "+" : "-";
+  const absMinutes = Math.abs(totalMinutes);
+  const hours = Math.floor(absMinutes / 60);
+  const mins = absMinutes % 60;
+  return `${sign}${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+}
+
+/**
+ * Convert a UTC Date to the wall-clock components in a given timezone.
+ * Returns a new Date object representing the wall-clock time (note: the Date
+ * object's internal UTC value is shifted; use only for display/formatting).
+ */
+export function convertToTimezone(utcDate: Date, timezone: string): Date {
+  const dateStr = utcDate.toLocaleString("en-US", { timeZone: timezone });
+  return new Date(dateStr);
+}

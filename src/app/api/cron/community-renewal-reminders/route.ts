@@ -3,6 +3,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendCommunityRenewalReminder } from "@/lib/email";
 import { verifyCronAuth } from "@/lib/cron-auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   const authError = verifyCronAuth(request);
   if (authError) return authError;

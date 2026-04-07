@@ -123,32 +123,52 @@ export async function callAstroAiApi(
 
   // Lambda Function URL requires an Origin header — without it, it returns 403 Forbidden.
   // Angular sends this automatically as a browser app; we must add it explicitly server-side.
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://www.backofficeportal.divineinfinitebeing.com";
-  const res = await fetch(aiUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Origin": origin,
-    },
-    body: JSON.stringify(enriched),
-  });
+  const origin =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "https://www.backofficeportal.divineinfinitebeing.com";
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Astro AI API error ${res.status}: ${text}`);
+  let lastError: unknown;
+  const maxRetries = 5;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(aiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: origin,
+          Host: aiUrl
+        },
+        body: JSON.stringify(enriched),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Astro AI API error ${res.status}: ${text}`);
+      }
+
+      const data = (await res.json()) as AstroAiResponse;
+
+      // Strip markdown code fences if present (matches Angular post-processing)
+      if (data.ai_response?.startsWith("```json")) {
+        data.ai_response = data.ai_response
+          .replace(/^```json\s*/, "")
+          .replace(/```$/, "")
+          .trim();
+      }
+
+      return data;
+    } catch (error) {
+      lastError = error;
+      console.error(`Attempt ${attempt} failed for Astro AI API:`, error);
+      if (attempt < maxRetries) {
+        // Wait 10 seconds before retrying
+        await new Promise((resolve) => setTimeout(resolve, 10000));
+      }
+    }
   }
 
-  const data = (await res.json()) as AstroAiResponse;
-
-  // Strip markdown code fences if present (matches Angular post-processing)
-  if (data.ai_response?.startsWith("```json")) {
-    data.ai_response = data.ai_response
-      .replace(/^```json\s*/, "")
-      .replace(/```$/, "")
-      .trim();
-  }
-
-  return data;
+  throw lastError || new Error("Astro AI API failed after maximum retries");
 }
 
 // ---------------------------------------------------------------------------

@@ -4,10 +4,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/admin-auth";
 import { getRoleDestination } from "@/types/user";
 
+export const dynamic = "force-dynamic";
+
 const VALID_PORTAL_BASES = [
   "/dashboard",
   "/portal",
   "/community",
+  "/mystery-school",
   "/trainee",
   "/advocate",
   "/admin",

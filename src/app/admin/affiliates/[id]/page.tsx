@@ -30,6 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Loader2,
   ArrowLeft,
@@ -38,6 +39,7 @@ import {
   XCircle,
   Wallet,
   PauseCircle,
+  AlertTriangle,
 } from "lucide-react";
 
 interface Affiliate {
@@ -77,6 +79,27 @@ interface Payout {
   created_at: string;
 }
 
+interface Dispute {
+  id: string;
+  commission_id: string | null;
+  affiliate_id: string;
+  raised_by: string | null;
+  status: string;
+  reason: string;
+  resolution_notes: string | null;
+  resolved_by: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const DISPUTE_STATUS_CLASS: Record<string, string> = {
+  open: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+  under_review: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  resolved: "bg-green-500/10 text-green-600 border-green-500/20",
+  dismissed: "bg-muted text-muted-foreground border-border",
+};
+
 const STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   active: "default",
   pending: "outline",
@@ -113,10 +136,12 @@ export default function AdminAffiliateDetailPage({
   const [affiliate, setAffiliate] = useState<Affiliate | null>(null);
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
   const [payoutDialogOpen, setPayoutDialogOpen] = useState(false);
   const [savingPayout, setSavingPayout] = useState(false);
   const [savingStatus, setSavingStatus] = useState(false);
+  const [resolvingDispute, setResolvingDispute] = useState<string | null>(null);
 
   // Payout form
   const [payoutAmount, setPayoutAmount] = useState("");
@@ -127,10 +152,11 @@ export default function AdminAffiliateDetailPage({
   const [selectedCommissionIds, setSelectedCommissionIds] = useState<string[]>([]);
 
   const loadData = useCallback(async () => {
-    const [affRes, commRes, payRes] = await Promise.all([
+    const [affRes, commRes, payRes, dispRes] = await Promise.all([
       fetch(`/api/admin/affiliates/${id}`),
       fetch(`/api/admin/affiliates/${id}/commissions`),
       fetch(`/api/admin/affiliates/${id}/payouts`),
+      fetch(`/api/admin/affiliates/${id}/disputes`),
     ]);
 
     if (affRes.ok) {
@@ -144,6 +170,10 @@ export default function AdminAffiliateDetailPage({
     if (payRes.ok) {
       const j = await payRes.json();
       setPayouts(j.data ?? []);
+    }
+    if (dispRes.ok) {
+      const j = await dispRes.json();
+      setDisputes(j.data ?? []);
     }
     setLoading(false);
   }, [id]);
@@ -246,6 +276,23 @@ export default function AdminAffiliateDetailPage({
       toast.error(err.title ?? "Failed to record payout");
     }
     setSavingPayout(false);
+  }
+
+  async function handleResolveDispute(disputeId: string, action: "resolved" | "dismissed", notes?: string) {
+    setResolvingDispute(disputeId);
+    const res = await fetch(`/api/admin/affiliates/${id}/disputes`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dispute_id: disputeId, status: action, resolution_notes: notes }),
+    });
+    if (res.ok) {
+      toast.success(`Dispute ${action}`);
+      await loadData();
+    } else {
+      const err = await res.json() as { detail?: string; title?: string };
+      toast.error(err.detail ?? err.title ?? `Failed to ${action} dispute`);
+    }
+    setResolvingDispute(null);
   }
 
   if (loading) {
@@ -408,7 +455,37 @@ export default function AdminAffiliateDetailPage({
         </Card>
       </div>
 
+      {/* Tabbed: Commission Ledger / Payout History / Disputes */}
+      <Tabs defaultValue="commissions" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="commissions">
+            Commission Ledger
+            {commissions.length > 0 && (
+              <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium">
+                {commissions.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="payouts">
+            Payout History
+            {payouts.length > 0 && (
+              <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium">
+                {payouts.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="disputes">
+            Disputes
+            {disputes.filter((d) => d.status === "open").length > 0 && (
+              <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700">
+                {disputes.filter((d) => d.status === "open").length}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
       {/* Commission Ledger */}
+      <TabsContent value="commissions">
       <Card>
         <CardHeader>
           <CardTitle>Commission Ledger</CardTitle>
@@ -514,8 +591,10 @@ export default function AdminAffiliateDetailPage({
           )}
         </CardContent>
       </Card>
+      </TabsContent>
 
       {/* Payout History */}
+      <TabsContent value="payouts">
       <Card>
         <CardHeader>
           <CardTitle>Payout History</CardTitle>
@@ -552,6 +631,99 @@ export default function AdminAffiliateDetailPage({
           )}
         </CardContent>
       </Card>
+
+      </TabsContent>
+
+      {/* Disputes */}
+      <TabsContent value="disputes">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="size-4 text-amber-500" />
+              Disputes
+            </CardTitle>
+            <CardDescription>Commission disputes raised for this affiliate.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            {disputes.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No disputes on record for this affiliate.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Reason</TableHead>
+                      <TableHead>Raised</TableHead>
+                      <TableHead>Resolution</TableHead>
+                      <TableHead>Resolved At</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {disputes.map((d) => (
+                      <TableRow key={d.id}>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${DISPUTE_STATUS_CLASS[d.status] ?? "bg-muted text-muted-foreground"}`}
+                          >
+                            {d.status.replace("_", " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-[220px] text-sm">{d.reason}</TableCell>
+                        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                          {fmtDate(d.created_at)}
+                        </TableCell>
+                        <TableCell className="max-w-[180px] text-sm text-muted-foreground">
+                          {d.resolution_notes ?? "—"}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                          {d.resolved_at ? fmtDate(d.resolved_at) : "—"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {(d.status === "open" || d.status === "under_review") && (
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                title="Resolve"
+                                disabled={resolvingDispute === d.id}
+                                onClick={() => handleResolveDispute(d.id, "resolved")}
+                              >
+                                {resolvingDispute === d.id ? (
+                                  <Loader2 className="size-3.5 animate-spin" />
+                                ) : (
+                                  <CheckCircle2 className="size-3.5" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 text-muted-foreground hover:text-foreground"
+                                title="Dismiss"
+                                disabled={resolvingDispute === d.id}
+                                onClick={() => handleResolveDispute(d.id, "dismissed")}
+                              >
+                                <XCircle className="size-3.5" />
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      </Tabs>
 
       {/* Record Payout Dialog */}
       <Dialog open={payoutDialogOpen} onOpenChange={setPayoutDialogOpen}>

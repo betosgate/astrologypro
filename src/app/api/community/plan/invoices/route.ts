@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 
+export const dynamic = "force-dynamic";
+
 export const runtime = "nodejs";
 
 /**

@@ -261,6 +261,73 @@ export async function deleteGoogleCalendarEvent(
 }
 
 /**
+ * Sets up a Google Calendar push notification watch on the diviner's primary calendar.
+ * Stores the channel-to-diviner mapping in calendar_webhook_channels for webhook reconciliation.
+ *
+ * @param webhookUrl - The publicly accessible URL for the webhook endpoint
+ *   (e.g. https://yourdomain.com/api/webhooks/calendar)
+ */
+export async function watchGoogleCalendar(
+  divinerId: string,
+  webhookUrl: string
+): Promise<{ channelId: string; expiration: string } | null> {
+  try {
+    const accessToken = await getAccessToken(divinerId);
+    if (!accessToken) return null;
+
+    const channelId = crypto.randomUUID();
+    // Google watch channels expire after a max of ~7 days; request the maximum
+    const expiration = Date.now() + 7 * 24 * 60 * 60 * 1000;
+
+    const res = await fetch(
+      `${GOOGLE_CALENDAR_API}/calendars/primary/events/watch`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: channelId,
+          type: "web_hook",
+          address: webhookUrl,
+          expiration,
+        }),
+      }
+    );
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("[google-calendar] Failed to set up watch:", errText);
+      return null;
+    }
+
+    const watchData = await res.json();
+
+    // Store the channel mapping so the webhook can look up the diviner
+    const supabase = createAdminClient();
+    await supabase.from("calendar_webhook_channels").upsert(
+      {
+        channel_id: channelId,
+        diviner_id: divinerId,
+        provider: "google",
+        resource_id: watchData.resourceId ?? null,
+        expiration: new Date(Number(watchData.expiration)).toISOString(),
+      },
+      { onConflict: "channel_id" }
+    );
+
+    return {
+      channelId,
+      expiration: new Date(Number(watchData.expiration)).toISOString(),
+    };
+  } catch (err) {
+    console.error("[google-calendar] Error setting up watch:", err);
+    return null;
+  }
+}
+
+/**
  * Disconnects Google Calendar by clearing the stored token.
  */
 export async function disconnectGoogleCalendar(
