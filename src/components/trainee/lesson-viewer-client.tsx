@@ -110,6 +110,10 @@ export type LessonViewerProps = {
   // Completion
   isCompleted: boolean;
 
+  // Next-item routing — computed server-side, consistent with lock logic
+  nextRoute: string | null;
+  nextLabel: string | null;
+
   // Sidebar nav
   sidebarLessons: SidebarLesson[];
 };
@@ -558,6 +562,8 @@ export function LessonViewerClient(props: LessonViewerProps) {
     quizLastScore,
     quizLastTotal,
     isCompleted: initialCompleted,
+    nextRoute,
+    nextLabel,
     sidebarLessons,
     triggers = [],
     lastPositionSeconds = 0,
@@ -621,7 +627,8 @@ export function LessonViewerClient(props: LessonViewerProps) {
     latestPositionRef.current = seconds;
   }, []);
 
-  // Heartbeat every 30 seconds while the component is mounted
+  // Heartbeat every 10 seconds while the component is mounted.
+  // Fires at ~10s cadence to keep last_position_seconds accurate for resume behavior.
   useEffect(() => {
     let lastTick = Date.now();
 
@@ -638,7 +645,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
           last_position_seconds: latestPositionRef.current,
         }),
       }).catch(() => {}); // fire-and-forget
-    }, 30_000);
+    }, 10_000);
 
     return () => clearInterval(interval);
   }, [lessonId]);
@@ -925,6 +932,8 @@ export function LessonViewerClient(props: LessonViewerProps) {
                   : "Pass the quiz above to complete this lesson."
                 : undefined
             }
+            nextRoute={nextRoute ?? null}
+            nextLabel={nextLabel ?? null}
             className="px-0"
           />
         </aside>

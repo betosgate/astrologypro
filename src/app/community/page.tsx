@@ -32,6 +32,7 @@ import {
   User,
   CreditCard,
   Compass,
+  Telescope,
 } from "lucide-react";
 import Link from "next/link";
 import { AstroChartsSection } from "@/components/community/astro-charts-section";
@@ -314,13 +315,23 @@ export default async function CommunityDashboardPage() {
   // ── Cancellation / renewal-soon flags ─────────────────────────────────────
   const isCancelling =
     Boolean((member as { cancel_at_period_end?: boolean | null }).cancel_at_period_end) ||
-    Boolean((member as { cancel_at?: string | null }).cancel_at);
+    Boolean((member as { cancel_at?: string | null }).cancel_at) ||
+    member.membership_status === "cancelling";
 
   const cancelAt: string | null =
     (member as { cancel_at?: string | null }).cancel_at ??
     (isCancelling ? renewalDate : null);
 
   const renewingSoon = !isCancelling && isWithinDays(renewalDate, 7);
+
+  // ── Days remaining until renewal/cancellation ─────────────────────────────
+  function daysUntil(iso: string | null): number | null {
+    if (!iso) return null;
+    const diff = new Date(iso).getTime() - Date.now();
+    if (diff <= 0) return 0;
+    return Math.ceil(diff / (24 * 60 * 60 * 1000));
+  }
+  const daysRemaining = daysUntil(renewalDate);
 
   // ── Legacy profile completion percentage (birth-data-only ring) ──────────
   let profilePct = 0;
@@ -535,6 +546,7 @@ export default async function CommunityDashboardPage() {
         {/* Top row: membership badge + member since + profile completion */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-3">
+            {/* Membership type badge */}
             <Badge
               variant="outline"
               className="text-xs font-semibold border-primary/40 bg-primary/5 text-primary"
@@ -543,6 +555,47 @@ export default async function CommunityDashboardPage() {
                 ? `${programName} — Family`
                 : programName}
             </Badge>
+            {/* Subscription status badge */}
+            <Badge
+              variant={
+                member.membership_status === "active"
+                  ? "default"
+                  : isCancelling
+                  ? "destructive"
+                  : "secondary"
+              }
+              className="text-xs capitalize"
+            >
+              {isCancelling ? "Cancelling" : (member.membership_status ?? "active")}
+            </Badge>
+            {/* Days remaining until next billing / access end */}
+            {daysRemaining !== null && !isCancelling && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="size-3 inline-block shrink-0" aria-hidden="true" />
+                {daysRemaining === 0
+                  ? "Renews today"
+                  : `${daysRemaining}d until renewal`}
+              </span>
+            )}
+            {daysRemaining !== null && isCancelling && (
+              <span className="text-xs text-red-600 flex items-center gap-1">
+                <Clock className="size-3 inline-block shrink-0" aria-hidden="true" />
+                {daysRemaining === 0
+                  ? "Access ends today"
+                  : `${daysRemaining}d of access remaining`}
+              </span>
+            )}
+            {/* Next billing date */}
+            {renewalDate && !isCancelling && (
+              <span className="text-xs text-muted-foreground">
+                Next billing:{" "}
+                {new Date(renewalDate).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
+            )}
             <span className="text-xs text-muted-foreground">
               Member since{" "}
               {new Date(member.joined_at).toLocaleDateString("en-US", {
@@ -579,7 +632,7 @@ export default async function CommunityDashboardPage() {
           <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
             <Link href="/community/plan">
               <CreditCard className="mr-1.5 size-3.5" />
-              My Plan
+              Manage Subscription
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
@@ -844,6 +897,36 @@ export default async function CommunityDashboardPage() {
             </Card>
           )}
         </div>
+
+        {/* Western Horoscope deep-link */}
+        <Card className="border-sky-500/20 bg-sky-500/5">
+          <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sky-500/20">
+                <Telescope className="size-4 text-sky-600" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold leading-tight">Western Natal Chart</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {ownChartReady
+                    ? "Your birth data is on file — generate or view your western horoscope."
+                    : "Enter your birth details to generate your western natal chart."}
+                </p>
+              </div>
+            </div>
+            <Button
+              asChild
+              size="sm"
+              variant="outline"
+              className="shrink-0 w-full sm:w-auto border-sky-500/40 text-sky-700 hover:bg-sky-500/10"
+            >
+              <Link href="/community/horoscope">
+                <Telescope className="mr-1.5 size-3.5" />
+                View My Natal Chart
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════

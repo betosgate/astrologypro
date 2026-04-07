@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendQuizPassed } from "@/lib/email";
+import { checkAndAwardTrainingGraduation } from "@/lib/training/graduation";
 
 export const dynamic = "force-dynamic";
 
@@ -198,10 +199,12 @@ export async function POST(
     );
   }
 
-  // If passed, mark lesson as complete — but only if all in-video triggers are also passed.
-  // This prevents the quiz path from bypassing the trigger-based completion gate.
+  // If passed, mark lesson as complete — but only when the lesson has no active triggers.
+  // Trigger-based lessons are completed exclusively via the trigger answer route.
+  // This is the authoritative gate: if ANY active trigger exists, lesson completion
+  // must come through that path, never through quiz submission.
   if (passed) {
-    // Check trigger gate before writing lesson completion
+    // Check trigger gate — if lesson has active triggers, block completion from here
     const { data: activeTriggers } = await admin
       .from("lesson_quiz_triggers")
       .select("id")
@@ -209,27 +212,17 @@ export async function POST(
       .eq("is_active", true);
 
     if (activeTriggers && activeTriggers.length > 0) {
-      const triggerIds = activeTriggers.map((t) => t.id);
-      const { count: passedTriggerCount } = await admin
-        .from("lesson_trigger_progress")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .in("trigger_id", triggerIds)
-        .eq("passed", true);
-
-      if ((passedTriggerCount ?? 0) < triggerIds.length) {
-        // Quiz passed but triggers pending — record the attempt as passed but don't
-        // mark the lesson complete yet. The learner must finish the in-video questions.
-        return NextResponse.json({
-          score,
-          total,
-          passed: true,
-          results,
-          lesson_complete: false,
-          pending_triggers: true,
-          message: "Quiz passed. Complete the in-video questions to finish this lesson.",
-        });
-      }
+      // Quiz passed but lesson has active triggers — return quiz result only.
+      // The trigger answer route will complete the lesson once all triggers are passed.
+      return NextResponse.json({
+        score,
+        total,
+        passed: true,
+        results,
+        lesson_complete: false,
+        pending_triggers: true,
+        message: "Quiz passed. Complete the in-video questions to finish this lesson.",
+      });
     }
 
     const now = new Date().toISOString();
@@ -325,7 +318,7 @@ export async function POST(
       }
     }
 
-    // Fire-and-forget: quiz passed email
+    // Fire-and-forget: quiz passed email + graduation check
     const pct = Math.round((score / total) * 100);
     admin.auth.admin.getUserById(user.id).then(({ data: authUser }) => {
       const traineeEmail = authUser.user?.email ?? "";
@@ -344,6 +337,12 @@ export async function POST(
         }).catch(() => {});
       }
     }).catch(() => {});
+
+    // Graduation check — runs after category completion is recorded.
+    // The shared helper is idempotent and verifies all lessons are done.
+    checkAndAwardTrainingGraduation(user.id).catch((err) =>
+      console.error("[training-graduation] check failed:", err)
+    );
   }
 
   return NextResponse.json({ score, total, passed, results });

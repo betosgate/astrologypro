@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { randomBytes } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   sendLessonComplete,
   sendCategoryComplete,
-  sendProgramComplete,
 } from "@/lib/email";
-import { createNotification } from "@/lib/notifications";
+import { checkAndAwardTrainingGraduation } from "@/lib/training/graduation";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +16,10 @@ export const dynamic = "force-dynamic";
  * if yes, inserts a category_completions record.
  *
  * Idempotent — duplicate lesson completions are silently ignored.
+ *
+ * NOTE: If the lesson has active in-video quiz triggers, this endpoint
+ * returns 422. Completion for trigger-gated lessons is handled exclusively
+ * by the trigger answer route once all triggers are passed.
  *
  * Response: { success: true, categoryCompleted: boolean }
  */
@@ -51,8 +53,9 @@ export async function POST(
 
   const now = new Date().toISOString();
 
-  // ── Server-side trigger gate ────────────────────────────────────────────────
-  // If the lesson has active in-video quiz triggers, all must be passed before completion.
+  // ── Trigger gate ────────────────────────────────────────────────────────────
+  // Lessons with active in-video quiz triggers are completed exclusively via
+  // the trigger answer route. This endpoint must not bypass that requirement.
   const { data: activeTriggers } = await admin
     .from("lesson_quiz_triggers")
     .select("id")
@@ -60,20 +63,12 @@ export async function POST(
     .eq("is_active", true);
 
   if (activeTriggers && activeTriggers.length > 0) {
-    const triggerIds = activeTriggers.map((t) => t.id);
-    const { count: passedCount } = await admin
-      .from("lesson_trigger_progress")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .in("trigger_id", triggerIds)
-      .eq("passed", true);
-
-    if ((passedCount ?? 0) < triggerIds.length) {
-      return NextResponse.json(
-        { error: "Complete all in-video quiz questions before marking the lesson done." },
-        { status: 422 }
-      );
-    }
+    return NextResponse.json(
+      {
+        error: "Complete all in-video quiz questions before marking the lesson done.",
+      },
+      { status: 422 }
+    );
   }
 
   // Look up lesson_progress to carry started_at / time_spent_seconds into completion record
@@ -82,7 +77,7 @@ export async function POST(
     .select("id, started_at, time_spent_seconds")
     .eq("user_id", user.id)
     .eq("lesson_id", lessonId)
-    .single();
+    .maybeSingle();
 
   // Mark lesson_progress.completed_at
   if (lessonProgress) {
@@ -93,7 +88,7 @@ export async function POST(
   }
 
   // Upsert lesson completion with time tracking fields
-  // ignoreDuplicates: true — idempotent; we detect "new completion" by checking error/count
+  // ignoreDuplicates: true — idempotent; we detect "new completion" by checking count
   const { error: completionError, count: insertedCount } = await admin
     .from("lesson_completions")
     .upsert(
@@ -132,7 +127,6 @@ export async function POST(
       .eq("is_active", true);
 
     if (totalCount && totalCount > 0) {
-      // Count how many the user has completed in this category
       const { data: categoryLessons } = await admin
         .from("training_lessons")
         .select("id")
@@ -188,11 +182,10 @@ export async function POST(
     }
   }
 
-  // ── Fire-and-forget emails ──────────────────────────────────────────────────
-  // Only send emails for new completions (not duplicate/idempotent calls)
+  // ── Fire-and-forget emails + graduation check ───────────────────────────────
+  // Only send emails and run graduation for new completions
   if (isNewCompletion) {
-    // Fetch trainee email + name, lesson title, category, and program info in parallel
-    const [authUser, categoryRow, progProgressRows] = await Promise.all([
+    const [authUser, categoryRow] = await Promise.all([
       admin.auth.admin.getUserById(user.id),
       categoryId
         ? admin
@@ -201,10 +194,6 @@ export async function POST(
             .eq("id", categoryId)
             .single()
         : Promise.resolve({ data: null }),
-      admin
-        .from("user_program_progress")
-        .select("program_id, progress_pct, next_category_name, next_lesson_title")
-        .eq("user_id", user.id),
     ]);
 
     const traineeEmail = authUser.data.user?.email ?? "";
@@ -222,7 +211,7 @@ export async function POST(
     const lessonTitle = lesson.title;
     const categoryName = catData?.name ?? "";
 
-    // Fetch next lesson title for this category from user_category_progress cache
+    // Fetch next lesson title for this category from progress cache
     let nextLessonTitle: string | undefined;
     if (categoryId) {
       const { data: ucpRow } = await admin
@@ -246,14 +235,16 @@ export async function POST(
 
       // Category complete email (only when newly completed this call)
       if (categoryCompleted && catData?.training_id) {
-        const programProgressRows = progProgressRows.data ?? [];
-        const programRow = programProgressRows.find(
-          (r) => r.program_id === catData.training_id
-        );
-        const nextCategoryName = programRow?.next_category_name ?? undefined;
+        const { data: progProgressRow } = await admin
+          .from("user_program_progress")
+          .select("next_category_name")
+          .eq("user_id", user.id)
+          .eq("program_id", catData.training_id)
+          .maybeSingle();
 
-        // Fetch program name and completed lesson count
-        const [programRow2, lessonsCompletedInCat] = await Promise.all([
+        const nextCategoryName = progProgressRow?.next_category_name ?? undefined;
+
+        const [programRow, lessonsCompletedInCat] = await Promise.all([
           admin
             .from("training_programs")
             .select("name")
@@ -279,59 +270,18 @@ export async function POST(
           to: traineeEmail,
           name: traineeName,
           categoryName,
-          programName: programRow2.data?.name ?? "",
+          programName: programRow.data?.name ?? "",
           lessonsCompleted: lessonsCompletedInCat.count ?? 0,
           nextCategoryName,
         }).catch(() => {});
-
-        // Graduation check: if ALL programs for this user have progress_pct >= 100
-        const allPrograms = programProgressRows;
-        if (
-          allPrograms.length > 0 &&
-          allPrograms.every((r) => Number(r.progress_pct) >= 100)
-        ) {
-          // Check that trainee is not already graduated
-          const { data: traineeRow } = await admin
-            .from("trainees")
-            .select("id, graduated_at")
-            .eq("user_id", user.id)
-            .maybeSingle();
-
-          if (traineeRow && !traineeRow.graduated_at) {
-            // Auto-graduate — generate a unique certificate verification code
-            const certCode = randomBytes(6).toString("hex").toUpperCase();
-
-            await admin
-              .from("trainees")
-              .update({
-                graduated_at: new Date().toISOString(),
-                training_status: "graduated",
-                certificate_code: certCode,
-              })
-              .eq("id", traineeRow.id);
-
-            const programName = programRow2.data?.name ?? "Training Program";
-            const certificateUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/trainee/certificate`;
-
-            sendProgramComplete({
-              to: traineeEmail,
-              name: traineeName,
-              programName,
-              certificateUrl,
-            }).catch(() => {});
-
-            // In-app graduation notification (fire-and-forget)
-            createNotification({
-              userId: user.id,
-              title: "🎓 Training Complete!",
-              body: "You've completed all programs. Your certificate is ready.",
-              type: "training",
-              actionUrl: "/trainee/certificate",
-            }).catch(() => {});
-          }
-        }
       }
     }
+
+    // Graduation check — runs after all emails are queued
+    // Uses the shared helper which verifies all lessons complete and is idempotent.
+    checkAndAwardTrainingGraduation(user.id).catch((err) =>
+      console.error("[training-graduation] check failed:", err)
+    );
   }
 
   return NextResponse.json({ success: true, categoryCompleted });
