@@ -326,8 +326,16 @@ export default async function TraineeSessionsPage() {
         </h2>
         {pastBookings.length === 0 ? (
           <Card>
-            <CardContent className="py-8 text-center">
-              <p className="text-sm text-muted-foreground">No session history yet.</p>
+            <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+              <div className="flex size-12 items-center justify-center rounded-full bg-muted">
+                <Clock className="size-6 text-muted-foreground" aria-hidden="true" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">No session history yet</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Completed practice sessions will appear here.
+                </p>
+              </div>
             </CardContent>
           </Card>
         ) : (

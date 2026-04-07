@@ -42,13 +42,16 @@ function formatDateStr(iso: string): string {
   });
 }
 
+// Gold-standard commission status colors:
+// pending=gray, approved=blue, paid=green, rejected=red, on_hold=orange
 const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-  on_hold: "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300",
-  approved: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
-  paid: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300",
-  rejected: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
+  pending: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+  on_hold: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
+  approved: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  paid: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
+  rejected: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
   reversed: "bg-muted text-muted-foreground",
+  adjusted: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
 };
 
 function StatusBadge({ status }: { status: string }) {

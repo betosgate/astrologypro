@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, LifeBuoy } from "lucide-react";
+import { Plus, LifeBuoy, Circle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Support | Dashboard" };
@@ -35,6 +35,8 @@ interface SupportTicket {
   category: string;
   created_at: string;
   updated_at: string;
+  // unread = updated_at > last customer message timestamp; we derive from updated_at vs created_at heuristic
+  _unread?: boolean;
 }
 
 // ─── Status badge styles ──────────────────────────────────────────────────────
@@ -91,7 +93,15 @@ export default async function SupportPage() {
     .order("created_at", { ascending: false })
     .limit(50);
 
-  const ticketList = (tickets as SupportTicket[]) ?? [];
+  const rawTickets = (tickets as SupportTicket[]) ?? [];
+
+  // Derive unread indicator: a ticket is "unread" if it has a staff reply newer than the
+  // ticket's updated_at as perceived by the customer — we use a simple heuristic:
+  // status is "waiting_requester" (staff replied and waiting) and updated_at > created_at
+  const ticketList = rawTickets.map((t) => ({
+    ...t,
+    _unread: t.status === "waiting_requester",
+  }));
   const openCount = ticketList.filter((t) =>
     ["open", "in_progress", "waiting_requester", "waiting_internal", "escalated"].includes(t.status)
   ).length;
@@ -166,12 +176,17 @@ export default async function SupportPage() {
                       </Link>
                     </TableCell>
                     <TableCell className="max-w-xs">
-                      <Link
-                        href={`/dashboard/support/${ticket.id}`}
-                        className="hover:underline line-clamp-1"
-                      >
-                        {ticket.subject}
-                      </Link>
+                      <span className="flex items-center gap-1.5">
+                        {ticket._unread && (
+                          <Circle className="size-2 fill-blue-500 text-blue-500 shrink-0" aria-label="New staff reply" />
+                        )}
+                        <Link
+                          href={`/dashboard/support/${ticket.id}`}
+                          className="hover:underline line-clamp-1"
+                        >
+                          {ticket.subject}
+                        </Link>
+                      </span>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {ticket.category}

@@ -114,6 +114,8 @@ type ProgramRow = {
   completed_count: number;
   completion_rate: number;
   avg_time_spent_seconds: number;
+  mean_completion_time_seconds: number;
+  median_completion_time_seconds: number;
   avg_quiz_pass_rate: number;
 };
 
@@ -127,6 +129,8 @@ type CategoryRow = {
   unique_users_started: number;
   completion_rate: number;
   avg_time_spent_seconds: number;
+  mean_completion_time_seconds: number;
+  median_completion_time_seconds: number;
 };
 
 type LessonRow = {
@@ -713,7 +717,8 @@ export default function TrainingAnalyticsPage() {
                         <TableHead className="text-right">Enrolled</TableHead>
                         <TableHead className="text-right">Completed</TableHead>
                         <TableHead className="text-right">Completion Rate</TableHead>
-                        <TableHead className="text-right">Avg Time</TableHead>
+                        <TableHead className="text-right">Mean Time</TableHead>
+                        <TableHead className="text-right">Median Time</TableHead>
                         <TableHead className="text-right">Quiz Pass Rate</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -743,7 +748,14 @@ export default function TrainingAnalyticsPage() {
                             {fmtPct(p.completion_rate)}
                           </TableCell>
                           <TableCell className="text-right tabular-nums whitespace-nowrap">
-                            {p.avg_time_spent_seconds > 0 ? fmtTime(p.avg_time_spent_seconds) : "—"}
+                            {(p.mean_completion_time_seconds ?? p.avg_time_spent_seconds) > 0
+                              ? fmtTime(p.mean_completion_time_seconds ?? p.avg_time_spent_seconds)
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums whitespace-nowrap">
+                            {(p.median_completion_time_seconds ?? 0) > 0
+                              ? fmtTime(p.median_completion_time_seconds)
+                              : "—"}
                           </TableCell>
                           <TableCell className="text-right">
                             {p.avg_quiz_pass_rate > 0 ? (
@@ -809,7 +821,8 @@ export default function TrainingAnalyticsPage() {
                         <TableHead className="text-right">Users Started</TableHead>
                         <TableHead className="text-right">Completions</TableHead>
                         <TableHead className="text-right">Completion Rate</TableHead>
-                        <TableHead className="text-right">Avg Time</TableHead>
+                        <TableHead className="text-right">Mean Time</TableHead>
+                        <TableHead className="text-right">Median Time</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -826,7 +839,14 @@ export default function TrainingAnalyticsPage() {
                             {fmtPct(c.completion_rate)}
                           </TableCell>
                           <TableCell className="text-right tabular-nums whitespace-nowrap">
-                            {c.avg_time_spent_seconds > 0 ? fmtTime(c.avg_time_spent_seconds) : "—"}
+                            {(c.mean_completion_time_seconds ?? c.avg_time_spent_seconds) > 0
+                              ? fmtTime(c.mean_completion_time_seconds ?? c.avg_time_spent_seconds)
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums whitespace-nowrap">
+                            {(c.median_completion_time_seconds ?? 0) > 0
+                              ? fmtTime(c.median_completion_time_seconds)
+                              : "—"}
                           </TableCell>
                         </TableRow>
                       ))}

@@ -22,7 +22,8 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Lock, Star, BookOpen, Layers } from "lucide-react";
+import { CheckCircle2, Lock, Star, BookOpen, Layers, Sparkles } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 export const dynamic = "force-dynamic";
 
@@ -176,17 +177,53 @@ export default async function GraduationPage() {
       `${stats.unexcusedMissed} unresolved missed decan${stats.unexcusedMissed > 1 ? "s" : ""}`,
   ].filter(Boolean) as string[];
 
+  const progressPct = Math.round(
+    ((stats.foundationComplete / 12) * 0.5 + (stats.decansComplete / 36) * 0.5) * 100
+  );
+
   return (
     <div className="space-y-6 max-w-2xl">
-      <div>
-        <div className="flex items-center gap-2">
-          <Star className="size-5 text-muted-foreground" />
-          <h1 className="text-2xl font-bold tracking-tight">Graduation</h1>
+      {/* Gold-on-dark hero */}
+      <div className="relative rounded-xl overflow-hidden border border-yellow-500/20 bg-gradient-to-br from-yellow-950/30 via-background to-background px-6 py-8 shadow-sm">
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 60% 60% at 10% 20%, rgba(234,179,8,0.07) 0%, transparent 70%)",
+          }}
+        />
+        <div className="relative space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-xs font-semibold text-yellow-500 uppercase tracking-wider">
+              <Sparkles className="size-3" />
+              Mystery School
+            </span>
+          </div>
+
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Graduation</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Complete all 12 foundation weeks and all 36 decans to receive your
+              Priest / Priestess title.
+            </p>
+          </div>
+
+          <Separator className="opacity-20" />
+
+          {/* Combined progress bar */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Overall completion</span>
+              <span className="font-semibold text-yellow-500/80">{progressPct}%</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-yellow-500/10 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-700"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+          </div>
         </div>
-        <p className="text-muted-foreground">
-          Complete all 36 decans and your full foundation to graduate from the
-          Mystery School.
-        </p>
       </div>
 
       {/* Progress summary */}

@@ -37,6 +37,7 @@ import {
   Users,
   DollarSign,
   Wallet,
+  UserPlus,
 } from "lucide-react";
 
 interface Affiliate {
@@ -151,8 +152,25 @@ export default function DashboardAffiliatesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Affiliates</h1>
+            <p className="text-muted-foreground">
+              Manage your affiliate partners and track commissions.
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />
+          ))}
+        </div>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-12 rounded-lg bg-muted animate-pulse" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -305,9 +323,21 @@ export default function DashboardAffiliatesPage() {
         </CardHeader>
         <CardContent>
           {affiliates.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No affiliates yet. Add your first affiliate partner above.
-            </p>
+            <div className="flex flex-col items-center gap-4 py-16 text-center">
+              <div className="flex size-14 items-center justify-center rounded-full bg-muted">
+                <UserPlus className="size-7 text-muted-foreground" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium">No affiliates yet</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Add affiliate partners to track referral commissions and grow your practice.
+                </p>
+              </div>
+              <Button onClick={() => { setSheetOpen(true); resetForm(); }}>
+                <Plus className="mr-2 size-4" />
+                Add Your First Affiliate
+              </Button>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>

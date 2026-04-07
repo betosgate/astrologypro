@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus } from "lucide-react";
+import { Plus, Clock } from "lucide-react";
 import { TicketsFilter } from "@/components/admin/tickets-filter";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +40,8 @@ interface SupportTicket {
   requester_role: string | null;
   assigned_to: string | null;
   assigned_team: string | null;
+  sla_due_at: string | null;
+  sla_breached: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -77,6 +79,16 @@ function formatDate(d: string) {
   });
 }
 
+// SLA posture: returns pill style + label
+function slaPosture(sla_due_at: string | null, sla_breached: boolean): { label: string; className: string } | null {
+  if (!sla_due_at) return null;
+  if (sla_breached) return { label: "Breached", className: "bg-red-500/10 text-red-600 border-red-500/20" };
+  const diffMs = new Date(sla_due_at).getTime() - Date.now();
+  if (diffMs < 0) return { label: "Breached", className: "bg-red-500/10 text-red-600 border-red-500/20" };
+  if (diffMs < 2 * 60 * 60 * 1000) return { label: "At Risk", className: "bg-amber-500/10 text-amber-600 border-amber-500/20" };
+  return { label: "On Track", className: "bg-green-500/10 text-green-600 border-green-500/20" };
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function AdminTicketsPage({
@@ -102,7 +114,7 @@ export default async function AdminTicketsPage({
   let query = admin
     .from("support_tickets")
     .select(
-      "id, ticket_number, type, category, subject, status, priority, requester_name, requester_email, requester_role, assigned_to, assigned_team, created_at, updated_at",
+      "id, ticket_number, type, category, subject, status, priority, requester_name, requester_email, requester_role, assigned_to, assigned_team, sla_due_at, sla_breached, created_at, updated_at",
       { count: "exact" }
     )
     .order("priority", { ascending: true })
@@ -174,6 +186,12 @@ export default async function AdminTicketsPage({
                   <TableHead>Requester</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Priority</TableHead>
+                  <TableHead>
+                    <span className="flex items-center gap-1">
+                      <Clock className="size-3.5" />
+                      SLA
+                    </span>
+                  </TableHead>
                   <TableHead>Assigned</TableHead>
                   <TableHead>Created</TableHead>
                 </TableRow>
@@ -224,6 +242,17 @@ export default async function AdminTicketsPage({
                       >
                         {formatStatus(ticket.priority)}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const posture = slaPosture(ticket.sla_due_at, ticket.sla_breached);
+                        if (!posture) return <span className="text-xs text-muted-foreground">—</span>;
+                        return (
+                          <Badge variant="outline" className={`text-xs ${posture.className}`}>
+                            {posture.label}
+                          </Badge>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {ticket.assigned_team ?? "Unassigned"}

@@ -24,29 +24,124 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Category / Subcategory map ───────────────────────────────────────────────
 
-const CATEGORIES = [
-  { value: "Account", label: "Account & Login" },
-  { value: "Payment", label: "Payment & Billing" },
-  { value: "Booking", label: "Booking & Appointment" },
-  { value: "Course", label: "Course Access" },
-  { value: "Technical", label: "Technical Issue" },
-  { value: "Refund", label: "Refund / Cancellation" },
-  { value: "Other", label: "Other" },
-] as const;
+const CATEGORY_MAP: Record<string, { label: string; subcategories: { value: string; label: string }[] }> = {
+  Account: {
+    label: "Account & Login",
+    subcategories: [
+      { value: "Login Issue", label: "Cannot log in" },
+      { value: "OTP Issue", label: "Did not receive OTP / verification email" },
+      { value: "Profile Update", label: "Account / profile correction request" },
+      { value: "Password Reset", label: "Password reset" },
+    ],
+  },
+  Payment: {
+    label: "Payment & Billing",
+    subcategories: [
+      { value: "Payment Failure", label: "Payment failed" },
+      { value: "Duplicate Charge", label: "Duplicate or extra charge" },
+      { value: "Invoice", label: "Invoice / receipt needed" },
+      { value: "Subscription", label: "Subscription issue" },
+    ],
+  },
+  Refund: {
+    label: "Refund / Cancellation",
+    subcategories: [
+      { value: "Refund Request", label: "Request a refund" },
+      { value: "Cancellation", label: "Cancel a booking or order" },
+      { value: "Exchange", label: "Exchange / swap" },
+    ],
+  },
+  Booking: {
+    label: "Booking & Appointment",
+    subcategories: [
+      { value: "Cannot Book", label: "Cannot complete booking" },
+      { value: "Reschedule", label: "Reschedule request" },
+      { value: "Session Issue", label: "Session or stream issue" },
+      { value: "No Show", label: "No-show / missed session" },
+    ],
+  },
+  Course: {
+    label: "Course Access",
+    subcategories: [
+      { value: "Access Issue", label: "Cannot access purchased course" },
+      { value: "Lesson Issue", label: "Lesson not loading" },
+      { value: "Progress Issue", label: "Progress not saved" },
+    ],
+  },
+  Order: {
+    label: "Orders & Fulfillment",
+    subcategories: [
+      { value: "Order Missing", label: "Order not received" },
+      { value: "Tracking", label: "Tracking not updated" },
+      { value: "Wrong Item", label: "Wrong or damaged item" },
+    ],
+  },
+  Technical: {
+    label: "Technical Issue",
+    subcategories: [
+      { value: "Stream Issue", label: "Live stream / video issue" },
+      { value: "Chat Issue", label: "Chat / messaging issue" },
+      { value: "App Bug", label: "App bug or error" },
+      { value: "Other Technical", label: "Other technical issue" },
+    ],
+  },
+  Complaint: {
+    label: "Complaint / Feedback",
+    subcategories: [
+      { value: "Service Complaint", label: "Complaint about a service" },
+      { value: "Diviner Complaint", label: "Complaint about a diviner" },
+      { value: "General Feedback", label: "General feedback" },
+    ],
+  },
+  Abuse: {
+    label: "Abuse / Safety Report",
+    subcategories: [
+      { value: "Abusive Behavior", label: "Abusive or inappropriate behavior" },
+      { value: "Fraud", label: "Suspected fraud" },
+      { value: "Other Safety", label: "Other safety concern" },
+    ],
+  },
+  Other: {
+    label: "Other",
+    subcategories: [
+      { value: "Other", label: "Other / not listed above" },
+    ],
+  },
+};
 
-type CategoryValue = typeof CATEGORIES[number]["value"];
+// Related entity types that can be attached
+const ENTITY_TYPES = [
+  { value: "", label: "None" },
+  { value: "order", label: "Order" },
+  { value: "booking", label: "Booking" },
+  { value: "session", label: "Session / Live stream" },
+  { value: "course", label: "Course" },
+  { value: "payout", label: "Payout" },
+];
+
+type CategoryKey = keyof typeof CATEGORY_MAP;
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function NewTicketPage() {
   const router = useRouter();
 
-  const [category, setCategory] = useState<CategoryValue | "">("");
+  const [category, setCategory] = useState<CategoryKey | "">("");
+  const [subcategory, setSubcategory] = useState("");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
+  const [entityType, setEntityType] = useState("");
+  const [entityId, setEntityId] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  function handleCategoryChange(val: string) {
+    setCategory(val as CategoryKey);
+    setSubcategory(""); // reset subcategory when category changes
+  }
+
+  const subcategoryOptions = category ? (CATEGORY_MAP[category]?.subcategories ?? []) : [];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -72,8 +167,11 @@ export default function NewTicketPage() {
         body: JSON.stringify({
           type: "support",
           category,
+          subcategory: subcategory || undefined,
           subject: subject.trim(),
           description: description.trim(),
+          related_entity_type: entityType || undefined,
+          related_entity_id: entityId.trim() || undefined,
         }),
       });
 
@@ -119,20 +217,42 @@ export default function NewTicketPage() {
               </Label>
               <Select
                 value={category}
-                onValueChange={(v) => setCategory(v as CategoryValue)}
+                onValueChange={handleCategoryChange}
               >
                 <SelectTrigger id="category">
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.label}
+                  {Object.entries(CATEGORY_MAP).map(([key, { label }]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Subcategory — only shown when category is selected and has options */}
+            {subcategoryOptions.length > 0 && (
+              <div className="space-y-1.5">
+                <Label htmlFor="subcategory">Subcategory</Label>
+                <Select
+                  value={subcategory}
+                  onValueChange={setSubcategory}
+                >
+                  <SelectTrigger id="subcategory">
+                    <SelectValue placeholder="Select a subcategory (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subcategoryOptions.map((sc) => (
+                      <SelectItem key={sc.value} value={sc.value}>
+                        {sc.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Subject */}
             <div className="space-y-1.5">
@@ -165,6 +285,44 @@ export default function NewTicketPage() {
                 rows={6}
                 required
               />
+            </div>
+
+            {/* Related entity selector */}
+            <div className="space-y-3 rounded-md border p-4 bg-muted/30">
+              <p className="text-sm font-medium">Related record (optional)</p>
+              <p className="text-xs text-muted-foreground -mt-1">
+                Link this ticket to an existing order, booking, or session to help us resolve it faster.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="entity-type" className="text-xs">Record type</Label>
+                  <Select value={entityType} onValueChange={(v) => { setEntityType(v); setEntityId(""); }}>
+                    <SelectTrigger id="entity-type">
+                      <SelectValue placeholder="None" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ENTITY_TYPES.map((et) => (
+                        <SelectItem key={et.value} value={et.value}>
+                          {et.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {entityType && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="entity-id" className="text-xs">
+                      {entityType.charAt(0).toUpperCase() + entityType.slice(1)} ID / reference
+                    </Label>
+                    <Input
+                      id="entity-id"
+                      placeholder={`e.g. ORD-12345`}
+                      value={entityId}
+                      onChange={(e) => setEntityId(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Actions */}

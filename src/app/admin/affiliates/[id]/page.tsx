@@ -37,6 +37,7 @@ import {
   CheckCircle2,
   XCircle,
   Wallet,
+  PauseCircle,
 } from "lucide-react";
 
 interface Affiliate {
@@ -81,6 +82,18 @@ const STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "o
   pending: "outline",
   suspended: "secondary",
   blocked: "destructive",
+};
+
+// Gold-standard commission status pill colors
+// pending=gray, approved=blue, paid=green, rejected=red, on_hold=orange, reversed=muted
+const COMMISSION_STATUS_CLASS: Record<string, string> = {
+  pending: "bg-gray-500/10 text-gray-600 border-gray-500/20",
+  on_hold: "bg-orange-500/10 text-orange-600 border-orange-500/20",
+  approved: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  paid: "bg-green-500/10 text-green-600 border-green-500/20",
+  rejected: "bg-red-500/10 text-red-600 border-red-500/20",
+  reversed: "bg-muted text-muted-foreground border-border",
+  adjusted: "bg-purple-500/10 text-purple-600 border-purple-500/20",
 };
 
 function fmtCents(cents: number) {
@@ -156,26 +169,48 @@ export default function AdminAffiliateDetailPage({
   }
 
   async function handleApproveCommission(commId: string) {
-    const res = await fetch(`/api/admin/affiliates/${id}/commissions`, {
-      method: "POST",
+    const res = await fetch(`/api/admin/commissions/${commId}`, {
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ commission_id: commId, action: "approve" }),
+      body: JSON.stringify({ status: "approved" }),
     });
-    // Direct patch via admin API
-    const patchRes = await fetch(`/api/admin/affiliates/${id}/commissions`, {
-      method: "POST",
+    if (res.ok) {
+      toast.success("Commission approved.");
+      await loadData();
+    } else {
+      const err = await res.json();
+      toast.error(err.detail ?? err.title ?? "Failed to approve commission.");
+    }
+  }
+
+  async function handleRejectCommission(commId: string) {
+    const res = await fetch(`/api/admin/commissions/${commId}`, {
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        order_amount_cents: 0,
-        commission_type: "fixed",
-        commission_rate: 0,
-        commission_amount_cents: 0,
-        notes: "approve action",
-      }),
+      body: JSON.stringify({ status: "rejected", reason: "Rejected by admin" }),
     });
-    void res; void patchRes;
-    // Use direct Supabase update via patch on the commission status
-    toast.info("Use the Supabase dashboard to approve individual commissions — or record a payout to mark them paid.");
+    if (res.ok) {
+      toast.success("Commission rejected.");
+      await loadData();
+    } else {
+      const err = await res.json();
+      toast.error(err.detail ?? err.title ?? "Failed to reject commission.");
+    }
+  }
+
+  async function handleHoldCommission(commId: string) {
+    const res = await fetch(`/api/admin/commissions/${commId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "on_hold", reason: "Placed on hold by admin" }),
+    });
+    if (res.ok) {
+      toast.success("Commission put on hold.");
+      await loadData();
+    } else {
+      const err = await res.json();
+      toast.error(err.detail ?? err.title ?? "Failed to put commission on hold.");
+    }
   }
 
   async function handleRecordPayout() {
@@ -393,6 +428,7 @@ export default function AdminAffiliateDetailPage({
                     <TableHead>Rate</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -405,11 +441,71 @@ export default function AdminAffiliateDetailPage({
                         {c.commission_type === "percentage" ? `${c.commission_rate}%` : `$${(Number(c.commission_rate) / 100).toFixed(2)} fixed`}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={c.status === "paid" ? "default" : c.status === "rejected" ? "destructive" : "outline"}>
+                        <Badge
+                          variant="outline"
+                          className={`text-xs ${COMMISSION_STATUS_CLASS[c.status] ?? "bg-muted text-muted-foreground"}`}
+                        >
                           {c.status}
                         </Badge>
                       </TableCell>
                       <TableCell>{fmtDate(c.created_at)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {c.status === "pending" && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                title="Approve"
+                                onClick={() => handleApproveCommission(c.id)}
+                              >
+                                <CheckCircle2 className="size-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                                title="Put on hold"
+                                onClick={() => handleHoldCommission(c.id)}
+                              >
+                                <PauseCircle className="size-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                title="Reject"
+                                onClick={() => handleRejectCommission(c.id)}
+                              >
+                                <XCircle className="size-3.5" />
+                              </Button>
+                            </>
+                          )}
+                          {c.status === "on_hold" && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                title="Approve"
+                                onClick={() => handleApproveCommission(c.id)}
+                              >
+                                <CheckCircle2 className="size-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                title="Reject"
+                                onClick={() => handleRejectCommission(c.id)}
+                              >
+                                <XCircle className="size-3.5" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

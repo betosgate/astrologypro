@@ -399,9 +399,21 @@ export default function DashboardAffiliateDetailPage({
                         {c.commission_type === "percentage" ? `${c.commission_rate}%` : `$${(Number(c.commission_rate) / 100).toFixed(2)} fixed`}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={c.status === "paid" ? "default" : c.status === "rejected" ? "destructive" : "outline"}>
-                          {c.status}
-                        </Badge>
+                        {(() => {
+                          const commStatusClass: Record<string, string> = {
+                            pending: "bg-gray-500/10 text-gray-600 border-gray-500/20",
+                            on_hold: "bg-orange-500/10 text-orange-600 border-orange-500/20",
+                            approved: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+                            paid: "bg-green-500/10 text-green-600 border-green-500/20",
+                            rejected: "bg-red-500/10 text-red-600 border-red-500/20",
+                            reversed: "bg-muted text-muted-foreground border-border",
+                          };
+                          return (
+                            <Badge variant="outline" className={`text-xs ${commStatusClass[c.status] ?? "bg-muted text-muted-foreground"}`}>
+                              {c.status}
+                            </Badge>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>{fmtDate(c.created_at)}</TableCell>
                     </TableRow>

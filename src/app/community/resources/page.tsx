@@ -3,8 +3,9 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Video, Radio, Megaphone, PlayCircle, Lock } from "lucide-react";
+import { FileText, Video, Radio, Megaphone, PlayCircle, Lock, BookOpen } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
+import Link from "next/link";
 
 export const metadata = { title: "Resources - AstrologyPro Community" };
 export const dynamic = "force-dynamic";
@@ -89,11 +90,20 @@ export default async function CommunityResourcesPage() {
       </div>
 
       {totalVisible === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">No content published yet. Check back soon.</p>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center gap-4 py-16 text-center">
+          <div className="flex size-14 items-center justify-center rounded-full bg-muted">
+            <BookOpen className="size-7 text-muted-foreground" />
+          </div>
+          <div>
+            <h3 className="text-lg font-medium">No resources available yet</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Community resources will appear here once published. Check back soon.
+            </p>
+          </div>
+          <Button asChild variant="outline">
+            <Link href="/community">Back to Community</Link>
+          </Button>
+        </div>
       )}
 
       {sections.map(({ key, label, Icon }) => {

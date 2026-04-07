@@ -20,8 +20,11 @@ import {
   ChevronUp,
   CheckSquare,
   Square,
+  Flame,
+  Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 export const dynamic = "force-dynamic";
 
@@ -426,41 +429,75 @@ export default function MysterySchoolTrainingPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <div className="flex items-center gap-2">
-          <BookOpen className="size-5 text-muted-foreground" />
-          <h1 className="text-2xl font-bold tracking-tight">
-            Foundation Training
-          </h1>
+
+      {/* ── Gold-standard hero header ─────────────────────────────────────── */}
+      <div className="relative rounded-xl overflow-hidden border border-yellow-500/20 bg-gradient-to-br from-yellow-950/30 via-background to-background px-6 py-8 shadow-sm">
+        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-yellow-500/10 via-transparent to-transparent" />
+        <div className="relative flex items-start justify-between gap-6 flex-wrap">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-9 items-center justify-center rounded-lg border border-yellow-500/30 bg-yellow-500/10">
+                <Flame className="size-5 text-yellow-400" />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-yellow-500/70">
+                  Mystery School — Foundation Q1
+                </p>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                  Foundation Training
+                </h1>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground max-w-lg">
+              Your 12-week foundation in the sacred tradition. Work through each
+              week in sequence — each week builds on the last.
+            </p>
+            {data.q1_complete && (
+              <div className="flex items-center gap-1.5 text-sm font-medium text-green-500">
+                <CheckCircle2 className="size-4" />
+                Foundation complete — your decan year is unlocked.
+              </div>
+            )}
+          </div>
+
+          {/* Quarter badge */}
+          <div className="text-right space-y-1 shrink-0">
+            <p className="text-xs text-muted-foreground">
+              Quarter: <span className="font-medium capitalize text-foreground">{data.student.start_quarter}</span>
+            </p>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Star className="size-3 text-yellow-500/70" />
+              <span>
+                Week {data.completed_count + (data.q1_complete ? 0 : 1)} of {data.total_weeks}
+              </span>
+            </div>
+          </div>
         </div>
-        <p className="text-muted-foreground">
-          Your 12-week Mystery School foundation. Work through each week in
-          sequence.
-        </p>
+
+        {/* Progress bar inlined in hero */}
+        <div className="relative mt-5 space-y-1.5">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{data.completed_count} of {data.total_weeks} weeks completed</span>
+            <span className="font-medium text-foreground">{progressPct}%</span>
+          </div>
+          <div className="h-2 w-full rounded-full bg-yellow-500/10 overflow-hidden border border-yellow-500/20">
+            <div
+              className="h-full rounded-full bg-yellow-500/70 transition-all duration-500"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Overall progress summary */}
-      <Card>
-        <CardContent className="py-4 space-y-3">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-medium">
-              {data.completed_count} of {data.total_weeks} weeks completed
-            </span>
-            <span className="text-muted-foreground">{progressPct}%</span>
-          </div>
-          <Progress value={progressPct} className="h-2" />
-          {data.q1_complete && (
-            <p className="text-sm font-medium text-green-600">
-              Foundation complete — your decan year begins soon.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <Separator />
 
       {data.weeks.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
-            <BookOpen className="mx-auto mb-3 size-10 text-muted-foreground/40" />
+            <div className="flex size-14 items-center justify-center rounded-full bg-yellow-500/10 border border-yellow-500/20 mx-auto mb-4">
+              <BookOpen className="size-7 text-yellow-400/60" />
+            </div>
+            <p className="text-sm font-medium mb-1">Your journey begins when you enroll</p>
             <p className="text-sm text-muted-foreground">
               Foundation content is being prepared. Check back soon.
             </p>

@@ -1,0 +1,710 @@
+Blog Technology / Content Publishing Module
+
+Requirement Analysis Document
+
+Perspective: Senior Solution Architect
+
+1) Objective
+
+The blog module must not behave like a simple "post listing page." It should function as a full publishing platform that supports:
+
+* content creation and editorial workflow
+* high SEO performance
+* authority building for diviners/experts
+* product, course, and service conversion support
+* affiliate/share tracking
+* long-term scalability for content growth
+* structured analytics for content performance
+
+This module should support both marketing goals and knowledge-delivery goals.
+
+For this platform, the blog should help with:
+* astrology education content
+* forecast and transit updates
+* diviner thought leadership
+* course promotion
+* product promotion
+* internal linking to offerings
+* audience capture through newsletter/lead magnet/CTA flows
+
+---
+
+2) Core Goals
+
+The blog system must be designed to achieve the following:
+
+1. Drive organic traffic
+   * rank for educational and intent-based content
+   * support SEO-friendly structure and schema
+
+2. Build trust and authority
+   * showcase diviner expertise
+   * allow author profile pages and authored content
+
+3. Support conversions
+   * promote courses, services, sessions, and products from within blog content
+   * support targeted CTA blocks
+
+4. Support editorial operations
+   * allow admins and diviners to draft, review, publish, and update content safely
+
+5. Support future scale
+   * categories, tags, series, taxonomy, multilingual readiness, analytics, and structured search must be built cleanly from day one
+
+---
+
+3) User Roles
+
+3.1 Admin
+
+Can:
+* create, edit, publish, unpublish, archive any post
+* manage categories, tags, series, authors, SEO metadata
+* assign diviner as author
+* manage featured posts and homepage placements
+* manage blog CTA blocks
+* manage redirects and slug history
+* view analytics dashboard
+* approve/reject content submitted by diviners
+* configure blog settings
+
+3.2 Diviner / Author
+
+Can:
+* create own draft posts
+* edit own drafts
+* submit draft for review
+* preview unpublished content
+* manage own author bio/profile content
+* attach related services/courses/products if permission is granted
+
+Cannot by default:
+* publish directly unless special permission is enabled
+* delete published content permanently
+* override SEO global rules
+
+3.3 Editor / Content Manager
+
+Can:
+* edit and refine posts from multiple authors
+* manage editorial quality
+* optimize metadata, readability, structure, and internal links
+* schedule publishing
+
+3.4 Affiliate
+
+Can:
+* access public blog content
+* share blog articles using their own tracked link
+* optionally have article-level referral tracking for linked products/courses
+
+Cannot:
+* author/edit posts unless explicitly granted a separate role
+
+3.5 Public Visitor
+
+Can:
+* browse blog homepage
+* view post details
+* search/filter content
+* share articles
+* subscribe to newsletter
+* click related product/course/service CTAs
+* explore author/diviner profile pages
+
+---
+
+4) Content Types the Blog Must Support
+
+Required content types:
+* Standard blog post
+* Educational article
+* Forecast article
+* Event/transit article
+* Author insight/opinion article
+* Course promotion article
+* Product-focused article
+* Guide / long-form pillar article
+* FAQ / explainer article
+* Series-based article
+
+Astrology-specific optional taxonomy fields:
+* zodiac signs covered
+* planets covered
+* houses covered
+* divination system used
+* content intent type
+* forecast timeframe
+* ritual/spiritual category
+* beginner/intermediate/advanced level
+
+---
+
+5) Public Blog Experience Requirements
+
+5.1 Blog Homepage
+
+The public blog landing page must include:
+* hero section with featured article(s)
+* latest articles section
+* category-based sections
+* trending / popular posts
+* featured author/diviner section
+* recommended courses/products/services blocks
+* newsletter signup block
+* search bar
+* filter controls
+* SEO-friendly page metadata
+
+Gold-standard expectations:
+* content sections should be configurable from admin
+* hero content should support manual pinning
+* homepage should not depend only on publish date order
+* homepage should allow dynamic content modules
+
+5.2 Blog Listing Pages
+
+System must support listing pages for:
+* all blogs
+* category page
+* tag page
+* author/diviner page
+* series page
+* filtered topic pages
+* search results page
+
+Listing page capabilities:
+* pagination, search, sort, tag/category filters
+* featured-first logic
+* image thumbnail, title, excerpt, author, date
+* estimated read time
+* content badge/type
+* optional popularity marker
+
+UX expectations:
+* filter state should be URL-driven
+* pages should be crawlable where SEO relevant
+* no heavy client-only dependency for core content visibility
+
+5.3 Blog Detail Page
+
+Each blog detail page must support:
+* title, subtitle/short description
+* featured image
+* author/diviner profile
+* publish date, updated date, reading time
+* category/tag display
+* table of contents for long content
+* rich content body
+* embedded images, embedded video/audio where needed
+* related content section
+* related courses/products/services CTA
+* social share actions, copy link action
+* newsletter/lead capture section
+* breadcrumb navigation
+* disclaimer block where applicable
+
+Gold-standard UX features:
+* reading progress indicator
+* sticky table of contents on desktop
+* anchor-linked headings
+* optimized typography for reading
+* mobile-friendly layout
+* related post recommendations based on taxonomy and behavior
+* "last updated" visibility for content trust
+* author box with diviner bio and links
+
+---
+
+6) Editorial & Publishing Workflow Requirements
+
+Content statuses:
+* Draft, In Review, Changes Requested, Approved, Scheduled, Published, Unpublished, Archived
+
+Workflow actions:
+* save draft, autosave, preview
+* submit for review
+* approve, reject with notes
+* schedule publish, publish now
+* unpublish, archive
+* duplicate post, restore old version
+
+Required workflow controls:
+* role-based permissions
+* version history
+* change log / audit trail
+* editor comments or review notes
+* content lock while editing
+* conflict handling if multiple editors open same post
+
+---
+
+7) Blog Authoring / Editor Requirements
+
+7.1 Content Editor Type
+
+Recommended approach: structured block-based editor, not plain textarea.
+
+Supported blocks:
+* heading, paragraph, bullet list, numbered list
+* quote, image, gallery, video embed
+* divider, CTA block, callout/info box
+* FAQ block, table
+* custom short banner, author note
+* related content block
+* product/course card block
+
+Editor capabilities:
+* slug generation and editing
+* excerpt management
+* draft saving, autosave
+* preview before publish
+* inline image upload
+* heading structure enforcement
+* internal link insertion, external link insertion
+* SEO metadata input
+* canonical URL input
+* schema selection or override
+* scheduled date/time selection
+* content validation warnings
+
+---
+
+8) SEO Requirements
+
+8.1 Required SEO fields per article
+
+* SEO title, meta description, slug
+* canonical URL
+* open graph title, open graph description, open graph image
+* robots index/follow controls
+* schema type
+* focus keyword (optional internal use)
+* FAQ schema data where applicable
+* article tags/category metadata
+
+8.2 Platform SEO requirements
+
+* SSR / SSG / ISR support
+* XML sitemap generation
+* author sitemap support if needed
+* image sitemap support if needed
+* RSS feed
+* clean readable URLs
+* breadcrumb schema, article schema, FAQ schema, author/person schema, organization schema
+* redirect manager for slug changes
+* automatic slug history tracking
+* 404 and 410 handling support
+* noindex support for drafts/private staging previews
+
+8.3 SEO quality checks before publish
+
+System should warn editor if:
+* SEO title missing, meta description missing
+* H1 missing, multiple H1s detected
+* featured image missing
+* content too short
+* alt text missing on images
+* no internal links
+* no CTA attached where required
+* canonical missing in special case content
+* slug conflicts detected
+
+---
+
+9) Content Taxonomy Requirements
+
+Required taxonomy entities:
+* Categories, Tags, Series, Authors
+* Content type, Topic clusters
+* Featured flag, Trending flag
+* Related course/product/service mapping
+
+Astrology-specific taxonomy examples:
+* zodiac sign, planet, house, transit type
+* beginner/intermediate/advanced
+* relationship/career/finance/spirituality/wellness themes
+* weekly/monthly/yearly forecast classification
+
+---
+
+10) Conversion & Business Integration Requirements
+
+Supported conversion modules:
+* inline CTA banner, sticky CTA, end-of-article CTA
+* newsletter signup, course card insertion
+* product card insertion
+* diviner consultation CTA
+* lead magnet block
+* webinar/event CTA
+* affiliate-aware CTA links
+
+Requirements:
+* CTA placement should be configurable
+* CTA should support A/B testing later
+* CTA click analytics must be stored
+* CTA should support source attribution
+* product/course linking should use platform entities, not hardcoded raw links only
+
+Affiliate linkage requirement:
+If an affiliate or diviner shares a blog URL:
+* system should preserve referral code or tracking token
+* if user later converts on linked product/course, attribution rules should be available to the platform
+* referral parameters must be secure and validated
+
+---
+
+11) Search & Discovery Requirements
+
+Required capabilities:
+* keyword search, category filter, tag filter, author filter
+* sort by latest / popular / featured
+* recommended content, related content, trending content logic
+* manual curation override
+
+Gold-standard expectation:
+Initial implementation can use database full-text search, but architecture should allow upgrade to Meilisearch, OpenSearch, or Algolia depending on scale and relevance needs.
+
+---
+
+12) Media Management Requirements
+
+Media library must support:
+* image upload, PDF upload where needed
+* featured image selection
+* alt text management, title/caption
+* crop/focal point if implemented
+* media reuse across articles
+* file validation, size/type restriction
+* responsive image delivery
+
+Required media rules:
+* WebP/optimized images preferred
+* image compression on upload or via processing pipeline
+* large images should not be served raw
+* CDN-backed delivery recommended
+* broken media references must be prevented
+
+---
+
+13) Author / Diviner Profile Requirements
+
+Each author/diviner should have a public profile page.
+
+Profile page must support:
+* name, slug, image
+* short bio, long bio
+* specialization
+* social/profile links
+* related services/courses
+* authored post list
+* SEO metadata
+* optional trust indicators / credentials
+
+Admin requirements:
+* assign one or multiple authors
+* set primary author
+* optionally support guest author later
+
+---
+
+14) Analytics Requirements
+
+Minimum metrics:
+* page views, unique visitors
+* article CTR on CTA
+* article conversion attribution
+* average engagement/read depth if available
+* shares/copy link clicks
+* top categories, top authors
+* top entry pages from search
+* bounce / exit signals if available
+* best-performing CTA blocks
+* content decay detection over time
+
+Editorial dashboard use cases:
+* which topics convert best
+* which authors drive more engagement
+* which articles rank but do not convert
+* which articles need refresh/update
+* which categories underperform
+
+---
+
+15) Admin Panel Requirements
+
+15.1 Post Management
+* list view, filters by status/author/category/date
+* publish controls, bulk actions
+* duplicate/clone, archive/unarchive
+* search by title/slug
+
+15.2 Taxonomy Management
+* categories CRUD, tags CRUD, series CRUD, author CRUD
+
+15.3 SEO & Redirect Management
+* redirect creation, slug history
+* canonical override, sitemap status
+
+15.4 Homepage / Placement Controls
+* featured blog selection, trending overrides
+* highlighted category selection, manual ordering where needed
+
+15.5 Analytics Dashboard
+* article performance metrics, CTA metrics
+* author performance, conversion tracking overview
+
+---
+
+16) Recommended Technical Architecture
+
+16.1 Frontend Rendering
+* Next.js App Router
+* hybrid rendering strategy:
+  * static generation for published blog pages where possible
+  * ISR / on-demand revalidation after publish/update
+  * SSR only where truly needed
+
+16.2 CMS Approach
+
+Preferred for this product: custom content management module inside the same Next.js full-stack system
+
+Why:
+* tighter integration with roles like admin/diviner/affiliate
+* easier product/course linking
+* cleaner permission control
+* better long-term business logic ownership
+* avoids overdependence on external CMS for core workflows
+
+Important architect note:
+Use MDX only for developer-managed static content if needed.
+For business-authored blog content, prefer structured JSON block content stored in DB and rendered through controlled components. That gives:
+* safer rendering
+* better versioning
+* better validation
+* better no-code editing
+* cleaner future extensibility
+
+16.3 Suggested backend components
+
+* Next.js server actions / route handlers or dedicated internal API layer
+* PostgreSQL for structured content metadata
+* object storage for media
+* CDN for delivery
+* queue/background job support for:
+  * scheduled publishing
+  * sitemap rebuilds
+  * search indexing
+  * image processing
+  * analytics aggregation
+
+---
+
+17) High-Level Data Model
+
+17.1 Core entities
+
+blog_posts:
+* id, title, subtitle, slug, excerpt, content_json
+* content_html_rendered_cache (optional)
+* featured_image_id, status
+* publish_at, published_at, archived_at
+* primary_author_id
+* seo_title, seo_description, canonical_url, og_image_id
+* content_type, read_time
+* featured_flag, trending_flag
+* created_by, updated_by, created_at, updated_at
+
+blog_post_revisions:
+* id, blog_post_id, revision_no, content_json_snapshot, change_note, created_by, created_at
+
+blog_categories: id, name, slug, description, seo fields, display_order
+
+blog_tags: id, name, slug
+
+blog_series: id, name, slug, description
+
+blog_authors:
+* id, linked_user_id, name, slug, short_bio, long_bio, image_id, expertise, seo fields
+
+blog_post_categories (junction)
+blog_post_tags (junction)
+blog_post_series (junction)
+blog_post_related_posts (junction)
+blog_post_related_entities (for courses/products/services)
+
+media_assets:
+* id, file_url, type, alt_text, size, width, height, metadata
+
+blog_redirects: old_slug/path, new_slug/path, redirect_type, active_flag
+
+blog_cta_blocks:
+* id, title, text, type, linked_entity, analytics_config, active_flag
+
+blog_audit_logs:
+* entity_type, entity_id, action, performed_by, before_json, after_json, timestamp
+
+---
+
+18) Suggested APIs
+
+Public APIs:
+* GET /api/blog/posts
+* GET /api/blog/posts/:slug
+* GET /api/blog/categories
+* GET /api/blog/tags
+* GET /api/blog/authors/:slug
+* GET /api/blog/search
+* GET /api/blog/related/:postId
+* GET /api/blog/rss
+* GET /api/blog/sitemap
+
+Admin APIs:
+* POST /api/admin/blog/posts
+* PATCH /api/admin/blog/posts/:id
+* POST /api/admin/blog/posts/:id/submit-review
+* POST /api/admin/blog/posts/:id/approve
+* POST /api/admin/blog/posts/:id/publish
+* POST /api/admin/blog/posts/:id/schedule
+* POST /api/admin/blog/posts/:id/unpublish
+* POST /api/admin/blog/posts/:id/archive
+* POST /api/admin/blog/posts/:id/duplicate
+* GET /api/admin/blog/posts/:id/revisions
+* POST /api/admin/media/upload
+* POST /api/admin/blog/categories
+* POST /api/admin/blog/tags
+* POST /api/admin/blog/redirects
+* GET /api/admin/blog/analytics
+
+---
+
+19) Security Requirements
+
+* RBAC must be enforced on all admin/editor actions
+* draft and preview routes must be protected
+* unpublished content must never be publicly indexable
+* slug collisions must be prevented
+* HTML/content sanitization required
+* file uploads must be validated
+* image/file upload malware and type checks should exist where applicable
+* audit logs required for publish/unpublish/delete actions
+* rate limiting required on search and newsletter endpoints
+* secure handling of affiliate/referral parameters required
+
+---
+
+20) Performance Requirements
+
+* blog detail pages must load fast and be SEO-first
+* featured image and content assets must be optimized
+* use lazy loading for non-critical blocks
+* use CDN caching for public blog assets
+* use ISR or on-demand revalidation after content publish/update
+* search queries must be indexed properly
+* avoid client-heavy rendering for core content
+* maintain excellent Core Web Vitals on blog pages
+
+---
+
+21) Accessibility Requirements
+
+* semantic heading order
+* keyboard navigability
+* alt text on images mandatory
+* sufficient color contrast
+* accessible CTA buttons
+* accessible forms for newsletter/comment/lead capture
+* screen-reader-friendly breadcrumbs and TOC
+* no editor-generated inaccessible markup
+
+---
+
+22) Future-Ready Requirements
+
+Architecture should be ready for later additions such as:
+* multilingual blog
+* gated premium articles
+* audio version of articles
+* article comments with moderation
+* AI-assisted first draft generation
+* content recommendations based on user behavior
+* A/B testing for headline and CTA
+* topic clustering dashboard
+* content refresh reminders
+* content scorecard
+* editorial calendar view
+* social auto-publish integrations
+
+---
+
+23) Testing Requirements
+
+23.1 Functional Testing
+* create/edit/delete/archive post
+* status transitions, scheduled publishing, preview flow
+* category/tag/author assignment
+* search and filtering, related content logic
+* CTA rendering, redirect behavior
+
+23.2 Permission Testing
+* diviner cannot publish if not allowed
+* editor can review but only allowed actions
+* admin can override where intended
+* public cannot access drafts
+
+23.3 SEO Testing
+* sitemap generation, meta tags render correctly
+* canonical works, schema renders correctly
+* redirects work after slug change
+* noindex works for non-public content
+
+23.4 Performance Testing
+* blog list and detail page Lighthouse targets
+* image optimization validation
+* cache/revalidation checks
+* search performance tests
+
+23.5 Security Testing
+* XSS via editor content
+* upload validation
+* access control bypass attempts
+* preview token misuse
+* query abuse/rate-limiting
+
+23.6 E2E Testing
+* author creates draft
+* editor reviews
+* admin publishes
+* public sees article
+* article appears in listing/search
+* slug update creates redirect
+* CTA click tracked
+
+---
+
+24) Gold-Standard Acceptance Criteria
+
+This module should be considered complete only when:
+* admins and diviners can manage content safely through controlled workflows
+* published articles render fast and SEO-friendly
+* author pages and taxonomy pages work cleanly
+* content supports conversion blocks for courses/products/services
+* blog URLs remain stable and redirects handle slug changes
+* analytics can show what content performs best
+* the module is scalable enough to support hundreds or thousands of posts without structural rewrite
+
+---
+
+25) Strong Architect Recommendation
+
+For this platform, I would strongly recommend:
+* Next.js App Router
+* custom blog CMS inside the product
+* structured block editor
+* PostgreSQL-backed content model
+* object storage for media
+* ISR + on-demand revalidation
+* rich SEO + redirect system from day one
+* tight integration with diviner, course, product, and affiliate modules
+
+That gives the cleanest long-term result.

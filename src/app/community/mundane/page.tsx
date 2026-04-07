@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Globe, MapPin, ChevronRight, TrendingUp, Building2, CalendarDays, BookOpen } from "lucide-react";
+import { Globe, MapPin, ChevronRight, TrendingUp, CalendarDays, BookOpen, Telescope } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mundane Astrology — Community" };
@@ -236,9 +236,12 @@ export default async function CommunityMundanePage() {
         </div>
       </section>
 
-      {/* Section 2: Active Forecasts */}
+      {/* Section 2: Mundane Forecasts */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Active Forecasts</h2>
+        <div className="flex items-center gap-2">
+          <TrendingUp className="size-4 text-muted-foreground" />
+          <h2 className="text-lg font-semibold">Mundane Forecasts</h2>
+        </div>
         {forecasts.length === 0 ? (
           <p className="text-sm text-muted-foreground">No active forecasts at this time.</p>
         ) : (
@@ -314,11 +317,11 @@ export default async function CommunityMundanePage() {
         )}
       </section>
 
-      {/* Section 4: Active Forecasts (new structured journal) */}
+      {/* Section 4: Forecast Journal (structured predictions with outcome tracking) */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
-          <BookOpen className="size-4 text-muted-foreground" />
-          <h2 className="text-lg font-semibold">Active Forecasts</h2>
+          <Telescope className="size-4 text-muted-foreground" />
+          <h2 className="text-lg font-semibold">Forecast Journal</h2>
         </div>
         <p className="text-sm text-muted-foreground">
           Astrological predictions with outcome tracking.
@@ -363,7 +366,7 @@ export default async function CommunityMundanePage() {
       {/* Section 6: Watched Entities */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
-          <Building2 className="size-4 text-muted-foreground" />
+          <Globe className="size-4 text-muted-foreground" />
           <h2 className="text-lg font-semibold">Watched Entities</h2>
         </div>
         <p className="text-sm text-muted-foreground">

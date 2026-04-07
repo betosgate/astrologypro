@@ -7,7 +7,6 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
   Lock,
   CheckCircle2,
@@ -18,7 +17,9 @@ import {
   Eye,
   Clock,
   ArrowRight,
+  Sparkles,
 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -268,7 +269,13 @@ function CurrentDecanCard({ decan }: { decan: DecanItem }) {
                   <p className={`text-xs font-medium ${colorClass}`}>
                     {decan.sign} · {decan.planet}
                     {decan.tarot_card_ref && (
-                      <span className="text-muted-foreground ml-2">· {decan.tarot_card_ref}</span>
+                      <Link
+                        href="/community/tarot"
+                        className="ml-2 text-muted-foreground hover:text-primary underline-offset-2 hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        · {decan.tarot_card_ref}
+                      </Link>
                     )}
                   </p>
                 </div>
@@ -463,37 +470,67 @@ export default function DecansProgressPage() {
   return (
     <div className="space-y-8">
 
-      {/* ── Header strip ─────────────────────────────────────────── */}
-      <div>
-        <div className="flex items-center gap-2">
-          <Star className="size-5 text-muted-foreground" />
-          <h1 className="text-2xl font-bold tracking-tight">Your Decan Journey</h1>
+      {/* ── Gold-on-dark hero header ──────────────────────────────── */}
+      <div className="relative rounded-xl overflow-hidden border border-yellow-500/20 bg-gradient-to-br from-yellow-950/30 via-background to-background px-6 py-8 shadow-sm">
+        {/* Radial glow overlay */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 60% 60% at 10% 20%, rgba(234,179,8,0.07) 0%, transparent 70%)",
+          }}
+        />
+        <div className="relative space-y-4">
+          {/* Branding badge */}
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-xs font-semibold text-yellow-500 uppercase tracking-wider">
+              <Sparkles className="size-3" />
+              Mystery School
+            </span>
+            {data.q1_complete && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-[10px] font-semibold text-green-500 uppercase tracking-wider">
+                <CheckCircle2 className="size-3" />
+                Foundation Complete
+              </span>
+            )}
+          </div>
+
+          {/* Title + sub-title */}
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Your Decan Journey
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {data.completedCount === 36
+                ? "All 36 decans complete — your year of practice is fulfilled."
+                : `Decan ${weekNumber} of 36 · ${data.completedCount} completed`}
+            </p>
+          </div>
+
+          <Separator className="opacity-20" />
+
+          {/* Inline progress */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>{data.completedCount} of {data.totalDecans} decans completed</span>
+              <span className="font-semibold text-yellow-500/80">{progressPct}%</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-yellow-500/10 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-700"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+          </div>
+
+          {data.completedCount === 36 && (
+            <p className="text-sm font-semibold text-yellow-400">
+              Congratulations, Priest/Priestess — graduation awaits.
+            </p>
+          )}
         </div>
-        <p className="text-muted-foreground text-sm mt-0.5">
-          Week {weekNumber} of 36 — {data.completedCount} completed
-        </p>
       </div>
 
-      {/* ── Progress bar ─────────────────────────────────────────── */}
-      <Card>
-        <CardContent className="py-4 space-y-3">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-medium">{data.completedCount} of 36 decans completed</span>
-            <span className="text-muted-foreground">{progressPct}%</span>
-          </div>
-          <Progress value={progressPct} className="h-2" />
-          {data.q1_complete && data.completedCount < 36 && (
-            <p className="text-xs text-muted-foreground">
-              Foundation complete — decan year in progress.
-            </p>
-          )}
-          {data.completedCount === 36 && (
-            <p className="text-sm font-semibold text-amber-600">
-              All 36 decans complete — congratulations, Priest/Priestess.
-            </p>
-          )}
-        </CardContent>
-      </Card>
 
       {/* ── Current decan (hero, full-width) ─────────────────────── */}
       {currentDecan && (
