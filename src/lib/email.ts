@@ -17,18 +17,12 @@ const FROM_ADDRESS =
   "AstrologyPro <noreply@divineinfinitebeing.com>";
 
 function getSESClient() {
-  const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.AWS_SES_SECRET_ACCESS_KEY;
-  const region = process.env.AWS_SES_REGION ?? "us-east-1";
+  const region = process.env.AWS_SES_REGION ?? process.env.AWS_REGION ?? "us-east-1";
 
-  if (!accessKeyId || !secretAccessKey) {
-    return null;
-  }
-
-  return new SESClient({
-    region,
-    credentials: { accessKeyId, secretAccessKey },
-  });
+  // Use default credential chain — picks up AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY/
+  // AWS_SESSION_TOKEN env vars, IAM instance role, or OIDC role automatically.
+  // Never hardcode credentials.
+  return new SESClient({ region });
 }
 
 interface SendEmailParams {
@@ -39,11 +33,6 @@ interface SendEmailParams {
 
 export async function sendEmail({ to, subject, html }: SendEmailParams) {
   const ses = getSESClient();
-
-  if (!ses) {
-    console.log("[Email] AWS SES not configured — logging instead:", { to, subject });
-    return { success: true, id: "dev-placeholder" };
-  }
 
   const command = new SendEmailCommand({
     Source: FROM_ADDRESS,
