@@ -6,6 +6,8 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import Link from "next/link";
 import { RouteTracker } from "@/components/shared/route-tracker";
 import { MobileNav } from "@/components/community/mobile-nav";
+import { NavLink } from "@/components/shared/nav-link";
+import { PortalLogoutButton } from "@/components/portal/logout-button";
 
 export const metadata = { title: "Community - AstrologyPro" };
 
@@ -68,13 +70,13 @@ export default async function CommunityLayout({ children }: { children: React.Re
             {/* Desktop nav — hidden below md */}
             <nav className="hidden items-center gap-1 md:flex">
               {navLinks.map((link) => (
-                <Link
+                <NavLink
                   key={link.href}
                   href={link.href}
-                  className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  exact={link.href === "/community"}
                 >
                   {link.label}
-                </Link>
+                </NavLink>
               ))}
             </nav>
           </div>
@@ -84,6 +86,7 @@ export default async function CommunityLayout({ children }: { children: React.Re
             <Link href="/account" className="text-sm text-muted-foreground hover:text-foreground">
               Account
             </Link>
+            <PortalLogoutButton />
           </div>
         </div>
       </header>

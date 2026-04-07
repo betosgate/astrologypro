@@ -68,6 +68,7 @@ import {
   UserX,
   BookOpenCheck,
   ScrollTextIcon,
+  Map,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -76,6 +77,7 @@ const NAV_GROUPS = [
   {
     label: "Overview",
     items: [
+      { label: "Walkthrough", href: "/admin/walkthrough", icon: Map },
       { label: "Analytics", href: "/admin", icon: LayoutDashboard, exact: true },
     ],
   },
@@ -210,7 +212,8 @@ const NAV_GROUPS = [
   {
     label: "Tools",
     items: [
-      { label: "Tarot", href: "/admin/tarot", icon: Shuffle },
+      { label: "Tarot Spreads", href: "/admin/tarot/spreads", icon: Shuffle },
+      { label: "Tarot Cards", href: "/admin/tarot/cards", icon: LayoutGrid },
       { label: "Rituals", href: "/admin/rituals", icon: Flame },
     ],
   },
