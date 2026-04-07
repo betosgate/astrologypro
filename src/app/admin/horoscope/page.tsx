@@ -24,6 +24,9 @@ import {
   Sparkles, CircleDot, Clock, MapPin, Printer, ArrowUp, RotateCcw,
   X,
 } from "lucide-react";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // ─── Planet & Zodiac symbols ─────────────────────────────────────────────────
 
@@ -514,57 +517,74 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          {isAspect ? (
-            /* Aspect modal header: Angular astroHeaderModifierPipe icon row */
-            <div className="pb-1">
-              <AstroHeaderParts title={aspectTitle ?? title} />
-            </div>
-          ) : (
-            <DialogTitle className="text-base font-bold capitalize">{title.replace(/_/g, " ")}</DialogTitle>
-          )}
-        </DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
+        {/* Custom Close Icon - Fixed to top-right */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.15)] group"
+          aria-label="Close modal"
+        >
+          <X className="size-5 transition-transform group-hover:rotate-90" />
+        </button>
 
-        {loading ? (
-          <div className="flex items-center gap-3 py-8 justify-center text-muted-foreground">
-            <Loader2 className="size-5 animate-spin text-amber-500" />
-            <span className="text-sm">Loading extended interpretation…</span>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Planet type: numbered paragraphs per planet — Angular showMoreModal keyvalue pattern */}
-            {promptType === "planet" && planetEntries && planetEntries.length > 0 ? (
-              <div className="space-y-5">
-                {planetEntries.map(({ planet, items }) => (
-                  <div key={planet} className="space-y-2">
-                    <p className="text-sm font-bold capitalize text-amber-700">{planet}</p>
-                    <ol className="space-y-2 list-none">
-                      {items.map((item, idx) => (
-                        <li key={idx} className="text-sm leading-relaxed text-foreground">
-                          <span className="font-semibold text-muted-foreground mr-2">{idx + 1}.</span>{item}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                ))}
+        {/* Sticky Header Section */}
+        <div className="px-6 py-5 border-b border-white/5 bg-slate-900/40 pr-16 shrink-0">
+          <DialogHeader>
+            {isAspect ? (
+              <div className="pb-1">
+                <AstroHeaderParts title={aspectTitle ?? title} />
               </div>
             ) : (
-              /* house / aspect / generic: plain paragraph */
-              <div className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{content}</div>
+              <DialogTitle className="text-lg font-bold capitalize gold-text">{title.replace(/_/g, " ")}</DialogTitle>
             )}
+          </DialogHeader>
+        </div>
 
-            {/* Word association chips inside modal — matching Angular's pictorial section */}
-            {isAspect && p1 && p2 && (
-              <div className="rounded-lg border overflow-hidden">
-                <div className="px-3 py-2 bg-muted/40 border-b">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Word Association</p>
+        {/* Scrollable Content Section */}
+        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+          {loading ? (
+            <div className="flex items-center gap-3 py-12 justify-center text-muted-foreground">
+              <Loader2 className="size-6 animate-spin text-amber-500" />
+              <span className="text-sm font-medium tracking-wide">Fetching Cosmic Insights...</span>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {promptType === "planet" && planetEntries && planetEntries.length > 0 ? (
+                <div className="space-y-6">
+                  {planetEntries.map(({ planet, items }) => (
+                    <div key={planet} className="rounded-xl border border-white/5 bg-white/5 p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <PlanetSymbol name={planet} />
+                        <div className="h-px flex-1 bg-gradient-to-right from-amber-500/20 to-transparent" />
+                      </div>
+                      <ol className="space-y-3 list-none">
+                        {items.map((item, idx) => (
+                          <li key={idx} className="text-sm leading-relaxed text-foreground/90 flex gap-3">
+                            <span className="flex-shrink-0 size-5 flex items-center justify-center rounded-full bg-amber-500/10 text-amber-500 font-bold text-[10px] border border-amber-500/20">{idx + 1}</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  ))}
                 </div>
-                <WordAssociationChips aspecting={p1} type={aspectType} aspected={p2} />
-              </div>
-            )}
-          </div>
-        )}
+              ) : (
+                <div className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap font-light tracking-wide bg-white/5 p-5 rounded-xl border border-white/5 italic">
+                  "{content}"
+                </div>
+              )}
+
+              {isAspect && p1 && p2 && (
+                <div className="rounded-xl border border-white/10 overflow-hidden bg-slate-900/40">
+                  <div className="px-3 py-2 bg-amber-500/10 border-b border-white/5">
+                    <p className="text-[10px] font-bold uppercase tracking-[2px] text-amber-600/80">Celestial Alignment Association</p>
+                  </div>
+                  <WordAssociationChips aspecting={p1} type={aspectType} aspected={p2} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -575,16 +595,27 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
 function ChartImageModal({ src, open, onClose }: { src: string; open: boolean; onClose: () => void }) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-4xl p-2">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Natal Chart</DialogTitle>
-        </DialogHeader>
-        {src.startsWith("<svg") ? (
-          <div dangerouslySetInnerHTML={{ __html: src }} className="overflow-auto" />
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} alt="Natal Chart" className="w-full h-auto rounded" />
-        )}
+      <DialogContent className="max-w-4xl p-0 overflow-hidden bg-slate-950 border-white/10" showCloseButton={false}>
+        {/* Custom Close Icon */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.2)] group"
+          aria-label="Close modal"
+        >
+          <X className="size-5 transition-transform group-hover:rotate-90" />
+        </button>
+
+        <div className="max-h-[90vh] overflow-y-auto p-4 flex items-center justify-center min-h-[300px]">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Natal Chart</DialogTitle>
+          </DialogHeader>
+          {src.startsWith("<svg") ? (
+            <div dangerouslySetInnerHTML={{ __html: src }} className="w-full max-w-full overflow-auto flex justify-center" />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={src} alt="Natal Chart" className="max-w-full h-auto rounded shadow-2xl" />
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -1000,83 +1031,98 @@ function DecanModal({ planet, sign, open, onClose }: {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base font-bold">
-            {/* Planet image + title */}
-            {PLANET_IMAGES[planet] && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={PLANET_IMAGES[planet]} alt={planet} className="size-6 object-contain" />
-            )}
-            <span>{planet} Decans in {sign}</span>
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
+        {/* Custom Close Icon - Fixed to top-right */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.15)] group"
+          aria-label="Close modal"
+        >
+          <X className="size-5 transition-transform group-hover:rotate-90" />
+        </button>
 
-        {loadingRows && (
-          <div className="flex items-center gap-3 py-8 justify-center text-muted-foreground">
-            <Loader2 className="size-5 animate-spin text-amber-500" />
-            <span className="text-sm">Loading decan data…</span>
-          </div>
-        )}
+        {/* Sticky Header Section */}
+        <div className="px-6 py-5 border-b border-white/5 bg-slate-900/40 pr-16 shrink-0">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-lg font-bold gold-text">
+              {PLANET_IMAGES[planet] && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={PLANET_IMAGES[planet]} alt={planet} className="size-7 object-contain drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
+              )}
+              <span>{planet} Decans in {sign}</span>
+            </DialogTitle>
+          </DialogHeader>
+        </div>
 
-        {rowError && (
-          <div className="py-4 text-sm text-destructive">{rowError}</div>
-        )}
+        {/* Scrollable Content Section */}
+        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
 
-        {rows.length > 0 && (
-          <div className="space-y-6">
-            {rows.map((row) => {
-              const sec = sections[row.decan];
-              return (
-                <div key={row.decan} className="rounded-lg border overflow-hidden">
-                  {/* Decan header */}
-                  <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-500/10 border-b">
-                    <span className="text-xs font-bold uppercase tracking-widest text-amber-600">{ordinalDecan(row.decan)} Decan</span>
-                    <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-400 ml-auto">{planet} in {sign}</Badge>
-                  </div>
+          {loadingRows && (
+            <div className="flex items-center gap-3 py-8 justify-center text-muted-foreground">
+              <Loader2 className="size-5 animate-spin text-amber-500" />
+              <span className="text-sm">Loading decan data…</span>
+            </div>
+          )}
 
-                  {/* Static labels row */}
-                  <div className="grid grid-cols-2 gap-px bg-border">
-                    <div className="bg-background px-4 py-2.5 space-y-0.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Greek Daemon</p>
-                      <p className="text-sm font-medium text-foreground">{row.greek_daemon || "—"}</p>
+          {rowError && (
+            <div className="py-4 text-sm text-destructive">{rowError}</div>
+          )}
+
+          {rows.length > 0 && (
+            <div className="space-y-6">
+              {rows.map((row) => {
+                const sec = sections[row.decan];
+                return (
+                  <div key={row.decan} className="rounded-lg border overflow-hidden">
+                    {/* Decan header */}
+                    <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-500/10 border-b">
+                      <span className="text-xs font-bold uppercase tracking-widest text-amber-600">{ordinalDecan(row.decan)} Decan</span>
+                      <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-400 ml-auto">{planet} in {sign}</Badge>
                     </div>
-                    <div className="bg-background px-4 py-2.5 space-y-0.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tarot Card</p>
-                      <p className="text-sm font-medium text-foreground">{row.tarot_name || "—"}</p>
+
+                    {/* Static labels row */}
+                    <div className="grid grid-cols-2 gap-px bg-border">
+                      <div className="bg-background px-4 py-2.5 space-y-0.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Greek Daemon</p>
+                        <p className="text-sm font-medium text-foreground">{row.greek_daemon || "—"}</p>
+                      </div>
+                      <div className="bg-background px-4 py-2.5 space-y-0.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tarot Card</p>
+                        <p className="text-sm font-medium text-foreground">{row.tarot_name || "—"}</p>
+                      </div>
+                    </div>
+
+                    {/* Static description if present */}
+                    {row.description && (
+                      <div className="px-4 py-3 bg-muted/5 border-t">
+                        <p className="text-xs text-muted-foreground leading-relaxed">{row.description}</p>
+                      </div>
+                    )}
+
+                    {/* AI sections */}
+                    <div className="px-4 py-4 space-y-5 border-t">
+                      <DecanAiBlock
+                        title={`${planet} in ${ordinalDecan(row.decan)} Decan of ${sign}`}
+                        data={sec?.planetAi ?? null}
+                        loading={sec?.loading ?? true}
+                      />
+                      <DecanAiBlock
+                        title={`Greek Daemon: ${row.greek_daemon}`}
+                        data={sec?.daemonAi ?? null}
+                        loading={sec?.loading ?? true}
+                      />
+                      <DecanAiBlock
+                        title={`Tarot: ${row.tarot_name}`}
+                        data={sec?.tarotAi ?? null}
+                        loading={sec?.loading ?? true}
+                      />
                     </div>
                   </div>
-
-                  {/* Static description if present */}
-                  {row.description && (
-                    <div className="px-4 py-3 bg-muted/5 border-t">
-                      <p className="text-xs text-muted-foreground leading-relaxed">{row.description}</p>
-                    </div>
-                  )}
-
-                  {/* AI sections */}
-                  <div className="px-4 py-4 space-y-5 border-t">
-                    <DecanAiBlock
-                      title={`${planet} in ${ordinalDecan(row.decan)} Decan of ${sign}`}
-                      data={sec?.planetAi ?? null}
-                      loading={sec?.loading ?? true}
-                    />
-                    <DecanAiBlock
-                      title={`Greek Daemon: ${row.greek_daemon}`}
-                      data={sec?.daemonAi ?? null}
-                      loading={sec?.loading ?? true}
-                    />
-                    <DecanAiBlock
-                      title={`Tarot: ${row.tarot_name}`}
-                      data={sec?.tarotAi ?? null}
-                      loading={sec?.loading ?? true}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -1261,37 +1307,148 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
         </div>
       </div>
 
-      {/* House bar chart */}
-      <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b">
-          <h3 className="text-sm font-semibold">House Chart</h3>
-        </div>
-        <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-2">
-          {houses.map((h: any) => {
-            const planetsInHouse = houseMap[Number(h.house)] ?? [];
-            return (
-              <div key={h.house} className="flex items-center gap-2 rounded-md border p-2">
-                <div className="shrink-0 w-16">
-                  <p className="text-xs font-semibold text-amber-600">House {h.house}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    <span className="text-amber-500">{ZODIAC_SYMBOLS[h.sign] ?? ""}</span> {h.sign}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-1 flex-1">
-                  {/* Empty boxes up to house number */}
-                  {[...Array(Math.min(Number(h.house) - 1, 6))].map((_, idx) => (
-                    <span key={idx} className="size-4 rounded-sm border border-border/40 bg-muted/30" />
-                  ))}
-                  {/* Planet badges */}
-                  {planetsInHouse.map((pName) => (
-                    <span key={pName} className="text-amber-500 text-base" title={pName}>{PLANET_SYMBOLS[pName] ?? "✦"}</span>
-                  ))}
+      {/* House Distribution Grid - Precise & Compact with Rich Tooltips */}
+      <TooltipProvider delayDuration={200}>
+        <div className="rounded-xl border border-amber-500/20 overflow-hidden bg-card shadow-sm mt-4">
+          <div className="px-4 py-2.5 bg-gradient-to-r from-amber-500/5 via-background to-background border-b border-amber-500/10 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="size-1.5 rounded-full bg-amber-500" />
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-700 dark:text-amber-500">Distribution Analysis</h3>
+            </div>
+            <Badge variant="outline" className="h-5 text-[9px] uppercase tracking-widest border-amber-500/20 text-amber-600 px-1.5 font-bold">Western V2</Badge>
+          </div>
+
+          <div className="p-4 overflow-x-auto bg-slate-50/30 dark:bg-slate-950/20">
+            <div className="flex flex-col gap-0.5 min-w-[850px]">
+              {/* Compact Legend Row */}
+              <div className="flex items-center gap-6 mb-2 border-b border-muted/20 pb-2 ml-1">
+                <div className="w-40 shrink-0 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">Planetary Track</div>
+                <div className="flex gap-1.5 flex-1 justify-between max-w-4xl px-2">
+                  {["Sun", "Moon", "Mercury", "Venus", "Mars", "Saturn", "Jupiter", "Uranus", "Neptune", "Pluto", "Node", "Part of Fortune", "Chiron"].map((p) => {
+                    const pImg = PLANET_IMAGES[p];
+                    return (
+                      <Tooltip key={p}>
+                        <TooltipTrigger asChild>
+                          <div className="size-7 flex items-center justify-center grayscale opacity-30 hover:opacity-100 transition-opacity cursor-help">
+                            {pImg ? (
+                              <img src={pImg} alt={p} className="size-4 object-contain brightness-0 dark:invert" />
+                            ) : (
+                              <span className="text-[10px] font-bold">{PLANET_SYMBOLS[p] ?? "✦"}</span>
+                            )}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-[10px] font-bold uppercase tracking-wider">{p}</TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
                 </div>
               </div>
-            );
-          })}
+
+              {houses.map((h: any) => {
+                const planetsInHouse = (houseMap[Number(h.house)] ?? []) as string[];
+                const gridPlanets = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Saturn", "Jupiter", "Uranus", "Neptune", "Pluto", "Node", "Part of Fortune", "Chiron"];
+
+                let maxIdx = -1;
+                planetsInHouse.forEach(pName => {
+                  const idx = gridPlanets.indexOf(pName);
+                  if (idx > maxIdx) maxIdx = idx;
+                });
+
+                return (
+                  <div key={h.house} className="flex items-center gap-6 py-2 group hover:bg-amber-500/10 rounded-lg px-2 transition-all border-b border-muted/5 last:border-0">
+                    {/* High-Readability House Header */}
+                    <div className="flex items-center gap-4 w-44 shrink-0">
+                      <div className="flex flex-col w-12 italic">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none mb-1">Cusp</span>
+                        <span className="text-sm font-black text-foreground/90 leading-none">H{String(h.house).padStart(2, "0")}</span>
+                      </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center justify-center size-9 rounded-full bg-background border-2 border-amber-500/20 group-hover:border-amber-500/50 group-hover:scale-110 transition-all shadow-sm cursor-pointer overflow-hidden">
+                            <span className="text-amber-500 text-xl leading-none font-bold">{ZODIAC_SYMBOLS[h.sign] ?? "•"}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="bg-white dark:bg-slate-900 border-2 border-amber-500/20 p-3 shadow-2xl rounded-xl">
+                          <p className="font-black text-sm uppercase tracking-widest text-amber-600 dark:text-amber-400 mb-1">{h.sign}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase italic pb-2 border-b border-muted/20">House {h.house} Custodian</p>
+                          <div className="mt-2 text-xs font-mono font-bold text-foreground/80">Position: {Number(h.full_degree || h.degree).toFixed(2)}°</div>
+                        </TooltipContent>
+                      </Tooltip>
+                      <div className="flex flex-col items-end flex-1">
+                        <span className="text-xs font-mono font-black text-amber-700 dark:text-amber-400 leading-none">{Number(h.full_degree || h.degree).toFixed(2)}°</span>
+                      </div>
+                    </div>
+
+                    {/* Interaction Track with Animated Scale */}
+                    <div className="flex gap-2 flex-1 items-center justify-between max-w-4xl px-2">
+                      {gridPlanets.map((colPlanet, colIdx) => {
+                        const isHere = planetsInHouse.includes(colPlanet);
+                        const pImg = PLANET_IMAGES[colPlanet];
+                        const planetData = planets?.find(p => p.name === colPlanet);
+
+                        if (isHere) {
+                          return (
+                            <Tooltip key={colPlanet}>
+                              <TooltipTrigger asChild>
+                                <div className="size-8 flex items-center justify-center rounded-lg bg-background border-2 border-amber-500/40 text-foreground hover:scale-125 hover:rotate-6 hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:z-20 hover:border-amber-500 transition-all cursor-zoom-in overflow-hidden" >
+                                  {pImg ? (
+                                    <img src={pImg} alt={colPlanet} className="size-6 object-contain" />
+                                  ) : (
+                                    <span className="text-lg font-bold leading-none text-amber-600">{PLANET_SYMBOLS[colPlanet] ?? "✦"}</span>
+                                  )}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="p-0 border-0 bg-transparent shadow-none overflow-visible">
+                                <div className="p-4 bg-white dark:bg-slate-900 border-2 border-amber-500/30 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.2)] min-w-[220px] relative">
+                                  <div className="flex items-center gap-4 mb-3 pb-3 border-b border-amber-500/10">
+                                    <div className="size-11 flex items-center justify-center rounded-xl bg-amber-500/5 shadow-inner p-2 border border-amber-500/10">
+                                      {pImg ? <img src={pImg} alt={colPlanet} className="size-full object-contain" /> : <span className="text-2xl">{PLANET_SYMBOLS[colPlanet]}</span>}
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-black text-foreground uppercase tracking-widest leading-none mb-1">{colPlanet}</p>
+                                      <p className="text-[10px] text-amber-600 font-bold uppercase tracking-tight opacity-70">Resident in Sign {planetData?.sign ?? "N/A"}</p>
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2 text-[11px] font-bold">
+                                    <div className="bg-slate-500/5 p-2 rounded-lg border border-border/40">
+                                      <span className="text-muted-foreground block text-[9px] uppercase tracking-widest mb-1 opacity-50">Degree</span>
+                                      <p className="font-mono text-amber-600">{Number(planetData?.full_degree ?? 0).toFixed(2)}°</p>
+                                    </div>
+                                    <div className="bg-slate-500/5 p-2 rounded-lg border border-border/40">
+                                      <span className="text-muted-foreground block text-[9px] uppercase tracking-widest mb-1 opacity-50">Motion</span>
+                                      <p className={planetData?.is_retro === "true" ? "text-red-500" : "text-green-500"}>{planetData?.is_retro === "true" ? "Retrograde" : "Direct"}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        }
+
+                        if (colIdx < maxIdx) {
+                          return (
+                            <Tooltip key={colIdx}>
+                              <TooltipTrigger asChild>
+                                <div className="size-8 bg-slate-950 border border-slate-800 dark:bg-slate-200 dark:border-slate-300 rounded shadow-inner opacity-90 transition-all hover:opacity-100 hover:scale-105 cursor-pointer" />
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="bg-slate-900 text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20">
+                                <span className="opacity-50 text-amber-400 mr-1">Zone:</span> {colPlanet}
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        }
+
+                        return <div key={colIdx} className="size-8" />;
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
-      </div>
+      </TooltipProvider>
+
 
       {/* AI interpretations */}
       {!aiData && <SectionSkeleton title="House Interpretations" />}
