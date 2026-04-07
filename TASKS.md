@@ -1,7 +1,7 @@
 # AstrologyPro — Daily Task Board
 
 > **Workflow:** Update this file each session. Check off items as you go. Push at end of day.
-> **Last updated:** 2026-04-07 (session 21 — support tickets, affiliate commissions, mundane astrology, training deep-seed, 4 req docs implemented)
+> **Last updated:** 2026-04-07 (session 23 — gold-standard deep fill: ticket queues/tasks/CSAT/SLA policies, commission rules engine+adjustments+affiliate dashboard, mundane leader registry+forecasts+watchlists+astro calendar, platform v2 gap audit, newsletter diviner attribution)
 > **Migrations:** All applied via `scripts/run-migration.js` — no manual SQL editor needed.
 
 ---
@@ -33,6 +33,16 @@
 | Reading history (astro + tarot) | ✅ Done — astro_toolkit_readings + tarot_readings saved per reading |
 | Global audit/activity log | ✅ Done — user_activity_log, logActivity(), admin + diviner reports |
 | Training content & quizzes | ✅ Done — 49 lessons, 261 quiz questions, full coverage |
+| Training video quiz trigger engine | ✅ Done — lesson_quiz_triggers, lesson_trigger_progress, server rewatch gate, client pause/rewind/retry |
+| Support ticket SLA automation | ✅ Done — sla_breached_at column, pg_cron every 5 min, notify stub, status badge |
+| Affiliate disputes & CSV export | ✅ Done — affiliate_commission_disputes, dashboard+admin routes, CSV export endpoint, Export button |
+| Perennial rituals (presets + configurator + playback) | ✅ Done — correct tag arrays, URL param configurator, canonical sort, sacred space overlay |
+| Mundane astrology chart calculation | ✅ Done — calculate-chart route, Calculate Chart button, natal chart display component |
+| Support ticket gold standard | ✅ Done — ticket_queues (12), ticket_tasks, ticket_csat, ticket_sla_policies (5), ticket_watchers, internal-notes API, CSAT submission, job ticket checklist UI |
+| Affiliate commission gold standard | ✅ Done — commission_rules engine, status machine+history, adjustments, refund recalc, affiliate self-service dashboard (layout+3 pages+3 APIs) |
+| Mundane astrology gold standard | ✅ Done — leader registry, forecast journal (+outcome tracking), research projects+notes, watchlists, astronomical events calendar, admin UIs, community page enhancements |
+| Platform v2 gap audit | ✅ Done — all 6 gaps already implemented; newsletter attribution to diviner was only gap (fixed) |
+| Calendar module (Outlook event ID + booking link banner) | ✅ Done — outlook_calendar_event_id, BookingLinkBanner on calendar page |
 | Session notes (write + API) | ✅ Done |
 | Sitemap | ✅ Done |
 | Currency bugs (global `/100` sweep) | ✅ Done — 10 files fixed |

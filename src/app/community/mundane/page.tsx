@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Globe, MapPin, ChevronRight, TrendingUp, Building2 } from "lucide-react";
+import { Globe, MapPin, ChevronRight, TrendingUp, Building2, CalendarDays, BookOpen } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mundane Astrology — Community" };
@@ -61,6 +62,37 @@ type EntitySummary = {
   region: string | null;
 };
 
+type AstroEvent = {
+  id: string;
+  title: string;
+  event_type: string;
+  planet_primary: string | null;
+  planet_secondary: string | null;
+  sign: string | null;
+  event_datetime_utc: string;
+  timezone_display: string | null;
+  notes: string | null;
+};
+
+type MundaneForecastNew = {
+  id: string;
+  title: string;
+  entity_id: string | null;
+  forecast_period_start: string;
+  forecast_period_end: string | null;
+  event_categories: string[];
+  confidence_level: string | null;
+  outcome_status: string;
+};
+
+const OUTCOME_BADGE: Record<string, string> = {
+  open: "bg-blue-100 text-blue-700 border-blue-200",
+  confirmed: "bg-green-100 text-green-700 border-green-200",
+  partially_confirmed: "bg-teal-100 text-teal-700 border-teal-200",
+  invalidated: "bg-red-100 text-red-700 border-red-200",
+  expired: "bg-gray-100 text-gray-600 border-gray-200",
+};
+
 export default async function CommunityMundanePage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -76,8 +108,11 @@ export default async function CommunityMundanePage() {
   if (member.membership_status !== "active") redirect("/join/community?status=inactive");
 
   const today = new Date().toISOString().slice(0, 10);
+  const ninetyDaysLater = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [ingressRes, forecastsRes, entitiesRes] = await Promise.all([
+  const adminClient = createAdminClient();
+
+  const [ingressRes, forecastsRes, entitiesRes, astroEventsRes, newForecastsRes] = await Promise.all([
     supabase
       .from("ingress_charts")
       .select("id, title, ingress_type, importance, short_description, event_timestamp, validity_start, validity_end, location_name")
@@ -101,11 +136,30 @@ export default async function CommunityMundanePage() {
       .eq("is_active", true)
       .order("name", { ascending: true })
       .limit(20),
+
+    adminClient
+      .from("mundane_astro_events")
+      .select("id, title, event_type, planet_primary, planet_secondary, sign, event_datetime_utc, timezone_display, notes")
+      .eq("is_verified", true)
+      .gte("event_datetime_utc", today)
+      .lte("event_datetime_utc", ninetyDaysLater)
+      .order("event_datetime_utc", { ascending: true })
+      .limit(5),
+
+    adminClient
+      .from("mundane_forecasts")
+      .select("id, title, entity_id, forecast_period_start, forecast_period_end, event_categories, confidence_level, outcome_status")
+      .eq("is_public", true)
+      .order("forecast_period_start", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(5),
   ]);
 
   const ingressCharts = (ingressRes.data ?? []) as IngressSummary[];
   const forecasts = (forecastsRes.data ?? []) as unknown as ForecastSummary[];
   const entities = (entitiesRes.data ?? []) as EntitySummary[];
+  const astroEvents = (astroEventsRes.data ?? []) as AstroEvent[];
+  const newForecasts = (newForecastsRes.data ?? []) as MundaneForecastNew[];
 
   return (
     <div className="space-y-10">
@@ -221,7 +275,92 @@ export default async function CommunityMundanePage() {
         )}
       </section>
 
-      {/* Section 3: Watched Entities */}
+      {/* Section 3: Upcoming Astronomical Events */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <CalendarDays className="size-4 text-muted-foreground" />
+          <h2 className="text-lg font-semibold">Upcoming Astronomical Events</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Ingresses, eclipses, lunations, and major planetary stations in the next 90 days.
+        </p>
+        {astroEvents.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No upcoming events on the calendar.</p>
+        ) : (
+          <div className="space-y-2">
+            {astroEvents.map((ev) => (
+              <div key={ev.id} className="flex items-start justify-between gap-3 rounded-lg border bg-card p-3 shadow-sm">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{ev.title}</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <Badge variant="outline" className="text-xs capitalize">{ev.event_type.replace("_", " ")}</Badge>
+                    {ev.planet_primary && (
+                      <span className="text-xs text-muted-foreground">{ev.planet_primary}{ev.planet_secondary ? ` / ${ev.planet_secondary}` : ""}</span>
+                    )}
+                    {ev.sign && <span className="text-xs text-muted-foreground">in {ev.sign}</span>}
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-xs text-muted-foreground">
+                    {formatDate(ev.event_datetime_utc)}
+                  </p>
+                  {ev.timezone_display && ev.timezone_display !== "UTC" && (
+                    <p className="text-xs text-muted-foreground">{ev.timezone_display}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Section 4: Active Forecasts (new structured journal) */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <BookOpen className="size-4 text-muted-foreground" />
+          <h2 className="text-lg font-semibold">Active Forecasts</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Astrological predictions with outcome tracking.
+        </p>
+        {newForecasts.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No public forecasts available yet.</p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {newForecasts.map((forecast) => (
+              <Card key={forecast.id} className="border-l-4 border-l-emerald-400/40">
+                <CardContent className="pt-4 pb-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-medium leading-snug">{forecast.title}</p>
+                    <Badge
+                      variant="outline"
+                      className={`text-xs shrink-0 capitalize ${OUTCOME_BADGE[forecast.outcome_status] ?? ""}`}
+                    >
+                      {forecast.outcome_status.replace("_", " ")}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {forecast.confidence_level && (
+                      <Badge variant="outline" className="text-xs capitalize">{forecast.confidence_level}</Badge>
+                    )}
+                    {(forecast.event_categories ?? []).slice(0, 2).map((cat) => (
+                      <Badge key={cat} variant="outline" className="text-xs capitalize">
+                        {cat.replace(/_/g, " ")}
+                      </Badge>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDate(forecast.forecast_period_start)}
+                    {forecast.forecast_period_end && ` – ${formatDate(forecast.forecast_period_end)}`}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Section 6: Watched Entities */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <Building2 className="size-4 text-muted-foreground" />

@@ -13,7 +13,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Pencil, Loader2, MapPin, Star, CalendarDays } from "lucide-react";
+import { ArrowLeft, Pencil, Loader2, MapPin, Star, CalendarDays, BarChart2 } from "lucide-react";
+import { toast } from "sonner";
+import { MundaneNatalChart } from "@/components/admin/mundane-natal-chart";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -29,6 +31,11 @@ type EntityDetail = {
   notes: string | null;
   is_active: boolean;
   created_at: string;
+  natal_chart_data: Record<string, unknown> | null;
+  birth_date: string | null;
+  birth_time: string | null;
+  birth_lat: number | null;
+  birth_lon: number | null;
 };
 
 type EntityChart = {
@@ -91,6 +98,8 @@ export default function AdminMundaneEntityDetailPage({
   const [events, setEvents] = useState<MundaneEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+
+  const [calculating, setCalculating] = useState(false);
 
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState<EditForm>({
@@ -162,6 +171,26 @@ export default function AdminMundaneEntityDetailPage({
     setSaving(false);
   }
 
+  async function handleCalculateChart() {
+    setCalculating(true);
+    try {
+      const res = await fetch(`/api/admin/mundane/entities/${id}/calculate-chart`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        toast.success("Chart calculated successfully");
+        load();
+      } else {
+        const json = await res.json();
+        toast.error(json.detail ?? json.title ?? "Chart calculation failed");
+      }
+    } catch {
+      toast.error("Network error — could not calculate chart");
+    } finally {
+      setCalculating(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -202,9 +231,24 @@ export default function AdminMundaneEntityDetailPage({
                 </div>
               </div>
             </div>
-            <Button size="sm" variant="outline" onClick={openEdit}>
-              <Pencil className="mr-1.5 size-3.5" /> Edit
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCalculateChart}
+                disabled={calculating}
+              >
+                {calculating ? (
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                ) : (
+                  <BarChart2 className="mr-1.5 size-3.5" />
+                )}
+                Calculate Chart
+              </Button>
+              <Button size="sm" variant="outline" onClick={openEdit}>
+                <Pencil className="mr-1.5 size-3.5" /> Edit
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2 text-sm">
@@ -230,6 +274,9 @@ export default function AdminMundaneEntityDetailPage({
           </div>
         </CardContent>
       </Card>
+
+      {/* Natal Chart Data */}
+      <MundaneNatalChart natalChartData={entity.natal_chart_data ?? null} />
 
       {/* Associated Charts */}
       <div className="space-y-3">

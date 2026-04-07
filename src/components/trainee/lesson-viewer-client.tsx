@@ -15,6 +15,8 @@ import {
   ChevronRight,
   Lock,
   Clock,
+  AlertCircle,
+  RotateCcw,
 } from "lucide-react";
 import Link from "next/link";
 import { PdfPreviewModal } from "@/components/trainee/pdf-preview-modal";
@@ -51,6 +53,33 @@ export type SidebarLesson = {
   locked: boolean;
 };
 
+// ---------------------------------------------------------------------------
+// Quiz Trigger types
+// ---------------------------------------------------------------------------
+export type TriggerUserProgress = {
+  trigger_id: string;
+  passed: boolean;
+  attempts: number;
+  last_rewind_at: string | null;
+  rewatch_required_until_seconds: number | null;
+  rewatch_completed: boolean;
+  passed_at: string | null;
+};
+
+export type LessonQuizTrigger = {
+  id: string;
+  trigger_timestamp_seconds: number;
+  rewind_target_seconds: number;
+  question_id: string;
+  question: {
+    id: string;
+    question: string;
+    options: { text: string }[];
+    explanation?: string | null;
+  } | null;
+  user_progress: TriggerUserProgress | null;
+};
+
 export type LessonViewerProps = {
   lessonId: string;
   programId: string;
@@ -71,6 +100,9 @@ export type LessonViewerProps = {
   quizPassed: boolean;
   quizLastScore: number | null;
   quizLastTotal: number | null;
+
+  // Video quiz triggers
+  triggers?: LessonQuizTrigger[];
 
   // Completion
   isCompleted: boolean;
@@ -120,7 +152,7 @@ function AssetTypeIcon({ type }: { type: LessonAsset["asset_type"] }) {
 }
 
 // ---------------------------------------------------------------------------
-// Video player
+// Video player (basic — used for embed/unknown URLs)
 // ---------------------------------------------------------------------------
 function VideoPlayer({
   video,
@@ -168,6 +200,302 @@ function VideoPlayer({
 }
 
 // ---------------------------------------------------------------------------
+// Trigger-aware video player (HTML5 direct videos only)
+// Wraps the <video> element and handles pause-on-trigger, scrub prevention,
+// quiz overlay display, and rewatch enforcement.
+// ---------------------------------------------------------------------------
+type TriggerVideoPlayerProps = {
+  video: { title: string | null; video_url: string; duration_mins: number | null };
+  lessonId: string;
+  triggers: LessonQuizTrigger[];
+  onEnded?: () => void;
+};
+
+function TriggerVideoPlayer({
+  video,
+  lessonId,
+  triggers,
+  onEnded,
+}: TriggerVideoPlayerProps) {
+  const embedUrl = getVideoEmbed(video.video_url);
+  const isDirect = isHtml5Video(video.video_url);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Track which triggers have been passed locally (optimistic after API confirms)
+  const [localPassedIds, setLocalPassedIds] = useState<Set<string>>(() => {
+    const s = new Set<string>();
+    for (const t of triggers) {
+      if (t.user_progress?.passed) s.add(t.id);
+    }
+    return s;
+  });
+
+  // Active trigger being presented to the user
+  const [activeTrigger, setActiveTrigger] = useState<LessonQuizTrigger | null>(null);
+
+  // Rewind notification state ("Incorrect. Rewinding in Xs...")
+  const [rewindCountdown, setRewindCountdown] = useState<number | null>(null);
+  const [rewindTarget, setRewindTarget] = useState<number>(0);
+
+  // Rewatch gate message (shown when 403 rewatch-required returned)
+  const [rewatchMessage, setRewatchMessage] = useState<string | null>(null);
+
+  // Answer submission state
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Rewatch polling: once in rewind mode, poll rewatch endpoint as video plays
+  const rewatchTriggerId = useRef<string | null>(null);
+  const rewatchPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Sort unpassed triggers by timestamp
+  const unpassedTriggers = triggers
+    .filter((t) => !localPassedIds.has(t.id))
+    .sort((a, b) => a.trigger_timestamp_seconds - b.trigger_timestamp_seconds);
+
+  // Countdown timer for rewind notification
+  useEffect(() => {
+    if (rewindCountdown === null) return;
+    if (rewindCountdown <= 0) {
+      // Execute rewind
+      const vid = videoRef.current;
+      if (vid) {
+        vid.currentTime = rewindTarget;
+        vid.play().then(() => {}, () => {});
+      }
+      setRewindCountdown(null);
+      setActiveTrigger(null);
+      setSelectedOption(null);
+      setRewatchMessage(null);
+      // Start rewatch polling
+      if (rewatchTriggerId.current) {
+        const tId = rewatchTriggerId.current;
+        if (rewatchPollRef.current) clearInterval(rewatchPollRef.current);
+        rewatchPollRef.current = setInterval(() => {
+          const vid = videoRef.current;
+          if (!vid) return;
+          const pos = Math.floor(vid.currentTime);
+          fetch(
+            `/api/trainee/training/lessons/${lessonId}/triggers/${tId}/rewatch`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ current_position_seconds: pos }),
+            }
+          ).then(async (res) => {
+            const json = await res.json().catch(() => ({}));
+            if (json.rewatch_completed) {
+              if (rewatchPollRef.current) {
+                clearInterval(rewatchPollRef.current);
+                rewatchPollRef.current = null;
+              }
+              rewatchTriggerId.current = null;
+            }
+          }, () => {});
+        }, 5000);
+      }
+      return;
+    }
+    const t = setTimeout(() => setRewindCountdown((c) => (c !== null ? c - 1 : null)), 1000);
+    return () => clearTimeout(t);
+  }, [rewindCountdown, rewindTarget, lessonId]);
+
+  // Cleanup poll on unmount
+  useEffect(() => {
+    return () => {
+      if (rewatchPollRef.current) clearInterval(rewatchPollRef.current);
+    };
+  }, []);
+
+  // timeupdate handler: check if we've hit an unpassed trigger
+  const handleTimeUpdate = useCallback(() => {
+    const vid = videoRef.current;
+    if (!vid || activeTrigger || rewindCountdown !== null) return;
+
+    const current = vid.currentTime;
+    for (const trigger of unpassedTriggers) {
+      const ts = trigger.trigger_timestamp_seconds;
+      // Fire when within 1s window of the trigger timestamp
+      if (current >= ts && current < ts + 1) {
+        vid.pause();
+        setActiveTrigger(trigger);
+        setSelectedOption(null);
+        setRewatchMessage(null);
+        break;
+      }
+    }
+  }, [activeTrigger, rewindCountdown, unpassedTriggers]);
+
+  // seeking handler: prevent scrubbing past an unpassed trigger
+  const handleSeeking = useCallback(() => {
+    const vid = videoRef.current;
+    if (!vid) return;
+    const seekTarget = vid.currentTime;
+    // Find the earliest unpassed trigger the user is trying to skip past
+    for (const trigger of unpassedTriggers) {
+      if (seekTarget > trigger.trigger_timestamp_seconds) {
+        // Snap back to just before the trigger
+        vid.currentTime = trigger.trigger_timestamp_seconds;
+        break;
+      }
+    }
+  }, [unpassedTriggers]);
+
+  async function handleAnswerSubmit() {
+    if (selectedOption === null || !activeTrigger || submitting) return;
+    setSubmitting(true);
+    setRewatchMessage(null);
+
+    try {
+      const res = await fetch(
+        `/api/trainee/training/lessons/${lessonId}/triggers/${activeTrigger.id}/answer`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ answer_index: selectedOption }),
+        }
+      );
+
+      if (res.status === 403) {
+        setRewatchMessage("Please replay the highlighted segment before retrying.");
+        setSubmitting(false);
+        return;
+      }
+
+      if (!res.ok) {
+        setRewatchMessage("Something went wrong. Please try again.");
+        setSubmitting(false);
+        return;
+      }
+
+      const json: { correct: boolean; rewind_to?: number } = await res.json();
+
+      if (json.correct) {
+        // Mark passed locally and resume video
+        setLocalPassedIds((prev) => new Set([...prev, activeTrigger.id]));
+        setActiveTrigger(null);
+        setSelectedOption(null);
+        videoRef.current?.play().then(() => {}, () => {});
+      } else {
+        // Wrong answer — start rewind countdown
+        rewatchTriggerId.current = activeTrigger.id;
+        setRewindTarget(json.rewind_to ?? activeTrigger.rewind_target_seconds);
+        setRewindCountdown(5);
+      }
+    } catch {
+      setRewatchMessage("Network error. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // For non-HTML5 or embed videos, fall back to standard VideoPlayer (no trigger support)
+  if (embedUrl || !isDirect) {
+    return <VideoPlayer video={video} onEnded={onEnded} />;
+  }
+
+  const q = activeTrigger?.question;
+  const showOverlay = activeTrigger !== null && rewindCountdown === null;
+  const showCountdown = rewindCountdown !== null;
+
+  return (
+    <div className="relative overflow-hidden rounded-xl border bg-black">
+      <video
+        ref={videoRef}
+        src={video.video_url}
+        controls={!showOverlay && !showCountdown}
+        className="w-full max-h-[480px]"
+        onEnded={onEnded}
+        onTimeUpdate={handleTimeUpdate}
+        onSeeking={handleSeeking}
+      />
+
+      {/* Rewind countdown notification */}
+      {showCountdown && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+          <div className="rounded-xl border border-red-500/40 bg-card p-6 max-w-sm w-full mx-4 text-center space-y-3 shadow-2xl">
+            <div className="flex items-center justify-center gap-2">
+              <RotateCcw className="size-5 text-red-500" />
+              <p className="font-semibold text-red-500">Incorrect Answer</p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Rewinding in{" "}
+              <span className="tabular-nums font-bold text-foreground">
+                {rewindCountdown}s
+              </span>
+              …
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Watch the segment again, then retry the question.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Quiz overlay */}
+      {showOverlay && q && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-4">
+          <div className="rounded-xl border bg-card p-5 max-w-md w-full shadow-2xl space-y-4">
+            {/* Header */}
+            <div className="flex items-start gap-2">
+              <AlertCircle className="size-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Video Quiz
+                </p>
+                <p className="text-sm font-medium leading-snug mt-0.5">{q.question}</p>
+              </div>
+            </div>
+
+            {/* Options */}
+            <div className="space-y-2">
+              {q.options.map((opt, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedOption(idx)}
+                  className={cn(
+                    "w-full rounded-lg border px-4 py-2.5 text-left text-sm transition-colors",
+                    selectedOption === idx
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border hover:border-primary/40 hover:bg-muted/40"
+                  )}
+                  aria-pressed={selectedOption === idx}
+                >
+                  {opt.text}
+                </button>
+              ))}
+            </div>
+
+            {/* Rewatch gate message */}
+            {rewatchMessage && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-400/40 bg-amber-500/5 px-3 py-2 text-sm text-amber-600">
+                <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                <span>{rewatchMessage}</span>
+              </div>
+            )}
+
+            {/* Submit */}
+            <Button
+              size="sm"
+              className="w-full"
+              disabled={selectedOption === null || submitting}
+              onClick={handleAnswerSubmit}
+            >
+              {submitting ? "Checking…" : "Submit Answer"}
+            </Button>
+
+            <p className="text-xs text-center text-muted-foreground">
+              Answer correctly to continue watching.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main client component
 // ---------------------------------------------------------------------------
 export function LessonViewerClient(props: LessonViewerProps) {
@@ -189,6 +517,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
     quizLastTotal,
     isCompleted: initialCompleted,
     sidebarLessons,
+    triggers = [],
   } = props;
 
   // Combine legacy single video + lesson_videos table entries
@@ -329,8 +658,10 @@ export function LessonViewerClient(props: LessonViewerProps) {
                   ))}
                 </div>
               )}
-              <VideoPlayer
+              <TriggerVideoPlayer
                 video={allVideos[activeVideoIdx]}
+                lessonId={lessonId}
+                triggers={triggers}
                 onEnded={handleVideoEnded}
               />
             </div>

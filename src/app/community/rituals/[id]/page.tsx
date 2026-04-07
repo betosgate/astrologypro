@@ -44,6 +44,21 @@ type Invocation = {
   priority: number;
 };
 
+// Canonical ordering: Opening → Gate → Invocation/Banishing → Closing
+function canonicalSort(invocations: Invocation[]): Invocation[] {
+  const rank = (name: string): number => {
+    if (name.includes("Opening")) return 0;
+    if (name.includes("Gate")) return 1;
+    if (name.includes("Closing")) return 3;
+    return 2; // Invocation / Banishing core steps
+  };
+  return [...invocations].sort((a, b) => {
+    const diff = rank(a.name) - rank(b.name);
+    if (diff !== 0) return diff;
+    return (a.priority ?? 0) - (b.priority ?? 0);
+  });
+}
+
 export default function RitualDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -55,6 +70,8 @@ export default function RitualDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(0); // 0 = preparation, 1..N = active step, N+1 = complete
   const [saving, setSaving] = useState(false);
+  // Show "Prepare Sacred Space" overlay before multi-step ritual begins
+  const [showSacredSpaceOverlay, setShowSacredSpaceOverlay] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -67,7 +84,7 @@ export default function RitualDetailPage() {
       }
       const data = await res.json();
       setRitual(data.ritual);
-      setInvocations(data.invocations ?? []);
+      setInvocations(canonicalSort(data.invocations ?? []));
 
       // Restore persisted step. If previously complete, stay at complete phase.
       const r: RitualConfig = data.ritual;
@@ -102,6 +119,18 @@ export default function RitualDetailPage() {
   }
 
   async function handleBegin() {
+    if (invocations.length > 1) {
+      // Multi-step: show "Prepare Sacred Space" overlay first
+      setShowSacredSpaceOverlay(true);
+    } else {
+      // Single step: start immediately
+      setStep(1);
+      await patchStep({ current_step: 1 });
+    }
+  }
+
+  async function handleBeginAfterOverlay() {
+    setShowSacredSpaceOverlay(false);
     setStep(1);
     await patchStep({ current_step: 1 });
   }
@@ -148,6 +177,48 @@ export default function RitualDetailPage() {
         <Button variant="outline" asChild>
           <Link href="/community/rituals">← Back to My Rituals</Link>
         </Button>
+      </div>
+    );
+  }
+
+  // ── Phase: Sacred Space Overlay (multi-step pre-ritual preparation) ──────────
+
+  if (showSacredSpaceOverlay) {
+    return (
+      <div className="space-y-6 max-w-2xl">
+        <Link
+          href="/community/rituals"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← My Rituals
+        </Link>
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
+          <CardContent className="flex flex-col items-center gap-6 py-12 text-center">
+            <div className="text-5xl">🕯️</div>
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">Prepare Sacred Space</h2>
+              <p className="mt-2 text-muted-foreground max-w-sm mx-auto">
+                Take a moment to center yourself and prepare your space before beginning{" "}
+                <span className="font-semibold">{ritual.ritual_name}</span>.
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                This ritual has {invocations.length} step{invocations.length !== 1 ? "s" : ""}.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3 justify-center">
+              <Button size="lg" onClick={handleBeginAfterOverlay}>
+                <span className="mr-2">🔥</span>
+                Begin the Ritual
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowSacredSpaceOverlay(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }

@@ -17,6 +17,7 @@ import { PageTracker } from "@/components/landing/page-tracker";
 import { MediaGallery, type MediaItem } from "@/components/public/media-gallery";
 import { LiveStreamSection, type StreamPlatformConfig } from "@/components/public/live-stream-section";
 import { TestimonialsSection } from "@/components/public/testimonials-section";
+import { BlogSubscribeForm } from "@/app/blog/subscribe-form";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -559,7 +560,20 @@ export default async function DivinerPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* ===== 8. FINAL CTA ===== */}
+      {/* ===== 8. NEWSLETTER SUBSCRIBE ===== */}
+      <section className="relative py-10 md:py-14">
+        <div className="mx-auto max-w-xl px-4 text-center">
+          <h2 className="mb-2 font-display text-2xl font-semibold text-cream">
+            Stay Connected with {diviner.display_name}
+          </h2>
+          <p className="mb-1 text-sm text-silver/60">
+            Get cosmic insights, updates, and exclusive offers delivered to your inbox.
+          </p>
+          <BlogSubscribeForm divinerUsername={username} />
+        </div>
+      </section>
+
+      {/* ===== 9. FINAL CTA ===== */}
       <section className="relative overflow-hidden py-12 md:py-16">
         {/* Cosmic gradient background */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_50%,rgba(201,168,76,0.06)_0%,transparent_60%)]" />

@@ -7,18 +7,43 @@ function isValidEmail(email: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json() as { email?: unknown };
+    const body = await req.json() as {
+      email?: unknown;
+      diviner_username?: unknown;
+    };
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const divinerUsername =
+      typeof body.diviner_username === "string" && body.diviner_username.trim()
+        ? body.diviner_username.trim().toLowerCase()
+        : undefined;
 
     if (!email || !isValidEmail(email)) {
       return NextResponse.json({ error: "A valid email address is required." }, { status: 400 });
     }
 
     const admin = createAdminClient();
+
+    // Resolve diviner_id from username if provided for attribution
+    let divinerId: string | null = null;
+    if (divinerUsername) {
+      const { data: diviner } = await admin
+        .from("diviners")
+        .select("id")
+        .eq("username", divinerUsername)
+        .maybeSingle();
+      divinerId = diviner?.id ?? null;
+    }
+
     const { error } = await admin
       .from("blog_subscribers")
       .upsert(
-        { email, subscribed_at: new Date().toISOString(), source: "marketing" },
+        {
+          email,
+          subscribed_at: new Date().toISOString(),
+          source: divinerUsername ? "diviner_profile" : "marketing",
+          ...(divinerId ? { diviner_id: divinerId } : {}),
+          ...(divinerUsername ? { attributed_username: divinerUsername } : {}),
+        },
         { onConflict: "email" }
       );
 

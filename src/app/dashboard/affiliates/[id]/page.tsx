@@ -38,6 +38,7 @@ import {
   Copy,
   Plus,
   Wallet,
+  Download,
 } from "lucide-react";
 
 interface Affiliate {
@@ -351,9 +352,26 @@ export default function DashboardAffiliateDetailPage({
 
       {/* Commission Ledger */}
       <Card>
-        <CardHeader>
-          <CardTitle>Commission Ledger</CardTitle>
-          <CardDescription>{commissions.length} entries</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Commission Ledger</CardTitle>
+            <CardDescription>{commissions.length} entries</CardDescription>
+          </div>
+          <Button
+            asChild
+            size="sm"
+            variant="outline"
+          >
+            <a
+              href={`/api/dashboard/affiliates/${id}/commissions/export`}
+              target="_blank"
+              rel="noopener noreferrer"
+              download
+            >
+              <Download className="mr-2 size-4" />
+              Export CSV
+            </a>
+          </Button>
         </CardHeader>
         <CardContent>
           {commissions.length === 0 ? (

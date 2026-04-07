@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Loader2, SendHorizonal, Lock } from "lucide-react";
+import { ArrowLeft, Loader2, SendHorizonal, Lock, CheckSquare, Square, Plus } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,7 +44,9 @@ interface Ticket {
   assigned_to: string | null;
   assigned_team: string | null;
   resolution: string | null;
+  sla_due_at: string | null;
   sla_breached: boolean;
+  sla_breached_at: string | null;
   first_response_at: string | null;
   resolved_at: string | null;
   closed_at: string | null;
@@ -68,6 +70,17 @@ interface HistoryEntry {
   old_value: string | null;
   new_value: string | null;
   note: string | null;
+  created_at: string;
+}
+
+interface TicketTask {
+  id: string;
+  ticket_id: string;
+  title: string;
+  description: string | null;
+  status: "pending" | "in_progress" | "done" | "blocked";
+  sort_order: number;
+  completed_at: string | null;
   created_at: string;
 }
 
@@ -116,6 +129,13 @@ export default function AdminTicketDetailPage() {
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
 
+  // Checklist state
+  const [tasks, setTasks] = useState<TicketTask[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [addingTask, setAddingTask] = useState(false);
+  const [showAddTask, setShowAddTask] = useState(false);
+
   // Edit state
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
@@ -148,9 +168,73 @@ export default function AdminTicketDetailPage() {
     }
   }, [ticketId, router]);
 
+  const loadTasks = useCallback(async () => {
+    setTasksLoading(true);
+    try {
+      const res = await fetch(`/api/admin/tickets/${ticketId}/tasks`);
+      if (res.ok) {
+        const json = await res.json();
+        setTasks(json.tasks ?? []);
+      }
+    } catch {
+      // Non-fatal: checklist load failure doesn't break the page
+    } finally {
+      setTasksLoading(false);
+    }
+  }, [ticketId]);
+
   useEffect(() => {
     loadTicket();
   }, [loadTicket]);
+
+  useEffect(() => {
+    // Load tasks for job tickets after main data loads
+    if (data?.ticket.type === "job") {
+      loadTasks();
+    }
+  }, [data?.ticket.type, loadTasks]);
+
+  async function handleAddTask(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newTaskTitle.trim()) return;
+    setAddingTask(true);
+    try {
+      const res = await fetch(`/api/admin/tickets/${ticketId}/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTaskTitle.trim(), sort_order: tasks.length }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail ?? "Failed to add task.");
+      }
+      setNewTaskTitle("");
+      setShowAddTask(false);
+      await loadTasks();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add task.");
+    } finally {
+      setAddingTask(false);
+    }
+  }
+
+  async function handleToggleTask(task: TicketTask) {
+    const nextStatus = task.status === "done" ? "pending" : "done";
+    try {
+      const res = await fetch(`/api/admin/ticket-tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail ?? "Failed to update task.");
+      }
+      await loadTasks();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update task.");
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -325,6 +409,85 @@ export default function AdminTicketDetailPage() {
             </CardContent>
           </Card>
 
+          {/* Checklist — job tickets only */}
+          {ticket.type === "job" && (
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Checklist</CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAddTask((v) => !v)}
+                    className="h-7 px-2 text-xs"
+                  >
+                    <Plus className="size-3.5 mr-1" />
+                    Add Task
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {tasksLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                    <Loader2 className="size-4 animate-spin" />
+                    Loading checklist…
+                  </div>
+                ) : tasks.length === 0 && !showAddTask ? (
+                  <p className="text-sm text-muted-foreground">
+                    No tasks yet. Click &quot;Add Task&quot; to create the first one.
+                  </p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {tasks.map((task) => (
+                      <li key={task.id} className="flex items-start gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleTask(task)}
+                          className="mt-0.5 shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                          aria-label={task.status === "done" ? "Mark as pending" : "Mark as done"}
+                        >
+                          {task.status === "done" ? (
+                            <CheckSquare className="size-4 text-green-500" />
+                          ) : (
+                            <Square className="size-4" />
+                          )}
+                        </button>
+                        <span className={`text-sm leading-tight ${task.status === "done" ? "line-through text-muted-foreground" : ""}`}>
+                          {task.title}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {showAddTask && (
+                  <form onSubmit={handleAddTask} className="flex items-center gap-2 pt-1">
+                    <Input
+                      autoFocus
+                      placeholder="Task title…"
+                      value={newTaskTitle}
+                      onChange={(e) => setNewTaskTitle(e.target.value)}
+                      className="h-8 text-sm"
+                      disabled={addingTask}
+                    />
+                    <Button type="submit" size="sm" className="h-8 px-3" disabled={addingTask || !newTaskTitle.trim()}>
+                      {addingTask ? <Loader2 className="size-3.5 animate-spin" /> : "Add"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2"
+                      onClick={() => { setShowAddTask(false); setNewTaskTitle(""); }}
+                    >
+                      Cancel
+                    </Button>
+                  </form>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Compose */}
           <Card>
             <CardHeader className="pb-3">
@@ -446,14 +609,31 @@ export default function AdminTicketDetailPage() {
                 <span className="text-muted-foreground">Created</span>
                 <span>{formatDateTime(ticket.created_at)}</span>
               </div>
+              {ticket.sla_due_at && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">SLA Due</span>
+                  <span>{formatDateTime(ticket.sla_due_at)}</span>
+                </div>
+              )}
               {ticket.resolved_at && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Resolved</span>
                   <span>{formatDateTime(ticket.resolved_at)}</span>
                 </div>
               )}
-              {ticket.sla_breached && (
-                <Badge className="w-full justify-center bg-red-500/10 text-red-600 border-red-500/20">
+              {ticket.sla_breached_at && (
+                <Badge
+                  variant="outline"
+                  className="w-full justify-center bg-red-500/10 text-red-600 border-red-500/20"
+                >
+                  SLA BREACHED · {formatDateTime(ticket.sla_breached_at)}
+                </Badge>
+              )}
+              {ticket.sla_breached && !ticket.sla_breached_at && (
+                <Badge
+                  variant="outline"
+                  className="w-full justify-center bg-red-500/10 text-red-600 border-red-500/20"
+                >
                   SLA Breached
                 </Badge>
               )}

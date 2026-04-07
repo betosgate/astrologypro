@@ -5,88 +5,74 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const dynamic = "force-dynamic";
 
 // GET /api/affiliate/commissions
-// Returns the authenticated user's commission ledger entries + payout history
-// Requires the user to be listed in the affiliates table
+// Paginated list of commissions for the authenticated affiliate user
+// Query: status?, limit?, cursor?
 export async function GET(request: Request) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (!user) {
+    return NextResponse.json(
+      { type: "https://httpstatuses.io/401", title: "Unauthorized", status: 401 },
+      { status: 401 }
+    );
+  }
 
   const admin = createAdminClient();
 
-  // Verify the user is an affiliate
-  const { data: affiliateRecord } = await admin
-    .from("affiliates")
-    .select("id, name, email, diviner_id")
+  // Look up affiliate record
+  const { data: affiliate, error: affError } = await admin
+    .from("diviner_affiliates")
+    .select("id")
     .eq("user_id", user.id)
-    .limit(1)
-    .single();
+    .maybeSingle();
 
-  if (!affiliateRecord) {
-    return NextResponse.json({ error: "Not an affiliate account" }, { status: 403 });
+  if (affError) {
+    return NextResponse.json(
+      { type: "https://httpstatuses.io/500", title: "Database error", status: 500, detail: affError.message },
+      { status: 500 }
+    );
+  }
+
+  if (!affiliate) {
+    return NextResponse.json(
+      { type: "https://httpstatuses.io/404", title: "Affiliate record not found", status: 404 },
+      { status: 404 }
+    );
   }
 
   const { searchParams } = new URL(request.url);
+  const statusFilter = searchParams.get("status");
   const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 100);
   const cursor = searchParams.get("cursor");
 
-  // Ledger entries for this affiliate
-  let ledgerQuery = admin
-    .from("commission_ledger_entries")
+  let query = admin
+    .from("affiliate_commissions")
     .select(
-      "id, diviner_user_id, order_amount_cents, commission_amount_cents, status, description, period_start, period_end, approved_at, created_at"
+      "id, order_reference, order_amount_cents, commission_type, commission_rate, commission_amount_cents, status, approved_at, notes, created_at"
     )
-    .eq("affiliate_user_id", user.id)
+    .eq("affiliate_id", affiliate.id)
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(limit + 1);
 
-  if (cursor) ledgerQuery = ledgerQuery.lt("id", cursor);
+  if (statusFilter) query = query.eq("status", statusFilter);
+  if (cursor) query = query.lt("id", cursor);
 
-  const { data: ledgerRows, error: ledgerError } = await ledgerQuery;
-  if (ledgerError) return NextResponse.json({ error: ledgerError.message }, { status: 500 });
+  const { data, error } = await query;
 
-  const hasMore = (ledgerRows ?? []).length > limit;
-  const ledgerItems = hasMore ? (ledgerRows ?? []).slice(0, limit) : (ledgerRows ?? []);
-  const nextCursor = hasMore ? ledgerItems[ledgerItems.length - 1]?.id : null;
+  if (error) {
+    return NextResponse.json(
+      { type: "https://httpstatuses.io/500", title: "Database error", status: 500, detail: error.message },
+      { status: 500 }
+    );
+  }
 
-  // Payout history for this affiliate
-  const { data: payouts, error: payoutError } = await admin
-    .from("affiliate_payout_records")
-    .select(
-      "id, amount_cents, currency, payout_method, reference_number, notes, status, paid_at, created_at"
-    )
-    .eq("affiliate_user_id", user.id)
-    .order("paid_at", { ascending: false })
-    .limit(50);
+  const hasMore = (data ?? []).length > limit;
+  const items = hasMore ? (data ?? []).slice(0, limit) : (data ?? []);
+  const nextCursor = hasMore ? items[items.length - 1]?.id : null;
 
-  if (payoutError) return NextResponse.json({ error: payoutError.message }, { status: 500 });
-
-  // Summary stats
-  const allLedger = await admin
-    .from("commission_ledger_entries")
-    .select("commission_amount_cents, status")
-    .eq("affiliate_user_id", user.id);
-
-  let totalEarned = 0;
-  let totalPaid = 0;
-  let totalPending = 0;
-
-  (allLedger.data ?? []).forEach((row) => {
-    const amount = Number(row.commission_amount_cents);
-    totalEarned += amount;
-    if (row.status === "paid") totalPaid += amount;
-    else if (row.status === "pending" || row.status === "approved" || row.status === "payable") totalPending += amount;
-  });
-
-  return NextResponse.json({
-    affiliate: { id: affiliateRecord.id, name: affiliateRecord.name, email: affiliateRecord.email },
-    summary: { total_earned: totalEarned, total_paid: totalPaid, total_pending: totalPending },
-    ledger: ledgerItems,
-    payouts: payouts ?? [],
-    nextCursor,
-    hasMore,
-  });
+  return NextResponse.json({ data: items, nextCursor, hasMore });
 }

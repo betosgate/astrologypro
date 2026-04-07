@@ -1,0 +1,49 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+export const dynamic = "force-dynamic";
+
+const VALID_EVENT_TYPES = [
+  "ingress", "lunation", "eclipse", "conjunction", "opposition", "station",
+  "retrograde", "direct", "great_conjunction", "return", "solar_arc", "custom",
+] as const;
+
+export async function GET(req: NextRequest) {
+  const sp = req.nextUrl.searchParams;
+  const from = sp.get("from") ?? "";
+  const to = sp.get("to") ?? "";
+  const eventType = sp.get("event_type") ?? "";
+  const limit = Math.min(100, Math.max(1, parseInt(sp.get("limit") ?? "50", 10)));
+
+  const admin = createAdminClient();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query: any = admin
+    .from("mundane_astro_events")
+    .select("id, title, event_type, planet_primary, planet_secondary, sign, event_datetime_utc, timezone_display, notes, is_verified, created_at")
+    .eq("is_verified", true);
+
+  if (from) {
+    query = query.gte("event_datetime_utc", from);
+  }
+  if (to) {
+    query = query.lte("event_datetime_utc", to);
+  }
+  if (eventType && (VALID_EVENT_TYPES as readonly string[]).includes(eventType)) {
+    query = query.eq("event_type", eventType);
+  }
+
+  query = query
+    .order("event_datetime_utc", { ascending: true })
+    .limit(limit);
+
+  const { data, error } = await query;
+  if (error) {
+    return NextResponse.json(
+      { type: "https://httpstatuses.com/500", title: "Internal Server Error", status: 500, detail: error.message },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ events: data ?? [] });
+}

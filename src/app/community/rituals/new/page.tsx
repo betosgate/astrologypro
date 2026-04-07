@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Card,
@@ -17,20 +17,35 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
 // ─────────────────────────────────────────────
-// Preset options matching Angular implementation
+// Preset options — canonical tag sets per spec
 // ─────────────────────────────────────────────
 const PRESET_OPTIONS = [
   {
     name: "Standard Banishing Ritual of the Pentagram",
-    tags: ["Banishing_Ritual"],
+    tags: [
+      "Ritual_Opening",
+      "Pentagram_Gate_Banishing_Ritual",
+      "Pentagram_Banishing_Ritual",
+      "Ritual_Closing",
+    ],
   },
   {
     name: "Standard Invocation Ritual of the Pentagram",
-    tags: ["Invocation_Ritual"],
+    tags: [
+      "Ritual_Opening",
+      "Pentagram_Gate_Invocation_Ritual",
+      "Pentagram_Invocation_Ritual",
+      "Ritual_Closing",
+    ],
   },
   {
     name: "Divine Infinite Being Invocation Ritual of the Pentagram",
-    tags: ["Core_Invocation_Ritual"],
+    tags: [
+      "Ritual_Opening",
+      "DIB_Gate_Invocation_Ritual",
+      "DIB_Invocation_Ritual",
+      "Ritual_Closing",
+    ],
   },
   {
     name: "Planetary Zodiacal Invocation Ritual of the Pentagram",
@@ -67,9 +82,10 @@ function buildCustomTags(
       tags.add(`${z}_Invocation_Ritual`);
     }
   } else {
-    // banishing — zodiac disabled per Angular
+    // banishing — zodiac disabled per spec
     for (const p of planets) {
       tags.add(`${p}_Gate_Banishing_Ritual`);
+      tags.add(`${p}_Banishing_Ritual`);
     }
   }
 
@@ -87,7 +103,11 @@ type StepPreview = {
 
 export default function CreateRitualPage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("choose");
+  const searchParams = useSearchParams();
+  // If ?type=planetary in URL, open configurator directly
+  const [step, setStep] = useState<Step>(
+    searchParams.get("type") === "planetary" ? "custom" : "choose"
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -226,6 +246,7 @@ export default function CreateRitualPage() {
               onClick={() => {
                 if (!saving) {
                   if (option.tags === null) {
+                    router.push("/community/rituals/new?type=planetary");
                     setStep("custom");
                   } else {
                     submitPreset(option.name, [...option.tags]);
@@ -273,7 +294,12 @@ export default function CreateRitualPage() {
         <button
           type="button"
           className="text-sm text-muted-foreground hover:text-foreground"
-          onClick={() => { setStep("choose"); setError(null); setStepPreview(null); }}
+          onClick={() => {
+            router.push("/community/rituals/new");
+            setStep("choose");
+            setError(null);
+            setStepPreview(null);
+          }}
         >
           ← Back to Ritual Options
         </button>
@@ -425,7 +451,12 @@ export default function CreateRitualPage() {
         <Button
           type="button"
           variant="outline"
-          onClick={() => { setStep("choose"); setError(null); setStepPreview(null); }}
+          onClick={() => {
+            router.push("/community/rituals/new");
+            setStep("choose");
+            setError(null);
+            setStepPreview(null);
+          }}
         >
           Cancel
         </Button>
