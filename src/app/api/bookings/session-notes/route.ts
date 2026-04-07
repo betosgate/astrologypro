@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 /**
  * PATCH /api/bookings/session-notes
  * Save session notes for a completed booking. Only the owning diviner can write notes.

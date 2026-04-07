@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserPortals } from "@/lib/user-roles";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/auth/me-portals
  *

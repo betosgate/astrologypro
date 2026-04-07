@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logActivity } from "@/lib/activity-log";
 
+export const dynamic = "force-dynamic";
+
 interface SavedCard {
   position: number;
   position_name: string;

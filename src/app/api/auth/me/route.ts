@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 /** GET /api/auth/me — returns the current user's email and id */
 export async function GET() {
   const supabase = await createClient();

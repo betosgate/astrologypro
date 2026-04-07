@@ -16,6 +16,8 @@ import {
 import { createCalendarEvent } from "@/lib/google-calendar";
 import { createMsCalendarEvent } from "@/lib/microsoft-calendar";
 
+export const dynamic = "force-dynamic";
+
 export const runtime = "nodejs";
 
 async function handleGiftCheckoutCompleted(

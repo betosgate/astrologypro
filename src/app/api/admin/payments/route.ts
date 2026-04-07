@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
     )
     .not("amount_charged", "is", null)
     .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
     .range(offset, offset + limit - 1);
 
   if (paymentFrom) query = query.gte("created_at", paymentFrom);

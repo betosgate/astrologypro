@@ -5,6 +5,8 @@ import { getAvailableSlots } from "@/lib/availability";
 import { getAvailableSlotsFromGoogle } from "@/lib/google-calendar";
 import { getMsFreeBusy } from "@/lib/microsoft-calendar";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ divinerId: string }> }
