@@ -22,8 +22,9 @@ import {
   Loader2, ChevronDown, ChevronRight, ChevronLeft, Star, Sun, Moon,
   Calendar as CalendarIcon, Heart, Users, Briefcase, Eye, Zap,
   Sparkles, CircleDot, Clock, MapPin, Printer, ArrowUp, RotateCcw,
-  X, Maximize2,
+  X, Maximize2, Search,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -538,66 +539,84 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
                   <AstroHeaderParts title={aspectTitle ?? title} />
                 </div>
               ) : (
-                <DialogTitle className="text-lg font-bold capitalize gold-text">{title.replace(/_/g, " ")}</DialogTitle>
+                <DialogTitle className="text-lg font-bold capitalize gold-text">{title.replace(/_/g, " ")} (Pictorial Analysis)</DialogTitle>
               )}
             </DialogHeader>
           </div>
 
-          {/* Scrollable Content Section */}
-          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-            {loading ? (
-              <div className="flex items-center gap-3 py-12 justify-center text-muted-foreground">
-                <Loader2 className="size-6 animate-spin text-amber-500" />
-                <span className="text-sm font-medium tracking-wide">Fetching Cosmic Insights...</span>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {promptType === "planet" && planetEntries && planetEntries.length > 0 ? (
-                  <div className="space-y-6">
-                    {planetEntries.map(({ planet, items }) => (
-                      <div key={planet} className="rounded-xl border border-white/5 bg-white/5 p-4 space-y-3">
-                        <div className="flex items-center gap-2">
-                          <PlanetSymbol name={planet} />
-                          <div className="h-px flex-1 bg-gradient-to-right from-amber-500/20 to-transparent" />
-                        </div>
-                        <ol className="space-y-3 list-none">
-                          {items.map((item, idx) => (
-                            <li key={idx} className="text-sm leading-relaxed text-foreground/90 flex gap-3">
-                              <span className="flex-shrink-0 size-5 flex items-center justify-center rounded-full bg-amber-500/10 text-amber-500 font-bold text-[10px] border border-amber-500/20">{idx + 1}</span>
-                              <span>{item}</span>
-                            </li>
-                          ))}
-                        </ol>
-                      </div>
-                    ))}
+          {/* Content Section — Side-by-side on MD screens if picture exists */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-950/50">
+            <div className={cn("grid grid-cols-1 gap-0 h-full", pictureUrl && "md:grid-cols-2")}>
+
+              {/* Textual/Structured Content */}
+              <div className="p-6 h-full flex flex-col border-b md:border-b-0 md:border-r border-white/5">
+                {loading ? (
+                  <div className="flex flex-col items-center gap-3 py-12 justify-center text-muted-foreground flex-1">
+                    <Loader2 className="size-8 animate-spin text-amber-500 mb-2" />
+                    <span className="text-sm font-medium tracking-widest uppercase opacity-70">Cosmic Retrieval...</span>
                   </div>
                 ) : (
-                  <div className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap font-light tracking-wide bg-white/5 p-5 rounded-xl border border-white/5 italic">
-                    "{content}"
+                  <div className="flex-1">
+                    {promptType === "planet" && planetEntries && planetEntries.length > 0 ? (
+                      <div className="space-y-6">
+                        {planetEntries.map(({ planet, items }) => (
+                          <div key={planet} className="rounded-xl border border-amber-500/10 bg-amber-500/5 p-4 space-y-3 shadow-inner">
+                            <div className="flex items-center gap-3">
+                              <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                                <PlanetSymbol name={planet} />
+                              </div>
+                              <div className="h-px flex-1 bg-gradient-to-r from-amber-500/30 to-transparent" />
+                            </div>
+                            <ol className="space-y-3 list-none">
+                              {items.map((item, idx) => (
+                                <li key={idx} className="text-sm leading-relaxed text-foreground/90 flex gap-3 group">
+                                  <span className="flex-shrink-0 size-5 flex items-center justify-center rounded-full bg-amber-500/20 text-amber-500 font-bold text-[10px] border border-amber-500/30 group-hover:bg-amber-500 group-hover:text-amber-950 transition-all">{idx + 1}</span>
+                                  <span className="opacity-90 group-hover:opacity-100">{item}</span>
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap font-light tracking-wide bg-slate-900/40 p-6 rounded-2xl border border-white/5 italic relative overflow-hidden shadow-2xl">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-amber-500/40" />
+                        <Sparkles className="absolute top-3 right-3 size-4 text-amber-500/20" />
+                        "{content}"
+                      </div>
+                    )}
                   </div>
                 )}
+              </div>
 
-                {pictureUrl && (
-                  <div className="relative group rounded-xl border border-white/10 overflow-hidden bg-slate-900/40 shadow-2xl">
+              {/* Pictorial Representation — Step-by-side with text */}
+              {pictureUrl && (
+                <div className="p-6 flex flex-col items-center justify-center bg-slate-900/20">
+                  <div className="relative group rounded-2xl border border-amber-500/20 overflow-hidden bg-slate-950 shadow-[0_0_50px_rgba(245,158,11,0.08)] transition-all hover:border-amber-500/40">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={pictureUrl} alt={title} className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-[1.02]" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/20 to-transparent pointer-events-none" />
+                    <img src={pictureUrl} alt={title} className="w-full h-auto max-h-[50vh] object-contain transition-transform duration-1000 group-hover:scale-[1.05]" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
 
                     {/* Maximize Icon */}
                     <button
                       onClick={() => setShowFullImage(true)}
-                      className="absolute top-3 right-3 size-8 flex items-center justify-center rounded-full bg-slate-900/80 border border-white/10 text-amber-500/80 hover:text-amber-500 hover:border-amber-500/50 transition-all shadow-lg backdrop-blur-sm z-10"
-                      title="Enlarge Image"
+                      className="absolute top-4 right-4 size-10 flex items-center justify-center rounded-xl bg-slate-950/80 border border-white/10 text-amber-500/80 hover:text-amber-500 hover:border-amber-500/50 transition-all shadow-2xl backdrop-blur-md z-10 group/btn"
+                      title="Enlarge Cosmic Map"
                     >
-                      <Maximize2 className="size-4" />
+                      <Maximize2 className="size-5 transition-transform group-hover/btn:scale-125" />
                     </button>
+
+                    <div className="absolute bottom-4 left-0 right-0 text-center px-4">
+                      <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-500/50 mix-blend-overlay">Celestial Configuration</span>
+                    </div>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
+
 
       {pictureUrl && (
         <ChartImageModal src={pictureUrl} open={showFullImage} onClose={() => setShowFullImage(false)} />
@@ -825,17 +844,24 @@ function useShowMore() {
           return { filename: parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join("-"), foldername: "aspect" };
         }
       } else if (type === "planet") {
-        // promptData has planet name + sign, e.g. { sign: "Virgo" } and title is planet name
-        const planet = title.trim();
-        const sign = promptData?.sign ?? promptData?.Sign ?? "";
+        // promptData can be the planet object directly or { planet: p } or { ascendant: { sign: '...' } }
+        const p = promptData?.planet ?? promptData;
+        const planet = p?.name ?? title.trim();
+        // Look for sign in p directly, or nested under the title (for points like ascendant)
+        const sign = p?.sign ?? p?.Sign ?? p?.[title.toLowerCase()]?.sign ?? p?.[title.toLowerCase()]?.Sign ?? "";
         if (planet && sign) {
-          return { filename: `${planet}-In-${sign}`, foldername: "planets" };
+          const capPlanet = planet.charAt(0).toUpperCase() + planet.slice(1);
+          const capSign = sign.charAt(0).toUpperCase() + sign.slice(1);
+          return { filename: `${capPlanet}-In-${capSign}`, foldername: "planets" };
         }
       } else if (type === "house") {
         // promptData has house number + sign + planet
         const house = promptData?.house ?? promptData?.House ?? "";
         const sign = promptData?.sign ?? promptData?.Sign ?? "";
-        const planet = promptData?.planet ?? promptData?.ruler ?? title.trim();
+        // Try to find a planet in this house if the direct 'planet' property is missing
+        let planet = promptData?.planet ?? promptData?.ruler;
+        if (!planet && title?.trim()) planet = title.trim();
+
         if (house && sign && planet) {
           const ordinal = String(house).replace(/\D/g, "");
           const suffix = ordinal === "1" ? "st" : ordinal === "2" ? "nd" : ordinal === "3" ? "rd" : "th";
@@ -947,6 +973,7 @@ function useShowMore() {
           }
         }
         const picUrl = await picturePromise;
+        if (!picUrl) toast.error("No Record Found", { description: `Pictorial representation for ${title} is unavailable.` });
         setModal({ title, content: "", loading: false, aspectTitle, promptType: resolvedType, planetEntries, pictureUrl: picUrl });
       } else if (resolvedType === "house") {
         // Response: {interpretations: {data: "..."}} — extract .interpretations.data
@@ -964,6 +991,7 @@ function useShowMore() {
           text = String(parsed ?? "");
         }
         const picUrl2 = await picturePromise;
+        if (!picUrl2) toast.error("No Record Found", { description: "Pictorial map is currently unavailable." });
         setModal({ title, content: text, loading: false, aspectTitle, promptType: resolvedType, pictureUrl: picUrl2 });
       } else {
         // aspect / generic: extract .interpretation
@@ -974,6 +1002,10 @@ function useShowMore() {
           text = String(parsed ?? "");
         }
         const picUrl3 = await picturePromise;
+        if (!picUrl3) {
+          // Only show toast if it's a specific aspect, not generic text
+          if (resolvedType === "aspect") toast.error("No Record Found", { description: "Aspect pictorial representation is unavailable." });
+        }
         setModal({ title, content: text, loading: false, aspectTitle, promptType: resolvedType, pictureUrl: picUrl3 });
       }
     } catch {
@@ -1315,7 +1347,7 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: 
                   <p className="text-sm leading-relaxed text-foreground">{interp}</p>
                   <div className="mt-2 flex justify-center">
                     <button
-                      onClick={() => trigger(p.name, interp, { planet: p, context: "western astrology planet interpretation" }, areaOfInquiry, undefined, false, "planet")}
+                      onClick={() => trigger(p.name, interp, p, areaOfInquiry, undefined, false, "planet")}
                       className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
                     >Show More</button>
                   </div>
@@ -1736,7 +1768,7 @@ function LilithSection({ lilith, aiData, areaOfInquiry }: { lilith: any; aiData:
           <div className="px-4 py-3 border-t">
             <p className="text-sm leading-relaxed">{interp}</p>
             <div className="mt-2 flex justify-center">
-              <button onClick={() => trigger("Lilith", interp, lilith, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+              <button onClick={() => trigger("Lilith", interp, lilith, areaOfInquiry, undefined, false, "planet")} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
             </div>
           </div>
         )}
@@ -1783,7 +1815,7 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry }: { natal
               <p className="text-sm leading-relaxed">{interp ?? <span className="text-muted-foreground italic">Loading…</span>}</p>
               {interp && (
                 <div className="mt-1.5 flex justify-center">
-                  <button onClick={() => trigger(key, interp, { [key]: degree }, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                  <button onClick={() => trigger(key, interp, { [key]: degree }, areaOfInquiry, undefined, false, "planet")} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
                 </div>
               )}
             </div>
