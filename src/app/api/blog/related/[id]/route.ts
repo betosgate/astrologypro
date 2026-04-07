@@ -86,7 +86,8 @@ export async function GET(
         .order("id", { ascending: false })
         .limit(4 - results.length);
 
-      for (const p of (catPosts ?? []) as any[]) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const p of (catPosts ?? []) as unknown as any[]) {
         if (!seen.has(p.id)) {
           seen.add(p.id);
           results.push(mapPost(p));
@@ -116,7 +117,8 @@ export async function GET(
         .order("id", { ascending: false })
         .limit(4 - results.length);
 
-      for (const p of (tagPosts ?? []) as any[]) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const p of (tagPosts ?? []) as unknown as any[]) {
         if (!seen.has(p.id)) {
           seen.add(p.id);
           results.push(mapPost(p));
@@ -137,7 +139,8 @@ export async function GET(
       .order("id", { ascending: false })
       .limit(4 - results.length);
 
-    for (const p of (authorPosts ?? []) as any[]) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const p of (authorPosts ?? []) as unknown as any[]) {
       if (!seen.has(p.id)) {
         seen.add(p.id);
         results.push(mapPost(p));
