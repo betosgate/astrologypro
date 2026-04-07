@@ -27,10 +27,11 @@ export async function GET() {
   if (!accountSid || !apiKeySid || !apiKeySecret) {
     return NextResponse.json(
       {
-        error: "token_unavailable",
+        token: null,
+        configured: false,
         message: "Voice token service is not configured.",
       },
-      { status: 503 }
+      { status: 200 }
     );
   }
 
