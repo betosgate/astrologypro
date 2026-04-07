@@ -7,7 +7,7 @@ Establish the "User Detail Sheet" pattern as the universal standard for all righ
 Administrative tasks often require quick inspections without losing the current table state or filters. A consistent right-side panel provides a focused and lightweight way to view/edit auxiliary information.
 
 ## Standard Reference Pattern
-- **Reference File**: `file:///home/lucifer/Projects/astrologypro/src/components/admin/user-detail-sheet.tsx`
+- **Reference File**: `src/components/admin/user-detail-sheet.tsx`
 - **Key Component**: `Sheet` from `@/components/ui/sheet`
 - **Navigation**: `Tabs` (Info, Notes, History)
 

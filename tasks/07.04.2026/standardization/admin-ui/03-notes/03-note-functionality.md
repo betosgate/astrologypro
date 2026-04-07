@@ -7,7 +7,7 @@ Establish the "Users Note Section" pattern as the universal standard for all adm
 Administrative notes provide critical context for user behavior, support issues, and audit trails. A consistent, high-quality note-taking interface ensures that notes are readable, editable (when allowed), and properly attributed to the admin who created them.
 
 ## Standard Reference Pattern
-- **Reference File**: `file:///home/lucifer/Projects/astrologypro/src/components/admin/user-detail-sheet.tsx`
+- **Reference File**: `src/components/admin/user-detail-sheet.tsx`
 - **Key Component**: `Notes` tab (lines 364–466)
 - **Functions**: `handleAddNote`, `handleDeleteNote`, `handleSaveEdit`
 
