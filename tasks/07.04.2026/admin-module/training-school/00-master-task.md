@@ -31,6 +31,7 @@ The repo already contains meaningful Training School implementation work. The re
 5. Exact playback-position persistence and trigger resume semantics are incomplete.
 6. Sidebar locking and next-item routing still rely on older assumptions in parts of the learner UI.
 7. Graduation and certificate issuance still depend too much on the legacy completion path.
+8. Role labels in the Training Programs table are showing as snake_case (e.g., mystery_school) instead of Human Readable (e.g., Mystery School).
 
 ## Actual Flow Anchors
 - `/trainee/training` is server-rendered and currently fetches only from `/api/trainee/training/programs`.
@@ -51,6 +52,7 @@ The repo already contains meaningful Training School implementation work. The re
 5. `02-learner-experience/04-add-exact-playback-resume-and-trigger-state-persistence.md`
 6. `02-learner-experience/05-align-sidebar-locking-and-next-item-routing.md`
 7. `03-certification/06-align-graduation-and-certificate-flow-with-trigger-completion.md`
+8. `04-ui-refinement/08-human-readable-role-labels.md`
 
 ## Dependency Rules
 - Do not finalize lesson completion authority before the trigger player is active on the trainee lesson page.
