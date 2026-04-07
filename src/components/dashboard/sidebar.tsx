@@ -24,6 +24,8 @@ import {
   ClipboardList,
   CreditCard,
   Video,
+  LifeBuoy,
+  Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -56,12 +58,14 @@ const navItems = [
   { label: "Video Sessions", href: "/dashboard/video", icon: Video },
   { label: "Marketing", href: "/dashboard/marketing", icon: Megaphone },
   { label: "Reading Reports", href: "/dashboard/reports/readings", icon: BarChart2 },
+  { label: "Mundane Astrology", href: "/dashboard/mundane", icon: Globe },
   { label: "Services", href: "/dashboard/services", icon: Sparkles },
   { label: "Gift Certificates", href: "/dashboard/gift-certificates", icon: Gift },
   { label: "Discounts", href: "/dashboard/discounts", icon: Tag },
   { label: "Follow-ups", href: "/dashboard/follow-ups", icon: Mail },
   { label: "Intake Builder", href: "/dashboard/intake-builder", icon: ClipboardList },
   { label: "Billing", href: "/dashboard/billing", icon: CreditCard },
+  { label: "Support", href: "/dashboard/support", icon: LifeBuoy },
   { label: "Profile", href: "/dashboard/profile", icon: User },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];

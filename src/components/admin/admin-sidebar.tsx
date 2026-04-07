@@ -57,6 +57,7 @@ import {
   Gift,
   ScrollText,
   ListChecks,
+  MessageSquare,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -73,6 +74,7 @@ const NAV_GROUPS = [
     items: [
       { label: "Users", href: "/admin/users", icon: Users },
       { label: "Diviners", href: "/admin/diviners", icon: Star },
+      { label: "Affiliates", href: "/admin/affiliates", icon: Users },
       { label: "Roles", href: "/admin/roles", icon: Shield },
       { label: "Invitations", href: "/admin/invitations", icon: Mail },
       { label: "Social Advocacy", href: "/admin/social-advocacy", icon: Share2 },
@@ -99,6 +101,7 @@ const NAV_GROUPS = [
     items: [
       { label: "Wheel Signs", href: "/admin/wheel-signs", icon: CircleDot },
       { label: "Mundane Hub", href: "/admin/mundane-dashboard", icon: Globe },
+      { label: "Mundane", href: "/admin/mundane", icon: Globe },
       { label: "Ingress Charts", href: "/admin/ingress-charts", icon: Navigation },
       { label: "Entities", href: "/admin/mundane-entities", icon: Building2 },
       { label: "Forecasts", href: "/admin/mundane-forecasts", icon: TrendingUp },
@@ -185,6 +188,12 @@ const NAV_GROUPS = [
     label: "Reports",
     items: [
       { label: "Readings", href: "/admin/reports/readings", icon: BarChart2 },
+    ],
+  },
+  {
+    label: "Support",
+    items: [
+      { label: "Tickets", href: "/admin/tickets", icon: MessageSquare },
     ],
   },
   {

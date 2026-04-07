@@ -2,10 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { generateReferralCode } from "@/lib/format";
-import { formatCurrency } from "@/lib/format";
 import {
   Card,
   CardContent,
@@ -34,238 +31,122 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Loader2,
   Plus,
   Eye,
-  Pencil,
-  UserX,
-  UserCheck,
-  DollarSign,
   Users,
-  TrendingUp,
-  Copy,
+  DollarSign,
+  Wallet,
 } from "lucide-react";
 
 interface Affiliate {
   id: string;
+  diviner_id: string;
   name: string;
   email: string;
   phone: string | null;
-  commission_percent: number;
-  referral_code: string;
-  is_active: boolean;
-  total_referrals: number;
-  total_earned: number;
-  total_paid: number;
+  status: string;
+  default_commission_type: string;
+  default_commission_value: number;
+  created_at: string;
 }
 
-export default function AffiliatesPage() {
-  const [loading, setLoading] = useState(true);
-  const [divinerId, setDivinerId] = useState<string | null>(null);
+interface Summary {
+  total_affiliates: number;
+  active_affiliates: number;
+  total_commissions_earned_cents: number;
+  total_paid_cents: number;
+  pending_balance_cents: number;
+}
+
+const STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  active: "default",
+  pending: "outline",
+  suspended: "secondary",
+  blocked: "destructive",
+};
+
+function fmtCents(cents: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
+}
+
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+export default function DashboardAffiliatesPage() {
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
-  const [agreementSigned, setAgreementSigned] = useState(true);
-  const [signingAgreement, setSigningAgreement] = useState(false);
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [loading, setLoading] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [editingAffiliate, setEditingAffiliate] = useState<Affiliate | null>(
-    null
-  );
   const [saving, setSaving] = useState(false);
-  const [markPaidDialog, setMarkPaidDialog] = useState<Affiliate | null>(null);
-  const [markingPaid, setMarkingPaid] = useState(false);
 
   // Form state
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formPhone, setFormPhone] = useState("");
-  const [formCommission, setFormCommission] = useState("10");
+  const [formCommType, setFormCommType] = useState("percentage");
+  const [formCommValue, setFormCommValue] = useState("10");
+  const [formNotes, setFormNotes] = useState("");
 
-  const loadAffiliates = useCallback(async (divId: string) => {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("affiliates")
-      .select(
-        "id, name, email, phone, commission_percent, referral_code, is_active, total_referrals, total_earned, total_paid"
-      )
-      .eq("diviner_id", divId)
-      .order("created_at", { ascending: false });
-
-    if (data) setAffiliates(data);
+  const loadAffiliates = useCallback(async () => {
+    setLoading(true);
+    const [affRes, sumRes] = await Promise.all([
+      fetch("/api/dashboard/affiliates"),
+      fetch("/api/dashboard/affiliates/summary"),
+    ]);
+    if (affRes.ok) {
+      const j = await affRes.json();
+      setAffiliates(j.data ?? []);
+    }
+    if (sumRes.ok) {
+      const j = await sumRes.json();
+      setSummary(j.data ?? null);
+    }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
-    async function load() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: diviner } = await supabase
-        .from("diviners")
-        .select("id, affiliate_agreement_signed")
-        .eq("user_id", user.id)
-        .single();
-
-      if (diviner) {
-        setDivinerId(diviner.id);
-        setAgreementSigned(diviner.affiliate_agreement_signed ?? false);
-        await loadAffiliates(diviner.id);
-      }
-      setLoading(false);
-    }
-    load();
+    loadAffiliates();
   }, [loadAffiliates]);
 
   function resetForm() {
     setFormName("");
     setFormEmail("");
     setFormPhone("");
-    setFormCommission("10");
-    setEditingAffiliate(null);
+    setFormCommType("percentage");
+    setFormCommValue("10");
+    setFormNotes("");
   }
 
-  function openAddSheet() {
-    resetForm();
-    setSheetOpen(true);
-  }
-
-  function openEditSheet(affiliate: Affiliate) {
-    setEditingAffiliate(affiliate);
-    setFormName(affiliate.name);
-    setFormEmail(affiliate.email);
-    setFormPhone(affiliate.phone ?? "");
-    setFormCommission(String(affiliate.commission_percent));
-    setSheetOpen(true);
-  }
-
-  async function handleSaveAffiliate() {
-    if (!divinerId || !formName || !formEmail) {
+  async function handleCreate() {
+    if (!formName || !formEmail) {
       toast.error("Name and email are required");
       return;
     }
-
     setSaving(true);
-    const supabase = createClient();
-
-    if (editingAffiliate) {
-      // Update
-      const { error } = await supabase
-        .from("affiliates")
-        .update({
-          name: formName,
-          email: formEmail,
-          phone: formPhone || null,
-          commission_percent: parseFloat(formCommission) || 10,
-        })
-        .eq("id", editingAffiliate.id);
-
-      if (error) {
-        toast.error("Failed to update affiliate");
-      } else {
-        toast.success("Affiliate updated");
-        await loadAffiliates(divinerId);
-      }
-    } else {
-      // Create
-      const { error } = await supabase.from("affiliates").insert({
-        diviner_id: divinerId,
+    const res = await fetch("/api/dashboard/affiliates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         name: formName,
         email: formEmail,
-        phone: formPhone || null,
-        commission_percent: parseFloat(formCommission) || 10,
-        referral_code: generateReferralCode(),
-        is_active: true,
-        total_referrals: 0,
-        total_earned: 0,
-        total_paid: 0,
-      });
-
-      if (error) {
-        toast.error("Failed to create affiliate");
-      } else {
-        toast.success("Affiliate created");
-        await loadAffiliates(divinerId);
-      }
-    }
-
-    setSaving(false);
-    setSheetOpen(false);
-    resetForm();
-  }
-
-  async function handleToggleActive(affiliate: Affiliate) {
-    if (!divinerId) return;
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("affiliates")
-      .update({ is_active: !affiliate.is_active })
-      .eq("id", affiliate.id);
-
-    if (error) {
-      toast.error("Failed to update affiliate status");
-    } else {
-      toast.success(
-        affiliate.is_active ? "Affiliate deactivated" : "Affiliate reactivated"
-      );
-      await loadAffiliates(divinerId);
-    }
-  }
-
-  async function handleMarkPaid() {
-    if (!markPaidDialog || !divinerId) return;
-    setMarkingPaid(true);
-    const supabase = createClient();
-
-    const unpaidAmount =
-      markPaidDialog.total_earned - markPaidDialog.total_paid;
-
-    // Update affiliate total_paid
-    const { error } = await supabase
-      .from("affiliates")
-      .update({ total_paid: markPaidDialog.total_earned })
-      .eq("id", markPaidDialog.id);
-
-    if (error) {
-      toast.error("Failed to mark as paid");
-    } else {
-      // Update related referral records to paid
-      await supabase
-        .from("affiliate_referrals")
-        .update({ status: "paid" })
-        .eq("affiliate_id", markPaidDialog.id)
-        .eq("status", "earned");
-
-      toast.success(`Marked ${formatCurrency(unpaidAmount)} as paid`);
-      await loadAffiliates(divinerId);
-    }
-
-    setMarkingPaid(false);
-    setMarkPaidDialog(null);
-  }
-
-  async function handleSignAgreement() {
-    setSigningAgreement(true);
-    const res = await fetch("/api/dashboard/affiliate-agreement", { method: "POST" });
+        phone: formPhone || undefined,
+        notes: formNotes || undefined,
+        default_commission_type: formCommType,
+        default_commission_value: parseFloat(formCommValue) || 0,
+      }),
+    });
     if (res.ok) {
-      setAgreementSigned(true);
-      toast.success("Affiliate agreement signed");
+      toast.success("Affiliate added");
+      setSheetOpen(false);
+      resetForm();
+      await loadAffiliates();
     } else {
-      toast.error("Failed to sign agreement");
+      const err = await res.json();
+      toast.error(err.title ?? "Failed to add affiliate");
     }
-    setSigningAgreement(false);
-  }
-
-  function copyReferralCode(code: string) {
-    navigator.clipboard.writeText(code);
-    toast.success("Referral code copied");
+    setSaving(false);
   }
 
   if (loading) {
@@ -276,43 +157,27 @@ export default function AffiliatesPage() {
     );
   }
 
-  const totalAffiliates = affiliates.length;
-  const activeAffiliates = affiliates.filter((a) => a.is_active).length;
-  const totalEarned = affiliates.reduce((sum, a) => sum + a.total_earned, 0);
-  const totalPaid = affiliates.reduce((sum, a) => sum + a.total_paid, 0);
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Affiliates</h1>
           <p className="text-muted-foreground">
-            Manage your affiliate partners and track referrals.
+            Manage your affiliate partners and track commissions.
           </p>
-          <Link
-            href="/dashboard/affiliate-commission"
-            className="mt-1 inline-flex items-center gap-1 text-sm text-primary hover:underline"
-          >
-            <DollarSign className="size-3.5" />
-            Commission Management
-          </Link>
         </div>
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild>
-            <Button onClick={openAddSheet}>
+            <Button onClick={resetForm}>
               <Plus className="mr-2 size-4" />
               Add Affiliate
             </Button>
           </SheetTrigger>
           <SheetContent>
             <SheetHeader>
-              <SheetTitle>
-                {editingAffiliate ? "Edit Affiliate" : "Add Affiliate"}
-              </SheetTitle>
+              <SheetTitle>Add Affiliate</SheetTitle>
               <SheetDescription>
-                {editingAffiliate
-                  ? "Update affiliate details."
-                  : "Create a new affiliate partner. A unique referral code will be auto-generated."}
+                Create a new affiliate partner under your account.
               </SheetDescription>
             </SheetHeader>
             <div className="mt-6 space-y-4">
@@ -342,36 +207,41 @@ export default function AffiliatesPage() {
                   type="tel"
                   value={formPhone}
                   onChange={(e) => setFormPhone(e.target.value)}
-                  placeholder="+1 (555) 123-4567"
+                  placeholder="+1 555 123 4567"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="aff-commission">Commission %</Label>
+                <Label>Commission type</Label>
+                <select
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                  value={formCommType}
+                  onChange={(e) => setFormCommType(e.target.value)}
+                >
+                  <option value="percentage">Percentage</option>
+                  <option value="fixed">Fixed amount</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>{formCommType === "percentage" ? "Commission %" : "Fixed amount (cents)"}</Label>
                 <Input
-                  id="aff-commission"
                   type="number"
                   min="0"
-                  max="100"
-                  value={formCommission}
-                  onChange={(e) => setFormCommission(e.target.value)}
-                  placeholder="10"
+                  value={formCommValue}
+                  onChange={(e) => setFormCommValue(e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Percentage of each booking amount paid to this affiliate.
-                </p>
               </div>
-              <Button
-                onClick={handleSaveAffiliate}
-                disabled={saving}
-                className="w-full"
-              >
+              <div className="space-y-2">
+                <Label htmlFor="aff-notes">Notes (optional)</Label>
+                <Input
+                  id="aff-notes"
+                  value={formNotes}
+                  onChange={(e) => setFormNotes(e.target.value)}
+                  placeholder="Internal notes…"
+                />
+              </div>
+              <Button onClick={handleCreate} disabled={saving} className="w-full">
                 {saving ? (
-                  <>
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : editingAffiliate ? (
-                  "Update Affiliate"
+                  <><Loader2 className="mr-2 size-4 animate-spin" />Saving…</>
                 ) : (
                   "Create Affiliate"
                 )}
@@ -381,106 +251,62 @@ export default function AffiliatesPage() {
         </Sheet>
       </div>
 
-      {/* Affiliate Agreement Banner */}
-      {!agreementSigned && (
-        <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
-          <CardContent className="flex flex-col gap-4 py-5 sm:flex-row sm:items-start">
-            <div className="flex-1 space-y-1">
-              <p className="font-semibold text-amber-900 dark:text-amber-100">Affiliate Agreement Required</p>
-              <p className="text-sm text-amber-800 dark:text-amber-200">
-                By managing affiliates on AstrologyPro, you agree to our affiliate program terms: you are responsible
-                for recruiting compliant affiliates, commissions are paid monthly for verified referrals, and you must
-                not misrepresent the platform in any affiliate marketing materials.
-              </p>
-            </div>
-            <Button
-              onClick={handleSignAgreement}
-              disabled={signingAgreement}
-              className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white"
-            >
-              {signingAgreement ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                  Signing…
-                </>
-              ) : (
-                "I Agree & Sign"
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Summary Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Affiliates
-            </CardTitle>
-            <Users className="size-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{totalAffiliates}</p>
-            <p className="text-xs text-muted-foreground">
-              {activeAffiliates} active
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Referrals
-            </CardTitle>
-            <TrendingUp className="size-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {affiliates.reduce((sum, a) => sum + a.total_referrals, 0)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Earned</CardTitle>
-            <DollarSign className="size-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {formatCurrency(totalEarned)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
-            <DollarSign className="size-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {formatCurrency(totalPaid)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {formatCurrency(totalEarned - totalPaid)} outstanding
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {summary && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Affiliates</CardTitle>
+              <Users className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{summary.total_affiliates}</p>
+              <p className="text-xs text-muted-foreground">{summary.active_affiliates} active</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Commissions Earned</CardTitle>
+              <DollarSign className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{fmtCents(summary.total_commissions_earned_cents)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
+              <DollarSign className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{fmtCents(summary.total_paid_cents)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Pending Balance</CardTitle>
+              <Wallet className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-amber-600">{fmtCents(summary.pending_balance_cents)}</p>
+              <p className="text-xs text-muted-foreground">Owed to affiliates</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Affiliates Table */}
       <Card>
         <CardHeader>
           <CardTitle>All Affiliates</CardTitle>
           <CardDescription>
-            {affiliates.length} affiliate
-            {affiliates.length !== 1 ? "s" : ""} total
+            {affiliates.length} affiliate{affiliates.length !== 1 ? "s" : ""}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {affiliates.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              No affiliates yet. Add your first affiliate partner to start
-              tracking referrals.
+              No affiliates yet. Add your first affiliate partner above.
             </p>
           ) : (
             <div className="overflow-x-auto">
@@ -489,177 +315,41 @@ export default function AffiliatesPage() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Commission %</TableHead>
-                    <TableHead>Referral Code</TableHead>
-                    <TableHead>Referrals</TableHead>
-                    <TableHead>Earned</TableHead>
-                    <TableHead>Paid</TableHead>
+                    <TableHead>Commission</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {affiliates.map((affiliate) => {
-                    const unpaid =
-                      affiliate.total_earned - affiliate.total_paid;
-                    return (
-                      <TableRow key={affiliate.id}>
-                        <TableCell className="font-medium">
-                          {affiliate.name}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {affiliate.email}
-                        </TableCell>
-                        <TableCell>{affiliate.commission_percent}%</TableCell>
-                        <TableCell>
-                          <button
-                            onClick={() =>
-                              copyReferralCode(affiliate.referral_code)
-                            }
-                            className="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 font-mono text-xs hover:bg-muted/80"
-                          >
-                            {affiliate.referral_code}
-                            <Copy className="size-3" />
-                          </button>
-                        </TableCell>
-                        <TableCell>{affiliate.total_referrals}</TableCell>
-                        <TableCell>
-                          {formatCurrency(affiliate.total_earned)}
-                        </TableCell>
-                        <TableCell>
-                          {formatCurrency(affiliate.total_paid)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              affiliate.is_active ? "default" : "secondary"
-                            }
-                          >
-                            {affiliate.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-8"
-                              onClick={() => openEditSheet(affiliate)}
-                              title="Edit"
-                            >
-                              <Pencil className="size-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-8"
-                              onClick={() => handleToggleActive(affiliate)}
-                              title={
-                                affiliate.is_active
-                                  ? "Deactivate"
-                                  : "Reactivate"
-                              }
-                            >
-                              {affiliate.is_active ? (
-                                <UserX className="size-3.5" />
-                              ) : (
-                                <UserCheck className="size-3.5" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-8"
-                              asChild
-                              title="View Report"
-                            >
-                              <Link
-                                href={`/dashboard/affiliates/${affiliate.id}`}
-                              >
-                                <Eye className="size-3.5" />
-                              </Link>
-                            </Button>
-                            {unpaid > 0 && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="size-8 text-green-600 hover:text-green-700"
-                                onClick={() => setMarkPaidDialog(affiliate)}
-                                title="Mark Paid"
-                              >
-                                <DollarSign className="size-3.5" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                  {affiliates.map((aff) => (
+                    <TableRow key={aff.id}>
+                      <TableCell className="font-medium">{aff.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{aff.email}</TableCell>
+                      <TableCell>
+                        {aff.default_commission_type === "percentage"
+                          ? `${aff.default_commission_value}%`
+                          : `$${(aff.default_commission_value / 100).toFixed(2)}`}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={STATUS_COLORS[aff.status] ?? "outline"}>{aff.status}</Badge>
+                      </TableCell>
+                      <TableCell>{fmtDate(aff.created_at)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" className="size-8" asChild title="View details">
+                          <Link href={`/dashboard/affiliates/${aff.id}`}>
+                            <Eye className="size-3.5" />
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/* Mark Paid Dialog */}
-      <Dialog
-        open={!!markPaidDialog}
-        onOpenChange={(open) => !open && setMarkPaidDialog(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Payment</DialogTitle>
-            <DialogDescription>
-              Mark all outstanding earnings as paid for{" "}
-              <span className="font-medium text-foreground">
-                {markPaidDialog?.name}
-              </span>
-              ?
-            </DialogDescription>
-          </DialogHeader>
-          {markPaidDialog && (
-            <div className="space-y-3 rounded-lg border p-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Total Earned</span>
-                <span>
-                  {formatCurrency(markPaidDialog.total_earned)}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Already Paid</span>
-                <span>{formatCurrency(markPaidDialog.total_paid)}</span>
-              </div>
-              <div className="flex justify-between border-t pt-2 font-medium">
-                <span>Amount to Pay</span>
-                <span className="text-green-600">
-                  {formatCurrency(
-                    markPaidDialog.total_earned - markPaidDialog.total_paid
-                  )}
-                </span>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setMarkPaidDialog(null)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleMarkPaid} disabled={markingPaid}>
-              {markingPaid ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                "Confirm Payment"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
