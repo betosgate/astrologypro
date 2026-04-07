@@ -260,57 +260,143 @@ export default function ChartsPage() {
                   </div>
                 </button>
 
-                {isOpen && synastry && (
-                  <CardContent className="border-t pt-4 space-y-4">
-                    <p className="text-sm text-muted-foreground italic">
-                      {synastry.summary}
-                    </p>
+                {isOpen && synastry && (() => {
+                  const harmonious = synastry.aspects.filter((a) => a.isHarmonious);
+                  const challenging = synastry.aspects.filter((a) => !a.isHarmonious);
+                  const aspectTypes = [...new Set(synastry.aspects.map((a) => a.aspectType))];
 
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Aspects
+                  return (
+                    <CardContent className="border-t pt-4 space-y-5">
+                      {/* Summary */}
+                      <p className="text-sm text-muted-foreground italic">
+                        {synastry.summary}
                       </p>
-                      <div className="grid gap-1.5">
-                        {synastry.aspects.map((aspect, i) => (
+
+                      {/* Compatibility gauge */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-medium text-muted-foreground">
+                            Compatibility Score
+                          </span>
+                          <span className="font-semibold text-sm">
+                            {synastry.score}%
+                          </span>
+                        </div>
+                        <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
                           <div
-                            key={i}
-                            className={[
-                              "flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm",
-                              aspect.isHarmonious
-                                ? "bg-green-50 border border-green-200"
-                                : "bg-red-50 border border-red-200",
-                            ].join(" ")}
-                          >
-                            <span
-                              className={
-                                aspect.isHarmonious ? "text-green-800" : "text-red-800"
-                              }
-                            >
-                              <span className="font-medium">{synastry.personAName}&apos;s {aspect.planetA}</span>
-                              {" "}{aspect.aspectType.toLowerCase()}{" "}
-                              <span className="font-medium">{synastry.personBName}&apos;s {aspect.planetB}</span>
-                            </span>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <Badge
-                                variant="outline"
-                                className={`text-xs ${
-                                  aspect.isHarmonious
-                                    ? "border-green-300 text-green-700"
-                                    : "border-red-300 text-red-700"
-                                }`}
-                              >
-                                {aspect.aspectType}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground">
-                                {aspect.orb}° orb
-                              </span>
-                            </div>
-                          </div>
-                        ))}
+                            className={`h-full rounded-full transition-all ${
+                              synastry.score >= 70
+                                ? "bg-green-500"
+                                : synastry.score >= 40
+                                ? "bg-amber-500"
+                                : "bg-red-500"
+                            }`}
+                            style={{ width: `${synastry.score}%` }}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                )}
+
+                      {/* Quick stats */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="rounded-lg border p-3 text-center">
+                          <p className="text-lg font-bold">{synastry.aspects.length}</p>
+                          <p className="text-xs text-muted-foreground">Total Aspects</p>
+                        </div>
+                        <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-center">
+                          <p className="text-lg font-bold text-green-700">{harmonious.length}</p>
+                          <p className="text-xs text-green-600">Harmonious</p>
+                        </div>
+                        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-center">
+                          <p className="text-lg font-bold text-red-700">{challenging.length}</p>
+                          <p className="text-xs text-red-600">Challenging</p>
+                        </div>
+                      </div>
+
+                      {/* Aspect type legend */}
+                      <div className="flex flex-wrap gap-2">
+                        {aspectTypes.map((type) => {
+                          const count = synastry.aspects.filter((a) => a.aspectType === type).length;
+                          const isHarm = synastry.aspects.find((a) => a.aspectType === type)?.isHarmonious;
+                          return (
+                            <Badge
+                              key={type}
+                              variant="outline"
+                              className={`text-xs ${
+                                isHarm
+                                  ? "border-green-300 text-green-700"
+                                  : "border-red-300 text-red-700"
+                              }`}
+                            >
+                              {type} ({count})
+                            </Badge>
+                          );
+                        })}
+                      </div>
+
+                      {/* Harmonious aspects */}
+                      {harmonious.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-green-600">
+                            Harmonious Aspects
+                          </p>
+                          <div className="grid gap-1.5">
+                            {harmonious.map((aspect, i) => (
+                              <div
+                                key={i}
+                                className="flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm bg-green-50 border border-green-200"
+                              >
+                                <span className="text-green-800">
+                                  <span className="font-medium">{synastry.personAName}&apos;s {aspect.planetA}</span>
+                                  {" "}{aspect.aspectType.toLowerCase()}{" "}
+                                  <span className="font-medium">{synastry.personBName}&apos;s {aspect.planetB}</span>
+                                </span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <Badge variant="outline" className="text-xs border-green-300 text-green-700">
+                                    {aspect.aspectType}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    {aspect.orb}° orb
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Challenging aspects */}
+                      {challenging.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-red-600">
+                            Challenging Aspects
+                          </p>
+                          <div className="grid gap-1.5">
+                            {challenging.map((aspect, i) => (
+                              <div
+                                key={i}
+                                className="flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm bg-red-50 border border-red-200"
+                              >
+                                <span className="text-red-800">
+                                  <span className="font-medium">{synastry.personAName}&apos;s {aspect.planetA}</span>
+                                  {" "}{aspect.aspectType.toLowerCase()}{" "}
+                                  <span className="font-medium">{synastry.personBName}&apos;s {aspect.planetB}</span>
+                                </span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <Badge variant="outline" className="text-xs border-red-300 text-red-700">
+                                    {aspect.aspectType}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    {aspect.orb}° orb
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  );
+                })()}
               </Card>
             );
           })}

@@ -60,6 +60,14 @@ type Quiz = {
 const fmt = (d: string) =>
   d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
 
+function formatRoleName(role: string) {
+  return role
+    .replace(/^is_/, "")
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 export default function TrainingPage() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -204,7 +212,7 @@ export default function TrainingPage() {
                 <span className="font-medium">Access:</span>{" "}
                 {!previewProgram.allowed_roles || previewProgram.allowed_roles.length === 0
                   ? "All authenticated users"
-                  : previewProgram.allowed_roles.map((r) => r.replace(/^is_/, "")).join(", ")}
+                  : previewProgram.allowed_roles.map(formatRoleName).join(", ")}
               </div>
               <Button size="sm" className="mt-2" onClick={() => setPreviewProgram(null)}>Close</Button>
             </CardContent>
@@ -328,7 +336,7 @@ export default function TrainingPage() {
                         ) : (
                           <div className="flex flex-wrap gap-1">
                             {prog.allowed_roles.map((r) => (
-                              <Badge key={r} variant="outline" className="text-xs">{r.replace(/^is_/, "")}</Badge>
+                              <Badge key={r} variant="outline" className="text-xs">{formatRoleName(r)}</Badge>
                             ))}
                           </div>
                         )}
