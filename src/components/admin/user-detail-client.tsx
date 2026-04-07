@@ -47,9 +47,80 @@ import {
   Activity,
   Shield,
   FileText,
+  Lock,
+  Unlock,
+  Monitor,
+  Smartphone,
+  Tablet,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
+
+// ─── Business data types (exported for page.tsx) ─────────────────────────────
+
+export interface DivinerAffiliate {
+  id: string;
+  name: string;
+  email?: string;
+  status: string;
+  created_at: string;
+}
+
+export interface DivinerBusinessData {
+  service_count: number;
+  bookings_this_month: number;
+  affiliates: DivinerAffiliate[];
+  total_affiliates: number;
+}
+
+export interface AffiliateBusinessData {
+  affiliate_row_id: string;
+  parent_diviner_id: string;
+  parent_diviner_name: string;
+  commission_type?: string;
+  commission_value?: number;
+  status: string;
+  created_at: string;
+}
+
+export type BusinessData =
+  | { kind: "diviner"; data: DivinerBusinessData }
+  | { kind: "affiliate"; data: AffiliateBusinessData }
+  | null;
+
+// ─── Session & lock types ─────────────────────────────────────────────────────
+
+export interface UserSession {
+  id: string;
+  session_ref?: string;
+  device_type?: string;
+  browser?: string;
+  os?: string;
+  ip_address?: string;
+  country_code?: string;
+  last_seen_at: string;
+  created_at: string;
+  revoked_at?: string;
+  is_current: boolean;
+}
+
+export interface AccountLock {
+  locked_at: string;
+  locked_reason?: string;
+  locked_by?: string;
+}
+
+export interface LoginAttempt {
+  id: string;
+  email: string;
+  ip_address?: string;
+  attempted_at: string;
+  success: boolean;
+}
 
 export interface UserDetailData {
   userId: string;
@@ -74,6 +145,12 @@ export interface UserDetailData {
   activityLog: ActivityLogEntry[];
   userActivityLog: UserActivityEntry[];
   commPrefs?: CommunicationPrefs | null;
+  // Business data (per role)
+  businessData?: BusinessData;
+  // Sessions & security
+  sessions?: UserSession[];
+  accountLock?: AccountLock | null;
+  loginAttempts?: LoginAttempt[];
 }
 
 interface AdminNote {
@@ -255,6 +332,13 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
   const [noteText, setNoteText] = useState("");
+  // Sessions & lock state
+  const [sessions, setSessions] = useState<UserSession[]>(user.sessions ?? []);
+  const [accountLock, setAccountLock] = useState<AccountLock | null>(user.accountLock ?? null);
+  const [lockReason, setLockReason] = useState("");
+  const [lockLoading, setLockLoading] = useState(false);
+  const [revokingSession, setRevokingSession] = useState<string | null>(null);
+  const [revokingAll, setRevokingAll] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
   const [notes, setNotes] = useState<AdminNote[]>(user.notes ?? []);
   const [suspending, setSuspending] = useState(false);
@@ -331,6 +415,95 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
       toast.error("Action failed");
     } finally {
       setSuspending(false);
+    }
+  }
+
+  // ── Lock account ──────────────────────────────────────────────────────────
+  async function handleLockAccount() {
+    if (!lockReason.trim()) {
+      toast.error("Please enter a reason before locking.");
+      return;
+    }
+    setLockLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${user.userId}/lock`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: lockReason.trim() }),
+      });
+      if (!res.ok) throw new Error("Failed to lock account");
+      setAccountLock({
+        locked_at: new Date().toISOString(),
+        locked_reason: lockReason.trim(),
+      });
+      setLockReason("");
+      toast.success("Account locked");
+    } catch {
+      toast.error("Failed to lock account");
+    } finally {
+      setLockLoading(false);
+    }
+  }
+
+  // ── Unlock account ────────────────────────────────────────────────────────
+  async function handleUnlockAccount() {
+    setLockLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${user.userId}/lock`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to unlock account");
+      setAccountLock(null);
+      toast.success("Account unlocked");
+    } catch {
+      toast.error("Failed to unlock account");
+    } finally {
+      setLockLoading(false);
+    }
+  }
+
+  // ── Revoke one session ────────────────────────────────────────────────────
+  async function handleRevokeSession(sessionId: string) {
+    setRevokingSession(sessionId);
+    try {
+      const res = await fetch(`/api/admin/users/${user.userId}/sessions`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId ? { ...s, revoked_at: new Date().toISOString() } : s
+        )
+      );
+      toast.success("Session revoked");
+    } catch {
+      toast.error("Failed to revoke session");
+    } finally {
+      setRevokingSession(null);
+    }
+  }
+
+  // ── Revoke all sessions ───────────────────────────────────────────────────
+  async function handleRevokeAllSessions() {
+    setRevokingAll(true);
+    try {
+      const res = await fetch(`/api/admin/users/${user.userId}/sessions`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const now = new Date().toISOString();
+      setSessions((prev) =>
+        prev.map((s) => (s.revoked_at ? s : { ...s, revoked_at: now }))
+      );
+      toast.success("All sessions revoked");
+    } catch {
+      toast.error("Failed to revoke sessions");
+    } finally {
+      setRevokingAll(false);
     }
   }
 

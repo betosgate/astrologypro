@@ -73,6 +73,38 @@ type Post = {
   blog_post_revisions: Revision[];
 };
 
+// ─── Astrology Taxonomy Constants ────────────────────────────────────────────
+
+const ZODIAC_SIGNS = [
+  "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+  "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces",
+] as const;
+
+const PLANETS = [
+  "Sun", "Moon", "Mercury", "Venus", "Mars",
+  "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto",
+] as const;
+
+const HOUSES = [
+  "1st", "2nd", "3rd", "4th", "5th", "6th",
+  "7th", "8th", "9th", "10th", "11th", "12th",
+] as const;
+
+const DIFFICULTY_LEVELS = [
+  { value: "beginner", label: "Beginner" },
+  { value: "intermediate", label: "Intermediate" },
+  { value: "advanced", label: "Advanced" },
+] as const;
+
+const CONTENT_INTENTS = [
+  { value: "forecast", label: "Forecast" },
+  { value: "guide", label: "Guide" },
+  { value: "education", label: "Education" },
+  { value: "opinion", label: "Opinion" },
+  { value: "promotion", label: "Promotion" },
+  { value: "news", label: "News" },
+] as const;
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const VALID_STATUSES: BlogStatus[] = [
@@ -256,6 +288,13 @@ export default function BlogEditorPage() {
   const [canonicalUrl, setCanonicalUrl] = useState("");
   const [changeSummary, setChangeSummary] = useState("");
 
+  // Astrology taxonomy
+  const [zodiacSigns, setZodiacSigns] = useState<string[]>([]);
+  const [selectedPlanets, setSelectedPlanets] = useState<string[]>([]);
+  const [selectedHouses, setSelectedHouses] = useState<string[]>([]);
+  const [difficultyLevel, setDifficultyLevel] = useState<string>("");
+  const [contentIntent, setContentIntent] = useState<string>("");
+
   const loadMeta = useCallback(async () => {
     const [authorsRes, catsRes, seriesRes] = await Promise.all([
       fetch("/api/admin/blog/authors"),
@@ -299,6 +338,13 @@ export default function BlogEditorPage() {
     setSeoTitle(data.seo_title ?? "");
     setSeoDescription(data.seo_description ?? "");
     setCanonicalUrl(data.canonical_url ?? "");
+    // Astrology taxonomy (fields added in migration 085)
+    const rawData = data as unknown as Record<string, unknown>;
+    setZodiacSigns(Array.isArray(rawData.zodiac_signs) ? (rawData.zodiac_signs as string[]) : []);
+    setSelectedPlanets(Array.isArray(rawData.planets) ? (rawData.planets as string[]) : []);
+    setSelectedHouses(Array.isArray(rawData.houses) ? (rawData.houses as string[]) : []);
+    setDifficultyLevel(typeof rawData.difficulty_level === "string" ? rawData.difficulty_level : "");
+    setContentIntent(typeof rawData.content_intent === "string" ? rawData.content_intent : "");
     setLoading(false);
   }, [id]);
 
@@ -350,6 +396,12 @@ export default function BlogEditorPage() {
       category_ids: selectedCategoryIds,
       tag_names: tagNames,
       change_summary: changeSummary || null,
+      // Astrology taxonomy
+      zodiac_signs: zodiacSigns,
+      planets: selectedPlanets,
+      houses: selectedHouses,
+      difficulty_level: difficultyLevel || null,
+      content_intent: contentIntent || null,
     };
 
     if ((nextStatus ?? status) === "scheduled" && scheduledAt) {
@@ -647,6 +699,117 @@ export default function BlogEditorPage() {
                 placeholder="astrology, moon, tarot"
               />
               <p className="text-xs text-muted-foreground">Comma-separated. New tags are auto-created.</p>
+            </CardContent>
+          </Card>
+
+          {/* Astrology Taxonomy */}
+          <Card>
+            <CardHeader><CardTitle className="text-sm">Astrology Taxonomy</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              {/* Zodiac Signs */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Zodiac Signs</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {ZODIAC_SIGNS.map((sign) => (
+                    <button
+                      key={sign}
+                      type="button"
+                      onClick={() =>
+                        setZodiacSigns((prev) =>
+                          prev.includes(sign) ? prev.filter((s) => s !== sign) : [...prev, sign]
+                        )
+                      }
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border transition-colors ${
+                        zodiacSigns.includes(sign)
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-muted-foreground border-input hover:border-foreground"
+                      }`}
+                    >
+                      {sign}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Planets */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Planets</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {PLANETS.map((planet) => (
+                    <button
+                      key={planet}
+                      type="button"
+                      onClick={() =>
+                        setSelectedPlanets((prev) =>
+                          prev.includes(planet) ? prev.filter((p) => p !== planet) : [...prev, planet]
+                        )
+                      }
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border transition-colors ${
+                        selectedPlanets.includes(planet)
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-muted-foreground border-input hover:border-foreground"
+                      }`}
+                    >
+                      {planet}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Houses */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Houses</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {HOUSES.map((house) => (
+                    <button
+                      key={house}
+                      type="button"
+                      onClick={() =>
+                        setSelectedHouses((prev) =>
+                          prev.includes(house) ? prev.filter((h) => h !== house) : [...prev, house]
+                        )
+                      }
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border transition-colors ${
+                        selectedHouses.includes(house)
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-muted-foreground border-input hover:border-foreground"
+                      }`}
+                    >
+                      {house}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Difficulty Level */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Difficulty Level</Label>
+                <select
+                  value={difficultyLevel}
+                  onChange={(e) => setDifficultyLevel(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                >
+                  <option value="">— None —</option>
+                  {DIFFICULTY_LEVELS.map((d) => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Content Intent */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Content Intent</Label>
+                <select
+                  value={contentIntent}
+                  onChange={(e) => setContentIntent(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                >
+                  <option value="">— None —</option>
+                  {CONTENT_INTENTS.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
             </CardContent>
           </Card>
 

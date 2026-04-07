@@ -18,6 +18,7 @@ import { MediaGallery, type MediaItem } from "@/components/public/media-gallery"
 import { LiveStreamSection, type StreamPlatformConfig } from "@/components/public/live-stream-section";
 import { TestimonialsSection } from "@/components/public/testimonials-section";
 import { BlogSubscribeForm } from "@/app/blog/subscribe-form";
+import { CheckInForm } from "@/components/diviner/check-in-form";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -90,6 +91,34 @@ async function getLivePlatforms(divinerId: string): Promise<StreamPlatformConfig
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
   return (data ?? []) as StreamPlatformConfig[];
+}
+
+async function getActiveGiveaway(divinerId: string): Promise<{ id: string } | null> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("giveaways")
+    .select("id")
+    .eq("diviner_id", divinerId)
+    .eq("status", "active")
+    .is("ends_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (data) return data;
+
+  // Also check giveaways with ends_at in the future
+  const { data: withEnd } = await admin
+    .from("giveaways")
+    .select("id")
+    .eq("diviner_id", divinerId)
+    .eq("status", "active")
+    .gt("ends_at", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return withEnd ?? null;
 }
 
 async function getPolicies() {
@@ -218,13 +247,14 @@ export default async function DivinerPage({ params }: PageProps) {
     httpOnly: false, // needs to be readable by the discover server component
   });
 
-  const [services, testimonials, stats, policies, mediaItems, livePlatformConfigs] = await Promise.all([
+  const [services, testimonials, stats, policies, mediaItems, livePlatformConfigs, activeGiveaway] = await Promise.all([
     getServices(diviner.id),
     getTestimonials(diviner.id),
     getDivinerStats(diviner.id),
     getPolicies(),
     getMediaItems(diviner.id),
     getLivePlatforms(diviner.id),
+    getActiveGiveaway(diviner.id),
   ]);
 
   const astroServices = services.filter((s) => s.category === "astrology");
@@ -319,6 +349,18 @@ export default async function DivinerPage({ params }: PageProps) {
         nextLiveAt={((diviner as Record<string, unknown>).next_live_at as string) ?? null}
         divinerId={diviner.id}
       />
+
+      {/* ===== 2b. CHECK-IN FORM (live sessions only) ===== */}
+      {(diviner as Record<string, unknown>).is_live === true && (
+        <section className="py-6">
+          <div className="mx-auto max-w-xl px-4">
+            <CheckInForm
+              divinerUsername={diviner.username}
+              activeGiveawayId={activeGiveaway?.id ?? null}
+            />
+          </div>
+        </section>
+      )}
 
       {/* ===== 3. ABOUT SECTION ===== */}
       {diviner.bio && (
