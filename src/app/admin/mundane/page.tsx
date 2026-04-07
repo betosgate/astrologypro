@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Globe, Plus, Building2, CalendarDays, ArrowRight, Loader2, UserRound, BookOpen, CheckCircle2 } from "lucide-react";
+import { Globe, Plus, Building2, CalendarDays, ArrowRight, Loader2, UserRound, BookOpen, CheckCircle2, FlaskConical, Search } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -248,6 +248,43 @@ export default function AdminMundanePage() {
               <Link href="/admin/mundane/events/new"><Plus className="mr-1 size-3.5" /> Add Event</Link>
             </Button>
           </CardContent>
+        </Card>
+      </div>
+
+      {/* Additional tools cards */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/event-calendar">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="size-4 text-amber-500" />
+                <span className="font-medium text-sm">Event Calendar</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Monthly calendar view of astrological events (ingresses, eclipses, lunations).</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/research">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <FlaskConical className="size-4 text-violet-500" />
+                <span className="font-medium text-sm">Research Workspace</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Research projects with notes, observations, and hypotheses.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/search">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <Search className="size-4 text-sky-500" />
+                <span className="font-medium text-sm">Mundane Search</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Search across all entities, leaders, events, and forecasts.</p>
+            </CardContent>
+          </Link>
         </Card>
       </div>
 
