@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Menu } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Menu, LogOut } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -31,6 +33,14 @@ export function MobileNav({
   membershipLabel,
 }: MobileNavProps) {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setOpen(false);
+    router.push("/login");
+  }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -70,11 +80,15 @@ export function MobileNav({
           ))}
         </nav>
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-background">
-          <form action="/api/auth/signout" method="post">
-            <Button variant="outline" size="sm" className="w-full" type="submit">
-              Sign Out
-            </Button>
-          </form>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={handleSignOut}
+          >
+            <LogOut className="mr-2 size-4" />
+            Sign Out
+          </Button>
         </div>
       </SheetContent>
     </Sheet>
