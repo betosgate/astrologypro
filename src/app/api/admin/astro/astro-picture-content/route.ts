@@ -56,16 +56,30 @@ export async function POST(req: NextRequest) {
     const basePath = foldername;
     const originalFilename = filename;
 
-    // Step 1: try primary filename
-    let url = await getFileUrl(`${basePath}/${originalFilename}.jpg`);
+    // Step 1: try primary filename with multiple extensions (.webp, .jpg)
+    const extensions = [".webp", ".jpg", ".png"];
+    let url: string | null = null;
+
+    for (const ext of extensions) {
+      url = await getFileUrl(`${basePath}/${originalFilename}${ext}`);
+      if (url) break;
+    }
 
     // Step 2: fallback — Conjunction ↔ Conjunct naming variation
-    if (!url && originalFilename.includes("Conjunction")) {
-      const fallback = originalFilename.replace("Conjunction", "Conjunct");
-      url = await getFileUrl(`${basePath}/${fallback}.jpg`);
-    } else if (!url && originalFilename.includes("Conjunct")) {
-      const fallback = originalFilename.replace("Conjunct", "Conjunction");
-      url = await getFileUrl(`${basePath}/${fallback}.jpg`);
+    if (!url) {
+      const isConjunction = originalFilename.includes("Conjunction");
+      const isConjunct = originalFilename.includes("Conjunct");
+
+      if (isConjunction || isConjunct) {
+        const altFilename = isConjunction
+          ? originalFilename.replace("Conjunction", "Conjunct")
+          : originalFilename.replace("Conjunct", "Conjunction");
+
+        for (const ext of extensions) {
+          url = await getFileUrl(`${basePath}/${altFilename}${ext}`);
+          if (url) break;
+        }
+      }
     }
 
     if (!url) {

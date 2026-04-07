@@ -17,21 +17,84 @@
  *   ASTRO_AI_API_URL           — Lambda URL for AI horoscope (new_astrology_api_url)
  */
 
+import { createAdminClient } from "@/lib/supabase/admin";
+
 const ASTROLOGY_API_BASE = "https://json.astrologyapi.com/v1";
+
+// ---------------------------------------------------------------------------
+// DB-backed key rotation (least-recently-used active key)
+// Falls back to env vars if no DB keys are available.
+// ---------------------------------------------------------------------------
+
+interface DbApiKey {
+  id: string;
+  access_key: string;
+  secret_key: string;
+}
+
+/**
+ * Fetch the least-recently-used active key from astrology_api_keys.
+ * After selection, updates last_used_at and increments requests_today.
+ * Returns null if no active keys exist.
+ */
+async function getDbKey(): Promise<DbApiKey | null> {
+  try {
+    const admin = createAdminClient();
+
+    // Pick the active key with the oldest (or null) last_used_at
+    const { data, error } = await admin
+      .from("astrology_api_keys")
+      .select("id, access_key, secret_key")
+      .eq("is_active", true)
+      .order("last_used_at", { ascending: true, nullsFirst: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    // Fire-and-forget usage tracking: read current count, increment, update
+    admin
+      .from("astrology_api_keys")
+      .select("requests_today")
+      .eq("id", data.id)
+      .single()
+      .then(({ data: row }) => {
+        const current = (row as Record<string, unknown> | null)?.requests_today as number ?? 0;
+        admin
+          .from("astrology_api_keys")
+          .update({
+            requests_today: current + 1,
+            last_used_at: new Date().toISOString(),
+          })
+          .eq("id", data.id)
+          .then(() => { /* fire-and-forget */ });
+      });
+
+    return data as DbApiKey;
+  } catch {
+    return null;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // AstrologyAPI.com client (Basic auth)
 // ---------------------------------------------------------------------------
 
-function getBasicAuthHeader(): string {
+function buildBasicAuthHeader(accessKey: string, secretKey: string): string {
+  return "Basic " + Buffer.from(`${accessKey}:${secretKey}`).toString("base64");
+}
+
+function getEnvBasicAuthHeader(): string {
   const accessKey = process.env.ASTROLOGY_API_ACCESS_KEY ?? "";
   const secretKey = process.env.ASTROLOGY_API_SECRET_KEY ?? "";
-  return "Basic " + Buffer.from(`${accessKey}:${secretKey}`).toString("base64");
+  return buildBasicAuthHeader(accessKey, secretKey);
 }
 
 /**
  * POST to json.astrologyapi.com/v1/<endpoint>
  * Ported from Angular getHttpHoroscopePost().
+ *
+ * Key selection: DB-backed round-robin (least-recently-used) with env var fallback.
  *
  * @param endpoint  e.g. "western_horoscope", "synastry_horoscope"
  * @param body      request payload
@@ -43,11 +106,17 @@ export async function callAstrologyApi<T = unknown>(
 ): Promise<T> {
   const url = `${ASTROLOGY_API_BASE}/${endpoint}`;
 
+  // Try DB key first, fall back to env
+  const dbKey = await getDbKey();
+  const authHeader = dbKey
+    ? buildBasicAuthHeader(dbKey.access_key, dbKey.secret_key)
+    : getEnvBasicAuthHeader();
+
   const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: getBasicAuthHeader(),
+      Authorization: authHeader,
       "Accept-Language": "en",
     },
     body: JSON.stringify(body),

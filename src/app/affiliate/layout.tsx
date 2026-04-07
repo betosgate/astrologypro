@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, DollarSign, Link as LinkIcon } from "lucide-react";
+import { PortalLogoutButton } from "@/components/portal/logout-button";
 
 const navItems = [
   { href: "/affiliate/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -24,7 +25,8 @@ export default function AffiliateLayout({
     <div className="min-h-screen bg-background">
       {/* Top nav bar */}
       <header className="border-b bg-card">
-        <div className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-6 px-4 py-3">
+          <div className="flex items-center gap-6">
           <span className="font-semibold text-sm tracking-tight">Affiliate Portal</span>
           <nav className="flex gap-1">
             {navItems.map(({ href, label, icon: Icon }) => {
@@ -45,6 +47,8 @@ export default function AffiliateLayout({
               );
             })}
           </nav>
+          </div>
+          <PortalLogoutButton />
         </div>
       </header>
 
