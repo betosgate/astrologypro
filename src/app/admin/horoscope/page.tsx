@@ -146,7 +146,7 @@ function AstroHeaderParts({ title }: { title?: string }) {
   const terms = [p1, aspectType, p2].filter(Boolean);
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="flex items-center justify-center gap-2 flex-wrap w-full">
       {terms.map((term, i) => {
         const img = ASTRO_HEADER_IMAGES[term];
         return (
@@ -807,7 +807,7 @@ function AspectsLegend() {
 function SectionSkeleton({ title }: { title: string }) {
   return (
     <div className="border rounded-lg overflow-hidden animate-pulse">
-      <div className="flex items-center gap-3 px-4 py-3 bg-muted/40">
+      <div className="flex items-center justify-center gap-3 px-4 py-3 bg-muted/40">
         <Loader2 className="size-4 animate-spin text-amber-500" />
         <span className="text-sm font-semibold">{title}</span>
       </div>
@@ -880,17 +880,15 @@ function useShowMore() {
           return { filename: `${capPlanet}-In-${capSign}`, foldername: "planets" };
         }
       } else if (type === "house") {
-        // promptData has house number + sign + planet
-        const house = promptData?.house ?? promptData?.House ?? "";
+        // promptData has house number + sign
+        const houseNum = promptData?.house ?? promptData?.House ?? "";
         const sign = promptData?.sign ?? promptData?.Sign ?? "";
-        // Try to find a planet in this house if the direct 'planet' property is missing
-        let planet = promptData?.planet ?? promptData?.ruler;
-        if (!planet && title?.trim()) planet = title.trim();
 
-        if (house && sign && planet) {
-          const ordinal = String(house).replace(/\D/g, "");
+        if (houseNum && sign) {
+          const ordinal = String(houseNum).replace(/\D/g, "");
           const suffix = ordinal === "1" ? "st" : ordinal === "2" ? "nd" : ordinal === "3" ? "rd" : "th";
-          return { filename: `${planet}-In-${ordinal}${suffix}-House-With-${sign}`, foldername: "planets" };
+          const capSign = sign.charAt(0).toUpperCase() + sign.slice(1);
+          return { filename: `${capSign}-In-${ordinal}${suffix}-House`, foldername: "house" };
         }
       }
     } catch { /* ignore — will return null */ }
@@ -1294,15 +1292,15 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: 
 
       {/* Table */}
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b">
-          <h3 className="text-sm font-semibold">Planet Information</h3>
+        <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+          <h3 className="text-sm font-semibold text-center w-full">Planet Information</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/20">
                 {["Planet", "Sign", "Full Degree", "House", "Norm Degree", "Speed", "Retro?"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -1352,7 +1350,7 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: 
             const hasDecan = checkDacen(p.name, p.sign);
             return (
               <div key={p.name} className="rounded-lg border overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/40 border-b">
+                <div className="flex items-center justify-center gap-2 px-4 py-2.5 bg-muted/40 border-b text-center">
                   <span className="text-amber-500 text-base">{PLANET_SYMBOLS[p.name] ?? "✦"}</span>
                   <h4 className="text-sm font-semibold uppercase tracking-wide">{p.name}</h4>
                   {hasDecan && (
@@ -1415,8 +1413,8 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
 
       {/* House table */}
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b">
-          <h3 className="text-sm font-semibold">House Information</h3>
+        <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+          <h3 className="text-sm font-semibold text-center w-full">House Information</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -1597,19 +1595,23 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
       {aiData === "error" && <SectionError title="House Interpretations" />}
       {Array.isArray(aiData) && aiData.length > 0 && (
         <div className="space-y-3">
-          {aiData.map((item: any) => (
-            <div key={item.house} className="rounded-lg border overflow-hidden">
-              <div className="px-4 py-2.5 bg-muted/40 border-b">
-                <h4 className="text-sm font-semibold uppercase tracking-wide">House {item.house}</h4>
-              </div>
-              <div className="px-4 py-3">
-                <p className="text-sm leading-relaxed">{item.interpretation}</p>
-                <div className="mt-2 flex justify-center">
-                  <button onClick={() => trigger(`House ${item.house}`, item.interpretation, item, areaOfInquiry, undefined, false, "house")} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+          {aiData.map((item: any) => {
+            const hRaw = houses.find((h: any) => Number(h.house) === Number(item.house));
+            const sign = hRaw?.sign ?? "";
+            return (
+              <div key={item.house} className="rounded-lg border overflow-hidden">
+                <div className="px-4 py-2.5 bg-muted/40 border-b flex justify-center">
+                  <h4 className="text-sm font-semibold uppercase tracking-wide text-center w-full">House {item.house}</h4>
+                </div>
+                <div className="px-4 py-3">
+                  <p className="text-sm leading-relaxed">{item.interpretation}</p>
+                  <div className="mt-2 flex justify-center">
+                    <button onClick={() => trigger(`House ${item.house}`, item.interpretation, { ...item, sign }, areaOfInquiry, undefined, false, "house")} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -1643,15 +1645,15 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
       <AspectsLegend />
 
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b">
-          <h3 className="text-sm font-semibold">Aspects</h3>
+        <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+          <h3 className="text-sm font-semibold text-center w-full">Aspects</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/20">
                 {["Aspected Planet", "Aspecting Planet", "Orb", "Type", "Diff", "Aspected °", "Aspecting °"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -1699,7 +1701,7 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
             return (
               <div key={i} className="rounded-lg border overflow-hidden">
                 {/* Header — Angular astroHeaderModifierPipe pattern: WORD [img] WORD [img] WORD [img] */}
-                <div className="px-4 py-2.5 bg-muted/40 border-b">
+                <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
                   <AstroHeaderParts title={item.title ?? `Aspect ${i + 1}`} />
                 </div>
                 <div className="px-4 py-3">
@@ -1734,8 +1736,8 @@ function DharmaKarmaSection({ data, rawData, areaOfInquiry }: { data: any; rawDa
       {[{ key: "dharma", label: "Dharma", text: dharma }, { key: "karma", label: "Karma", text: karma }].map(({ key, label, text }) => (
         text ? (
           <div key={key} className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20">
-              <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-300">{label}</h4>
+            <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20 flex justify-center">
+              <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-300 text-center w-full">{label}</h4>
             </div>
             <div className="px-4 py-3">
               <p className="text-sm leading-relaxed">{text}</p>
@@ -1763,15 +1765,15 @@ function LilithSection({ lilith, aiData, areaOfInquiry }: { lilith: any; aiData:
     <div className="space-y-4">
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b">
-          <h3 className="text-sm font-semibold">Lilith <span className="text-amber-500 ml-1">⚸</span></h3>
+        <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+          <h3 className="text-sm font-semibold text-center w-full">Lilith <span className="text-amber-500 ml-1">⚸</span></h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/20">
                 {["Planet", "Sign", "Full Degree", "House", "Norm Degree", "Speed", "Retro?"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -1823,8 +1825,8 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry }: { natal
   return (
     <div className="rounded-lg border overflow-hidden">
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
-      <div className="px-4 py-2.5 bg-muted/40 border-b">
-        <h3 className="text-sm font-semibold">Ascendant · Midheaven · Vertex</h3>
+      <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+        <h3 className="text-sm font-semibold text-center w-full">Ascendant · Midheaven · Vertex</h3>
       </div>
       <div className="divide-y">
         {keys.map((key) => {
@@ -1833,7 +1835,7 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry }: { natal
           return (
             <div key={key} className="px-4 py-3">
               <div className="flex items-center gap-2 mb-1.5">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600">{key}</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 text-center">{key}</h4>
                 {degree && <Badge variant="outline" className="text-[10px]">{typeof degree === "object" ? `${degree.sign ?? ""} ${Number(degree.degree ?? 0).toFixed(2)}°` : String(degree)}</Badge>}
               </div>
               <p className="text-sm leading-relaxed">{interp ?? <span className="text-muted-foreground italic">Loading…</span>}</p>
@@ -1888,7 +1890,7 @@ function PlanetReturnSummaryTable({ tab, birth, returnDate, natalData }: {
 
   return (
     <div className="rounded-lg border overflow-hidden">
-      <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20">
+      <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20 text-center">
         <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-300">{label} Return — Summary</h3>
       </div>
       <div className="overflow-x-auto">
@@ -1896,7 +1898,7 @@ function PlanetReturnSummaryTable({ tab, birth, returnDate, natalData }: {
           <thead>
             <tr className="border-b bg-muted/20">
               {["Date of Birth", "Place of Birth", "Time of Birth", "House System", `${label} at Birth`, `Next ${label} Return`].map((h) => (
-                <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
@@ -1929,14 +1931,14 @@ function PlanetReturnInterpretation({ tab, aiData, areaOfInquiry }: { tab: strin
   return (
     <div className="rounded-lg border overflow-hidden">
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
-      <div className="px-4 py-2.5 bg-muted/40 border-b">
-        <h3 className="text-sm font-semibold">{title}</h3>
+      <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+        <h3 className="text-sm font-semibold text-center w-full">{title}</h3>
       </div>
       <div className="divide-y">
         {interp && typeof interp === "object" ? (
           Object.entries(interp).map(([k, v]) => (
             <div key={k} className="px-4 py-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1.5">{k}</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1.5 text-center w-full">{k}</h4>
               <p className="text-sm leading-relaxed">{String(v)}</p>
               <div className="mt-1.5 flex justify-center">
                 <button onClick={() => trigger(k, String(v), interp, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
@@ -1984,12 +1986,12 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       <div className="space-y-2">
         {items.map((item: any, i: number) => (
           <div key={i} className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-2 bg-muted/30 border-b flex items-center gap-2">
+            <div className="px-4 py-2 bg-muted/30 border-b flex items-center justify-center gap-2">
               {item.name && PLANET_IMAGES[item.name] && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={PLANET_IMAGES[item.name]} alt={item.name} className="size-5 object-contain" />
               )}
-              <h4 className="text-sm font-semibold">{item.title ?? item.name ?? `${title} ${i + 1}`}</h4>
+              <h4 className="text-sm font-semibold text-center w-full">{item.title ?? item.name ?? `${title} ${i + 1}`}</h4>
             </div>
             <div className="px-4 py-3">
               <p className="text-sm leading-relaxed">{item.interpretation ?? item.data ?? item.forecast}</p>
@@ -2015,12 +2017,12 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       {/* 1. Solar Return Details */}
       {details && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Solar Return Details</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return Details</h3></div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b bg-muted/20">
                 {["Native Birth Date", "Solar Return Date", "Sun Degree", "Solar Return ASC"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr></thead>
               <tbody><tr className="bg-background">
@@ -2037,12 +2039,12 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       {/* 2. Solar Return Planets table */}
       {planetList.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Solar Return Planets</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return Planets</h3></div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b bg-muted/20">
                 {["Planet", "House", "Full Degree", "Sign", "Norm Degree", "Speed", "Retro?"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr></thead>
               <tbody>
@@ -2076,12 +2078,12 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
               const forecasts: string[] = Array.isArray(p.forecast) ? p.forecast : (p.forecast ? [String(p.forecast)] : []);
               return (
                 <div key={p.name ?? i} className="rounded-lg border overflow-hidden">
-                  <div className="px-4 py-2 bg-muted/30 border-b flex items-center gap-2">
+                  <div className="px-4 py-2 bg-muted/30 border-b flex items-center justify-center gap-2">
                     {p.name && PLANET_IMAGES[p.name] && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={PLANET_IMAGES[p.name]} alt={p.name} className="size-5 object-contain" />
                     )}
-                    <h4 className="text-sm font-semibold">{p.name ?? `Planet ${i + 1}`}</h4>
+                    <h4 className="text-sm font-semibold text-center w-full">{p.name ?? `Planet ${i + 1}`}</h4>
                     {p.sign && <Badge variant="outline" className="ml-auto text-[10px] text-amber-600 border-amber-400">{p.sign}{p.house ? ` · House ${p.house}` : ""}</Badge>}
                   </div>
                   <div className="px-4 py-3 space-y-1.5">
@@ -2100,12 +2102,12 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       {/* 4. Solar Return House Cusps */}
       {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex || houseList.length > 0) && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Solar Return House Cusps</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return House Cusps</h3></div>
           {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex) && (
             <div className="overflow-x-auto border-b">
               <table className="w-full text-sm">
                 <thead><tr className="border-b bg-muted/20">
-                  {["Point", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>)}
+                  {["Point", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>)}
                 </tr></thead>
                 <tbody>
                   {[{ label: "Ascendant", val: cuspObj.ascendant }, { label: "Midheaven", val: cuspObj.midheaven }, { label: "Vertex", val: cuspObj.vertex }].filter((r) => r.val).map((r) => (
@@ -2123,7 +2125,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr className="border-b bg-muted/20">
-                  {["House", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>)}
+                  {["House", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>)}
                 </tr></thead>
                 <tbody>
                   {houseList.map((h: any, i: number) => (
@@ -2143,12 +2145,12 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       {/* 5. Solar Return Aspects table */}
       {aspectList.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Solar Return Planet Aspects</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return Planet Aspects</h3></div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b bg-muted/20">
                 {["SR Planet", "Natal Planet", "Type", "Orb"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr></thead>
               <tbody>
@@ -2261,15 +2263,15 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {/* Weekly / Monthly Transit Relation Table */}
       {transitRows.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b">
-            <h3 className="text-sm font-semibold">{label} — Transit Aspects</h3>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+            <h3 className="text-sm font-semibold text-center w-full">{label} — Transit Aspects</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/20">
                   {["Transit Planet", "Aspect", "Natal Planet", "Orb", "Date"].map((h) => (
-                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -2304,15 +2306,15 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {/* Lunar Return Metrics (monthly only) */}
       {!isWeekly && lunarRows.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b">
-            <h3 className="text-sm font-semibold">Lunar Return Metrics</h3>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+            <h3 className="text-sm font-semibold text-center w-full">Lunar Return Metrics</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/20">
                   {["Date / Month", "Moon Day", "Illumination", "Phase", "Moon Sign"].map((h) => (
-                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -2337,8 +2339,8 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {aiData === "error" && <SectionError title={`${label} Interpretation`} />}
       {Array.isArray(aiData) && aiData.map((item: any, i: number) => (
         <div key={i} className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b">
-            <h4 className="text-sm font-semibold">{item.title ?? `${label} ${i + 1}`}</h4>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+            <h4 className="text-sm font-semibold text-center w-full">{item.title ?? `${label} ${i + 1}`}</h4>
           </div>
           <div className="px-4 py-3">
             <p className="text-sm leading-relaxed">{item.interpretation ?? item.data}</p>
@@ -2357,8 +2359,8 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
             <h3 className="text-sm font-semibold px-1">Lunar Return AI Interpretation</h3>
             {items.map((item: any, i: number) => (
               <div key={i} className="rounded-lg border overflow-hidden">
-                <div className="px-4 py-2.5 bg-muted/40 border-b">
-                  <h4 className="text-sm font-semibold">{item.title ?? `Lunar Return ${i + 1}`}</h4>
+                <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+                  <h4 className="text-sm font-semibold text-center w-full">{item.title ?? `Lunar Return ${i + 1}`}</h4>
                 </div>
                 <div className="px-4 py-3">
                   <p className="text-sm leading-relaxed">{item.interpretation ?? item.data ?? JSON.stringify(item)}</p>
@@ -2401,8 +2403,8 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
     if (!text) return null;
     return (
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b">
-          <h4 className="text-sm font-semibold">{title}</h4>
+        <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+          <h4 className="text-sm font-semibold text-center w-full">{title}</h4>
         </div>
         <div className="px-4 py-3">
           <p className="text-sm leading-relaxed">{text}</p>
@@ -2420,11 +2422,11 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
     if (!entries.length) return null;
     return (
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">{title}</h3></div>
+        <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">{title}</h3></div>
         <div className="divide-y">
           {entries.map(([k, v]) => (
             <div key={k} className="px-4 py-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{k.replace(/_/g, " ")}</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{k.replace(/_/g, " ")}</h4>
               <p className="text-sm leading-relaxed">{String(v)}</p>
               <div className="mt-1.5 flex justify-center">
                 <button onClick={() => trigger(k, String(v), obj, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
@@ -2462,11 +2464,11 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
       {/* Summary — timeline entries */}
       {Array.isArray(inner?.summary?.recommendation_on_date_and_timeline) && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Summary</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Summary</h3></div>
           <div className="divide-y">
             {inner.summary.recommendation_on_date_and_timeline.map((s: any, i: number) => (
               <div key={i} className="px-4 py-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{s.timeline_title}</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{s.timeline_title}</h4>
                 <p className="text-sm leading-relaxed">{s.timeline_data}</p>
                 <div className="mt-1.5 flex justify-center">
                   <button onClick={() => trigger(s.timeline_title, s.timeline_data, s, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
@@ -2480,11 +2482,11 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
       {/* Summary — answer array */}
       {Array.isArray(inner?.summary?.answer) && inner.summary.answer.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20"><h3 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Answer</h3></div>
+          <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20 text-center"><h3 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Answer</h3></div>
           <div className="divide-y">
             {inner.summary.answer.map((a: any, i: number) => (
               <div key={i} className="px-4 py-3">
-                {a.title && <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{a.title}</h4>}
+                {a.title && <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{a.title}</h4>}
                 <p className="text-sm leading-relaxed">{a.data ?? a.text ?? String(a)}</p>
               </div>
             ))}
@@ -2495,11 +2497,11 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
       {/* Summary — recommendation array */}
       {Array.isArray(inner?.summary?.recommendation) && inner.summary.recommendation.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Recommendations</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Recommendations</h3></div>
           <div className="divide-y">
             {inner.summary.recommendation.map((r: any, i: number) => (
               <div key={i} className="px-4 py-3">
-                {r.title && <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{r.title}</h4>}
+                {r.title && <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{r.title}</h4>}
                 <p className="text-sm leading-relaxed">{r.data ?? r.text ?? String(r)}</p>
               </div>
             ))}
@@ -2510,11 +2512,11 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
       {/* Houses */}
       {Array.isArray(inner?.house) && inner.house.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">House Analysis</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">House Analysis</h3></div>
           <div className="divide-y">
             {inner.house.map((h: any, i: number) => (
               <div key={i} className="px-4 py-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{h.title}</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{h.title}</h4>
                 <p className="text-sm leading-relaxed">{h.data}</p>
                 <div className="mt-1.5 flex justify-center">
                   <button onClick={() => trigger(h.title, h.data, h, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
@@ -2528,7 +2530,7 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
       {/* Planets (inner.planet array) */}
       {Array.isArray(inner?.planet) && inner.planet.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Planet Analysis</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Planet Analysis</h3></div>
           <div className="divide-y">
             {inner.planet.map((p: any, i: number) => {
               const pName = p.title?.split(" ")[0];
@@ -2536,7 +2538,7 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
                 <div key={i} className="px-4 py-3">
                   <div className="flex items-center gap-2 mb-1">
                     {pName && PLANET_IMAGES[pName] && <img src={PLANET_IMAGES[pName]} alt={pName} className="size-5 object-contain" />}
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600">{p.title}</h4>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 text-center w-full">{p.title}</h4>
                   </div>
                   <p className="text-sm leading-relaxed">{p.data}</p>
                   <div className="mt-1.5 flex justify-center">
@@ -2552,11 +2554,11 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
       {/* Astrological aspects sub-section */}
       {inner?.astrological_aspect && typeof inner.astrological_aspect === "object" && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Astrological Aspects</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Astrological Aspects</h3></div>
           <div className="divide-y">
             {Object.entries(inner.astrological_aspect).map(([k, v]: [string, any]) => (
               <div key={k} className="px-4 py-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{k.replace(/_/g, " ")}</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{k.replace(/_/g, " ")}</h4>
                 <p className="text-sm leading-relaxed">{typeof v === "string" ? v : JSON.stringify(v)}</p>
               </div>
             ))}
@@ -2601,11 +2603,11 @@ function RelationshipSection({ aiMap, areaOfInquiry, tabSlug }: { aiMap: Record<
     if (!items.length) return null;
     return (
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">{title}</h3></div>
+        <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">{title}</h3></div>
         <div className="divide-y">
           {items.map((item: any, i: number) => (
             <div key={i} className="px-4 py-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{item.title ?? item.name}</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{item.title ?? item.name}</h4>
               <p className="text-sm leading-relaxed">{item.data ?? item.interpretation ?? item.description}</p>
               <div className="mt-1.5 flex justify-center">
                 <button onClick={() => trigger(item.title ?? title, item.data ?? item.interpretation ?? "", item, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
