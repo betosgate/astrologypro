@@ -869,30 +869,215 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
 
         {/* ── Tab 5: Sessions & Security ───────────────────────────────────── */}
         <TabsContent value="sessions" className="space-y-4">
+
+          {/* ── Account lock status ─────────────────────────────────────────── */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Shield className="size-4" />
+                Account Lock
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {accountLock ? (
+                <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900 p-4">
+                  <Lock className="size-5 shrink-0 text-red-600 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-red-700 dark:text-red-400">
+                      Account Locked
+                    </p>
+                    {accountLock.locked_reason && (
+                      <p className="mt-0.5 text-sm text-red-600 dark:text-red-500">
+                        Reason: {accountLock.locked_reason}
+                      </p>
+                    )}
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Locked at: {fmt(accountLock.locked_at)}
+                    </p>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="shrink-0" disabled={lockLoading}>
+                        {lockLoading ? (
+                          <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                        ) : (
+                          <Unlock className="mr-1.5 size-3.5" />
+                        )}
+                        Unlock
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Unlock account?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will restore platform access for {user.name || user.email}.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleUnlockAccount}>Unlock</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Account is not locked. Use the form below to lock it.
+                  </p>
+                  <div className="space-y-2">
+                    <Label htmlFor="lock-reason" className="text-sm">
+                      Lock reason <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="lock-reason"
+                      placeholder="Enter reason for locking this account"
+                      value={lockReason}
+                      onChange={(e) => setLockReason(e.target.value)}
+                    />
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={lockLoading || !lockReason.trim()}
+                      >
+                        {lockLoading ? (
+                          <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                        ) : (
+                          <Lock className="mr-1.5 size-3.5" />
+                        )}
+                        Lock Account
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Lock account?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {user.name || user.email} will immediately lose platform access.
+                          Reason: {lockReason}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-red-600 hover:bg-red-700"
+                          onClick={handleLockAccount}
+                        >
+                          Lock Account
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* ── Active sessions ──────────────────────────────────────────────── */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <History className="size-4" />
-                Login History
+                Active Sessions
               </CardTitle>
               <Button
                 size="sm"
                 variant="outline"
                 className="text-red-600 hover:text-red-700"
-                onClick={async () => {
-                  try {
-                    await fetch(`/api/admin/users/${user.userId}/revoke-sessions`, {
-                      method: "POST",
-                    });
-                    toast.success("All sessions revoked");
-                    router.refresh();
-                  } catch {
-                    toast.error("Failed to revoke sessions");
-                  }
-                }}
+                disabled={revokingAll}
+                onClick={handleRevokeAllSessions}
               >
+                {revokingAll && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
                 Revoke All Sessions
               </Button>
+            </CardHeader>
+            <CardContent>
+              {sessions.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  No sessions tracked
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Device</TableHead>
+                      <TableHead>Browser / OS</TableHead>
+                      <TableHead>IP</TableHead>
+                      <TableHead>Last Seen</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sessions.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5 text-xs">
+                            {s.device_type === "mobile" ? (
+                              <Smartphone className="size-3.5 shrink-0" />
+                            ) : s.device_type === "tablet" ? (
+                              <Tablet className="size-3.5 shrink-0" />
+                            ) : (
+                              <Monitor className="size-3.5 shrink-0" />
+                            )}
+                            <span className="capitalize">{s.device_type ?? "desktop"}</span>
+                            {s.is_current && (
+                              <span className="text-green-600 font-medium">(current)</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {[s.browser, s.os].filter(Boolean).join(" / ") || "—"}
+                        </TableCell>
+                        <TableCell className="text-xs font-mono">{s.ip_address ?? "—"}</TableCell>
+                        <TableCell className="text-xs">{fmt(s.last_seen_at)}</TableCell>
+                        <TableCell>
+                          {s.revoked_at ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                              <XCircle className="size-3.5 text-red-400" />
+                              Revoked
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs text-green-600">
+                              <CheckCircle2 className="size-3.5" />
+                              Active
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {!s.revoked_at && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                              disabled={revokingSession === s.id}
+                              onClick={() => handleRevokeSession(s.id)}
+                            >
+                              {revokingSession === s.id ? (
+                                <Loader2 className="size-3.5 animate-spin" />
+                              ) : (
+                                "Revoke"
+                              )}
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* ── Login history ────────────────────────────────────────────────── */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="size-4" />
+                Login History
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {user.loginLogs.length === 0 ? (
@@ -926,6 +1111,51 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
             </CardContent>
           </Card>
 
+          {/* ── Login attempts ───────────────────────────────────────────────── */}
+          {(user.loginAttempts ?? []).length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Shield className="size-4" />
+                  Recent Login Attempts (last 10)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Time</TableHead>
+                      <TableHead>IP</TableHead>
+                      <TableHead>Result</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(user.loginAttempts ?? []).map((a) => (
+                      <TableRow key={a.id}>
+                        <TableCell className="text-xs">{fmt(a.attempted_at)}</TableCell>
+                        <TableCell className="text-xs font-mono">{a.ip_address ?? "—"}</TableCell>
+                        <TableCell>
+                          {a.success ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-green-600">
+                              <CheckCircle2 className="size-3.5" />
+                              Success
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs text-red-500">
+                              <XCircle className="size-3.5" />
+                              Failed
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ── Security events ──────────────────────────────────────────────── */}
           {user.securityEvents.length > 0 && (
             <Card>
               <CardHeader>
