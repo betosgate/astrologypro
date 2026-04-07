@@ -1061,7 +1061,7 @@ export async function sendMysterySchoolGraduation({
   to: string;
   name: string;
 }) {
-  const decansUrl = `${APP_URL}/community/decans`;
+  const decansUrl = `${APP_URL}/mystery-school`;
 
   const content = `
     <p style="margin:0 0 16px;color:#d4d4d8;">
@@ -2147,7 +2147,7 @@ export async function sendGraduationCongratulations({
   graduationDate,
   graduationUrl,
 }: GraduationCongratulationsParams) {
-  const ritualBuilderUrl = `${APP_URL}/community/training/ritual-builder`;
+  const ritualBuilderUrl = `${APP_URL}/mystery-school/training/ritual-builder`;
 
   const content = `
     <p style="margin:0 0 16px;color:#d4d4d8;">

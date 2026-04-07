@@ -20,7 +20,7 @@ import {
 import { Loader2, Sparkles, Mail } from "lucide-react";
 import { APP_URL } from "@/lib/constants";
 
-const PORTAL_BASES = ["/dashboard", "/portal", "/community", "/trainee", "/advocate", "/admin"];
+const PORTAL_BASES = ["/dashboard", "/portal", "/community", "/mystery-school", "/trainee", "/advocate", "/admin"];
 
 /**
  * Resolve where to send the user after a successful password login.

@@ -8,7 +8,7 @@ export type UserRole =
   | "social_advo"            // Social Advocate — /advocate
   | "customer_socialadvo"    // Client + Social Advocate — /portal (also /advocate)
   | "perennial_mandalism"    // Perennial Mandalism member — /community
-  | "mystery_school"         // Mystery School member — /community
+  | "mystery_school"         // Mystery School member — /mystery-school
   | "trainee";               // Trainee under a mentor diviner — /trainee
 
 /**
@@ -19,7 +19,7 @@ export const ROLE_DESTINATIONS: Record<UserRole, string> = {
   social_advo:           "/advocate",
   customer_socialadvo:   "/portal",
   perennial_mandalism:   "/community",
-  mystery_school:        "/community",
+  mystery_school:        "/mystery-school",
   trainee:               "/trainee",
 };
 

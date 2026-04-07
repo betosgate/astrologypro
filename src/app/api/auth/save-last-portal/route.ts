@@ -6,6 +6,7 @@ const VALID_PORTAL_BASES = [
   "/dashboard",
   "/portal",
   "/community",
+  "/mystery-school",
   "/trainee",
   "/advocate",
   "/admin",

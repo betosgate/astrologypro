@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -74,10 +75,16 @@ export async function POST() {
   }
 
   const now = new Date().toISOString();
+  const certCode = randomBytes(6).toString("hex").toUpperCase();
+
   await admin
     .from("trainees")
-    .update({ graduated_at: now, training_status: "graduated" })
+    .update({
+      graduated_at: now,
+      training_status: "graduated",
+      certificate_code: certCode,
+    })
     .eq("id", trainee.id);
 
-  return NextResponse.json({ graduated: true, graduatedAt: now });
+  return NextResponse.json({ graduated: true, graduatedAt: now, certificate_code: certCode });
 }

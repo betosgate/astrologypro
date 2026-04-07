@@ -120,35 +120,60 @@ export default async function LessonViewerPage({
   const catLessonList = allCatLessons ?? [];
   const catLessonIds = catLessonList.map((l) => l.id);
 
-  // Fetch completion for sidebar
-  const { data: completionRows } =
-    catLessonIds.length > 0
-      ? await supabase
-          .from("lesson_completions")
-          .select("lesson_id")
-          .eq("user_id", user.id)
-          .in("lesson_id", catLessonIds)
-      : { data: [] };
-
-  // Fallback: also check legacy trainee_lesson_progress
-  const { data: legacyRows } =
-    catLessonIds.length > 0
-      ? await supabase
-          .from("trainee_lesson_progress")
-          .select("lesson_id")
-          .eq("trainee_id", trainee.id)
-          .not("completed_at", "is", null)
-          .in("lesson_id", catLessonIds)
-      : { data: [] };
+  // Fetch completion, legacy completion, category sequential flag, global lock,
+  // and next-lesson from cache -- all in parallel
+  const [completionRowsResult, legacyRowsResult, catSeqResult, globalLockResult, catProgressResult] =
+    await Promise.all([
+      catLessonIds.length > 0
+        ? supabase
+            .from("lesson_completions")
+            .select("lesson_id")
+            .eq("user_id", user.id)
+            .in("lesson_id", catLessonIds)
+        : Promise.resolve({ data: [] as { lesson_id: string }[] }),
+      catLessonIds.length > 0
+        ? supabase
+            .from("trainee_lesson_progress")
+            .select("lesson_id")
+            .eq("trainee_id", trainee.id)
+            .not("completed_at", "is", null)
+            .in("lesson_id", catLessonIds)
+        : Promise.resolve({ data: [] as { lesson_id: string }[] }),
+      supabase
+        .from("training_categories")
+        .select("is_sequential")
+        .eq("id", categoryId)
+        .single(),
+      supabase
+        .from("training_settings")
+        .select("global_sequential_lock")
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("user_category_progress")
+        .select("next_lesson_id")
+        .eq("user_id", user.id)
+        .eq("category_id", categoryId)
+        .maybeSingle(),
+    ]);
 
   const completedSet = new Set([
-    ...(completionRows ?? []).map((r) => r.lesson_id),
-    ...(legacyRows ?? []).map((r) => r.lesson_id),
+    ...(completionRowsResult.data ?? []).map((r) => r.lesson_id),
+    ...(legacyRowsResult.data ?? []).map((r) => r.lesson_id),
   ]);
 
+  const sidebarGlobalLock = globalLockResult.data?.global_sequential_lock ?? false;
+  const catIsSequential = catSeqResult.data?.is_sequential ?? false;
+  const nextLessonId = catProgressResult.data?.next_lesson_id ?? null;
+
   function isSidebarLessonLocked(lesson: (typeof catLessonList)[0]): boolean {
-    if (!lesson.previous_lesson_id) return false;
-    return !completedSet.has(lesson.previous_lesson_id);
+    if (!sidebarGlobalLock) return false;
+    if (completedSet.has(lesson.id)) return false;
+    if (!catIsSequential) return false;
+    if (lesson.id === (nextLessonId ?? lesson.id)) return false;
+    return catLessonList.some(
+      (prev) => prev.priority < lesson.priority && !completedSet.has(prev.id)
+    );
   }
 
   const sidebarLessons: SidebarLesson[] = catLessonList.map((l) => ({
@@ -194,6 +219,8 @@ export default async function LessonViewerPage({
     quizLastTotal: lessonData.quiz_last_total ?? null,
     isCompleted: lessonData.completed === true,
     sidebarLessons,
+    triggers: lessonData.triggers ?? [],
+    lastPositionSeconds: lessonData.last_position_seconds ?? 0,
   };
 
   return (

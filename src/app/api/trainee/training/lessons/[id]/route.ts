@@ -150,8 +150,8 @@ export async function GET(
     }
   }
 
-  // Fetch user's completion + latest quiz attempt status + quiz triggers
-  const [completionResult, quizAttemptResult, triggersResult, triggerProgressResult] =
+  // Fetch user's completion + latest quiz attempt status + quiz triggers + progress
+  const [completionResult, quizAttemptResult, triggersResult, triggerProgressResult, lessonProgressResult] =
     await Promise.all([
       admin
         .from("lesson_completions")
@@ -184,6 +184,13 @@ export async function GET(
         )
         .eq("user_id", user.id)
         .eq("lesson_id", id),
+      // User's lesson progress (for resume position)
+      admin
+        .from("lesson_progress")
+        .select("last_position_seconds")
+        .eq("user_id", user.id)
+        .eq("lesson_id", id)
+        .maybeSingle(),
     ]);
 
   // Build a map of trigger_id -> user_progress for quick lookup
@@ -215,6 +222,7 @@ export async function GET(
       quiz_last_total: quizAttemptResult.data?.total_questions ?? null,
       quiz_last_attempted_at: quizAttemptResult.data?.attempted_at ?? null,
       triggers,
+      last_position_seconds: lessonProgressResult.data?.last_position_seconds ?? 0,
     },
   });
 }

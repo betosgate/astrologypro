@@ -163,7 +163,7 @@ export async function GET(request: NextRequest) {
       const decan = decanMap.get(progress.decan_id);
       if (!decan) continue;
 
-      const decanUrl = `${appUrl}/community/decans/${progress.decan_id}`;
+      const decanUrl = `${appUrl}/mystery-school/decans/${progress.decan_id}`;
 
       const allDone =
         progress.ritual_done && progress.scry_done && progress.journal_done;

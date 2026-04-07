@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
       year: "numeric",
     });
 
-    const bookingUrl = `${APP_URL}/community/training/post-graduation`;
+    const bookingUrl = `${APP_URL}/mystery-school/training/post-graduation`;
 
     try {
       await sendPostGraduationConsultationReminder({
