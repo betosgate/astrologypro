@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import {
   BookOpen,
@@ -30,6 +29,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   BookText,
+  User,
+  CreditCard,
+  Compass,
 } from "lucide-react";
 import Link from "next/link";
 import { AstroChartsSection } from "@/components/community/astro-charts-section";
@@ -94,9 +96,12 @@ function isWithinDays(iso: string | null, days: number): boolean {
 // ── Section heading component ──────────────────────────────────────────────
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-      {children}
-    </h2>
+    <div className="flex items-center gap-3 mb-3">
+      <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+        {children}
+      </h2>
+      <div className="h-px flex-1 bg-border" />
+    </div>
   );
 }
 
@@ -511,6 +516,69 @@ export default async function CommunityDashboardPage() {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
+          TOP SUMMARY BAR
+      ════════════════════════════════════════════════════════════════════ */}
+      <div className="rounded-xl border bg-card p-4 sm:p-5">
+        {/* Top row: membership badge + member since + profile completion */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge
+              variant="outline"
+              className="text-xs font-semibold border-primary/40 bg-primary/5 text-primary"
+            >
+              {planType === "family"
+                ? `${programName} — Family`
+                : programName}
+            </Badge>
+            <span className="text-xs text-muted-foreground">
+              Member since{" "}
+              {new Date(member.joined_at).toLocaleDateString("en-US", {
+                month: "short",
+                year: "numeric",
+              })}
+            </span>
+          </div>
+          {/* Profile completion mini bar */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-2 flex-1 sm:flex-initial sm:w-40">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                Profile
+              </span>
+              <Progress
+                value={profileCompletionData.overall_pct}
+                className="h-1.5 flex-1"
+                aria-label={`Profile ${profileCompletionData.overall_pct}% complete`}
+              />
+              <span className="text-xs font-bold tabular-nums text-primary">
+                {profileCompletionData.overall_pct}%
+              </span>
+            </div>
+          </div>
+        </div>
+        {/* Quick action buttons */}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/community/profile">
+              <User className="mr-1.5 size-3.5" />
+              My Profile
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/community/plan">
+              <CreditCard className="mr-1.5 size-3.5" />
+              My Plan
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/astrologers">
+              <Compass className="mr-1.5 size-3.5" />
+              Get Reading
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════
           SECTION 1 — YOUR MEMBERSHIP
       ════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
@@ -654,7 +722,7 @@ export default async function CommunityDashboardPage() {
           SECTION 2 — ASTROLOGY
       ════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
-        <SectionHeading>Astrology</SectionHeading>
+        <SectionHeading>Your Charts &amp; Astrology</SectionHeading>
 
         {/* Profile Progress + Astro Charts */}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -758,7 +826,7 @@ export default async function CommunityDashboardPage() {
       ════════════════════════════════════════════════════════════════════ */}
       {isPerennial && (
         <section className="space-y-4">
-          <SectionHeading>Sacred Practice</SectionHeading>
+          <SectionHeading>Sacred Study</SectionHeading>
 
           {/* My Rituals */}
           <div className="space-y-3">
@@ -1063,13 +1131,11 @@ export default async function CommunityDashboardPage() {
         </section>
       )}
 
-      <Separator />
-
       {/* ═══════════════════════════════════════════════════════════════════
-          SECTION 5 — EXPLORE
+          SECTION 5 — SACRED STUDY (library / wisdom / articles)
       ════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
-        <SectionHeading>Explore</SectionHeading>
+        <SectionHeading>Sacred Library</SectionHeading>
 
         {/* Content Library */}
         <div className="space-y-3">
@@ -1165,36 +1231,42 @@ export default async function CommunityDashboardPage() {
           </div>
         )}
 
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          SECTION 6 — COMMUNITY (events, sessions, broadcasts)
+      ════════════════════════════════════════════════════════════════════ */}
+      <section className="space-y-4">
+        <SectionHeading>Community</SectionHeading>
+
         {/* Feature quick links */}
-        <div className="space-y-3">
-          <div className="grid gap-4 sm:grid-cols-2">
-            {features.map((f) => {
-              const Icon = f.icon;
-              return (
-                <Card key={f.title} className="transition-colors hover:border-primary/30">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-                        <Icon className="size-5 text-primary" />
-                      </div>
-                      <CardTitle className="text-base">{f.title}</CardTitle>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {features.map((f) => {
+            const Icon = f.icon;
+            return (
+              <Card key={f.title} className="transition-colors hover:border-primary/30">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
+                      <Icon className="size-5 text-primary" />
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <p className="text-sm text-muted-foreground">{f.description}</p>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={f.href}>Explore</Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                    <CardTitle className="text-base">{f.title}</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">{f.description}</p>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={f.href}>Explore</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          SECTION 6 — MYSTERY SCHOOL (Perennial upgrade — last, not first)
+          SECTION 7 — MYSTERY SCHOOL (Perennial upgrade — last, not first)
       ════════════════════════════════════════════════════════════════════ */}
       {isPerennial && (
         <section>

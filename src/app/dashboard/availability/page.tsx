@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
@@ -352,9 +352,10 @@ export default function AvailabilityPage() {
                 </div>
 
                 {t.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-2 border-t border-border/40 pt-2">
-                    {t.description}
-                  </p>
+                  <div
+                    className="prose prose-xs dark:prose-invert text-xs text-muted-foreground line-clamp-2 border-t border-border/40 pt-2 max-w-none"
+                    dangerouslySetInnerHTML={{ __html: t.description }}
+                  />
                 )}
 
                 {/* Actions */}
@@ -525,12 +526,10 @@ export default function AvailabilityPage() {
                 Notes / Instructions{" "}
                 <span className="text-muted-foreground font-normal">(optional)</span>
               </Label>
-              <Textarea
-                id="av-description"
-                placeholder="e.g. Available for new clients. Bring your birth details."
-                rows={3}
+              <RichTextEditor
                 value={form.description}
-                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                onChange={(html) => setForm((p) => ({ ...p, description: html }))}
+                placeholder="e.g. Available for new clients. Bring your birth details."
               />
             </div>
 
