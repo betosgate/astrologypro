@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { logActivity } from "@/lib/activity-log";
 
 interface SavedCard {
   position: number;
@@ -67,6 +68,14 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  logActivity({
+    userId: user.id,
+    eventCategory: 'reading',
+    eventType: 'tarot.reading_saved',
+    metadata: { spreadName: spread_name, readingId: data.id },
+  })
+
   return NextResponse.json({ reading: data }, { status: 201 });
 }
 

@@ -15,7 +15,7 @@ export async function GET() {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("training_settings")
-    .select("id, allowed_roles, updated_at")
+    .select("id, allowed_roles, global_sequential_lock, updated_at")
     .limit(1)
     .maybeSingle();
 
@@ -23,7 +23,9 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ settings: data ?? { allowed_roles: [], updated_at: null } });
+  return NextResponse.json({
+    settings: data ?? { allowed_roles: [], global_sequential_lock: false, updated_at: null },
+  });
 }
 
 // PUT /api/admin/training/settings
@@ -33,19 +35,19 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  let body: { allowed_roles?: string[] };
+  let body: { allowed_roles?: string[]; global_sequential_lock?: boolean };
   try { body = await req.json(); } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { allowed_roles } = body;
+  const { allowed_roles, global_sequential_lock } = body;
   if (!Array.isArray(allowed_roles)) {
     return NextResponse.json({ error: "allowed_roles must be an array." }, { status: 422 });
   }
 
   const validRoles = [
     "trainee", "astrologer", "tarot_reader", "social_advocate",
-    "affiliate", "mystery_school", "perennial_mandalism", "customer"
+    "affiliate", "mystery_school", "perennial_mandalism", "customer",
   ];
   const invalid = allowed_roles.filter(r => !validRoles.includes(r));
   if (invalid.length > 0) {
@@ -53,6 +55,10 @@ export async function PUT(req: NextRequest) {
       { error: `Invalid roles: ${invalid.join(", ")}` },
       { status: 422 }
     );
+  }
+
+  if (global_sequential_lock !== undefined && typeof global_sequential_lock !== "boolean") {
+    return NextResponse.json({ error: "global_sequential_lock must be a boolean." }, { status: 422 });
   }
 
   const admin = createAdminClient();
@@ -64,23 +70,28 @@ export async function PUT(req: NextRequest) {
     .limit(1)
     .maybeSingle();
 
+  const updatePayload: Record<string, unknown> = {
+    allowed_roles,
+    updated_at: new Date().toISOString(),
+    updated_by: user.id,
+  };
+  if (global_sequential_lock !== undefined) {
+    updatePayload.global_sequential_lock = global_sequential_lock;
+  }
+
   let data, error;
   if (existing?.id) {
     ({ data, error } = await admin
       .from("training_settings")
-      .update({
-        allowed_roles,
-        updated_at: new Date().toISOString(),
-        updated_by: user.id,
-      })
+      .update(updatePayload)
       .eq("id", existing.id)
-      .select("id, allowed_roles, updated_at")
+      .select("id, allowed_roles, global_sequential_lock, updated_at")
       .single());
   } else {
     ({ data, error } = await admin
       .from("training_settings")
-      .insert({ allowed_roles, updated_by: user.id })
-      .select("id, allowed_roles, updated_at")
+      .insert({ ...updatePayload })
+      .select("id, allowed_roles, global_sequential_lock, updated_at")
       .single());
   }
 

@@ -1,0 +1,678 @@
+User Management Module
+
+Requirement Analysis Document
+
+Project Type: Next.js full-stack application
+
+Module Purpose
+
+The User Management module will act as the central identity, access, profile, and hierarchy management layer of the platform.
+
+It must not be treated as only a "users table + login screen."
+At gold-standard level, this module becomes the system of record for:
+
+* authentication
+* authorization
+* user lifecycle
+* role-based access
+* user hierarchy
+* affiliate ownership mapping
+* operational status control
+* auditability
+* security enforcement
+* account onboarding and verification
+
+This module will be referenced by all other modules such as:
+
+* dashboard
+* blog/content
+* products
+* affiliate management
+* commission management
+* orders
+* payouts
+* training/courses
+* consultations/bookings
+* notifications
+* reports
+
+---
+
+1. Primary Goals
+
+The module must allow the platform to:
+
+1. create and manage all types of users
+2. control what each user can see and do
+3. support hierarchical relationships such as:
+   * Admin > all users
+   * Diviner > own affiliates
+   * Affiliate > own referral activity only
+4. securely handle login, invitation, verification, activation, suspension, and deactivation
+5. maintain a complete audit trail of all user and permission changes
+6. allow future scalability for additional roles and business models
+
+---
+
+2. Supported User Types
+
+2.1 Super Admin / Platform Admin
+
+Highest authority in the system.
+
+Can:
+* create any user
+* edit any user
+* assign/reassign roles
+* activate/suspend/deactivate accounts
+* manage Diviners and Affiliates
+* create Affiliate accounts on behalf of Diviners
+* override commission setup where business rules allow
+* impersonate users if enabled
+* view system audit logs
+* reset MFA / password / login lock
+* manage access policies
+
+2.2 Admin
+
+Operational admin with broad access, but potentially restricted compared to Super Admin.
+
+Can:
+* manage most user accounts
+* invite users
+* assign supported roles
+* update user status
+* manage Diviner-affiliate mapping
+* view operational user reports
+* access support tooling
+
+2.3 Diviner
+
+A business owner / astrologer / expert role.
+
+Can:
+* manage own profile
+* view own dashboard
+* create or request creation of Affiliates under them
+* configure affiliate commission rules where allowed
+* track own affiliate network
+* view customers/orders/referrals related to them
+* manage payout status tracking for affiliates under them
+* not access platform-wide users outside their scope
+
+2.4 Affiliate
+
+A referral/sales partner attached to a Diviner or created by Admin on behalf of a Diviner.
+
+Can:
+* manage own profile
+* access own referral links
+* view own sales/referral/conversion data
+* view own assigned commission structure
+* view payout status/history if exposed
+* not manage other affiliates
+* not access parent Diviner configuration beyond allowed visibility
+
+2.5 Customer / End User
+
+Platform consumer.
+
+Can:
+* register or be created through a checkout/invite flow
+* manage own profile
+* view own purchases, consultations, courses, subscriptions, etc.
+* manage password, MFA, and preferences
+* access only self-owned data
+
+2.6 Optional Future Roles
+
+Design should keep these extensible:
+* Content Editor
+* Support Agent
+* Finance/Admin Accounts
+* Moderator
+* Course Manager
+* Analyst
+* Read-only Auditor
+
+---
+
+3. Module Scope
+
+In Scope:
+* authentication and account access
+* user creation and invitations
+* role management
+* permission control
+* user status management
+* hierarchy mapping
+* user profile management
+* verification flows
+* session/device tracking
+* password/MFA management
+* audit logs
+* user search/filter/listing
+* bulk actions
+* user notes/internal tags
+* consent and communication preferences
+
+Out of Scope:
+* payroll/payout execution
+* detailed commission calculation engine
+* CRM pipeline logic
+* order processing engine
+* blog authoring engine
+* finance ledgering
+
+---
+
+4. Core Functional Requirements
+
+4.1 Authentication & Access
+
+The system must support:
+* email + password login
+* OTP/email verification flow
+* forgot password / reset password
+* change password
+* optional MFA
+* session expiration handling
+* device/session listing
+* forced logout from all devices
+* account lock after repeated failed attempts
+* secure token/session strategy
+* optional social auth in future
+
+Gold-standard expectation:
+* MFA optional at launch, mandatory-ready in architecture
+* support secure server-side session handling
+* token/session revocation must be possible
+* login history must be visible to admin and self-user where appropriate
+
+4.2 User Creation
+
+Users may be created through multiple flows:
+
+Admin-created user:
+Admin creates: Diviner, Affiliate, Admin, Staff, Customer (if needed operationally)
+
+Diviner-created affiliate:
+Diviner can create Affiliate under their own account.
+
+Admin-created affiliate on behalf of Diviner:
+Admin creates Affiliate, but must map that Affiliate to a selected Diviner.
+
+Self-registration:
+Used for customers/end users, and optionally for Diviners or Affiliates if business allows controlled onboarding.
+
+Required capabilities:
+* invite via email
+* resend invitation
+* invitation expiry
+* accept invitation flow
+* pending invitation list
+* cancellation of invite
+* duplicate email prevention
+* optional approval workflow before activation
+
+4.3 User Profile Management
+
+Each user should have a profile with:
+
+Common fields:
+* first name, last name, display name
+* email, phone number
+* profile image
+* timezone, language
+* country, state/region
+* address fields if needed
+* date of birth if applicable
+* notes
+* status, role
+* created_at, updated_at, last_login_at
+
+Business fields by role:
+
+Diviner:
+* public bio, internal bio
+* expertise/specialization
+* service categories
+* slug / profile URL
+* brand name or practice name
+* payout preference summary
+* verification/KYC status if needed
+* active affiliate count
+* referral ownership rules
+
+Affiliate:
+* parent Diviner
+* referral code
+* affiliate status
+* commission type, commission value snapshot
+* payout notes
+* tax/compliance/KYC verification status if needed
+* marketing approval status
+* unique referral links
+
+Customer:
+* customer ID
+* account source
+* assigned Diviner if applicable
+* consultation history summary reference
+* course access status reference
+* communication preferences
+
+4.4 Role-Based Access Control (RBAC)
+
+Each action in the system must be permission-driven, not just role-name-driven.
+
+Examples of permissions:
+* user.create, user.edit, user.delete, user.invite
+* user.activate, user.suspend
+* role.assign, permission.manage
+* affiliate.create, affiliate.assign, affiliate.view_all, affiliate.view_own
+* audit.view, impersonation.use
+* session.revoke, content.manage
+* commission.view, payout.mark_paid
+
+Gold-standard requirement:
+Support: roles, permissions, scoped permissions, feature flags by role, row-level ownership logic
+
+Example access model:
+* Admin: full system scope
+* Diviner: own scope only
+* Affiliate: self-scope only
+* Customer: self-scope only
+
+4.5 User Hierarchy & Ownership Mapping
+
+The system must support:
+* one Diviner having many Affiliates
+* one Affiliate belonging to one active Diviner at a time
+* Admin creating Affiliate on behalf of Diviner
+* reassigning Affiliate to another Diviner only through controlled admin workflow
+* full history of reassignment
+* ownership effective dates if needed
+* visibility filtering based on hierarchy
+
+Business rule examples:
+* Affiliate must always have one parent Diviner unless marked "unassigned"
+* Diviner can only view Affiliates mapped to them
+* Admin can view all Diviners and all Affiliates
+* Affiliate cannot see sibling Affiliates
+* commissions must reference the current ownership structure at time of sale
+
+4.6 User Status Lifecycle
+
+Statuses:
+* Draft, Invited, Pending Verification, Pending Approval
+* Active, Suspended, Locked, Deactivated, Archived
+
+Rules:
+* only Active users can log in
+* Suspended users cannot access the platform
+* Locked users require reset or unlock action
+* Archived users are hidden from standard views
+* status change must always be logged with actor, timestamp, and reason
+
+4.7 User Listing & Search
+
+Must support:
+* global search, quick filters, advanced filters
+* sort, pagination, bulk selection
+* export, saved filters
+* role-based data visibility
+
+Filters: role, status, parent Diviner, affiliate status, invitation status, created date range, last login date range, verification state, country/region, has MFA, locked/unlocked
+
+Sorting: name, created date, updated date, last login, role, status
+
+4.8 User Detail Screen
+
+Tabs recommended:
+1. Overview
+2. Profile
+3. Access & Role
+4. Hierarchy / Relationships
+5. Sessions & Security
+6. Activity Timeline
+7. Notes
+8. Referrals / Business Context
+9. Audit Log
+
+Actions from detail page:
+* edit profile, reset password, resend invite
+* activate/deactivate, suspend/unsuspend, unlock account
+* reset MFA, change role, assign/reassign Diviner
+* view linked records, add internal note
+
+4.9 Permissions Management
+
+Features:
+* create role, edit role, clone role, deactivate role
+* assign permissions to role
+* view which users use a role
+* restrict deletion of system roles
+* permission dependency validation
+
+Gold-standard behavior:
+* system roles protected from unsafe deletion
+* audit log for every permission change
+* preview "who will be affected"
+* optional environment protection for production role edits
+
+4.10 Session & Security Management
+
+The system must provide:
+* login history, recent device list
+* IP/device fingerprint metadata
+* suspicious login alerts
+* revoke one session / revoke all sessions
+* MFA reset, failed login counters
+* lock/unlock workflows
+
+Admin controls:
+* force logout, force password reset
+* disable account, inspect security events
+
+4.11 Audit Logging
+
+Must log:
+* user creation, invite sent/resend/cancelled
+* role change, permission change, status change
+* password reset initiated/completed
+* MFA enabled/disabled/reset
+* hierarchy mapping change, affiliate reassignment
+* login success/failure
+* impersonation start/end
+* profile critical field updates
+
+Audit log fields:
+event ID, event type, actor user, target user, old value, new value, timestamp, IP/device, reason/comment, source module
+
+4.12 Internal Notes & Tags
+
+Should support:
+* private notes, role-restricted visibility
+* manual tags, status labels, operational flags
+
+Examples: VIP, Needs Verification, High Priority, Fraud Review, Payment Follow-up
+
+4.13 Communication Preferences
+
+Users should be able to manage:
+* email notifications, SMS notifications
+* marketing messages, product updates
+* security alerts, affiliate performance alerts
+* payout reminders, blog/newsletter subscription preferences
+
+4.14 Impersonation / Login as User
+
+If enabled:
+* only Admin/Super Admin can use it
+* explicit permission required
+* reason required
+* full audit log mandatory
+* banner shown while impersonating
+* sensitive actions may be blocked even during impersonation
+
+---
+
+5. UI / UX Requirements
+
+5.1 User List Screen
+
+Must show: name, email, role, status, parent Diviner (where applicable), invite status, last login, created date, quick actions
+
+Quick actions: view, edit, activate/suspend, resend invite, reset password, reassign, delete/archive
+
+5.2 Create / Invite User Form
+
+Dynamic form based on selected role.
+
+Core sections: basic identity, contact info, role selection, status, login/access options, parent mapping, business settings, notification preferences
+
+Dynamic examples:
+If role = Affiliate, show: parent Diviner, referral code, affiliate status, commission setup visibility, marketing approval state
+If role = Diviner, show: expertise, profile slug, visibility/public profile options, affiliate capability toggle
+
+5.3 Role & Permission Screen
+
+Should include: role list, permission matrix, clone role action, compare roles, show number of assigned users, warnings for dangerous changes
+
+5.4 User Detail Screen
+
+Design expectations:
+* clean left summary card
+* right-side tabbed interface
+* quick actions fixed in header
+* clear badges for role/status/verification
+* relationship card for Diviner/Affiliate mapping
+* activity timeline visible without heavy effort
+
+---
+
+6. Validation Rules
+
+General:
+* email must be unique
+* phone validation by country if enforced
+* required fields depend on role
+* invitation cannot be sent without email
+* parent Diviner required for Affiliate unless explicitly marked unassigned
+* inactive parent should not accept new Affiliates
+* role change must validate downstream business rules
+
+Examples:
+* cannot assign Affiliate role without referral ownership metadata
+* cannot deactivate last Super Admin
+* cannot delete role if active users still assigned
+* cannot archive user with unresolved compliance/financial dependencies
+* cannot duplicate referral code
+* cannot map one Affiliate to multiple active Diviners simultaneously
+
+---
+
+7. Business Rules
+
+1. Admin can create Affiliates on behalf of Diviners.
+2. Diviner can create/manage only their own Affiliates.
+3. Affiliate commission may be configured by Diviner or Admin depending on permission.
+4. Affiliate ownership must be clearly traceable in history.
+5. Any status change affecting login must be immediate.
+6. Sensitive security actions must require confirmation.
+7. Permission edits must never silently affect production users without logging.
+8. Soft delete/archive preferred over hard delete.
+9. Core user identity should remain stable even if role changes over time.
+10. System must support future expansion to multi-tenant or multi-brand logic if needed.
+
+---
+
+8. Suggested Data Model
+
+Core entities:
+
+users: id, first_name, last_name, display_name, email, phone, password_hash, role_id, status, email_verified_at, phone_verified_at, last_login_at, created_at, updated_at, archived_at
+
+roles: id, name, code, is_system, status, created_at, updated_at
+
+permissions: id, code, name, module, description
+
+role_permissions: id, role_id, permission_id
+
+user_profiles: id, user_id, avatar_url, timezone, language, address data, bio/public fields, metadata json
+
+user_relationships: id, parent_user_id, child_user_id, relationship_type, active_from, active_to, status
+
+user_security_events: id, user_id, event_type, ip_address, device_info, created_at
+
+user_sessions: id, user_id, session_token_ref, device_info, ip_address, last_seen_at, revoked_at
+
+user_audit_logs: id, actor_user_id, target_user_id, action, old_value_json, new_value_json, reason, created_at
+
+invitations: id, email, role_id, invited_by, token_hash, expires_at, accepted_at, status
+
+affiliate_metadata: id, user_id, parent_diviner_user_id, referral_code, commission_type, commission_value, payout_status_summary, approval_status
+
+---
+
+9. API / Backend Requirements
+
+Authentication:
+POST /api/auth/login
+POST /api/auth/logout
+POST /api/auth/forgot-password
+POST /api/auth/reset-password
+POST /api/auth/verify-email
+POST /api/auth/resend-verification
+POST /api/auth/mfa/enable
+POST /api/auth/mfa/disable
+POST /api/auth/mfa/verify
+
+User Management:
+GET /api/users
+POST /api/users
+GET /api/users/:id
+PATCH /api/users/:id
+PATCH /api/users/:id/status
+POST /api/users/:id/resend-invite
+POST /api/users/:id/reset-password
+POST /api/users/:id/unlock
+POST /api/users/:id/revoke-sessions
+POST /api/users/:id/assign-role
+POST /api/users/:id/reassign-parent
+
+Role Management:
+GET /api/roles
+POST /api/roles
+GET /api/roles/:id
+PATCH /api/roles/:id
+POST /api/roles/:id/clone
+GET /api/permissions
+PUT /api/roles/:id/permissions
+
+Audit & Sessions:
+GET /api/users/:id/audit
+GET /api/users/:id/sessions
+DELETE /api/users/:id/sessions/:sessionId
+
+Invitations:
+POST /api/invitations
+GET /api/invitations
+POST /api/invitations/:id/resend
+POST /api/invitations/:token/accept
+
+---
+
+10. Security Requirements
+
+Must include:
+* password hashing with strong algorithm
+* secure session/token handling
+* CSRF protection where applicable
+* rate limiting on login and reset endpoints
+* brute-force protection
+* role and permission checks server-side
+* no trust in client role state
+* audit logs for privileged actions
+* secure secrets handling
+* PII protection in logs
+* soft delete over hard delete for traceability
+* secure headers and cookie strategy
+* least privilege policy
+
+Gold-standard note: All permissions must be enforced on the backend, not only hidden in UI.
+
+---
+
+11. Performance Requirements
+
+The module should support:
+* fast search on large user volumes
+* indexed filtering and sorting
+* paginated listing
+* background email sending for invites/resets
+* lazy loading of heavy tabs like audit logs
+* caching of permission maps where safe
+* query optimization for hierarchy-based views
+
+---
+
+12. Reporting Requirements
+
+Useful operational reports:
+* total users by role
+* active vs inactive users
+* new users over time
+* invited but not accepted
+* locked/suspended users
+* Diviner-wise affiliate count
+* top affiliates by referrals/sales
+* login activity trends
+* MFA adoption rate
+* inactive users with no login in X days
+
+---
+
+13. Notifications & Event Triggers
+
+The system should trigger notifications for:
+* invite sent, invite accepted
+* email verification pending
+* password reset
+* account activated, account suspended
+* role changed
+* affiliate assigned/reassigned
+* suspicious login detected
+* MFA enabled/disabled
+
+---
+
+14. Acceptance Criteria
+
+The module will be considered release-ready when:
+1. Admin can create, invite, edit, activate, suspend, and archive users.
+2. Diviner can create and manage only their allowed Affiliate accounts.
+3. Affiliate visibility is restricted to self-owned scope.
+4. User list supports search, filter, sort, and pagination.
+5. Status transitions are controlled and audited.
+6. Roles and permissions are configurable and enforced server-side.
+7. All critical changes generate audit logs.
+8. Security flows for login, reset, verification, and session revocation work correctly.
+9. Hierarchy mapping between Diviner and Affiliate is maintained with history.
+10. Module is reusable by other platform modules through shared user identity and permission services.
+
+---
+
+15. Gold-Standard Enhancements
+
+* impersonation with audit
+* bulk invite / bulk status change
+* CSV import for users
+* saved filters in user list
+* timeline of all account actions
+* profile completion score
+* fraud/risk flags
+* KYC document status hooks
+* permission diff viewer before saving
+* "last changed by" on critical fields
+* reusable policy engine for future modules
+* webhook/event emission when user state changes
+* row-level access abstraction for all modules
+
+---
+
+16. Architect Recommendation
+
+The User Management module should be treated as a platform foundation module, not a simple admin screen.
+
+Recommended internal separation - build it in layers:
+
+1. Identity Layer: login, password, session, verification, MFA
+2. Access Control Layer: roles, permissions, policy enforcement
+3. Profile Layer: user details, metadata, preferences
+4. Hierarchy Layer: Diviner <-> Affiliate mapping, ownership, assignment history
+5. Operational Layer: user lists, admin tools, notes, bulk actions, reporting
+6. Audit & Security Layer: logs, session control, security events
+
+That approach will keep the module scalable and clean long term.

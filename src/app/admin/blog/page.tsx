@@ -1,306 +1,336 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Pencil, FileText, Eye } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Plus, FileText, Pencil, Copy, Archive, Search } from "lucide-react";
 
-const CATEGORIES = ["Business", "Astrology", "Tarot", "Spirituality", "General"];
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type BlogStatus = "draft" | "in_review" | "approved" | "scheduled" | "published" | "unpublished" | "archived";
+
+type PostAuthor = { id: string; name: string; avatar_url: string | null } | null;
+
+type PostCategory = {
+  category_id: string;
+  blog_categories: { id: string; name: string; slug: string };
+};
+
+type PostTag = {
+  tag_id: string;
+  blog_tags: { id: string; name: string; slug: string };
+};
 
 type Post = {
   id: string;
   title: string;
   slug: string;
-  category: string;
+  status: BlogStatus;
   excerpt: string | null;
-  image_url: string | null;
-  is_published: boolean;
+  featured: boolean;
+  hero: boolean;
+  reading_time_minutes: number | null;
   published_at: string | null;
-  created_at: string;
+  scheduled_at: string | null;
+  updated_at: string;
+  author: PostAuthor;
+  blog_post_categories: PostCategory[];
+  blog_post_tags: PostTag[];
 };
 
-type FormState = {
-  title: string;
-  slug: string;
-  category: string;
-  excerpt: string;
-  content: string;
-  image_url: string;
-  is_published: boolean;
+// ─── Status helpers ───────────────────────────────────────────────────────────
+
+const STATUS_TABS: { value: BlogStatus | "all"; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "draft", label: "Draft" },
+  { value: "in_review", label: "In Review" },
+  { value: "approved", label: "Approved" },
+  { value: "scheduled", label: "Scheduled" },
+  { value: "published", label: "Published" },
+  { value: "unpublished", label: "Unpublished" },
+  { value: "archived", label: "Archived" },
+];
+
+const STATUS_CLASSES: Record<BlogStatus, string> = {
+  draft:       "bg-gray-100 text-gray-700",
+  in_review:   "bg-yellow-100 text-yellow-700",
+  approved:    "bg-blue-100 text-blue-700",
+  scheduled:   "bg-purple-100 text-purple-700",
+  published:   "bg-green-100 text-green-700",
+  unpublished: "bg-orange-100 text-orange-700",
+  archived:    "bg-red-100 text-red-700",
 };
 
-const EMPTY_FORM: FormState = {
-  title: "", slug: "", category: "General", excerpt: "", content: "", image_url: "", is_published: false,
+const STATUS_LABELS: Record<BlogStatus, string> = {
+  draft:       "Draft",
+  in_review:   "In Review",
+  approved:    "Approved",
+  scheduled:   "Scheduled",
+  published:   "Published",
+  unpublished: "Unpublished",
+  archived:    "Archived",
 };
 
-function toSlug(title: string) {
-  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+function StatusBadge({ status }: { status: BlogStatus }) {
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[status]}`}>
+      {STATUS_LABELS[status]}
+    </span>
+  );
 }
+
+function fmt(d: string | null) {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminBlogPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState<FormState>({ ...EMPTY_FORM });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [previewPost, setPreviewPost] = useState<Post | null>(null);
+  const [activeStatus, setActiveStatus] = useState<BlogStatus | "all">("all");
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [duplicating, setDuplicating] = useState<string | null>(null);
+  const [archiving, setArchiving] = useState<string | null>(null);
 
-  // Filters
-  const [createdFrom, setCreatedFrom] = useState("");
-  const [createdTo, setCreatedTo] = useState("");
-
-  const fmt = (d: string | null) =>
-    d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
-
-  async function load(overrides?: { createdFrom?: string; createdTo?: string }) {
+  const load = useCallback(async (status: BlogStatus | "all", q: string) => {
     setLoading(true);
-    const cf = overrides?.createdFrom ?? createdFrom;
-    const ct = overrides?.createdTo ?? createdTo;
     const params = new URLSearchParams();
-    if (cf) params.set("created_from", cf);
-    if (ct) params.set("created_to", ct);
+    if (status !== "all") params.set("status", status);
+    if (q) params.set("search", q);
+    params.set("limit", "100");
     const res = await fetch(`/api/admin/blog?${params}`);
-    if (res.ok) setPosts(await res.json());
+    if (res.ok) {
+      const json = await res.json();
+      setPosts(json.posts ?? []);
+    }
     setLoading(false);
-  }
+  }, []);
 
-  function resetFilters() {
-    setCreatedFrom(""); setCreatedTo("");
-  }
+  useEffect(() => {
+    load(activeStatus, search);
+  }, [activeStatus, search, load]);
 
-  useEffect(() => { load(); }, []);
-
-  function F(field: keyof FormState) {
-    return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-      setForm((f) => ({ ...f, [field]: e.target.value }));
-  }
-
-  function handleTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const title = e.target.value;
-    setForm((f) => ({ ...f, title, slug: editId ? f.slug : toSlug(title) }));
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
-    setError(null);
-    const url = editId ? `/api/admin/blog/${editId}` : "/api/admin/blog";
-    const res = await fetch(url, {
-      method: editId ? "PATCH" : "POST",
+    setSearch(searchInput);
+  }
+
+  async function handleDuplicate(post: Post) {
+    setDuplicating(post.id);
+    const res = await fetch("/api/admin/blog", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...form,
-        excerpt: form.excerpt || null,
-        content: form.content || null,
-        image_url: form.image_url || null,
+        title: `${post.title} (Copy)`,
+        excerpt: post.excerpt,
+        status: "draft",
+        author_id: post.author?.id ?? null,
       }),
     });
-    if (!res.ok) {
-      const d = await res.json();
-      setError(d.error ?? "Failed");
-    } else {
-      await load();
-      setShowForm(false);
-      setEditId(null);
-      setForm({ ...EMPTY_FORM });
+    if (res.ok) {
+      await load(activeStatus, search);
     }
-    setSaving(false);
+    setDuplicating(null);
   }
 
-  async function openEdit(id: string) {
-    const res = await fetch(`/api/admin/blog/${id}`);
-    if (!res.ok) return;
-    const post = await res.json();
-    setEditId(id);
-    setForm({
-      title: post.title,
-      slug: post.slug,
-      category: post.category,
-      excerpt: post.excerpt ?? "",
-      content: post.content ?? "",
-      image_url: post.image_url ?? "",
-      is_published: post.is_published,
-    });
-    setShowForm(true);
+  async function handleArchive(post: Post) {
+    if (!confirm(`Archive "${post.title}"? It will be removed from the public site.`)) return;
+    setArchiving(post.id);
+    await fetch(`/api/admin/blog/${post.id}`, { method: "DELETE" });
+    setPosts((prev) => prev.filter((p) => p.id !== post.id));
+    setArchiving(null);
   }
 
-  async function togglePublish(post: Post) {
-    await fetch(`/api/admin/blog/${post.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_published: !post.is_published }),
-    });
-    setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, is_published: !p.is_published } : p));
-  }
-
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this post?")) return;
-    await fetch(`/api/admin/blog/${id}`, { method: "DELETE" });
-    setPosts((prev) => prev.filter((p) => p.id !== id));
-  }
-
-  const published = posts.filter((p) => p.is_published).length;
+  const counts = posts.length;
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Blog Posts</h1>
-          <p className="text-muted-foreground">{posts.length} total · {published} published</p>
+          <h1 className="text-2xl font-bold tracking-tight">Blog Posts</h1>
+          <p className="text-muted-foreground">{counts} post{counts !== 1 ? "s" : ""} shown</p>
         </div>
-        <Button size="sm" onClick={() => { setEditId(null); setForm({ ...EMPTY_FORM }); setShowForm(true); }}>
-          <Plus className="mr-1.5 size-4" /> New Post
+        <Button asChild size="sm">
+          <Link href="/admin/blog/new">
+            <Plus className="mr-1.5 size-4" />
+            New Post
+          </Link>
         </Button>
       </div>
 
-      {/* Filters */}
+      {/* Status tabs */}
+      <div className="flex flex-wrap gap-1 border-b pb-0">
+        {STATUS_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => setActiveStatus(tab.value)}
+            className={`px-3 py-1.5 text-sm font-medium rounded-t-md transition-colors ${
+              activeStatus === tab.value
+                ? "border-b-2 border-amber-500 text-amber-600"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Search */}
+      <form onSubmit={handleSearch} className="flex gap-2 max-w-sm">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+          <Input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search by title…"
+            className="pl-8"
+          />
+        </div>
+        <Button type="submit" size="sm" variant="outline">Search</Button>
+        {search && (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => { setSearch(""); setSearchInput(""); }}
+          >
+            Clear
+          </Button>
+        )}
+      </form>
+
+      {/* Table */}
       <Card>
-        <CardContent className="pt-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1">
-              <Label className="text-xs">Created from</Label>
-              <Input type="date" value={createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} />
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <FileText className="size-4" />
+            Posts
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
+          ) : posts.length === 0 ? (
+            <div className="flex flex-col items-center gap-4 py-16 text-center">
+              <FileText className="size-10 text-muted-foreground/30" />
+              <p className="text-muted-foreground">No posts found.</p>
+              <Button asChild size="sm">
+                <Link href="/admin/blog/new">
+                  <Plus className="mr-1.5 size-4" /> Create your first post
+                </Link>
+              </Button>
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Created to</Label>
-              <Input type="date" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} />
-            </div>
-          </div>
-          <div className="mt-3 flex gap-2">
-            <Button size="sm" onClick={() => load()}>Search</Button>
-            <Button size="sm" variant="outline" onClick={() => { resetFilters(); load({ createdFrom: "", createdTo: "" }); }}>Reset</Button>
-          </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Author</TableHead>
+                  <TableHead>Categories</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Read time</TableHead>
+                  <TableHead>Published</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {posts.map((post) => (
+                  <TableRow key={post.id}>
+                    <TableCell className="max-w-[240px]">
+                      <div>
+                        <p className="font-medium truncate">{post.title}</p>
+                        <p className="text-xs text-muted-foreground font-mono truncate">/blog/{post.slug}</p>
+                        <div className="flex gap-1 mt-0.5">
+                          {post.featured && (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0">Featured</Badge>
+                          )}
+                          {post.hero && (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0">Hero</Badge>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {post.author?.name ?? "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {post.blog_post_categories.map((pc) => (
+                          <Badge key={pc.category_id} variant="secondary" className="text-xs">
+                            {pc.blog_categories.name}
+                          </Badge>
+                        ))}
+                        {post.blog_post_categories.length === 0 && (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={post.status} />
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {post.reading_time_minutes ? `${post.reading_time_minutes} min` : "—"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {post.status === "scheduled" && post.scheduled_at
+                        ? `Scheduled ${fmt(post.scheduled_at)}`
+                        : fmt(post.published_at)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button size="sm" variant="ghost" asChild>
+                          <Link href={`/admin/blog/${post.id}`}>
+                            <Pencil className="size-3.5" />
+                            <span className="sr-only">Edit</span>
+                          </Link>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDuplicate(post)}
+                          disabled={duplicating === post.id}
+                          title="Duplicate as draft"
+                        >
+                          <Copy className="size-3.5" />
+                          <span className="sr-only">Duplicate</span>
+                        </Button>
+                        {post.status !== "archived" && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleArchive(post)}
+                            disabled={archiving === post.id}
+                            className="text-red-500 hover:bg-red-50 hover:text-red-600"
+                            title="Archive"
+                          >
+                            <Archive className="size-3.5" />
+                            <span className="sr-only">Archive</span>
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
-
-      {/* Preview modal */}
-      {previewPost && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setPreviewPost(null)}>
-          <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <CardHeader><CardTitle>Post Preview</CardTitle></CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div><span className="font-medium">Title:</span> {previewPost.title}</div>
-              <div><span className="font-medium">Category:</span> <Badge variant="secondary" className="text-xs">{previewPost.category}</Badge></div>
-              {previewPost.excerpt && <div><span className="font-medium">Excerpt:</span> {previewPost.excerpt}</div>}
-              <div><span className="font-medium">Status:</span> {previewPost.is_published ? <Badge variant="default" className="text-xs">Published</Badge> : <Badge variant="outline" className="text-xs">Draft</Badge>}</div>
-              {previewPost.published_at && <div><span className="font-medium">Published at:</span> {fmt(previewPost.published_at)}</div>}
-              <div><span className="font-medium">Created:</span> {fmt(previewPost.created_at)}</div>
-              <Button size="sm" className="mt-2" onClick={() => setPreviewPost(null)}>Close</Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{editId ? "Edit Post" : "New Blog Post"}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label>Title *</Label>
-                  <Input value={form.title} onChange={handleTitleChange} required />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Slug *</Label>
-                  <Input value={form.slug} onChange={F("slug")} required placeholder="my-post-slug" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Category</Label>
-                  <select
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                    value={form.category}
-                    onChange={F("category")}
-                  >
-                    {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label>Excerpt</Label>
-                  <Textarea value={form.excerpt} onChange={F("excerpt")} rows={2} placeholder="Short description shown on blog listing…" />
-                </div>
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label>Content (HTML)</Label>
-                  <Textarea value={form.content} onChange={F("content")} rows={10} placeholder="<p>Your article content here…</p>" className="font-mono text-xs" />
-                </div>
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label>Image URL</Label>
-                  <Input value={form.image_url} onChange={F("image_url")} placeholder="https://…" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={form.is_published}
-                    onChange={(e) => setForm((f) => ({ ...f, is_published: e.target.checked }))}
-                    className="size-4"
-                  />
-                  <Label>Publish immediately</Label>
-                </div>
-              </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
-              <div className="flex gap-2">
-                <Button type="submit" size="sm" disabled={saving}>{saving ? "Saving…" : editId ? "Update" : "Create"}</Button>
-                <Button type="button" variant="ghost" size="sm" onClick={() => { setShowForm(false); setEditId(null); }}>Cancel</Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : posts.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <FileText className="mx-auto mb-3 size-10 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">No blog posts yet.</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {posts.map((post) => (
-            <Card key={post.id}>
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between gap-4 flex-wrap">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium">{post.title}</span>
-                      <Badge variant="secondary" className="text-xs">{post.category}</Badge>
-                      {post.is_published
-                        ? <Badge variant="default" className="text-xs">Published</Badge>
-                        : <Badge variant="outline" className="text-xs">Draft</Badge>}
-                    </div>
-                    <p className="text-xs text-muted-foreground font-mono">/blog/{post.slug}</p>
-                    {post.excerpt && <p className="text-sm text-muted-foreground">{post.excerpt}</p>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => setPreviewPost(post)}>
-                      <Eye className="size-4" />
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => togglePublish(post)}>
-                      {post.is_published ? "Unpublish" : "Publish"}
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => openEdit(post.id)}>
-                      <Pencil className="size-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => handleDelete(post.id)} className="text-destructive hover:text-destructive">
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

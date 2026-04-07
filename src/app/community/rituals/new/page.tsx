@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Card,
@@ -12,28 +12,78 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Flame, AlertCircle, Loader2, ChevronRight, X, CheckCircle2 } from "lucide-react";
+import {
+  Flame,
+  AlertCircle,
+  Loader2,
+  X,
+  CheckCircle2,
+  Shield,
+  Sparkles,
+  Globe,
+  Star,
+  ChevronRight,
+} from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
 // ─────────────────────────────────────────────
-// Preset options matching Angular implementation
+// Preset options — canonical tag sets per spec
 // ─────────────────────────────────────────────
 const PRESET_OPTIONS = [
   {
     name: "Standard Banishing Ritual of the Pentagram",
-    tags: ["Banishing_Ritual"],
+    shortName: "Banishing",
+    description: "Cleanse and purify your sacred space with the foundational pentagram banishing rite.",
+    icon: Shield,
+    iconColor: "text-blue-400",
+    iconBg: "from-blue-900/40 to-blue-800/20",
+    borderColor: "hover:border-blue-500/40 group-hover:ring-blue-500/20",
+    tags: [
+      "Ritual_Opening",
+      "Pentagram_Gate_Banishing_Ritual",
+      "Pentagram_Banishing_Ritual",
+      "Ritual_Closing",
+    ],
   },
   {
     name: "Standard Invocation Ritual of the Pentagram",
-    tags: ["Invocation_Ritual"],
+    shortName: "Invocation",
+    description: "Invoke higher energies and open the gates with the classic pentagram invocation.",
+    icon: Sparkles,
+    iconColor: "text-violet-400",
+    iconBg: "from-violet-900/40 to-purple-800/20",
+    borderColor: "hover:border-violet-500/40 group-hover:ring-violet-500/20",
+    tags: [
+      "Ritual_Opening",
+      "Pentagram_Gate_Invocation_Ritual",
+      "Pentagram_Invocation_Ritual",
+      "Ritual_Closing",
+    ],
   },
   {
     name: "Divine Infinite Being Invocation Ritual of the Pentagram",
-    tags: ["Core_Invocation_Ritual"],
+    shortName: "Divine Infinite Being",
+    description: "Connect with the Divine Infinite Being through this sacred invocation ceremony.",
+    icon: Globe,
+    iconColor: "text-amber-400",
+    iconBg: "from-amber-900/40 to-orange-800/20",
+    borderColor: "hover:border-amber-500/40 group-hover:ring-amber-500/20",
+    tags: [
+      "Ritual_Opening",
+      "DIB_Gate_Invocation_Ritual",
+      "DIB_Invocation_Ritual",
+      "Ritual_Closing",
+    ],
   },
   {
     name: "Planetary Zodiacal Invocation Ritual of the Pentagram",
+    shortName: "Planetary Zodiacal",
+    description: "Advanced configurator — choose specific planets and zodiac signs for your ritual.",
+    icon: Star,
+    iconColor: "text-cyan-400",
+    iconBg: "from-cyan-900/40 to-sky-800/20",
+    borderColor: "hover:border-cyan-500/40 group-hover:ring-cyan-500/20",
     tags: null, // custom — opens configurator
   },
 ] as const;
@@ -67,9 +117,10 @@ function buildCustomTags(
       tags.add(`${z}_Invocation_Ritual`);
     }
   } else {
-    // banishing — zodiac disabled per Angular
+    // banishing — zodiac disabled per spec
     for (const p of planets) {
       tags.add(`${p}_Gate_Banishing_Ritual`);
+      tags.add(`${p}_Banishing_Ritual`);
     }
   }
 
@@ -87,8 +138,13 @@ type StepPreview = {
 
 export default function CreateRitualPage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("choose");
+  const searchParams = useSearchParams();
+  // If ?type=planetary in URL, open configurator directly
+  const [step, setStep] = useState<Step>(
+    searchParams.get("type") === "planetary" ? "custom" : "choose"
+  );
   const [saving, setSaving] = useState(false);
+  const [savingPreset, setSavingPreset] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Custom configurator state
@@ -142,7 +198,7 @@ export default function CreateRitualPage() {
   }, [step, mode, selectedPlanets, selectedZodiacs]);
 
   async function submitPreset(name: string, tags: string[]) {
-    setSaving(true);
+    setSavingPreset(name);
     setError(null);
     const res = await fetch("/api/community/rituals", {
       method: "POST",
@@ -152,7 +208,7 @@ export default function CreateRitualPage() {
     if (!res.ok) {
       const body = await res.json();
       setError(body.error ?? "Failed to create ritual");
-      setSaving(false);
+      setSavingPreset(null);
       return;
     }
     const { ritual } = await res.json();
@@ -191,24 +247,29 @@ export default function CreateRitualPage() {
     router.push(`/community/rituals/${ritual.id}`);
   }
 
-  // ── Step: Choose preset or custom ──────────────────────────────────────────
+  // ── Step: Choose preset — 2x2 grid with icons ─────────────────────────────
   if (step === "choose") {
     return (
-      <div className="space-y-6 max-w-2xl">
+      <div className="space-y-8 max-w-2xl">
+        {/* Header */}
         <div>
           <Link
             href="/community/rituals"
-            className="text-sm text-muted-foreground hover:text-foreground"
+            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             ← My Rituals
           </Link>
-          <div className="flex items-center gap-2 mt-2">
-            <Flame className="size-5 text-muted-foreground" />
-            <h1 className="text-2xl font-bold tracking-tight">Create a Ritual</h1>
+          <div className="flex items-center gap-3 mt-3">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/30 to-orange-500/20 ring-1 ring-amber-500/20">
+              <Flame className="size-5 text-amber-400" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Create a Ritual</h1>
+              <p className="text-sm text-muted-foreground">
+                Choose a preset or configure a custom planetary invocation.
+              </p>
+            </div>
           </div>
-          <p className="text-muted-foreground mt-1">
-            Choose a preset ritual or configure a custom planetary invocation.
-          </p>
         </div>
 
         {error && (
@@ -218,46 +279,80 @@ export default function CreateRitualPage() {
           </div>
         )}
 
-        <div className="space-y-3">
-          {PRESET_OPTIONS.map((option) => (
-            <Card
-              key={option.name}
-              className="cursor-pointer transition-colors hover:border-primary/40"
-              onClick={() => {
-                if (!saving) {
+        {/* 2x2 preset grid */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {PRESET_OPTIONS.map((option) => {
+            const Icon = option.icon;
+            const isLoading = savingPreset === option.name;
+
+            return (
+              <button
+                key={option.name}
+                type="button"
+                disabled={savingPreset !== null}
+                onClick={() => {
+                  if (savingPreset !== null) return;
                   if (option.tags === null) {
+                    router.push("/community/rituals/new?type=planetary");
                     setStep("custom");
                   } else {
                     submitPreset(option.name, [...option.tags]);
                   }
-                }
-              }}
-            >
-              <CardContent className="flex items-center justify-between gap-4 py-4">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-sm">{option.name}</p>
-                  {option.tags ? (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {option.tags.map((t) => (
-                        <Badge key={t} variant="secondary" className="text-[10px] px-1.5 py-0.5">
-                          {t.replace(/_/g, " ")}
-                        </Badge>
-                      ))}
+                }}
+                className={`group relative overflow-hidden rounded-2xl border border-border/60 bg-card/70 p-5 text-left transition-all hover:border-amber-500/30 hover:shadow-lg hover:shadow-amber-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 ${option.borderColor}`}
+              >
+                {/* Hover glow */}
+                <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-[radial-gradient(ellipse_at_top_left,rgba(245,158,11,0.06),transparent_60%)]" />
+
+                <div className="relative space-y-3">
+                  {/* Icon + tag count badge row */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div
+                      className={`flex size-11 items-center justify-center rounded-xl bg-gradient-to-br ${option.iconBg} ring-1 ring-white/5 shadow-inner`}
+                    >
+                      <Icon className={`size-5 ${option.iconColor}`} />
                     </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Configure planets and zodiac signs
+                    {/* Tag count badge */}
+                    {option.tags ? (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1.5 py-0.5 shrink-0 text-muted-foreground border-border/40"
+                      >
+                        {option.tags.length} tags
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1.5 py-0.5 shrink-0 text-cyan-400 border-cyan-500/30 bg-cyan-950/20"
+                      >
+                        Custom
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Name */}
+                  <div>
+                    <p className="font-semibold text-sm leading-snug">{option.name}</p>
+                    <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                      {option.description}
                     </p>
-                  )}
+                  </div>
+
+                  {/* Action row */}
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-xs text-muted-foreground/60">
+                      {option.tags ? "Click to start" : "Configure first"}
+                    </span>
+                    {isLoading ? (
+                      <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="size-4 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5" />
+                    )}
+                  </div>
                 </div>
-                {saving && option.tags !== null ? (
-                  <Loader2 className="size-4 animate-spin shrink-0 text-muted-foreground" />
-                ) : (
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                )}
-              </CardContent>
-            </Card>
-          ))}
+              </button>
+            );
+          })}
         </div>
       </div>
     );
@@ -269,21 +364,31 @@ export default function CreateRitualPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
+      {/* Header */}
       <div>
         <button
           type="button"
-          className="text-sm text-muted-foreground hover:text-foreground"
-          onClick={() => { setStep("choose"); setError(null); setStepPreview(null); }}
+          className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+          onClick={() => {
+            router.push("/community/rituals/new");
+            setStep("choose");
+            setError(null);
+            setStepPreview(null);
+          }}
         >
           ← Back to Ritual Options
         </button>
-        <div className="flex items-center gap-2 mt-2">
-          <Flame className="size-5 text-muted-foreground" />
-          <h1 className="text-2xl font-bold tracking-tight">Configure Your Ritual</h1>
+        <div className="flex items-center gap-3 mt-3">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/30 to-sky-500/20 ring-1 ring-cyan-500/20">
+            <Star className="size-5 text-cyan-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Configure Your Ritual</h1>
+            <p className="text-sm text-muted-foreground">
+              Planetary Zodiacal Invocation / Banishing Ritual
+            </p>
+          </div>
         </div>
-        <p className="text-muted-foreground mt-1">
-          Planetary Zodiacal Invocation / Banishing Ritual
-        </p>
       </div>
 
       {error && (
@@ -296,99 +401,140 @@ export default function CreateRitualPage() {
         </div>
       )}
 
-      {/* Mode selector */}
-      <Card>
+      {/* Mode selector — prominent toggle */}
+      <Card className="border-border/60">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Ritual Mode</CardTitle>
-        </CardHeader>
-        <CardContent className="flex gap-3">
-          {(["invocation", "banishing"] as RitualMode[]).map((m) => (
-            <Button
-              key={m}
-              size="sm"
-              variant={mode === m ? "default" : "outline"}
-              onClick={() => {
-                setMode(m);
-                if (m === "banishing") setSelectedZodiacs([]);
-              }}
-            >
-              {m.charAt(0).toUpperCase() + m.slice(1)}
-            </Button>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* Planets */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Planets</CardTitle>
-          <CardDescription>Select one or more planets for your ritual.</CardDescription>
+          <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Ritual Mode
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-y-3 gap-x-4 sm:grid-cols-3">
-            {PLANETS.map((planet) => (
-              <div key={planet} className="flex items-center gap-2">
-                <Checkbox
-                  id={`planet-${planet}`}
-                  checked={selectedPlanets.includes(planet)}
-                  onCheckedChange={() => toggleItem(planet, selectedPlanets, setSelectedPlanets)}
-                />
-                <Label htmlFor={`planet-${planet}`} className="cursor-pointer text-sm">
-                  {planet}
-                </Label>
-              </div>
+          <div className="flex rounded-xl border border-border/60 bg-muted/20 p-1 gap-1">
+            {(["invocation", "banishing"] as RitualMode[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => {
+                  setMode(m);
+                  if (m === "banishing") setSelectedZodiacs([]);
+                }}
+                className={`flex-1 rounded-lg py-2 px-4 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  mode === m
+                    ? m === "invocation"
+                      ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-md"
+                      : "bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {m.charAt(0).toUpperCase() + m.slice(1)}
+              </button>
             ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Zodiac Signs — disabled in banishing mode */}
-      <Card className={mode === "banishing" ? "opacity-40 pointer-events-none" : ""}>
+      {/* Planets — chip style */}
+      <Card className="border-border/60">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            Zodiac Signs
+          <CardTitle className="text-base">Planets</CardTitle>
+          <CardDescription>Select one or more planets for your ritual.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {PLANETS.map((planet) => {
+              const selected = selectedPlanets.includes(planet);
+              return (
+                <button
+                  key={planet}
+                  type="button"
+                  onClick={() => toggleItem(planet, selectedPlanets, setSelectedPlanets)}
+                  aria-pressed={selected}
+                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    selected
+                      ? "border-amber-500/50 bg-amber-500/20 text-amber-300"
+                      : "border-border/60 bg-muted/20 text-muted-foreground hover:border-border hover:text-foreground"
+                  }`}
+                >
+                  <Checkbox
+                    checked={selected}
+                    className="pointer-events-none size-3.5"
+                    tabIndex={-1}
+                    aria-hidden
+                  />
+                  {planet}
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Zodiac Signs — chip style, disabled in banishing mode */}
+      <Card
+        className={`border-border/60 transition-opacity ${
+          mode === "banishing" ? "opacity-40 pointer-events-none" : ""
+        }`}
+      >
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-base">Zodiac Signs</CardTitle>
             {mode === "banishing" && (
-              <Badge variant="secondary" className="text-xs">Disabled in banishing mode</Badge>
+              <Badge variant="secondary" className="text-[10px]">
+                Disabled in banishing mode
+              </Badge>
             )}
-          </CardTitle>
+          </div>
           <CardDescription>
             {mode === "invocation"
               ? "Select zodiac signs to include in your invocation."
-              : "Zodiac selection is disabled for banishing rituals."}
+              : "Zodiac selection is not available for banishing rituals."}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-y-3 gap-x-4 sm:grid-cols-3">
-            {ZODIAC_SIGNS.map((sign) => (
-              <div key={sign} className="flex items-center gap-2">
-                <Checkbox
-                  id={`zodiac-${sign}`}
-                  checked={selectedZodiacs.includes(sign)}
+          <div className="flex flex-wrap gap-2">
+            {ZODIAC_SIGNS.map((sign) => {
+              const selected = selectedZodiacs.includes(sign);
+              return (
+                <button
+                  key={sign}
+                  type="button"
                   disabled={mode === "banishing"}
-                  onCheckedChange={() => toggleItem(sign, selectedZodiacs, setSelectedZodiacs)}
-                />
-                <Label
-                  htmlFor={`zodiac-${sign}`}
-                  className={`text-sm ${mode === "banishing" ? "cursor-default" : "cursor-pointer"}`}
+                  onClick={() => toggleItem(sign, selectedZodiacs, setSelectedZodiacs)}
+                  aria-pressed={selected}
+                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    selected
+                      ? "border-violet-500/50 bg-violet-500/20 text-violet-300"
+                      : "border-border/60 bg-muted/20 text-muted-foreground hover:border-border hover:text-foreground"
+                  }`}
                 >
+                  <Checkbox
+                    checked={selected}
+                    className="pointer-events-none size-3.5"
+                    tabIndex={-1}
+                    aria-hidden
+                  />
                   {sign}
-                </Label>
-              </div>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
 
       {/* Preview of generated tags + step readiness */}
       {hasSelections && (
-        <Card className="border-primary/20 bg-primary/5">
+        <Card className="border-amber-500/20 bg-gradient-to-br from-amber-950/20 to-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">Preview — Ritual Tags</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex flex-wrap gap-1.5">
               {previewTags.map((tag) => (
-                <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0.5">
+                <Badge
+                  key={tag}
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0.5 border-amber-500/20 bg-amber-500/5 text-amber-300/80"
+                >
                   {tag.replace(/_/g, " ")}
                 </Badge>
               ))}
@@ -417,15 +563,25 @@ export default function CreateRitualPage() {
         </Card>
       )}
 
-      <div className="flex gap-3">
-        <Button onClick={submitCustom} disabled={saving}>
+      <div className="flex gap-3 pt-2">
+        <Button
+          onClick={submitCustom}
+          disabled={saving}
+          className="bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:from-amber-500 hover:to-orange-500 shadow-md"
+        >
           {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
+          <Flame className="mr-2 size-4" />
           Begin the Ritual
         </Button>
         <Button
           type="button"
           variant="outline"
-          onClick={() => { setStep("choose"); setError(null); setStepPreview(null); }}
+          onClick={() => {
+            router.push("/community/rituals/new");
+            setStep("choose");
+            setError(null);
+            setStepPreview(null);
+          }}
         >
           Cancel
         </Button>

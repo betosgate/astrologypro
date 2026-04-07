@@ -1,0 +1,769 @@
+# AstrologyPro Platform — Gold Standard Requirement Analysis
+
+## 1. Document Purpose
+
+This document converts the current task board and business notes into a build-ready product requirement for the AstrologyPro platform. It defines the public experience, diviner experience, customer experience, affiliate flow, monetization logic, operational rules, and system-level requirements.
+
+This is not a light feature summary. It is intended to be used by product, design, engineering, QA, and operations teams as the baseline implementation document.
+
+---
+
+## 2. Product Vision
+
+AstrologyPro is a marketplace + branded storefront + live engagement platform for diviners.
+
+Each diviner gets a branded public page at `astrologypro.com/[username]` that acts as:
+
+* their public profile
+* their live-stream hub
+* their product and service storefront
+* a lead capture point
+* an affiliate-driven conversion surface
+* an entry point into a customer back office for purchased readings
+
+The platform also includes:
+
+* a main public marketing website
+* a browse/search directory for diviners
+* a diviner back office
+* an admin back office
+* a customer portal
+* an affiliate system
+* automated marketing based on check-ins and astrology event timing
+* a recurring subscription product for weekly personalized updates
+* a video reading system with optional phone dial-in and usage-based billing
+
+---
+
+## 3. Business Goals
+
+1. Let each diviner run a branded business inside the platform without needing a separate website.
+2. Convert live-stream viewers into leads, customers, subscribers, and returning clients.
+3. Sell both time-based and non-time-based astrology/tarot products.
+4. Build recurring revenue via monthly customer subscriptions and diviner SaaS plans.
+5. Support affiliate-led sales with accurate attribution and payout tracking.
+6. Give admins full operational control over diviners, products, commissions, subscriptions, and content.
+7. Keep the user journey simple: discover diviner → watch live or browse → buy product → submit only required intake data → receive service → return via customer portal.
+
+---
+
+## 4. Core Product Principles
+
+1. **Diviner-first storefront model**
+   The diviner page is the core selling surface, not just a profile page.
+
+2. **Payment before detailed intake**
+   Users must pay before being asked for detailed birth or reading information, except for free check-in flows.
+
+3. **Dynamic data collection**
+   The platform must ask only for information that is required for the selected product.
+
+4. **Strong ownership and attribution**
+   The system must always know which diviner owns the customer journey and which affiliate, if any, drove the sale.
+
+5. **Configurable monetization**
+   Revenue splits, affiliate percentages, diviner subscriptions, and telephony pass-through costs must be configurable by business rules.
+
+6. **Operational clarity**
+   Admins and diviners must be able to see products, leads, purchases, commissions, payouts, subscriptions, reminders, and service fulfillment status clearly.
+
+---
+
+## 5. Assumptions and Governing Rules
+
+The following assumptions are derived from the current notes and should be treated as baseline requirements unless business decides otherwise:
+
+1. Each diviner has a unique public username and route.
+2. The default public profile route is `astrologypro.com/[username]`.
+3. The main public tabs on the diviner page are **Home** and **Bio**.
+4. A secondary content area on the page must support **My Media** and **Testimonials**.
+5. The **Check-In** feature is visible only when the diviner is currently live.
+6. Products are divided into **Time-Based Products** and **Non-Time-Based Products**.
+7. **Nativity/Birth Chart** must be visually emphasized as a key offering.
+8. Customers must pay before entering detailed birth data for a purchased reading.
+9. The weekly personalized update subscription is a recurring paid product, branded to the diviner.
+10. A platform/diviner default revenue split exists, currently referenced as 70/30, but the system should allow configurable rules.
+11. Affiliate commission is deducted from the diviner side unless business rules specify otherwise.
+12. Affiliates may have unique product-specific links.
+13. Diviners are responsible for paying affiliates; the system tracks the amount owed and payout status.
+14. Diviners have a base SaaS plan and optional paid add-ons.
+15. Phone dial-in usage for video readings is billed as pass-through usage to the diviner.
+16. The platform must support both admin-managed and diviner-managed setup for affiliates.
+
+---
+
+## 6. User Roles
+
+### 6.1 Visitor
+Unauthenticated public user browsing the main site or a diviner page.
+
+### 6.2 Customer
+User who can purchase products, submit required intake details, manage subscriptions, and access prior readings or purchased services.
+
+### 6.3 Diviner
+Service provider with a public profile, product catalog, live stream presence, customers, affiliate relationships, content/media, and back-office tools.
+
+### 6.4 Affiliate
+User or partner who can sign up, receive tracked links, refer traffic and sales, and accumulate commissions tied to approved rules.
+
+### 6.5 Admin
+Platform operator with full control over diviners, users, products, subscriptions, revenue rules, compliance text, content moderation, and system configuration.
+
+### 6.6 Support / Finance Operations (optional sub-role)
+Back-office operational users who may need limited admin functions such as viewing orders, updating payout status, or moderating testimonials.
+
+---
+
+## 7. Role and Permission Model
+
+| Capability                     | Visitor | Customer | Diviner | Affiliate | Admin |
+| ------------------------------ | ------: | -------: | ------: | --------: | ----: |
+| View public diviner page       |     Yes |      Yes |     Yes |       Yes |   Yes |
+| Watch live stream              |     Yes |      Yes |     Yes |       Yes |   Yes |
+| Submit live check-in           |     Yes |      Yes |      No |       Yes |   Yes |
+| Buy products                   |     Yes |      Yes |      No |       Yes |   Yes |
+| Access purchased readings      |      No |      Yes |      No |        No |   Yes |
+| Manage public profile          |      No |       No |     Yes |        No |   Yes |
+| Manage products                |      No |       No |     Yes |        No |   Yes |
+| Manage testimonials/media      |      No |       No |     Yes |        No |   Yes |
+| View own commissions           |      No |       No |     Yes |       Yes |   Yes |
+| Configure affiliate rates      |      No |       No |    Yes* |        No |   Yes |
+| Approve affiliates             |      No |       No |    Yes* |        No |   Yes |
+| Manage global commission rules |      No |       No |      No |        No |   Yes |
+| Manage platform plans          |      No |       No |      No |        No |   Yes |
+| Access full admin reporting    |      No |       No |      No |        No |   Yes |
+
+`*` subject to admin-defined permissions and business policy.
+
+---
+
+## 8. Information Architecture
+
+### 8.1 Public Website
+1. Main marketing homepage
+2. Browse Diviners directory/search page
+3. Diviner public page (`/[username]`)
+4. Affiliate sign-up page
+5. Product detail or checkout entry pages
+6. Login/register pages
+7. Static legal/content pages
+
+### 8.2 Authenticated Areas
+1. Customer back office
+2. Diviner back office
+3. Admin back office
+4. Affiliate dashboard (standalone or inside user portal depending on product design)
+
+---
+
+## 9. Detailed Functional Requirements
+
+# 9A. Public Diviner Page (`/[username]`)
+
+This is the most important user-facing surface in the platform.
+
+## 9A.1 Routing and Identity
+1. Each diviner must have a unique username/slug.
+2. Username must be validated for uniqueness and reserved words.
+3. Username changes must be restricted and audited to avoid broken links.
+4. The public page must be SEO-friendly with indexable metadata.
+5. The page must support direct linking from social profiles and affiliate links.
+
+## 9A.2 Page Structure
+The public diviner page must include:
+* hero section
+* profile image or brand image
+* diviner name and title/tagline
+* live status badge
+* primary CTA area
+* Home tab
+* Bio tab
+* My Media / Testimonials secondary area
+* product listing area
+* customer login link
+* optional affiliate / promo content blocks
+
+## 9A.3 Home Tab Requirements
+The Home tab is the main commercial and engagement view. It must support:
+1. Live stream area
+2. Product/service listing area
+3. Check-In feature when live
+4. Featured offering emphasis
+5. My Media and Testimonials section below the main content or in a secondary tab block
+6. Customer portal access link
+
+## 9A.4 Bio Tab Requirements
+The Bio tab must display:
+* profile biography text
+* optional credentials/designations
+* optional specialties (e.g., natal chart, relationship chart, tarot)
+* optional languages
+* optional experience summary
+* optional mission/introduction content
+* optional profile links/social links if permitted by admin
+
+## 9A.5 Live Stream Module
+
+### Live States
+1. **Not Live** — display fallback content; hide Check-In form; optionally show next live time
+2. **Live on One Platform** — embed that stream; show live badge; show Check-In CTA/form
+3. **Live on Multiple Platforms** — show platform selection controls; allow switching
+
+### Diviner Back-Office Config Needed
+* platform enabled/disabled status
+* stream URL or embed URL per platform
+* optional stream key/reference metadata
+* default fallback content when not live
+* display order of platforms
+* live status override
+
+## 9A.6 Product and Service Listing
+
+### Product Categories
+1. **Time-Based Products** — Solar Return, Jupiter Return, Saturn Return, yearly transit readings
+2. **Non-Time-Based Products** — Natal Chart, Relationship Chart, Tarot, compatibility reading
+
+### Product Listing Requirements
+Each product card must support: title, short description, category, price, delivery type, expected turnaround, featured badge, CTA button.
+
+### Featured Product Rule
+The Nativity/Birth Chart offering must be visually emphasized: featured badge, first position, highlighted card style, or dedicated callout section.
+
+## 9A.7 Check-In Feature (Live Only)
+
+### Visibility Rule
+The Check-In CTA/form must appear only when the diviner is currently live.
+
+### Data to Collect
+* First Name, Last Name, Email, Birth Date, Birth City, Birth Time
+
+### Check-In Submission Outcomes
+1. save record against diviner and live session
+2. create or link a lead/customer profile
+3. mark consent preferences
+4. enroll user into reminder logic if consented
+5. optionally show follow-up CTA to purchase applicable reading
+
+## 9A.8 My Media Section
+Each media item should support: title, thumbnail, source platform, media URL/embed URL, category/tag, sort order, active/inactive state.
+
+## 9A.9 Testimonials Section
+* show approved testimonials only
+* optionally highlight featured testimonials
+* "Write me a testimonial" CTA
+* testimonial submission through moderation workflow
+* prevent spam and abuse
+
+## 9A.10 Customer Login Link
+A public CTA/link must be shown: "Access your personal divination back office" — routes to login or directly into customer portal if authenticated.
+
+---
+
+# 9B. Product Catalog and Service Model
+
+## 9B.1 Product Types
+1. One-time reading product
+2. Scheduled/private session product
+3. Recurring subscription product
+4. Digital deliverable product
+5. Free/lead capture offer (optional)
+
+## 9B.2 Product Configuration Fields
+product name, slug, owner diviner, category, type, short description, long description, price, compare-at price, active/inactive status, featured flag, intake form template, delivery method, expected turnaround, visibility scope, affiliate eligibility, targeted landing settings
+
+## 9B.3 Dynamic Intake Form Requirement
+Each product must define exactly what post-payment information is required.
+
+### Example Configuration Matrix
+* Natal Chart: full birth date, birth time, birth city
+* Solar Return: birth details + target year or context
+* Relationship Chart: user birth details + second person birth details
+* Tarot: question + email, birth details optional
+* Weekly Updates Subscription: minimum account/contact info only
+
+---
+
+# 9C. Purchase Flow
+
+## 9C.1 Core Purchase Rule
+**Payment must be collected before the detailed reading intake form is shown.**
+
+## 9C.2 Purchase Flow Steps
+1. User lands on diviner page or product page
+2. User selects product
+3. User sees product summary and price
+4. User proceeds to checkout
+5. Payment successfully authorized/captured
+6. Order is created
+7. Only then the system requests detailed product-specific intake data
+8. User submits intake
+9. Diviner receives order and required details
+10. Customer can track or access order in their portal
+
+## 9C.3 Guest vs Account Purchase
+* guest checkout with post-purchase account creation prompt, OR
+* mandatory lightweight account creation during checkout
+
+## 9C.4 Checkout Requirements
+product summary, diviner identity confirmation, applied affiliate/referral attribution, taxes if applicable, subscription terms when recurring, legal consent, success/failure handling
+
+## 9C.5 Post-Purchase Intake Requirements
+* save and continue later
+* validation of required fields
+* clear confirmation on submission
+* order status update when intake is complete
+
+## 9C.6 Fulfillment Statuses
+pending_payment → paid → awaiting_intake → intake_submitted → in_progress → scheduled → delivered → cancelled / refunded
+
+---
+
+# 9D. Weekly Personalized Updates Subscription
+
+## 9D.1 Product Definition
+Recurring subscription (~$10/month). Provides automated weekly transit or mundane updates, branded to the diviner.
+
+## 9D.2 Subscription Features
+* recurring billing
+* start/cancel/reactivate
+* customer subscription history
+* diviner branding on content
+* weekly content delivery by email and/or customer portal
+* revenue split tracking
+
+## 9D.3 Revenue Split
+Configurable platform/diviner split. Current business note references 70/30 arrangement.
+
+---
+
+# 9E. Affiliate System
+
+## 9E.1 Affiliate Entry Point
+Public "Become an Affiliate" page and sign-up flow.
+
+## 9E.2 Affiliate Relationship Model
+* attached to specific diviner
+* attached to specific products under a diviner
+* approved by diviner or admin
+
+## 9E.3 Affiliate Link Requirements
+* diviner-wide links
+* product-specific links
+* campaign-specific links (optional)
+
+## 9E.4 Affiliate Commission Rules
+* default platform/diviner split exists
+* affiliate earns percentage from diviner side
+* diviner or admin configures commission
+* effective rate snapshotted at moment of sale
+
+## 9E.5 Payout Ownership
+Diviner is responsible for paying affiliate. Platform calculates commission owed, maintains ledger, tracks payout status.
+
+## 9E.6 Affiliate Lifecycle Statuses
+applied → pending_review → approved / rejected → suspended / inactive
+
+## 9E.7 Attribution Requirements
+affiliate ID, referral source, product referred, diviner referred, click timestamp, conversion timestamp, attribution window, last-touch or first-touch rule
+
+---
+
+# 9F. Diviner Back Office
+
+## 9F.1 Diviner Dashboard Key Widgets
+profile completeness, current live status, active products count, new check-ins, recent orders, pending intake submissions, upcoming scheduled readings, subscription revenue snapshot, affiliate sales and unpaid commissions, testimonials awaiting review, media performance summary
+
+## 9F.2 Profile Management
+public display name, username request/change workflow, profile image, tagline, bio, specialties, languages, links/socials, public visibility status
+
+## 9F.3 Live Settings Management
+set live stream platform URLs, toggle platform availability, define fallback content, manually mark live/not live, choose default embedded stream behavior
+
+## 9F.4 Product Management
+create/edit/archive products, assign category and type, set pricing, define intake requirements, mark products featured, enable/disable affiliate eligibility, set affiliate commission where allowed
+
+## 9F.5 Orders and Customers
+all orders, customer information, purchase status, intake submission details, service delivery status, refunded/cancelled orders
+
+## 9F.6 Check-In Management
+new leads from live sessions, contact information, birth info collected, consent status, associated live session, conversion status, giveaway eligibility
+
+## 9F.7 Media Management
+add, edit, sort, and disable media items
+
+## 9F.8 Testimonial Management
+review submitted, approve/reject/hide, feature selected, respond internally with moderation notes
+
+## 9F.9 Affiliate Management
+invite or add affiliates, review applications, approve or reject applicants, assign commission rules, generate/view affiliate links, track sales and owed commissions, record affiliate payout completion
+
+## 9F.10 Subscription and Billing View
+current SaaS plan, active add-ons, invoices and billing history, telephony usage charges, pass-through phone usage totals, renewal date and payment status
+
+---
+
+# 9G. Diviner SaaS Plans and Add-Ons
+
+## 9G.1 Base Plan
+$99/month includes: diviner back office access, public profile page, video system
+
+## 9G.2 Add-On
+$30/month for AI-powered question helper during live readings
+
+## 9G.3 Plan Management Requirements
+plan assignment, upgrade/downgrade, add-on enable/disable, billing proration, suspension for non-payment, visibility of included features
+
+## 9G.4 Access Control Based on Plan
+* inactive plan may disable public booking or live features
+* AI helper only available when add-on is active
+* phone dial-in may require specific plan or usage agreement
+
+---
+
+# 9H. Video Reading System and Phone Dial-In
+
+## 9H.1 Core Requirement
+Platform must support private video reading sessions for diviners and customers.
+
+## 9H.2 Session Capabilities
+creation of session/room, diviner and customer joining securely, session start/end tracking, session status handling, optional session notes or order linkage
+
+## 9H.3 Phone Dial-In
+Non-toll-free phone dial-in as option for customers joining readings.
+
+## 9H.4 Telephony Vendor Direction
+Amazon Chime SDK or equivalent. Must fail gracefully.
+
+## 9H.5 Usage Billing Requirement
+* capture call usage duration
+* calculate cost using effective rate
+* attach charge to diviner billing ledger
+* show usage history and totals
+* separate pass-through usage from subscription fees
+
+## 9H.6 Legal Requirement
+Diviner sign-up agreement and billing terms must include pass-through telephony costs. System must support storing versioned acceptance.
+
+---
+
+# 9I. Customer Back Office
+
+## 9I.1 Minimum Features
+1. Login and account access
+2. View purchased readings/products
+3. View order status
+4. Complete pending intake forms
+5. Access delivered readings/content
+6. Manage subscription products
+7. Update basic account information
+
+## 9I.2 Reading/Order Detail View
+product purchased, diviner name, purchase date, current fulfillment status, intake status, submitted inputs, final deliverable or session reference
+
+## 9I.3 Subscription Management
+see active weekly subscription, cancel or manage renewal, view billing history
+
+---
+
+# 9J. Main AstrologyPro Marketing Site
+
+## 9J.1 Homepage
+explain platform value proposition, highlight diviners and offerings, promote browsing and discovery, support SEO and campaign landing traffic
+
+## 9J.2 Browse Diviners Directory
+search by name, filter by specialty/language/live now, sort by featured/popular/newest
+
+## 9J.3 Diviner Stickiness Rule
+If user lands from `/[username]`, store preference cookie. On Browse page: show their current diviner prominently with "Choose another diviner" override option.
+
+## 9J.4 Attribution Priority
+Preferred diviner cookie must work alongside affiliate attribution without causing double-credit.
+
+---
+
+# 9K. Automated Email and Reminder System
+
+## 9K.1 Supported Reminder Use Cases
+* Solar Return approaching
+* Jupiter Return approaching
+* other date-triggered product opportunities
+* live event follow-up
+* abandoned post-check-in offer follow-up
+
+## 9K.2 Reminder Engine Requirements
+event-triggered reminders, diviner-branded templates, opt-in/opt-out management, scheduled sends, segmentation by product relevance, campaign performance tracking
+
+## 9K.3 Compliance Requirements
+unsubscribe handling, consent audit trail, delivery status tracking, template versioning
+
+---
+
+# 9L. Giveaway System
+
+## 9L.1 Functional Requirements
+* selecting eligible entries from check-ins
+* random winner selection
+* configurable number of winners (example: 3/month)
+* tracking draw date and winner history
+* avoiding duplicate winner selection where configured
+
+## 9L.2 Admin/Diviner Control
+run the draw, view candidate pool, mark contacted/redeemed status
+
+---
+
+# 9M. Admin Back Office
+
+## 9M.1 Admin Dashboard
+active diviners, live diviners now, customer count, order volume, subscription MRR, affiliate performance, unpaid affiliate liabilities, testimonial moderation queue, support alerts or billing exceptions
+
+## 9M.2 Diviner Management
+create/edit/suspend diviners, manage public profile states, manage username issues, act on behalf of diviners, view full sales and billing data
+
+## 9M.3 Global Product and Revenue Controls
+product templates, default revenue splits, commission policies, plan pricing, add-on pricing, telephony markup/pass-through rules, subscription offerings
+
+## 9M.4 Content Moderation
+testimonials, media items, bios and profile content, affiliate applications
+
+## 9M.5 Legal and Policy Management
+Versioned legal text for: customer terms, diviner agreement, affiliate agreement, pass-through telephony consent, marketing consent language
+
+---
+
+## 10. Data Model / Core Entities
+
+1. User
+2. Role / Permission
+3. DivinerProfile
+4. DivinerPlanSubscription
+5. DivinerPlanAddOn
+6. StreamPlatformConfig
+7. LiveSession
+8. Product
+9. ProductCategory
+10. ProductIntakeTemplate
+11. ProductIntakeField
+12. CustomerProfile
+13. Order
+14. OrderItem
+15. OrderIntakeSubmission
+16. Reading / Deliverable
+17. WeeklySubscription
+18. CheckInLead
+19. MediaItem
+20. Testimonial
+21. AffiliateProfile
+22. AffiliateApplication
+23. AffiliateLink
+24. AffiliateAttributionEvent
+25. CommissionLedgerEntry
+26. AffiliatePayoutRecord
+27. EmailTemplate
+28. ReminderRule
+29. ScheduledNotification
+30. GiveawayCampaign
+31. GiveawayEntry
+32. GiveawayWinner
+33. VideoSession
+34. TelephonyUsageRecord
+35. BillingInvoice / Charge
+36. LegalAcceptanceRecord
+37. AuditLog
+
+---
+
+## 11. State Models
+
+### 11.1 Diviner Status
+draft → active → suspended → archived
+
+### 11.2 Product Status
+draft → active → hidden → archived
+
+### 11.3 Live Session Status
+scheduled → live → ended → cancelled
+
+### 11.4 Order Status
+pending_payment → paid → awaiting_intake → intake_submitted → in_progress → scheduled → delivered → cancelled → refunded
+
+### 11.5 Affiliate Status
+applied → pending_review → approved / rejected → suspended
+
+### 11.6 Testimonial Status
+submitted → pending_review → approved / rejected / hidden
+
+### 11.7 Payout Status
+pending → due → marked_paid → disputed → cancelled
+
+---
+
+## 12. Business Rules and Validation Rules
+
+### 12.1 Username Rules
+* must be unique
+* must meet format constraints
+* must avoid reserved platform terms
+
+### 12.2 Live Check-In Rules
+* only visible when live status is true
+* email required
+* birth data validation required
+* consent capture required if reminders/marketing are enabled
+
+### 12.3 Product Purchase Rules
+* inactive or hidden products cannot be purchased
+* payment must complete before detailed intake is requested
+* intake requirements are product-specific
+
+### 12.4 Commission Rules
+* effective commission rate must be snapshotted at time of conversion
+* affiliate payout liability must remain traceable even if rates change later
+
+### 12.5 Subscription Rules
+* recurring products must support cancellation and status history
+* weekly updates must stop after cancellation
+
+### 12.6 Testimonial Rules
+* testimonials are not public until approved
+* public testimonial form must be protected from spam and malicious input
+
+### 12.7 Telephony Rules
+* pass-through charges based on measured usage
+* charges appear in diviner billing history
+* legal acceptance required before enabling dial-in feature
+
+---
+
+## 13. Reporting and Analytics Requirements
+
+### 13.1 Diviner-Level Reporting
+sales by product, sales by date range, subscription revenue, check-in count, check-in to purchase conversion rate, affiliate-driven sales, unpaid affiliate commissions, testimonial volume, live engagement snapshots
+
+### 13.2 Admin-Level Reporting
+platform GMV, revenue split totals, subscription MRR, top diviners, top products, affiliate sales by diviner/product, telephony usage charges, refund rates, live vs non-live conversions
+
+---
+
+## 14. Non-Functional Requirements
+
+### 14.1 Performance
+public diviner pages must load quickly even with media embeds; page should not be blocked by third-party stream failures; checkout and portal flows must feel responsive
+
+### 14.2 Scalability
+system must support growth in diviners, products, orders, subscriptions, and affiliate clicks without redesign; background jobs for reminders, subscription sends, attribution processing, billing jobs
+
+### 14.3 Security
+strong authentication and RBAC, secure storage of customer personal data, encrypted transport and sensitive data at rest, audit trail for critical business events
+
+### 14.4 Privacy
+clear consent collection for reminders and marketing, cookie and tracking disclosure, support deletion/deactivation flows
+
+### 14.5 Reliability
+failed reminder sends, billing events, video/telephony records, and embed loads must be observable and retryable
+
+### 14.6 Accessibility
+modern accessibility standards, keyboard navigable forms/tabs/buttons/media controls
+
+### 14.7 SEO
+main site and diviner pages must support SEO metadata, social sharing metadata, and clean URLs
+
+---
+
+## 15. Integration Requirements
+
+* payment gateway (Stripe, PayPal)
+* email delivery provider (AWS SES)
+* video session provider (VideoSDK)
+* telephony/dial-in provider (Amazon Chime SDK or equivalent)
+* embedded social/live platforms (Facebook, YouTube, Instagram)
+* analytics/tracking system
+* consent/cookie management layer
+
+Integrations must fail gracefully and must not break core commerce flows.
+
+---
+
+## 16. Acceptance Criteria by Major Module
+
+### 16.1 Diviner Public Page
+* A unique public page loads at `/[username]`
+* Home and Bio tabs work correctly
+* Live stream section handles zero, one, or multiple live platforms
+* Check-In appears only when live
+* Products display by category and active state
+* My Media and Testimonials are visible and manageable
+* Customer portal link is present
+
+### 16.2 Purchase Flow
+* Customer can purchase without filling detailed birth info first
+* Post-payment intake form changes according to product type
+* Order status moves: paid → awaiting_intake → intake_submitted
+
+### 16.3 Weekly Subscription
+* Customer can subscribe monthly
+* Weekly branded content can be issued and tracked
+* Revenue split is recorded correctly
+
+### 16.4 Affiliate System
+* Affiliate can apply
+* Approved affiliate gets unique tracking link
+* Sale attribution is recorded
+* Commission owed is recorded and can be marked paid by diviner
+
+### 16.5 Diviner Billing
+* Base plan and add-on billing appear correctly
+* Telephony usage charges shown separately and accurately
+
+### 16.6 Customer Portal
+* Customer can log in and view past purchases/readings
+* Customer can complete pending intake for paid orders
+* Customer can manage subscription status
+
+---
+
+## 17. Recommended Delivery Phasing
+
+### Phase 1 — Core Revenue Foundation
+diviner public page, Home/Bio tabs, single and multi-platform live module, product listing, checkout with payment-first rule, dynamic post-payment intake, customer portal minimum version
+
+### Phase 2 — Retention and Social Proof
+check-in system, media module, testimonials + moderation, main marketing site, browse diviners directory, diviner stickiness cookie
+
+### Phase 3 — Monetization Expansion
+weekly personalized subscription product, affiliate signup and attribution system, diviner affiliate management, commission ledger and payout tracking
+
+### Phase 4 — Operational Maturity
+diviner SaaS plans and add-ons, video reading system, phone dial-in and pass-through billing, advanced reminder engine, giveaway system, admin analytics and controls expansion
+
+---
+
+## 18. Risks and Open Decision Items
+
+1. Final revenue split logic across platform, diviner, and affiliate
+2. Exact affiliate attribution window and precedence model
+3. Whether guest checkout is allowed
+4. Whether birth time can be optional in check-in and certain product types
+5. Exact video vendor and telephony provider choice
+6. Whether weekly updates are email-only, portal-only, or both
+7. Whether diviners can freely set affiliate commission or must stay within admin-defined limits
+8. Final legal text and consent wording
+9. Whether testimonials are text-only or can include video/media
+10. Whether live status is manually controlled, auto-detected, or hybrid
+
+---
+
+## 19. Final Product Summary
+
+At completion, AstrologyPro should operate as a full diviner commerce and engagement platform where:
+
+* every diviner has a branded public hub
+* live audiences can convert into leads and buyers
+* products are sold cleanly with payment-first logic
+* required reading intake is dynamic and efficient
+* customers can return through a dedicated portal
+* affiliates can drive targeted sales with tracked commissions
+* diviners can manage their storefront, audience, products, testimonials, media, and billing
+* admins can oversee all operations, revenue rules, and platform growth
+
+This requirement should be treated as the baseline product definition for design, database planning, API design, implementation tickets, QA cases, and release planning.

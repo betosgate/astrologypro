@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 
-export function BlogSubscribeForm() {
+interface BlogSubscribeFormProps {
+  /** When set, attributes the subscription to a specific diviner (newsletter attribution). */
+  divinerUsername?: string;
+}
+
+export function BlogSubscribeForm({ divinerUsername }: BlogSubscribeFormProps = {}) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -16,7 +21,10 @@ export function BlogSubscribeForm() {
       const res = await fetch("/api/blog/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({
+          email: email.trim(),
+          ...(divinerUsername ? { diviner_username: divinerUsername } : {}),
+        }),
       });
 
       if (res.ok) {

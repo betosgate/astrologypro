@@ -1,0 +1,80 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+/**
+ * POST /api/mystery-school/decan/[id]/ritual/start
+ * Creates a ritual_executions row for this student+decan, or returns the existing one.
+ */
+export async function POST(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id: decanId } = await params;
+
+  const { data: member } = await supabase
+    .from("community_members")
+    .select("membership_type, membership_status")
+    .eq("user_id", user.id)
+    .single();
+
+  if (
+    !member ||
+    member.membership_type !== "mystery_school" ||
+    member.membership_status !== "active"
+  ) {
+    return NextResponse.json(
+      { error: "Mystery School membership required" },
+      { status: 403 }
+    );
+  }
+
+  const { data: student } = await supabase
+    .from("mystery_school_students")
+    .select("id")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!student) {
+    return NextResponse.json({ error: "Student record not found" }, { status: 404 });
+  }
+
+  const admin = createAdminClient();
+
+  // Count published steps for total_steps
+  const { count: totalSteps } = await admin
+    .from("decan_rituals")
+    .select("id", { count: "exact", head: true })
+    .eq("decan_id", decanId)
+    .eq("is_published", true);
+
+  if (!totalSteps || totalSteps === 0) {
+    return NextResponse.json({ error: "No published ritual steps for this decan" }, { status: 422 });
+  }
+
+  // Upsert — creates row on first call, returns existing on repeat
+  const { data: execution, error } = await admin
+    .from("ritual_executions")
+    .upsert(
+      {
+        student_id: student.id,
+        decan_id: decanId,
+        total_steps: totalSteps,
+      },
+      { onConflict: "student_id,decan_id", ignoreDuplicates: false }
+    )
+    .select("id, current_step, total_steps, started_at, completed_at, is_complete")
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(execution, { status: 200 });
+}

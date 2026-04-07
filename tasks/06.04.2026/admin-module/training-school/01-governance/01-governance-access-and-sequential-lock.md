@@ -1,43 +1,61 @@
 # Module 01 - Governance, Access, and Sequential Lock
 
 ## Objective
-Complete the top-level Training School governance model so admins can control both who can see Training School navigation and how sequential progression is enforced across programs.
+Implement the missing top-level Training School governance controls so admin settings define both access and global sequencing behavior.
 
-## Current State In Repo
-- `training_settings.allowed_roles` exists and is editable from `/admin/training/settings`.
-- `training_programs.is_sequential` exists.
-- `training_categories.is_sequential` exists.
-- Learner APIs already enforce program-level and category-level locks based on those flags.
-- There is no admin-level global sequential-lock control or documented precedence rule.
+## Current Repo State
+- `training_settings.allowed_roles` already exists and is editable from `/admin/training/settings`.
+- `training_programs.is_sequential` already exists.
+- `training_categories.is_sequential` already exists.
+- Learner routes already enforce program/category sequential behavior in parts of the current API layer.
+- There is no global training sequential-lock setting in `training_settings`.
 
-## Required Outcome
-- Admin settings expose the two common controls called out by the architect:
+## Exact Gap
+- The architect defined two common controls:
   - sequential lock on/off
   - which roles can access Training School nav
-- The precedence between program-level and category-level sequential behavior is explicit and testable.
-- Existing program/category flags remain valid and are not renamed.
+- The repo currently supports the second control, but not the first one at the settings layer.
+- Precedence between global setting, program setting, and category setting is not documented in an execution-ready way.
 
-## Detailed Tasks
-- [ ] Audit the existing `training_settings` schema and extend it minimally if a global sequential-lock field does not exist yet.
-- [ ] Update `/api/admin/training/settings` and `/admin/training/settings` to support the global sequential-lock control in addition to `allowed_roles`.
-- [ ] Define and document the precedence rule for:
-  - global training setting
-  - `training_programs.is_sequential`
-  - `training_categories.is_sequential`
-- [ ] Implement the architect rule: category-level sequential logic exists independently, but when category-level sequential is off, category priority should control next-entry behavior.
-- [ ] Validate that Training School navigation visibility uses the configured access rules and does not depend only on raw auth state.
-- [ ] Ensure existing learner routes fail safely when a user can hit a URL directly without nav access.
-- [ ] Record any admin audit/logging requirement if training governance changes should be visible in the activity log.
+## Required Implementation
+- Extend `training_settings` with a global sequential-lock field if it does not already exist.
+- Update `/api/admin/training/settings` GET and PUT to read/write that field.
+- Update `/admin/training/settings` to expose the setting in the UI.
+- Enforce this precedence rule:
+  - if global sequential lock is off, program/category sequential rules do not lock learner progression
+  - if global sequential lock is on, `training_programs.is_sequential` controls category ordering inside the program
+  - if global sequential lock is on and `training_categories.is_sequential` is off, category priority still controls category selection, but lesson locking inside that category is not enforced
+  - if global sequential lock is on and `training_categories.is_sequential` is on, lesson ordering is enforced by lesson priority
+- Ensure access rules continue to depend on configured roles, not only on authentication state.
+
+## Likely Affected Files
+- `src/app/admin/training/settings/page.tsx`
+- `src/app/api/admin/training/settings/route.ts`
+- learner training route handlers that currently enforce sequential locking
+- Supabase migration file for `training_settings` if the new field is missing
+
+## API and Schema Constraints
+- Keep using `training_settings`.
+- Keep using `training_programs.is_sequential` and `training_categories.is_sequential`.
+- Do not rename access fields or create a parallel settings table.
+
+## Dependencies
+- None. This task should be executed first.
 
 ## Acceptance Criteria
-- Admins can configure role access and the top-level sequential-lock behavior from settings.
-- Program/category sequential rules are deterministic and documented.
-- Learner-side lock enforcement respects the configured governance model.
+- Admin settings can persist both allowed roles and the global sequential-lock value.
+- Learner progression respects the defined precedence rule.
+- Direct URL access does not bypass configured role restrictions.
 
 ## Verification Test Plan
-- [ ] As an admin, update allowed roles and confirm the change persists through `/api/admin/training/settings`.
-- [ ] Toggle the global sequential-lock setting on and off and confirm the stored value round-trips in the UI and API.
-- [ ] Verify a role without access cannot see Training School nav and cannot consume Training School routes through direct URL access.
-- [ ] Verify a role with access can still consume accessible programs.
-- [ ] With program sequential on and category sequential on, confirm later categories/lessons remain locked until earlier ones complete.
-- [ ] With program sequential on and category sequential off, confirm category priority determines which category is next while intra-category lesson behavior follows the agreed rule.
+- [ ] Save allowed roles and confirm the values persist through refresh and API round-trip.
+- [ ] Save the global sequential-lock value and confirm the value persists through refresh and API round-trip.
+- [ ] With global sequential lock off, confirm a learner can open later categories/lessons without ordering enforcement.
+- [ ] With global sequential lock on and program/category sequential on, confirm earlier incomplete items block later ones.
+- [ ] With global sequential lock on and program sequential on but category sequential off, confirm category priority determines next category and lesson locking is not enforced inside that category.
+- [ ] Confirm a user without configured access cannot access training routes from the nav or by direct URL.
+
+## Out Of Scope
+- Reporting changes
+- Quiz engine changes
+- Certificate changes

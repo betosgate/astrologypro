@@ -345,6 +345,44 @@ export default function CommunityPlanPage() {
     }
   }
 
+  // ── Cancel / uncancel ──
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [showUncancelDialog, setShowUncancelDialog] = useState(false);
+  const [uncancelLoading, setUncancelLoading] = useState(false);
+
+  async function handleCancel() {
+    setCancelLoading(true);
+    try {
+      const res = await fetch("/api/community/plan/cancel", { method: "POST" });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? "Failed to schedule cancellation");
+      toast.success("Cancellation scheduled. You retain access until your billing period ends.");
+      setShowCancelDialog(false);
+      await loadPlan();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to schedule cancellation");
+    } finally {
+      setCancelLoading(false);
+    }
+  }
+
+  async function handleUncancel() {
+    setUncancelLoading(true);
+    try {
+      const res = await fetch("/api/community/plan/uncancel", { method: "POST" });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? "Failed to reverse cancellation");
+      toast.success("Cancellation reversed. Your membership will renew as normal.");
+      setShowUncancelDialog(false);
+      await loadPlan();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to reverse cancellation");
+    } finally {
+      setUncancelLoading(false);
+    }
+  }
+
   // ── Billing portal ──
   const [portalLoading, setPortalLoading] = useState(false);
 
@@ -452,12 +490,42 @@ export default function CommunityPlanPage() {
                     <span className="font-medium text-foreground">
                       Next billing:
                     </span>{" "}
-                    {formatNextBilling(plan.current_period_end)}
+                    {plan.status === "cancelling"
+                      ? `Access until ${formatNextBilling(plan.current_period_end)}`
+                      : formatNextBilling(plan.current_period_end)}
                   </div>
                   <div>
                     <span className="font-medium text-foreground">Members:</span>{" "}
                     {plan.member_count} of {plan.tier.included_members} included
                   </div>
+                </div>
+
+                {/* Cancel / uncancel actions */}
+                <Separator />
+                <div className="pt-1">
+                  {plan.status === "cancelling" ? (
+                    <div className="space-y-2">
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        Your membership is set to cancel at the end of the billing period. You still have full access until then.
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowUncancelDialog(true)}
+                      >
+                        Keep My Membership
+                      </Button>
+                    </div>
+                  ) : plan.status === "active" ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-muted-foreground hover:text-destructive"
+                      onClick={() => setShowCancelDialog(true)}
+                    >
+                      Cancel Membership
+                    </Button>
+                  ) : null}
                 </div>
               </CardContent>
             </Card>
@@ -1097,6 +1165,83 @@ export default function CommunityPlanPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Cancel membership confirmation dialog ── */}
+      <Dialog
+        open={showCancelDialog}
+        onOpenChange={(open) => !open && setShowCancelDialog(false)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Membership?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Your membership will remain active until the end of your current
+            billing period
+            {plan?.current_period_end ? (
+              <>
+                {" "}
+                (
+                <span className="font-medium text-foreground">
+                  {formatNextBilling(plan.current_period_end)}
+                </span>
+                )
+              </>
+            ) : null}
+            . After that, your access will end. You can rejoin at any time.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowCancelDialog(false)}
+              disabled={cancelLoading}
+            >
+              Keep Membership
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancel}
+              disabled={cancelLoading}
+            >
+              {cancelLoading && (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              )}
+              Cancel at Period End
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Uncancel (reactivate) confirmation dialog ── */}
+      <Dialog
+        open={showUncancelDialog}
+        onOpenChange={(open) => !open && setShowUncancelDialog(false)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Keep Your Membership?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Your pending cancellation will be reversed and your membership will
+            renew as normal at the end of the current billing period.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowUncancelDialog(false)}
+              disabled={uncancelLoading}
+            >
+              No, keep it cancelled
+            </Button>
+            <Button onClick={handleUncancel} disabled={uncancelLoading}>
+              {uncancelLoading && (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              )}
+              Keep My Membership
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

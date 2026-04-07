@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -20,6 +21,8 @@ import {
 } from "@/components/ui/table";
 import { ClientsSearch } from "@/components/dashboard/clients-search";
 import { ClientDetailSheet } from "@/components/dashboard/client-detail-sheet";
+import { Users, SearchX } from "lucide-react";
+import Link from "next/link";
 
 export const metadata = {
   title: "Clients",
@@ -92,9 +95,30 @@ export default async function ClientsPage({
         </CardHeader>
         <CardContent>
           {clients.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              {q ? "No clients match your search." : "No clients yet."}
-            </p>
+            <div className="flex flex-col items-center gap-4 py-16 text-center">
+              <div className="flex size-14 items-center justify-center rounded-full bg-muted">
+                {q ? (
+                  <SearchX className="size-7 text-muted-foreground" />
+                ) : (
+                  <Users className="size-7 text-muted-foreground" />
+                )}
+              </div>
+              <div>
+                <h3 className="text-lg font-medium">
+                  {q ? "No clients match your search" : "No clients yet"}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {q
+                    ? `No clients found for "${q}". Try a different search term.`
+                    : "Clients will appear here once they have booked a session with you."}
+                </p>
+              </div>
+              {!q && (
+                <Button asChild variant="outline">
+                  <Link href="/dashboard/services">Set Up Services</Link>
+                </Button>
+              )}
+            </div>
           ) : (
             <Table>
               <TableHeader>

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DivinerHero } from "@/components/landing/diviner-hero";
@@ -13,6 +14,10 @@ import { ServiceTabs } from "./service-tabs";
 import { APP_URL } from "@/lib/constants";
 import { Gift, ArrowRight, ShieldAlert } from "lucide-react";
 import { PageTracker } from "@/components/landing/page-tracker";
+import { MediaGallery, type MediaItem } from "@/components/public/media-gallery";
+import { LiveStreamSection, type StreamPlatformConfig } from "@/components/public/live-stream-section";
+import { TestimonialsSection } from "@/components/public/testimonials-section";
+import { BlogSubscribeForm } from "@/app/blog/subscribe-form";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -58,6 +63,33 @@ async function getTestimonials(divinerId: string) {
     .limit(9);
 
   return testimonials ?? [];
+}
+
+async function getMediaItems(divinerId: string): Promise<MediaItem[]> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("media_items")
+    .select(
+      "id, diviner_id, type, url, title, description, thumbnail_url, category, platform, duration_seconds, sort_order, is_featured, view_count, created_at"
+    )
+    .eq("diviner_id", divinerId)
+    .eq("is_active", true)
+    .order("is_featured", { ascending: false })
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: false });
+  return (data ?? []) as MediaItem[];
+}
+
+async function getLivePlatforms(divinerId: string): Promise<StreamPlatformConfig[]> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("stream_platform_configs")
+    .select("*")
+    .eq("diviner_id", divinerId)
+    .eq("is_enabled", true)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+  return (data ?? []) as StreamPlatformConfig[];
 }
 
 async function getPolicies() {
@@ -177,11 +209,22 @@ export default async function DivinerPage({ params }: PageProps) {
     notFound();
   }
 
-  const [services, testimonials, stats, policies] = await Promise.all([
+  // Store stickiness cookie so /discover can surface this diviner as "Your Astrologer"
+  const cookieStore = await cookies();
+  cookieStore.set("preferred_diviner", diviner.username, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 90, // 90 days
+    sameSite: "lax",
+    httpOnly: false, // needs to be readable by the discover server component
+  });
+
+  const [services, testimonials, stats, policies, mediaItems, livePlatformConfigs] = await Promise.all([
     getServices(diviner.id),
     getTestimonials(diviner.id),
     getDivinerStats(diviner.id),
     getPolicies(),
+    getMediaItems(diviner.id),
+    getLivePlatforms(diviner.id),
   ]);
 
   const astroServices = services.filter((s) => s.category === "astrology");
@@ -267,7 +310,17 @@ export default async function DivinerPage({ params }: PageProps) {
         isCertified={!!(diviner as Record<string, unknown>).is_certified}
       />
 
-      {/* ===== 2. ABOUT SECTION ===== */}
+      {/* ===== 2. LIVE STREAM SECTION ===== */}
+      <LiveStreamSection
+        isLive={(diviner as Record<string, unknown>).is_live === true}
+        livePlatforms={((diviner as Record<string, unknown>).live_platforms as string[]) ?? []}
+        platformConfigs={livePlatformConfigs}
+        fallbackContent={((diviner as Record<string, unknown>).fallback_content as string) ?? null}
+        nextLiveAt={((diviner as Record<string, unknown>).next_live_at as string) ?? null}
+        divinerId={diviner.id}
+      />
+
+      {/* ===== 3. ABOUT SECTION ===== */}
       {diviner.bio && (
         <section id="about" className="py-10 md:py-14">
           <div className="mx-auto max-w-6xl px-4">
@@ -368,7 +421,7 @@ export default async function DivinerPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* ===== 3. SERVICES SECTION ===== */}
+      {/* ===== 4. SERVICES SECTION ===== */}
       {services.length > 0 && (
         <section id="services" className="py-10 md:py-14">
           <div className="mx-auto max-w-6xl px-4">
@@ -406,11 +459,34 @@ export default async function DivinerPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* ===== 4. TESTIMONIALS ===== */}
+      {/* ===== 5. MEDIA & CONTENT ===== */}
+      {mediaItems.length > 0 && (
+        <section id="media" className="py-10 md:py-14">
+          <div className="mx-auto max-w-6xl px-4">
+            <h2 className="mb-2 text-center font-display text-3xl font-semibold text-cream md:text-4xl">
+              Media &amp; Content
+            </h2>
+            <p className="mx-auto mb-8 max-w-md text-center text-sm text-silver/60">
+              Videos, podcasts, articles, and more from {diviner.display_name}
+            </p>
+            <MediaGallery items={mediaItems} divinerId={diviner.id} />
+          </div>
+          <div className="cosmic-divider mx-auto mt-10 max-w-6xl md:mt-14" />
+        </section>
+      )}
+
+      {/* ===== 5. TESTIMONIALS ===== */}
       <TestimonialSection
         testimonials={testimonials}
         averageRating={stats.averageRating}
         reviewCount={stats.reviewCount}
+      />
+
+      {/* ===== 5b. PUBLIC TESTIMONIALS (with submission form) ===== */}
+      <TestimonialsSection
+        divinerId={diviner.id}
+        divinerUsername={username}
+        divinerName={diviner.display_name}
       />
 
       {/* ===== 5. AVAILABILITY PREVIEW ===== */}
@@ -484,7 +560,20 @@ export default async function DivinerPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* ===== 8. FINAL CTA ===== */}
+      {/* ===== 8. NEWSLETTER SUBSCRIBE ===== */}
+      <section className="relative py-10 md:py-14">
+        <div className="mx-auto max-w-xl px-4 text-center">
+          <h2 className="mb-2 font-display text-2xl font-semibold text-cream">
+            Stay Connected with {diviner.display_name}
+          </h2>
+          <p className="mb-1 text-sm text-silver/60">
+            Get cosmic insights, updates, and exclusive offers delivered to your inbox.
+          </p>
+          <BlogSubscribeForm divinerUsername={username} />
+        </div>
+      </section>
+
+      {/* ===== 9. FINAL CTA ===== */}
       <section className="relative overflow-hidden py-12 md:py-16">
         {/* Cosmic gradient background */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_50%,rgba(201,168,76,0.06)_0%,transparent_60%)]" />

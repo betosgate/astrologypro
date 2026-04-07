@@ -114,6 +114,8 @@ type ProgramRow = {
   completed_count: number;
   completion_rate: number;
   avg_time_spent_seconds: number;
+  mean_completion_time_seconds: number;
+  median_completion_time_seconds: number;
   avg_quiz_pass_rate: number;
 };
 
@@ -127,6 +129,8 @@ type CategoryRow = {
   unique_users_started: number;
   completion_rate: number;
   avg_time_spent_seconds: number;
+  mean_completion_time_seconds: number;
+  median_completion_time_seconds: number;
 };
 
 type LessonRow = {
@@ -237,7 +241,13 @@ export default function TrainingAnalyticsPage() {
     setOverviewLoading(true);
     fetch("/api/admin/training/analytics/overview")
       .then((r) => r.json())
-      .then((d) => setOverview(d))
+      .then((d) => {
+        // Guard: only set if the response looks like valid overview data
+        if (d && typeof d.total_trainees === "number") {
+          setOverview(d);
+        }
+      })
+      .catch(() => {/* silently ignore network/parse errors */})
       .finally(() => setOverviewLoading(false));
   }, []);
 
@@ -253,9 +263,10 @@ export default function TrainingAnalyticsPage() {
     fetch(`/api/admin/training/analytics/users?${params}`)
       .then((r) => r.json())
       .then((d) => {
-        setUsers(d.users ?? []);
-        setUsersTotal(d.total ?? 0);
+        setUsers(Array.isArray(d?.users) ? d.users : []);
+        setUsersTotal(typeof d?.total === "number" ? d.total : 0);
       })
+      .catch(() => { setUsers([]); setUsersTotal(0); })
       .finally(() => setUsersLoading(false));
   };
 
@@ -265,7 +276,8 @@ export default function TrainingAnalyticsPage() {
     setProgramsLoading(true);
     fetch("/api/admin/training/analytics/programs")
       .then((r) => r.json())
-      .then((d) => setPrograms(d.programs ?? []))
+      .then((d) => setPrograms(Array.isArray(d?.programs) ? d.programs : []))
+      .catch(() => setPrograms([]))
       .finally(() => {
         setProgramsLoading(false);
         setProgramsFetched(true);
@@ -287,7 +299,8 @@ export default function TrainingAnalyticsPage() {
     if (pid && pid !== "all") params.set("program_id", pid);
     fetch(`/api/admin/training/analytics/categories?${params}`)
       .then((r) => r.json())
-      .then((d) => setCategories(d.categories ?? []))
+      .then((d) => setCategories(Array.isArray(d?.categories) ? d.categories : []))
+      .catch(() => setCategories([]))
       .finally(() => {
         setCategoriesLoading(false);
         setCategoriesFetched(true);
@@ -309,7 +322,8 @@ export default function TrainingAnalyticsPage() {
     if (cid && cid !== "all") params.set("category_id", cid);
     fetch(`/api/admin/training/analytics/lessons?${params}`)
       .then((r) => r.json())
-      .then((d) => setLessons(d.lessons ?? []))
+      .then((d) => setLessons(Array.isArray(d?.lessons) ? d.lessons : []))
+      .catch(() => setLessons([]))
       .finally(() => {
         setLessonsLoading(false);
         setLessonsFetched(true);
@@ -322,7 +336,8 @@ export default function TrainingAnalyticsPage() {
     setQuizzesLoading(true);
     fetch("/api/admin/training/analytics/quizzes")
       .then((r) => r.json())
-      .then((d) => setQuizzes(d.quizzes ?? []))
+      .then((d) => setQuizzes(Array.isArray(d?.quizzes) ? d.quizzes : []))
+      .catch(() => setQuizzes([]))
       .finally(() => {
         setQuizzesLoading(false);
         setQuizzesFetched(true);
@@ -702,7 +717,8 @@ export default function TrainingAnalyticsPage() {
                         <TableHead className="text-right">Enrolled</TableHead>
                         <TableHead className="text-right">Completed</TableHead>
                         <TableHead className="text-right">Completion Rate</TableHead>
-                        <TableHead className="text-right">Avg Time</TableHead>
+                        <TableHead className="text-right">Mean Time</TableHead>
+                        <TableHead className="text-right">Median Time</TableHead>
                         <TableHead className="text-right">Quiz Pass Rate</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -732,7 +748,14 @@ export default function TrainingAnalyticsPage() {
                             {fmtPct(p.completion_rate)}
                           </TableCell>
                           <TableCell className="text-right tabular-nums whitespace-nowrap">
-                            {p.avg_time_spent_seconds > 0 ? fmtTime(p.avg_time_spent_seconds) : "—"}
+                            {(p.mean_completion_time_seconds ?? p.avg_time_spent_seconds) > 0
+                              ? fmtTime(p.mean_completion_time_seconds ?? p.avg_time_spent_seconds)
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums whitespace-nowrap">
+                            {(p.median_completion_time_seconds ?? 0) > 0
+                              ? fmtTime(p.median_completion_time_seconds)
+                              : "—"}
                           </TableCell>
                           <TableCell className="text-right">
                             {p.avg_quiz_pass_rate > 0 ? (
@@ -798,7 +821,8 @@ export default function TrainingAnalyticsPage() {
                         <TableHead className="text-right">Users Started</TableHead>
                         <TableHead className="text-right">Completions</TableHead>
                         <TableHead className="text-right">Completion Rate</TableHead>
-                        <TableHead className="text-right">Avg Time</TableHead>
+                        <TableHead className="text-right">Mean Time</TableHead>
+                        <TableHead className="text-right">Median Time</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -815,7 +839,14 @@ export default function TrainingAnalyticsPage() {
                             {fmtPct(c.completion_rate)}
                           </TableCell>
                           <TableCell className="text-right tabular-nums whitespace-nowrap">
-                            {c.avg_time_spent_seconds > 0 ? fmtTime(c.avg_time_spent_seconds) : "—"}
+                            {(c.mean_completion_time_seconds ?? c.avg_time_spent_seconds) > 0
+                              ? fmtTime(c.mean_completion_time_seconds ?? c.avg_time_spent_seconds)
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums whitespace-nowrap">
+                            {(c.median_completion_time_seconds ?? 0) > 0
+                              ? fmtTime(c.median_completion_time_seconds)
+                              : "—"}
                           </TableCell>
                         </TableRow>
                       ))}

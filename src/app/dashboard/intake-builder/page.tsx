@@ -1,17 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { IntakeBuilderClient } from "@/components/dashboard/intake-builder-client";
+import type { IntakeTemplate } from "@/lib/intake-fields";
 
 export const metadata = {
   title: "Intake Builder",
 };
+
+interface ServiceRow {
+  id: string;
+  name: string;
+  category: string;
+  intake_template_id: string | null;
+}
 
 export default async function IntakeBuilderPage() {
   const supabase = await createClient();
@@ -30,48 +32,38 @@ export default async function IntakeBuilderPage() {
 
   if (!diviner) redirect("/admin");
 
-  // Fetch all services for this diviner
-  const { data: services } = await supabase
-    .from("services")
-    .select("id, name, category")
-    .eq("diviner_id", diviner.id)
-    .eq("is_active", true)
-    .order("name");
+  // Fetch services and templates in parallel
+  const [servicesResult, templatesResult] = await Promise.all([
+    admin
+      .from("services")
+      .select("id, name, category, intake_template_id")
+      .eq("diviner_id", diviner.id)
+      .eq("is_active", true)
+      .order("name"),
+    admin
+      .from("intake_templates")
+      .select("id, name, description, is_default, fields, created_at, updated_at")
+      .eq("diviner_id", diviner.id)
+      .order("created_at", { ascending: true }),
+  ]);
 
-  // Fetch all intake forms for this diviner
-  const { data: intakeForms } = await supabase
-    .from("intake_forms")
-    .select("id, service_id, questions")
-    .eq("diviner_id", diviner.id);
-
-  const serviceList = services ?? [];
-  const formList = intakeForms ?? [];
+  const services = (servicesResult.data ?? []) as ServiceRow[];
+  const templates = (templatesResult.data ?? []) as IntakeTemplate[];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Intake Builder</h1>
         <p className="text-muted-foreground">
-          Customize the questions clients answer before booking each service.
+          Create reusable intake templates and assign them to your services.
         </p>
       </div>
 
-      {serviceList.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>No Services Found</CardTitle>
-            <CardDescription>
-              Add at least one service before configuring intake questions.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      ) : (
-        <IntakeBuilderClient
-          divinerId={diviner.id}
-          services={serviceList}
-          intakeForms={formList}
-        />
-      )}
+      <IntakeBuilderClient
+        divinerId={diviner.id}
+        services={services}
+        templates={templates}
+      />
     </div>
   );
 }
