@@ -35,6 +35,5 @@ export function logActivity(params: LogActivityParams): void {
       metadata: params.metadata ?? {},
       ip_address: params.ipAddress ?? null,
     })
-    .then(() => {})
-    .catch(() => {})
+    .then(() => {}, () => {})
 }
