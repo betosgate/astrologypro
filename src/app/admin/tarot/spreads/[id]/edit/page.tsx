@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/lib/supabase/client";
+import { ArrowLeft, Loader2, ImagePlus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const BUCKET = "all-frontend-assets";
@@ -31,7 +33,7 @@ export default function EditTarotSpreadPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [thumbnailUrl, setThumbnailUrl] = useState("");
 
   const [form, setForm] = useState({
@@ -46,8 +48,8 @@ export default function EditTarotSpreadPage() {
     async function load() {
       const res = await fetch(`/api/admin/tarot/spreads/${id}`);
       if (!res.ok) {
-        setError("Spread not found");
-        setLoading(false);
+        toast.error("Spread not found");
+        router.push("/admin/tarot/spreads");
         return;
       }
       const spread = await res.json();
@@ -62,22 +64,30 @@ export default function EditTarotSpreadPage() {
       setLoading(false);
     }
     load();
-  }, [id]);
+  }, [id, router]);
+
+  function validate() {
+    const e: Record<string, string> = {};
+    if (!form.name.trim()) e.name = "Name is required";
+    if (!form.card_count.trim()) e.card_count = "Card count is required";
+    else if (isNaN(parseInt(form.card_count)) || parseInt(form.card_count) < 1) e.card_count = "Must be at least 1";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!ALLOWED_TYPES.includes(file.type)) {
-      setError("Invalid file type. Allowed: JPEG, PNG, WebP, GIF.");
+      toast.error("Invalid file type. Allowed: JPEG, PNG, WebP, GIF.");
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
-      setError("File too large. Maximum size is 10 MB.");
+      toast.error("File too large. Maximum size is 10 MB.");
       return;
     }
 
-    setError(null);
     setUploading(true);
 
     const ext = file.name.split(".").pop() ?? "jpg";
@@ -89,7 +99,7 @@ export default function EditTarotSpreadPage() {
       .upload(path, file, { upsert: false });
 
     if (uploadError) {
-      setError(`Upload failed: ${uploadError.message}`);
+      toast.error(`Upload failed: ${uploadError.message}`);
       setUploading(false);
       return;
     }
@@ -101,8 +111,9 @@ export default function EditTarotSpreadPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!validate()) return;
     setSaving(true);
-    setError(null);
+    setErrors({});
 
     const res = await fetch(`/api/admin/tarot/spreads/${id}`, {
       method: "PUT",
@@ -119,7 +130,7 @@ export default function EditTarotSpreadPage() {
 
     if (!res.ok) {
       const body = await res.json();
-      setError(body.error ?? "Failed to save changes");
+      toast.error(body.error ?? "Failed to save changes");
       setSaving(false);
       return;
     }
@@ -135,7 +146,7 @@ export default function EditTarotSpreadPage() {
     const res = await fetch(`/api/admin/tarot/spreads/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const body = await res.json();
-      setError(body.error ?? "Failed to delete spread");
+      toast.error(body.error ?? "Failed to delete spread");
       setDeleting(false);
       return;
     }
@@ -146,57 +157,130 @@ export default function EditTarotSpreadPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <Link href="/admin/tarot" className="text-sm text-muted-foreground hover:text-foreground">
-            ← Back to Tarot
-          </Link>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight">Edit Tarot Spread</h1>
-        </div>
-        <p className="text-sm text-muted-foreground">Loading…</p>
+      <div className="flex flex-col items-center justify-center p-24 text-muted-foreground">
+        <Loader2 className="mr-2 h-8 w-8 animate-spin" />
+        <p className="mt-4">Loading spread...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/admin/tarot/spreads" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Back to Spreads
-        </Link>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">Edit Tarot Spread</h1>
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" asChild>
+          <Link href="/admin/tarot/spreads">
+            <ArrowLeft className="size-5" />
+            <span className="sr-only">Back to spreads</span>
+          </Link>
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Edit Spread</h1>
+          <p className="text-muted-foreground text-sm">Update properties for {form.name || "this spread"}</p>
+        </div>
       </div>
 
-      <Card className="max-w-2xl">
-        <CardHeader>
-          <CardTitle>Spread Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit}>
+        <Card className="max-w-3xl">
+          <CardHeader>
+            <CardTitle>Spread Details</CardTitle>
+            <CardDescription>Configure the underlying properties for this tarot spread.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+
             <div className="space-y-2">
               <Label htmlFor="name">Name *</Label>
-              <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+              <Input
+                id="name"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="e.g. Celtic Cross"
+              />
+              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea id="description" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Textarea
+                id="description"
+                rows={4}
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Describe the purpose and layout of this spread..."
+                className="resize-none"
+              />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="card_count">Card Count *</Label>
-                <Input id="card_count" type="number" min="1" value={form.card_count} onChange={(e) => setForm({ ...form, card_count: e.target.value })} required />
+                <Input
+                  id="card_count"
+                  type="number"
+                  min="1"
+                  value={form.card_count}
+                  onChange={(e) => setForm({ ...form, card_count: e.target.value })}
+                  placeholder="e.g. 10"
+                />
+                {errors.card_count && <p className="text-sm text-destructive">{errors.card_count}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="priority">Priority</Label>
-                <Input id="priority" type="number" min="0" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} />
+                <Label htmlFor="priority">Display Priority (Optional)</Label>
+                <Input
+                  id="priority"
+                  type="number"
+                  min="0"
+                  value={form.priority}
+                  onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                  placeholder="Higher number = higher in list"
+                />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Thumbnail</Label>
-              <div className="flex items-center gap-3">
+              <Label>Thumbnail Image</Label>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div
+                  className="relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-dashed border-muted-foreground/50 bg-muted/30 transition-colors hover:bg-muted/50"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {thumbnailUrl ? (
+                    <img src={thumbnailUrl} alt="Thumbnail" className="h-full w-full object-cover" />
+                  ) : (
+                    <ImagePlus className="size-6 text-muted-foreground opacity-50" />
+                  )}
+                  {uploading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm">
+                      <Loader2 className="size-5 animate-spin" />
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Upload Image</p>
+                  <p className="text-xs text-muted-foreground">JPEG, PNG, WebP up to 10MB.</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={uploading}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {thumbnailUrl ? "Change image" : "Select image"}
+                    </Button>
+                    {thumbnailUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => setThumbnailUrl("")}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                </div>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -204,48 +288,44 @@ export default function EditTarotSpreadPage() {
                   className="hidden"
                   onChange={handleFileChange}
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={uploading}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  {uploading ? "Uploading…" : "Choose Image"}
-                </Button>
-                {thumbnailUrl && (
-                  <a href={thumbnailUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline break-all max-w-xs truncate">
-                    {thumbnailUrl}
-                  </a>
-                )}
               </div>
-              {thumbnailUrl && (
-                <img src={thumbnailUrl} alt="Thumbnail preview" className="mt-2 h-24 w-auto rounded border object-contain" />
-              )}
             </div>
 
             <div className="flex items-center gap-2">
-              <Checkbox id="is_active" checked={form.is_active} onCheckedChange={(checked) => setForm({ ...form, is_active: !!checked })} />
-              <Label htmlFor="is_active">Active</Label>
+              <Checkbox
+                id="is_active"
+                checked={form.is_active}
+                onCheckedChange={(checked) => setForm({ ...form, is_active: !!checked })}
+              />
+              <Label htmlFor="is_active" className="cursor-pointer">Active</Label>
             </div>
 
-            {error && <p className="text-sm text-red-500">{error}</p>}
-
-            <div className="flex gap-3 pt-2">
-              <Button type="submit" disabled={saving || uploading}>{saving ? "Saving…" : "Save Changes"}</Button>
+            {/* Actions */}
+            <div className="flex justify-between pt-4 border-t">
               <Button
                 type="button"
-                variant="destructive"
-                disabled={deleting}
+                variant="outline"
+                className="text-destructive border-destructive hover:bg-destructive/10"
+                disabled={deleting || saving || uploading}
                 onClick={handleDelete}
               >
-                {deleting ? "Deleting…" : "Delete"}
+                {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                Delete Spread
               </Button>
-              <Button type="button" variant="outline" onClick={() => router.push("/admin/tarot/spreads")}>Cancel</Button>
+              <div className="flex gap-3">
+                <Button type="button" variant="outline" onClick={() => router.push("/admin/tarot/spreads")} disabled={saving || uploading || deleting}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving || uploading || deleting}>
+                  {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
+                  Save Changes
+                </Button>
+              </div>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+
+          </CardContent>
+        </Card>
+      </form>
     </div>
   );
 }
