@@ -63,6 +63,8 @@ import {
   Clock,
   FlaskConical,
   Search,
+  Orbit,
+  MapPin,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -113,6 +115,8 @@ const NAV_GROUPS = [
       { label: "Entities", href: "/admin/mundane-entities", icon: Building2 },
       { label: "Forecasts", href: "/admin/mundane-forecasts", icon: TrendingUp },
       { label: "Event Calendar", href: "/admin/mundane/event-calendar", icon: CalendarDays },
+      { label: "Chart Studio", href: "/admin/mundane/chart-studio", icon: Orbit },
+      { label: "World Map", href: "/admin/mundane/world-map", icon: MapPin },
       { label: "Research", href: "/admin/mundane/research", icon: FlaskConical },
       { label: "Mundane Search", href: "/admin/mundane/search", icon: Search },
       { label: "Mundane Access", href: "/admin/mundane-access", icon: Shield },

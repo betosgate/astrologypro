@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -34,6 +34,22 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Pencil,
   KeyRound,
   ShieldOff,
@@ -56,6 +72,13 @@ import {
   XCircle,
   Briefcase,
   ExternalLink,
+  GraduationCap,
+  UserCog,
+  AlertTriangle,
+  Users,
+  ScrollText,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -125,6 +148,23 @@ export interface LoginAttempt {
   success: boolean;
 }
 
+export interface ReferralEntry {
+  id: string;
+  referred_user_id: string;
+  referred_name?: string;
+  referred_email?: string;
+  referral_date: string;
+  status: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  action_type: string;
+  admin_user_id?: string;
+  details?: string | Record<string, unknown>;
+  created_at: string;
+}
+
 export interface UserDetailData {
   userId: string;
   rowId: string;
@@ -154,6 +194,11 @@ export interface UserDetailData {
   sessions?: UserSession[];
   accountLock?: AccountLock | null;
   loginAttempts?: LoginAttempt[];
+  // Training status (trainee role)
+  trainingStatus?: string;
+  // Referrals (affiliate/diviner)
+  referrals?: ReferralEntry[];
+  totalReferrals?: number;
 }
 
 interface AdminNote {
@@ -346,8 +391,36 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
   const [notes, setNotes] = useState<AdminNote[]>(user.notes ?? []);
   const [suspending, setSuspending] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  // Training status
+  const [trainingStatusOpen, setTrainingStatusOpen] = useState(false);
+  const [trainingStatusValue, setTrainingStatusValue] = useState(user.trainingStatus ?? "in_progress");
+  const [trainingStatusLoading, setTrainingStatusLoading] = useState(false);
+  // Impersonation
+  const [impersonateOpen, setImpersonateOpen] = useState(false);
+  const [impersonateReason, setImpersonateReason] = useState("");
+  const [impersonateLoading, setImpersonateLoading] = useState(false);
+  const [isImpersonating, setIsImpersonating] = useState(false);
+  // Audit log
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditPage, setAuditPage] = useState(0);
+  const [auditHasMore, setAuditHasMore] = useState(true);
+  const [auditLoaded, setAuditLoaded] = useState(false);
 
   const displayStatus = user.accountStatus ?? (user.isActive ? "active" : "inactive");
+
+  // ── Check impersonation state ──────────────────────────────────────────────
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const impData = sessionStorage.getItem("impersonation");
+      if (impData) {
+        try {
+          const parsed = JSON.parse(impData);
+          if (parsed.active) setIsImpersonating(true);
+        } catch { /* ignore */ }
+      }
+    }
+  }, []);
 
   // ── Save note ─────────────────────────────────────────────────────────────────
   async function handleSaveNote() {
@@ -422,6 +495,95 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
       setSuspending(false);
     }
   }
+
+  // ── Update training status ─────────────────────────────────────────────────
+  async function handleUpdateTrainingStatus() {
+    setTrainingStatusLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${user.userId}/training-status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: trainingStatusValue }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error ?? "Failed to update training status");
+      }
+      toast.success(`Training status updated to ${trainingStatusValue}`);
+      setTrainingStatusOpen(false);
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update training status");
+    } finally {
+      setTrainingStatusLoading(false);
+    }
+  }
+
+  // ── Impersonate user ──────────────────────────────────────────────────────
+  async function handleImpersonate() {
+    if (impersonateReason.trim().length < 5) {
+      toast.error("Reason must be at least 5 characters");
+      return;
+    }
+    setImpersonateLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${user.userId}/impersonate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: impersonateReason.trim() }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error ?? "Failed to impersonate");
+      }
+      const data = await res.json() as { magicLinkUrl: string };
+      // Store impersonation state
+      sessionStorage.setItem(
+        "impersonation",
+        JSON.stringify({
+          active: true,
+          userId: user.userId,
+          userName: user.name || user.email,
+          startedAt: new Date().toISOString(),
+        })
+      );
+      setIsImpersonating(true);
+      setImpersonateOpen(false);
+      setImpersonateReason("");
+      toast.success("Impersonation started. Opening in new tab...");
+      window.open(data.magicLinkUrl, "_blank");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to impersonate");
+    } finally {
+      setImpersonateLoading(false);
+    }
+  }
+
+  function handleStopImpersonation() {
+    sessionStorage.removeItem("impersonation");
+    setIsImpersonating(false);
+    toast.success("Impersonation ended");
+  }
+
+  // ── Fetch audit logs ──────────────────────────────────────────────────────
+  const fetchAuditLogs = useCallback(async (page: number) => {
+    setAuditLoading(true);
+    try {
+      const res = await fetch(
+        `/api/admin/users/${user.userId}/audit-log?page=${page}&limit=20`
+      );
+      if (!res.ok) throw new Error("Failed to fetch audit logs");
+      const data = await res.json() as { logs: AuditLogEntry[]; total: number };
+      setAuditLogs(data.logs);
+      setAuditHasMore((page + 1) * 20 < data.total);
+      setAuditPage(page);
+      setAuditLoaded(true);
+    } catch {
+      toast.error("Failed to load audit logs");
+    } finally {
+      setAuditLoading(false);
+    }
+  }, [user.userId]);
 
   // ── Lock account ──────────────────────────────────────────────────────────
   async function handleLockAccount() {
@@ -607,8 +769,136 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
             <StickyNote className="mr-1.5 size-3.5" />
             Add Note
           </Button>
+
+          {/* Training Status — only for trainees */}
+          {user.role === "trainee" && (
+            <Dialog open={trainingStatusOpen} onOpenChange={setTrainingStatusOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <GraduationCap className="mr-1.5 size-3.5" />
+                  Update Training Status
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Update Training Status</DialogTitle>
+                  <DialogDescription>
+                    Change the training status for {user.name || user.email}.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3 py-4">
+                  <Label htmlFor="training-status-select">Training Status</Label>
+                  <Select
+                    value={trainingStatusValue}
+                    onValueChange={setTrainingStatusValue}
+                  >
+                    <SelectTrigger id="training-status-select">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="certified">Certified</SelectItem>
+                      <SelectItem value="dropped">Dropped</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setTrainingStatusOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleUpdateTrainingStatus}
+                    disabled={trainingStatusLoading}
+                  >
+                    {trainingStatusLoading && (
+                      <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                    )}
+                    Update Status
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {/* Impersonate User */}
+          <Dialog open={impersonateOpen} onOpenChange={setImpersonateOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline">
+                <UserCog className="mr-1.5 size-3.5" />
+                Impersonate User
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Impersonate User</DialogTitle>
+                <DialogDescription>
+                  You will be logged in as {user.name || user.email}. This action is logged and audited.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 py-4">
+                <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 p-3">
+                  <AlertTriangle className="size-4 shrink-0 text-amber-600 mt-0.5" />
+                  <p className="text-sm text-amber-700 dark:text-amber-400">
+                    Impersonation opens a magic link in a new tab. All actions you take will be logged.
+                  </p>
+                </div>
+                <Label htmlFor="impersonate-reason">
+                  Reason <span className="text-destructive">*</span>
+                </Label>
+                <Textarea
+                  id="impersonate-reason"
+                  value={impersonateReason}
+                  onChange={(e) => setImpersonateReason(e.target.value)}
+                  placeholder="Why are you impersonating this user? (min 5 characters)"
+                  rows={3}
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setImpersonateOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleImpersonate}
+                  disabled={impersonateLoading || impersonateReason.trim().length < 5}
+                >
+                  {impersonateLoading && (
+                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  )}
+                  Start Impersonation
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
+
+      {/* Impersonation warning banner */}
+      {isImpersonating && (
+        <div className="flex items-center justify-between rounded-lg border border-amber-400 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="size-4 text-amber-600" />
+            <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
+              You are impersonating {user.name || user.email}.
+            </span>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-amber-700 border-amber-400 hover:bg-amber-100"
+            onClick={handleStopImpersonation}
+          >
+            Stop Impersonation
+          </Button>
+        </div>
+      )}
 
       {/* ── Tabs ─────────────────────────────────────────────────────────────── */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -628,6 +918,21 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
               Business
             </TabsTrigger>
           )}
+          {(user.role === "affiliate" || user.role === "diviner") && (
+            <TabsTrigger value="referrals">
+              <Users className="mr-1.5 size-3.5" />
+              Referrals {user.totalReferrals != null && user.totalReferrals > 0 && `(${user.totalReferrals})`}
+            </TabsTrigger>
+          )}
+          <TabsTrigger
+            value="audit"
+            onClick={() => {
+              if (!auditLoaded) fetchAuditLogs(0);
+            }}
+          >
+            <ScrollText className="mr-1.5 size-3.5" />
+            Audit Log
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Tab 1: Overview ──────────────────────────────────────────────── */}
@@ -1556,6 +1861,159 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
             )}
           </TabsContent>
         )}
+
+        {/* ── Tab: Referrals (affiliate/diviner) ──────────────────────────── */}
+        {(user.role === "affiliate" || user.role === "diviner") && (
+          <TabsContent value="referrals" className="space-y-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="size-4" />
+                  Referral History
+                </CardTitle>
+                {user.totalReferrals != null && (
+                  <Badge variant="secondary">{user.totalReferrals} total</Badge>
+                )}
+              </CardHeader>
+              <CardContent>
+                {(!user.referrals || user.referrals.length === 0) ? (
+                  <div className="py-12 text-center">
+                    <Users className="mx-auto size-8 text-muted-foreground/30 mb-3" />
+                    <p className="text-sm text-muted-foreground">No referrals found</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Referred User</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Referral Date</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {user.referrals.map((ref) => (
+                        <TableRow key={ref.id}>
+                          <TableCell>
+                            <Link
+                              href={`/admin/users/${ref.referred_user_id}`}
+                              className="text-sm font-medium hover:underline text-primary"
+                            >
+                              {ref.referred_name ?? ref.referred_user_id.slice(0, 8) + "..."}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {ref.referred_email ?? "—"}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {fmtDate(ref.referral_date)}
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge status={ref.status} />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {/* ── Tab: Audit Log ──────────────────────────────────────────────── */}
+        <TabsContent value="audit" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <ScrollText className="size-4" />
+                Admin Audit Log
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {auditLoading && !auditLoaded ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : auditLogs.length === 0 && auditLoaded ? (
+                <div className="py-12 text-center">
+                  <ScrollText className="mx-auto size-8 text-muted-foreground/30 mb-3" />
+                  <p className="text-sm text-muted-foreground">No audit log entries for this user</p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-3">
+                    {auditLogs.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className="flex items-start gap-3 rounded-lg border p-3"
+                      >
+                        <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                          <Activity className="size-4 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium bg-muted px-2 py-0.5 rounded">
+                              {entry.action_type}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {entry.admin_user_id ? `By: ${entry.admin_user_id}` : "System"}
+                            {" · "}
+                            {fmt(entry.created_at)}
+                          </p>
+                          {entry.details && (
+                            <p className="mt-1 text-xs text-muted-foreground truncate max-w-md">
+                              {typeof entry.details === "string"
+                                ? entry.details
+                                : JSON.stringify(entry.details)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Pagination */}
+                  <div className="flex items-center justify-between pt-4 border-t mt-4">
+                    <p className="text-xs text-muted-foreground">Page {auditPage + 1}</p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={auditPage === 0 || auditLoading}
+                        onClick={() => fetchAuditLogs(auditPage - 1)}
+                      >
+                        <ChevronLeft className="mr-1 size-3.5" />
+                        Previous
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!auditHasMore || auditLoading}
+                        onClick={() => fetchAuditLogs(auditPage + 1)}
+                      >
+                        Next
+                        <ChevronRight className="ml-1 size-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+              {!auditLoaded && !auditLoading && (
+                <div className="py-12 text-center">
+                  <Button
+                    variant="outline"
+                    onClick={() => fetchAuditLogs(0)}
+                  >
+                    <ScrollText className="mr-1.5 size-3.5" />
+                    Load Audit Log
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );
