@@ -632,26 +632,42 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
 function ChartImageModal({ src, open, onClose }: { src: string; open: boolean; onClose: () => void }) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-[95vw] w-[95vw] max-h-[95vh] h-[95vh] p-0 overflow-hidden bg-slate-950 border-white/10" showCloseButton={false}>
-        {/* Custom Close Icon */}
+      <DialogContent
+        className="max-w-[100vw] w-screen max-h-[100vh] h-screen p-0 border-none rounded-none overflow-hidden bg-black/95 backdrop-blur-sm z-[100]"
+        showCloseButton={false}
+      >
+        {/* Persistent High-Visibility Close Icon */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.2)] group"
-          aria-label="Close modal"
+          className="absolute top-6 right-6 z-[110] size-12 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-white transition-all active:scale-95 shadow-[0_0_30px_rgba(245,158,11,0.3)] group"
+          aria-label="Exit Fullscreen"
         >
-          <X className="size-5 transition-transform group-hover:rotate-90" />
+          <X className="size-7 transition-transform group-hover:rotate-90" />
         </button>
 
-        <div className="h-full w-full overflow-hidden p-6 flex items-center justify-center">
+        <div className="h-full w-full overflow-auto flex items-center justify-center p-4">
           <DialogHeader className="sr-only">
-            <DialogTitle>Astrological Asset</DialogTitle>
+            <DialogTitle>Fullscreen Astrological Perception</DialogTitle>
           </DialogHeader>
+
           {src.startsWith("<svg") ? (
-            <div dangerouslySetInnerHTML={{ __html: src }} className="w-full h-full overflow-auto flex justify-center items-center" />
+            <div
+              dangerouslySetInnerHTML={{ __html: src }}
+              className="w-full h-full min-w-full min-h-full flex justify-center items-center scale-110"
+            />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={src} alt="Astrological Asset" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
+            <img
+              src={src}
+              alt="Astrological Visualization"
+              className="max-w-full max-h-full object-contain drop-shadow-[0_0_80px_rgba(245,158,11,0.1)] transition-transform duration-1000 animate-in fade-in zoom-in-95"
+            />
           )}
+
+          {/* Bottom Branding (Very Subtle) */}
+          <div className="absolute bottom-8 left-0 right-0 text-center pointer-events-none">
+            <span className="text-[10px] font-black uppercase tracking-[0.6em] text-white/10">Celestial Visualization Map</span>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -1062,6 +1078,7 @@ function DecanModal({ planet, sign, open, onClose }: {
   const [sections, setSections] = useState<Record<number, DecanSection>>({});
   const [loadingRows, setLoadingRows] = useState(false);
   const [rowError, setRowError] = useState<string | null>(null);
+  const [fullscreenImg, setFullscreenImg] = useState<string | null>(null);
 
   // Fetch decan rows + fire 3 AI calls per decan whenever modal opens
   useEffect(() => {
@@ -1150,120 +1167,123 @@ function DecanModal({ planet, sign, open, onClose }: {
   }, [open, planet, sign]);
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
-        {/* Custom Close Icon - Fixed to top-right */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.15)] group"
-          aria-label="Close modal"
-        >
-          <X className="size-5 transition-transform group-hover:rotate-90" />
-        </button>
+    <>
+      <ChartImageModal src={fullscreenImg || ""} open={!!fullscreenImg} onClose={() => setFullscreenImg(null)} />
+      <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
+          {/* Custom Close Icon - Fixed to top-right */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.15)] group"
+            aria-label="Close modal"
+          >
+            <X className="size-5 transition-transform group-hover:rotate-90" />
+          </button>
 
-        {/* Sticky Header Section */}
-        <div className="px-6 py-5 border-b border-white/5 bg-slate-900/40 pr-16 shrink-0">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-lg font-bold gold-text">
-              {PLANET_IMAGES[planet] && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={PLANET_IMAGES[planet]} alt={planet} className="size-7 object-contain drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
-              )}
-              <span>{planet} Decans in {sign}</span>
-            </DialogTitle>
-          </DialogHeader>
-        </div>
+          {/* Sticky Header Section */}
+          <div className="px-6 py-5 border-b border-white/5 bg-slate-900/40 pr-16 shrink-0">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3 text-lg font-bold gold-text">
+                {PLANET_IMAGES[planet] && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={PLANET_IMAGES[planet]} alt={planet} className="size-7 object-contain drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
+                )}
+                <span>{planet} Decans in {sign}</span>
+              </DialogTitle>
+            </DialogHeader>
+          </div>
 
-        {/* Scrollable Content Section */}
-        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+          {/* Scrollable Content Section */}
+          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
 
-          {loadingRows && (
-            <div className="flex items-center gap-3 py-8 justify-center text-muted-foreground">
-              <Loader2 className="size-5 animate-spin text-amber-500" />
-              <span className="text-sm">Loading decan data…</span>
-            </div>
-          )}
+            {loadingRows && (
+              <div className="flex items-center gap-3 py-8 justify-center text-muted-foreground">
+                <Loader2 className="size-5 animate-spin text-amber-500" />
+                <span className="text-sm">Loading decan data…</span>
+              </div>
+            )}
 
-          {rowError && (
-            <div className="py-4 text-sm text-destructive">{rowError}</div>
-          )}
+            {rowError && (
+              <div className="py-4 text-sm text-destructive">{rowError}</div>
+            )}
 
-          {rows.length > 0 && (
-            <div className="space-y-6">
-              {rows.map((row) => {
-                const sec = sections[row.decan];
-                return (
-                  <div key={row.decan} className="rounded-lg border overflow-hidden bg-slate-900/20">
-                    {/* Decan header */}
-                    <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-500/10 border-b">
-                      <span className="text-xs font-bold uppercase tracking-widest text-amber-600">{ordinalDecan(row.decan)} Decan</span>
-                      <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-400 ml-auto">{planet} in {sign}</Badge>
-                    </div>
+            {rows.length > 0 && (
+              <div className="space-y-6">
+                {rows.map((row) => {
+                  const sec = sections[row.decan];
+                  return (
+                    <div key={row.decan} className="rounded-lg border overflow-hidden bg-slate-900/20">
+                      {/* Decan header */}
+                      <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-500/10 border-b">
+                        <span className="text-xs font-bold uppercase tracking-widest text-amber-600">{ordinalDecan(row.decan)} Decan</span>
+                        <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-400 ml-auto">{planet} in {sign}</Badge>
+                      </div>
 
-                    {/* Decan Image if available */}
-                    {row.decan_img && (
-                      <div className="relative group/img bg-slate-950 border-b border-white/5 flex justify-center p-4">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={row.decan_img}
-                          alt={`${ordinalDecan(row.decan)} Decan Imagery`}
-                          className="max-h-[320px] w-auto object-contain rounded-lg shadow-2xl transition-transform hover:scale-[1.02]"
+                      {/* Decan Image if available */}
+                      {row.decan_img && (
+                        <div className="relative group/img bg-slate-950 border-b border-white/5 flex justify-center p-4">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={row.decan_img}
+                            alt={`${ordinalDecan(row.decan)} Decan Imagery`}
+                            className="max-h-[320px] w-auto object-contain rounded-lg shadow-2xl transition-transform hover:scale-[1.02]"
+                          />
+                          <button
+                            className="absolute bottom-6 right-6 p-2 rounded-full bg-slate-900/80 border border-white/10 text-amber-500 opacity-0 group-hover/img:opacity-100 transition-opacity"
+                            onClick={() => setFullscreenImg(row.decan_img || null)}
+                            title="Open Full Image"
+                          >
+                            <Maximize2 className="size-4" />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Static labels row */}
+                      <div className="grid grid-cols-2 gap-px bg-border">
+                        <div className="bg-background px-4 py-2.5 space-y-0.5">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Greek Daemon</p>
+                          <p className="text-sm font-medium text-foreground">{row.greek_daemon || "—"}</p>
+                        </div>
+                        <div className="bg-background px-4 py-2.5 space-y-0.5">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tarot Card</p>
+                          <p className="text-sm font-medium text-foreground">{row.tarot_name || "—"}</p>
+                        </div>
+                      </div>
+
+                      {/* Static description if present */}
+                      {row.description && (
+                        <div className="px-4 py-3 bg-muted/5 border-t">
+                          <p className="text-xs text-muted-foreground leading-relaxed">{row.description}</p>
+                        </div>
+                      )}
+
+                      {/* AI sections */}
+                      <div className="px-4 py-4 space-y-5 border-t">
+                        <DecanAiBlock
+                          title={`${planet} in ${ordinalDecan(row.decan)} Decan of ${sign}`}
+                          data={sec?.planetAi ?? null}
+                          loading={sec?.loading ?? true}
                         />
-                        <button
-                          className="absolute bottom-6 right-6 p-2 rounded-full bg-slate-900/80 border border-white/10 text-amber-500 opacity-0 group-hover/img:opacity-100 transition-opacity"
-                          onClick={() => window.open(row.decan_img, '_blank')}
-                          title="Open Full Image"
-                        >
-                          <Maximize2 className="size-4" />
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Static labels row */}
-                    <div className="grid grid-cols-2 gap-px bg-border">
-                      <div className="bg-background px-4 py-2.5 space-y-0.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Greek Daemon</p>
-                        <p className="text-sm font-medium text-foreground">{row.greek_daemon || "—"}</p>
-                      </div>
-                      <div className="bg-background px-4 py-2.5 space-y-0.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tarot Card</p>
-                        <p className="text-sm font-medium text-foreground">{row.tarot_name || "—"}</p>
+                        <DecanAiBlock
+                          title={`Greek Daemon: ${row.greek_daemon}`}
+                          data={sec?.daemonAi ?? null}
+                          loading={sec?.loading ?? true}
+                        />
+                        <DecanAiBlock
+                          title={`Tarot: ${row.tarot_name}`}
+                          data={sec?.tarotAi ?? null}
+                          loading={sec?.loading ?? true}
+                        />
                       </div>
                     </div>
-
-                    {/* Static description if present */}
-                    {row.description && (
-                      <div className="px-4 py-3 bg-muted/5 border-t">
-                        <p className="text-xs text-muted-foreground leading-relaxed">{row.description}</p>
-                      </div>
-                    )}
-
-                    {/* AI sections */}
-                    <div className="px-4 py-4 space-y-5 border-t">
-                      <DecanAiBlock
-                        title={`${planet} in ${ordinalDecan(row.decan)} Decan of ${sign}`}
-                        data={sec?.planetAi ?? null}
-                        loading={sec?.loading ?? true}
-                      />
-                      <DecanAiBlock
-                        title={`Greek Daemon: ${row.greek_daemon}`}
-                        data={sec?.daemonAi ?? null}
-                        loading={sec?.loading ?? true}
-                      />
-                      <DecanAiBlock
-                        title={`Tarot: ${row.tarot_name}`}
-                        data={sec?.tarotAi ?? null}
-                        loading={sec?.loading ?? true}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -2237,11 +2257,11 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
   // Normalise transit relation rows — handles both Lambda and AstrologyAPI shapes
   const transitRows: any[] = (() => {
     if (!data) return [];
-    // Lambda: { transit_relation: [...] } or direct array
+    // Lambda: {transit_relation: [...] } or direct array
     if (Array.isArray(data?.transit_relation)) return data.transit_relation;
     if (Array.isArray(data?.transits)) return data.transits;
     if (Array.isArray(data)) return data;
-    // AstrologyAPI weekly shape: { transit_planet: { Sun: {...}, ... } } — flatten
+    // AstrologyAPI weekly shape: {transit_planet: {Sun: {...}, ... } } — flatten
     if (data?.transit_planet && typeof data.transit_planet === "object") {
       return Object.entries(data.transit_planet).flatMap(([tPlanet, aspects]: [string, any]) =>
         Object.entries(aspects ?? {}).map(([nPlanet, detail]: [string, any]) => ({
