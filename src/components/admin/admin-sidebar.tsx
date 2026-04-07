@@ -68,6 +68,7 @@ import {
   UserX,
   BookOpenCheck,
   ScrollTextIcon,
+  Map,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -76,6 +77,7 @@ const NAV_GROUPS = [
   {
     label: "Overview",
     items: [
+      { label: "Walkthrough", href: "/admin/walkthrough", icon: Map },
       { label: "Analytics", href: "/admin", icon: LayoutDashboard, exact: true },
     ],
   },

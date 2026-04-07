@@ -4,6 +4,8 @@ import { getUserPortals } from "@/lib/user-roles";
 import { PortalSwitcher } from "@/components/shared/portal-switcher";
 import Link from "next/link";
 import { RouteTracker } from "@/components/shared/route-tracker";
+import { NavLink } from "@/components/shared/nav-link";
+import { PortalLogoutButton } from "@/components/portal/logout-button";
 
 export const metadata = { title: "Advocate Portal - AstrologyPro" };
 
@@ -42,13 +44,13 @@ export default async function AdvocateLayout({ children }: { children: React.Rea
             <span className="hidden text-sm text-muted-foreground sm:inline">Advocate Portal</span>
             <nav className="hidden items-center gap-1 sm:flex">
               {navLinks.map((link) => (
-                <Link
+                <NavLink
                   key={link.href}
                   href={link.href}
-                  className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  exact={link.href === "/advocate"}
                 >
                   {link.label}
-                </Link>
+                </NavLink>
               ))}
             </nav>
           </div>
@@ -57,6 +59,7 @@ export default async function AdvocateLayout({ children }: { children: React.Rea
             <Link href="/account" className="text-sm text-muted-foreground hover:text-foreground">
               Account
             </Link>
+            <PortalLogoutButton />
           </div>
         </div>
         <nav className="flex items-center gap-1 border-t px-4 sm:hidden">
