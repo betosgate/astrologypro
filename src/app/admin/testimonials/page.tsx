@@ -150,7 +150,12 @@ export default function TestimonialsListPage() {
 
   const filtered = testimonials.filter((t) => {
     if (!search) return true;
-    return (t.client_name ?? "").toLowerCase().includes(search.toLowerCase());
+    const s = search.toLowerCase();
+    return (
+      (t.client_name ?? "").toLowerCase().includes(s) ||
+      (t.text ?? "").toLowerCase().includes(s) ||
+      (t.title ?? "").toLowerCase().includes(s)
+    );
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -178,7 +183,7 @@ export default function TestimonialsListPage() {
           {/* Filters */}
           <div className="flex flex-wrap gap-3">
             <Input
-              placeholder="Search by client name…"
+              placeholder="Search by client name or text…"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
