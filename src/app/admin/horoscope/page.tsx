@@ -274,12 +274,14 @@ async function callDecanLookup(signs: string, planet: string) {
 
 interface DecanRow {
   id?: number;
+  sign_id?: number;
   sign_name: string;
   planet: string;
   decan: number;           // 1 | 2 | 3
   greek_daemon: string;
   tarot_name: string;
   description?: string;
+  decan_img?: string;
   is_active?: boolean;
 }
 
@@ -544,19 +546,19 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
             </DialogHeader>
           </div>
 
-          {/* Content Section — Side-by-side on MD screens if picture exists */}
+          {/* Content Section — Vertical stack: Text first, then Image */}
           <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-950/50">
-            <div className={cn("grid grid-cols-1 gap-0 h-full", pictureUrl && "md:grid-cols-2")}>
+            <div className="flex flex-col gap-0 h-full">
 
               {/* Textual/Structured Content */}
-              <div className="p-6 h-full flex flex-col border-b md:border-b-0 md:border-r border-white/5">
+              <div className="p-6 shrink-0 border-b border-white/5">
                 {loading ? (
-                  <div className="flex flex-col items-center gap-3 py-12 justify-center text-muted-foreground flex-1">
+                  <div className="flex flex-col items-center gap-3 py-12 justify-center text-muted-foreground">
                     <Loader2 className="size-8 animate-spin text-amber-500 mb-2" />
                     <span className="text-sm font-medium tracking-widest uppercase opacity-70">Cosmic Retrieval...</span>
                   </div>
                 ) : (
-                  <div className="flex-1">
+                  <div>
                     {promptType === "planet" && planetEntries && planetEntries.length > 0 ? (
                       <div className="space-y-6">
                         {planetEntries.map(({ planet, items }) => (
@@ -589,12 +591,12 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
                 )}
               </div>
 
-              {/* Pictorial Representation — Step-by-side with text */}
+              {/* Pictorial Representation — Below the text */}
               {pictureUrl && (
-                <div className="p-6 flex flex-col items-center justify-center bg-slate-900/20">
-                  <div className="relative group rounded-2xl border border-amber-500/20 overflow-hidden bg-slate-950 shadow-[0_0_50px_rgba(245,158,11,0.08)] transition-all hover:border-amber-500/40">
+                <div className="p-6 flex flex-col items-center justify-center bg-slate-900/20 border-b border-white/5">
+                  <div className="relative group rounded-2xl border border-amber-500/20 overflow-hidden bg-slate-950 shadow-[0_0_50px_rgba(245,158,11,0.08)] transition-all hover:border-amber-500/40 max-w-lg w-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={pictureUrl} alt={title} className="w-full h-auto max-h-[50vh] object-contain transition-transform duration-1000 group-hover:scale-[1.05]" />
+                    <img src={pictureUrl} alt={title} className="w-full h-auto max-h-[60vh] object-contain transition-transform duration-1000 group-hover:scale-[1.05]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
 
                     {/* Maximize Icon */}
@@ -1191,12 +1193,31 @@ function DecanModal({ planet, sign, open, onClose }: {
               {rows.map((row) => {
                 const sec = sections[row.decan];
                 return (
-                  <div key={row.decan} className="rounded-lg border overflow-hidden">
+                  <div key={row.decan} className="rounded-lg border overflow-hidden bg-slate-900/20">
                     {/* Decan header */}
                     <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-500/10 border-b">
                       <span className="text-xs font-bold uppercase tracking-widest text-amber-600">{ordinalDecan(row.decan)} Decan</span>
                       <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-400 ml-auto">{planet} in {sign}</Badge>
                     </div>
+
+                    {/* Decan Image if available */}
+                    {row.decan_img && (
+                      <div className="relative group/img bg-slate-950 border-b border-white/5 flex justify-center p-4">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={row.decan_img}
+                          alt={`${ordinalDecan(row.decan)} Decan Imagery`}
+                          className="max-h-[320px] w-auto object-contain rounded-lg shadow-2xl transition-transform hover:scale-[1.02]"
+                        />
+                        <button
+                          className="absolute bottom-6 right-6 p-2 rounded-full bg-slate-900/80 border border-white/10 text-amber-500 opacity-0 group-hover/img:opacity-100 transition-opacity"
+                          onClick={() => window.open(row.decan_img, '_blank')}
+                          title="Open Full Image"
+                        >
+                          <Maximize2 className="size-4" />
+                        </button>
+                      </div>
+                    )}
 
                     {/* Static labels row */}
                     <div className="grid grid-cols-2 gap-px bg-border">
@@ -1300,7 +1321,21 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: 
             <tbody>
               {ordered.map((p, i) => (
                 <tr key={p.name} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
-                  <td className="px-3 py-2 font-medium whitespace-nowrap"><PlanetSymbol name={p.name} /></td>
+                  <td className="px-3 py-2 font-medium whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <PlanetSymbol name={p.name} />
+                      {checkDacen(p.name, p.sign) && (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          onClick={() => setDecanPlanet({ name: p.name, sign: p.sign })}
+                          src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
+                          alt="Decan Icon"
+                          title="Decan Information (Click to view)"
+                          className="size-5 cursor-pointer hover:scale-125 transition-transform drop-shadow-[0_0_5px_rgba(245,158,11,0.4)]"
+                        />
+                      )}
+                    </div>
+                  </td>
                   <td className="px-3 py-2 whitespace-nowrap"><ZodiacSymbol sign={p.sign} /></td>
                   <td className="px-3 py-2 font-mono text-xs">{Number(p.full_degree).toFixed(2)}°</td>
                   <td className="px-3 py-2 text-center">{p.house}</td>
@@ -1333,13 +1368,14 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: 
                   <span className="text-amber-500 text-base">{PLANET_SYMBOLS[p.name] ?? "✦"}</span>
                   <h4 className="text-sm font-semibold uppercase tracking-wide">{p.name}</h4>
                   {hasDecan && (
-                    <button
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
                       onClick={() => setDecanPlanet({ name: p.name, sign: p.sign })}
-                      className="inline-flex items-center justify-center p-1 rounded-md hover:bg-purple-500/10 text-purple-600 transition-colors"
-                      title={`${p.name} Decan in ${p.sign}`}
-                    >
-                      <Sparkles className="size-4" />
-                    </button>
+                      src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
+                      alt="Decan Icon"
+                      title="Decan Information (Click to view)"
+                      className="size-5 cursor-pointer hover:scale-125 transition-transform drop-shadow-[0_0_5px_rgba(245,158,11,0.4)] ml-1.5"
+                    />
                   )}
                   <Badge variant="outline" className="ml-auto text-[10px] text-amber-600 border-amber-400">{p.sign} · House {p.house}</Badge>
                 </div>
