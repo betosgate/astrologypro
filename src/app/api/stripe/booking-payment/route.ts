@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logActivity } from "@/lib/activity-log";
 import { createPaymentIntent } from "@/lib/stripe/connect";
 import { PRICING } from "@/lib/constants";
 import {
@@ -395,6 +396,18 @@ export async function POST(request: NextRequest) {
         .from("bookings")
         .update({ status: "confirmed" })
         .eq("id", booking.id);
+
+      logActivity({
+        userId: clientAuthUserId,
+        eventCategory: 'booking',
+        eventType: 'booking.created',
+        metadata: {
+          bookingId: booking.id,
+          divinerId,
+          serviceName: service.name,
+          giftCovered: true,
+        },
+      })
 
       // Send confirmation + access instructions emails immediately
       const sessionLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/session/${booking.id}`;

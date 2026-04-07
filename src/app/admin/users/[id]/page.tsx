@@ -79,7 +79,7 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
       .eq("user_id", userId)
       .order("created_at", { ascending: false }),
 
-    // Activity log — catch errors if table doesn't exist yet
+    // Admin activity log — admin actions targeting this user
     admin
       .from("admin_activity_log")
       .select("id, actor_email, action_type, details, created_at")
@@ -87,6 +87,16 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
       .order("created_at", { ascending: false })
       .limit(50),
   ]);
+
+  // User-generated activity log — fire-and-forget; swallow errors if table absent
+  const userActivityRes = await Promise.resolve(
+    admin
+      .from("user_activity_log")
+      .select("id, user_id, actor_id, event_category, event_type, metadata, ip_address, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(50)
+  ).catch(() => ({ data: [] as unknown[] }));
 
   // Optional tables — may not exist; swallow errors using Promise.resolve wrapper
   const [securityEventsRes, relationshipsRes] = await Promise.all([
@@ -321,6 +331,15 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
       action_type: a.action_type as string,
       details:     a.details as string | undefined,
       created_at:  a.created_at as string,
+    })),
+    userActivityLog: safeTable((userActivityRes as { data?: unknown }).data).map((a) => ({
+      id:             a.id as string,
+      event_category: a.event_category as string | undefined,
+      event_type:     a.event_type as string,
+      metadata:       a.metadata as Record<string, unknown> | undefined,
+      ip_address:     a.ip_address as string | undefined,
+      actor_id:       a.actor_id as string | undefined,
+      created_at:     a.created_at as string,
     })),
     commPrefs: null,
   };

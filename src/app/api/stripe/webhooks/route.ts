@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logActivity } from "@/lib/activity-log";
 import Stripe from "stripe";
 import {
   sendBookingConfirmation,
@@ -118,6 +119,13 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
     )
     .select("id")
     .single();
+
+  logActivity({
+    userId: userId,
+    eventCategory: 'subscription',
+    eventType: 'subscription.created',
+    metadata: { planName: membershipType, planType, status: 'active' },
+  })
 
   // Send community welcome email for all membership types (idempotent via SES dedup window)
   if (email) {
@@ -297,7 +305,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   if (customerId) {
     const { data: communityMember } = await supabase
       .from("community_members")
-      .select("id, email, full_name, membership_status")
+      .select("id, user_id, email, full_name, membership_status")
       .eq("stripe_customer_id", customerId)
       .maybeSingle();
 
@@ -307,6 +315,19 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
         .from("community_members")
         .update({ membership_status: "active" })
         .eq("id", communityMember.id);
+
+      if (communityMember.user_id) {
+        logActivity({
+          userId: communityMember.user_id,
+          eventCategory: 'payment',
+          eventType: 'payment.failed',
+          metadata: {
+            error: 'invoice_payment_failed',
+            amountDue: invoice.amount_due / 100,
+            currency: invoice.currency,
+          },
+        })
+      }
 
       if (communityMember.email) {
         sendCommunityPaymentFailed({
@@ -374,6 +395,15 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       updated_at: new Date().toISOString(),
     })
     .eq("id", member.id);
+
+  if (member.user_id) {
+    logActivity({
+      userId: member.user_id,
+      eventCategory: 'subscription',
+      eventType: 'subscription.updated',
+      metadata: { status: mappedStatus, stripeStatus: newStatus },
+    })
+  }
 }
 
 // ─── Diviner SaaS plan subscription helpers ───────────────────────────────────
@@ -543,7 +573,7 @@ async function handleSubscriptionDeleted(
   // Community membership cancelled — fetch member before updating so we have email
   const { data: communityMember } = await supabase
     .from("community_members")
-    .select("id, email, full_name, current_period_end")
+    .select("id, user_id, email, full_name, current_period_end")
     .eq("stripe_subscription_id", subscription.id)
     .maybeSingle();
 
@@ -552,6 +582,15 @@ async function handleSubscriptionDeleted(
       .from("community_members")
       .update({ membership_status: "cancelled" })
       .eq("id", communityMember.id);
+
+    if (communityMember.user_id) {
+      logActivity({
+        userId: communityMember.user_id,
+        eventCategory: 'subscription',
+        eventType: 'subscription.cancelled',
+        metadata: { stripeSubscriptionId: subscription.id },
+      })
+    }
 
     if (communityMember.email) {
       const subDelAny = subscription as unknown as { current_period_end?: number };
@@ -612,7 +651,7 @@ async function handlePaymentIntentSucceeded(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, duration_minutes, diviner_id, client_id, services(name, duration_minutes), diviners(id, display_name, google_calendar_connected), clients(email, full_name)"
+      "id, scheduled_at, duration_minutes, diviner_id, client_id, services(name, duration_minutes), diviners(id, display_name, google_calendar_connected), clients(email, full_name, user_id)"
     )
     .eq("id", bookingId)
     .single();
@@ -631,9 +670,30 @@ async function handlePaymentIntentSucceeded(
   const clientRecord = (booking as Record<string, unknown>).clients as {
     email: string;
     full_name: string | null;
+    user_id: string | null;
   } | null;
 
   if (!svc || !div) return;
+
+  if (clientRecord?.user_id) {
+    const amount = paymentIntent.amount / 100
+    logActivity({
+      userId: clientRecord.user_id,
+      eventCategory: 'payment',
+      eventType: 'payment.succeeded',
+      metadata: { amount, bookingId, divinerId: booking.diviner_id },
+    })
+    logActivity({
+      userId: clientRecord.user_id,
+      eventCategory: 'booking',
+      eventType: 'booking.created',
+      metadata: {
+        bookingId,
+        divinerId: booking.diviner_id,
+        serviceName: svc.name,
+      },
+    })
+  }
 
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";

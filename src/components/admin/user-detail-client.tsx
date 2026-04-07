@@ -72,6 +72,7 @@ export interface UserDetailData {
   securityEvents: SecurityEvent[];
   relationships: UserRelationship[];
   activityLog: ActivityLogEntry[];
+  userActivityLog: UserActivityEntry[];
   commPrefs?: CommunicationPrefs | null;
 }
 
@@ -117,6 +118,16 @@ interface ActivityLogEntry {
   actor_email?: string;
   action_type: string;
   details?: string;
+  created_at: string;
+}
+
+interface UserActivityEntry {
+  id: string;
+  event_category?: string;
+  event_type: string;
+  metadata?: Record<string, unknown>;
+  ip_address?: string;
+  actor_id?: string;
   created_at: string;
 }
 
@@ -166,6 +177,31 @@ function EventBadge({ type }: { type: string }) {
   return (
     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>
       {type}
+    </span>
+  );
+}
+
+// ─── Category badge ────────────────────────────────────────────────────────────
+
+const CATEGORY_COLORS: Record<string, string> = {
+  auth:         "bg-blue-500/15 text-blue-400",
+  booking:      "bg-green-500/15 text-green-400",
+  payment:      "bg-amber-500/15 text-amber-400",
+  reading:      "bg-purple-500/15 text-purple-400",
+  subscription: "bg-teal-500/15 text-teal-400",
+  admin:        "bg-orange-500/15 text-orange-400",
+  security:     "bg-red-500/15 text-red-400",
+  system:       "bg-gray-500/15 text-gray-400",
+};
+
+function CategoryBadge({ category }: { category?: string }) {
+  const cat = (category ?? "system").toLowerCase();
+  const cls = CATEGORY_COLORS[cat] ?? "bg-gray-500/15 text-gray-400";
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}
+    >
+      {cat}
     </span>
   );
 }
@@ -755,46 +791,106 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
 
         {/* ── Tab 6: Activity Log ──────────────────────────────────────────── */}
         <TabsContent value="activity" className="space-y-4">
+          {/* Unified timeline — merge user_activity_log + admin_activity_log, sort DESC */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="size-4" />
-                Admin Activity Log
+                <Activity className="size-4" />
+                Activity Timeline
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {user.activityLog.length === 0 ? (
+              {user.userActivityLog.length === 0 && user.activityLog.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">
-                  No admin actions recorded for this user
+                  No activity recorded for this user
                 </p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Actor</TableHead>
-                      <TableHead>Action</TableHead>
-                      <TableHead>Details</TableHead>
-                      <TableHead>Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {user.activityLog.map((entry) => (
-                      <TableRow key={entry.id}>
-                        <TableCell className="text-xs">{entry.actor_email ?? "—"}</TableCell>
-                        <TableCell>
-                          <span className="text-xs font-medium bg-muted px-2 py-0.5 rounded">
-                            {entry.action_type}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground max-w-[250px]">
-                          {entry.details ?? "—"}
-                        </TableCell>
-                        <TableCell className="text-xs">{fmt(entry.created_at)}</TableCell>
+              ) : (() => {
+                // Merge and sort unified timeline
+                type TimelineItem =
+                  | { kind: "user"; entry: UserActivityEntry }
+                  | { kind: "admin"; entry: ActivityLogEntry };
+
+                const timeline: TimelineItem[] = [
+                  ...user.userActivityLog.map((e) => ({ kind: "user" as const, entry: e })),
+                  ...user.activityLog.map((e) => ({ kind: "admin" as const, entry: e })),
+                ].sort(
+                  (a, b) =>
+                    new Date(b.entry.created_at).getTime() -
+                    new Date(a.entry.created_at).getTime()
+                );
+
+                return (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-36">Time</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Event</TableHead>
+                        <TableHead>Details / Metadata</TableHead>
+                        <TableHead>IP</TableHead>
+                        <TableHead>Actor</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
+                    </TableHeader>
+                    <TableBody>
+                      {timeline.map((item) => {
+                        if (item.kind === "user") {
+                          const e = item.entry;
+                          const metaSummary = e.metadata
+                            ? Object.entries(e.metadata)
+                                .slice(0, 3)
+                                .map(([k, v]) => `${k}: ${String(v).slice(0, 30)}`)
+                                .join(", ")
+                            : "—";
+                          return (
+                            <TableRow key={`ua_${e.id}`}>
+                              <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                                {fmt(e.created_at)}
+                              </TableCell>
+                              <TableCell>
+                                <CategoryBadge category={e.event_category} />
+                              </TableCell>
+                              <TableCell className="text-xs font-medium">{e.event_type}</TableCell>
+                              <TableCell className="text-xs text-muted-foreground max-w-[220px] truncate">
+                                {metaSummary}
+                              </TableCell>
+                              <TableCell className="text-xs font-mono">{e.ip_address ?? "—"}</TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {e.actor_id ? (
+                                  <span className="font-mono">{e.actor_id.slice(0, 8)}…</span>
+                                ) : (
+                                  "user"
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        } else {
+                          const e = item.entry;
+                          return (
+                            <TableRow key={`aa_${e.id}`}>
+                              <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                                {fmt(e.created_at)}
+                              </TableCell>
+                              <TableCell>
+                                <CategoryBadge category="admin" />
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-xs font-medium bg-muted px-2 py-0.5 rounded">
+                                  {e.action_type}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground max-w-[220px] truncate">
+                                {e.details ?? "—"}
+                              </TableCell>
+                              <TableCell className="text-xs font-mono">—</TableCell>
+                              <TableCell className="text-xs">{e.actor_email ?? "admin"}</TableCell>
+                            </TableRow>
+                          );
+                        }
+                      })}
+                    </TableBody>
+                  </Table>
+                );
+              })()}
             </CardContent>
           </Card>
         </TabsContent>

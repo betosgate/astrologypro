@@ -34,6 +34,7 @@ import {
   RefreshCcw,
   ShoppingBag,
   BarChart3,
+  BarChart2,
   Radio,
   ClipboardList,
   Shuffle,
@@ -55,6 +56,7 @@ import {
   Mail,
   Gift,
   ScrollText,
+  ListChecks,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -155,6 +157,7 @@ const NAV_GROUPS = [
       { label: "Refunds", href: "/admin/refunds", icon: RefreshCcw },
       { label: "Orders", href: "/admin/orders", icon: ShoppingBag },
       { label: "Reports", href: "/admin/reports", icon: BarChart3 },
+      { label: "Activity Log", href: "/admin/reports/activity", icon: ListChecks },
     ],
   },
   {
@@ -176,6 +179,12 @@ const NAV_GROUPS = [
     items: [
       { label: "Tarot", href: "/admin/tarot", icon: Shuffle },
       { label: "Rituals", href: "/admin/rituals", icon: Flame },
+    ],
+  },
+  {
+    label: "Reports",
+    items: [
+      { label: "Readings", href: "/admin/reports/readings", icon: BarChart2 },
     ],
   },
   {

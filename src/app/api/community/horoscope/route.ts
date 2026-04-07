@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { callAstrologyApi, BirthData } from "@/lib/astrology-api";
 
 export const dynamic = "force-dynamic";
@@ -45,8 +46,32 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Endpoint not allowed" }, { status: 400 });
   }
 
+  // Map allowlisted endpoint names to reading_type enum values
+  function toReadingType(ep: string): string {
+    if (ep.includes("planet_return") || ep === "planet_return") return "planet_return";
+    if (ep.includes("solar_return"))   return "solar_return";
+    if (ep.includes("saturn_return"))  return "saturn_return";
+    if (ep.includes("jupiter_return")) return "jupiter_return";
+    if (ep.includes("transit"))        return "transit";
+    if (ep.includes("natal"))          return "natal_chart";
+    return "horoscope";
+  }
+
   try {
     const result = await callAstrologyApi(endpoint, birth as unknown as Record<string, unknown>);
+
+    // Fire-and-forget history record — does not block the response
+    void Promise.resolve(
+      createAdminClient()
+        .from("astro_toolkit_readings")
+        .insert({
+          user_id:      user.id,
+          reading_type: toReadingType(endpoint),
+          input_data:   { endpoint, birth },
+          result_data:  result as Record<string, unknown>,
+        })
+    ).catch(() => {});
+
     return NextResponse.json(result);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Astrology API error";

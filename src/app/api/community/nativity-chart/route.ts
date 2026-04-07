@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logActivity } from "@/lib/activity-log";
 import { callAstrologyApi } from "@/lib/astrology-api";
 
 export const dynamic = "force-dynamic";
@@ -115,21 +116,32 @@ export async function POST(req: NextRequest) {
 
     // Persist to birth_chart_results (non-fatal if it fails)
     const adminClient = createAdminClient();
-    await adminClient.from("birth_chart_results").insert({
-      user_id: user.id,
-      community_member_id: member.id,
-      city_label: cityLabel,
-      birth_day: day,
-      birth_month: month,
-      birth_year: year,
-      birth_hour: hour,
-      birth_min: min,
-      lat,
-      lon,
-      tzone,
-      chart_url: chartUrl,
-      astro_data: astroData,
-    });
+    const { data: chartRecord } = await adminClient
+      .from("birth_chart_results")
+      .insert({
+        user_id: user.id,
+        community_member_id: member.id,
+        city_label: cityLabel,
+        birth_day: day,
+        birth_month: month,
+        birth_year: year,
+        birth_hour: hour,
+        birth_min: min,
+        lat,
+        lon,
+        tzone,
+        chart_url: chartUrl,
+        astro_data: astroData,
+      })
+      .select("id")
+      .single();
+
+    logActivity({
+      userId: user.id,
+      eventCategory: 'reading',
+      eventType: 'birth_chart.saved',
+      metadata: { cityLabel, chartId: chartRecord?.id ?? null },
+    })
 
     return NextResponse.json({
       astroData,
