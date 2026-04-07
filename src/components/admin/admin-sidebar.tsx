@@ -60,6 +60,7 @@ import {
   MessageSquare,
   MousePointerClick,
   UserCog,
+  Clock,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -205,7 +206,9 @@ const NAV_GROUPS = [
   {
     label: "Support",
     items: [
-      { label: "Tickets", href: "/admin/tickets", icon: MessageSquare },
+      { label: "Tickets", href: "/admin/tickets", icon: MessageSquare, exact: true },
+      { label: "SLA Dashboard", href: "/admin/tickets/sla", icon: Clock },
+      { label: "Queue Config", href: "/admin/tickets/queues", icon: ListChecks },
     ],
   },
   {

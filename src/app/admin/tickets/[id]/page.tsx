@@ -43,6 +43,7 @@ interface Ticket {
   requester_role: string | null;
   assigned_to: string | null;
   assigned_team: string | null;
+  queue_id: string | null;
   resolution: string | null;
   sla_due_at: string | null;
   sla_breached: boolean;
@@ -52,6 +53,11 @@ interface Ticket {
   closed_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface TicketQueue {
+  id: string;
+  name: string;
 }
 
 interface TicketMessage {
@@ -89,6 +95,8 @@ interface TicketData {
   messages: TicketMessage[];
   history: HistoryEntry[];
 }
+
+const EMPTY_QUEUES: TicketQueue[] = [];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -136,10 +144,14 @@ export default function AdminTicketDetailPage() {
   const [addingTask, setAddingTask] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
 
+  // Queue list for selector
+  const [queues, setQueues] = useState<TicketQueue[]>(EMPTY_QUEUES);
+
   // Edit state
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
   const [assignedTeam, setAssignedTeam] = useState("");
+  const [queueId, setQueueId] = useState<string>("");
   const [resolution, setResolution] = useState("");
 
   // Message compose
@@ -160,6 +172,7 @@ export default function AdminTicketDetailPage() {
       setStatus(json.ticket.status);
       setPriority(json.ticket.priority);
       setAssignedTeam(json.ticket.assigned_team ?? "");
+      setQueueId(json.ticket.queue_id ?? "");
       setResolution(json.ticket.resolution ?? "");
     } catch {
       toast.error("Failed to load ticket.");
@@ -193,6 +206,14 @@ export default function AdminTicketDetailPage() {
       loadTasks();
     }
   }, [data?.ticket.type, loadTasks]);
+
+  useEffect(() => {
+    // Load queue list for the queue selector
+    fetch("/api/admin/ticket-queues?active_only=true")
+      .then((r) => r.ok ? r.json() : { queues: [] })
+      .then((j) => setQueues(j.queues ?? []))
+      .catch(() => {});
+  }, []);
 
   async function handleAddTask(e: React.FormEvent) {
     e.preventDefault();
@@ -246,6 +267,7 @@ export default function AdminTicketDetailPage() {
           status,
           priority,
           assigned_team: assignedTeam || null,
+          queue_id: queueId || null,
           resolution: resolution || null,
         }),
       });
@@ -674,6 +696,23 @@ export default function AdminTicketDetailPage() {
                     {["low", "normal", "high", "urgent", "critical"].map((p) => (
                       <SelectItem key={p} value={p}>
                         {formatStatus(p)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Queue</Label>
+                <Select value={queueId || "_none"} onValueChange={(v) => setQueueId(v === "_none" ? "" : v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="No queue" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">No queue</SelectItem>
+                    {queues.map((q) => (
+                      <SelectItem key={q.id} value={q.id}>
+                        {q.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
