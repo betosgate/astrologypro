@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { format, parse, isValid } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -267,10 +268,42 @@ async function callNatalWheel(body: Record<string, unknown>) {
   return r.json();
 }
 async function callDecanLookup(signs: string, planet: string) {
-  const r = await fetch("/api/admin/astro/decan-info", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signs, planet }) });
-  if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? r.statusText); }
-  return r.json() as Promise<{ results: DecanRow[] }>;
+  const r = await fetch("/api/astro-decan/fetch-decan-details", { 
+    method: "POST", 
+    headers: { "Content-Type": "application/json" }, 
+    body: JSON.stringify({ signs, planet }) 
+  });
+  if (!r.ok) { 
+    const d = await r.json(); 
+    throw new Error(d.message || d.error || r.statusText); 
+  }
+  const json = await r.json();
+  
+  // The new API returns a single object in json.results.
+  // The frontend component expects an array of DecanRow.
+  const row = json.results;
+  if (row && !Array.isArray(row)) {
+    // Parse decan string (e.g. "1st Decan") to number if needed
+    let decanNum = 1;
+    if (typeof row.decan === "string") {
+      const match = row.decan.match(/\d+/);
+      if (match) decanNum = parseInt(match[0], 10);
+    } else if (typeof row.decan === "number") {
+      decanNum = row.decan;
+    }
+
+    return {
+      results: [{
+        ...row,
+        sign_name: row.signs || signs, // Ensure sign_name is present
+        decan: decanNum
+      }]
+    };
+  }
+
+  return json as { results: DecanRow[] };
 }
+
 
 interface DecanRow {
   id?: string;
@@ -634,7 +667,14 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
 
 
       {pictureUrl && (
-        <ChartImageModal src={pictureUrl} open={showFullImage} onClose={() => setShowFullImage(false)} />
+        <ChartImageModal 
+          src={pictureUrl} 
+          open={showFullImage} 
+          onClose={() => {
+            setShowFullImage(false);
+            onClose();
+          }} 
+        />
       )}
     </>
   );
@@ -643,47 +683,45 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
 // ─── Chart Image Modal ────────────────────────────────────────────────────────
 
 function ChartImageModal({ src, open, onClose }: { src: string; open: boolean; onClose: () => void }) {
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent
-        className="max-w-[100vw] w-screen max-h-[100vh] h-screen p-0 border-none rounded-none overflow-hidden bg-black/95 backdrop-blur-sm z-[100]"
-        showCloseButton={false}
+  // Use a simple Portal for a true "full viewport" experience without Dialog constraints
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); return () => setMounted(false); }, []);
+
+  if (!open || !mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[999999] bg-black flex flex-col items-center justify-center animate-in fade-in duration-300">
+      {/* Persistent High-Visibility Close Icon */}
+      <button
+        onClick={onClose}
+        className="absolute top-6 right-6 z-[110] size-12 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:text-white transition-all active:scale-95 shadow-[0_0_30px_rgba(245,158,11,0.3)] group"
+        aria-label="Exit Fullscreen"
       >
-        {/* Persistent High-Visibility Close Icon */}
-        <button
-          onClick={onClose}
-          className="absolute top-6 right-6 z-[110] size-12 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-white transition-all active:scale-95 shadow-[0_0_30px_rgba(245,158,11,0.3)] group"
-          aria-label="Exit Fullscreen"
-        >
-          <X className="size-7 transition-transform group-hover:rotate-90" />
-        </button>
+        <X className="size-7 transition-transform group-hover:rotate-90" />
+      </button>
 
-        <div className="h-full w-full overflow-auto flex items-center justify-center p-4">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Fullscreen Astrological Perception</DialogTitle>
-          </DialogHeader>
+      <div className="h-full w-full overflow-auto flex items-center justify-center p-2 sm:p-4">
+        {src.startsWith("<svg") ? (
+          <div
+            dangerouslySetInnerHTML={{ __html: src }}
+            className="w-full h-full min-w-full min-h-full flex justify-center items-center scale-110"
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={src}
+            alt="Fullscreen Astrological Visualization"
+            className="max-w-full max-h-full object-contain drop-shadow-[0_0_80px_rgba(245,158,11,0.15)] transition-transform duration-700 animate-in fade-in zoom-in-95"
+          />
+        )}
 
-          {src.startsWith("<svg") ? (
-            <div
-              dangerouslySetInnerHTML={{ __html: src }}
-              className="w-full h-full min-w-full min-h-full flex justify-center items-center scale-110"
-            />
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={src}
-              alt="Astrological Visualization"
-              className="max-w-full max-h-full object-contain drop-shadow-[0_0_80px_rgba(245,158,11,0.1)] transition-transform duration-1000 animate-in fade-in zoom-in-95"
-            />
-          )}
-
-          {/* Bottom Branding (Very Subtle) */}
-          <div className="absolute bottom-8 left-0 right-0 text-center pointer-events-none">
-            <span className="text-[10px] font-black uppercase tracking-[0.6em] text-white/10">Celestial Visualization Map</span>
-          </div>
+        {/* Bottom Branding (Very Subtle) */}
+        <div className="absolute bottom-8 left-0 right-0 text-center pointer-events-none">
+          <span className="text-[10px] font-black uppercase tracking-[0.6em] text-white/20">Celestial Visualization Map</span>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -1140,7 +1178,14 @@ function DecanModal({ planet, sign, open, onClose }: {
 
   return (
     <>
-      <ChartImageModal src={fullscreenImg || ""} open={!!fullscreenImg} onClose={() => setFullscreenImg(null)} />
+      <ChartImageModal 
+        src={fullscreenImg || ""} 
+        open={!!fullscreenImg} 
+        onClose={() => {
+          setFullscreenImg(null);
+          onClose();
+        }} 
+      />
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
         <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
           {/* Custom Close Icon - Fixed to top-right */}
@@ -1201,7 +1246,7 @@ function DecanModal({ planet, sign, open, onClose }: {
                             className="max-h-[320px] w-auto object-contain rounded-lg shadow-2xl transition-transform hover:scale-[1.02]"
                           />
                           <button
-                            className="absolute bottom-6 right-6 p-2 rounded-full bg-slate-900/80 border border-white/10 text-amber-500 opacity-0 group-hover/img:opacity-100 transition-opacity"
+                            className="absolute bottom-6 right-6 p-2 rounded-full bg-slate-900/80 border border-white/10 text-amber-500 hover:bg-slate-800 transition-all shadow-lg"
                             onClick={() => setFullscreenImg(row.decan_img || null)}
                             title="Open Full Image"
                           >

@@ -1051,47 +1051,10 @@ export async function sendGuestRoomLink({
 }
 
 // ---------------------------------------------------------------------------
-// Mystery School graduation congratulations
+// (sendMysterySchoolGraduation removed in commit fixing the graduation
+// chain — Mystery School graduates now go through sendGraduationCongratulations
+// via processGraduation in src/lib/mystery-school/graduation.ts.)
 // ---------------------------------------------------------------------------
-
-export async function sendMysterySchoolGraduation({
-  to,
-  name,
-}: {
-  to: string;
-  name: string;
-}) {
-  const decansUrl = `${APP_URL}/mystery-school`;
-
-  const content = `
-    <p style="margin:0 0 16px;color:#d4d4d8;">
-      Congratulations, ${name}! You have completed all 36 decan rituals of the Mystery School
-      and officially graduated.
-    </p>
-    <p style="margin:0 0 24px;color:#a1a1aa;">
-      This is a significant milestone. You have walked the full wheel of the year, worked with
-      every decan energy, and committed to the practice week after week. The work you've done
-      here is yours to carry forward.
-    </p>
-    <p style="margin:0 0 24px;color:#a1a1aa;">
-      Your graduation is now recorded. Watch for announcements about what comes next in your
-      journey as a Mystery School graduate.
-    </p>
-  `;
-
-  return sendEmail({
-    to,
-    subject: "You have graduated from the Mystery School 🌟",
-    html: buildEmailHtml({
-      title: `Congratulations, ${name} — Mystery School Graduate`,
-      preheader: "You completed all 36 decan rituals. You have graduated.",
-      content,
-      ctaText: "View Your Decan Journey",
-      ctaUrl: decansUrl,
-      footer: `AstrologyPro &mdash; Divine Infinite Being`,
-    }),
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Community: Payment Failed

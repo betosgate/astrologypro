@@ -18,6 +18,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getSystemConfigValue } from "@/lib/astro/system-settings";
 
 const ASTROLOGY_API_BASE = "https://json.astrologyapi.com/v1";
 
@@ -163,10 +164,14 @@ export async function callAstroAiApi(
   body: AstroAiBody,
   areaOfInquiry?: string
 ): Promise<AstroAiResponse> {
-  const aiUrl = process.env.ASTRO_AI_API_URL;
+  // Read from astro_system_settings (SYSTEM_CONFIG/ASTRO_AI_API_URL) first,
+  // fall back to the env var. The helper does both lookups internally.
+  const aiUrl = await getSystemConfigValue("ASTRO_AI_API_URL");
 
   if (!aiUrl) {
-    throw new Error("ASTRO_AI_API_URL is not configured");
+    throw new Error(
+      "ASTRO_AI_API_URL is not configured (no astro_system_settings row and no env var)"
+    );
   }
 
   // Mirror Angular's system_content injection

@@ -13,6 +13,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
+import { LockedLink } from "@/components/trainee/locked-link";
 
 export const dynamic = "force-dynamic";
 
@@ -215,91 +216,83 @@ export default async function CategoryLessonsPage({
               nextLessonId !== null &&
               lesson.id === nextLessonId;
 
+            // LockedLink handles both states uniformly: when locked it cancels
+            // navigation and shows a toast derived from the same lock semantics
+            // the API uses for route gating; when unlocked it renders an
+            // ordinary <Link>. Visible UI, click behavior, and route enforcement
+            // share one source of truth.
             return (
               <div key={lesson.id}>
-                {locked ? (
-                  <div className="rounded-xl border bg-card/50 opacity-60 p-4 cursor-not-allowed">
+                <LockedLink
+                  href={`/trainee/training/${programId}/${categoryId}/${lesson.id}`}
+                  isLocked={locked}
+                  blockedMessage="Complete the previous lesson first to continue in sequence."
+                  className="group block"
+                >
+                  <div
+                    className={[
+                      "rounded-xl border bg-card p-4 transition-colors",
+                      locked ? "" : "hover:border-primary/40",
+                      isDone
+                        ? "border-green-500/20 bg-green-500/[0.02]"
+                        : isResume
+                        ? "border-primary/30 bg-primary/[0.02]"
+                        : "",
+                    ].join(" ")}
+                  >
                     <div className="flex items-start gap-3">
-                      <Lock className="size-4 text-muted-foreground/50 mt-0.5 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">
-                          <span className="text-muted-foreground/60 mr-2 tabular-nums text-xs">
-                            {String(idx + 1).padStart(2, "0")}.
-                          </span>
-                          {lesson.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Complete previous lessons in order first
-                        </p>
+                      <div className="mt-0.5 shrink-0">
+                        {locked ? (
+                          <Lock className="size-5 text-muted-foreground/50" />
+                        ) : isDone ? (
+                          <CheckCircle2 className="size-5 text-green-500" />
+                        ) : (
+                          <Circle className="size-5 text-muted-foreground/40" />
+                        )}
                       </div>
-                      <Badge variant="outline" className="shrink-0 text-xs">
-                        Locked
-                      </Badge>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <p className="text-sm font-medium group-hover:text-primary transition-colors">
+                            <span className="text-muted-foreground/60 mr-2 tabular-nums text-xs">
+                              {String(idx + 1).padStart(2, "0")}.
+                            </span>
+                            {lesson.title}
+                          </p>
+                          {locked ? (
+                            <Badge variant="outline" className="shrink-0 text-xs">
+                              Locked
+                            </Badge>
+                          ) : isDone ? (
+                            <Badge
+                              variant="outline"
+                              className="shrink-0 text-xs bg-green-500/5 text-green-600 border-green-500/30"
+                            >
+                              Done
+                            </Badge>
+                          ) : isResume ? (
+                            <Badge
+                              variant="outline"
+                              className="shrink-0 text-xs bg-primary/5 text-primary border-primary/30"
+                            >
+                              Resume here
+                            </Badge>
+                          ) : null}
+                        </div>
+                        {lesson.description && (
+                          <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                            {lesson.description}
+                          </p>
+                        )}
+                        {lesson.duration_mins != null && (
+                          <div className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+                            <Clock className="size-3" />
+                            <span>{lesson.duration_mins} min</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                ) : (
-                  <Link
-                    href={`/trainee/training/${programId}/${categoryId}/${lesson.id}`}
-                    className="group block"
-                  >
-                    <div
-                      className={[
-                        "rounded-xl border bg-card p-4 transition-colors hover:border-primary/40",
-                        isDone
-                          ? "border-green-500/20 bg-green-500/[0.02]"
-                          : isResume
-                          ? "border-primary/30 bg-primary/[0.02]"
-                          : "",
-                      ].join(" ")}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="mt-0.5 shrink-0">
-                          {isDone ? (
-                            <CheckCircle2 className="size-5 text-green-500" />
-                          ) : (
-                            <Circle className="size-5 text-muted-foreground/40" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <p className="text-sm font-medium group-hover:text-primary transition-colors">
-                              <span className="text-muted-foreground/60 mr-2 tabular-nums text-xs">
-                                {String(idx + 1).padStart(2, "0")}.
-                              </span>
-                              {lesson.title}
-                            </p>
-                            {isDone ? (
-                              <Badge
-                                variant="outline"
-                                className="shrink-0 text-xs bg-green-500/5 text-green-600 border-green-500/30"
-                              >
-                                Done
-                              </Badge>
-                            ) : isResume ? (
-                              <Badge
-                                variant="outline"
-                                className="shrink-0 text-xs bg-primary/5 text-primary border-primary/30"
-                              >
-                                Resume here
-                              </Badge>
-                            ) : null}
-                          </div>
-                          {lesson.description && (
-                            <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-                              {lesson.description}
-                            </p>
-                          )}
-                          {lesson.duration_mins != null && (
-                            <div className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
-                              <Clock className="size-3" />
-                              <span>{lesson.duration_mins} min</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                )}
+                </LockedLink>
               </div>
             );
           })}

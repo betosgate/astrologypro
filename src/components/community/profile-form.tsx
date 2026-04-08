@@ -19,10 +19,15 @@ interface CommunityProfileFormProps {
     joined_at: string;
     expires_at: string | null;
   };
-  userId: string;
+  /**
+   * @deprecated No longer used. The component now filters by member.id and
+   * relies on the `community_update_own` RLS policy (auth.uid() = user_id)
+   * for object-level authorization. Kept on the type so callers don't break.
+   */
+  userId?: string;
 }
 
-export function CommunityProfileForm({ member, userId }: CommunityProfileFormProps) {
+export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
   const supabase = createClient();
 
   const [fullName, setFullName] = useState(member.full_name ?? "");
@@ -42,10 +47,12 @@ export function CommunityProfileForm({ member, userId }: CommunityProfileFormPro
     setSaving(true);
 
     try {
+      // Filter by row PK; the community_update_own RLS policy
+      // (auth.uid() = user_id) provides the object-level authorization.
       const { error: updateError } = await supabase
         .from("community_members")
         .update({ full_name: fullName })
-        .eq("user_id", userId);
+        .eq("id", member.id);
 
       if (updateError) {
         setError(updateError.message);

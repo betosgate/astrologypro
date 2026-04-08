@@ -20,7 +20,9 @@ export async function GET(
 
   const { data, error } = await admin
     .from("quiz_questions")
-    .select("id, lesson_id, question, options, correct_answer, explanation, priority")
+    .select(
+      "id, lesson_id, question, options, correct_answer, explanation, priority, remediation_video_id, remediation_video_index, remediation_start_seconds, remediation_replay_until_seconds, remediation_message",
+    )
     .eq("lesson_id", lessonId)
     .order("priority", { ascending: true })
     .order("id", { ascending: true });
@@ -50,6 +52,11 @@ export async function POST(
     correct_answer?: number;
     explanation?: string | null;
     priority?: number;
+    remediation_video_id?: string | null;
+    remediation_video_index?: number | null;
+    remediation_start_seconds?: number | null;
+    remediation_replay_until_seconds?: number | null;
+    remediation_message?: string | null;
   };
   try {
     body = await req.json();
@@ -57,7 +64,18 @@ export async function POST(
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { question, options, correct_answer, explanation, priority } = body;
+  const {
+    question,
+    options,
+    correct_answer,
+    explanation,
+    priority,
+    remediation_video_id,
+    remediation_video_index,
+    remediation_start_seconds,
+    remediation_replay_until_seconds,
+    remediation_message,
+  } = body;
 
   if (!question || typeof question !== "string" || !question.trim()) {
     return NextResponse.json({ error: "question is required." }, { status: 422 });
@@ -92,6 +110,30 @@ export async function POST(
     );
   }
 
+  // Module 04 remediation metadata validation. All fields nullable; if any
+  // start/replay value is supplied, the pair must be coherent (replay > start).
+  const remStart =
+    typeof remediation_start_seconds === "number" &&
+    Number.isFinite(remediation_start_seconds) &&
+    remediation_start_seconds >= 0
+      ? Math.round(remediation_start_seconds)
+      : null;
+  const remReplay =
+    typeof remediation_replay_until_seconds === "number" &&
+    Number.isFinite(remediation_replay_until_seconds) &&
+    remediation_replay_until_seconds >= 0
+      ? Math.round(remediation_replay_until_seconds)
+      : null;
+  if (remStart !== null && remReplay !== null && remReplay <= remStart) {
+    return NextResponse.json(
+      {
+        error:
+          "remediation_replay_until_seconds must be greater than remediation_start_seconds.",
+      },
+      { status: 422 },
+    );
+  }
+
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("quiz_questions")
@@ -102,6 +144,16 @@ export async function POST(
       correct_answer,
       explanation: explanation?.trim() ?? null,
       priority: priority ?? 0,
+      remediation_video_id: remediation_video_id ?? null,
+      remediation_video_index:
+        typeof remediation_video_index === "number" &&
+        Number.isInteger(remediation_video_index) &&
+        remediation_video_index >= 0
+          ? remediation_video_index
+          : null,
+      remediation_start_seconds: remStart,
+      remediation_replay_until_seconds: remReplay,
+      remediation_message: remediation_message?.trim() || null,
     })
     .select()
     .single();
