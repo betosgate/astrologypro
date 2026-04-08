@@ -4,6 +4,7 @@ import { MIGRATION_SQL as MIG_20260408000108 } from "@/data/migrations/202604080
 import { MIGRATION_SQL as MIG_20260408000109 } from "@/data/migrations/20260408000109_calendar_connections";
 import { MIGRATION_SQL as MIG_20260408000110 } from "@/data/migrations/20260408000110_backfill_calendar_connections";
 import { MIGRATION_SQL as MIG_20260408000111 } from "@/data/migrations/20260408000111_quiz_question_remediation";
+import { MIGRATION_SQL as MIG_20260408000112 } from "@/data/migrations/20260408000112_global_pricing";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -77,6 +78,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds remediation_video_id, remediation_video_index, remediation_start_seconds, remediation_replay_until_seconds, remediation_message columns to quiz_questions. Drives the new per-question stepwise remediation flow (Module 05) — wrong answer sends the learner back to a specific video timestamp and required replay window. CHECK constraint guarantees replay_until > start when both are set. Partial index on lesson_id WHERE remediation_start_seconds IS NOT NULL. All columns nullable for backward compatibility — existing questions without remediation are treated as inline-retry by the runtime.",
     sortKey: "20260408000111",
     sql: MIG_20260408000111,
+  },
+  "20260408000112_global_pricing": {
+    id: "20260408000112_global_pricing",
+    title: "Global pricing (admin-managed prices for purchasable items)",
+    description:
+      "Creates global_pricing table with one row per purchasable item, keyed on item_key. Public SELECT (signup pages need it; the values are not secrets). Seeds the professional_divination_course at 25969 INR. Edited via the new /admin/pricing UI. Read by the diviner-signup page at runtime.",
+    sortKey: "20260408000112",
+    sql: MIG_20260408000112,
   },
 };
 

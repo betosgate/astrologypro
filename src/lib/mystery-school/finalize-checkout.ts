@@ -70,6 +70,16 @@ export async function finalizeMysterySchoolCheckoutSession(
     ? parseInt(session.metadata.entry_year, 10)
     : null;
 
+  // Derive the one-time enrollment fee from the Stripe session itself
+  // instead of hardcoding $97. amount_total is in the smallest currency unit
+  // (cents for USD), so divide by 100. Falls back to 97 only when the
+  // session somehow lacks an amount_total (defensive — completed checkouts
+  // always have one).
+  const oneTimeFeeAmount =
+    typeof session.amount_total === "number" && session.amount_total > 0
+      ? session.amount_total / 100
+      : 97.0;
+
   const { data: student, error: studentError } = await admin
     .from("mystery_school_students")
     .upsert(
@@ -83,7 +93,7 @@ export async function finalizeMysterySchoolCheckoutSession(
         entry_year: entryYear,
         stripe_subscription_id: subscriptionId,
         one_time_fee_paid: true,
-        one_time_fee_amount: 97.0,
+        one_time_fee_amount: oneTimeFeeAmount,
         status: "active",
         paused_at: null,
         cancelled_at: null,

@@ -1,6 +1,7 @@
 # Perennial Payment Flow Contract And Stripe Lifecycle
 
-- Status: Ready For Implementation
+- Completion Notes: NOT IMPLEMENTED — deferred. Requires the Couple Stripe price + a checkout-session-style endpoint + webhook hooks for post-payment provisioning. This is the largest single piece of remaining perennial work and needs its own focused session.
+- Status: Deferred (2026-04-08)
 - Date: 2026-04-08
 - Category: Perennial Signup
 - Owner: Fullstack

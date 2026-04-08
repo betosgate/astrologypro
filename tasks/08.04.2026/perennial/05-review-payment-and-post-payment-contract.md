@@ -1,6 +1,7 @@
 # Perennial Review, Payment, And Post-Payment Contract
 
-- Status: Ready For Implementation
+- Completion Notes: NOT IMPLEMENTED — deferred. The current Submit button validates and logs the would-submit payload to the console with a UI note. A real review step + Stripe Elements + post-payment provisioning needs the Couple Stripe price configured first (the Single + Family price IDs already exist) plus an /api/perennial-signup endpoint that creates accounts after a successful charge.
+- Status: Deferred (2026-04-08)
 - Date: 2026-04-08
 - Category: Perennial Signup
 - Owner: Frontend

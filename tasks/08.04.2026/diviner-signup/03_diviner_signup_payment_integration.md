@@ -1,7 +1,7 @@
 # Diviner Signup Stripe Payment Gateway Integration
 
-- Status: Pending
-- Completion Notes:
+- Status: Partial — deferred (2026-04-08)
+- Completion Notes: NOT YET IMPLEMENTED — deferred. The signup page redirects to /diviner-signup/success after successful registration. Stripe Elements modal + create-payment-intent API need real test keys + a UI rebuild that mirrors the existing /community/upgrade Stripe Elements pattern. Best done in a focused follow-up session with Stripe test mode keys configured.
 
 ## Overview
 Implement the internal Stripe payment modal integration for the professional divination course.

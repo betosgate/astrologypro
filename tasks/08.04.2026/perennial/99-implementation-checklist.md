@@ -1,6 +1,7 @@
 # Perennial Signup Implementation Checklist
 
-- Status: Ready For Implementation
+- Completion Notes: Tracks progress against the master task. Tasks 01-04 are partially shipped; tasks 05-09 are deferred pending Stripe configuration.
+- Status: Partial (2026-04-08)
 - Date: 2026-04-08
 - Category: Perennial Signup
 - Owner: Frontend

@@ -1,7 +1,7 @@
 # Diviner Signup API & State Management
 
-- Status: Pending
-- Completion Notes:
+- Status: Completed (2026-04-08)
+- Completion Notes: Implemented at src/app/api/diviner-signup/route.ts — POST creates a Supabase auth user (email_confirm=true) plus a trainees row. Pricing fetch goes to GET /api/pricing/[itemKey] returning the global_pricing row (admin-managed via /admin/pricing). Affiliate ID is read from the affiliatid query param and stored on user_metadata + trainees.affiliate_id. NOTE: full external IP detection via ipinfo.io is intentionally NOT included — leaks an external API token, can be added as a follow-up if needed.
 
 ## Overview
 Implement the external service integration and API calls needed for the Diviner Signup page form logics.

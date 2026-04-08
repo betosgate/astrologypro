@@ -1,6 +1,7 @@
 # Perennial Field Mapping And Payload Normalization
 
-- Status: Ready For Implementation
+- Completion Notes: NOT IMPLEMENTED — deferred. The console.log payload demonstrates the intended shape but the spec details (sub_relation handling, age_group derivation, profile_completion derivation) need a dedicated normalisation pass.
+- Status: Deferred (2026-04-08)
 - Date: 2026-04-08
 - Category: Perennial Signup
 - Owner: Fullstack
