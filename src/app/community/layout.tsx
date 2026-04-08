@@ -53,48 +53,77 @@ export default async function CommunityLayout({ children }: { children: React.Re
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background md:flex">
       <RouteTracker href="/community" />
-      <header className="sticky top-0 z-40 border-b bg-background">
-        <div className="container mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <div className="flex items-center gap-2 md:gap-6">
-            {/* Mobile hamburger — visible only below md */}
-            <MobileNav
-              membershipType={member.membership_type}
-              navItems={navLinks}
-              displayName={member.full_name ?? ""}
-              membershipLabel={membershipLabel}
-            />
-            <Link href="/community" className="text-lg font-bold">AstrologyPro</Link>
-            <span className="hidden rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary md:inline">
-              {membershipLabel}
-            </span>
-            {/* Desktop nav — hidden below md */}
-            <nav className="hidden items-center gap-1 md:flex">
-              {navLinks.map((link) => (
+
+      {/* Left sidebar — desktop only */}
+      <aside className="hidden md:flex md:fixed md:inset-y-0 md:left-0 md:z-30 md:w-60 md:flex-col md:border-r md:bg-background">
+        <div className="flex h-14 items-center gap-2 border-b px-4">
+          <Link href="/community" className="text-lg font-bold">
+            AstrologyPro
+          </Link>
+        </div>
+        <div className="px-4 py-3">
+          <span className="inline-block rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+            {membershipLabel}
+          </span>
+        </div>
+        <nav className="flex-1 overflow-y-auto px-2 pb-4">
+          <ul className="flex flex-col gap-0.5">
+            {navLinks.map((link) => (
+              <li key={link.href}>
                 <NavLink
-                  key={link.href}
                   href={link.href}
                   exact={link.href === "/community"}
+                  className="block w-full"
                 >
                   {link.label}
                 </NavLink>
-              ))}
-            </nav>
-          </div>
-          <div className="flex items-center gap-2">
-            <PortalSwitcher portals={portals} currentBase="/community" />
-            <NotificationBell userId={user.id} />
-            <Link href="/account" className="text-sm text-muted-foreground hover:text-foreground">
-              Account
-            </Link>
-            <PortalLogoutButton />
-          </div>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        {/* Logout pinned to sidebar bottom */}
+        <div className="border-t px-3 py-3">
+          <PortalLogoutButton />
         </div>
-      </header>
-      <main className="container mx-auto max-w-5xl p-4 py-6 lg:p-8">
-        {children}
-      </main>
+      </aside>
+
+      {/* Main column (offset by sidebar width on md+) */}
+      <div className="flex min-h-screen w-full flex-col md:ml-60">
+        <header className="sticky top-0 z-20 border-b bg-background">
+          <div className="flex h-14 items-center justify-between gap-2 px-4">
+            <div className="flex items-center gap-2 md:hidden">
+              <MobileNav
+                membershipType={member.membership_type}
+                navItems={navLinks}
+                displayName={member.full_name ?? ""}
+                membershipLabel={membershipLabel}
+              />
+              <Link href="/community" className="text-lg font-bold">
+                AstrologyPro
+              </Link>
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <PortalSwitcher portals={portals} currentBase="/community" />
+              <NotificationBell userId={user.id} />
+              <Link
+                href="/account"
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Account
+              </Link>
+              {/* Mobile-only logout (sidebar handles it on desktop) */}
+              <div className="md:hidden">
+                <PortalLogoutButton />
+              </div>
+            </div>
+          </div>
+        </header>
+        <main className="container mx-auto w-full max-w-5xl p-4 py-6 lg:p-8">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

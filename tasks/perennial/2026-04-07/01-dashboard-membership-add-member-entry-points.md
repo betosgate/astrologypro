@@ -1,6 +1,12 @@
 # Add Dashboard And Membership Entry Points For Member Creation - 2026-04-07
 
-- Status: Planned
+- Status: Completed (2026-04-08)
+- Completion Notes:
+  - Upstream `master` already added a dedicated `/community/members/new` create flow + button on `MembershipCard`.
+  - This task added a second dedicated "Add Perennial Mandalism Member" entry-point card in `src/app/community/page.tsx` directly below the top membership block, routing to `/community/members/new`.
+  - Cleaned up `MembershipCard` to use a single canonical "+ Add Member" button → `/community/members/new` (deduped).
+  - Both entry points (membership card button + dedicated card) open the same `/community/members/new` form.
+  - Not done: visual QA on deployed preview.
 - Priority: P1
 - Owner: Frontend
 - Scope: dashboard CTA placement, membership block action, navigation into dedicated form screen

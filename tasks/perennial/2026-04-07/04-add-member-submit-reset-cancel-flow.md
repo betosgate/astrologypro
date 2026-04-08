@@ -1,6 +1,11 @@
 # Wire Add Member Submit, Reset, And Cancel Flow - 2026-04-07
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes:
+  - Submit: `handleSubmit` in `src/app/community/members/new/page.tsx:128` — POSTs to `/api/community/members/create`, redirects to `/community` on success.
+  - Reset: `handleReset` at line 123 — restores `INITIAL_FORM`, clears error.
+  - Cancel: button at line 442 — `<Link href="/community">` returns user to dashboard.
+  - Validation errors surfaced via `error` state; success returns to dashboard as required.
 - Priority: P1
 - Owner: Fullstack
 - Scope: form submission, reset behavior, cancel redirect, success handling, dashboard return path

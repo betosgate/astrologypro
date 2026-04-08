@@ -712,6 +712,24 @@ export default async function CommunityDashboardPage() {
         {/* Rich membership card */}
         <MembershipCard subscription={membershipSubscription} userEmail={user.email} />
 
+        {/* Dedicated Add Perennial Mandalism Member entry point */}
+        {membershipSubscription.plan_type === "family" &&
+          membershipSubscription.member_count < membershipSubscription.max_members && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="py-4 px-5 flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <p className="text-sm font-semibold">Add Perennial Mandalism Member</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Open the full add-member form to enroll a new family member.
+                  </p>
+                </div>
+                <Button asChild size="sm">
+                  <Link href="/community/members/new">+ Add Member</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
         {/* Profile completion — horizontal progress bar when not complete; badge when complete */}
         {profileIsComplete ? (
           <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3">

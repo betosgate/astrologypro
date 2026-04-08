@@ -166,14 +166,14 @@ export function MembershipCard({ subscription, userEmail }: MembershipCardProps)
 
         {/* Action buttons */}
         <div className="flex flex-wrap gap-2 pt-1">
+          {isFamily && subscription.member_count < subscription.max_members && (
+            <Button asChild size="sm">
+              <Link href="/community/members/new">+ Add Member</Link>
+            </Button>
+          )}
           {canUpgrade && (
             <Button asChild size="sm" variant="outline">
               <Link href="/community/upgrade">Upgrade Plan</Link>
-            </Button>
-          )}
-          {isFamily && (
-            <Button asChild size="sm" variant="outline">
-              <Link href="/community/members/new">Add Member</Link>
             </Button>
           )}
           <Button

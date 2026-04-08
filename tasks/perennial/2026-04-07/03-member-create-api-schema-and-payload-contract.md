@@ -1,6 +1,14 @@
 # Add Member Create API, Schema, And Payload Contract - 2026-04-07
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes:
+  - Implemented in `src/app/api/community/members/create/route.ts` (175 lines).
+  - Route: `POST /api/community/members/create`.
+  - Auth: requires authenticated Supabase user; verifies caller has an active community membership row.
+  - Validation: required `firstname`, `lastname`, `email` (with regex format check, 422 on failure).
+  - Persists top-level fields (relation_type, gender, relationship_status, state, city, zip, address, phone) on `community_members` and stores all 23 intake/questionnaire fields in `intake_data` JSONB.
+  - Sets `membership_type='perennial_mandalism'`, derives `plan_type` from caller's membership.
+  - Not done: schema fields `password`/`confirmpassword`/`relation_with`/`user_type` are NOT accepted by upstream API (out of scope — members are not auth users; if login is needed, follow-up required). No formal Zod schema (`createCommunityMemberSchema`) — validation is inline.
 - Priority: P1
 - Owner: Backend
 - Scope: API naming, request validation, schema design, payload normalization, member creation persistence
