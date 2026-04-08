@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { LockedLink } from "@/components/trainee/locked-link";
 
 export const dynamic = "force-dynamic";
 
@@ -147,21 +148,21 @@ function LessonRow({
         )}
       </div>
 
-      {/* Lesson number + title */}
+      {/* Lesson number + title — LockedLink intercepts clicks on locked
+          lessons and shows a toast derived from the same lock_reason
+          metadata the API uses for route gating. */}
       <span className="flex-1 min-w-0 truncate">
         <span className="text-muted-foreground/60 mr-1.5 tabular-nums">
           {String(index + 1).padStart(2, "0")}.
         </span>
-        {isLocked ? (
-          <span>{lesson.title}</span>
-        ) : (
-          <Link
-            href={`/trainee/training/${programId}/${categoryId}/${lesson.id}`}
-            className="hover:text-primary hover:underline underline-offset-2 transition-colors"
-          >
-            {lesson.title}
-          </Link>
-        )}
+        <LockedLink
+          href={`/trainee/training/${programId}/${categoryId}/${lesson.id}`}
+          isLocked={isLocked}
+          lockReason={lesson.lock_reason}
+          className="hover:text-primary hover:underline underline-offset-2 transition-colors"
+        >
+          {lesson.title}
+        </LockedLink>
       </span>
 
       {/* Quiz badge */}
@@ -241,19 +242,16 @@ function CategoryCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
-              {isLocked ? (
-                <>
-                  <h3 className="font-semibold text-sm">{category.name}</h3>
-                  <Lock className="size-3.5 text-muted-foreground/60" />
-                </>
-              ) : (
-                <Link
-                  href={`/trainee/training/${programId}/${category.id}`}
-                  className="font-semibold text-sm hover:text-primary hover:underline underline-offset-2 transition-colors"
-                >
-                  {category.name}
-                </Link>
-              )}
+              <LockedLink
+                href={`/trainee/training/${programId}/${category.id}`}
+                isLocked={isLocked}
+                lockReason={category.lock_reason}
+                blockedMessage="Complete the previous category first to unlock this section."
+                className="font-semibold text-sm hover:text-primary hover:underline underline-offset-2 transition-colors"
+              >
+                {category.name}
+              </LockedLink>
+              {isLocked && <Lock className="size-3.5 text-muted-foreground/60" />}
             </div>
             <Badge
               variant="outline"
