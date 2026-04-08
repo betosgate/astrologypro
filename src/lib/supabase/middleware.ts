@@ -90,9 +90,5 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (matchedRoute?.apiOnly && !isApiRequest) {
-    return supabaseResponse;
-  }
-
   return supabaseResponse;
 }

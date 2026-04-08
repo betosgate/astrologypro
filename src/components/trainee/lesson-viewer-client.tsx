@@ -97,8 +97,10 @@ export type LessonViewerProps = {
   // Quiz
   quizQuestions: QuizQuestionClient[];
   quizPassed: boolean;
-  quizLastScore: number | null;
-  quizLastTotal: number | null;
+  /** @deprecated Module 05 stepwise quiz model doesn't surface a "last attempt score". */
+  quizLastScore?: number | null;
+  /** @deprecated Module 05 stepwise quiz model doesn't surface a "last attempt total". */
+  quizLastTotal?: number | null;
 
   // Video quiz triggers
   triggers?: LessonQuizTrigger[];
