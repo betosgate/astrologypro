@@ -1,4 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  upsertCalendarConnection,
+  deleteCalendarConnection,
+} from "@/lib/calendar/connections";
 
 const TENANT_ID = "common"; // multi-tenant
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
@@ -45,6 +49,19 @@ export async function handleMsOAuthCallback(code: string, divinerId: string): Pr
 
   const admin = createAdminClient();
   await admin.from("diviners").update({ outlook_calendar_token: tokens }).eq("id", divinerId);
+
+  // Dual-write into normalized calendar_connections (cutover from JSONB).
+  // Best-effort — never throws.
+  await upsertCalendarConnection(admin, {
+    divinerId,
+    provider: "microsoft",
+    refreshToken: tokens.refresh_token,
+    accessToken: tokens.access_token ?? null,
+    expiresAt:
+      typeof tokens.expires_in === "number"
+        ? new Date(Date.now() + tokens.expires_in * 1000)
+        : null,
+  });
 }
 
 /** Get a valid access token, refreshing if needed */
@@ -92,6 +109,17 @@ async function getMsAccessToken(divinerId: string): Promise<string | null> {
   };
 
   await admin.from("diviners").update({ outlook_calendar_token: updatedTokens }).eq("id", divinerId);
+
+  // Dual-write the rotated token into calendar_connections so the
+  // normalized table stays current with the JSONB during the cutover.
+  await upsertCalendarConnection(admin, {
+    divinerId,
+    provider: "microsoft",
+    refreshToken: updatedTokens.refresh_token ?? token.refresh_token,
+    accessToken: updatedTokens.access_token ?? null,
+    expiresAt: new Date(updatedTokens.expires_at * 1000),
+  });
+
   return newTokens.access_token;
 }
 
@@ -239,4 +267,6 @@ export async function deleteMsCalendarEvent(
 export async function disconnectMsCalendar(divinerId: string): Promise<void> {
   const admin = createAdminClient();
   await admin.from("diviners").update({ outlook_calendar_token: null }).eq("id", divinerId);
+  // Mirror the disconnect into the normalized calendar_connections table.
+  await deleteCalendarConnection(admin, divinerId, "microsoft");
 }
