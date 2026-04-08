@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { stripe } from "@/lib/stripe/client";
 import { redirect } from "next/navigation";
 import {
   Card,
@@ -39,6 +40,7 @@ import Link from "next/link";
 import { AstroChartsSection } from "@/components/community/astro-charts-section";
 import { ProfileProgressSection } from "@/components/community/profile-progress-section";
 import { MembershipCard, type MembershipSubscription } from "@/components/community/membership-card";
+import { ManageSubscriptionButton } from "@/components/mystery-school/manage-subscription-button";
 import { ProfileCompletionCard, type ProfileCompletionData } from "@/components/community/profile-completion-card";
 import { ProgressRing } from "@/components/community/progress-ring";
 import { MandalismContentPreview, type MandalismContent } from "@/components/community/mandalism-content-preview";
@@ -77,6 +79,28 @@ function ringColor(pct: number): string {
   if (pct >= 100) return "hsl(142, 71%, 45%)";
   if (pct >= 60) return "hsl(var(--primary))";
   return "hsl(25, 90%, 55%)";
+}
+
+function formatDateLong(iso: string | null): string | null {
+  if (!iso) return null;
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatCurrency(amount: number, currency = "usd"): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
+
+function capitalize(value: string | null | undefined): string {
+  if (!value) return "";
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 const AVATAR_COLORS = [
@@ -175,6 +199,7 @@ export default async function CommunityDashboardPage() {
     profileCompletionRelChartResult,
     pmTierResult,
     platformSettingsResult,
+    mysterySchoolStudentResult,
   ] = await Promise.all([
     // Client profile for progress ring calculation
     supabase
@@ -265,6 +290,14 @@ export default async function CommunityDashboardPage() {
       .select("ms_pm_discount_enabled")
       .limit(1)
       .maybeSingle(),
+
+    createAdminClient()
+      .from("mystery_school_students")
+      .select(
+        "id, enrolled_at, enrollment_date, entry_quarter, entry_year, stripe_subscription_id, one_time_fee_amount, status, paused_at, cancelled_at, access_expires_at"
+      )
+      .eq("user_id", user.id)
+      .maybeSingle(),
   ]);
 
   const client = clientResult.data;
@@ -278,6 +311,105 @@ export default async function CommunityDashboardPage() {
   const pcRelCharts = profileCompletionRelChartResult.data ?? [];
   const pmTier = pmTierResult.data ?? null;
   const pmDiscountEnabled = platformSettingsResult.data?.ms_pm_discount_enabled ?? false;
+  const mysterySchoolStudent = mysterySchoolStudentResult.data as {
+    id: string;
+    enrolled_at: string;
+    enrollment_date: string | null;
+    entry_quarter: string | null;
+    entry_year: number | null;
+    stripe_subscription_id: string | null;
+    one_time_fee_amount: number | null;
+    status: string;
+    paused_at: string | null;
+    cancelled_at: string | null;
+    access_expires_at: string | null;
+  } | null;
+
+  let mysterySchoolCurrentPeriodEnd: string | null = null;
+  let mysterySchoolRecurringAmount: number | null = null;
+  let mysterySchoolRecurringCurrency = "usd";
+  if (mysterySchoolStudent?.stripe_subscription_id) {
+    try {
+      const sub = await stripe.subscriptions.retrieve(
+        mysterySchoolStudent.stripe_subscription_id,
+        { expand: ["latest_invoice"] }
+      ) as unknown as {
+        current_period_end?: number;
+        billing_cycle_anchor?: number;
+        latest_invoice?: {
+          period_end?: number | null;
+        } | string | null;
+        items?: {
+          data?: Array<{
+            price?: {
+              unit_amount?: number | null;
+              currency?: string | null;
+            };
+          }>;
+        };
+      };
+      const invoicePeriodEnd =
+        sub.latest_invoice &&
+        typeof sub.latest_invoice !== "string" &&
+        typeof sub.latest_invoice.period_end === "number"
+          ? sub.latest_invoice.period_end
+          : null;
+      const nextBillingTimestamp =
+        sub.current_period_end ??
+        invoicePeriodEnd ??
+        sub.billing_cycle_anchor ??
+        null;
+
+      if (nextBillingTimestamp) {
+        mysterySchoolCurrentPeriodEnd = new Date(
+          nextBillingTimestamp * 1000
+        ).toISOString();
+      }
+      const price = sub.items?.data?.[0]?.price;
+      if (typeof price?.unit_amount === "number") {
+        mysterySchoolRecurringAmount = price.unit_amount / 100;
+      }
+      if (price?.currency) {
+        mysterySchoolRecurringCurrency = price.currency;
+      }
+    } catch {
+      // Non-fatal: card can still render without the current billing date.
+    }
+  }
+
+  const mysterySchoolHasActiveAccess = Boolean(
+    mysterySchoolStudent &&
+      (
+        mysterySchoolStudent.status === "active" ||
+        (
+          mysterySchoolStudent.status === "cancelled" &&
+          mysterySchoolStudent.access_expires_at &&
+          new Date(mysterySchoolStudent.access_expires_at) > new Date()
+        )
+      )
+  );
+  const mysterySchoolNeedsResubscribe = Boolean(
+    mysterySchoolStudent && !mysterySchoolHasActiveAccess
+  );
+  const mysterySchoolEntryLabel =
+    mysterySchoolStudent?.entry_quarter && mysterySchoolStudent?.entry_year
+      ? `${capitalize(mysterySchoolStudent.entry_quarter)} ${mysterySchoolStudent.entry_year}`
+      : null;
+  const mysterySchoolEnrolledDate =
+    formatDateLong(mysterySchoolStudent?.enrollment_date ?? mysterySchoolStudent?.enrolled_at ?? null);
+  const mysterySchoolAccessUntil =
+    formatDateLong(mysterySchoolStudent?.access_expires_at ?? mysterySchoolCurrentPeriodEnd);
+  const mysterySchoolRenewalDate =
+    mysterySchoolStudent?.status === "active"
+      ? formatDateLong(mysterySchoolCurrentPeriodEnd)
+      : null;
+  const mysterySchoolBillingLabel = mysterySchoolRecurringAmount
+    ? `${formatCurrency(mysterySchoolRecurringAmount, mysterySchoolRecurringCurrency)}/month`
+    : "Managed in Stripe";
+  const mysterySchoolEnrollmentFeeLabel =
+    typeof mysterySchoolStudent?.one_time_fee_amount === "number"
+      ? formatCurrency(mysterySchoolStudent.one_time_fee_amount)
+      : null;
 
   // ── Membership card subscription prop ────────────────────────────────────
   // Max members: from tier table if available, else derive from plan_type
@@ -774,18 +906,50 @@ export default async function CommunityDashboardPage() {
           </Card>
         )}
 
-        {/* Mystery School upgrade — secondary CTA, only for Perennial members */}
+        {/* Mystery School access / upgrade — secondary CTA, only for Perennial members */}
         {isPerennial && (
           <Card className="border-dashed border-purple-500/30">
             <CardContent className="py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2 min-w-0">
                 <GraduationCap className="size-4 shrink-0 text-purple-500" aria-hidden="true" />
-                <p className="text-sm text-muted-foreground truncate">
-                  Deepen your practice with the Mystery School curriculum
-                </p>
+                {mysterySchoolHasActiveAccess ? (
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      Mystery School access is active
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {mysterySchoolStudent?.status === "cancelled" && mysterySchoolAccessUntil
+                        ? `Access remains open until ${mysterySchoolAccessUntil}`
+                        : mysterySchoolRenewalDate
+                        ? `Next renewal ${mysterySchoolRenewalDate}`
+                        : "Open your Mystery School dashboard"}
+                    </p>
+                  </div>
+                ) : mysterySchoolNeedsResubscribe ? (
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      Mystery School subscription inactive
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {mysterySchoolStudent?.status === "paused"
+                        ? "Your subscription is paused. Resume with a new payment to reopen access."
+                        : "Resubscribe to restore your curriculum access and billing."}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground truncate">
+                    Deepen your practice with the Mystery School curriculum
+                  </p>
+                )}
               </div>
               <Button asChild size="sm" variant="outline" className="shrink-0 w-full sm:w-auto border-purple-500/40 text-purple-700 hover:bg-purple-500/10">
-                <Link href="/mystery-school/enroll">Upgrade to Mystery School</Link>
+                <Link href={mysterySchoolHasActiveAccess ? "/mystery-school" : "/mystery-school/enroll"}>
+                  {mysterySchoolHasActiveAccess
+                    ? "Open Mystery School"
+                    : mysterySchoolNeedsResubscribe
+                    ? "Rejoin Mystery School"
+                    : "Upgrade to Mystery School"}
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -1403,32 +1567,123 @@ export default async function CommunityDashboardPage() {
                 <p className="text-xs text-purple-300/80 mt-0.5">Sacred Gateway — Next Seasonal Cohort Open</p>
               </div>
             </div>
-            <p className="text-sm text-purple-100/80 max-w-xl leading-relaxed">
-              Deepen your practice with the 12-week foundation and year-long decan curriculum.
-              Join the next seasonal cohort and unlock ancient wisdom through structured, mentored study.
-            </p>
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="text-sm text-purple-100/70">
-                From{" "}
-                <span className="font-bold text-white">$97 one-time</span>
-                {" "}+{" "}
-                <span className="font-bold text-white">$27/month</span>
-                {pmDiscountEnabled && (
-                  <>
-                    {" "}— or{" "}
-                    <span className="font-bold text-amber-300">+$17.03/month</span>
-                    {" "}for PM members
-                  </>
-                )}
-              </div>
-            </div>
-            <Button
-              asChild
-              size="default"
-              className="bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-600 hover:to-violet-600 text-white font-semibold shadow-lg shadow-purple-900/40"
-            >
-              <Link href="/mystery-school/enroll">Enter the Sacred Gateway →</Link>
-            </Button>
+            {mysterySchoolHasActiveAccess ? (
+              <>
+                <p className="text-sm text-purple-100/80 max-w-2xl leading-relaxed">
+                  Your Mystery School subscription is already linked to this account. Continue your curriculum, review your cohort details, and return to the active decan journey from here.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                  <div className="rounded-xl border border-purple-400/20 bg-black/15 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-purple-200/70">Status</p>
+                    <p className="mt-1 text-sm font-semibold text-white capitalize">
+                      {mysterySchoolStudent?.status === "cancelled" && mysterySchoolAccessUntil
+                        ? "Cancelled · Access Active"
+                        : mysterySchoolStudent?.status ?? "Active"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-purple-400/20 bg-black/15 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-purple-200/70">Enrolled</p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      {mysterySchoolEnrolledDate ?? "Recently"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-purple-400/20 bg-black/15 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-purple-200/70">Billing</p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      {mysterySchoolBillingLabel}
+                    </p>
+                    {mysterySchoolEnrollmentFeeLabel ? (
+                      <p className="mt-1 text-xs text-purple-200/70">
+                        Enrollment paid {mysterySchoolEnrollmentFeeLabel}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="rounded-xl border border-purple-400/20 bg-black/15 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-purple-200/70">
+                      {mysterySchoolStudent?.status === "cancelled" ? "Access Until" : "Next Renewal"}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      {mysterySchoolStudent?.status === "cancelled"
+                        ? (mysterySchoolAccessUntil ?? "Pending Stripe sync")
+                        : (mysterySchoolRenewalDate ?? "Managed in Stripe")}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-purple-400/20 bg-black/15 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-purple-200/70">Cohort</p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      {mysterySchoolEntryLabel ?? "Seasonal Entry"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    asChild
+                    size="default"
+                    className="bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-600 hover:to-violet-600 text-white font-semibold shadow-lg shadow-purple-900/40"
+                  >
+                    <Link href="/mystery-school">
+                      Open Mystery School →
+                    </Link>
+                  </Button>
+                  <ManageSubscriptionButton
+                    size="default"
+                    variant="outline"
+                    className="border-purple-300/30 bg-white/5 text-white hover:bg-white/10"
+                  />
+                </div>
+              </>
+            ) : mysterySchoolNeedsResubscribe ? (
+              <>
+                <p className="text-sm text-purple-100/80 max-w-xl leading-relaxed">
+                  {mysterySchoolStudent?.status === "paused"
+                    ? "Your Mystery School subscription is paused. Make a new payment to restore dashboard access and continue the curriculum."
+                    : "Your previous Mystery School access has ended. Rejoin to restore your curriculum, return to the current cohort path, and continue your structured study."}
+                </p>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="text-sm text-purple-100/70">
+                    Rejoin from{" "}
+                    <span className="font-bold text-white">$97 one-time</span>
+                    {" "}+{" "}
+                    <span className="font-bold text-white">$27/month</span>
+                  </div>
+                </div>
+                <Button
+                  asChild
+                  size="default"
+                  className="bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-600 hover:to-violet-600 text-white font-semibold shadow-lg shadow-purple-900/40"
+                >
+                  <Link href="/mystery-school/enroll">Rejoin the Sacred Gateway →</Link>
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-purple-100/80 max-w-xl leading-relaxed">
+                  Deepen your practice with the 12-week foundation and year-long decan curriculum.
+                  Join the next seasonal cohort and unlock ancient wisdom through structured, mentored study.
+                </p>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="text-sm text-purple-100/70">
+                    From{" "}
+                    <span className="font-bold text-white">$97 one-time</span>
+                    {" "}+{" "}
+                    <span className="font-bold text-white">$27/month</span>
+                    {pmDiscountEnabled && (
+                      <>
+                        {" "}— current PM monthly member rate{" "}
+                        <span className="font-bold text-amber-300">$17.03/month</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  asChild
+                  size="default"
+                  className="bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-600 hover:to-violet-600 text-white font-semibold shadow-lg shadow-purple-900/40"
+                >
+                  <Link href="/mystery-school/enroll">Enter the Sacred Gateway →</Link>
+                </Button>
+              </>
+            )}
           </div>
         </section>
       )}

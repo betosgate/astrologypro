@@ -4,6 +4,7 @@ export interface MysterySchoolLifecycleUpdate {
   status: "active" | "paused" | "cancelled";
   paused_at: string | null;
   cancelled_at: string | null;
+  // Billing metadata only. Dashboard access is controlled strictly by status.
   access_expires_at: string | null;
 }
 

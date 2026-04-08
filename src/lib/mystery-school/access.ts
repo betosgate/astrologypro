@@ -8,8 +8,10 @@
  *     has dual entitlement
  *
  * A user has active Mystery School access when:
- *   - They have a mystery_school_students row with status = 'active'
- *   - OR status = 'cancelled' but access_expires_at is in the future
+ *   - They have a mystery_school_students row with valid payment-linked fields
+ *     and status = 'active'
+ *   - OR they have valid payment-linked fields, status = 'cancelled', and
+ *     access_expires_at is still in the future
  *   - OR they are a legacy active community_members mystery_school user,
  *     in which case we provision the missing mystery_school_students row
  *     on demand and then grant access through that record
@@ -42,6 +44,19 @@ export interface MysterySchoolStudent {
   graduated_at?: string | null;
 }
 
+export function hasValidMysterySchoolBilling(
+  student: Pick<
+    MysterySchoolStudent,
+    "stripe_subscription_id" | "one_time_fee_paid" | "one_time_fee_amount"
+  >
+): boolean {
+  return Boolean(
+    student.stripe_subscription_id &&
+      student.one_time_fee_paid &&
+      typeof student.one_time_fee_amount === "number"
+  );
+}
+
 /**
  * Returns the authenticated user's MysterySchoolStudent record if they have
  * active access, or `null` if they are not enrolled / not active.
@@ -51,9 +66,8 @@ export interface MysterySchoolStudent {
  * for membership_type — it may still be 'perennial_mandalism' for dual-
  * entitlement users.
  *
- * For cancelled students: access is still granted while `access_expires_at` is
- * in the future, matching the business rule that access revokes at end of paid
- * period — not immediately on cancellation.
+ * Paused students do NOT retain dashboard access. Cancelled students keep
+ * access only until their paid-through access_expires_at date.
  */
 export async function requireMysterySchoolAccess(): Promise<{
   student: MysterySchoolStudent;
@@ -84,14 +98,14 @@ export async function requireMysterySchoolAccess(): Promise<{
 
   if (studentRaw) {
     const student = studentRaw as unknown as MysterySchoolStudent;
+    const hasBilling = hasValidMysterySchoolBilling(student);
 
-    // Active students: straightforward pass
-    if (student.status === "active") {
+    if (hasBilling && student.status === "active") {
       return { student };
     }
 
-    // Cancelled students with a future access_expires_at still have access
     if (
+      hasBilling &&
       student.status === "cancelled" &&
       student.access_expires_at &&
       new Date(student.access_expires_at) > new Date()
@@ -109,7 +123,10 @@ export async function requireMysterySchoolAccess(): Promise<{
     .eq("membership_type", "mystery_school")
     .maybeSingle();
 
-  if (legacyMember?.membership_status !== "active") {
+  if (
+    legacyMember?.membership_status !== "active" ||
+    !legacyMember.stripe_subscription_id
+  ) {
     return null;
   }
 
