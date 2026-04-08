@@ -8,6 +8,7 @@ Replicate the Professional Divination Course signup page UI based on the Master 
 
 **Route:** `/diviner-signup`  
 **Title:** `Checkout - Professional Divination Course | School of Our Divine Infinite Being`
+**Dynamic Data:** The course price must be fetched from the `/api/community/settings` endpoint (handled in `02_diviner_signup_api_integration.md`).
 
 ## Existing Page Check
 - No existing `diviner-signup` page or related code was found in the project. We are creating this module from scratch as a brand new page.
@@ -31,8 +32,8 @@ Replicate the Professional Divination Course signup page UI based on the Master 
 ### Sidebar (Right Column)
 - Order Summary: 
   - Item Name: `Professional Divination Course`
-  - Price: `₹25,969.00 (INR)` (Dynamic based on IP/Country)
-  - Details: `Price Details`, `Total Payable: ₹25,969.00 (INR)`
+  - Price: `[Dynamic Price]` (Fetched from API)
+  - Details: `Price Details`, `Total Payable: [Dynamic Price]`
   - Button: `Pay in FULL`
 - Billing Details Form Fields:
   - First Name, Last Name
