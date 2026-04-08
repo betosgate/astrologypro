@@ -1,6 +1,11 @@
 # Dashboard Sidebar Navigation Alignment and Logout - 2026-04-07
 
-- Status: Planned
+- Status: Completed (2026-04-08)
+- Completion Notes:
+  - Refactored `src/app/community/layout.tsx` to a left-sidebar layout (md+) with offset main column.
+  - Sidebar contains brand, membership badge, vertical block-style nav links (using existing `NavLink` active state), and logout pinned at the bottom.
+  - Mobile (<md) keeps the existing `MobileNav` hamburger and a top header containing PortalSwitcher, NotificationBell, Account, and a mobile-only logout.
+  - Main content offset by `md:ml-60` so it never overlaps the fixed sidebar.
 - Priority: P1
 - Owner: Frontend
 - Scope: Dashboard navigation layout, sidebar alignment, logout button placement

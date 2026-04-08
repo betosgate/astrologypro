@@ -1,6 +1,7 @@
 # Add Doctrine Links Admin CMS - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Admin CMS at `src/app/admin/doctrine-links/` with API at `src/app/api/admin/doctrine-links/`.
 - Priority: P2
 - Owner: Fullstack
 - Scope: doctrine link model, admin CRUD, member rendering

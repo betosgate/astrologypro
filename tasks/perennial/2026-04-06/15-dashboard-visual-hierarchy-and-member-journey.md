@@ -1,6 +1,7 @@
 # Improve Perennial Dashboard Visual Hierarchy And Member Journey - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Top membership block now sits above profile completion + upgrade nudge; sidebar (perennial/2026-04-07/05) reinforces hierarchy.
 - Priority: P2
 - Owner: Frontend
 - Scope: visual hierarchy, dashboard information density, CTA prioritization, empty/loading states, section clarity

@@ -2,6 +2,7 @@
 
 **Date:** 2026-04-01
 **Status:** Done
+**Verified 2026-04-08:** Already Done — src/app/admin/tarot/cards/{new,[id]/edit}/page.tsx + src/app/api/admin/tarot/cards/.
 
 ## Target Details
 - **Add Route:** `/admin/tarot/cards/add`

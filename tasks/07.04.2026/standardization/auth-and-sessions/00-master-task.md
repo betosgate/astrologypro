@@ -1,5 +1,8 @@
 # Auth & Session Standardization Master Task
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Verified complete: middleware (`src/middleware.ts` → `src/proxy.ts` → `src/lib/supabase/middleware.ts`), AuthProvider wired in `src/app/layout.tsx:124`, API routes return 401 JSON, trainee layout has logout button.
+
 ## Objective
 Implement a robust, modern authentication and session synchronization system using Next.js Middleware and a client-side Auth Provider to eliminate session-expiry "silent failures" and automatic redirect issues.
 
@@ -7,7 +10,7 @@ Implement a robust, modern authentication and session synchronization system usi
 - Repo path: `tasks/07.04.2026/standardization/auth-and-sessions`
 
 ## Why This Task Pack Exists
-Currently, the application relies on individual layout/page checks for session redirecting and lacks a global middleware for session refreshing. This causes users to be "silently logged out" where APIs fail but the UI doesn't redirect until a full page refresh. This pack centralizes auth logic for improved reliability.
+Currently, the application relies on individual layout/page checks for session redirecting and lacks a global middleware for session refreshing. This causes users to be "silently logged out" where APIs fail but the UI doesn't redirect until a full page refresh. Additionally, portals like Trainee lack a desktop-accessible "Log out" button. This pack centralizes auth logic for improved reliability and UX parity.
 
 ## Global Standardization Rules
 1. **Middleware First**: Use a global `middleware.ts` to refresh the session on *every* request (including static assets and APIs).
@@ -23,6 +26,7 @@ Currently, the application relies on individual layout/page checks for session r
 1. `01-middleware/01-implement-supabase-middleware.md`
 2. `02-providers/02-create-auth-provider-context.md`
 3. `03-api/03-standardize-api-auth-checks.md`
+4. `04-logout/04-trainee-logout.md`
 
 ## Standard Per-Task Workflow
 For each child task:

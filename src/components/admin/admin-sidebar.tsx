@@ -68,6 +68,8 @@ import {
   UserX,
   BookOpenCheck,
   ScrollTextIcon,
+  Map,
+  Key,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -76,6 +78,7 @@ const NAV_GROUPS = [
   {
     label: "Overview",
     items: [
+      { label: "Walkthrough", href: "/admin/walkthrough", icon: Map },
       { label: "Analytics", href: "/admin", icon: LayoutDashboard, exact: true },
     ],
   },
@@ -106,7 +109,16 @@ const NAV_GROUPS = [
       { label: "Webinars", href: "/admin/webinars", icon: Monitor },
       { label: "Spiritual Wisdom", href: "/admin/spiritual-wisdom", icon: Sparkles },
       { label: "General Content", href: "/admin/general-content", icon: Layers },
-      { label: "Perennial Content", href: "/admin/perennial-content", icon: Leaf },
+      { label: "Perennial Content", href: "/admin/perennial-content", icon: Leaf, exact: true },
+      {
+        label: "Products",
+        href: "/admin/perennial-content/products",
+        icon: Package,
+        children: [
+          { label: "Product Categories", href: "/admin/perennial-content/categories", icon: Layers },
+          { label: "Product Management", href: "/admin/perennial-content/products", icon: ShoppingBag },
+        ],
+      },
     ],
   },
   {
@@ -204,13 +216,20 @@ const NAV_GROUPS = [
     label: "Engagement",
     items: [
       { label: "Giveaways", href: "/admin/giveaways", icon: Gift },
-      { label: "Testimonials", href: "/admin/testimonials", icon: MessageSquare },
+    ],
+  },
+  {
+    label: "Manage Testimonial",
+    items: [
+      { label: "Testimonials List", href: "/admin/testimonials", icon: MessageSquare, exact: true },
+      { label: "Request Testimonial", href: "/admin/testimonials/requests", icon: ScrollText },
     ],
   },
   {
     label: "Tools",
     items: [
-      { label: "Tarot", href: "/admin/tarot", icon: Shuffle },
+      { label: "Tarot Spreads", href: "/admin/tarot/spreads", icon: Shuffle },
+      { label: "Tarot Cards", href: "/admin/tarot/cards", icon: LayoutGrid },
       { label: "Rituals", href: "/admin/rituals", icon: Flame },
     ],
   },
@@ -231,12 +250,32 @@ const NAV_GROUPS = [
   {
     label: "Config",
     items: [
+      { label: "Platform Settings", href: "/admin/platform-settings", icon: Settings2 },
+      { label: "API Keys", href: "/admin/astrology-keys", icon: Key },
       { label: "Legal", href: "/admin/legal", icon: ScrollText },
     ],
   },
 ];
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type NavItemDef = {
+  label: string;
+  href: string;
+  icon: React.ElementType;
+  exact?: boolean;
+  children?: { label: string; href: string; icon: React.ElementType }[];
+};
+
 // ─── Single nav item ────────────────────────────────────────────────────────────
+
+function isItemActive(
+  item: { href: string; exact?: boolean },
+  pathname: string
+) {
+  if (item.exact) return pathname === item.href;
+  return pathname === item.href || pathname.startsWith(item.href + "/");
+}
 
 function NavItem({
   item,
@@ -270,6 +309,63 @@ function NavItem({
   );
 }
 
+// ─── Nav item with children (dropdown) ────────────────────────────────────────
+
+function NavItemWithChildren({
+  item,
+  pathname,
+  onClick,
+}: {
+  item: NavItemDef & { children: NonNullable<NavItemDef["children"]> };
+  pathname: string;
+  onClick?: () => void;
+}) {
+  const Icon = item.icon;
+  const childActive = item.children.some((child) =>
+    isItemActive(child, pathname)
+  );
+  const [open, setOpen] = useState(childActive);
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          "flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+          childActive
+            ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        )}
+      >
+        <Icon
+          className={cn(
+            "size-4 shrink-0",
+            childActive ? "text-amber-500" : ""
+          )}
+        />
+        <span className="flex-1 text-left">{item.label}</span>
+        {open ? (
+          <ChevronDown className="size-3.5 shrink-0" />
+        ) : (
+          <ChevronRight className="size-3.5 shrink-0" />
+        )}
+      </button>
+      {open && (
+        <div className="mt-0.5 space-y-0.5 pl-5">
+          {item.children.map((child) => (
+            <NavItem
+              key={child.href}
+              item={child}
+              isActive={isItemActive(child, pathname)}
+              onClick={onClick}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Collapsible group ──────────────────────────────────────────────────────────
 
 function NavGroup({
@@ -281,18 +377,15 @@ function NavGroup({
   pathname: string;
   onClick?: () => void;
 }) {
-  const hasActive = group.items.some((item) =>
-    "exact" in item && item.exact
-      ? pathname === item.href
-      : pathname === item.href || pathname.startsWith(item.href + "/")
-  );
+  const hasActive = group.items.some((item) => {
+    if (isItemActive(item, pathname)) return true;
+    if ("children" in item && item.children) {
+      return item.children.some((child) => isItemActive(child, pathname));
+    }
+    return false;
+  });
 
   const [open, setOpen] = useState(hasActive || group.label === "Overview");
-
-  const isActive = (item: (typeof group.items)[number]) => {
-    if ("exact" in item && item.exact) return pathname === item.href;
-    return pathname === item.href || pathname.startsWith(item.href + "/");
-  };
 
   // "Overview" group — no collapse header, always show
   if (group.label === "Overview") {
@@ -302,7 +395,7 @@ function NavGroup({
           <NavItem
             key={item.href}
             item={item}
-            isActive={isActive(item)}
+            isActive={isItemActive(item, pathname)}
             onClick={onClick}
           />
         ))}
@@ -330,14 +423,23 @@ function NavGroup({
       </button>
       {open && (
         <div className="mt-0.5 space-y-0.5 pl-1">
-          {group.items.map((item) => (
-            <NavItem
-              key={item.href}
-              item={item}
-              isActive={isActive(item)}
-              onClick={onClick}
-            />
-          ))}
+          {group.items.map((item) =>
+            "children" in item && item.children ? (
+              <NavItemWithChildren
+                key={item.href}
+                item={item as NavItemDef & { children: NonNullable<NavItemDef["children"]> }}
+                pathname={pathname}
+                onClick={onClick}
+              />
+            ) : (
+              <NavItem
+                key={item.href}
+                item={item}
+                isActive={isItemActive(item, pathname)}
+                onClick={onClick}
+              />
+            )
+          )}
         </div>
       )}
     </div>

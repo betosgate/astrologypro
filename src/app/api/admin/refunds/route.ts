@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: NextRequest) {
   const user = await getAdminUser();
-  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const sp = request.nextUrl.searchParams;
   const createdFrom = sp.get("created_from") ?? "";
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   const user = await getAdminUser();
-  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { bookingId, reason } = await request.json();
   if (!bookingId) {

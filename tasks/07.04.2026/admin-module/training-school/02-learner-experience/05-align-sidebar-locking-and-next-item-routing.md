@@ -1,5 +1,8 @@
 # Module 05 - Align Sidebar Locking and Next-Item Routing
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Sidebar lock + next-item metadata sourced from /api/trainee/training/programs response (which now uses global_sequential_lock); local divergence in lesson page replaced.
+
 ## Objective
 Make sidebar locking, category routing, and next-item behavior consistent with the final priority/sequential model instead of older ad hoc checks.
 

@@ -1,5 +1,18 @@
 # Perennial Not Implemented Tasks
 
+> **Updated 2026-04-08 — Reconciled with current master.** Many items in this snapshot are now implemented. See `tasks/perennial/2026-04-06/` and `tasks/perennial/2026-04-07/` for the canonical task tracking.
+>
+> **Resolved since this file was written:**
+> - Perennial unsubscribe with confirmation flow → `src/app/api/community/billing/unsubscribe/route.ts` + `src/components/community/unsubscribe-modal.tsx`
+> - Separate add-member page route → `src/app/community/members/new/page.tsx` + `src/app/api/community/members/create/route.ts`
+> - Ritual media playback / video fetch pipeline → `src/components/community/ritual-video-player.tsx` + `ritual_invocations.video_url` migration
+> - Payment-intent / setup-intent based subscription modal → `src/app/api/community/billing/setup-intent/route.ts` + `src/components/community/update-payment-modal.tsx`
+> - Perennial product CRUD + product detail → `src/app/admin/perennial-content/products/`
+> - Subscription lifecycle (cancel/upgrade/downgrade) → `src/app/api/community/plan/{cancel,uncancel,change-tier}/route.ts`
+> - Welcome / enrollment / monthly transit emails → `src/app/api/stripe/webhooks/route.ts` + `src/app/api/cron/monthly-transits/route.ts`
+>
+> **Still legacy-only (intentionally not ported):** Angular cookie auth + AuthGuard/ResolveService — replaced by Supabase server middleware in this Next.js project.
+
 ## Purpose
 
 This file contains a clean bullet-point list of Perennial tasks that are **not implemented** in the current project, based on comparison with the legacy Perennial MD and the current Next.js codebase.

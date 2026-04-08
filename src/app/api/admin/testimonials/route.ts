@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const user = await getAdminUser();
   if (!user) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const sp = req.nextUrl.searchParams;
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const user = await getAdminUser();
   if (!user) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: {
@@ -54,6 +54,8 @@ export async function POST(req: NextRequest) {
     video?: object[];
     is_featured?: boolean;
     status?: string;
+    requested_to_email?: string | null;
+    requested_to_phone_no?: string | null;
   };
   try {
     body = await req.json();
@@ -73,8 +75,13 @@ export async function POST(req: NextRequest) {
     video,
     is_featured,
     status,
+    requested_to_email,
+    requested_to_phone_no,
   } = body;
 
+  if (!title || typeof title !== "string" || !title.trim()) {
+    return NextResponse.json({ error: "Title is required." }, { status: 400 });
+  }
   if (!text || typeof text !== "string" || !text.trim()) {
     return NextResponse.json({ error: "Text is required." }, { status: 400 });
   }
@@ -83,6 +90,8 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createAdminClient();
+  const added_by_name = user.email ?? null;
+
   const { data, error } = await admin
     .from("testimonials")
     .insert({
@@ -91,12 +100,16 @@ export async function POST(req: NextRequest) {
       rating: rating ?? null,
       text: text.trim(),
       service_type: service_type ?? null,
-      title: title ?? null,
+      title: title.trim(),
       images: images ?? [],
       audio: audio ?? [],
       video: video ?? [],
       is_featured: is_featured ?? false,
       status: status ?? "pending",
+      requested_to_email: requested_to_email?.toLowerCase() ?? null,
+      requested_to_phone_no: requested_to_phone_no ?? null,
+      added_by_name,
+      added_by_id: user.id,
     })
     .select()
     .single();

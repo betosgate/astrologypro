@@ -1,5 +1,8 @@
 # Diviner Affiliate Commission Management — Task Overview
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Implemented across migration 20260407000063_affiliate_commission.sql (affiliate_commissions table + RLS), API routes src/app/api/admin/commissions/[commissionId]/{adjust,refund,route.ts} + src/app/api/admin/affiliates/, and dashboard UI src/app/admin/affiliates/ + src/app/dashboard/affiliate-commission/ + src/app/affiliate/dashboard/.
+
 **Source doc:** `Diviner Affiliate Commission Requirements.docx`
 **Scope:** Full affiliate management + commission tracking + payout system for Diviners
 

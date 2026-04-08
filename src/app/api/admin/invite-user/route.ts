@@ -17,7 +17,7 @@ const ROLE_DESTINATIONS: Record<string, string> = {
 export async function POST(req: Request) {
   // Verify caller is admin
   const user = await getAdminUser();
-  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
   const { email, role, name } = body as { email: string; role: string; name?: string };

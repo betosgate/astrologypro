@@ -1,4 +1,5 @@
 **Status:** Done
+**Verified 2026-04-08:** Migration supabase/migrations/20260406000004_admin_activity_log.sql + writes from src/app/api/admin/{bulk-email,bulk-status,users/bulk,users/[id]/{password,delete,training-status,lock}}/route.ts. Reads via src/app/api/admin/activity-log/route.ts.
 
 # Task: Admin Activity Log
 

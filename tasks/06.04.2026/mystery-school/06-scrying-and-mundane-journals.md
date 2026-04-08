@@ -1,5 +1,8 @@
 # Module 06 - Scrying and Mundane Journals
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: scry_journals + mundane_journals (migration 20260406000025) with submission UI in mystery-school/scrying and /mundane.
+
 ## Objective
 Bring the journaling flows up to the required data and validation depth while reusing the existing journal tables where possible.
 

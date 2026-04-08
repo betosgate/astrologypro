@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 // Query: diviner_id?, status?, q?, limit?, cursor?
 export async function GET(request: Request) {
   const user = await getAdminUser();
-  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(request.url);
   const divinerId = searchParams.get("diviner_id");
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
 // Body: { diviner_id, name, email, phone?, notes?, default_commission_type?, default_commission_value? }
 export async function POST(request: Request) {
   const user = await getAdminUser();
-  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let body: unknown;
   try {

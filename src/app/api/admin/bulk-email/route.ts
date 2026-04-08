@@ -13,7 +13,7 @@ const FROM_EMAIL     = process.env.RESEND_FROM_EMAIL ?? "admin@divineinfinitebei
 export async function POST(req: NextRequest) {
   const adminUser = await getAdminUser();
   if (!adminUser) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: { user_ids?: unknown; subject?: unknown; message?: unknown };

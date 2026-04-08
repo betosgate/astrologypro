@@ -1,4 +1,7 @@
 # Task: Admin User List - Automatic Data Refresh
+
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: router.refresh() called from user-management-client onSuccess callbacks; sheet operations re-fetch the page on close.
 Date: 2026-04-07
 Category: Admin Dashboard
 

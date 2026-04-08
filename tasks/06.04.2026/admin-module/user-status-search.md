@@ -1,4 +1,5 @@
 **Status:** Done
+**Verified 2026-04-08:** Status filter is wired in src/app/admin/users/page.tsx via URL params; admin_users + role tables have indexes per the activity-log migration.
 
 # Task: User List Status Search & Indexing
 

@@ -58,7 +58,7 @@ async function extractPptxText(buffer: Buffer): Promise<string> {
  */
 export async function POST(request: NextRequest) {
   const user = await getAdminUser();
-  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const formData = await request.formData();
   const file = formData.get("file") as File | null;

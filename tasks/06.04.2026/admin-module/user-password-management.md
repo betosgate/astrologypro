@@ -1,4 +1,5 @@
 **Status:** Done
+**Verified 2026-04-08:** src/app/api/admin/users/[id]/password/route.ts (reset link / forced change).
 
 # Task: User Password Management
 

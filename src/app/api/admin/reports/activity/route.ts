@@ -25,12 +25,13 @@ export interface ActivityItem {
 //   category     filter by event_category (user_activity only)
 //   event_type   filter by event_type
 //   user_id      filter to one user
+//   date_after   created_at lower bound (ISO)
 //   cursor       keyset: "<created_at>__<id>"
 //   limit        default 50
 
 export async function GET(req: NextRequest) {
   const admin = await getAdminUser();
-  if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = req.nextUrl;
   const source = (searchParams.get("source") ?? "user_activity") as
@@ -40,6 +41,7 @@ export async function GET(req: NextRequest) {
   const category   = searchParams.get("category") ?? "";
   const eventType  = searchParams.get("event_type") ?? "";
   const userId     = searchParams.get("user_id") ?? "";
+  const dateAfter  = searchParams.get("date_after") ?? "";
   const cursor     = searchParams.get("cursor") ?? "";
   const limitRaw   = parseInt(searchParams.get("limit") ?? "50", 10);
   const limit      = Math.min(Math.max(1, isNaN(limitRaw) ? 50 : limitRaw), 200);
@@ -71,6 +73,7 @@ export async function GET(req: NextRequest) {
       if (userId)    q = q.eq("user_id", userId);
       if (category)  q = q.eq("event_category", category);
       if (eventType) q = q.eq("event_type", eventType);
+      if (dateAfter) q = q.gte("created_at", dateAfter);
       if (cursorAt && cursorId) {
         q = q.or(`created_at.lt.${cursorAt},and(created_at.eq.${cursorAt},id.lt.${cursorId})`);
       }
@@ -126,6 +129,7 @@ export async function GET(req: NextRequest) {
 
       if (userId)    q = q.eq("target_user_id", userId);
       if (eventType) q = q.eq("action_type", eventType);
+      if (dateAfter) q = q.gte("created_at", dateAfter);
       if (cursorAt && cursorId) {
         q = q.or(`created_at.lt.${cursorAt},and(created_at.eq.${cursorAt},id.lt.${cursorId})`);
       }
@@ -182,6 +186,7 @@ export async function GET(req: NextRequest) {
 
       if (userId)    q = q.eq("user_id", userId);
       if (eventType) q = q.eq("event_type", eventType);
+      if (dateAfter) q = q.gte("created_at", dateAfter);
       if (cursorAt && cursorId) {
         q = q.or(`created_at.lt.${cursorAt},and(created_at.eq.${cursorAt},id.lt.${cursorId})`);
       }

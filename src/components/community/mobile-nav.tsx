@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PortalLogoutButton } from "@/components/portal/logout-button";
 import {
   Sheet,
   SheetContent,
@@ -70,11 +71,14 @@ export function MobileNav({
           ))}
         </nav>
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-background">
-          <form action="/api/auth/signout" method="post">
-            <Button variant="outline" size="sm" className="w-full" type="submit">
-              Sign Out
-            </Button>
-          </form>
+          <PortalLogoutButton
+            variant="outline"
+            size="sm"
+            className="w-full justify-center"
+            onLoggedOut={() => setOpen(false)}
+          >
+            Sign Out
+          </PortalLogoutButton>
         </div>
       </SheetContent>
     </Sheet>

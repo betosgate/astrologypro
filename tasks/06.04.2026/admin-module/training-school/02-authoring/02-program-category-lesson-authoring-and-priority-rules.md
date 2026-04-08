@@ -1,5 +1,8 @@
 # Module 02 - Program, Category, Lesson Authoring and Priority Rules
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Admin authoring at src/app/admin/training/{programs,categories,lessons}/ + APIs at src/app/api/admin/training/. Priority columns drive ordering in trainee programs route.
+
 ## Objective
 Make the training hierarchy and ordering behavior explicit in admin authoring and learner routing.
 

@@ -1,4 +1,5 @@
 **Status:** Done
+**Verified 2026-04-08:** src/app/api/admin/users/[id]/lock/route.ts:8-35 requires reason (422 if missing); writes to admin_activity_log details.
 
 # Task: User Status Change Notes & Notification
 

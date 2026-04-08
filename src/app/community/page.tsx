@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import {
   Card,
@@ -32,6 +33,7 @@ import {
   User,
   CreditCard,
   Compass,
+  Telescope,
 } from "lucide-react";
 import Link from "next/link";
 import { AstroChartsSection } from "@/components/community/astro-charts-section";
@@ -172,6 +174,7 @@ export default async function CommunityDashboardPage() {
     profileCompletionFamilyResult,
     profileCompletionRelChartResult,
     pmTierResult,
+    platformSettingsResult,
   ] = await Promise.all([
     // Client profile for progress ring calculation
     supabase
@@ -255,6 +258,13 @@ export default async function CommunityDashboardPage() {
           .eq("id", member.pm_tier_id)
           .single()
       : Promise.resolve({ data: null }),
+
+    // Admin discount toggle — read via admin client (RLS bypass)
+    createAdminClient()
+      .from("platform_settings")
+      .select("ms_pm_discount_enabled")
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const client = clientResult.data;
@@ -267,6 +277,7 @@ export default async function CommunityDashboardPage() {
   const pcFamilyMembers = profileCompletionFamilyResult.data ?? [];
   const pcRelCharts = profileCompletionRelChartResult.data ?? [];
   const pmTier = pmTierResult.data ?? null;
+  const pmDiscountEnabled = platformSettingsResult.data?.ms_pm_discount_enabled ?? false;
 
   // ── Membership card subscription prop ────────────────────────────────────
   // Max members: from tier table if available, else derive from plan_type
@@ -314,13 +325,23 @@ export default async function CommunityDashboardPage() {
   // ── Cancellation / renewal-soon flags ─────────────────────────────────────
   const isCancelling =
     Boolean((member as { cancel_at_period_end?: boolean | null }).cancel_at_period_end) ||
-    Boolean((member as { cancel_at?: string | null }).cancel_at);
+    Boolean((member as { cancel_at?: string | null }).cancel_at) ||
+    member.membership_status === "cancelling";
 
   const cancelAt: string | null =
     (member as { cancel_at?: string | null }).cancel_at ??
     (isCancelling ? renewalDate : null);
 
   const renewingSoon = !isCancelling && isWithinDays(renewalDate, 7);
+
+  // ── Days remaining until renewal/cancellation ─────────────────────────────
+  function daysUntil(iso: string | null): number | null {
+    if (!iso) return null;
+    const diff = new Date(iso).getTime() - Date.now();
+    if (diff <= 0) return 0;
+    return Math.ceil(diff / (24 * 60 * 60 * 1000));
+  }
+  const daysRemaining = daysUntil(renewalDate);
 
   // ── Legacy profile completion percentage (birth-data-only ring) ──────────
   let profilePct = 0;
@@ -535,6 +556,7 @@ export default async function CommunityDashboardPage() {
         {/* Top row: membership badge + member since + profile completion */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-3">
+            {/* Membership type badge */}
             <Badge
               variant="outline"
               className="text-xs font-semibold border-primary/40 bg-primary/5 text-primary"
@@ -543,6 +565,47 @@ export default async function CommunityDashboardPage() {
                 ? `${programName} — Family`
                 : programName}
             </Badge>
+            {/* Subscription status badge */}
+            <Badge
+              variant={
+                member.membership_status === "active"
+                  ? "default"
+                  : isCancelling
+                  ? "destructive"
+                  : "secondary"
+              }
+              className="text-xs capitalize"
+            >
+              {isCancelling ? "Cancelling" : (member.membership_status ?? "active")}
+            </Badge>
+            {/* Days remaining until next billing / access end */}
+            {daysRemaining !== null && !isCancelling && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="size-3 inline-block shrink-0" aria-hidden="true" />
+                {daysRemaining === 0
+                  ? "Renews today"
+                  : `${daysRemaining}d until renewal`}
+              </span>
+            )}
+            {daysRemaining !== null && isCancelling && (
+              <span className="text-xs text-red-600 flex items-center gap-1">
+                <Clock className="size-3 inline-block shrink-0" aria-hidden="true" />
+                {daysRemaining === 0
+                  ? "Access ends today"
+                  : `${daysRemaining}d of access remaining`}
+              </span>
+            )}
+            {/* Next billing date */}
+            {renewalDate && !isCancelling && (
+              <span className="text-xs text-muted-foreground">
+                Next billing:{" "}
+                {new Date(renewalDate).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
+            )}
             <span className="text-xs text-muted-foreground">
               Member since{" "}
               {new Date(member.joined_at).toLocaleDateString("en-US", {
@@ -579,7 +642,7 @@ export default async function CommunityDashboardPage() {
           <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
             <Link href="/community/plan">
               <CreditCard className="mr-1.5 size-3.5" />
-              My Plan
+              Manage Subscription
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
@@ -647,7 +710,25 @@ export default async function CommunityDashboardPage() {
         )}
 
         {/* Rich membership card */}
-        <MembershipCard subscription={membershipSubscription} />
+        <MembershipCard subscription={membershipSubscription} userEmail={user.email} />
+
+        {/* Dedicated Add Perennial Mandalism Member entry point */}
+        {membershipSubscription.plan_type === "family" &&
+          membershipSubscription.member_count < membershipSubscription.max_members && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="py-4 px-5 flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <p className="text-sm font-semibold">Add Perennial Mandalism Member</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Open the full add-member form to enroll a new family member.
+                  </p>
+                </div>
+                <Button asChild size="sm">
+                  <Link href="/community/members/new">+ Add Member</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
         {/* Profile completion — horizontal progress bar when not complete; badge when complete */}
         {profileIsComplete ? (
@@ -844,6 +925,36 @@ export default async function CommunityDashboardPage() {
             </Card>
           )}
         </div>
+
+        {/* Western Horoscope deep-link */}
+        <Card className="border-sky-500/20 bg-sky-500/5">
+          <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sky-500/20">
+                <Telescope className="size-4 text-sky-600" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold leading-tight">Western Natal Chart</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {ownChartReady
+                    ? "Your birth data is on file — generate or view your western horoscope."
+                    : "Enter your birth details to generate your western natal chart."}
+                </p>
+              </div>
+            </div>
+            <Button
+              asChild
+              size="sm"
+              variant="outline"
+              className="shrink-0 w-full sm:w-auto border-sky-500/40 text-sky-700 hover:bg-sky-500/10"
+            >
+              <Link href="/community/horoscope">
+                <Telescope className="mr-1.5 size-3.5" />
+                View My Natal Chart
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -948,26 +1059,6 @@ export default async function CommunityDashboardPage() {
             </CardContent>
           </Card>
         </section>
-      )}
-
-      {/* Mystery School nav for existing MS members — redirect to dedicated portal */}
-      {isMysterySchool && (
-        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-violet-500/10">
-          <CardContent className="space-y-3 py-6">
-            <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
-              <GraduationCap className="size-5 text-primary" />
-            </div>
-            <div>
-              <p className="font-semibold text-base">Go to Mystery School</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Your dedicated Mystery School portal has your decan calendar, training, and curriculum.
-              </p>
-            </div>
-            <Button asChild size="sm">
-              <Link href="/mystery-school">Open Mystery School →</Link>
-            </Button>
-          </CardContent>
-        </Card>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -1322,9 +1413,13 @@ export default async function CommunityDashboardPage() {
                 <span className="font-bold text-white">$97 one-time</span>
                 {" "}+{" "}
                 <span className="font-bold text-white">$27/month</span>
-                {" "}— or{" "}
-                <span className="font-bold text-amber-300">+$17.03/month</span>
-                {" "}upgrade for PM members
+                {pmDiscountEnabled && (
+                  <>
+                    {" "}— or{" "}
+                    <span className="font-bold text-amber-300">+$17.03/month</span>
+                    {" "}for PM members
+                  </>
+                )}
               </div>
             </div>
             <Button

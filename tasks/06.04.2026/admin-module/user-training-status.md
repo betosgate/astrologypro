@@ -1,4 +1,5 @@
 **Status:** Done
+**Verified 2026-04-08:** src/app/api/admin/users/[id]/training-status/route.ts:35 updates trainees.training_status; logged via admin_activity_log line 44.
 
 # Task: User Training Status Management
 

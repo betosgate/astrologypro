@@ -33,7 +33,7 @@ const VALID_USER_TYPES = [
 export async function POST(req: Request) {
   // Verify caller is admin
   const adminUser = await getAdminUser();
-  if (!adminUser) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!adminUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = (await req.json()) as CreateUserBody;
 

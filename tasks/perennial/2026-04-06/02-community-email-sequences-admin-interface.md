@@ -1,6 +1,7 @@
 # Add Community Email Sequences Admin Interface - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Admin UI at `src/app/admin/email-sequences/` with API at `src/app/api/admin/email-sequences/`.
 - Priority: P1
 - Owner: Fullstack
 - Scope: sequence visibility, control tools, template preview, per-user send history

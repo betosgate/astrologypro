@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const user = await getAdminUser();
   if (!user) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const admin = createAdminClient();
@@ -29,7 +29,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const user = await getAdminUser();
   if (!user) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: {

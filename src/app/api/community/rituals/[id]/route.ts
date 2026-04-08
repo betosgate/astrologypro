@@ -33,7 +33,7 @@ export async function GET(
   const admin = createAdminClient();
   const { data: invocations } = await admin
     .from("ritual_invocations")
-    .select("id, name, description, instructions, priority")
+    .select("id, name, description, instructions, priority, video_url")
     .in("name", ritual.ritual_tags)
     .eq("is_active", true)
     .order("priority", { ascending: true });

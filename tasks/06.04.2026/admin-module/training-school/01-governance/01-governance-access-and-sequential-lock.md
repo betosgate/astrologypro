@@ -1,5 +1,8 @@
 # Module 01 - Governance, Access, and Sequential Lock
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: allowed_roles per program (migration 20260405000002), global_sequential_lock per training_settings (migration 20260407000081); enforced in trainee API routes.
+
 ## Objective
 Implement the missing top-level Training School governance controls so admin settings define both access and global sequencing behavior.
 

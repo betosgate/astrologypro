@@ -3,7 +3,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import {
   CheckCircle2,
   Download,
@@ -110,6 +109,10 @@ export type LessonViewerProps = {
   // Completion
   isCompleted: boolean;
 
+  // Next-item routing — computed server-side, consistent with lock logic
+  nextRoute: string | null;
+  nextLabel: string | null;
+
   // Sidebar nav
   sidebarLessons: SidebarLesson[];
 };
@@ -214,6 +217,8 @@ type TriggerVideoPlayerProps = {
   initialPosition?: number;
   onPositionUpdate?: (seconds: number) => void;
   onEnded?: () => void;
+  onPassedIdsChange?: (passedIds: string[]) => void;
+  onLessonCompleted?: () => void;
 };
 
 function TriggerVideoPlayer({
@@ -223,6 +228,8 @@ function TriggerVideoPlayer({
   initialPosition = 0,
   onPositionUpdate,
   onEnded,
+  onPassedIdsChange,
+  onLessonCompleted,
 }: TriggerVideoPlayerProps) {
   const embedUrl = getVideoEmbed(video.video_url);
   const isDirect = isHtml5Video(video.video_url);
@@ -256,6 +263,30 @@ function TriggerVideoPlayer({
   const rewatchTriggerId = useRef<string | null>(null);
   const rewatchPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Sort unpassed triggers by timestamp
+  const unpassedTriggers = triggers
+    .filter((t) => !localPassedIds.has(t.id))
+    .sort((a, b) => a.trigger_timestamp_seconds - b.trigger_timestamp_seconds);
+
+  const getPlaybackBoundary = useCallback(() => {
+    const triggerBoundary =
+      unpassedTriggers[0]?.trigger_timestamp_seconds ?? Infinity;
+    const rewatchBoundary = unpassedTriggers.reduce((min, trigger) => {
+      const requiresRewatch =
+        trigger.user_progress?.rewatch_completed === false &&
+        trigger.user_progress?.rewatch_required_until_seconds != null;
+
+      if (!requiresRewatch) return min;
+
+      return Math.min(
+        min,
+        trigger.user_progress?.rewatch_required_until_seconds ?? Infinity
+      );
+    }, Infinity);
+
+    return Math.min(triggerBoundary, rewatchBoundary);
+  }, [unpassedTriggers]);
+
   // Set initial position when video loads (resume behavior)
   const initialPositionApplied = useRef(false);
   useEffect(() => {
@@ -264,11 +295,8 @@ function TriggerVideoPlayer({
     if (!vid) return;
     const handleCanPlay = () => {
       if (!initialPositionApplied.current && vid.readyState >= 2) {
-        // Only resume to a position that is before the first unpassed trigger
-        const firstUnpassed = triggers
-          .filter((t) => !localPassedIds.has(t.id))
-          .sort((a, b) => a.trigger_timestamp_seconds - b.trigger_timestamp_seconds)[0];
-        const maxPos = firstUnpassed ? firstUnpassed.trigger_timestamp_seconds : Infinity;
+        // Resume cannot jump past an active rewatch gate or the next trigger.
+        const maxPos = getPlaybackBoundary();
         vid.currentTime = Math.min(initialPosition, maxPos);
         initialPositionApplied.current = true;
       }
@@ -277,7 +305,11 @@ function TriggerVideoPlayer({
     // Also try immediately in case already loaded
     handleCanPlay();
     return () => vid.removeEventListener("canplay", handleCanPlay);
-  }, [initialPosition, triggers, localPassedIds]);
+  }, [getPlaybackBoundary, initialPosition]);
+
+  useEffect(() => {
+    onPassedIdsChange?.([...localPassedIds]);
+  }, [localPassedIds, onPassedIdsChange]);
 
   // Report position to parent at ~10s cadence for heartbeat
   useEffect(() => {
@@ -290,11 +322,6 @@ function TriggerVideoPlayer({
     }, 10_000);
     return () => clearInterval(interval);
   }, [onPositionUpdate]);
-
-  // Sort unpassed triggers by timestamp
-  const unpassedTriggers = triggers
-    .filter((t) => !localPassedIds.has(t.id))
-    .sort((a, b) => a.trigger_timestamp_seconds - b.trigger_timestamp_seconds);
 
   // Countdown timer for rewind notification
   useEffect(() => {
@@ -374,15 +401,11 @@ function TriggerVideoPlayer({
     const vid = videoRef.current;
     if (!vid) return;
     const seekTarget = vid.currentTime;
-    // Find the earliest unpassed trigger the user is trying to skip past
-    for (const trigger of unpassedTriggers) {
-      if (seekTarget > trigger.trigger_timestamp_seconds) {
-        // Snap back to just before the trigger
-        vid.currentTime = trigger.trigger_timestamp_seconds;
-        break;
-      }
+    const boundary = getPlaybackBoundary();
+    if (seekTarget > boundary) {
+      vid.currentTime = boundary;
     }
-  }, [unpassedTriggers]);
+  }, [getPlaybackBoundary]);
 
   async function handleAnswerSubmit() {
     if (selectedOption === null || !activeTrigger || submitting) return;
@@ -411,13 +434,20 @@ function TriggerVideoPlayer({
         return;
       }
 
-      const json: { correct: boolean; rewind_to?: number } = await res.json();
+      const json: { correct: boolean; rewind_to?: number; lesson_complete?: boolean } =
+        await res.json();
 
       if (json.correct) {
         // Mark passed locally and resume video
-        setLocalPassedIds((prev) => new Set([...prev, activeTrigger.id]));
+        setLocalPassedIds((prev) => {
+          const next = new Set([...prev, activeTrigger.id]);
+          return next;
+        });
         setActiveTrigger(null);
         setSelectedOption(null);
+        if (json.lesson_complete) {
+          onLessonCompleted?.();
+        }
         videoRef.current?.play().then(() => {}, () => {});
       } else {
         // Wrong answer — start rewind countdown
@@ -558,6 +588,8 @@ export function LessonViewerClient(props: LessonViewerProps) {
     quizLastScore,
     quizLastTotal,
     isCompleted: initialCompleted,
+    nextRoute,
+    nextLabel,
     sidebarLessons,
     triggers = [],
     lastPositionSeconds = 0,
@@ -581,6 +613,11 @@ export function LessonViewerClient(props: LessonViewerProps) {
 
   const [activeVideoIdx, setActiveVideoIdx] = useState(0);
   const [isCompleted, setIsCompleted] = useState(initialCompleted);
+  const [passedTriggerIds, setPassedTriggerIds] = useState<string[]>(
+    triggers
+      .filter((trigger) => trigger.user_progress?.passed)
+      .map((trigger) => trigger.id)
+  );
   const [pdfPreview, setPdfPreview] = useState<{
     url: string;
     title: string;
@@ -592,22 +629,23 @@ export function LessonViewerClient(props: LessonViewerProps) {
   // All in-video trigger questions must be answered correctly before completing.
   // A trigger counts as requiring a pass if it has a question attached.
   const hasTriggers = triggers.length > 0;
+  const passedTriggerIdSet = new Set(passedTriggerIds);
   const allTriggersPassed =
     !hasTriggers ||
     triggers.every((t) => {
       // Only gate on triggers that have a question
       if (!t.question) return true;
-      return t.user_progress?.passed === true;
+      return passedTriggerIdSet.has(t.id);
     });
 
-  const canComplete = (!hasQuiz || quizPassed) && allTriggersPassed;
+  const canComplete = hasTriggers ? allTriggersPassed : (!hasQuiz || quizPassed);
 
-  const handleVideoEnded = useCallback(() => {
+  const handleVideoEnded = () => {
     // Auto-advance to next video if available
     if (activeVideoIdx < allVideos.length - 1) {
       setActiveVideoIdx((i) => i + 1);
     }
-  }, [activeVideoIdx, allVideos.length]);
+  };
 
   // Record lesson start on mount
   useEffect(() => {
@@ -621,7 +659,8 @@ export function LessonViewerClient(props: LessonViewerProps) {
     latestPositionRef.current = seconds;
   }, []);
 
-  // Heartbeat every 30 seconds while the component is mounted
+  // Heartbeat every 10 seconds while the component is mounted.
+  // Fires at ~10s cadence to keep last_position_seconds accurate for resume behavior.
   useEffect(() => {
     let lastTick = Date.now();
 
@@ -638,7 +677,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
           last_position_seconds: latestPositionRef.current,
         }),
       }).catch(() => {}); // fire-and-forget
-    }, 30_000);
+    }, 10_000);
 
     return () => clearInterval(interval);
   }, [lessonId]);
@@ -729,6 +768,8 @@ export function LessonViewerClient(props: LessonViewerProps) {
                 initialPosition={activeVideoIdx === 0 ? lastPositionSeconds : 0}
                 onPositionUpdate={handlePositionUpdate}
                 onEnded={handleVideoEnded}
+                onPassedIdsChange={setPassedTriggerIds}
+                onLessonCompleted={() => setIsCompleted(true)}
               />
             </div>
           )}
@@ -893,7 +934,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
           )}
 
           {/* Quiz section */}
-          {hasQuiz && (
+          {!hasTriggers && hasQuiz && (
             <div className="rounded-xl border bg-card overflow-hidden">
               <div className="px-4 py-3 border-b">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -920,11 +961,13 @@ export function LessonViewerClient(props: LessonViewerProps) {
             disabled={!canComplete}
             disabledReason={
               !canComplete
-                ? !allTriggersPassed && (!hasQuiz || quizPassed)
+                ? hasTriggers && !allTriggersPassed
                   ? "Answer all in-video quiz questions correctly to complete this lesson."
                   : "Pass the quiz above to complete this lesson."
                 : undefined
             }
+            nextRoute={nextRoute ?? null}
+            nextLabel={nextLabel ?? null}
             className="px-0"
           />
         </aside>

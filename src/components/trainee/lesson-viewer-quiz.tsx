@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { CheckCircle2, XCircle, ChevronLeft, ChevronRight, Clock } from "lucide-react";
@@ -11,10 +10,12 @@ import { cn } from "@/lib/utils";
 // ---------------------------------------------------------------------------
 // Types — options from the API have no correct_answer exposed to client
 // ---------------------------------------------------------------------------
+type QuizOption = string | { text?: string | null } | null | undefined;
+
 export type QuizQuestionClient = {
   id: string;
   question: string;
-  options: { text: string }[];
+  options: QuizOption[];
   explanation?: string | null;
 };
 
@@ -33,6 +34,20 @@ interface LessonViewerQuizProps {
   lastScore?: number | null;
   lastTotal?: number | null;
   onPassed?: () => void; // called after successful pass to trigger completion UI
+}
+
+function getOptionLabel(option: QuizOption, fallback: string) {
+  if (typeof option === "string") {
+    const trimmed = option.trim();
+    return trimmed.length > 0 ? trimmed : fallback;
+  }
+
+  if (option && typeof option === "object" && typeof option.text === "string") {
+    const trimmed = option.text.trim();
+    return trimmed.length > 0 ? trimmed : fallback;
+  }
+
+  return fallback;
 }
 
 export function LessonViewerQuiz({
@@ -248,11 +263,11 @@ export function LessonViewerQuiz({
                 <div className="pl-6 space-y-0.5 text-xs">
                   <p className="text-red-600">
                     Your answer:{" "}
-                    {questions[i]?.options[r.selected]?.text ?? "—"}
+                    {getOptionLabel(questions[i]?.options[r.selected], "—")}
                   </p>
                   <p className="text-green-600">
                     Correct:{" "}
-                    {questions[i]?.options[r.correct_index]?.text ?? "—"}
+                    {getOptionLabel(questions[i]?.options[r.correct_index], "—")}
                   </p>
                 </div>
               )}
@@ -314,8 +329,9 @@ export function LessonViewerQuiz({
 
       {/* Options */}
       <div className="space-y-2">
-        {(q.options as { text: string }[]).map((opt, oIdx) => {
+        {q.options.map((opt, oIdx) => {
           const isSelected = answers[currentQ] === oIdx;
+          const label = getOptionLabel(opt, `Option ${oIdx + 1}`);
           return (
             <button
               key={oIdx}
@@ -327,7 +343,7 @@ export function LessonViewerQuiz({
                   : "border-border hover:border-primary/40 hover:bg-muted/40"
               )}
             >
-              {opt.text}
+              {label}
             </button>
           );
         })}

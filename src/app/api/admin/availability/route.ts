@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const user = await getAdminUser();
-  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const sp = req.nextUrl.searchParams;
   const divinerId = sp.get("diviner_id");
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const user = await getAdminUser();
-  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
   const { diviner_id, title, start_date, end_date, weekdays, start_time, end_time, timezone, duration_minutes, description, is_active } = body;

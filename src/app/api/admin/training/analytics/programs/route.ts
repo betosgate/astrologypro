@@ -18,7 +18,7 @@ function median(values: number[]): number {
 export async function GET() {
   const user = await getAdminUser();
   if (!user) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const admin = createAdminClient();

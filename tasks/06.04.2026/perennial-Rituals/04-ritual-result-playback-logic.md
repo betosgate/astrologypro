@@ -1,5 +1,8 @@
 # Task: Ritual Result Playback Logic
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: src/app/community/rituals/[id]/page.tsx + src/components/community/ritual-video-player.tsx (uses /api/rituals/[id]/playback).
+
 ## Objective
 Implement the logic to fetch, sequence, and play back a saved ritual configuration based on its unique ID.
 

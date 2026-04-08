@@ -1,5 +1,8 @@
 # Module 08 - Missed Decan, Retry Logic, and Admin Excuse Flow
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: cron marks missed decans; admin excuse path via src/app/api/admin/perennial-content/decans/[id]/excuse + retry-year flag.
+
 ## Objective
 Implement the enforcement layer that turns decan timing into real progression rules.
 

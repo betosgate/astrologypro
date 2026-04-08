@@ -122,9 +122,11 @@ function StepIndicator({
 
 function Step1Info({
   isPmMember,
+  discountEnabled,
   onNext,
 }: {
   isPmMember: boolean;
+  discountEnabled: boolean;
   onNext: () => void;
 }) {
   return (
@@ -149,7 +151,7 @@ function Step1Info({
           <span className="text-muted-foreground text-sm">+</span>
           <Badge variant="secondary" className="text-sm px-3 py-1">$27 / month</Badge>
         </div>
-        {isPmMember && (
+        {isPmMember && discountEnabled && (
           <p className="text-sm text-muted-foreground mt-1">
             You currently pay{" "}
             <span className="font-semibold text-foreground">$9.97/month</span> for
@@ -280,6 +282,7 @@ function Step2Quarter({
 function Step3Review({
   selected,
   isPmMember,
+  discountEnabled,
   confirmed,
   onToggleConfirm,
   onNext,
@@ -287,6 +290,7 @@ function Step3Review({
 }: {
   selected: UpcomingEntryDate;
   isPmMember: boolean;
+  discountEnabled: boolean;
   confirmed: boolean;
   onToggleConfirm: () => void;
   onNext: () => void;
@@ -334,26 +338,19 @@ function Step3Review({
               <span className="text-muted-foreground">Monthly subscription</span>
               <span className="font-medium">$27.00 / month</span>
             </div>
-            {isPmMember && (
+            {isPmMember && discountEnabled && (
               <div className="flex justify-between text-primary">
-                <span>Current PM subscription credit</span>
+                <span>PM member discount applied</span>
                 <span className="font-medium">−$9.97 / month</span>
               </div>
             )}
             <div className="border-t pt-2 flex justify-between font-semibold">
-              <span>Net monthly cost</span>
+              <span>Monthly cost</span>
               <span className="text-primary">
-                ${isPmMember ? "17.03" : "27.00"} / month
+                ${isPmMember && discountEnabled ? "17.03" : "27.00"} / month
               </span>
             </div>
           </div>
-
-          {isPmMember && (
-            <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
-              Your current Perennial Mandalism subscription will be replaced by
-              your Mystery School membership. You will not be double-charged.
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -399,10 +396,12 @@ function Step3Review({
 function Step4Payment({
   selected,
   isPmMember,
+  discountEnabled,
   onBack,
 }: {
   selected: UpcomingEntryDate;
   isPmMember: boolean;
+  discountEnabled: boolean;
   onBack: () => void;
 }) {
   const [loading, setLoading] = useState(false);
@@ -453,9 +452,9 @@ function Step4Payment({
           <div className="text-sm text-muted-foreground">
             <span className="font-semibold text-foreground">$97</span> enrollment +{" "}
             <span className="font-semibold text-foreground">
-              ${isPmMember ? "17.03" : "27.00"}
+              ${isPmMember && discountEnabled ? "17.03" : "27.00"}
             </span>
-            /mo net
+            /mo
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button
@@ -501,17 +500,21 @@ export default function UpgradeToMysterySchoolPage() {
   const [selectedQuarter, setSelectedQuarter] = useState<UpcomingEntryDate | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [isPmMember, setIsPmMember] = useState(false);
+  const [discountEnabled, setDiscountEnabled] = useState(false);
 
-  // Detect whether the current user is a PM member (for net pricing display)
+  // Detect PM membership and admin discount toggle
   useEffect(() => {
-    fetch("/api/community/subscription")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data?.subscription?.membership_type === "perennial_mandalism") {
-          setIsPmMember(true);
-        }
-      })
-      .catch(() => {/* non-fatal — defaults to false */});
+    Promise.all([
+      fetch("/api/community/subscription").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/community/settings").then((r) => r.json()).catch(() => ({})),
+    ]).then(([subData, settingsData]) => {
+      if (subData?.subscription?.membership_type === "perennial_mandalism") {
+        setIsPmMember(true);
+      }
+      if (settingsData?.ms_pm_discount_enabled === true) {
+        setDiscountEnabled(true);
+      }
+    });
   }, []);
 
   function goNext() {
@@ -529,7 +532,7 @@ export default function UpgradeToMysterySchoolPage() {
       <StepIndicator current={step} labels={STEP_LABELS} />
 
       {step === 1 && (
-        <Step1Info isPmMember={isPmMember} onNext={goNext} />
+        <Step1Info isPmMember={isPmMember} discountEnabled={discountEnabled} onNext={goNext} />
       )}
 
       {step === 2 && (
@@ -545,6 +548,7 @@ export default function UpgradeToMysterySchoolPage() {
         <Step3Review
           selected={selectedQuarter}
           isPmMember={isPmMember}
+          discountEnabled={discountEnabled}
           confirmed={confirmed}
           onToggleConfirm={() => setConfirmed((v) => !v)}
           onNext={goNext}
@@ -556,6 +560,7 @@ export default function UpgradeToMysterySchoolPage() {
         <Step4Payment
           selected={selectedQuarter}
           isPmMember={isPmMember}
+          discountEnabled={discountEnabled}
           onBack={goBack}
         />
       )}

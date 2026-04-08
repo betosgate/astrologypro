@@ -1,4 +1,7 @@
 # Task: Admin User Detail - Direct Note Navigation
+
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: user-detail-sheet.tsx:98 + 143 + 279 — initialTab/activeTab state, sync on open. Add Note action passes "notes" as initialTab.
 Date: 2026-04-07
 Category: Admin Dashboard
 

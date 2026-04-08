@@ -1,5 +1,8 @@
 # Task 02 - Standardize View Details Panels
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Sheet-based detail panels implemented for users, invitations, activity-log, and activity-report (see src/components/admin/*-detail-sheet.tsx). All consume the same shadcn Sheet primitive.
+
 ## Objective
 Establish the "User Detail Sheet" pattern as the universal standard for all right-side detail views in the administrative interface.
 

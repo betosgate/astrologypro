@@ -1,5 +1,8 @@
 # Task: Calendar OAuth Sync (Google & Microsoft)
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Google OAuth: src/app/api/calendar/{connect,callback}/route.ts. Microsoft: src/app/api/calendar/microsoft/{connect,callback}/route.ts. Disconnect: src/app/api/calendar/disconnect/route.ts.
+
 ## Objective
 Enable **Administrators and Diviners** to connect Google and Microsoft (Outlook/Office 365) calendars for real-time availability syncing. Admins must be able to initiate or manage these connections on behalf of any Diviner.
 

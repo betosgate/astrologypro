@@ -1,5 +1,8 @@
 # Sidebar Menu Consolidation (Calendar Submenu)
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: src/components/dashboard/sidebar.tsx:58-71 introduces nested children for the Calendar parent (Bookings, Schedule, Availability, Calendar View). Active parent detection at lines 231-247; mobile sheet handled at lines 273-309.
+
 ## Goal
 Consolidate the four calendar-related menu items (**Bookings**, **Schedule**, **Availability**, **Calendar**) into a single parent menu titled **"Calendar"** with nested sub-items to reduce sidebar clutter and group related functionality together.
 

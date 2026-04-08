@@ -1,5 +1,8 @@
 # Module 08 - Certificate Award, Email, and Verification
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: src/lib/training/graduation.ts:108 issues random certificate_code; verification at src/app/api/certificate/verify/[code]/route.ts; email via sendProgramComplete.
+
 ## Objective
 Finalize the certificate lifecycle so certificates are issued only after true final training completion and remain downloadable and verifiable.
 

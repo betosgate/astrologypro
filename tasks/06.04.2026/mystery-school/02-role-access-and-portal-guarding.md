@@ -1,5 +1,8 @@
 # Module 02 - Role Access and Portal Guarding
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: src/lib/user-roles.ts + getUserPortals; community layout redirects PM-only, /mystery-school layout gates by mystery_school_students.
+
 ## Objective
 Make sure Mystery School access control satisfies the requirement behavior without forcing a move to a `user_roles` table.
 

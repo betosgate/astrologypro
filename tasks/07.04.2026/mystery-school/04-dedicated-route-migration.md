@@ -1,6 +1,17 @@
 # Task 04: Dedicated Route Migration
+
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Mystery School lives at src/app/mystery-school/{layout,page}.tsx + decans/, training/. APIs at src/app/api/mystery-school/{decan,decans,foundation,post-grad,ritual-builder}.
 Date: 2026-04-07
 Category: Mystery School Module
+
+## Status
+
+- Largely implemented
+- Dedicated `/mystery-school` routes already exist
+- Legacy Community Mystery School routes are already being redirected
+- Audit remaining gaps before editing
+- Do not rebuild route trees that are already in place
 
 ## Objective
 Move all Mystery School frontend routes from `/community/...` to `/mystery-school/...`.

@@ -22,8 +22,12 @@ import {
   Loader2, ChevronDown, ChevronRight, ChevronLeft, Star, Sun, Moon,
   Calendar as CalendarIcon, Heart, Users, Briefcase, Eye, Zap,
   Sparkles, CircleDot, Clock, MapPin, Printer, ArrowUp, RotateCcw,
-  X,
+  X, Maximize2, Search,
 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // ─── Planet & Zodiac symbols ─────────────────────────────────────────────────
 
@@ -142,7 +146,7 @@ function AstroHeaderParts({ title }: { title?: string }) {
   const terms = [p1, aspectType, p2].filter(Boolean);
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="flex items-center justify-center gap-2 flex-wrap w-full">
       {terms.map((term, i) => {
         const img = ASTRO_HEADER_IMAGES[term];
         return (
@@ -263,21 +267,36 @@ async function callNatalWheel(body: Record<string, unknown>) {
   return r.json();
 }
 async function callDecanLookup(signs: string, planet: string) {
-  const r = await fetch("/api/admin/astro/decan-lookup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signs, planet }) });
+  const r = await fetch("/api/admin/astro/decan-info", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signs, planet }) });
   if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? r.statusText); }
   return r.json() as Promise<{ results: DecanRow[] }>;
 }
 
 interface DecanRow {
-  id?: number;
+  id?: string;
+  sign_id?: string;
   sign_name: string;
   planet: string;
   decan: number;           // 1 | 2 | 3
   greek_daemon: string;
   tarot_name: string;
   description?: string;
+  decan_img?: string;
   is_active?: boolean;
+  // Cached AI descriptions (persisted by the server)
+  planet_sign_short_desc?: string | null;
+  planet_sign_long_desc?: string | null;
+  daemon_short_desc?: string | null;
+  daemon_long_desc?: string | null;
+  tarot_short_desc?: string | null;
+  tarot_long_desc?: string | null;
 }
+
+type DecanPossibility = {
+  planet: string;
+  sign_name?: string | null;
+  signs?: string | null;
+};
 
 interface DecanAi {
   short_format: string;
@@ -512,75 +531,112 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
 }) {
   const isAspect = promptType === "aspect" || !!aspectTitle;
   const { p1, aspectType, p2 } = isAspect ? parseAspectTitle(aspectTitle ?? title) : { p1: "", aspectType: "", p2: "" };
+  const [showFullImage, setShowFullImage] = useState(false);
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          {isAspect ? (
-            /* Aspect modal header: Angular astroHeaderModifierPipe icon row */
-            <div className="pb-1">
-              <AstroHeaderParts title={aspectTitle ?? title} />
-            </div>
-          ) : (
-            <DialogTitle className="text-base font-bold capitalize">{title.replace(/_/g, " ")}</DialogTitle>
-          )}
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
+          {/* Custom Close Icon - Fixed to top-right */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.15)] group"
+            aria-label="Close modal"
+          >
+            <X className="size-5 transition-transform group-hover:rotate-90" />
+          </button>
 
-        {loading ? (
-          <div className="flex items-center gap-3 py-8 justify-center text-muted-foreground">
-            <Loader2 className="size-5 animate-spin text-amber-500" />
-            <span className="text-sm">Loading extended interpretation…</span>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Pictorial asset from AWS S3 — mirrors Angular's pictorialData image section */}
-            {pictureUrl && (
-              <div className="rounded-lg overflow-hidden border border-amber-500/20">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={pictureUrl}
-                  alt={title}
-                  className="w-full max-h-72 object-contain bg-black/5"
-                  loading="lazy"
-                />
-              </div>
-            )}
-
-            {/* Planet type: numbered paragraphs per planet — Angular showMoreModal keyvalue pattern */}
-            {promptType === "planet" && planetEntries && planetEntries.length > 0 ? (
-              <div className="space-y-5">
-                {planetEntries.map(({ planet, items }) => (
-                  <div key={planet} className="space-y-2">
-                    <p className="text-sm font-bold capitalize text-amber-700">{planet}</p>
-                    <ol className="space-y-2 list-none">
-                      {items.map((item, idx) => (
-                        <li key={idx} className="text-sm leading-relaxed text-foreground">
-                          <span className="font-semibold text-muted-foreground mr-2">{idx + 1}.</span>{item}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              /* house / aspect / generic: plain paragraph */
-              <div className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{content}</div>
-            )}
-
-            {/* Word association chips inside modal — matching Angular's pictorial section */}
-            {isAspect && p1 && p2 && (
-              <div className="rounded-lg border overflow-hidden">
-                <div className="px-3 py-2 bg-muted/40 border-b">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Word Association</p>
+          {/* Sticky Header Section */}
+          <div className="px-6 py-5 border-b border-white/5 bg-slate-900/40 pr-16 shrink-0">
+            <DialogHeader>
+              {isAspect ? (
+                <div className="pb-1">
+                  <AstroHeaderParts title={aspectTitle ?? title} />
                 </div>
-                <WordAssociationChips aspecting={p1} type={aspectType} aspected={p2} />
-              </div>
-            )}
+              ) : (
+                <DialogTitle className="text-lg font-bold capitalize gold-text">{title.replace(/_/g, " ")} (Pictorial Analysis)</DialogTitle>
+              )}
+            </DialogHeader>
           </div>
-        )}
-      </DialogContent>
-    </Dialog>
+
+          {/* Content Section — Vertical stack: Text first, then Image */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-950/50">
+            <div className="flex flex-col gap-0 h-full">
+
+              {/* Textual/Structured Content */}
+              <div className="p-6 shrink-0 border-b border-white/5">
+                {loading ? (
+                  <div className="flex flex-col items-center gap-3 py-12 justify-center text-muted-foreground">
+                    <Loader2 className="size-8 animate-spin text-amber-500 mb-2" />
+                    <span className="text-sm font-medium tracking-widest uppercase opacity-70">Cosmic Retrieval...</span>
+                  </div>
+                ) : (
+                  <div>
+                    {promptType === "planet" && planetEntries && planetEntries.length > 0 ? (
+                      <div className="space-y-6">
+                        {planetEntries.map(({ planet, items }) => (
+                          <div key={planet} className="rounded-xl border border-amber-500/10 bg-amber-500/5 p-4 space-y-3 shadow-inner">
+                            <div className="flex items-center gap-3">
+                              <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                                <PlanetSymbol name={planet} />
+                              </div>
+                              <div className="h-px flex-1 bg-gradient-to-r from-amber-500/30 to-transparent" />
+                            </div>
+                            <ol className="space-y-3 list-none">
+                              {items.map((item, idx) => (
+                                <li key={idx} className="text-sm leading-relaxed text-foreground/90 flex gap-3 group">
+                                  <span className="flex-shrink-0 size-5 flex items-center justify-center rounded-full bg-amber-500/20 text-amber-500 font-bold text-[10px] border border-amber-500/30 group-hover:bg-amber-500 group-hover:text-amber-950 transition-all">{idx + 1}</span>
+                                  <span className="opacity-90 group-hover:opacity-100">{item}</span>
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap font-light tracking-wide bg-slate-900/40 p-6 rounded-2xl border border-white/5 italic relative overflow-hidden shadow-2xl">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-amber-500/40" />
+                        <Sparkles className="absolute top-3 right-3 size-4 text-amber-500/20" />
+                        "{content}"
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Pictorial Representation — Below the text */}
+              {pictureUrl && (
+                <div className="p-6 flex flex-col items-center justify-center bg-slate-900/20 border-b border-white/5">
+                  <div className="relative group rounded-2xl border border-amber-500/20 overflow-hidden bg-slate-950 shadow-[0_0_50px_rgba(245,158,11,0.08)] transition-all hover:border-amber-500/40 max-w-lg w-full">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={pictureUrl} alt={title} className="w-full h-auto max-h-[60vh] object-contain transition-transform duration-1000 group-hover:scale-[1.05]" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
+
+                    {/* Maximize Icon */}
+                    <button
+                      onClick={() => setShowFullImage(true)}
+                      className="absolute top-4 right-4 size-10 flex items-center justify-center rounded-xl bg-slate-950/80 border border-white/10 text-amber-500/80 hover:text-amber-500 hover:border-amber-500/50 transition-all shadow-2xl backdrop-blur-md z-10 group/btn"
+                      title="Enlarge Cosmic Map"
+                    >
+                      <Maximize2 className="size-5 transition-transform group-hover/btn:scale-125" />
+                    </button>
+
+                    <div className="absolute bottom-4 left-0 right-0 text-center px-4">
+                      <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-500/50 mix-blend-overlay">Celestial Configuration</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
+      {pictureUrl && (
+        <ChartImageModal src={pictureUrl} open={showFullImage} onClose={() => setShowFullImage(false)} />
+      )}
+    </>
   );
 }
 
@@ -589,16 +645,43 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
 function ChartImageModal({ src, open, onClose }: { src: string; open: boolean; onClose: () => void }) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-4xl p-2">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Natal Chart</DialogTitle>
-        </DialogHeader>
-        {src.startsWith("<svg") ? (
-          <div dangerouslySetInnerHTML={{ __html: src }} className="overflow-auto" />
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} alt="Natal Chart" className="w-full h-auto rounded" />
-        )}
+      <DialogContent
+        className="max-w-[100vw] w-screen max-h-[100vh] h-screen p-0 border-none rounded-none overflow-hidden bg-black/95 backdrop-blur-sm z-[100]"
+        showCloseButton={false}
+      >
+        {/* Persistent High-Visibility Close Icon */}
+        <button
+          onClick={onClose}
+          className="absolute top-6 right-6 z-[110] size-12 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-white transition-all active:scale-95 shadow-[0_0_30px_rgba(245,158,11,0.3)] group"
+          aria-label="Exit Fullscreen"
+        >
+          <X className="size-7 transition-transform group-hover:rotate-90" />
+        </button>
+
+        <div className="h-full w-full overflow-auto flex items-center justify-center p-4">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Fullscreen Astrological Perception</DialogTitle>
+          </DialogHeader>
+
+          {src.startsWith("<svg") ? (
+            <div
+              dangerouslySetInnerHTML={{ __html: src }}
+              className="w-full h-full min-w-full min-h-full flex justify-center items-center scale-110"
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={src}
+              alt="Astrological Visualization"
+              className="max-w-full max-h-full object-contain drop-shadow-[0_0_80px_rgba(245,158,11,0.1)] transition-transform duration-1000 animate-in fade-in zoom-in-95"
+            />
+          )}
+
+          {/* Bottom Branding (Very Subtle) */}
+          <div className="absolute bottom-8 left-0 right-0 text-center pointer-events-none">
+            <span className="text-[10px] font-black uppercase tracking-[0.6em] text-white/10">Celestial Visualization Map</span>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -730,7 +813,7 @@ function AspectsLegend() {
 function SectionSkeleton({ title }: { title: string }) {
   return (
     <div className="border rounded-lg overflow-hidden animate-pulse">
-      <div className="flex items-center gap-3 px-4 py-3 bg-muted/40">
+      <div className="flex items-center justify-center gap-3 px-4 py-3 bg-muted/40">
         <Loader2 className="size-4 animate-spin text-amber-500" />
         <span className="text-sm font-semibold">{title}</span>
       </div>
@@ -792,21 +875,26 @@ function useShowMore() {
           return { filename: parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join("-"), foldername: "aspect" };
         }
       } else if (type === "planet") {
-        // promptData has planet name + sign, e.g. { sign: "Virgo" } and title is planet name
-        const planet = title.trim();
-        const sign = promptData?.sign ?? promptData?.Sign ?? "";
+        // promptData can be the planet object directly or { planet: p } or { ascendant: { sign: '...' } }
+        const p = promptData?.planet ?? promptData;
+        const planet = p?.name ?? title.trim();
+        // Look for sign in p directly, or nested under the title (for points like ascendant)
+        const sign = p?.sign ?? p?.Sign ?? p?.[title.toLowerCase()]?.sign ?? p?.[title.toLowerCase()]?.Sign ?? "";
         if (planet && sign) {
-          return { filename: `${planet}-In-${sign}`, foldername: "planets" };
+          const capPlanet = planet.charAt(0).toUpperCase() + planet.slice(1);
+          const capSign = sign.charAt(0).toUpperCase() + sign.slice(1);
+          return { filename: `${capPlanet}-In-${capSign}`, foldername: "planets" };
         }
       } else if (type === "house") {
-        // promptData has house number + sign + planet
-        const house = promptData?.house ?? promptData?.House ?? "";
+        // promptData has house number + sign
+        const houseNum = promptData?.house ?? promptData?.House ?? "";
         const sign = promptData?.sign ?? promptData?.Sign ?? "";
-        const planet = promptData?.planet ?? promptData?.ruler ?? title.trim();
-        if (house && sign && planet) {
-          const ordinal = String(house).replace(/\D/g, "");
+
+        if (houseNum && sign) {
+          const ordinal = String(houseNum).replace(/\D/g, "");
           const suffix = ordinal === "1" ? "st" : ordinal === "2" ? "nd" : ordinal === "3" ? "rd" : "th";
-          return { filename: `${planet}-In-${ordinal}${suffix}-House-With-${sign}`, foldername: "planets" };
+          const capSign = sign.charAt(0).toUpperCase() + sign.slice(1);
+          return { filename: `${capSign}-In-${ordinal}${suffix}-House`, foldername: "house" };
         }
       }
     } catch { /* ignore — will return null */ }
@@ -914,6 +1002,7 @@ function useShowMore() {
           }
         }
         const picUrl = await picturePromise;
+        if (!picUrl) toast.error("No Record Found", { description: `Pictorial representation for ${title} is unavailable.` });
         setModal({ title, content: "", loading: false, aspectTitle, promptType: resolvedType, planetEntries, pictureUrl: picUrl });
       } else if (resolvedType === "house") {
         // Response: {interpretations: {data: "..."}} — extract .interpretations.data
@@ -931,6 +1020,7 @@ function useShowMore() {
           text = String(parsed ?? "");
         }
         const picUrl2 = await picturePromise;
+        if (!picUrl2) toast.error("No Record Found", { description: "Pictorial map is currently unavailable." });
         setModal({ title, content: text, loading: false, aspectTitle, promptType: resolvedType, pictureUrl: picUrl2 });
       } else {
         // aspect / generic: extract .interpretation
@@ -941,6 +1031,10 @@ function useShowMore() {
           text = String(parsed ?? "");
         }
         const picUrl3 = await picturePromise;
+        if (!picUrl3) {
+          // Only show toast if it's a specific aspect, not generic text
+          if (resolvedType === "aspect") toast.error("No Record Found", { description: "Aspect pictorial representation is unavailable." });
+        }
         setModal({ title, content: text, loading: false, aspectTitle, promptType: resolvedType, pictureUrl: picUrl3 });
       }
     } catch {
@@ -995,8 +1089,10 @@ function DecanModal({ planet, sign, open, onClose }: {
   const [sections, setSections] = useState<Record<number, DecanSection>>({});
   const [loadingRows, setLoadingRows] = useState(false);
   const [rowError, setRowError] = useState<string | null>(null);
+  const [fullscreenImg, setFullscreenImg] = useState<string | null>(null);
 
-  // Fetch decan rows + fire 3 AI calls per decan whenever modal opens
+  // Fetch decan rows from the new decan-info API which returns cached descriptions
+  // (and auto-generates + persists via AI if missing on the server side)
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -1013,64 +1109,24 @@ function DecanModal({ planet, sign, open, onClose }: {
         setRows(results);
         setLoadingRows(false);
 
-        // Fire 3 AI calls per decan row in parallel (non-fatal)
+        // Build sections from the cached (or freshly AI-generated) descriptions
+        // returned by the server. No client-side AI calls needed.
+        const newSections: Record<number, DecanSection> = {};
         for (const row of results) {
-          const decanLabel = ordinalDecan(row.decan);
-          // Initialise loading state for this decan
-          setSections((prev) => ({ ...prev, [row.decan]: { planetAi: null, daemonAi: null, tarotAi: null, loading: true } }));
-
-          const systemContent = "give response only in json format as a whole , nothing else answer as astrologer not AI BOT";
-
-          // Angular exact prompts — three parallel AI calls
-          const [planetRes, daemonRes, tarotRes] = await Promise.allSettled([
-            callAI({
-              condition: {
-                system_content: systemContent,
-                user_content: `What does it mean when you have ${planet} in the ${decanLabel} decan of ${sign} in astrology , give me response in json where two indexes are short_format (min 3 sentences) and long_format (min 5 sentences) and response should not start with 'json' ever`,
-              },
-              toolname: "other",
-              json: [{ planet, sign, decan: decanLabel, decan_data: row }],
-            } as any),
-            callAI({
-              condition: {
-                system_content: systemContent,
-                user_content: `Explain the Greek daemon ${row.greek_daemon} as the spirit of the decan in relation to the ${decanLabel} decan of ${sign} in astrology. Give response in json where two indexes are short_format (min 3 sentences) and long_format (min 5 sentences) and response should not start with 'json' ever`,
-              },
-              toolname: "other",
-              json: [{ daemon: row.greek_daemon, sign, decan: decanLabel }],
-            } as any),
-            callAI({
-              condition: {
-                system_content: systemContent,
-                user_content: `Using the Crowley's thoth decks attributions, without referencing his deck directly, explain the ${row.tarot_name} as it would relate to the ${decanLabel} decan of ${sign} in astrology. Give response in json where two indexes are short_format (min 3 sentences) and long_format (min 5 sentences) and response should not start with 'json' ever`,
-              },
-              toolname: "other",
-              json: [{ tarot: row.tarot_name, sign, decan: decanLabel }],
-            } as any),
-          ]);
-
-          if (cancelled) return;
-
-          function parseDecanAi(res: PromiseSettledResult<any>): DecanAi | null {
-            if (res.status === "rejected") return null;
-            let parsed = res.value?.ai_response;
-            if (typeof parsed === "string") { try { parsed = JSON.parse(parsed); } catch { /* keep */ } }
-            if (typeof parsed === "object" && parsed !== null) {
-              return { short_format: parsed.short_format ?? "", long_format: parsed.long_format ?? "" };
-            }
-            return null;
-          }
-
-          setSections((prev) => ({
-            ...prev,
-            [row.decan]: {
-              planetAi: parseDecanAi(planetRes),
-              daemonAi: parseDecanAi(daemonRes),
-              tarotAi: parseDecanAi(tarotRes),
-              loading: false,
-            },
-          }));
+          newSections[row.decan] = {
+            planetAi: (row.planet_sign_short_desc || row.planet_sign_long_desc)
+              ? { short_format: row.planet_sign_short_desc ?? "", long_format: row.planet_sign_long_desc ?? "" }
+              : null,
+            daemonAi: (row.daemon_short_desc || row.daemon_long_desc)
+              ? { short_format: row.daemon_short_desc ?? "", long_format: row.daemon_long_desc ?? "" }
+              : null,
+            tarotAi: (row.tarot_short_desc || row.tarot_long_desc)
+              ? { short_format: row.tarot_short_desc ?? "", long_format: row.tarot_long_desc ?? "" }
+              : null,
+            loading: false,
+          };
         }
+        if (!cancelled) setSections(newSections);
       } catch (e: unknown) {
         if (cancelled) return;
         setRowError(e instanceof Error ? e.message : "Failed to load decan data");
@@ -1083,102 +1139,148 @@ function DecanModal({ planet, sign, open, onClose }: {
   }, [open, planet, sign]);
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base font-bold">
-            {/* Planet image + title */}
-            {PLANET_IMAGES[planet] && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={PLANET_IMAGES[planet]} alt={planet} className="size-6 object-contain" />
+    <>
+      <ChartImageModal src={fullscreenImg || ""} open={!!fullscreenImg} onClose={() => setFullscreenImg(null)} />
+      <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
+          {/* Custom Close Icon - Fixed to top-right */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.15)] group"
+            aria-label="Close modal"
+          >
+            <X className="size-5 transition-transform group-hover:rotate-90" />
+          </button>
+
+          {/* Sticky Header Section */}
+          <div className="px-6 py-5 border-b border-white/5 bg-slate-900/40 pr-16 shrink-0">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3 text-lg font-bold gold-text">
+                {PLANET_IMAGES[planet] && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={PLANET_IMAGES[planet]} alt={planet} className="size-7 object-contain drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
+                )}
+                <span>{planet} Decans in {sign}</span>
+              </DialogTitle>
+            </DialogHeader>
+          </div>
+
+          {/* Scrollable Content Section */}
+          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+
+            {loadingRows && (
+              <div className="flex items-center gap-3 py-8 justify-center text-muted-foreground">
+                <Loader2 className="size-5 animate-spin text-amber-500" />
+                <span className="text-sm">Loading decan data…</span>
+              </div>
             )}
-            <span>{planet} Decans in {sign}</span>
-          </DialogTitle>
-        </DialogHeader>
 
-        {loadingRows && (
-          <div className="flex items-center gap-3 py-8 justify-center text-muted-foreground">
-            <Loader2 className="size-5 animate-spin text-amber-500" />
-            <span className="text-sm">Loading decan data…</span>
+            {rowError && (
+              <div className="py-4 text-sm text-destructive">{rowError}</div>
+            )}
+
+            {rows.length > 0 && (
+              <div className="space-y-6">
+                {rows.map((row) => {
+                  const sec = sections[row.decan];
+                  return (
+                    <div key={row.decan} className="rounded-lg border overflow-hidden bg-slate-900/20">
+                      {/* Decan header */}
+                      <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-500/10 border-b">
+                        <span className="text-xs font-bold uppercase tracking-widest text-amber-600">{ordinalDecan(row.decan)} Decan</span>
+                        <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-400 ml-auto">{planet} in {sign}</Badge>
+                      </div>
+
+                      {/* Decan Image if available */}
+                      {row.decan_img && (
+                        <div className="relative group/img bg-slate-950 border-b border-white/5 flex justify-center p-4">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={row.decan_img}
+                            alt={`${ordinalDecan(row.decan)} Decan Imagery`}
+                            className="max-h-[320px] w-auto object-contain rounded-lg shadow-2xl transition-transform hover:scale-[1.02]"
+                          />
+                          <button
+                            className="absolute bottom-6 right-6 p-2 rounded-full bg-slate-900/80 border border-white/10 text-amber-500 opacity-0 group-hover/img:opacity-100 transition-opacity"
+                            onClick={() => setFullscreenImg(row.decan_img || null)}
+                            title="Open Full Image"
+                          >
+                            <Maximize2 className="size-4" />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Static labels row */}
+                      <div className="grid grid-cols-2 gap-px bg-border">
+                        <div className="bg-background px-4 py-2.5 space-y-0.5">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Greek Daemon</p>
+                          <p className="text-sm font-medium text-foreground">{row.greek_daemon || "—"}</p>
+                        </div>
+                        <div className="bg-background px-4 py-2.5 space-y-0.5">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tarot Card</p>
+                          <p className="text-sm font-medium text-foreground">{row.tarot_name || "—"}</p>
+                        </div>
+                      </div>
+
+                      {/* Static description if present */}
+                      {row.description && (
+                        <div className="px-4 py-3 bg-muted/5 border-t">
+                          <p className="text-xs text-muted-foreground leading-relaxed">{row.description}</p>
+                        </div>
+                      )}
+
+                      {/* AI sections */}
+                      <div className="px-4 py-4 space-y-5 border-t">
+                        <DecanAiBlock
+                          title={`${planet} in ${ordinalDecan(row.decan)} Decan of ${sign}`}
+                          data={sec?.planetAi ?? null}
+                          loading={sec?.loading ?? true}
+                        />
+                        <DecanAiBlock
+                          title={`Greek Daemon: ${row.greek_daemon}`}
+                          data={sec?.daemonAi ?? null}
+                          loading={sec?.loading ?? true}
+                        />
+                        <DecanAiBlock
+                          title={`Tarot: ${row.tarot_name}`}
+                          data={sec?.tarotAi ?? null}
+                          loading={sec?.loading ?? true}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
-
-        {rowError && (
-          <div className="py-4 text-sm text-destructive">{rowError}</div>
-        )}
-
-        {rows.length > 0 && (
-          <div className="space-y-6">
-            {rows.map((row) => {
-              const sec = sections[row.decan];
-              return (
-                <div key={row.decan} className="rounded-lg border overflow-hidden">
-                  {/* Decan header */}
-                  <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-500/10 border-b">
-                    <span className="text-xs font-bold uppercase tracking-widest text-amber-600">{ordinalDecan(row.decan)} Decan</span>
-                    <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-400 ml-auto">{planet} in {sign}</Badge>
-                  </div>
-
-                  {/* Static labels row */}
-                  <div className="grid grid-cols-2 gap-px bg-border">
-                    <div className="bg-background px-4 py-2.5 space-y-0.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Greek Daemon</p>
-                      <p className="text-sm font-medium text-foreground">{row.greek_daemon || "—"}</p>
-                    </div>
-                    <div className="bg-background px-4 py-2.5 space-y-0.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tarot Card</p>
-                      <p className="text-sm font-medium text-foreground">{row.tarot_name || "—"}</p>
-                    </div>
-                  </div>
-
-                  {/* Static description if present */}
-                  {row.description && (
-                    <div className="px-4 py-3 bg-muted/5 border-t">
-                      <p className="text-xs text-muted-foreground leading-relaxed">{row.description}</p>
-                    </div>
-                  )}
-
-                  {/* AI sections */}
-                  <div className="px-4 py-4 space-y-5 border-t">
-                    <DecanAiBlock
-                      title={`${planet} in ${ordinalDecan(row.decan)} Decan of ${sign}`}
-                      data={sec?.planetAi ?? null}
-                      loading={sec?.loading ?? true}
-                    />
-                    <DecanAiBlock
-                      title={`Greek Daemon: ${row.greek_daemon}`}
-                      data={sec?.daemonAi ?? null}
-                      loading={sec?.loading ?? true}
-                    />
-                    <DecanAiBlock
-                      title={`Tarot: ${row.tarot_name}`}
-                      data={sec?.tarotAi ?? null}
-                      loading={sec?.loading ?? true}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
 // ─── Planets Section ──────────────────────────────────────────────────────────
 
-function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: { planets: any[]; aiData: any; areaOfInquiry?: string; decanPossibilities: any[] }) {
+function normalizeDecanValue(value: unknown): string {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: { planets: any[]; aiData: any; areaOfInquiry?: string; decanPossibilities: DecanPossibility[] }) {
   const { modal, trigger, close } = useShowMore();
   const [decanPlanet, setDecanPlanet] = useState<{ name: string; sign: string } | null>(null);
 
   if (!planets) return null;
 
   const checkDacen = (planetName: string, signName: string) => {
-    if (!decanPossibilities) return false;
-    return decanPossibilities.some((item: any) =>
-      item.planet === planetName && item.sign_name === signName
-    );
+    const normalizedPlanet = normalizeDecanValue(planetName);
+    const normalizedSign = normalizeDecanValue(signName);
+    if (!normalizedPlanet || !normalizedSign || !decanPossibilities?.length) return false;
+
+    return decanPossibilities.some((item) => {
+      const itemPlanet = normalizeDecanValue(item.planet);
+      const itemSign = normalizeDecanValue(item.sign_name ?? item.signs);
+      return itemPlanet === normalizedPlanet && itemSign === normalizedSign;
+    });
   };
 
   // Sort planets in canonical order
@@ -1205,8 +1307,8 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: 
 
       {/* Table */}
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b">
-          <h3 className="text-sm font-semibold">Planet Information</h3>
+        <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+          <h3 className="text-sm font-semibold text-center w-full">Planet Information</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -1220,10 +1322,30 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: 
             <tbody>
               {ordered.map((p, i) => (
                 <tr key={p.name} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
-                  <td className="px-3 py-2 font-medium whitespace-nowrap"><PlanetSymbol name={p.name} /></td>
+                  <td className="px-3 py-2 font-medium whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <PlanetSymbol name={p.name} />
+                      {checkDacen(p.name, p.sign) && (
+                        <button
+                          type="button"
+                          onClick={() => setDecanPlanet({ name: p.name, sign: p.sign })}
+                          className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
+                          title="Decan Information (Click to view)"
+                          aria-label={`Open decan information for ${p.name} in ${p.sign}`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
+                            alt=""
+                            className="size-5 cursor-pointer hover:scale-125 transition-transform drop-shadow-[0_0_5px_rgba(245,158,11,0.4)]"
+                          />
+                        </button>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-3 py-2 whitespace-nowrap"><ZodiacSymbol sign={p.sign} /></td>
                   <td className="px-3 py-2 font-mono text-xs">{Number(p.full_degree).toFixed(2)}°</td>
-                  <td className="px-3 py-2 text-center">{p.house}</td>
+                  <td className="px-3 py-2">{p.house}</td>
                   <td className="px-3 py-2 font-mono text-xs">{Number(p.norm_degree).toFixed(2)}°</td>
                   <td className="px-3 py-2 font-mono text-xs">{Number(p.speed).toFixed(4)}</td>
                   <td className="px-3 py-2">
@@ -1249,16 +1371,23 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: 
             const hasDecan = checkDacen(p.name, p.sign);
             return (
               <div key={p.name} className="rounded-lg border overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/40 border-b">
+                <div className="flex items-center justify-center gap-2 px-4 py-2.5 bg-muted/40 border-b text-center">
                   <span className="text-amber-500 text-base">{PLANET_SYMBOLS[p.name] ?? "✦"}</span>
                   <h4 className="text-sm font-semibold uppercase tracking-wide">{p.name}</h4>
                   {hasDecan && (
                     <button
+                      type="button"
                       onClick={() => setDecanPlanet({ name: p.name, sign: p.sign })}
-                      className="inline-flex items-center justify-center p-1 rounded-md hover:bg-purple-500/10 text-purple-600 transition-colors"
-                      title={`${p.name} Decan in ${p.sign}`}
+                      className="ml-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
+                      title="Decan Information (Click to view)"
+                      aria-label={`Open decan information for ${p.name} in ${p.sign}`}
                     >
-                      <Sparkles className="size-4" />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
+                        alt=""
+                        className="size-5 cursor-pointer hover:scale-125 transition-transform drop-shadow-[0_0_5px_rgba(245,158,11,0.4)]"
+                      />
                     </button>
                   )}
                   <Badge variant="outline" className="ml-auto text-[10px] text-amber-600 border-amber-400">{p.sign} · House {p.house}</Badge>
@@ -1267,7 +1396,7 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, decanPossibilities }: 
                   <p className="text-sm leading-relaxed text-foreground">{interp}</p>
                   <div className="mt-2 flex justify-center">
                     <button
-                      onClick={() => trigger(p.name, interp, { planet: p, context: "western astrology planet interpretation" }, areaOfInquiry, undefined, false, "planet")}
+                      onClick={() => trigger(p.name, interp, p, areaOfInquiry, undefined, false, "planet")}
                       className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
                     >Show More</button>
                   </div>
@@ -1311,8 +1440,8 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
 
       {/* House table */}
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b">
-          <h3 className="text-sm font-semibold">House Information</h3>
+        <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+          <h3 className="text-sm font-semibold text-center w-full">House Information</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -1345,56 +1474,171 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
         </div>
       </div>
 
-      {/* House bar chart */}
-      <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b">
-          <h3 className="text-sm font-semibold">House Chart</h3>
-        </div>
-        <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-2">
-          {houses.map((h: any) => {
-            const planetsInHouse = houseMap[Number(h.house)] ?? [];
-            return (
-              <div key={h.house} className="flex items-center gap-2 rounded-md border p-2">
-                <div className="shrink-0 w-16">
-                  <p className="text-xs font-semibold text-amber-600">House {h.house}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    <span className="text-amber-500">{ZODIAC_SYMBOLS[h.sign] ?? ""}</span> {h.sign}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-1 flex-1">
-                  {/* Empty boxes up to house number */}
-                  {[...Array(Math.min(Number(h.house) - 1, 6))].map((_, idx) => (
-                    <span key={idx} className="size-4 rounded-sm border border-border/40 bg-muted/30" />
-                  ))}
-                  {/* Planet badges */}
-                  {planetsInHouse.map((pName) => (
-                    <span key={pName} className="text-amber-500 text-base" title={pName}>{PLANET_SYMBOLS[pName] ?? "✦"}</span>
-                  ))}
+      {/* House Distribution Grid - Precise & Compact with Rich Tooltips */}
+      <TooltipProvider delayDuration={200}>
+        <div className="rounded-xl border border-amber-500/20 overflow-hidden bg-card shadow-sm mt-4">
+          <div className="px-4 py-2.5 bg-gradient-to-r from-amber-500/5 via-background to-background border-b border-amber-500/10 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="size-1.5 rounded-full bg-amber-500" />
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-700 dark:text-amber-500">Distribution Analysis</h3>
+            </div>
+            <Badge variant="outline" className="h-5 text-[9px] uppercase tracking-widest border-amber-500/20 text-amber-600 px-1.5 font-bold">Western V2</Badge>
+          </div>
+
+          <div className="p-4 overflow-x-auto bg-slate-50/30 dark:bg-slate-950/20">
+            <div className="flex flex-col gap-0.5 min-w-[850px]">
+              {/* Compact Legend Row */}
+              <div className="flex items-center gap-6 mb-2 border-b border-muted/20 pb-2 ml-1">
+                <div className="w-40 shrink-0 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">Planetary Track</div>
+                <div className="flex gap-1.5 flex-1 justify-between max-w-4xl px-2">
+                  {["Sun", "Moon", "Mercury", "Venus", "Mars", "Saturn", "Jupiter", "Uranus", "Neptune", "Pluto", "Node", "Part of Fortune", "Chiron"].map((p) => {
+                    const pImg = PLANET_IMAGES[p];
+                    return (
+                      <Tooltip key={p}>
+                        <TooltipTrigger asChild>
+                          <div className="size-7 flex items-center justify-center grayscale opacity-30 hover:opacity-100 transition-opacity cursor-help">
+                            {pImg ? (
+                              <img src={pImg} alt={p} className="size-4 object-contain brightness-0 dark:invert" />
+                            ) : (
+                              <span className="text-[10px] font-bold">{PLANET_SYMBOLS[p] ?? "✦"}</span>
+                            )}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-[10px] font-bold uppercase tracking-wider">{p}</TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
                 </div>
               </div>
-            );
-          })}
+
+              {houses.map((h: any) => {
+                const planetsInHouse = (houseMap[Number(h.house)] ?? []) as string[];
+                const gridPlanets = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Saturn", "Jupiter", "Uranus", "Neptune", "Pluto", "Node", "Part of Fortune", "Chiron"];
+
+                let maxIdx = -1;
+                planetsInHouse.forEach(pName => {
+                  const idx = gridPlanets.indexOf(pName);
+                  if (idx > maxIdx) maxIdx = idx;
+                });
+
+                return (
+                  <div key={h.house} className="flex items-center gap-6 py-2 group hover:bg-amber-500/10 rounded-lg px-2 transition-all border-b border-muted/5 last:border-0">
+                    {/* High-Readability House Header */}
+                    <div className="flex items-center gap-4 w-44 shrink-0">
+                      <div className="flex flex-col w-12 italic">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none mb-1">Cusp</span>
+                        <span className="text-sm font-black text-foreground/90 leading-none">H{String(h.house).padStart(2, "0")}</span>
+                      </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center justify-center size-9 rounded-full bg-background border-2 border-amber-500/20 group-hover:border-amber-500/50 group-hover:scale-110 transition-all shadow-sm cursor-pointer overflow-hidden">
+                            <span className="text-amber-500 text-xl leading-none font-bold">{ZODIAC_SYMBOLS[h.sign] ?? "•"}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="bg-white dark:bg-slate-900 border-2 border-amber-500/20 p-3 shadow-2xl rounded-xl">
+                          <p className="font-black text-sm uppercase tracking-widest text-amber-600 dark:text-amber-400 mb-1">{h.sign}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase italic pb-2 border-b border-muted/20">House {h.house} Custodian</p>
+                          <div className="mt-2 text-xs font-mono font-bold text-foreground/80">Position: {Number(h.full_degree || h.degree).toFixed(2)}°</div>
+                        </TooltipContent>
+                      </Tooltip>
+                      <div className="flex flex-col items-end flex-1">
+                        <span className="text-xs font-mono font-black text-amber-700 dark:text-amber-400 leading-none">{Number(h.full_degree || h.degree).toFixed(2)}°</span>
+                      </div>
+                    </div>
+
+                    {/* Interaction Track with Animated Scale */}
+                    <div className="flex gap-2 flex-1 items-center justify-between max-w-4xl px-2">
+                      {gridPlanets.map((colPlanet, colIdx) => {
+                        const isHere = planetsInHouse.includes(colPlanet);
+                        const pImg = PLANET_IMAGES[colPlanet];
+                        const planetData = planets?.find(p => p.name === colPlanet);
+
+                        if (isHere) {
+                          return (
+                            <Tooltip key={colPlanet}>
+                              <TooltipTrigger asChild>
+                                <div className="size-8 flex items-center justify-center rounded-lg bg-background border-2 border-amber-500/40 text-foreground hover:scale-125 hover:rotate-6 hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:z-20 hover:border-amber-500 transition-all cursor-zoom-in overflow-hidden" >
+                                  {pImg ? (
+                                    <img src={pImg} alt={colPlanet} className="size-6 object-contain" />
+                                  ) : (
+                                    <span className="text-lg font-bold leading-none text-amber-600">{PLANET_SYMBOLS[colPlanet] ?? "✦"}</span>
+                                  )}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="p-0 border-0 bg-transparent shadow-none overflow-visible">
+                                <div className="p-4 bg-white dark:bg-slate-900 border-2 border-amber-500/30 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.2)] min-w-[220px] relative">
+                                  <div className="flex items-center gap-4 mb-3 pb-3 border-b border-amber-500/10">
+                                    <div className="size-11 flex items-center justify-center rounded-xl bg-amber-500/5 shadow-inner p-2 border border-amber-500/10">
+                                      {pImg ? <img src={pImg} alt={colPlanet} className="size-full object-contain" /> : <span className="text-2xl">{PLANET_SYMBOLS[colPlanet]}</span>}
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-black text-foreground uppercase tracking-widest leading-none mb-1">{colPlanet}</p>
+                                      <p className="text-[10px] text-amber-600 font-bold uppercase tracking-tight opacity-70">Resident in Sign {planetData?.sign ?? "N/A"}</p>
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2 text-[11px] font-bold">
+                                    <div className="bg-slate-500/5 p-2 rounded-lg border border-border/40">
+                                      <span className="text-muted-foreground block text-[9px] uppercase tracking-widest mb-1 opacity-50">Degree</span>
+                                      <p className="font-mono text-amber-600">{Number(planetData?.full_degree ?? 0).toFixed(2)}°</p>
+                                    </div>
+                                    <div className="bg-slate-500/5 p-2 rounded-lg border border-border/40">
+                                      <span className="text-muted-foreground block text-[9px] uppercase tracking-widest mb-1 opacity-50">Motion</span>
+                                      <p className={planetData?.is_retro === "true" ? "text-red-500" : "text-green-500"}>{planetData?.is_retro === "true" ? "Retrograde" : "Direct"}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        }
+
+                        if (colIdx < maxIdx) {
+                          return (
+                            <Tooltip key={colIdx}>
+                              <TooltipTrigger asChild>
+                                <div className="size-8 bg-slate-950 border border-slate-800 dark:bg-slate-200 dark:border-slate-300 rounded shadow-inner opacity-90 transition-all hover:opacity-100 hover:scale-105 cursor-pointer" />
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="bg-slate-900 text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20">
+                                <span className="opacity-50 text-amber-400 mr-1">Zone:</span> {colPlanet}
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        }
+
+                        return <div key={colIdx} className="size-8" />;
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
-      </div>
+      </TooltipProvider>
+
 
       {/* AI interpretations */}
       {!aiData && <SectionSkeleton title="House Interpretations" />}
       {aiData === "error" && <SectionError title="House Interpretations" />}
       {Array.isArray(aiData) && aiData.length > 0 && (
         <div className="space-y-3">
-          {aiData.map((item: any) => (
-            <div key={item.house} className="rounded-lg border overflow-hidden">
-              <div className="px-4 py-2.5 bg-muted/40 border-b">
-                <h4 className="text-sm font-semibold uppercase tracking-wide">House {item.house}</h4>
-              </div>
-              <div className="px-4 py-3">
-                <p className="text-sm leading-relaxed">{item.interpretation}</p>
-                <div className="mt-2 flex justify-center">
-                  <button onClick={() => trigger(`House ${item.house}`, item.interpretation, item, areaOfInquiry, undefined, false, "house")} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+          {aiData.map((item: any) => {
+            const hRaw = houses.find((h: any) => Number(h.house) === Number(item.house));
+            const sign = hRaw?.sign ?? "";
+            return (
+              <div key={item.house} className="rounded-lg border overflow-hidden">
+                <div className="px-4 py-2.5 bg-muted/40 border-b flex justify-center">
+                  <h4 className="text-sm font-semibold uppercase tracking-wide text-center w-full">House {item.house}</h4>
+                </div>
+                <div className="px-4 py-3">
+                  <p className="text-sm leading-relaxed">{item.interpretation}</p>
+                  <div className="mt-2 flex justify-center">
+                    <button onClick={() => trigger(`House ${item.house}`, item.interpretation, { ...item, sign }, areaOfInquiry, undefined, false, "house")} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -1428,8 +1672,8 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
       <AspectsLegend />
 
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b">
-          <h3 className="text-sm font-semibold">Aspects</h3>
+        <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+          <h3 className="text-sm font-semibold text-center w-full">Aspects</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -1484,7 +1728,7 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
             return (
               <div key={i} className="rounded-lg border overflow-hidden">
                 {/* Header — Angular astroHeaderModifierPipe pattern: WORD [img] WORD [img] WORD [img] */}
-                <div className="px-4 py-2.5 bg-muted/40 border-b">
+                <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
                   <AstroHeaderParts title={item.title ?? `Aspect ${i + 1}`} />
                 </div>
                 <div className="px-4 py-3">
@@ -1493,10 +1737,6 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
                     <button onClick={() => trigger(item.title ?? `Aspect ${i + 1}`, item.interpretation, item, areaOfInquiry, item.title)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
                   </div>
                 </div>
-                {/* Word association keyword chips — 3 columns for the two planets + aspect type */}
-                {p1 && p2 && (
-                  <WordAssociationChips aspecting={p1} type={aspectType} aspected={p2} />
-                )}
               </div>
             );
           })}
@@ -1523,8 +1763,8 @@ function DharmaKarmaSection({ data, rawData, areaOfInquiry }: { data: any; rawDa
       {[{ key: "dharma", label: "Dharma", text: dharma }, { key: "karma", label: "Karma", text: karma }].map(({ key, label, text }) => (
         text ? (
           <div key={key} className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20">
-              <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-300">{label}</h4>
+            <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20 flex justify-center">
+              <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-300 text-center w-full">{label}</h4>
             </div>
             <div className="px-4 py-3">
               <p className="text-sm leading-relaxed">{text}</p>
@@ -1552,8 +1792,8 @@ function LilithSection({ lilith, aiData, areaOfInquiry }: { lilith: any; aiData:
     <div className="space-y-4">
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b">
-          <h3 className="text-sm font-semibold">Lilith <span className="text-amber-500 ml-1">⚸</span></h3>
+        <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+          <h3 className="text-sm font-semibold text-center w-full">Lilith <span className="text-amber-500 ml-1">⚸</span></h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -1569,7 +1809,7 @@ function LilithSection({ lilith, aiData, areaOfInquiry }: { lilith: any; aiData:
                 <td className="px-3 py-2 font-medium"><PlanetSymbol name={lilith.name ?? "Lilith"} /></td>
                 <td className="px-3 py-2"><ZodiacSymbol sign={lilith.sign} /></td>
                 <td className="px-3 py-2 font-mono text-xs">{Number(lilith.full_degree).toFixed(2)}°</td>
-                <td className="px-3 py-2 text-center">{lilith.house}</td>
+                <td className="px-3 py-2">{lilith.house}</td>
                 <td className="px-3 py-2 font-mono text-xs">{Number(lilith.norm_degree).toFixed(2)}°</td>
                 <td className="px-3 py-2 font-mono text-xs">{Number(lilith.speed).toFixed(4)}</td>
                 <td className="px-3 py-2"><Badge variant={lilith.is_retro === "true" ? "destructive" : "outline"} className="text-[10px]">{lilith.is_retro === "true" ? "R" : "—"}</Badge></td>
@@ -1581,7 +1821,7 @@ function LilithSection({ lilith, aiData, areaOfInquiry }: { lilith: any; aiData:
           <div className="px-4 py-3 border-t">
             <p className="text-sm leading-relaxed">{interp}</p>
             <div className="mt-2 flex justify-center">
-              <button onClick={() => trigger("Lilith", interp, lilith, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+              <button onClick={() => trigger("Lilith", interp, lilith, areaOfInquiry, undefined, false, "planet")} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
             </div>
           </div>
         )}
@@ -1612,8 +1852,8 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry }: { natal
   return (
     <div className="rounded-lg border overflow-hidden">
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
-      <div className="px-4 py-2.5 bg-muted/40 border-b">
-        <h3 className="text-sm font-semibold">Ascendant · Midheaven · Vertex</h3>
+      <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+        <h3 className="text-sm font-semibold text-center w-full">Ascendant · Midheaven · Vertex</h3>
       </div>
       <div className="divide-y">
         {keys.map((key) => {
@@ -1622,13 +1862,13 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry }: { natal
           return (
             <div key={key} className="px-4 py-3">
               <div className="flex items-center gap-2 mb-1.5">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600">{key}</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 text-center">{key}</h4>
                 {degree && <Badge variant="outline" className="text-[10px]">{typeof degree === "object" ? `${degree.sign ?? ""} ${Number(degree.degree ?? 0).toFixed(2)}°` : String(degree)}</Badge>}
               </div>
               <p className="text-sm leading-relaxed">{interp ?? <span className="text-muted-foreground italic">Loading…</span>}</p>
               {interp && (
                 <div className="mt-1.5 flex justify-center">
-                  <button onClick={() => trigger(key, interp, { [key]: degree }, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                  <button onClick={() => trigger(key, interp, { [key]: degree }, areaOfInquiry, undefined, false, "planet")} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
                 </div>
               )}
             </div>
@@ -1677,7 +1917,7 @@ function PlanetReturnSummaryTable({ tab, birth, returnDate, natalData }: {
 
   return (
     <div className="rounded-lg border overflow-hidden">
-      <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20">
+      <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20 text-center">
         <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-300">{label} Return — Summary</h3>
       </div>
       <div className="overflow-x-auto">
@@ -1685,7 +1925,7 @@ function PlanetReturnSummaryTable({ tab, birth, returnDate, natalData }: {
           <thead>
             <tr className="border-b bg-muted/20">
               {["Date of Birth", "Place of Birth", "Time of Birth", "House System", `${label} at Birth`, `Next ${label} Return`].map((h) => (
-                <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
@@ -1718,14 +1958,14 @@ function PlanetReturnInterpretation({ tab, aiData, areaOfInquiry }: { tab: strin
   return (
     <div className="rounded-lg border overflow-hidden">
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
-      <div className="px-4 py-2.5 bg-muted/40 border-b">
-        <h3 className="text-sm font-semibold">{title}</h3>
+      <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+        <h3 className="text-sm font-semibold text-center w-full">{title}</h3>
       </div>
       <div className="divide-y">
         {interp && typeof interp === "object" ? (
           Object.entries(interp).map(([k, v]) => (
             <div key={k} className="px-4 py-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1.5">{k}</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1.5 text-center w-full">{k}</h4>
               <p className="text-sm leading-relaxed">{String(v)}</p>
               <div className="mt-1.5 flex justify-center">
                 <button onClick={() => trigger(k, String(v), interp, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
@@ -1773,12 +2013,12 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       <div className="space-y-2">
         {items.map((item: any, i: number) => (
           <div key={i} className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-2 bg-muted/30 border-b flex items-center gap-2">
+            <div className="px-4 py-2 bg-muted/30 border-b flex items-center justify-center gap-2">
               {item.name && PLANET_IMAGES[item.name] && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={PLANET_IMAGES[item.name]} alt={item.name} className="size-5 object-contain" />
               )}
-              <h4 className="text-sm font-semibold">{item.title ?? item.name ?? `${title} ${i + 1}`}</h4>
+              <h4 className="text-sm font-semibold text-center w-full">{item.title ?? item.name ?? `${title} ${i + 1}`}</h4>
             </div>
             <div className="px-4 py-3">
               <p className="text-sm leading-relaxed">{item.interpretation ?? item.data ?? item.forecast}</p>
@@ -1804,12 +2044,12 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       {/* 1. Solar Return Details */}
       {details && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Solar Return Details</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return Details</h3></div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b bg-muted/20">
                 {["Native Birth Date", "Solar Return Date", "Sun Degree", "Solar Return ASC"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr></thead>
               <tbody><tr className="bg-background">
@@ -1826,12 +2066,12 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       {/* 2. Solar Return Planets table */}
       {planetList.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Solar Return Planets</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return Planets</h3></div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b bg-muted/20">
                 {["Planet", "House", "Full Degree", "Sign", "Norm Degree", "Speed", "Retro?"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr></thead>
               <tbody>
@@ -1865,12 +2105,12 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
               const forecasts: string[] = Array.isArray(p.forecast) ? p.forecast : (p.forecast ? [String(p.forecast)] : []);
               return (
                 <div key={p.name ?? i} className="rounded-lg border overflow-hidden">
-                  <div className="px-4 py-2 bg-muted/30 border-b flex items-center gap-2">
+                  <div className="px-4 py-2 bg-muted/30 border-b flex items-center justify-center gap-2">
                     {p.name && PLANET_IMAGES[p.name] && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={PLANET_IMAGES[p.name]} alt={p.name} className="size-5 object-contain" />
                     )}
-                    <h4 className="text-sm font-semibold">{p.name ?? `Planet ${i + 1}`}</h4>
+                    <h4 className="text-sm font-semibold text-center w-full">{p.name ?? `Planet ${i + 1}`}</h4>
                     {p.sign && <Badge variant="outline" className="ml-auto text-[10px] text-amber-600 border-amber-400">{p.sign}{p.house ? ` · House ${p.house}` : ""}</Badge>}
                   </div>
                   <div className="px-4 py-3 space-y-1.5">
@@ -1889,12 +2129,12 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       {/* 4. Solar Return House Cusps */}
       {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex || houseList.length > 0) && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Solar Return House Cusps</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return House Cusps</h3></div>
           {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex) && (
             <div className="overflow-x-auto border-b">
               <table className="w-full text-sm">
                 <thead><tr className="border-b bg-muted/20">
-                  {["Point", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>)}
+                  {["Point", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>)}
                 </tr></thead>
                 <tbody>
                   {[{ label: "Ascendant", val: cuspObj.ascendant }, { label: "Midheaven", val: cuspObj.midheaven }, { label: "Vertex", val: cuspObj.vertex }].filter((r) => r.val).map((r) => (
@@ -1912,7 +2152,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr className="border-b bg-muted/20">
-                  {["House", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>)}
+                  {["House", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>)}
                 </tr></thead>
                 <tbody>
                   {houseList.map((h: any, i: number) => (
@@ -1932,7 +2172,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       {/* 5. Solar Return Aspects table */}
       {aspectList.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Solar Return Planet Aspects</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return Planet Aspects</h3></div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b bg-muted/20">
@@ -2014,11 +2254,11 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
   // Normalise transit relation rows — handles both Lambda and AstrologyAPI shapes
   const transitRows: any[] = (() => {
     if (!data) return [];
-    // Lambda: { transit_relation: [...] } or direct array
+    // Lambda: {transit_relation: [...] } or direct array
     if (Array.isArray(data?.transit_relation)) return data.transit_relation;
     if (Array.isArray(data?.transits)) return data.transits;
     if (Array.isArray(data)) return data;
-    // AstrologyAPI weekly shape: { transit_planet: { Sun: {...}, ... } } — flatten
+    // AstrologyAPI weekly shape: {transit_planet: {Sun: {...}, ... } } — flatten
     if (data?.transit_planet && typeof data.transit_planet === "object") {
       return Object.entries(data.transit_planet).flatMap(([tPlanet, aspects]: [string, any]) =>
         Object.entries(aspects ?? {}).map(([nPlanet, detail]: [string, any]) => ({
@@ -2050,8 +2290,8 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {/* Weekly / Monthly Transit Relation Table */}
       {transitRows.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b">
-            <h3 className="text-sm font-semibold">{label} — Transit Aspects</h3>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+            <h3 className="text-sm font-semibold text-center w-full">{label} — Transit Aspects</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -2093,15 +2333,15 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {/* Lunar Return Metrics (monthly only) */}
       {!isWeekly && lunarRows.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b">
-            <h3 className="text-sm font-semibold">Lunar Return Metrics</h3>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+            <h3 className="text-sm font-semibold text-center w-full">Lunar Return Metrics</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/20">
                   {["Date / Month", "Moon Day", "Illumination", "Phase", "Moon Sign"].map((h) => (
-                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -2126,8 +2366,8 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {aiData === "error" && <SectionError title={`${label} Interpretation`} />}
       {Array.isArray(aiData) && aiData.map((item: any, i: number) => (
         <div key={i} className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b">
-            <h4 className="text-sm font-semibold">{item.title ?? `${label} ${i + 1}`}</h4>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+            <h4 className="text-sm font-semibold text-center w-full">{item.title ?? `${label} ${i + 1}`}</h4>
           </div>
           <div className="px-4 py-3">
             <p className="text-sm leading-relaxed">{item.interpretation ?? item.data}</p>
@@ -2146,8 +2386,8 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
             <h3 className="text-sm font-semibold px-1">Lunar Return AI Interpretation</h3>
             {items.map((item: any, i: number) => (
               <div key={i} className="rounded-lg border overflow-hidden">
-                <div className="px-4 py-2.5 bg-muted/40 border-b">
-                  <h4 className="text-sm font-semibold">{item.title ?? `Lunar Return ${i + 1}`}</h4>
+                <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+                  <h4 className="text-sm font-semibold text-center w-full">{item.title ?? `Lunar Return ${i + 1}`}</h4>
                 </div>
                 <div className="px-4 py-3">
                   <p className="text-sm leading-relaxed">{item.interpretation ?? item.data ?? JSON.stringify(item)}</p>
@@ -2190,8 +2430,8 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
     if (!text) return null;
     return (
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b">
-          <h4 className="text-sm font-semibold">{title}</h4>
+        <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+          <h4 className="text-sm font-semibold text-center w-full">{title}</h4>
         </div>
         <div className="px-4 py-3">
           <p className="text-sm leading-relaxed">{text}</p>
@@ -2209,11 +2449,11 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
     if (!entries.length) return null;
     return (
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">{title}</h3></div>
+        <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">{title}</h3></div>
         <div className="divide-y">
           {entries.map(([k, v]) => (
             <div key={k} className="px-4 py-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{k.replace(/_/g, " ")}</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{k.replace(/_/g, " ")}</h4>
               <p className="text-sm leading-relaxed">{String(v)}</p>
               <div className="mt-1.5 flex justify-center">
                 <button onClick={() => trigger(k, String(v), obj, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
@@ -2251,11 +2491,11 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
       {/* Summary — timeline entries */}
       {Array.isArray(inner?.summary?.recommendation_on_date_and_timeline) && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Summary</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Summary</h3></div>
           <div className="divide-y">
             {inner.summary.recommendation_on_date_and_timeline.map((s: any, i: number) => (
               <div key={i} className="px-4 py-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{s.timeline_title}</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{s.timeline_title}</h4>
                 <p className="text-sm leading-relaxed">{s.timeline_data}</p>
                 <div className="mt-1.5 flex justify-center">
                   <button onClick={() => trigger(s.timeline_title, s.timeline_data, s, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
@@ -2269,11 +2509,11 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
       {/* Summary — answer array */}
       {Array.isArray(inner?.summary?.answer) && inner.summary.answer.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20"><h3 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Answer</h3></div>
+          <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20 text-center"><h3 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Answer</h3></div>
           <div className="divide-y">
             {inner.summary.answer.map((a: any, i: number) => (
               <div key={i} className="px-4 py-3">
-                {a.title && <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{a.title}</h4>}
+                {a.title && <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{a.title}</h4>}
                 <p className="text-sm leading-relaxed">{a.data ?? a.text ?? String(a)}</p>
               </div>
             ))}
@@ -2284,11 +2524,11 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
       {/* Summary — recommendation array */}
       {Array.isArray(inner?.summary?.recommendation) && inner.summary.recommendation.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Recommendations</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Recommendations</h3></div>
           <div className="divide-y">
             {inner.summary.recommendation.map((r: any, i: number) => (
               <div key={i} className="px-4 py-3">
-                {r.title && <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{r.title}</h4>}
+                {r.title && <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{r.title}</h4>}
                 <p className="text-sm leading-relaxed">{r.data ?? r.text ?? String(r)}</p>
               </div>
             ))}
@@ -2299,11 +2539,11 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
       {/* Houses */}
       {Array.isArray(inner?.house) && inner.house.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">House Analysis</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">House Analysis</h3></div>
           <div className="divide-y">
             {inner.house.map((h: any, i: number) => (
               <div key={i} className="px-4 py-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{h.title}</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{h.title}</h4>
                 <p className="text-sm leading-relaxed">{h.data}</p>
                 <div className="mt-1.5 flex justify-center">
                   <button onClick={() => trigger(h.title, h.data, h, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
@@ -2317,7 +2557,7 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
       {/* Planets (inner.planet array) */}
       {Array.isArray(inner?.planet) && inner.planet.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Planet Analysis</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Planet Analysis</h3></div>
           <div className="divide-y">
             {inner.planet.map((p: any, i: number) => {
               const pName = p.title?.split(" ")[0];
@@ -2325,7 +2565,7 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
                 <div key={i} className="px-4 py-3">
                   <div className="flex items-center gap-2 mb-1">
                     {pName && PLANET_IMAGES[pName] && <img src={PLANET_IMAGES[pName]} alt={pName} className="size-5 object-contain" />}
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600">{p.title}</h4>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 text-center w-full">{p.title}</h4>
                   </div>
                   <p className="text-sm leading-relaxed">{p.data}</p>
                   <div className="mt-1.5 flex justify-center">
@@ -2341,11 +2581,11 @@ function HorarySection({ data, areaOfInquiry }: { data: any; areaOfInquiry?: str
       {/* Astrological aspects sub-section */}
       {inner?.astrological_aspect && typeof inner.astrological_aspect === "object" && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">Astrological Aspects</h3></div>
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Astrological Aspects</h3></div>
           <div className="divide-y">
             {Object.entries(inner.astrological_aspect).map(([k, v]: [string, any]) => (
               <div key={k} className="px-4 py-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{k.replace(/_/g, " ")}</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{k.replace(/_/g, " ")}</h4>
                 <p className="text-sm leading-relaxed">{typeof v === "string" ? v : JSON.stringify(v)}</p>
               </div>
             ))}
@@ -2390,11 +2630,11 @@ function RelationshipSection({ aiMap, areaOfInquiry, tabSlug }: { aiMap: Record<
     if (!items.length) return null;
     return (
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b"><h3 className="text-sm font-semibold">{title}</h3></div>
+        <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">{title}</h3></div>
         <div className="divide-y">
           {items.map((item: any, i: number) => (
             <div key={i} className="px-4 py-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{item.title ?? item.name}</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{item.title ?? item.name}</h4>
               <p className="text-sm leading-relaxed">{item.data ?? item.interpretation ?? item.description}</p>
               <div className="mt-1.5 flex justify-center">
                 <button onClick={() => trigger(item.title ?? title, item.data ?? item.interpretation ?? "", item, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
@@ -2679,7 +2919,7 @@ export default function AdminHoroscopePage() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showChartBtn, setShowChartBtn] = useState(false);
   const [chartModal, setChartModal] = useState<string | null>(null);
-  const [decanPossibilities, setDecanPossibilities] = useState<any[]>([]);
+  const [decanPossibilities, setDecanPossibilities] = useState<DecanPossibility[]>([]);
 
   // Reset on tab change
   useEffect(() => {
@@ -2688,12 +2928,14 @@ export default function AdminHoroscopePage() {
     setShowScrollTop(false); setShowChartBtn(false);
   }, [currentSlug]);
 
-  // Pre-fetch decan possibilities
+  // Pre-fetch decan possibilities (distinct planet+sign pairs)
   useEffect(() => {
-    fetch("/api/admin/astro-decans")
+    fetch("/api/admin/astro/decan-info")
       .then((r) => r.json())
       .then((data) => {
-        if (Array.isArray(data)) setDecanPossibilities(data);
+        if (data?.results && Array.isArray(data.results)) {
+          setDecanPossibilities(data.results as DecanPossibility[]);
+        }
       })
       .catch(() => { });
   }, []);

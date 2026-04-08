@@ -1,5 +1,8 @@
 # Module 07 - Time-to-Complete Statistics and Benchmarks
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: time_spent_seconds tracked in lesson_progress and propagated to lesson_completions; analytics route aggregates.
+
 ## Objective
 Add training-level and category-level completion-time analytics with clear metric definitions.
 

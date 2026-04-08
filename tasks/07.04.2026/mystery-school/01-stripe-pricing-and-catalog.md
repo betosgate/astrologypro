@@ -1,6 +1,17 @@
 # Task 01: Stripe Pricing And Catalog
+
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Stripe price IDs wired in src/app/api/community/checkout/route.ts:92-94 — STRIPE_PRICE_MYSTERY_ENROLLMENT, STRIPE_PRICE_MYSTERY_MONTHLY, STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT. PM individual/family priced via STRIPE_PRICE_COMMUNITY_INDIVIDUAL/FAMILY.
 Date: 2026-04-07
 Category: Mystery School Module
+
+## Status
+
+- Partially implemented
+- Standard Mystery School Stripe prices already exist and are recorded here
+- The PM-discount Stripe price is still pending manual creation
+- Inspect current env/config before changing code
+- Do not recreate prices that already exist
 
 ## Execution Note For AI Agent
 
@@ -39,12 +50,27 @@ Define and prepare the Stripe product/price catalog required for Mystery School 
 
 | Env Var | Expected Price | Billing Type | Stripe Price ID | Status |
 |---|---|---|---|---|
-| `STRIPE_PRICE_MYSTERY_ENROLLMENT` | `97.00 USD` | One-time | `TBD` | `Pending` |
-| `STRIPE_PRICE_MYSTERY_MONTHLY` | `27.00 USD/month` | Monthly recurring | `TBD` | `Pending` |
-| `STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT` | `17.03 USD/month` | Monthly recurring | `TBD` | `Pending` |
+| `STRIPE_PRICE_MYSTERY_ENROLLMENT` | `97.00 USD` | One-time | `price_1TJOXjBcRXKECv5fQ4dz7W4z` | **Exists in .env.local** |
+| `STRIPE_PRICE_MYSTERY_MONTHLY` | `27.00 USD/month` | Monthly recurring | `price_1TJOXlBcRXKECv5f64n37Za2` | **Exists in .env.local** |
+| `STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT` | `17.03 USD/month` | Monthly recurring | `price_1TJZCPBcRXKECv5fhwdSCyXL` | **Created in Stripe test mode** |
+
+## Manual Action Required
+
+The PM-discount price now exists in Stripe test mode:
+
+- `STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT=price_1TJZCPBcRXKECv5fhwdSCyXL`
+
+Manual step remaining:
+
+1. Add to your local env manually:
+   - `STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT=price_1TJZCPBcRXKECv5fhwdSCyXL`
+
+Once the env var is set, the checkout logic (Task 03) will automatically
+select this price for eligible PM users when the admin discount toggle is enabled.
 
 ## Success Criteria
 
-- All required Mystery School Stripe prices exist
-- The discounted PM-user monthly price exists as a separate Stripe price
-- The env var names needed by the app are unambiguous
+- [x] Enrollment price exists: `price_1TJOXjBcRXKECv5fQ4dz7W4z`
+- [x] Monthly price exists: `price_1TJOXlBcRXKECv5f64n37Za2`
+- [x] PM discount price exists: `price_1TJZCPBcRXKECv5fhwdSCyXL`
+- [ ] Env var `STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT` added to `.env.local` after creation
