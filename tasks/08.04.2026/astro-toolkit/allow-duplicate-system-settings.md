@@ -1,5 +1,12 @@
 # Task: Allow Duplicate Astro System Settings
 
+- Status: Completed (2026-04-08)
+- Completion Notes:
+  - Migration `supabase/migrations/20260408000114_drop_unique_astro_system_settings.sql` (registered in `/admin/db/migrations` runner) drops the named `astro_system_settings_type_name_key` UNIQUE plus a defensive sweep that removes any other UNIQUE on the same column pair. Idempotent.
+  - `src/app/api/admin/astro-system-settings/route.ts` POST handler no longer special-cases the 23505 unique_violation — the constraint is gone, so the spec example payload now succeeds.
+  - Reads still pick the first active row by `created_at` via `getActiveAstroSetting`, so existing consumers (natal-wheel, ai-interpret, planet-return, fetch-config) are unaffected.
+  - To roll out: open `/admin/db/migrations`, click **Run migration** on `20260408000114_drop_unique_astro_system_settings`.
+
 ## Problem Statement
 When calling the API `POST /api/admin/astro-system-settings` with a payload where the `type` and `key_name` combination already exists in the database, the API currently returns a `409 Conflict` error:
 
