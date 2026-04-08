@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
-import { MIGRATION_SQL as MIG_20260408000106 } from "@/data/migrations/20260408000106_astro_decan_new_infos";
+import { MIGRATIONS, listMigrations } from "@/lib/db/migrations";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -34,9 +34,23 @@ export const maxDuration = 60;
 
 const PROJECT_REF = "wyluvclvtvwptsvvtgkv";
 
-const MIGRATIONS: Record<string, string> = {
-  "20260408000106_astro_decan_new_infos": MIG_20260408000106,
-};
+/**
+ * GET /api/admin/db/migrate
+ * Returns the allowlisted migrations + their metadata. Used by the
+ * admin migrations UI to render the runner page.
+ */
+export async function GET() {
+  const user = await getAdminUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  return NextResponse.json({
+    project_ref: PROJECT_REF,
+    has_token: Boolean(process.env.SUPABASE_ACCESS_TOKEN),
+    migrations: listMigrations(),
+  });
+}
 
 export async function POST(req: NextRequest) {
   const user = await getAdminUser();
@@ -75,8 +89,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const sql = MIGRATIONS[migrationId];
-  if (!sql) {
+  const descriptor = MIGRATIONS[migrationId];
+  if (!descriptor) {
     return NextResponse.json(
       {
         error: "Unknown migration_id",
@@ -86,6 +100,7 @@ export async function POST(req: NextRequest) {
       { status: 404 },
     );
   }
+  const sql = descriptor.sql;
 
   // Call the Supabase Management API to execute the SQL.
   const url = `https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query`;
