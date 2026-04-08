@@ -1,5 +1,8 @@
 # Module 11 - Email Automation and Lifecycle Messaging
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Enrollment + graduation emails fire from stripe webhook + graduation.ts; missed-decan emails fire from src/app/api/cron/decan-unlock.
+
 ## Objective
 Fill in the missing Mystery School email automation around enrollment, decan lifecycle, missed-state handling, and post-graduation follow-up.
 

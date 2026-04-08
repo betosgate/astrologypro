@@ -1,5 +1,8 @@
 # Mystery School Module - Gap Closure Master Task
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: See child notes — all 11 mystery school subsystems have backing schema, APIs, and UI.
+
 ## Goal
 Close the real behavioral gaps in the current Mystery School implementation without forcing schema renames purely for parity with the external requirement document.
 

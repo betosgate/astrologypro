@@ -1,5 +1,8 @@
 # Master Documentation: Nativity Birth Chart (Western Horoscope V2)
 
+- Status: Completed (2026-04-08, verified)
+- Notes: Master reference doc for Nativity Birth Chart V2. Backing implementation lives in src/app/api/admin/astro/natal-wheel/ + src/app/api/community/generate-natal/.
+
 This master document consolidates all technical documentation for the "Nativity Birth Chart" (Western Horoscope V2) module. It provides a comprehensive guide to the service architecture, component structures, API interactions, and technical workflows.
 
 ## Table of Contents

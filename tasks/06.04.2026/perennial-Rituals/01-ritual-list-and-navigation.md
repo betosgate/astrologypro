@@ -1,5 +1,8 @@
 # Task: Ritual List and Navigation
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: src/app/community/rituals/page.tsx (list) + src/app/api/community/rituals/route.ts.
+
 ## Objective
 Implement the "My Rituals" list view within the **Perennial User Dashboard** where users can see their personal ritual history.
 

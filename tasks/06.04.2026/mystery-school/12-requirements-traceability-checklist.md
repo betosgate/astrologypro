@@ -1,5 +1,8 @@
 # Mystery School Requirements Traceability Checklist
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: All requirements traced to backing migrations + routes (see child notes).
+
 ## Purpose
 Map the original Mystery School requirement set to:
 - existing repo coverage

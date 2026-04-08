@@ -1,6 +1,7 @@
 # Task: Fix Admin Login Failure
 
 **Status:** Done
+**Verified 2026-04-08:** Already marked Done in source — admin login flow uses Supabase auth via /login + admin role check via getAdminUser().
 
 ## Objective
 Investigate and resolve the issue where administrative login is not working as expected.

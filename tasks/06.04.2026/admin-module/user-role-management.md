@@ -1,4 +1,5 @@
 **Status:** Done
+**Verified 2026-04-08:** src/app/api/admin/users/[id]/change-role/route.ts + multi-role merge in src/app/admin/users/page.tsx:344.
 
 # Task: User Role Management
 

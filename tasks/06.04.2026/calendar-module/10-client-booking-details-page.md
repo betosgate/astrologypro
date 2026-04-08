@@ -1,5 +1,8 @@
 # Task: Client "My Booking" Details Page
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: src/app/booking/[uniqueId]/ page provides client booking detail + manage actions.
+
 ## Objective
 Create a dedicated, premium details page where clients can view their booking information, join the session, or manage (reschedule/cancel) their appointment through the AstrologyPro interface.
 

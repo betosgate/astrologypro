@@ -1,4 +1,5 @@
 **Status:** Done
+**Verified 2026-04-08:** src/app/admin/tarot/spreads/page.tsx with table client.
 
 # Task: Tarot Spread List
 

@@ -1,4 +1,5 @@
 **Status:** Done
+**Verified 2026-04-08:** src/components/admin/user-management-client.tsx implements page-size selector + pagination controls; sizes 10/25/50/100.
 
 # Task: User List Pagination & Component Refactor
 
