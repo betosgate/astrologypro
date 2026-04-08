@@ -29,7 +29,11 @@ Replicate the Professional Divination Course signup page UI based on the Master 
 - Metrics List Items (must contain the 6 bullet points regarding curriculum, 100 hours training, live readings, recordings, etc.)
 
 ### Sidebar (Right Column)
-- Order Summary: (Professional Divination Course, Button: Pay in FULL)
+- Order Summary: 
+  - Item Name: `Professional Divination Course`
+  - Price: `₹25,969.00 (INR)` (Dynamic based on IP/Country)
+  - Details: `Price Details`, `Total Payable: ₹25,969.00 (INR)`
+  - Button: `Pay in FULL`
 - Billing Details Form Fields:
   - First Name, Last Name
   - Phone No (Auto-formats to: `(XXX) XXX-XXXX`)
@@ -39,8 +43,9 @@ Replicate the Professional Divination Course signup page UI based on the Master 
 - Action Button: `SUBMIT`
 
 ## Technical Logic
+- **Form Submission:** Clicking the **SUBMIT** button triggers the registration logic followed by the payment gateway initialization. (Details in `02_diviner_signup_api_integration.md` and `03_diviner_signup_payment_integration.md`).
 - Validate Password Regex: `/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).{8,15}$/`
-- Phone formatting string manipulation logic.
+- Phone formatting string manipulation logic: `(XXX) XXX-XXXX`.
 
 ## Task Summary
 1. Create directory `src/app/diviner-signup/`.

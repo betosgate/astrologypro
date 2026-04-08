@@ -23,10 +23,13 @@ Implement the external service integration and API calls needed for the Diviner 
 - Read `affiliatid` from query parameters.
 - Verify affiliate by calling API `user/find-affiliate-id`.
 
-### 4. User Registration API
-- On Form Submit, call `POST /user/trainee-signup`.
-- Payload: All form fields + `is_diviner: 0`.
-- Extract and save `results._id` as `customer_id` for payment processing steps.
+### 4. User Registration API (SUBMIT Button Logic)
+- **On SUBMIT Click:**
+  1. Validate all form fields (Password, Phone, etc.).
+  2. Call `POST /user/trainee-signup`.
+  3. Payload includes all form fields + `is_diviner: 0`.
+  4. Store `results._id` as `customer_id`.
+  5. Upon success, immediately proceed to create payment intent (Refer to `03_diviner_signup_payment_integration.md`).
 
 ## Needs / Assets
 - `countries.json`, `states.json`, `IndianState.json`
