@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { upsertCalendarConnection, deleteCalendarConnection } from "@/lib/calendar/connections";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
@@ -30,7 +31,9 @@ export function getOAuthUrl(divinerId: string): string {
 
 /**
  * Exchanges an authorization code for tokens and stores the refresh token
- * on the diviner record.
+ * on the diviner record AND in the new calendar_connections table
+ * (dual-write during the cutover from JSONB-on-diviners to a normalized
+ * table).
  */
 export async function handleOAuthCallback(
   code: string,
@@ -56,17 +59,32 @@ export async function handleOAuthCallback(
   const tokens = await response.json();
 
   const supabase = createAdminClient();
+  // Note: do NOT write google_calendar_connected — it is a GENERATED ALWAYS
+  // column (see migration 20260403000001) and the previous version of this
+  // code was failing at runtime because of it.
   const { error } = await supabase
     .from("diviners")
     .update({
       google_calendar_token: tokens.refresh_token,
-      google_calendar_connected: true,
     })
     .eq("id", divinerId);
 
   if (error) {
     throw new Error(`Failed to store calendar token: ${error.message}`);
   }
+
+  // Dual-write to the normalized calendar_connections table. Best-effort —
+  // never throws because we don't want the cutover write to break the
+  // legacy success path.
+  await upsertCalendarConnection(supabase, {
+    divinerId,
+    provider: "google",
+    refreshToken: tokens.refresh_token,
+    expiresAt:
+      typeof tokens.expires_in === "number"
+        ? new Date(Date.now() + tokens.expires_in * 1000)
+        : null,
+  });
 }
 
 /**
@@ -334,15 +352,20 @@ export async function disconnectGoogleCalendar(
   divinerId: string
 ): Promise<void> {
   const supabase = createAdminClient();
+  // Note: do NOT write google_calendar_connected — it is GENERATED ALWAYS
+  // (see migration 20260403000001) and is automatically derived from
+  // google_calendar_token IS NOT NULL.
   const { error } = await supabase
     .from("diviners")
     .update({
       google_calendar_token: null,
-      google_calendar_connected: false,
     })
     .eq("id", divinerId);
 
   if (error) {
     throw new Error(`Failed to disconnect Google Calendar: ${error.message}`);
   }
+
+  // Mirror the disconnect into the normalized calendar_connections table.
+  await deleteCalendarConnection(supabase, divinerId, "google");
 }
