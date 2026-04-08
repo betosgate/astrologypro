@@ -1,22 +1,11 @@
-import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { CircularProgress } from "@/components/ui/circular-progress";
-import {
-  ChevronRight,
-  CheckCircle2,
-  Clock,
-  Lock,
-  BookOpen,
-  ArrowLeft,
-} from "lucide-react";
+import { ChevronRight, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { LockedLink } from "@/components/trainee/locked-link";
+import { ProgramWorkspace } from "@/components/trainee/program-workspace";
 
 export const dynamic = "force-dynamic";
 
@@ -110,194 +99,6 @@ async function fetchProgramDetail(programId: string): Promise<ProgramDetail | nu
   return programs.find((p) => p.id === programId) ?? null;
 }
 
-// ---------------------------------------------------------------------------
-// Lesson row inside expanded category
-// ---------------------------------------------------------------------------
-function LessonRow({
-  lesson,
-  index,
-  programId,
-  categoryId,
-  isLocked,
-}: {
-  lesson: LessonSummary;
-  index: number;
-  programId: string;
-  categoryId: string;
-  isLocked: boolean;
-}) {
-  return (
-    <div
-      className={[
-        "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
-        isLocked
-          ? "opacity-50 cursor-not-allowed"
-          : lesson.completed
-          ? "text-muted-foreground hover:bg-muted/40"
-          : "hover:bg-muted/40",
-      ].join(" ")}
-    >
-      {/* Status icon */}
-      <div className="shrink-0 w-5 flex justify-center">
-        {lesson.completed ? (
-          <CheckCircle2 className="size-4 text-green-500" />
-        ) : isLocked ? (
-          <Lock className="size-3.5 text-muted-foreground/50" />
-        ) : (
-          <div className="size-4 rounded-full border-2 border-muted-foreground/40" />
-        )}
-      </div>
-
-      {/* Lesson number + title — LockedLink intercepts clicks on locked
-          lessons and shows a toast derived from the same lock_reason
-          metadata the API uses for route gating. */}
-      <span className="flex-1 min-w-0 truncate">
-        <span className="text-muted-foreground/60 mr-1.5 tabular-nums">
-          {String(index + 1).padStart(2, "0")}.
-        </span>
-        <LockedLink
-          href={`/trainee/training/${programId}/${categoryId}/${lesson.id}`}
-          isLocked={isLocked}
-          lockReason={lesson.lock_reason}
-          className="hover:text-primary hover:underline underline-offset-2 transition-colors"
-        >
-          {lesson.title}
-        </LockedLink>
-      </span>
-
-      {/* Quiz badge */}
-      {lesson.quiz_passed === true && (
-        <Badge
-          variant="outline"
-          className="shrink-0 text-xs bg-green-500/5 text-green-600 border-green-500/30"
-        >
-          Quiz Passed
-        </Badge>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Category card (server — always expanded)
-// ---------------------------------------------------------------------------
-function CategoryCard({
-  category,
-  index,
-  programId,
-  nextCategoryId,
-}: {
-  category: CategoryWithProgress;
-  index: number;
-  programId: string;
-  nextCategoryId: string | null;
-}) {
-  const completed = category.completed_lessons;
-  const total = category.total_lessons;
-  const pct = category.progress_pct;
-
-  // Use API-sourced lock flag — computed server-side from is_sequential + priorities
-  const isLocked = category.is_locked;
-  const isDone = category.completed || (total > 0 && completed === total);
-  // "Resume" badge: the category is not done, not locked, and is the next one
-  const isResume =
-    !isDone &&
-    !isLocked &&
-    nextCategoryId !== null &&
-    category.id === nextCategoryId;
-
-  const statusLabel = isDone
-    ? "Done"
-    : isLocked
-    ? "Locked"
-    : isResume
-    ? "Resume"
-    : completed > 0
-    ? "In Progress"
-    : "Not Started";
-
-  const statusClasses = isDone
-    ? "bg-green-500/10 text-green-600 border-green-500/30"
-    : isLocked
-    ? "bg-muted text-muted-foreground border-border"
-    : isResume
-    ? "bg-primary/5 text-primary border-primary/30"
-    : completed > 0
-    ? "bg-amber-500/10 text-amber-600 border-amber-500/30"
-    : "bg-muted text-muted-foreground border-border";
-
-  return (
-    <div
-      className={[
-        "rounded-xl border overflow-hidden transition-colors",
-        isLocked ? "opacity-70" : "hover:border-primary/30",
-      ].join(" ")}
-      title={isLocked ? (category.lock_reason ?? undefined) : undefined}
-    >
-      {/* Category header */}
-      <div className="flex items-start gap-4 px-5 py-4">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground mt-0.5">
-          {String(index + 1).padStart(2, "0")}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <LockedLink
-                href={`/trainee/training/${programId}/${category.id}`}
-                isLocked={isLocked}
-                lockReason={category.lock_reason}
-                blockedMessage="Complete the previous category first to unlock this section."
-                className="font-semibold text-sm hover:text-primary hover:underline underline-offset-2 transition-colors"
-              >
-                {category.name}
-              </LockedLink>
-              {isLocked && <Lock className="size-3.5 text-muted-foreground/60" />}
-            </div>
-            <Badge
-              variant="outline"
-              className={["text-xs shrink-0", statusClasses].join(" ")}
-            >
-              {isDone && <CheckCircle2 className="size-3 mr-1" />}
-              {isLocked && <Lock className="size-3 mr-1" />}
-              {statusLabel}
-            </Badge>
-          </div>
-          {category.description && (
-            <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-              {category.description}
-            </p>
-          )}
-          <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <BookOpen className="size-3" />
-              {total} {total === 1 ? "lesson" : "lessons"}
-            </span>
-            <span>
-              {completed}/{total} complete
-            </span>
-          </div>
-          <Progress value={pct} className="mt-2 h-1" />
-        </div>
-      </div>
-
-      {/* Lessons list — use API is_locked field per lesson */}
-      {category.lessons.length > 0 && (
-        <div className="border-t bg-muted/10 px-2 py-2 space-y-0.5">
-          {category.lessons.map((lesson, li) => (
-            <LessonRow
-              key={lesson.id}
-              lesson={lesson}
-              index={li}
-              programId={programId}
-              categoryId={category.id}
-              isLocked={isLocked || lesson.is_locked}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Page
@@ -343,81 +144,76 @@ export default async function ProgramDetailPage({
         <span className="text-foreground font-medium truncate">{program.name}</span>
       </div>
 
-      {/* Header + sticky progress sidebar (desktop: grid layout) */}
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
-        {/* Main content */}
-        <div className="flex-1 min-w-0 space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{program.name}</h1>
-            {program.description && (
-              <p className="mt-2 text-muted-foreground">{program.description}</p>
-            )}
-          </div>
-
-          {/* Categories */}
-          <div className="space-y-4">
-            {program.categories.length === 0 ? (
-              <Card>
-                <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                  No categories in this program yet.
-                </CardContent>
-              </Card>
-            ) : (
-              program.categories.map((cat, idx) => (
-                <CategoryCard
-                  key={cat.id}
-                  category={cat}
-                  index={idx}
-                  programId={programId}
-                  nextCategoryId={program.next_category_id}
-                />
-              ))
-            )}
+      {/* Program header */}
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight">{program.name}</h1>
+          {program.description && (
+            <p className="mt-2 text-sm text-muted-foreground max-w-2xl">
+              {program.description}
+            </p>
+          )}
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            <span className="tabular-nums">
+              {completedCats}/{program.total_categories} categories
+            </span>
+            <span aria-hidden>·</span>
+            <span className="tabular-nums">
+              {completedLessons}/{totalLessons} lessons
+            </span>
+            <span aria-hidden>·</span>
+            <span className="tabular-nums">{program.progress_pct}% complete</span>
           </div>
         </div>
-
-        {/* Sidebar: sticky progress */}
-        <aside className="w-full lg:w-64 lg:sticky lg:top-24 shrink-0">
-          <div className="rounded-xl border bg-card p-5 space-y-4">
-            <h2 className="text-sm font-semibold">Your Progress</h2>
-            <div className="flex flex-col items-center gap-3">
-              <CircularProgress
-                percentage={program.progress_pct}
-                size={96}
-                strokeWidth={8}
-              />
-              <p className="text-sm text-muted-foreground text-center">
-                {completedLessons} of {totalLessons} lessons complete
-              </p>
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Categories</span>
-                <span className="font-medium tabular-nums">
-                  {completedCats}/{program.total_categories}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Lessons</span>
-                <span className="font-medium tabular-nums">
-                  {completedLessons}/{totalLessons}
-                </span>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              asChild
-              className="w-full"
-            >
-              <Link href="/trainee/training">
-                <ArrowLeft className="size-3.5 mr-1.5" />
-                All Programs
-              </Link>
-            </Button>
-          </div>
-        </aside>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/trainee/training">
+            <ArrowLeft className="size-3.5 mr-1.5" />
+            All programs
+          </Link>
+        </Button>
       </div>
+
+      {/* Module 02: two-pane workspace.
+          Initial selection rules per the task spec:
+            - lowest-priority unlocked, incomplete category (in priority order)
+            - that category's next_lesson_id (or first unlocked lesson). */}
+      {program.categories.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">
+            No categories in this program yet.
+          </CardContent>
+        </Card>
+      ) : (
+        (() => {
+          // Pick the in-progress category, or fall back to the first unlocked
+          // incomplete one, or the first one if everything is done.
+          const initialCategory =
+            program.categories.find((c) => c.id === program.next_category_id) ??
+            program.categories.find(
+              (c) => !c.is_locked && !c.completed && c.total_lessons > 0,
+            ) ??
+            program.categories[0] ??
+            null;
+
+          const initialLesson =
+            initialCategory?.next_lesson_id ??
+            initialCategory?.lessons.find(
+              (l) => !l.is_locked && !l.completed,
+            )?.id ??
+            initialCategory?.lessons[0]?.id ??
+            null;
+
+          return (
+            <ProgramWorkspace
+              programId={programId}
+              programName={program.name}
+              categories={program.categories}
+              initialCategoryId={initialCategory?.id ?? null}
+              initialLessonId={initialLesson}
+            />
+          );
+        })()
+      )}
     </div>
   );
 }

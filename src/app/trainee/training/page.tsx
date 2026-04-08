@@ -113,16 +113,9 @@ function ProgramCard({ program }: { program: Program }) {
   const isComplete = program.progress_pct >= 100 && totalLessons > 0;
   const isStarted = completedLessons > 0;
 
-  const currentLessonId =
-    currentCategory?.next_lesson_id ??
-    currentCategory?.lessons.find((lesson) => !lesson.is_locked && !lesson.completed)?.id ??
-    null;
-
-  const ctaHref = currentCategory
-    ? currentLessonId
-      ? `/trainee/training/${program.id}/${currentCategory.id}/${currentLessonId}`
-      : `/trainee/training/${program.id}/${currentCategory.id}`
-    : `/trainee/training/${program.id}`;
+  // Module 02: program CTA always opens the program workspace, never a
+  // lesson deep-link. Initial selection state lives inside the workspace.
+  const ctaHref = `/trainee/training/${program.id}`;
 
   return (
     <div className="group rounded-xl border bg-card transition-colors hover:border-primary/40 overflow-hidden">
