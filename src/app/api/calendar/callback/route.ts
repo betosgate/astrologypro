@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { handleOAuthCallback } from "@/lib/google-calendar";
 
 export const dynamic = "force-dynamic";
@@ -23,15 +24,25 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  console.log("[Google OAuth] Callback received", { code: code ? "present" : "missing", state, error });
+
   try {
-    await handleOAuthCallback(code, state);
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error("No active session found during OAuth callback.");
+    }
+
+    await handleOAuthCallback(code, state, user.id);
+    console.log("[Google OAuth] Success for owner:", state);
     return NextResponse.redirect(
       new URL("/dashboard/settings?calendar=connected", baseUrl)
     );
-  } catch (err) {
-    console.error("Google Calendar OAuth callback failed:", err);
+  } catch (err: any) {
+    console.error("[Google OAuth] Callback failed:", err);
     return NextResponse.redirect(
-      new URL("/dashboard/settings?calendar=error&reason=token_exchange", baseUrl)
+      new URL(`/dashboard/settings?calendar=error&reason=${encodeURIComponent(err.message)}`, baseUrl)
     );
   }
 }

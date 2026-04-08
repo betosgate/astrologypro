@@ -1,7 +1,8 @@
 # Perennial Signup UX Acceptance Criteria And Edge Cases
 
-- Completion Notes: NOT IMPLEMENTED — deferred. The current page handles the most important edge cases (plan downgrades trim members, unique email validation, required-field summary error) but the full acceptance test plan including focus-on-first-invalid-field, server error states, etc. needs polishing after task 05 lands.
-- Status: Deferred (2026-04-08)
+- Completion Notes: Implemented. Validation now returns { message, fieldId } so the page can scrollIntoView({behavior:"smooth", block:"center"}) the first invalid field and focus it via requestAnimationFrame. Plan capacity is checked first (Single=1, Couple=2, Family=3-5) before any field-level validation, preventing the underfilled-Couple and underfilled-Family edge cases. Plan downgrade trims excess members in setMembers (changePlan). Email uniqueness blocks submission with the offending email surfaced in the error message. The optional questionnaire is per-member expand/collapse and remains usable on mobile (single-column grids on small screens). The form does not allow a 6th member: Add button disables when householdCount >= plan.totalMembers. The page never asks for a manual password and the order summary card explicitly states "system-generated password emailed after payment". Going back from the Stripe checkout uses Stripe-hosted cancel_url which returns the user to /perennial-signup?cancelled=1.
+- Earlier notes: NOT IMPLEMENTED — deferred. The current page handles the most important edge cases (plan downgrades trim members, unique email validation, required-field summary error) but the full acceptance test plan including focus-on-first-invalid-field, server error states, etc. needs polishing after task 05 lands.
+- Status: Completed (2026-04-08)
 - Date: 2026-04-08
 - Category: Perennial Signup
 - Owner: Frontend

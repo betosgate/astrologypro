@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DivinerHero } from "@/components/landing/diviner-hero";
@@ -25,7 +24,7 @@ interface PageProps {
 }
 
 async function getDiviner(username: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: diviner } = await supabase
     .from("diviners")
@@ -38,7 +37,7 @@ async function getDiviner(username: string) {
 }
 
 async function getServices(divinerId: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: services } = await supabase
     .from("services")
@@ -52,7 +51,7 @@ async function getServices(divinerId: string) {
 }
 
 async function getTestimonials(divinerId: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: testimonials } = await supabase
     .from("testimonials")
@@ -131,7 +130,7 @@ async function getPolicies() {
 }
 
 async function getDivinerStats(divinerId: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { count: completedSessions } = await supabase
     .from("bookings")
@@ -238,14 +237,6 @@ export default async function DivinerPage({ params }: PageProps) {
     notFound();
   }
 
-  // Store stickiness cookie so /discover can surface this diviner as "Your Astrologer"
-  const cookieStore = await cookies();
-  cookieStore.set("preferred_diviner", diviner.username, {
-    path: "/",
-    maxAge: 60 * 60 * 24 * 90, // 90 days
-    sameSite: "lax",
-    httpOnly: false, // needs to be readable by the discover server component
-  });
 
   const [services, testimonials, stats, policies, mediaItems, livePlatformConfigs, activeGiveaway] = await Promise.all([
     getServices(diviner.id),
@@ -642,7 +633,7 @@ export default async function DivinerPage({ params }: PageProps) {
         </div>
       </section>
 
-      <PageTracker divinerId={diviner.id} path={`/${username}`} />
+      <PageTracker divinerId={diviner.id} path={`/${username}`} username={diviner.username} />
     </>
   );
 }

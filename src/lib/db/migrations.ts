@@ -7,6 +7,7 @@ import { MIGRATION_SQL as MIG_20260408000111 } from "@/data/migrations/202604080
 import { MIGRATION_SQL as MIG_20260408000112 } from "@/data/migrations/20260408000112_global_pricing";
 import { MIGRATION_SQL as MIG_20260408000113 } from "@/data/migrations/20260408000113_trainees_payment_fields";
 import { MIGRATION_SQL as MIG_20260408000114 } from "@/data/migrations/20260408000114_drop_unique_astro_system_settings";
+import { MIGRATION_SQL as MIG_20260408000115 } from "@/data/migrations/20260408000115_pending_perennial_signups";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -104,6 +105,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Drops the (type, key_name) UNIQUE constraint on astro_system_settings so admins can store rotation pools (e.g. multiple ASTROLOGY_API keys with the same key_name label) without 409 conflicts. Reads still pick the first active row by created_at via getActiveAstroSetting. Idempotent — DROP CONSTRAINT IF EXISTS plus a defensive loop that drops any other UNIQUE on the same column pair.",
     sortKey: "20260408000114",
     sql: MIG_20260408000114,
+  },
+  "20260408000115_pending_perennial_signups": {
+    id: "20260408000115_pending_perennial_signups",
+    title: "Pending Perennial signups (Stripe checkout intermediate state)",
+    description:
+      "Creates pending_perennial_signups table — temporary storage for in-flight household signups between Stripe Checkout creation and webhook receipt. Holds the full household JSONB payload (1-5 members) keyed on stripe_session_id. Service-role-only RLS because the payload contains personal data. Status enum (pending/processing/completed/failed) drives the webhook handler that provisions Supabase auth users + community_members rows after payment.",
+    sortKey: "20260408000115",
+    sql: MIG_20260408000115,
   },
 };
 

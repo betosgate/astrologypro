@@ -9,9 +9,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ divinerId: string }> }
+  { params }: { params: Promise<{ ownerId: string }> }
 ) {
-  const { divinerId } = await params;
+  const { ownerId } = await params;
   const { searchParams } = request.nextUrl;
   const date = searchParams.get("date");
   const duration = searchParams.get("duration");
@@ -43,12 +43,13 @@ export async function GET(
     const supabase = await createClient();
     const admin = createAdminClient();
 
-    // Fetch diviner timezone and calendar connection flags
-    const { data: diviner } = await supabase
+    // Fetch diviner timezone
+    const { data: diviner } = await admin
       .from("diviners")
-      .select("timezone, google_calendar_connected, outlook_calendar_connected")
-      .eq("id", divinerId)
+      .select("timezone")
+      .eq("id", ownerId)
       .single();
+// Note: We use admin client here because this is a public fetch of a profile's timezone
 
     if (!diviner) {
       return NextResponse.json(
@@ -57,18 +58,27 @@ export async function GET(
       );
     }
 
+    // Check calendar connections for this owner
+    const { data: connections } = await admin
+      .from("calendar_connections")
+      .select("provider")
+      .eq("owner_id", ownerId);
+
+    const isGoogleConnected = connections?.some(c => c.provider === "google");
+    const isOutlookConnected = connections?.some(c => c.provider === "microsoft");
+
     // Fetch weekly availability slots (active only)
     const { data: weeklySlots } = await supabase
       .from("availability_slots")
       .select("day_of_week, start_time, end_time")
-      .eq("diviner_id", divinerId)
+      .eq("owner_id", ownerId)
       .eq("is_active", true);
 
     // Fetch overrides for the given date
     const { data: overrides } = await supabase
       .from("availability_overrides")
       .select("date, is_available, start_time, end_time")
-      .eq("diviner_id", divinerId)
+      .eq("owner_id", ownerId)
       .eq("date", date);
 
     // Fetch existing bookings for the date
@@ -78,7 +88,7 @@ export async function GET(
     const { data: bookings } = await supabase
       .from("bookings")
       .select("scheduled_at, duration_minutes")
-      .eq("diviner_id", divinerId)
+      .eq("owner_id", ownerId)
       .gte("scheduled_at", dayStart)
       .lte("scheduled_at", dayEnd)
       .in("status", ["pending", "confirmed", "in_progress"]);
@@ -87,7 +97,7 @@ export async function GET(
     const { data: holds } = await admin
       .from("booking_holds")
       .select("scheduled_at, duration_minutes")
-      .eq("diviner_id", divinerId)
+      .eq("owner_id", ownerId)
       .gt("expires_at", new Date().toISOString())
       .gte("scheduled_at", dayStart)
       .lte("scheduled_at", dayEnd);
@@ -98,11 +108,11 @@ export async function GET(
     let externalBusy: { start: string; end: string }[] = [];
     try {
       const [googleBusy, outlookBusy] = await Promise.all([
-        diviner.google_calendar_connected
-          ? getAvailableSlotsFromGoogle(divinerId, new Date(date)).catch(() => [] as { start: string; end: string }[])
+        isGoogleConnected
+          ? getAvailableSlotsFromGoogle(ownerId, new Date(date)).catch(() => [] as { start: string; end: string }[])
           : Promise.resolve([] as { start: string; end: string }[]),
-        diviner.outlook_calendar_connected
-          ? getMsFreeBusy(divinerId, date).catch(() => [] as { start: string; end: string }[])
+        isOutlookConnected
+          ? getMsFreeBusy(ownerId, date).catch(() => [] as { start: string; end: string }[])
           : Promise.resolve([] as { start: string; end: string }[]),
       ]);
       externalBusy = [...googleBusy, ...outlookBusy];

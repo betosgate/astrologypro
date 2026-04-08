@@ -36,10 +36,10 @@ interface PricingResponse {
 
 const COUNTRIES = ["United States", "India", "United Kingdom", "Canada", "Australia", "Other"] as const;
 const US_STATES = [
-  "Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming",
+  "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming",
 ];
 const INDIAN_STATES = [
-  "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Delhi",
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Delhi",
 ];
 
 function formatPhone(raw: string): string {
@@ -191,248 +191,311 @@ export default function DivinerSignupPage() {
     pricing != null ? formatCurrency(pricing.price, pricing.currency) : "—";
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 text-zinc-100">
-      {/* Premium dark header with orange→red gradient title */}
-      <header className="border-b border-zinc-800/60 bg-gradient-to-b from-zinc-950 via-zinc-900/80 to-zinc-950">
-        <div className="container mx-auto max-w-6xl px-4 py-8 sm:py-10">
-          <div className="text-center">
-            <p className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.25em] text-zinc-400">
-              School of the Divine
-            </p>
-            <p className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.25em] text-zinc-400">
-              Infinite Being
-            </p>
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-orange-500/30">
+      {/* Dynamic background glow */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-orange-600/10 blur-[120px] rounded-full" />
+        <div className="absolute top-[20%] -right-[5%] w-[30%] h-[50%] bg-red-600/5 blur-[100px] rounded-full" />
+      </div>
+
+      {/* Top Brand Bar (Reference matching) */}
+      <div className="relative z-10 w-full bg-[#f38100] py-2.5 px-4 shadow-[0_4px_10px_rgba(0,0,0,0.3)]">
+        <div className="container mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            {["HOME", "DIVINATION CERTIFICATION", "MYSTERY SCHOOL", "PERENNIAL MANDALISM", "SHOP", "JUNG DEBATES", "OUR LEADERSHIP", "CONTACT"].map((link) => (
+              <span key={link} className="whitespace-nowrap px-2 text-[10px] font-bold text-zinc-900 hover:text-white cursor-pointer transition-colors">
+                {link}
+              </span>
+            ))}
           </div>
-          <h1 className="mt-5 text-center text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-orange-400 via-orange-500 to-red-600 bg-clip-text text-transparent drop-shadow-[0_2px_18px_rgba(249,115,22,0.25)]">
-            CHECK OUT
-          </h1>
-          <div className="mx-auto mt-3 h-px max-w-md bg-gradient-to-r from-transparent via-orange-500/40 to-transparent" />
+          <div className="hidden sm:block">
+            <span className="text-[10px] font-extrabold text-zinc-900 bg-white/20 px-3 py-1 rounded">SCHOOL LOGIN</span>
+          </div>
+        </div>
+      </div>
+
+      <header className="relative z-10 w-full pt-8 pb-4">
+        <div className="container mx-auto max-w-6xl px-4 flex flex-col items-center">
+          {/* Logo & Brand Name Container */}
+          <div className="flex flex-col items-center mb-6">
+            <div className="relative size-20 sm:size-24 mb-4">
+              <div className="absolute inset-0 bg-orange-500/20 blur-xl rounded-full animate-pulse" />
+              <img
+                src="/images/home/png_logo_1.png"
+                alt="Logo"
+                className="relative z-10 w-full h-full object-contain filter drop-shadow-lg"
+              />
+            </div>
+            <div className="text-center space-y-0.5">
+              <h2 className="text-xs sm:text-sm font-black uppercase tracking-[0.4em] text-zinc-300">
+                School of the Divine
+              </h2>
+              <h2 className="text-xs sm:text-sm font-black uppercase tracking-[0.4em] text-zinc-300">
+                Infinite Being
+              </h2>
+            </div>
+          </div>
+
+          {/* Large Check Out Banner (Reference match) */}
+          <div className="w-full max-w-3xl relative">
+            <div className="absolute inset-0 bg-orange-600 blur-2xl opacity-20 transform -rotate-1 scale-105" />
+            <div className="relative bg-gradient-to-r from-orange-400 via-orange-500 to-red-600 px-8 py-4 sm:py-6 rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.4),inset_0_2px_1px_rgba(255,255,255,0.3)] border-b-4 border-red-700">
+              <h1 className="text-center text-4xl sm:text-6xl font-black italic tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+                CHECK OUT
+              </h1>
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="container mx-auto max-w-6xl px-4 py-8 sm:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* LEFT: course info */}
-          <div className="lg:col-span-2 space-y-6 order-2 lg:order-1">
-            <div className="rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 p-4 text-sm text-amber-200 shadow-sm">
-              Get a flat <strong className="text-amber-100">10% instant discount</strong> on course fees with full payment upfront!
-            </div>
-            <h2 className="text-xl sm:text-2xl font-semibold text-zinc-100 leading-snug">
-              Our full course includes the mastery of <span className="text-orange-400">15 Astrology and Tarot</span> products
-            </h2>
-            <p className="text-sm text-zinc-400 leading-relaxed">
-              Our courses are taught through live web casts and student-center
-              training videos. You&apos;ll collaborate live with teachers, join
-              break-out sessions with fellow students, and keep lifetime access
-              to every recording and material you receive.
-            </p>
+      <main className="relative z-10 container mx-auto max-w-6xl px-4 py-8 sm:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10">
 
-            <div>
-              <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-orange-400 mb-3">
-                Course metrics
-              </h3>
-              <ul className="space-y-2 text-sm text-zinc-300">
-                {[
-                  "Comprehensive 15-product curriculum",
-                  "100+ hours of structured training",
-                  "Live readings with experienced practitioners",
-                  "Recorded sessions you keep for life",
-                  "Live break-out sessions with fellow students",
-                  "Full course materials accessible for life",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2">
-                    <span className="mt-1.5 size-1.5 rounded-full bg-orange-500 shrink-0" aria-hidden />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
+          {/* LEFT COLUMN: Course Info */}
+          <div className="lg:col-span-2 space-y-10 order-2 lg:order-1">
+            <div className="relative group overflow-hidden rounded-2xl border border-amber-500/20 bg-zinc-900/40 p-1 backdrop-blur-sm">
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/50 to-transparent" />
+              <div className="px-6 py-5">
+                <h2 className="text-xl sm:text-2xl font-black italic text-zinc-100 leading-tight">
+                  GET A FLAT <span className="text-orange-500">10% INSTANT DISCOUNT</span> ON COURSE FEES WITH FULL PAYMENT UPFRONT!
+                </h2>
+                <p className="mt-4 text-lg font-bold text-amber-500 italic">
+                  Our full course includes the mastery of 15 Astrology and Tarot products
+                </p>
+              </div>
+            </div>
+
+            {/* Content Box with Highlight Box (Like Reference) */}
+            <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/60 p-8 shadow-xl">
+              <div className="absolute top-0 left-0 w-1 h-32 bg-orange-500 rounded-full -translate-x-0.5" />
+              <div className="space-y-6">
+                <div className="inline-block px-4 py-2 bg-gradient-to-r from-red-600/40 to-transparent rounded-lg border-l-4 border-red-600">
+                  <p className="text-base font-bold text-zinc-100 leading-relaxed italic">
+                    Our courses are done through live web casts and student center training videos and sements.
+                    You will be able to collaborate live with teachers and go into break out seasons with other students
+                    while enjoying full course materials you gain access to for life!
+                  </p>
+                </div>
+
+                <section>
+                  <h3 className="text-lg font-black italic uppercase tracking-wider text-orange-500 mb-6 flex items-center gap-3">
+                    <span className="w-8 h-1 bg-orange-500 rounded-full" />
+                    COURSES METRICS:
+                  </h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {[
+                      "Comprehensive 15-product curriculum",
+                      "100+ hours of structured training",
+                      "Live readings with experienced practitioners",
+                      "Recorded sessions you keep for life",
+                      "Live break-out sessions with fellow students",
+                      "Full course materials accessible for life",
+                    ].map((item) => (
+                      <div key={item} className="flex items-start gap-4 group p-3 rounded-xl hover:bg-white/5 transition-colors">
+                        <div className="mt-1 size-3 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)] shrink-0 border-2 border-white/20" />
+                        <p className="text-sm font-bold text-zinc-300 leading-snug group-hover:text-white transition-colors">
+                          {item}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </div>
             </div>
           </div>
 
-          {/* RIGHT: order summary + form */}
-          <aside className="lg:col-span-1 space-y-4 order-1 lg:order-2">
-            <Card className="border-orange-500/30 bg-zinc-900/60 backdrop-blur shadow-[0_0_60px_-20px_rgba(249,115,22,0.25)]">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base text-zinc-100">Order Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-baseline justify-between gap-2">
-                  <p className="text-sm text-zinc-300">Professional Divination Course</p>
-                  <p className="font-bold tabular-nums text-zinc-100">{priceLabel}</p>
+          {/* RIGHT COLUMN: Order & Billing */}
+          <aside className="lg:col-span-1 space-y-8 order-1 lg:order-2">
+
+            {/* Order Summary (Reference Match) */}
+            <Card className="overflow-hidden border-orange-600 border-2 bg-zinc-950/80 shadow-[0_20px_50px_rgba(0,0,0,0.5),0_0_30px_rgba(249,115,22,0.1)]">
+              <div className="bg-[#f38100] py-1.5 text-center">
+                <h2 className="text-[13px] font-black uppercase tracking-widest text-zinc-900">ORDER SUMMARY</h2>
+              </div>
+              <CardContent className="p-4 space-y-4">
+                <div className="rounded border border-zinc-800 bg-zinc-900/50 p-3">
+                  <div className="flex flex-col gap-1">
+                    <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Item Name:</p>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="text-xs font-black text-zinc-100">Professional Divination Course</p>
+                      <p className="text-xs font-black text-orange-400">{priceLabel}</p>
+                    </div>
+                  </div>
                 </div>
+
                 {pricingError && (
-                  <p className="text-xs text-red-400">{pricingError}</p>
+                  <div className="flex items-center gap-2 p-2 rounded bg-red-950/50 border border-red-500/30">
+                    <AlertCircle className="size-3 text-red-500" />
+                    <p className="text-[10px] font-bold text-red-400">{pricingError}</p>
+                  </div>
                 )}
-                <div className="border-t border-zinc-800 pt-3 flex items-baseline justify-between">
-                  <p className="text-sm font-semibold text-zinc-200">Total Payable</p>
-                  <p className="text-xl font-bold tabular-nums bg-gradient-to-r from-amber-300 to-yellow-500 bg-clip-text text-transparent">
+
+                <div className="bg-[#f38100] py-1 text-center">
+                  <h2 className="text-[11px] font-black uppercase tracking-widest text-zinc-900">PRICE DETAILS</h2>
+                </div>
+
+                <Button className="w-full h-8 bg-gradient-to-b from-orange-400 to-orange-600 text-zinc-900 font-black text-[10px] uppercase tracking-widest shadow-[0_4px_0_rgb(180,83,9)] hover:translate-y-[1px] hover:shadow-[0_3px_0_rgb(180,83,9)] transition-all">
+                  PAY IN FULL
+                </Button>
+
+                <div className="flex items-center justify-between border-t border-zinc-800 pt-3">
+                  <p className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Total Payable</p>
+                  <p className="text-lg font-black text-white tabular-nums">
                     {priceLabel}
                   </p>
                 </div>
-                <Badge variant="outline" className="w-full justify-center border-orange-500/40 text-orange-200">
-                  Pay in Full
-                </Badge>
               </CardContent>
             </Card>
 
-            <Card className="bg-zinc-900/60 border-zinc-800 backdrop-blur">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base text-zinc-100">Billing Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
+            {/* Billing Details (Reference Match) */}
+            <Card className="overflow-hidden border-zinc-800 border-2 bg-zinc-950/80 shadow-2xl">
+              <div className="bg-[#f38100] py-1.5 text-center">
+                <h2 className="text-[13px] font-black uppercase tracking-widest text-zinc-900">BILLING DETAILS</h2>
+              </div>
+              <CardContent className="p-5">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-3.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-1 gap-3.5">
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold uppercase text-zinc-400 ml-1">First Name</Label>
+                        <Input
+                          className="bg-zinc-900/50 border-zinc-700 h-10 font-bold focus:border-orange-500/50"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold uppercase text-zinc-400 ml-1">Last Name</Label>
+                        <Input
+                          className="bg-zinc-900/50 border-zinc-700 h-10 font-bold focus:border-orange-500/50"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
                     <div className="space-y-1.5">
-                      <Label htmlFor="ds-fname">First Name</Label>
+                      <Label className="text-[10px] font-bold uppercase text-zinc-400 ml-1">Phone No</Label>
                       <Input
-                        id="ds-fname"
-                        required
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
+                        className="bg-zinc-900/50 border-zinc-700 h-10 font-bold focus:border-orange-500/50"
+                        value={phone}
+                        onChange={(e) => setPhone(formatPhone(e.target.value))}
+                        placeholder="(555) 123-4567"
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="ds-lname">Last Name</Label>
-                      <Input
-                        id="ds-lname"
-                        required
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                      />
-                    </div>
-                  </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="ds-phone">Phone</Label>
-                    <Input
-                      id="ds-phone"
-                      required
-                      value={phone}
-                      onChange={(e) => setPhone(formatPhone(e.target.value))}
-                      placeholder="(555) 123-4567"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="ds-country">Country</Label>
-                      <Select value={country} onValueChange={setCountry}>
-                        <SelectTrigger id="ds-country">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {COUNTRIES.map((c) => (
-                            <SelectItem key={c} value={c}>
-                              {c}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="ds-state">State</Label>
-                      {stateOptions ? (
-                        <Select value={state} onValueChange={setState}>
-                          <SelectTrigger id="ds-state">
-                            <SelectValue placeholder="Select" />
+                    <div className="grid grid-cols-2 gap-3.5">
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold uppercase text-zinc-400 ml-1">Country</Label>
+                        <Select value={country} onValueChange={setCountry}>
+                          <SelectTrigger className="bg-zinc-900/50 border-zinc-700 h-10 font-bold">
+                            <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
-                            {stateOptions.map((s) => (
-                              <SelectItem key={s} value={s}>
-                                {s}
+                          <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
+                            {COUNTRIES.map((c) => (
+                              <SelectItem key={c} value={c} className="font-bold focus:bg-orange-500/10">
+                                {c}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                      ) : (
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold uppercase text-zinc-400 ml-1">State</Label>
+                        {stateOptions ? (
+                          <Select value={state} onValueChange={setState}>
+                            <SelectTrigger className="bg-zinc-900/50 border-zinc-700 h-10 font-bold">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
+                              {stateOptions.map((s) => (
+                                <SelectItem key={s} value={s} className="font-bold focus:bg-orange-500/10">
+                                  {s}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            className="bg-zinc-900/50 border-zinc-700 h-10 font-bold focus:border-orange-500/50"
+                            value={state}
+                            onChange={(e) => setState(e.target.value)}
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3.5">
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold uppercase text-zinc-400 ml-1">City</Label>
                         <Input
-                          id="ds-state"
-                          value={state}
-                          onChange={(e) => setState(e.target.value)}
+                          className="bg-zinc-900/50 border-zinc-700 h-10 font-bold focus:border-orange-500/50"
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
                         />
-                      )}
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold uppercase text-zinc-400 ml-1">Zip</Label>
+                        <Input
+                          className="bg-zinc-900/50 border-zinc-700 h-10 font-bold focus:border-orange-500/50"
+                          value={zip}
+                          onChange={(e) => setZip(e.target.value)}
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1.5">
-                      <Label htmlFor="ds-city">City</Label>
+                      <Label className="text-[10px] font-bold uppercase text-zinc-400 ml-1">Email</Label>
                       <Input
-                        id="ds-city"
-                        required
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
+                        className="bg-zinc-900/50 border-zinc-700 h-10 font-bold focus:border-orange-500/50"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                       />
                     </div>
+
                     <div className="space-y-1.5">
-                      <Label htmlFor="ds-zip">Zip</Label>
-                      <Input
-                        id="ds-zip"
-                        required
-                        value={zip}
-                        onChange={(e) => setZip(e.target.value)}
-                      />
+                      <Label className="text-[10px] font-bold uppercase text-zinc-400 ml-1">Password</Label>
+                      <div className="relative">
+                        <Input
+                          className="bg-zinc-900/50 border-zinc-700 h-10 font-bold focus:border-orange-500/50 pr-10"
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((v) => !v)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-orange-400"
+                        >
+                          {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="ds-email">Email</Label>
-                    <Input
-                      id="ds-email"
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="ds-password">Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="ds-password"
-                        type={showPassword ? "text" : "password"}
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                      >
-                        {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                      </button>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      8-15 chars, mixed case, a digit, and one of @#$%^&+=
-                    </p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="ds-confirm">Confirm Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="ds-confirm"
-                        type={showConfirm ? "text" : "password"}
-                        required
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirm((v) => !v)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        aria-label={showConfirm ? "Hide password" : "Show password"}
-                      >
-                        {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                      </button>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase text-zinc-400 ml-1">Confirm Password</Label>
+                      <div className="relative">
+                        <Input
+                          className="bg-zinc-900/50 border-zinc-700 h-10 font-bold focus:border-orange-500/50 pr-10"
+                          type={showConfirm ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirm((v) => !v)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-orange-400"
+                        >
+                          {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                        </button>
+                      </div>
                     </div>
                   </div>
 
                   {error && (
-                    <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
+                    <div className="flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/5 p-3 text-[11px] font-bold text-red-400">
                       <AlertCircle className="size-4 shrink-0 mt-0.5" />
                       <p>{error}</p>
                     </div>
@@ -440,7 +503,7 @@ export default function DivinerSignupPage() {
 
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-yellow-300 to-amber-500 text-zinc-900 font-bold hover:from-yellow-400 hover:to-amber-600 hover:text-zinc-900 shadow-[0_0_30px_-8px_rgba(250,204,21,0.6)]"
+                    className="w-full h-12 bg-[#f38100] hover:bg-orange-500 text-zinc-900 font-black text-sm uppercase tracking-[0.2em] shadow-[0_6px_0_rgb(180,83,9)] hover:translate-y-[1px] hover:shadow-[0_4px_0_rgb(180,83,9)] transition-all active:translate-y-[3px] active:shadow-none"
                     disabled={submitting}
                   >
                     {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
@@ -463,10 +526,7 @@ export default function DivinerSignupPage() {
           email={email}
           name={`${firstName} ${lastName}`.trim()}
           onPaid={() => {
-            // Payment confirmed in-page; forward to the success route.
-            router.push(
-              `/diviner-signup/success?email=${encodeURIComponent(email)}`,
-            );
+            router.push(`/diviner-signup/success?email=${encodeURIComponent(email)}`);
           }}
         />
       )}

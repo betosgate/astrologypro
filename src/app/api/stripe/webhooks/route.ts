@@ -225,6 +225,72 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
   }
 }
 
+async function handlePerennialSignupCheckoutCompleted(
+  session: Stripe.Checkout.Session
+) {
+  const supabase = createAdminClient();
+
+  // 1. Look up the pending row.
+  const { data: pending, error: lookupError } = await supabase
+    .from("pending_perennial_signups")
+    .select("id, plan_key, household, primary_email, status")
+    .eq("stripe_session_id", session.id)
+    .maybeSingle();
+
+  if (lookupError || !pending) {
+    console.error(
+      "[stripe/webhooks] perennial_signup pending row missing:",
+      session.id,
+      lookupError?.message,
+    );
+    return;
+  }
+
+  // 2. Idempotency: if already completed, do nothing.
+  if (pending.status === "completed") {
+    return;
+  }
+
+  // 3. Mark processing.
+  await supabase
+    .from("pending_perennial_signups")
+    .update({ status: "processing" })
+    .eq("id", pending.id);
+
+  // 4. Provision the household.
+  const { provisionPerennialHousehold } = await import(
+    "@/lib/perennial/household-provisioning"
+  );
+  const household = pending.household as Parameters<
+    typeof provisionPerennialHousehold
+  >[1];
+  const result = await provisionPerennialHousehold(supabase, household);
+
+  // 5. Persist the outcome.
+  const updateFields: Record<string, unknown> = {
+    provisioned_user_ids: result.user_ids,
+    processed_at: new Date().toISOString(),
+  };
+  if (result.ok) {
+    updateFields.status = "completed";
+    updateFields.error_message = null;
+  } else {
+    updateFields.status = "failed";
+    updateFields.error_message = result.errors
+      .map((e) => `${e.email}: ${e.error}`)
+      .join("; ");
+  }
+
+  await supabase
+    .from("pending_perennial_signups")
+    .update(updateFields)
+    .eq("id", pending.id);
+
+  console.log(
+    `[stripe/webhooks] perennial_signup ${result.ok ? "completed" : "PARTIAL"} session=${session.id} provisioned=${result.user_ids.length} errors=${result.errors.length}`,
+  );
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Route gift certificate checkouts to their own handler
   if (session.metadata?.type === "gift_certificate") {
@@ -234,6 +300,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Route community subscription checkouts
   if (session.metadata?.type === "community") {
     return handleCommunityCheckoutCompleted(session);
+  }
+
+  // Route Perennial multi-member household signups
+  if (session.metadata?.type === "perennial_signup") {
+    return handlePerennialSignupCheckoutCompleted(session);
   }
 
   const supabase = createAdminClient();

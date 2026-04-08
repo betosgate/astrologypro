@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const sp = req.nextUrl.searchParams;
-  const divinerId = sp.get("diviner_id");
+  const ownerId = sp.get("owner_id") || sp.get("diviner_id");
 
   const admin = createAdminClient();
   let query = admin
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     .select("*, diviners(id, display_name, username)")
     .order("created_at", { ascending: false });
 
-  if (divinerId) query = query.eq("diviner_id", divinerId);
+  if (ownerId) query = query.eq("owner_id", ownerId);
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -29,9 +29,10 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { diviner_id, title, start_date, end_date, weekdays, start_time, end_time, timezone, duration_minutes, description, is_active } = body;
+  const { owner_id, diviner_id, title, start_date, end_date, weekdays, start_time, end_time, timezone, duration_minutes, description, is_active } = body;
+  const finalOwnerId = owner_id || diviner_id;
 
-  if (!diviner_id || !start_date || !end_date || !weekdays || !start_time || !end_time || !timezone) {
+  if (!finalOwnerId || !start_date || !end_date || !weekdays || !start_time || !end_time || !timezone) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 422 });
   }
 
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await admin
     .from("availability_templates")
     .insert({
-      diviner_id,
+      owner_id: finalOwnerId,
       title: title || "Available",
       start_date,
       end_date,

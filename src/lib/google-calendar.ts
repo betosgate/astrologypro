@@ -7,15 +7,19 @@ const GOOGLE_REDIRECT_URI =
   process.env.GOOGLE_REDIRECT_URI ||
   "http://localhost:3000/api/calendar/callback";
 
-const SCOPES = ["https://www.googleapis.com/auth/calendar"];
+const SCOPES = [
+  "https://www.googleapis.com/auth/calendar.events.owned",
+  "https://www.googleapis.com/auth/userinfo.email",
+];
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_CALENDAR_API = "https://www.googleapis.com/calendar/v3";
+const TABLE_NAME = "calendar_connections";
 
 /**
  * Builds the Google OAuth2 consent URL for calendar access.
  */
-export function getOAuthUrl(divinerId: string): string {
+export function getOAuthUrl(ownerId: string): string {
   const params = new URLSearchParams({
     client_id: GOOGLE_CLIENT_ID,
     redirect_uri: GOOGLE_REDIRECT_URI,
@@ -23,7 +27,7 @@ export function getOAuthUrl(divinerId: string): string {
     scope: SCOPES.join(" "),
     access_type: "offline",
     prompt: "consent",
-    state: divinerId,
+    state: ownerId,
   });
 
   return `${GOOGLE_AUTH_URL}?${params.toString()}`;
@@ -37,7 +41,8 @@ export function getOAuthUrl(divinerId: string): string {
  */
 export async function handleOAuthCallback(
   code: string,
-  divinerId: string
+  ownerId: string, // Changed from divinerId
+  userId: string   // Added userId
 ): Promise<void> {
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
@@ -57,20 +62,31 @@ export async function handleOAuthCallback(
   }
 
   const tokens = await response.json();
+  console.log("[Google OAuth] Exchange response:", {
+    has_access: !!tokens.access_token,
+    has_refresh: !!tokens.refresh_token,
+  });
 
   const supabase = createAdminClient();
-  // Note: do NOT write google_calendar_connected — it is a GENERATED ALWAYS
-  // column (see migration 20260403000001) and the previous version of this
-  // code was failing at runtime because of it.
+
+  // We identify the user's connection by both userId and provider
   const { error } = await supabase
-    .from("diviners")
-    .update({
-      google_calendar_token: tokens.refresh_token,
-    })
-    .eq("id", divinerId);
+    .from(TABLE_NAME)
+    .upsert({
+      user_id: userId,
+      owner_id: ownerId,
+      provider: "google",
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token, // Google refresh tokens are long-lived
+      expires_at: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : null,
+      updated_at: new Date().toISOString()
+    }, {
+      onConflict: "user_id,provider"
+    });
 
   if (error) {
-    throw new Error(`Failed to store calendar token: ${error.message}`);
+    console.error("[Google OAuth] Upsert failed:", error);
+    throw new Error(`Failed to store calendar connection: ${error.message}`);
   }
 
   // Dual-write to the normalized calendar_connections table. Best-effort —
@@ -95,48 +111,35 @@ export async function handleOAuthCallback(
  * during the cutover window so neither newly-connected nor pre-cutover
  * diviners are broken.
  */
-async function getAccessToken(divinerId: string): Promise<string> {
+async function getAccessToken(ownerId: string): Promise<string> {
   const supabase = createAdminClient();
-
-  let refreshToken: string | null = null;
-
-  // 1. Look up the diviner row (need user_id for the calendar_connections lookup
-  //    AND the legacy JSONB column for the fallback)
-  const { data: diviner } = await supabase
-    .from("diviners")
-    .select("user_id, google_calendar_token")
-    .eq("id", divinerId)
+  const { data, error } = await supabase
+    .from(TABLE_NAME)
+    .select("access_token, refresh_token, expires_at")
+    .eq("owner_id", ownerId)
+    .eq("provider", "google")
     .single();
 
-  // 2. Preferred: read from calendar_connections via diviners.user_id
-  if (diviner?.user_id) {
-    const { data: conn } = await supabase
-      .from("calendar_connections")
-      .select("refresh_token")
-      .eq("user_id", diviner.user_id)
-      .eq("provider", "google")
-      .maybeSingle();
-    if (conn?.refresh_token) {
-      refreshToken = conn.refresh_token;
+  if (error || !data?.refresh_token) {
+    throw new Error("No Google Calendar connection found for this owner");
+  }
+
+  // If token is still valid (5 min buffer), return cached access_token
+  if (data.access_token && data.expires_at) {
+    const expiresAt = new Date(data.expires_at).getTime();
+    if (expiresAt > Date.now() + 5 * 60 * 1000) {
+      return data.access_token;
     }
   }
 
-  // 3. Fallback: legacy JSONB column on the diviner row
-  if (!refreshToken && diviner?.google_calendar_token) {
-    refreshToken = diviner.google_calendar_token as string;
-  }
-
-  if (!refreshToken) {
-    throw new Error("No Google Calendar token found for this diviner");
-  }
-
+  // Otherwise, refresh it
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       client_id: GOOGLE_CLIENT_ID,
       client_secret: GOOGLE_CLIENT_SECRET,
-      refresh_token: refreshToken,
+      refresh_token: data.refresh_token,
       grant_type: "refresh_token",
     }),
   });
@@ -146,6 +149,18 @@ async function getAccessToken(divinerId: string): Promise<string> {
   }
 
   const tokens = await response.json();
+
+  // Cache the new access token
+  await supabase
+    .from(TABLE_NAME)
+    .update({
+      access_token: tokens.access_token,
+      expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq("owner_id", ownerId)
+    .eq("provider", "google");
+
   return tokens.access_token;
 }
 
@@ -154,10 +169,10 @@ async function getAccessToken(divinerId: string): Promise<string> {
  * Returns an array of { start, end } busy periods.
  */
 export async function getAvailableSlotsFromGoogle(
-  divinerId: string,
+  ownerId: string,
   date: Date
 ): Promise<{ start: string; end: string }[]> {
-  const accessToken = await getAccessToken(divinerId);
+  const accessToken = await getAccessToken(ownerId);
 
   const timeMin = new Date(date);
   timeMin.setHours(0, 0, 0, 0);
@@ -192,7 +207,7 @@ export async function getAvailableSlotsFromGoogle(
  * Creates a calendar event on the diviner's Google Calendar with booking details.
  */
 export async function createCalendarEvent(
-  divinerId: string,
+  ownerId: string,
   booking: {
     title: string;
     description?: string;
@@ -202,7 +217,7 @@ export async function createCalendarEvent(
     clientName?: string;
   }
 ): Promise<{ eventId: string; htmlLink: string }> {
-  const accessToken = await getAccessToken(divinerId);
+  const accessToken = await getAccessToken(ownerId);
 
   const event: Record<string, unknown> = {
     summary: booking.title,
@@ -253,13 +268,13 @@ export async function createCalendarEvent(
  * Update an existing Google Calendar event (for reschedule).
  */
 export async function updateGoogleCalendarEvent(
-  divinerId: string,
+  ownerId: string,
   eventId: string,
   newScheduledAt: string,
   durationMinutes: number
 ): Promise<boolean> {
   try {
-    const accessToken = await getAccessToken(divinerId);
+    const accessToken = await getAccessToken(ownerId);
     if (!accessToken) return false;
 
     const start = new Date(newScheduledAt);
@@ -286,11 +301,11 @@ export async function updateGoogleCalendarEvent(
  * Delete a Google Calendar event (for cancellation).
  */
 export async function deleteGoogleCalendarEvent(
-  divinerId: string,
+  ownerId: string,
   eventId: string
 ): Promise<boolean> {
   try {
-    const accessToken = await getAccessToken(divinerId);
+    const accessToken = await getAccessToken(ownerId);
     if (!accessToken) return false;
 
     const res = await fetch(
@@ -314,11 +329,11 @@ export async function deleteGoogleCalendarEvent(
  *   (e.g. https://yourdomain.com/api/webhooks/calendar)
  */
 export async function watchGoogleCalendar(
-  divinerId: string,
+  ownerId: string,
   webhookUrl: string
 ): Promise<{ channelId: string; expiration: string } | null> {
   try {
-    const accessToken = await getAccessToken(divinerId);
+    const accessToken = await getAccessToken(ownerId);
     if (!accessToken) return null;
 
     const channelId = crypto.randomUUID();
@@ -355,7 +370,7 @@ export async function watchGoogleCalendar(
     await supabase.from("calendar_webhook_channels").upsert(
       {
         channel_id: channelId,
-        diviner_id: divinerId,
+        diviner_id: ownerId,
         provider: "google",
         resource_id: watchData.resourceId ?? null,
         expiration: new Date(Number(watchData.expiration)).toISOString(),
@@ -374,26 +389,25 @@ export async function watchGoogleCalendar(
 }
 
 /**
- * Disconnects Google Calendar by clearing the stored token.
+ * Disconnects Google Calendar by clearing the stored connection.
  */
 export async function disconnectGoogleCalendar(
-  divinerId: string
+  ownerId: string
 ): Promise<void> {
   const supabase = createAdminClient();
   // Note: do NOT write google_calendar_connected — it is GENERATED ALWAYS
   // (see migration 20260403000001) and is automatically derived from
   // google_calendar_token IS NOT NULL.
   const { error } = await supabase
-    .from("diviners")
-    .update({
-      google_calendar_token: null,
-    })
-    .eq("id", divinerId);
+    .from(TABLE_NAME)
+    .delete()
+    .eq("owner_id", ownerId)
+    .eq("provider", "google");
 
   if (error) {
     throw new Error(`Failed to disconnect Google Calendar: ${error.message}`);
   }
 
   // Mirror the disconnect into the normalized calendar_connections table.
-  await deleteCalendarConnection(supabase, divinerId, "google");
+  await deleteCalendarConnection(supabase, ownerId, "google");
 }

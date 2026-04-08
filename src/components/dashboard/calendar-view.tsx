@@ -12,7 +12,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, X, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Plus, Calendar as CalendarIcon, Trash2, Loader2 } from "lucide-react";
+import { ManualBookingModal } from "./manual-booking-modal";
 
 interface AvailabilitySlot {
   id: string;
@@ -35,6 +36,12 @@ interface Booking {
   scheduled_at: string;
   duration_minutes: number;
   status: string;
+  session_notes: string | null;
+  metadata?: {
+    is_reminder?: boolean;
+    is_manual?: boolean;
+    timezone?: string;
+  } | null;
   services: { name: string } | null;
   clients: { full_name: string | null } | null;
 }
@@ -78,6 +85,8 @@ export function CalendarView({
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showAddOverride, setShowAddOverride] = useState(false);
+  const [showAddBooking, setShowAddBooking] = useState(false);
+  const [bookingTime, setBookingTime] = useState<string | undefined>();
   const [overrideDate, setOverrideDate] = useState("");
   const [overrideStart, setOverrideStart] = useState("09:00");
   const [overrideEnd, setOverrideEnd] = useState("17:00");
@@ -156,6 +165,22 @@ export function CalendarView({
 
     return { date, dateStr, availBlocks, overrideBlocks, bookingBlocks };
   });
+
+  async function handleDeleteBooking(id: string) {
+    if (!confirm("Are you sure you want to delete this booking?")) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/dashboard/bookings/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setSelectedBooking(null);
+        window.location.reload();
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function handleAddOverride() {
     if (!overrideDate) return;
@@ -242,6 +267,18 @@ export function CalendarView({
           >
             <Plus className="mr-1 size-3" />
             Add Special Hours
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            className="bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+            onClick={() => {
+              setBookingTime(undefined);
+              setShowAddBooking(true);
+            }}
+          >
+            <CalendarIcon className="mr-1 size-3" />
+            Create Manual Booking
           </Button>
         </div>
       </div>
@@ -353,15 +390,24 @@ export function CalendarView({
 
                       {/* Availability blocks (green) */}
                       {availBlocks.map((block, i) => (
-                        <div
+                        <button
                           key={`avail-${i}`}
-                          className="absolute inset-x-0 mx-0.5 rounded bg-green-500/15 border border-green-500/20"
+                          type="button"
+                          className="absolute inset-x-0 mx-0.5 cursor-pointer rounded bg-green-500/15 border border-green-500/20 hover:bg-green-500/25 transition-colors text-left"
                           style={{ top: block.top, height: block.height }}
+                          onClick={() => {
+                            // Calculate the exact start time for this slot
+                            const slotDate = new Date(dateStr + "T00:00:00");
+                            const [h, m] = block.label.split(" - ")[0].split(":").map(Number);
+                            slotDate.setHours(h, m, 0, 0);
+                            setBookingTime(slotDate.toISOString());
+                            setShowAddBooking(true);
+                          }}
                         >
                           <span className="p-1 text-[10px] text-green-400">
                             {block.label}
                           </span>
-                        </div>
+                        </button>
                       ))}
 
                       {/* Booking blocks (gold/amber) */}
@@ -415,7 +461,9 @@ export function CalendarView({
               <div>
                 <Label className="text-muted-foreground">Client</Label>
                 <p className="font-medium">
-                  {selectedBooking.clients?.full_name ?? "Unknown"}
+                  {selectedBooking.metadata?.is_reminder 
+                    ? "Personal Reminder (Self)" 
+                    : selectedBooking.clients?.full_name ?? "Unknown"}
                 </p>
               </div>
               <div>
@@ -441,9 +489,31 @@ export function CalendarView({
               </div>
               <div>
                 <Label className="text-muted-foreground">Status</Label>
-                <Badge variant="outline" className="ml-1">
+                <Badge variant="outline" className="ml-1 uppercase text-[10px]">
                   {selectedBooking.status}
                 </Badge>
+              </div>
+
+              {selectedBooking.session_notes && (
+                <div className="pt-4 border-t">
+                  <Label className="text-muted-foreground block mb-2">Notes & Instructions</Label>
+                  <div 
+                    className="text-sm prose prose-invert max-w-none bg-muted/30 p-4 rounded-lg border overflow-auto max-h-[200px]"
+                    dangerouslySetInnerHTML={{ __html: selectedBooking.session_notes }}
+                  />
+                </div>
+              )}
+
+              <div className="pt-6 border-t">
+                <Button 
+                  variant="destructive" 
+                  className="w-full"
+                  onClick={() => handleDeleteBooking(selectedBooking.id)}
+                  disabled={saving}
+                >
+                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                  Delete Booking
+                </Button>
               </div>
             </div>
           )}
@@ -506,6 +576,13 @@ export function CalendarView({
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Manual Booking Modal */}
+      <ManualBookingModal
+        open={showAddBooking}
+        onOpenChange={setShowAddBooking}
+        initialTime={bookingTime}
+      />
     </div>
   );
 }

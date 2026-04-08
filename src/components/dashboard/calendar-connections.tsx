@@ -221,6 +221,7 @@ export function CalendarConnections({
           disconnecting={disconnecting === "google"}
           onDisconnect={() => handleDisconnect("google")}
         />
+        {/* 
         <ProviderCard
           provider="microsoft"
           name="Outlook Calendar"
@@ -231,6 +232,7 @@ export function CalendarConnections({
           disconnecting={disconnecting === "microsoft"}
           onDisconnect={() => handleDisconnect("microsoft")}
         />
+        */}
       </div>
     </div>
   );
