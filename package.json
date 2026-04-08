@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx scripts/seed.ts",
-    "migrate": "node scripts/run-migration.js"
+    "migrate": "node scripts/run-migration.js",
+    "local:build": "NODE_OPTIONS=\"--max-old-space-size=4096\" npm run build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
