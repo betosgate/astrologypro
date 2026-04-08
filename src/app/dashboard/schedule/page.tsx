@@ -439,7 +439,7 @@ export default async function SchedulePage({
       )}
 
       {/* Summary stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <Card>
           <CardContent className="pt-4 pb-3">
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Sessions</p>
@@ -454,13 +454,6 @@ export default async function SchedulePage({
               {(stats.minutes / 60).toFixed(1)}
             </p>
             <p className="text-xs text-muted-foreground">booked</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Revenue</p>
-            <p className="text-2xl font-bold">{formatCurrency(stats.revenue)}</p>
-            <p className="text-xs text-muted-foreground">this week</p>
           </CardContent>
         </Card>
       </div>

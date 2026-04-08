@@ -5,9 +5,10 @@ import { useEffect } from "react";
 interface PageTrackerProps {
   divinerId: string;
   path: string;
+  username?: string;
 }
 
-export function PageTracker({ divinerId, path }: PageTrackerProps) {
+export function PageTracker({ divinerId, path, username }: PageTrackerProps) {
   useEffect(() => {
     const data = JSON.stringify({
       divinerId,
@@ -30,7 +31,13 @@ export function PageTracker({ divinerId, path }: PageTrackerProps) {
         // Silently ignore tracking failures
       });
     }
-  }, [divinerId, path]);
+
+    // Set preferred diviner cookie client-side to avoid server-side restriction
+    if (username) {
+      const maxAge = 60 * 60 * 24 * 90; // 90 days
+      document.cookie = `preferred_diviner=${username}; path=/; max-age=${maxAge}; samesite=lax`;
+    }
+  }, [divinerId, path, username]);
 
   return null;
 }

@@ -11,6 +11,8 @@ export const metadata = {
   title: "Calendar - Dashboard",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function CalendarPage() {
   const supabase = await createClient();
   const admin = createAdminClient();
@@ -26,18 +28,19 @@ export default async function CalendarPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!diviner) redirect("/admin");
+  // ownerId is either ownerId or user.id
+  const ownerId = diviner?.id || user.id;
 
   // Fetch all relevant data in parallel
   const [slotsResult, overridesResult, bookingsResult] = await Promise.all([
     supabase
       .from("availability_slots")
       .select("id, day_of_week, start_time, end_time, is_active")
-      .eq("diviner_id", diviner.id),
+      .eq("owner_id", ownerId),
     supabase
       .from("availability_overrides")
       .select("id, date, is_available, start_time, end_time")
-      .eq("diviner_id", diviner.id)
+      .eq("owner_id", ownerId)
       .gte(
         "date",
         new Date(
@@ -57,9 +60,9 @@ export default async function CalendarPage() {
     supabase
       .from("bookings")
       .select(
-        "id, scheduled_at, duration_minutes, status, services(name), clients(full_name)"
+        "id, scheduled_at, duration_minutes, status, session_notes, metadata, services(name), clients(full_name)"
       )
-      .eq("diviner_id", diviner.id)
+      .eq("owner_id", ownerId)
       .in("status", ["pending", "confirmed", "in_progress"])
       .gte(
         "scheduled_at",
@@ -71,7 +74,7 @@ export default async function CalendarPage() {
   ]);
 
   const hasExternalCalendar =
-    diviner.google_calendar_connected || diviner.outlook_calendar_connected;
+    diviner?.google_calendar_connected || diviner?.outlook_calendar_connected;
 
   return (
     <div className="space-y-6">
@@ -106,14 +109,14 @@ export default async function CalendarPage() {
         </div>
       )}
 
-      {diviner.username && (
+      {diviner?.username && (
         <BookingLinkBanner
           bookingUrl={`${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/${diviner.username}`}
         />
       )}
 
       <CalendarView
-        divinerId={diviner.id}
+        divinerId={ownerId}
         availabilitySlots={slotsResult.data ?? []}
         overrides={overridesResult.data ?? []}
         bookings={(bookingsResult.data as any[]) ?? []}
