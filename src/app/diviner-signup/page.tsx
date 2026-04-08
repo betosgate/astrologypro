@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Eye, EyeOff, Loader2, Lock, AlertCircle } from "lucide-react";
+import { DivinerSignupPaymentModal } from "@/components/diviner-signup/payment-modal";
+import { toast } from "sonner";
 
 const COURSE_ITEM_KEY = "professional_divination_course";
 const PASSWORD_REGEX = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).{8,15}$/;
@@ -82,6 +84,8 @@ export default function DivinerSignupPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [registeredUserId, setRegisteredUserId] = useState<string | null>(null);
 
   // Fetch the dynamic course price on mount
   useEffect(() => {
@@ -167,12 +171,15 @@ export default function DivinerSignupPage() {
         setError(body.error ?? `HTTP ${r.status}`);
         return;
       }
-      // Registration succeeded. Stripe payment integration (task 03) is a
-      // separate piece of work — for now redirect the user to a stub success
-      // page so the flow is observable end-to-end without payment.
-      router.push(
-        `/diviner-signup/success?email=${encodeURIComponent(email)}`,
-      );
+      // Registration succeeded. Open the Stripe Elements payment modal.
+      // The modal will fetch a PaymentIntent for the live course price and
+      // confirm it in-place. Once paid, we'll forward to the success page.
+      toast.success("Account registered", {
+        description:
+          "Redirecting you to secure payment. Please wait…",
+      });
+      setRegisteredUserId(body.user_id ?? null);
+      setPaymentModalOpen(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -436,6 +443,23 @@ export default function DivinerSignupPage() {
           </aside>
         </div>
       </main>
+
+      {/* Stripe Elements payment modal */}
+      {registeredUserId && (
+        <DivinerSignupPaymentModal
+          open={paymentModalOpen}
+          onOpenChange={setPaymentModalOpen}
+          userId={registeredUserId}
+          email={email}
+          name={`${firstName} ${lastName}`.trim()}
+          onPaid={() => {
+            // Payment confirmed in-page; forward to the success route.
+            router.push(
+              `/diviner-signup/success?email=${encodeURIComponent(email)}`,
+            );
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -726,9 +726,55 @@ async function handleAccountUpdated(account: Stripe.Account) {
   }
 }
 
+async function handleDivinerSignupPaymentSucceeded(
+  paymentIntent: Stripe.PaymentIntent
+) {
+  const userId = paymentIntent.metadata?.user_id;
+  const email = paymentIntent.metadata?.email;
+  if (!userId) {
+    console.warn(
+      "[stripe/webhooks] diviner_signup payment_intent missing user_id metadata"
+    );
+    return;
+  }
+
+  const supabase = createAdminClient();
+
+  // Mark the trainee as having paid. Idempotent — re-running with the same
+  // payment_intent_id is a no-op.
+  const { error: updateError } = await supabase
+    .from("trainees")
+    .update({
+      training_status: "paid",
+      payment_intent_id: paymentIntent.id,
+      paid_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId);
+
+  if (updateError) {
+    // Defensive: payment_intent_id / paid_at columns may not exist on
+    // every environment yet. Don't fail the webhook — log and move on.
+    console.warn(
+      "[stripe/webhooks] diviner_signup trainees update warning:",
+      updateError.message
+    );
+  }
+
+  console.log(
+    `[stripe/webhooks] diviner_signup payment succeeded user=${userId} email=${email ?? "?"} intent=${paymentIntent.id}`
+  );
+}
+
 async function handlePaymentIntentSucceeded(
   paymentIntent: Stripe.PaymentIntent
 ) {
+  // Diviner signup payments use type=diviner_signup metadata. Route them to
+  // the dedicated handler and return — they don't have bookingId.
+  if (paymentIntent.metadata?.type === "diviner_signup") {
+    await handleDivinerSignupPaymentSucceeded(paymentIntent);
+    return;
+  }
+
   const bookingId = paymentIntent.metadata?.bookingId;
   const clientEmail = paymentIntent.metadata?.clientEmail;
   if (!bookingId || !clientEmail) return;
