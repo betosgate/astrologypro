@@ -219,6 +219,20 @@ type TriggerVideoPlayerProps = {
   onEnded?: () => void;
   onPassedIdsChange?: (passedIds: string[]) => void;
   onLessonCompleted?: () => void;
+  /**
+   * Module 05: when the stepwise lesson quiz fires a wrong answer with
+   * remediation metadata, the parent passes the seek/replay window here.
+   * The player pauses, seeks to startSeconds, plays, and watches currentTime
+   * until it reaches replayUntilSeconds — then pauses and calls
+   * `onRemediationComplete`. requestId is included so a new request with the
+   * same start/until pair still re-triggers the effect.
+   */
+  remediationRequest?: {
+    startSeconds: number;
+    replayUntilSeconds: number;
+    requestId: number;
+  } | null;
+  onRemediationComplete?: () => void;
 };
 
 function TriggerVideoPlayer({
@@ -230,6 +244,8 @@ function TriggerVideoPlayer({
   onEnded,
   onPassedIdsChange,
   onLessonCompleted,
+  remediationRequest,
+  onRemediationComplete,
 }: TriggerVideoPlayerProps) {
   const embedUrl = getVideoEmbed(video.video_url);
   const isDirect = isHtml5Video(video.video_url);
@@ -376,6 +392,51 @@ function TriggerVideoPlayer({
       if (rewatchPollRef.current) clearInterval(rewatchPollRef.current);
     };
   }, []);
+
+  // ── Module 05: lesson-quiz remediation playback ─────────────────────────
+  // When the parent passes a remediationRequest, seek to startSeconds, play,
+  // and watch currentTime until it reaches replayUntilSeconds. Then pause and
+  // signal the parent so the quiz can re-enable retry.
+  useEffect(() => {
+    if (!remediationRequest) return;
+    const vid = videoRef.current;
+    if (!vid) return;
+
+    const { startSeconds, replayUntilSeconds } = remediationRequest;
+    let cancelled = false;
+
+    function start() {
+      if (cancelled) return;
+      try {
+        vid!.pause();
+        vid!.currentTime = startSeconds;
+        vid!.play().catch(() => undefined);
+      } catch {
+        // ignore
+      }
+    }
+
+    function tick() {
+      if (cancelled) return;
+      const v = videoRef.current;
+      if (!v) return;
+      if (v.currentTime >= replayUntilSeconds) {
+        v.pause();
+        onRemediationComplete?.();
+        cancelled = true;
+      }
+    }
+
+    start();
+    const id = setInterval(tick, 250);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+    // requestId in remediationRequest changes on every new request so
+    // back-to-back remediations re-fire even if start/until are equal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remediationRequest?.requestId]);
 
   // timeupdate handler: check if we've hit an unpassed trigger
   const handleTimeUpdate = useCallback(() => {
@@ -585,8 +646,11 @@ export function LessonViewerClient(props: LessonViewerProps) {
     assets,
     quizQuestions,
     quizPassed,
-    quizLastScore,
-    quizLastTotal,
+    // quizLastScore / quizLastTotal: legacy props from the batch quiz model.
+    // The Module 05 stepwise quiz model doesn't surface a "last attempt
+    // score" because each question is graded immediately and re-tried until
+    // correct. Kept on the props interface for backward compatibility with
+    // the page component, but no longer destructured here.
     isCompleted: initialCompleted,
     nextRoute,
     nextLabel,
@@ -623,6 +687,17 @@ export function LessonViewerClient(props: LessonViewerProps) {
     title: string;
   } | null>(null);
   const [assetsExpanded, setAssetsExpanded] = useState(false);
+
+  // Module 05 — quiz remediation: when the stepwise quiz fires onWrongAnswer
+  // with remediation metadata, we set this state to drive the video player
+  // and the quiz waits for `remediationReady` before allowing retry.
+  const [remediationRequest, setRemediationRequest] = useState<{
+    startSeconds: number;
+    replayUntilSeconds: number;
+    requestId: number; // increments on every request so the player effect re-fires
+  } | null>(null);
+  const [remediationReady, setRemediationReady] = useState(false);
+  const remediationRequestSeqRef = useRef(0);
 
   const hasQuiz = quizQuestions.length > 0;
 
@@ -770,6 +845,11 @@ export function LessonViewerClient(props: LessonViewerProps) {
                 onEnded={handleVideoEnded}
                 onPassedIdsChange={setPassedTriggerIds}
                 onLessonCompleted={() => setIsCompleted(true)}
+                remediationRequest={remediationRequest}
+                onRemediationComplete={() => {
+                  setRemediationReady(true);
+                  setRemediationRequest(null);
+                }}
               />
             </div>
           )}
@@ -946,8 +1026,34 @@ export function LessonViewerClient(props: LessonViewerProps) {
                   lessonId={lessonId}
                   questions={quizQuestions}
                   alreadyPassed={quizPassed}
-                  lastScore={quizLastScore}
-                  lastTotal={quizLastTotal}
+                  remediationReady={remediationReady}
+                  onWrongAnswer={(remediation) => {
+                    // Module 05: drive the video player to the remediation
+                    // segment. Bail out if the question doesn't have a usable
+                    // window — quiz falls back to inline retry.
+                    const start = remediation.start_seconds;
+                    const until = remediation.replay_until_seconds;
+                    if (start == null || until == null || until <= start) return;
+
+                    // If the lesson has multiple videos and the remediation
+                    // points at a specific one, switch the active video.
+                    if (
+                      remediation.video_index != null &&
+                      remediation.video_index !== activeVideoIdx &&
+                      remediation.video_index >= 0 &&
+                      remediation.video_index < allVideos.length
+                    ) {
+                      setActiveVideoIdx(remediation.video_index);
+                    }
+
+                    setRemediationReady(false);
+                    remediationRequestSeqRef.current += 1;
+                    setRemediationRequest({
+                      startSeconds: start,
+                      replayUntilSeconds: until,
+                      requestId: remediationRequestSeqRef.current,
+                    });
+                  }}
                   onPassed={() => setIsCompleted(true)}
                 />
               </div>
