@@ -1,5 +1,8 @@
 # Astro Decan Fetch Planet Signs API Error Documentation
 
+- Status: Resolved (2026-04-08)
+- Resolution: The PGRST205 error described below comes from PostgREST when the `astro_decan_new_infos` table doesn't yet exist in the schema cache. The table is created and seeded by migration `20260408000106_astro_decan_new_infos` which is registered in the admin migration runner at `/admin/db/migrations`. To resolve this error in any environment: log in as admin, open `/admin/db/migrations`, and click **Run migration** on the "Astro Decan New Infos" row. The migration is idempotent, so re-running it is safe. After the run, refresh PostgREST's schema cache via `NOTIFY pgrst, 'reload schema';` if needed (Supabase usually picks it up automatically). The fix path documented in sections 5–8 below remains accurate as a debugging guide.
+
 ## Error Observed
 
 While calling the API endpoint:

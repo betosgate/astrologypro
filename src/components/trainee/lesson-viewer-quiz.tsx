@@ -4,36 +4,67 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { CheckCircle2, XCircle, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import {
+  CheckCircle2,
+  XCircle,
+  ChevronLeft,
+  Loader2,
+  Video,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// ---------------------------------------------------------------------------
-// Types — options from the API have no correct_answer exposed to client
-// ---------------------------------------------------------------------------
+// ─── Types ──────────────────────────────────────────────────────────────────
+
 type QuizOption = string | { text?: string | null } | null | undefined;
+
+export interface QuestionRemediation {
+  video_id: string | null;
+  video_index: number | null;
+  start_seconds: number | null;
+  replay_until_seconds: number | null;
+  message: string | null;
+}
 
 export type QuizQuestionClient = {
   id: string;
   question: string;
   options: QuizOption[];
   explanation?: string | null;
-};
-
-export type QuizResultItem = {
-  question: string;
-  correct: boolean;
-  selected: number;
-  correct_index: number;
-  explanation: string | null;
+  // Module 04 — exposed by /api/trainee/training/lessons/[id]
+  remediation_video_id?: string | null;
+  remediation_video_index?: number | null;
+  remediation_start_seconds?: number | null;
+  remediation_replay_until_seconds?: number | null;
+  remediation_message?: string | null;
 };
 
 interface LessonViewerQuizProps {
   lessonId: string;
   questions: QuizQuestionClient[];
   alreadyPassed: boolean;
-  lastScore?: number | null;
-  lastTotal?: number | null;
-  onPassed?: () => void; // called after successful pass to trigger completion UI
+  /**
+   * Called when the learner answers a question wrong AND that question has
+   * remediation metadata. Parent should pause the video, seek to
+   * `remediation.start_seconds`, play, and call `onRemediationReady` once
+   * playback has reached `remediation.replay_until_seconds`.
+   *
+   * If this prop is not supplied, the quiz falls back to inline retry
+   * (the wrong answer is highlighted, the learner picks again).
+   */
+  onWrongAnswer?: (
+    remediation: QuestionRemediation,
+    questionIndex: number,
+  ) => void;
+  /**
+   * Imperative signal from the parent telling the quiz "remediation is done,
+   * the learner can retry now". Parent toggles this to true once playback
+   * has reached the required replay-until timestamp. Quiz reads it and
+   * re-enables the retry interaction. Toggle back to false after the next
+   * Submit click.
+   */
+  remediationReady?: boolean;
+  /** Called after the lesson quiz is fully passed (all answers correct). */
+  onPassed?: () => void;
 }
 
 function getOptionLabel(option: QuizOption, fallback: string) {
@@ -41,354 +72,323 @@ function getOptionLabel(option: QuizOption, fallback: string) {
     const trimmed = option.trim();
     return trimmed.length > 0 ? trimmed : fallback;
   }
-
   if (option && typeof option === "object" && typeof option.text === "string") {
     const trimmed = option.text.trim();
     return trimmed.length > 0 ? trimmed : fallback;
   }
-
   return fallback;
 }
+
+function questionRemediation(q: QuizQuestionClient): QuestionRemediation | null {
+  const hasAny =
+    q.remediation_start_seconds != null ||
+    q.remediation_replay_until_seconds != null ||
+    q.remediation_message != null;
+  if (!hasAny) return null;
+  return {
+    video_id: q.remediation_video_id ?? null,
+    video_index: q.remediation_video_index ?? null,
+    start_seconds: q.remediation_start_seconds ?? null,
+    replay_until_seconds: q.remediation_replay_until_seconds ?? null,
+    message: q.remediation_message ?? null,
+  };
+}
+
+// ─── Component ──────────────────────────────────────────────────────────────
 
 export function LessonViewerQuiz({
   lessonId,
   questions,
   alreadyPassed,
-  lastScore,
-  lastTotal,
+  onWrongAnswer,
+  remediationReady,
   onPassed,
 }: LessonViewerQuizProps) {
-  const [currentQ, setCurrentQ] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [currentIdx, setCurrentIdx] = useState(0);
+  // Per-question stored answers — used at the end to call the legacy batch
+  // /quiz endpoint which records the attempt + completes the lesson.
+  const [confirmedAnswers, setConfirmedAnswers] = useState<Record<number, number>>({});
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [results, setResults] = useState<QuizResultItem[] | null>(null);
-  const [score, setScore] = useState<number | null>(null);
-  const [total, setTotal] = useState<number | null>(null);
-  const [passed, setPassed] = useState(false);
-  const [cooldownEndsAt, setCooldownEndsAt] = useState<Date | null>(null);
-  const [cooldownSecondsLeft, setCooldownSecondsLeft] = useState<number>(0);
-  const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [isWrong, setIsWrong] = useState(false);
+  const [waitingForReplay, setWaitingForReplay] = useState(false);
+  const [showWrongMessage, setShowWrongMessage] = useState<string | null>(null);
+  const [allDone, setAllDone] = useState(false);
 
-  // ── Cooldown countdown timer ───────────────────────────────────────────────
+  const wrongMessageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Parent signal: remediation playback finished, retry is allowed.
   useEffect(() => {
-    if (!cooldownEndsAt) return;
-
-    function tick() {
-      const remaining = Math.ceil((cooldownEndsAt!.getTime() - Date.now()) / 1000);
-      if (remaining <= 0) {
-        setCooldownSecondsLeft(0);
-        setCooldownEndsAt(null);
-        if (cooldownTimerRef.current) {
-          clearInterval(cooldownTimerRef.current);
-          cooldownTimerRef.current = null;
-        }
-      } else {
-        setCooldownSecondsLeft(remaining);
-      }
+    if (waitingForReplay && remediationReady) {
+      setWaitingForReplay(false);
+      // Hide the toast-style banner once focus returns to the quiz.
+      setShowWrongMessage(null);
     }
+  }, [waitingForReplay, remediationReady]);
 
-    tick(); // run immediately
-    cooldownTimerRef.current = setInterval(tick, 1000);
+  useEffect(() => {
     return () => {
-      if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+      if (wrongMessageTimerRef.current) clearTimeout(wrongMessageTimerRef.current);
     };
-  }, [cooldownEndsAt]);
+  }, []);
 
   if (alreadyPassed) {
     return (
-      <div className="rounded-xl border border-green-500/30 bg-green-500/5 px-4 py-4 space-y-1">
+      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-4 space-y-1">
         <div className="flex items-center gap-2">
-          <CheckCircle2 className="size-5 text-green-500 shrink-0" />
-          <span className="text-sm font-semibold text-green-600">Quiz Passed</span>
+          <CheckCircle2 className="size-4 text-emerald-600" />
+          <p className="text-sm font-semibold text-emerald-700">Quiz already passed.</p>
         </div>
-        {lastScore != null && lastTotal != null && (
-          <p className="text-xs text-green-600/80 pl-7">
-            Score: {lastScore}/{lastTotal} ({Math.round((lastScore / lastTotal) * 100)}%)
-          </p>
-        )}
+        <p className="text-xs text-muted-foreground">
+          You have already completed the quiz for this lesson.
+        </p>
       </div>
     );
   }
 
-  const totalQ = questions.length;
-  const progressPct = totalQ > 0 ? Math.round(((currentQ + 1) / totalQ) * 100) : 0;
-  const allAnswered = questions.every((_, i) => answers[i] !== undefined);
-
-  function selectOption(optIdx: number) {
-    if (results) return; // quiz submitted
-    setAnswers((prev) => ({ ...prev, [currentQ]: optIdx }));
+  if (!questions || questions.length === 0) {
+    return (
+      <div className="rounded-md border border-dashed bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+        No quiz questions are available for this lesson yet.
+      </div>
+    );
   }
 
+  if (allDone) {
+    return (
+      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-4 space-y-2">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="size-5 text-emerald-600" />
+          <p className="text-sm font-semibold text-emerald-700">
+            Quiz complete — every question answered correctly.
+          </p>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          The lesson has been marked complete. You can move on to the next lesson.
+        </p>
+      </div>
+    );
+  }
+
+  const currentQuestion = questions[currentIdx];
+  const totalCount = questions.length;
+  const answeredCount = Object.keys(confirmedAnswers).length;
+  const progressPct = Math.round((answeredCount / totalCount) * 100);
+
   async function handleSubmit() {
-    if (!allAnswered) {
-      toast.error("Please answer all questions before submitting.");
-      return;
-    }
+    if (selectedOption == null || waitingForReplay || submitting) return;
 
     setSubmitting(true);
+    setIsWrong(false);
     try {
-      const answersArr = questions.map((_, i) => answers[i] as number);
+      // 1. Per-question grading via the new /quiz/answer endpoint.
       const res = await fetch(
-        `/api/trainee/training/lessons/${lessonId}/quiz`,
+        `/api/trainee/training/lessons/${lessonId}/quiz/answer`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ answers: answersArr }),
-        }
+          body: JSON.stringify({
+            question_id: currentQuestion.id,
+            answer_index: selectedOption,
+          }),
+        },
       );
-
-      if (res.status === 429) {
-        const errJson = await res.json().catch(() => ({}));
-        if (errJson.cooldown && errJson.cooldown_ends_at) {
-          setCooldownEndsAt(new Date(errJson.cooldown_ends_at));
-          setCooldownSecondsLeft((errJson.minutes_left ?? 1) * 60);
-        }
-        throw new Error(errJson.error ?? "Too many attempts. Please wait before retrying.");
-      }
+      const body = await res.json();
 
       if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error ?? "Failed to submit quiz");
+        toast.error("Could not submit answer", {
+          description: body.error ?? `HTTP ${res.status}`,
+        });
+        return;
       }
 
-      const json: {
-        score: number;
-        total: number;
-        passed: boolean;
-        results: QuizResultItem[];
-      } = await res.json();
+      if (body.correct === true) {
+        // Record the chosen answer; advance.
+        const next = { ...confirmedAnswers, [currentIdx]: selectedOption };
+        setConfirmedAnswers(next);
+        setSelectedOption(null);
+        setIsWrong(false);
 
-      setScore(json.score);
-      setTotal(json.total);
-      setPassed(json.passed);
-      setResults(json.results);
-
-      if (json.passed) {
-        toast.success("Quiz passed! Lesson marked as complete.");
-        onPassed?.();
+        if (currentIdx + 1 >= totalCount) {
+          // All questions answered correctly — finalize via the existing
+          // batch endpoint to record the attempt + complete the lesson.
+          await finalize(next);
+        } else {
+          setCurrentIdx((i) => i + 1);
+        }
+        return;
       }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Could not submit quiz.";
-      toast.error(msg);
+
+      // Wrong answer.
+      setIsWrong(true);
+      const remediation =
+        (body.remediation as QuestionRemediation | null | undefined) ??
+        questionRemediation(currentQuestion);
+
+      if (remediation && onWrongAnswer) {
+        // Hand control to the parent — it will pause/seek/play the video
+        // and signal back via remediationReady when playback has finished
+        // the required replay window.
+        const message =
+          remediation.message ??
+          "Let's review the relevant part of the video, then try again.";
+        setShowWrongMessage(message);
+        setWaitingForReplay(true);
+
+        // Auto-hide the inline message after ~6s — the parent's video
+        // playback continues independently.
+        if (wrongMessageTimerRef.current) clearTimeout(wrongMessageTimerRef.current);
+        wrongMessageTimerRef.current = setTimeout(() => {
+          setShowWrongMessage(null);
+        }, 6000);
+
+        onWrongAnswer(remediation, currentIdx);
+      } else {
+        // Inline retry fallback when there is no remediation metadata.
+        const message =
+          (body.explanation as string | null) ??
+          currentQuestion.explanation ??
+          "That's not quite right. Try again.";
+        toast.warning("Incorrect", { description: message });
+      }
+    } catch (err) {
+      toast.error("Network error", {
+        description: err instanceof Error ? err.message : String(err),
+      });
     } finally {
       setSubmitting(false);
     }
   }
 
-  function handleRetry() {
-    setAnswers({});
-    setResults(null);
-    setScore(null);
-    setTotal(null);
-    setPassed(false);
-    setCurrentQ(0);
-    // Do not clear cooldown here — cooldown persists across retry button clicks
+  async function finalize(answersByIndex: Record<number, number>) {
+    // Build the answers array in question order so the legacy batch route
+    // can grade and record the attempt.
+    const answersArray = questions.map((_, idx) => answersByIndex[idx] ?? -1);
+    try {
+      const res = await fetch(
+        `/api/trainee/training/lessons/${lessonId}/quiz`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ answers: answersArray }),
+        },
+      );
+      const body = await res.json();
+      if (!res.ok) {
+        toast.error("Could not record quiz attempt", {
+          description: body.error ?? `HTTP ${res.status}`,
+        });
+        return;
+      }
+      setAllDone(true);
+      toast.success("Quiz complete", {
+        description: "All questions answered correctly. Lesson marked complete.",
+      });
+      onPassed?.();
+    } catch (err) {
+      toast.error("Network error finalizing quiz", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
-  const isCoolingDown = cooldownEndsAt !== null && cooldownSecondsLeft > 0;
-
-  function formatCountdown(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return m > 0 ? `${m}m ${s.toString().padStart(2, "0")}s` : `${s}s`;
-  }
-
-  const q = questions[currentQ];
-
-  // ---- Results view ----
-  if (results) {
-    return (
-      <div className="space-y-4">
-        {/* Score summary */}
-        <div
-          className={cn(
-            "flex items-center gap-3 rounded-xl border px-4 py-3",
-            passed
-              ? "border-green-500/40 bg-green-500/5"
-              : "border-red-400/40 bg-red-500/5"
-          )}
-        >
-          {passed ? (
-            <CheckCircle2 className="size-5 text-green-500 shrink-0" />
-          ) : (
-            <XCircle className="size-5 text-red-500 shrink-0" />
-          )}
-          <div className="flex-1">
-            <p
-              className={cn(
-                "font-semibold text-sm",
-                passed ? "text-green-600" : "text-red-600"
-              )}
-            >
-              {passed ? "You passed!" : "Not quite — try again"}
-            </p>
-            <p
-              className={cn(
-                "text-xs mt-0.5",
-                passed ? "text-green-600/80" : "text-red-600/80"
-              )}
-            >
-              {score}/{total} correct (
-              {total && total > 0
-                ? Math.round(((score ?? 0) / total) * 100)
-                : 0}
-              %)
-            </p>
-          </div>
-        </div>
-
-        {/* Per-question results */}
-        <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-          {results.map((r, i) => (
-            <div
-              key={i}
-              className={cn(
-                "rounded-lg border p-3 text-sm space-y-2",
-                r.correct
-                  ? "border-green-500/30 bg-green-500/5"
-                  : "border-red-400/30 bg-red-500/5"
-              )}
-            >
-              <div className="flex items-start gap-2">
-                {r.correct ? (
-                  <CheckCircle2 className="size-4 text-green-500 shrink-0 mt-0.5" />
-                ) : (
-                  <XCircle className="size-4 text-red-500 shrink-0 mt-0.5" />
-                )}
-                <p className="font-medium text-xs">
-                  Q{i + 1}: {r.question}
-                </p>
-              </div>
-              {!r.correct && (
-                <div className="pl-6 space-y-0.5 text-xs">
-                  <p className="text-red-600">
-                    Your answer:{" "}
-                    {getOptionLabel(questions[i]?.options[r.selected], "—")}
-                  </p>
-                  <p className="text-green-600">
-                    Correct:{" "}
-                    {getOptionLabel(questions[i]?.options[r.correct_index], "—")}
-                  </p>
-                </div>
-              )}
-              {r.explanation && (
-                <p className="pl-6 text-xs text-muted-foreground italic">
-                  {r.explanation}
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {!passed && (
-          <>
-            {isCoolingDown && (
-              <div className="flex items-center gap-2 rounded-lg border border-amber-400/40 bg-amber-500/5 px-3 py-2.5 text-sm text-amber-600">
-                <Clock className="size-4 shrink-0" />
-                <span>
-                  Please wait{" "}
-                  <span className="font-semibold tabular-nums">
-                    {formatCountdown(cooldownSecondsLeft)}
-                  </span>{" "}
-                  before trying again.
-                </span>
-              </div>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRetry}
-              disabled={isCoolingDown}
-              className="w-full"
-              aria-disabled={isCoolingDown}
-            >
-              {isCoolingDown ? `Retry available in ${formatCountdown(cooldownSecondsLeft)}` : "Try Again"}
-            </Button>
-          </>
-        )}
-      </div>
-    );
-  }
-
-  // ---- Question view ----
   return (
     <div className="space-y-4">
-      {/* Progress header */}
-      <div className="space-y-2">
+      {/* Progress + question counter */}
+      <div className="space-y-1.5">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>
-            Question {currentQ + 1} of {totalQ}
+          <span className="tabular-nums">
+            Question {currentIdx + 1} of {totalCount}
           </span>
-          <span>{progressPct}%</span>
+          <span className="tabular-nums">{answeredCount} answered</span>
         </div>
-        <Progress value={progressPct} className="h-1" />
+        <Progress value={progressPct} className="h-1.5" />
       </div>
 
-      {/* Question */}
-      <p className="text-sm font-medium leading-snug">{q.question}</p>
+      {/* Question text */}
+      <div className="rounded-xl border bg-card p-4 space-y-3">
+        <p className="text-sm font-medium leading-relaxed">{currentQuestion.question}</p>
 
-      {/* Options */}
-      <div className="space-y-2">
-        {q.options.map((opt, oIdx) => {
-          const isSelected = answers[currentQ] === oIdx;
-          const label = getOptionLabel(opt, `Option ${oIdx + 1}`);
-          return (
-            <button
-              key={oIdx}
-              onClick={() => selectOption(oIdx)}
-              className={cn(
-                "w-full rounded-lg border px-4 py-2.5 text-left text-sm transition-colors",
-                isSelected
-                  ? "border-primary bg-primary/5 text-primary"
-                  : "border-border hover:border-primary/40 hover:bg-muted/40"
-              )}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
+        {/* Options */}
+        <div className="space-y-2">
+          {currentQuestion.options.map((opt, oIdx) => {
+            const label = getOptionLabel(opt, `Option ${oIdx + 1}`);
+            const isSelected = selectedOption === oIdx;
+            const disabled = waitingForReplay || submitting;
+            return (
+              <button
+                key={oIdx}
+                type="button"
+                onClick={() => !disabled && setSelectedOption(oIdx)}
+                disabled={disabled}
+                className={cn(
+                  "w-full text-left rounded-lg border px-3 py-2 text-sm transition-colors",
+                  isSelected
+                    ? isWrong
+                      ? "border-destructive bg-destructive/5"
+                      : "border-primary bg-primary/5"
+                    : "hover:border-primary/30 hover:bg-muted/40",
+                  disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer",
+                )}
+              >
+                <span className="text-muted-foreground tabular-nums mr-2">
+                  {String.fromCharCode(65 + oIdx)}.
+                </span>
+                {label}
+              </button>
+            );
+          })}
+        </div>
 
-      {/* Navigation */}
-      <div className="flex items-center justify-between gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setCurrentQ((q) => Math.max(0, q - 1))}
-          disabled={currentQ === 0}
-          aria-label="Previous question"
-        >
-          <ChevronLeft className="size-4 mr-1" />
-          Prev
-        </Button>
+        {/* Wrong-answer remediation banner */}
+        {isWrong && showWrongMessage && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700">
+            <XCircle className="size-4 shrink-0 mt-0.5" />
+            <p className="leading-snug">{showWrongMessage}</p>
+          </div>
+        )}
 
-        {currentQ < totalQ - 1 ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setCurrentQ((q) => Math.min(totalQ - 1, q + 1))}
-            aria-label="Next question"
-          >
-            Next
-            <ChevronRight className="size-4 ml-1" />
-          </Button>
-        ) : (
+        {waitingForReplay && (
+          <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-primary">
+            <Video className="size-4 shrink-0 animate-pulse" />
+            <p className="leading-snug">
+              Replaying the relevant video segment. The retry button will
+              re-enable when the segment finishes.
+            </p>
+          </div>
+        )}
+
+        {/* Submit / retry */}
+        <div className="flex items-center justify-between pt-1">
+          <div className="text-xs text-muted-foreground">
+            {currentIdx > 0 && (
+              <button
+                type="button"
+                onClick={() => setCurrentIdx((i) => Math.max(0, i - 1))}
+                disabled={waitingForReplay || submitting}
+                className="inline-flex items-center gap-1 hover:text-foreground transition-colors disabled:opacity-50"
+              >
+                <ChevronLeft className="size-3" />
+                Previous
+              </button>
+            )}
+          </div>
           <Button
             size="sm"
             onClick={handleSubmit}
-            disabled={!allAnswered || submitting || isCoolingDown}
+            disabled={
+              selectedOption == null || waitingForReplay || submitting
+            }
           >
-            {submitting ? "Submitting…" : "Submit Quiz"}
+            {submitting && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
+            {isWrong && !waitingForReplay
+              ? "Try again"
+              : currentIdx + 1 === totalCount
+                ? "Submit final answer"
+                : "Submit and continue"}
           </Button>
-        )}
+        </div>
       </div>
-
-      {/* Answered count */}
-      {!allAnswered && (
-        <p className="text-xs text-center text-muted-foreground">
-          {Object.keys(answers).length}/{totalQ} answered
-        </p>
-      )}
     </div>
   );
 }
