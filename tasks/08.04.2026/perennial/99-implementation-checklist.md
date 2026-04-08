@@ -22,6 +22,7 @@ Read this file after reading:
 7. `06-ux-acceptance-criteria-and-edge-cases.md`
 8. `07-ui-copy-parity-and-adaptation.md`
 9. `08-field-mapping-and-payload-normalization.md`
+10. `09-payment-flow-contract-and-stripe-lifecycle.md`
 
 ## Non-Negotiable Summary
 
@@ -32,15 +33,19 @@ Before coding, lock these rules:
 3. Every member must have a unique email.
 4. Do not render password or confirm-password inputs.
 5. Generated passwords are emailed automatically after successful payment.
-6. Membership becomes active only after successful Stripe payment.
-7. `Single`, `Couple`, `Family` pricing is fixed and exact.
-8. `relation + sub_relation` is required for additional members.
-9. The full optional questionnaire remains for every member.
-10. Only the primary member manages billing.
-11. Non-billing members still receive full PM access after activation.
-12. `Single` requires exactly 1 completed member.
-13. `Couple` requires exactly 2 completed members.
-14. `Family` requires 3 to 5 completed members.
+6. Generated passwords must satisfy the internal strength rule.
+7. Membership becomes active only after successful Stripe payment.
+8. `Single`, `Couple`, `Family` pricing is fixed and exact.
+9. `relation + sub_relation` is required for additional members.
+10. The full optional questionnaire remains for every member.
+11. Only the primary member manages billing.
+12. Non-billing members still receive full PM access after activation.
+13. `Single` requires exactly 1 completed member.
+14. `Couple` requires exactly 2 completed members.
+15. `Family` requires 3 to 5 completed members.
+16. The page must use the current AstrologyPro theme and shared design-system patterns.
+17. The Perennial payment lifecycle must follow the dedicated payment-flow contract rather than ad-hoc checkout logic.
+18. `STRIPE_PRICE_COMMUNITY_COUPLE` is required for full `Couple` checkout support and is currently missing from `.env.local`.
 
 ## Recommended Build Order
 
@@ -56,7 +61,8 @@ Before coding, lock these rules:
 1. Add the new Perennial signup page route.
 2. Make the page full-screen and product-facing.
 3. Do not build it as a modal, drawer, or tiny embedded form.
-4. Add strong section scaffolding:
+4. Keep the implementation visually aligned with the current AstrologyPro theme and shared UI components.
+5. Add strong section scaffolding:
    - page intro
    - plan selection
    - household forms
@@ -147,6 +153,16 @@ Before coding, lock these rules:
 3. Distinguish payment pending vs membership active states clearly.
 4. Add loading, error, retry, and success affordances.
 5. Do not imply active membership before success.
+6. Treat generated credentials as subject to a strong backend password policy even though the form does not collect passwords.
+
+### Step 10A: Implement the Stripe lifecycle intentionally
+
+1. Use the dedicated Perennial payment-flow contract.
+2. Ensure payment init is tied to a durable pending-signup payload.
+3. Use Perennial-specific success and cancel return routes.
+4. Do not rely on client-only state after Stripe redirect.
+5. Treat verified backend payment confirmation as the source of truth for activation and account creation.
+6. Explicitly account for the missing `STRIPE_PRICE_COMMUNITY_COUPLE` env dependency.
 
 ### Step 11: Polish mobile and responsive behavior
 
@@ -195,3 +211,5 @@ The task is done only if:
 3. the flow is coherent from plan selection through review/payment
 4. no core requirement from the task set is left as a "follow-up"
 5. the feature can be implemented by an AI in one run without needing clarification on the product model
+6. the final page looks like a native AstrologyPro page, not a disconnected redesign
+7. the missing `STRIPE_PRICE_COMMUNITY_COUPLE` setup requirement is documented clearly for manual env configuration

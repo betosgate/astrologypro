@@ -17,6 +17,20 @@ Implement clear Perennial plan selection with strict household-capacity enforcem
 - `Couple` = `2` total members = `$29.95/month`
 - `Family` = `3` to `5` total members = `$39.95/month`
 
+## Stripe Env Requirement
+
+To support these three plans cleanly, the backend/payment setup needs three Stripe price env vars:
+
+1. `STRIPE_PRICE_COMMUNITY_INDIVIDUAL`
+2. `STRIPE_PRICE_COMMUNITY_COUPLE`
+3. `STRIPE_PRICE_COMMUNITY_FAMILY`
+
+Current known status in this repo:
+
+1. `STRIPE_PRICE_COMMUNITY_INDIVIDUAL` exists
+2. `STRIPE_PRICE_COMMUNITY_FAMILY` exists
+3. `STRIPE_PRICE_COMMUNITY_COUPLE` is missing and must be added manually later
+
 ## Confirmed Capacity Rules
 
 1. `Single` allows exactly 1 total member.
@@ -81,3 +95,4 @@ The order summary must always show:
 4. changing plans updates limits and summary immediately
 5. the UI never permits invalid plan/member-count combinations without surfacing an error state
 6. `Family` cannot proceed to payment with fewer than 3 completed members
+7. the task clearly identifies the missing `STRIPE_PRICE_COMMUNITY_COUPLE` dependency

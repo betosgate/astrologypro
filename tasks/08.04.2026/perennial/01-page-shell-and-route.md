@@ -53,6 +53,8 @@ The page should include these top-level sections in order:
 
 The page must feel intentional and premium, not like admin CRUD.
 
+It must also remain visually consistent with the current AstrologyPro site theme and shared component language.
+
 Requirements:
 
 1. strong page title and plan framing
@@ -61,6 +63,7 @@ Requirements:
 4. polished empty/add-member states
 5. visible validation and error affordances
 6. pricing summary that feels transactional and trustworthy
+7. styling that clearly belongs to the current site rather than a separate branded experience
 
 ## Required Labels / Conceptual Copy
 
@@ -81,3 +84,4 @@ The page should clearly communicate:
 3. the shell has clear sections for plan, members, and pricing
 4. the page supports long-form completion without layout collapse
 5. the page feels like a purpose-built signup journey
+6. the page visually matches the current AstrologyPro theme and shared design system
