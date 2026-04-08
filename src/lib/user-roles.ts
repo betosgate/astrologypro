@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { hasValidMysterySchoolBilling } from "@/lib/mystery-school/access";
 
 export interface UserPortal {
   role: string;
@@ -13,7 +14,9 @@ export interface UserPortal {
  *
  * Parallel membership model:
  *   - community_members with membership_type = 'perennial_mandalism' → PM portal
- *   - mystery_school_students with status = 'active' (or unexpired cancelled) → MS portal
+ *   - mystery_school_students with status = 'active'
+ *     or 'cancelled' with future access_expires_at → MS portal
+ *   - the MS row must also contain the required payment-linked fields
  *   - A user can have BOTH records → dual-entitlement, both portals shown
  */
 export async function getUserPortals(
@@ -36,7 +39,7 @@ export async function getUserPortals(
       .maybeSingle(),
     supabase
       .from("mystery_school_students")
-      .select("id, status, access_expires_at")
+      .select("id, status, access_expires_at, stripe_subscription_id, one_time_fee_paid, one_time_fee_amount")
       .eq("user_id", userId)
       .maybeSingle(),
     supabase.from("trainees").select("id").eq("user_id", userId).maybeSingle(),
@@ -65,42 +68,32 @@ export async function getUserPortals(
     });
   }
 
-  // MS portal: active mystery_school_students (or cancelled with future access_expires_at)
+  // MS portal: active mystery_school_students, plus cancelled students
+  // who still have access until the paid-through date.
   if (mysteryStudent.data) {
     const msData = mysteryStudent.data as {
       id: string;
       status: string;
       access_expires_at: string | null;
+      stripe_subscription_id: string | null;
+      one_time_fee_paid: boolean;
+      one_time_fee_amount: number | null;
     };
-    const isActive = msData.status === "active";
     const isCancelledWithAccess =
       msData.status === "cancelled" &&
-      msData.access_expires_at &&
+      !!msData.access_expires_at &&
       new Date(msData.access_expires_at) > new Date();
 
-    if (isActive || isCancelledWithAccess) {
+    if (
+      hasValidMysterySchoolBilling(msData) &&
+      (msData.status === "active" || isCancelledWithAccess)
+    ) {
       portals.push({
         role: "mystery_school",
         label: "Mystery School",
         href: "/mystery-school",
       });
     }
-  }
-
-  // Legacy fallback: if community_members.membership_type is 'mystery_school'
-  // but no mystery_school_students record exists, still show MS portal
-  // (handles pre-migration users)
-  if (
-    community.data &&
-    community.data.membership_type === "mystery_school" &&
-    community.data.membership_status === "active" &&
-    !mysteryStudent.data
-  ) {
-    portals.push({
-      role: "mystery_school",
-      label: "Mystery School",
-      href: "/mystery-school",
-    });
   }
 
   if (trainee.data)

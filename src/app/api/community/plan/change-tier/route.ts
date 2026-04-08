@@ -91,9 +91,26 @@ export async function POST(request: NextRequest) {
       .select("id", { count: "exact", head: true })
       .eq("member_id", member.id);
 
+    const currentFamilyCount = familyCount ?? 0;
+
+    // Reject downgrades that would put the household over the new tier's
+    // hard ceiling. Stripe item updates can succeed but the user would be
+    // sitting over capacity with no clean way to enforce it later.
+    if (
+      newTier.max_total_members != null &&
+      currentFamilyCount > newTier.max_total_members
+    ) {
+      return NextResponse.json(
+        {
+          error: `This tier supports up to ${newTier.max_total_members} household members, but you currently have ${currentFamilyCount}. Remove ${currentFamilyCount - newTier.max_total_members} member${currentFamilyCount - newTier.max_total_members === 1 ? "" : "s"} before downgrading.`,
+        },
+        { status: 422 }
+      );
+    }
+
     const newExtraCount = Math.max(
       0,
-      (familyCount ?? 0) - newTier.base_member_limit
+      currentFamilyCount - newTier.base_member_limit
     );
 
     // Update Stripe subscription if one exists

@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
+import { getSystemConfigValue } from "@/lib/astro/system-settings";
 
 export const dynamic = "force-dynamic";
 
-const LAMBDA_URL = process.env.ASTRO_PLANET_RETURN_URL ?? "https://a5p6f3zd26utex5rxmbu7vromu0jsszy.lambda-url.us-east-1.on.aws/";
+// Reads ASTRO_PLANET_RETURN_URL from astro_system_settings (type=SYSTEM_CONFIG)
+// first, then falls back to the env var via the helper. The previous
+// hardcoded Lambda URL has been removed — the route now returns 500 with a
+// clear message when neither source is configured, which is the right
+// failure mode (the URL is environment-specific and silently using a stale
+// fallback would be wrong).
 
 const ALLOWED_STEPS = [
   "jupiter_return",
@@ -25,8 +31,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid steps value" }, { status: 400 });
   }
 
+  const lambdaUrl = await getSystemConfigValue("ASTRO_PLANET_RETURN_URL");
+  if (!lambdaUrl) {
+    return NextResponse.json(
+      {
+        error:
+          "ASTRO_PLANET_RETURN_URL is not configured. Add a SYSTEM_CONFIG row at /admin/astro-system-settings or set the env var.",
+      },
+      { status: 500 }
+    );
+  }
+
   try {
-    const res = await fetch(LAMBDA_URL, {
+    const res = await fetch(lambdaUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

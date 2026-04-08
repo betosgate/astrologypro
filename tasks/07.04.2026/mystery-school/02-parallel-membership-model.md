@@ -1,7 +1,7 @@
 # Task 02: Parallel Membership Model
 
-- Status: Completed (2026-04-08, verified)
-- Completion Notes: mystery_school_students table provisioned in src/app/api/stripe/webhooks/route.ts on enrollment; community_members.membership_type is no longer the single source of truth — dual access supported.
+- Status: Completed (2026-04-08, re-audited)
+- Completion Notes: mystery_school_students is now the effective Mystery School entitlement source; stale membership_type-based guards were replaced with requireMysterySchoolAccess(), legacy community_members mystery_school users were backfilled via 20260408000105_backfill_legacy_mystery_school_students.sql so no legacy user is missing a student row, and Stripe lifecycle webhooks now sync Mystery School cancel/resume/delete state into mystery_school_students without touching PM membership fields.
 Date: 2026-04-07
 Category: Mystery School Module
 
@@ -63,3 +63,4 @@ Unacceptable outcome:
 - PM billing and access remain intact after Mystery School purchase
 - Mystery School is provisioned without replacing PM
 - The system has a real multi-membership source of truth, not a conflicting single-value membership hack
+- Later Stripe subscription lifecycle events keep Mystery School entitlement in sync through `mystery_school_students`

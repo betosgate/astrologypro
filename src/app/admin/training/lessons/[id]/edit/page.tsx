@@ -45,6 +45,13 @@ interface QuizQuestion {
   correct_answer: number;
   explanation: string | null;
   priority: number;
+  // Module 04 — question-level remediation metadata. All optional; nulls
+  // mean the runtime falls back to inline retry instead of video remediation.
+  remediation_video_id?: string | null;
+  remediation_video_index?: number | null;
+  remediation_start_seconds?: number | null;
+  remediation_replay_until_seconds?: number | null;
+  remediation_message?: string | null;
 }
 
 const ASSET_TYPES = ["pdf", "doc", "image", "link", "other"] as const;
@@ -148,6 +155,14 @@ export default function EditLessonPage() {
     correct_answer: "0",
     explanation: "",
     priority: "0",
+    // Module 04 / 05: per-question remediation. All optional.
+    // When start/until are filled, the new stepwise quiz client will pause
+    // the video on a wrong answer, seek to start_seconds, replay until
+    // replay_until_seconds, then return focus to the quiz for retry.
+    remediation_video_index: "",
+    remediation_start_seconds: "",
+    remediation_replay_until_seconds: "",
+    remediation_message: "",
   });
   const [quizSaving, setQuizSaving] = useState(false);
 
@@ -402,6 +417,22 @@ export default function EditLessonPage() {
       toast.error("Correct answer index exceeds number of filled options.");
       return;
     }
+    // Coerce remediation fields. Empty strings -> null.
+    const parseIntOrNull = (s: string) => {
+      if (!s.trim()) return null;
+      const n = parseInt(s, 10);
+      return Number.isFinite(n) && n >= 0 ? n : null;
+    };
+    const remStart = parseIntOrNull(quizForm.remediation_start_seconds);
+    const remUntil = parseIntOrNull(quizForm.remediation_replay_until_seconds);
+    const remIndex = parseIntOrNull(quizForm.remediation_video_index);
+    if (remStart !== null && remUntil !== null && remUntil <= remStart) {
+      toast.error(
+        "Remediation replay-until seconds must be greater than start seconds.",
+      );
+      return;
+    }
+
     setQuizSaving(true);
     try {
       const res = await fetch(`/api/admin/training/quiz/${id}`, {
@@ -413,6 +444,10 @@ export default function EditLessonPage() {
           correct_answer: correctIdx,
           explanation: quizForm.explanation.trim() || null,
           priority: parseInt(quizForm.priority, 10) || 0,
+          remediation_video_index: remIndex,
+          remediation_start_seconds: remStart,
+          remediation_replay_until_seconds: remUntil,
+          remediation_message: quizForm.remediation_message.trim() || null,
         }),
       });
       const data = await res.json();
@@ -430,6 +465,10 @@ export default function EditLessonPage() {
         correct_answer: "0",
         explanation: "",
         priority: "0",
+        remediation_video_index: "",
+        remediation_start_seconds: "",
+        remediation_replay_until_seconds: "",
+        remediation_message: "",
       });
       await loadQuestions();
     } catch {
@@ -1340,6 +1379,118 @@ export default function EditLessonPage() {
                   placeholder="Optional explanation shown after answering…"
                 />
               </div>
+
+              {/* ── Module 04 / 05: question-level video remediation ─────── */}
+              <div className="rounded-md border border-dashed bg-muted/20 p-3 space-y-3">
+                <div>
+                  <p className="text-sm font-semibold">
+                    Wrong-answer video remediation{" "}
+                    <span className="text-xs font-normal text-muted-foreground">
+                      (optional)
+                    </span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    When a learner answers this question wrong, the stepwise
+                    quiz client will pause the video, seek to the start time
+                    below, replay until the replay-until time, then return
+                    focus to the quiz for retry. Leave all fields blank to
+                    use inline retry instead.
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium" htmlFor="q-rem-start">
+                      Start (seconds)
+                    </label>
+                    <input
+                      id="q-rem-start"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={quizForm.remediation_start_seconds}
+                      onChange={(e) =>
+                        setQuizForm((p) => ({
+                          ...p,
+                          remediation_start_seconds: e.target.value,
+                        }))
+                      }
+                      placeholder="120"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label
+                      className="text-xs font-medium"
+                      htmlFor="q-rem-until"
+                    >
+                      Replay until (seconds)
+                    </label>
+                    <input
+                      id="q-rem-until"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={quizForm.remediation_replay_until_seconds}
+                      onChange={(e) =>
+                        setQuizForm((p) => ({
+                          ...p,
+                          remediation_replay_until_seconds: e.target.value,
+                        }))
+                      }
+                      placeholder="180"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label
+                      className="text-xs font-medium"
+                      htmlFor="q-rem-video-index"
+                    >
+                      Video index{" "}
+                      <span className="font-normal text-muted-foreground">
+                        (multi-video lessons)
+                      </span>
+                    </label>
+                    <input
+                      id="q-rem-video-index"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={quizForm.remediation_video_index}
+                      onChange={(e) =>
+                        setQuizForm((p) => ({
+                          ...p,
+                          remediation_video_index: e.target.value,
+                        }))
+                      }
+                      placeholder="0"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label
+                    className="text-xs font-medium"
+                    htmlFor="q-rem-message"
+                  >
+                    Wrong-answer message
+                  </label>
+                  <input
+                    id="q-rem-message"
+                    type="text"
+                    value={quizForm.remediation_message}
+                    onChange={(e) =>
+                      setQuizForm((p) => ({
+                        ...p,
+                        remediation_message: e.target.value,
+                      }))
+                    }
+                    placeholder="Let's review this part of the video, then try again."
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </div>
+              </div>
+
               <Button type="submit" size="sm" disabled={quizSaving}>
                 {quizSaving ? "Adding…" : "Add Question"}
               </Button>

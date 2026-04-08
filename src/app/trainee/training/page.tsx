@@ -113,16 +113,9 @@ function ProgramCard({ program }: { program: Program }) {
   const isComplete = program.progress_pct >= 100 && totalLessons > 0;
   const isStarted = completedLessons > 0;
 
-  const currentLessonId =
-    currentCategory?.next_lesson_id ??
-    currentCategory?.lessons.find((lesson) => !lesson.is_locked && !lesson.completed)?.id ??
-    null;
-
-  const ctaHref = currentCategory
-    ? currentLessonId
-      ? `/trainee/training/${program.id}/${currentCategory.id}/${currentLessonId}`
-      : `/trainee/training/${program.id}/${currentCategory.id}`
-    : `/trainee/training/${program.id}`;
+  // Module 02: program CTA always opens the program workspace, never a
+  // lesson deep-link. Initial selection state lives inside the workspace.
+  const ctaHref = `/trainee/training/${program.id}`;
 
   return (
     <div className="group rounded-xl border bg-card transition-colors hover:border-primary/40 overflow-hidden">
@@ -256,21 +249,61 @@ export default async function TrainingCenterPage() {
 
   const programs = await fetchPrograms();
 
-  // Overall summary stats
-  const totalLessons = programs.reduce(
-    (s, p) => s + p.total_lessons,
-    0
+  // ── Module 03: learner-wide accessible-lesson status split ───────────────
+  // Counting rules:
+  //   Completed   = lesson.completed === true (authoritative lesson_completions)
+  //   Ongoing     = lesson is in lesson_progress with a started_at but no
+  //                 completed_at, AND not already completed
+  //   Not Started = accessible lesson with no progress and no completion
+  // Total is the union of every lesson across every accessible program — locked
+  // lessons in accessible programs are counted (typically as Not Started).
+  const allAccessibleLessonIds: string[] = [];
+  let completedLessons = 0;
+  for (const program of programs) {
+    for (const cat of program.categories) {
+      for (const lesson of cat.lessons) {
+        allAccessibleLessonIds.push(lesson.id);
+        if (lesson.completed) completedLessons++;
+      }
+    }
+  }
+  const totalLessons = allAccessibleLessonIds.length;
+
+  // Pull "started but not completed" lesson_progress rows in one query.
+  let ongoingLessonIds = new Set<string>();
+  if (allAccessibleLessonIds.length > 0) {
+    const { data: progressRows } = await supabase
+      .from("lesson_progress")
+      .select("lesson_id")
+      .eq("user_id", user.id)
+      .not("started_at", "is", null)
+      .is("completed_at", null)
+      .in("lesson_id", allAccessibleLessonIds);
+    ongoingLessonIds = new Set((progressRows ?? []).map((r) => r.lesson_id));
+  }
+
+  // Build a completed set for the mutually-exclusive split.
+  const completedLessonIds = new Set<string>();
+  for (const program of programs) {
+    for (const cat of program.categories) {
+      for (const lesson of cat.lessons) {
+        if (lesson.completed) completedLessonIds.add(lesson.id);
+      }
+    }
+  }
+
+  // Status counts (mutually exclusive, collectively exhaustive).
+  const completedCount = completedLessonIds.size;
+  const ongoingCount = Array.from(ongoingLessonIds).filter(
+    (id) => !completedLessonIds.has(id),
+  ).length;
+  const notStartedCount = Math.max(
+    0,
+    totalLessons - completedCount - ongoingCount,
   );
-  const completedLessons = programs.reduce(
-    (s, p) => s + p.completed_lessons,
-    0
-  );
-  const completedCategories = programs.reduce(
-    (s, p) => s + p.completed_categories,
-    0
-  );
+
   const overallPct =
-    totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+    totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
 
   return (
     <div className="space-y-8">
@@ -282,15 +315,57 @@ export default async function TrainingCenterPage() {
             Work through your training programs and earn your certification.
           </p>
         </div>
+
+        {/* Module 03: learner-wide overall progress with explicit
+            Not Started / Ongoing / Completed split. Counts cover every
+            accessible lesson, not only lessons the learner has touched. */}
         {totalLessons > 0 && (
-          <div className="space-y-2 rounded-xl border bg-card p-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-medium">Overall Progress</span>
-              <span className="text-muted-foreground tabular-nums">
-                {completedLessons}/{totalLessons} lessons
-              </span>
+          <div className="rounded-xl border bg-card p-5">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              {/* LEFT half: three status blocks */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-lg border border-muted-foreground/20 bg-muted/30 p-3 text-center">
+                  <p className="text-2xl font-bold tabular-nums text-muted-foreground">
+                    {notStartedCount}
+                  </p>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground mt-0.5">
+                    Not Started
+                  </p>
+                </div>
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-center">
+                  <p className="text-2xl font-bold tabular-nums text-amber-700">
+                    {ongoingCount}
+                  </p>
+                  <p className="text-[11px] uppercase tracking-wide text-amber-700/80 mt-0.5">
+                    Ongoing
+                  </p>
+                </div>
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-center">
+                  <p className="text-2xl font-bold tabular-nums text-emerald-700">
+                    {completedCount}
+                  </p>
+                  <p className="text-[11px] uppercase tracking-wide text-emerald-700/80 mt-0.5">
+                    Completed
+                  </p>
+                </div>
+              </div>
+
+              {/* RIGHT half: total + progress bar */}
+              <div className="flex flex-col justify-between gap-3">
+                <div className="flex items-baseline justify-end gap-2">
+                  <span className="text-2xl font-bold tabular-nums">
+                    {completedCount}/{totalLessons}
+                  </span>
+                  <span className="text-sm text-muted-foreground">lessons</span>
+                </div>
+                <div className="space-y-1.5">
+                  <Progress value={overallPct} className="h-2" />
+                  <p className="text-xs text-muted-foreground text-right tabular-nums">
+                    {overallPct}% complete
+                  </p>
+                </div>
+              </div>
             </div>
-            <Progress value={overallPct} className="h-2" />
           </div>
         )}
       </div>
@@ -306,38 +381,6 @@ export default async function TrainingCenterPage() {
         </div>
       )}
 
-      {/* Summary strip */}
-      {completedLessons > 0 && (
-        <div className="rounded-xl border bg-card px-5 py-4">
-          <h2 className="text-sm font-semibold mb-3">Your Progress Summary</h2>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-2xl font-bold tabular-nums text-primary">
-                {completedLessons}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Lessons Done
-              </p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold tabular-nums text-primary">
-                {completedCategories}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Categories Done
-              </p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold tabular-nums text-primary">
-                {overallPct}%
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Overall
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

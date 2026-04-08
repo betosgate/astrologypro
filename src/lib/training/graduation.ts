@@ -96,22 +96,42 @@ export async function checkAndAwardTrainingGraduation(
   const allDone = await allLessonsComplete(userId);
   if (!allDone) return false;
 
-  // All lessons complete — award graduation
+  // All lessons complete — award graduation. Retry on certificate_code
+  // unique-violation (Postgres 23505) — 48 bits of entropy means a
+  // collision is astronomically unlikely (~20M graduations) but the cost
+  // of a single retry is one extra UPDATE so we may as well handle it.
   const now = new Date().toISOString();
-  const certCode = randomBytes(6).toString("hex").toUpperCase();
+  const MAX_CERT_RETRIES = 3;
+  let lastError: { code?: string; message?: string } | null = null;
 
-  const { error } = await admin
-    .from("trainees")
-    .update({
-      graduated_at: now,
-      training_status: "graduated",
-      certificate_code: certCode,
-    })
-    .eq("id", traineeRow.id)
-    .is("graduated_at", null); // idempotent guard
+  for (let attempt = 0; attempt < MAX_CERT_RETRIES; attempt++) {
+    const certCode = randomBytes(6).toString("hex").toUpperCase();
+    const { error } = await admin
+      .from("trainees")
+      .update({
+        graduated_at: now,
+        training_status: "graduated",
+        certificate_code: certCode,
+      })
+      .eq("id", traineeRow.id)
+      .is("graduated_at", null); // idempotent guard
 
-  if (error) {
-    console.warn("[training-graduation] update failed:", error.message);
+    if (!error) {
+      lastError = null;
+      break;
+    }
+
+    lastError = error as { code?: string; message?: string };
+    const code = (error as { code?: string }).code;
+    if (code !== "23505") {
+      // Not a unique-violation — no point retrying.
+      break;
+    }
+    // Loop and try a fresh code.
+  }
+
+  if (lastError) {
+    console.warn("[training-graduation] update failed:", lastError.message);
     return false;
   }
 

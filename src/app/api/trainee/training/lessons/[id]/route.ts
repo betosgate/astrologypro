@@ -62,8 +62,12 @@ export async function GET(
         .order("priority", { ascending: true }),
       admin
         .from("quiz_questions")
-        // Deliberately exclude correct_answer — it stays server-side
-        .select("id, question, options, explanation, priority")
+        // Deliberately exclude correct_answer — it stays server-side. The
+        // remediation_* fields are exposed because the new stepwise quiz
+        // runtime needs them on the client to drive the video seek + replay.
+        .select(
+          "id, question, options, explanation, priority, remediation_video_id, remediation_video_index, remediation_start_seconds, remediation_replay_until_seconds, remediation_message",
+        )
         .eq("lesson_id", id)
         .order("priority", { ascending: true }),
     ]);
@@ -113,8 +117,11 @@ export async function GET(
           .in("lesson_id", prevIds);
 
         if ((completedCount ?? 0) < prevIds.length) {
+          // Standard learner-readable lock_reason. Mirrors the message used by
+          // the LockedLink toast on visible UI surfaces.
+          const lockReason = "Complete the previous lesson first to continue in sequence.";
           return NextResponse.json(
-            { error: "Complete previous lessons in order first.", locked: true },
+            { error: lockReason, lock_reason: lockReason, locked: true },
             { status: 403 }
           );
         }
@@ -148,9 +155,11 @@ export async function GET(
             .in("category_id", prevCatIds);
 
           if ((completedCatCount ?? 0) < prevCatIds.length) {
+            const lockReason = "Complete the previous category first to unlock this section.";
             return NextResponse.json(
               {
-                error: "Complete previous categories in order first.",
+                error: lockReason,
+                lock_reason: lockReason,
                 locked: true,
               },
               { status: 403 }

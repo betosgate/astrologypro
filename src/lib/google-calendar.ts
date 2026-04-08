@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { upsertCalendarConnection, deleteCalendarConnection } from "@/lib/calendar/connections";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
@@ -34,7 +35,9 @@ export function getOAuthUrl(ownerId: string): string {
 
 /**
  * Exchanges an authorization code for tokens and stores the refresh token
- * on the diviner record.
+ * on the diviner record AND in the new calendar_connections table
+ * (dual-write during the cutover from JSONB-on-diviners to a normalized
+ * table).
  */
 export async function handleOAuthCallback(
   code: string,
@@ -65,7 +68,7 @@ export async function handleOAuthCallback(
   });
 
   const supabase = createAdminClient();
-  
+
   // We identify the user's connection by both userId and provider
   const { error } = await supabase
     .from(TABLE_NAME)
@@ -85,10 +88,28 @@ export async function handleOAuthCallback(
     console.error("[Google OAuth] Upsert failed:", error);
     throw new Error(`Failed to store calendar connection: ${error.message}`);
   }
+
+  // Dual-write to the normalized calendar_connections table. Best-effort —
+  // never throws because we don't want the cutover write to break the
+  // legacy success path.
+  await upsertCalendarConnection(supabase, {
+    divinerId,
+    provider: "google",
+    refreshToken: tokens.refresh_token,
+    expiresAt:
+      typeof tokens.expires_in === "number"
+        ? new Date(Date.now() + tokens.expires_in * 1000)
+        : null,
+  });
 }
 
 /**
  * Refreshes the access token using the stored refresh token.
+ *
+ * Read-side cutover: prefer the normalized calendar_connections table.
+ * Fall back to the legacy diviners.google_calendar_token JSONB scalar
+ * during the cutover window so neither newly-connected nor pre-cutover
+ * diviners are broken.
  */
 async function getAccessToken(ownerId: string): Promise<string> {
   const supabase = createAdminClient();
@@ -128,7 +149,7 @@ async function getAccessToken(ownerId: string): Promise<string> {
   }
 
   const tokens = await response.json();
-  
+
   // Cache the new access token
   await supabase
     .from(TABLE_NAME)
@@ -374,6 +395,9 @@ export async function disconnectGoogleCalendar(
   ownerId: string
 ): Promise<void> {
   const supabase = createAdminClient();
+  // Note: do NOT write google_calendar_connected — it is GENERATED ALWAYS
+  // (see migration 20260403000001) and is automatically derived from
+  // google_calendar_token IS NOT NULL.
   const { error } = await supabase
     .from(TABLE_NAME)
     .delete()
@@ -383,4 +407,7 @@ export async function disconnectGoogleCalendar(
   if (error) {
     throw new Error(`Failed to disconnect Google Calendar: ${error.message}`);
   }
+
+  // Mirror the disconnect into the normalized calendar_connections table.
+  await deleteCalendarConnection(supabase, ownerId, "google");
 }

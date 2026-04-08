@@ -15,6 +15,11 @@ import {
 } from "@/lib/email";
 import { createCalendarEvent } from "@/lib/google-calendar";
 import { createMsCalendarEvent } from "@/lib/microsoft-calendar";
+import {
+  getSubscriptionPeriodEndIso,
+  mapMysterySchoolLifecycleUpdate,
+} from "@/lib/mystery-school/subscription-lifecycle";
+import { finalizeMysterySchoolCheckoutSession } from "@/lib/mystery-school/finalize-checkout";
 
 export const dynamic = "force-dynamic";
 
@@ -97,7 +102,7 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
   const subscriptionId =
     typeof session.subscription === "string"
       ? session.subscription
-      : (session.subscription as any)?.id;
+      : session.subscription?.id;
 
   if (!userId || !membershipType) return;
 
@@ -193,29 +198,10 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
   // Provision mystery school student record on enrollment
   if (isMysterySchool) {
     const entryQuarter = session.metadata?.entry_quarter ?? null;
-    const entryYearRaw = session.metadata?.entry_year;
-    const entryYear = entryYearRaw ? parseInt(entryYearRaw, 10) : null;
     const enrollmentDate = new Date().toISOString();
-
-    // Idempotent upsert — repeated webhook delivery is safe
-    const { error: studentError } = await supabase
-      .from("mystery_school_students")
-      .upsert(
-        {
-          user_id: userId,
-          community_member_id: communityMemberId,
-          enrolled_at: enrollmentDate,
-          enrollment_date: enrollmentDate,
-          training_status: "foundation",
-          entry_quarter: entryQuarter,
-          entry_year: entryYear,
-          stripe_subscription_id: subscriptionId ?? null,
-          one_time_fee_paid: true,
-          one_time_fee_amount: 97.00,
-          status: "active",
-        },
-        { onConflict: "user_id" }
-      );
+    const { error: studentError } = await finalizeMysterySchoolCheckoutSession(session)
+      .then(() => ({ error: null }))
+      .catch((error: unknown) => ({ error }));
 
     if (studentError) {
       console.error("[Webhook] Failed to upsert mystery_school_students:", studentError);
@@ -306,6 +292,28 @@ function getSubscriptionIdFromInvoice(invoice: Stripe.Invoice): string | null {
   return typeof sub === "string" ? sub : sub.id;
 }
 
+async function handleMysterySchoolSubscriptionUpdated(
+  subscription: Stripe.Subscription
+) {
+  const adminClient = createAdminClient();
+
+  const { data: student } = await adminClient
+    .from("mystery_school_students")
+    .select("id, status")
+    .eq("stripe_subscription_id", subscription.id)
+    .maybeSingle();
+
+  if (!student) return;
+
+  const now = new Date().toISOString();
+  const update = mapMysterySchoolLifecycleUpdate(subscription, now);
+
+  await adminClient
+    .from("mystery_school_students")
+    .update(update)
+    .eq("id", student.id);
+}
+
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
   const supabase = createAdminClient();
   const subscriptionId = getSubscriptionIdFromInvoice(invoice);
@@ -318,6 +326,24 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 
   if (error) {
     console.error("Failed to update subscription status on invoice.paid:", error);
+  }
+
+  // Mystery School: a paid invoice confirms the subscription is still billable.
+  // Do not undo scheduled cancellation windows, but clear a paused state.
+  const { data: student } = await supabase
+    .from("mystery_school_students")
+    .select("id, status")
+    .eq("stripe_subscription_id", subscriptionId)
+    .maybeSingle();
+
+  if (student && student.status === "paused") {
+    await supabase
+      .from("mystery_school_students")
+      .update({
+        status: "active",
+        paused_at: null,
+      })
+      .eq("id", student.id);
   }
 }
 
@@ -386,6 +412,9 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
       }
     }
   }
+
+  // Mystery School: keep access state unchanged for payment failure.
+  // Stripe will send subscription.updated / deleted when the lifecycle actually changes.
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
@@ -394,6 +423,8 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     typeof subscription.customer === "string"
       ? subscription.customer
       : (subscription.customer as Stripe.Customer).id;
+
+  await handleMysterySchoolSubscriptionUpdated(subscription);
 
   // ── Diviner SaaS plan upsert ────────────────────────────────────────────────
   await upsertDivinerPlanSubscription(adminClient, subscription, customerId);
@@ -583,6 +614,8 @@ async function handleSubscriptionDeleted(
   subscription: Stripe.Subscription
 ) {
   const supabase = createAdminClient();
+  const now = new Date().toISOString();
+  const periodEnd = getSubscriptionPeriodEndIso(subscription) ?? now;
 
   // Diviner legacy subscription cancelled
   await supabase
@@ -657,6 +690,24 @@ async function handleSubscriptionDeleted(
       }).catch(() => {});
     }
   }
+
+  const { data: mysterySchoolStudent } = await supabase
+    .from("mystery_school_students")
+    .select("id")
+    .eq("stripe_subscription_id", subscription.id)
+    .maybeSingle();
+
+  if (mysterySchoolStudent) {
+    await supabase
+      .from("mystery_school_students")
+      .update({
+        status: "cancelled",
+        paused_at: null,
+        cancelled_at: now,
+        access_expires_at: periodEnd,
+      })
+      .eq("id", mysterySchoolStudent.id);
+  }
 }
 
 async function handleAccountUpdated(account: Stripe.Account) {
@@ -675,9 +726,55 @@ async function handleAccountUpdated(account: Stripe.Account) {
   }
 }
 
+async function handleDivinerSignupPaymentSucceeded(
+  paymentIntent: Stripe.PaymentIntent
+) {
+  const userId = paymentIntent.metadata?.user_id;
+  const email = paymentIntent.metadata?.email;
+  if (!userId) {
+    console.warn(
+      "[stripe/webhooks] diviner_signup payment_intent missing user_id metadata"
+    );
+    return;
+  }
+
+  const supabase = createAdminClient();
+
+  // Mark the trainee as having paid. Idempotent — re-running with the same
+  // payment_intent_id is a no-op.
+  const { error: updateError } = await supabase
+    .from("trainees")
+    .update({
+      training_status: "paid",
+      payment_intent_id: paymentIntent.id,
+      paid_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId);
+
+  if (updateError) {
+    // Defensive: payment_intent_id / paid_at columns may not exist on
+    // every environment yet. Don't fail the webhook — log and move on.
+    console.warn(
+      "[stripe/webhooks] diviner_signup trainees update warning:",
+      updateError.message
+    );
+  }
+
+  console.log(
+    `[stripe/webhooks] diviner_signup payment succeeded user=${userId} email=${email ?? "?"} intent=${paymentIntent.id}`
+  );
+}
+
 async function handlePaymentIntentSucceeded(
   paymentIntent: Stripe.PaymentIntent
 ) {
+  // Diviner signup payments use type=diviner_signup metadata. Route them to
+  // the dedicated handler and return — they don't have bookingId.
+  if (paymentIntent.metadata?.type === "diviner_signup") {
+    await handleDivinerSignupPaymentSucceeded(paymentIntent);
+    return;
+  }
+
   const bookingId = paymentIntent.metadata?.bookingId;
   const clientEmail = paymentIntent.metadata?.clientEmail;
   if (!bookingId || !clientEmail) return;

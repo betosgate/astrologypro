@@ -1,4 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  upsertCalendarConnection,
+  deleteCalendarConnection,
+} from "@/lib/calendar/connections";
 
 const TENANT_ID = "common"; // multi-tenant
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
@@ -32,8 +36,8 @@ export function getMsOAuthUrl(divinerId: string): string {
 
 /** Exchange auth code for tokens and persist to calendar_connections */
 export async function handleMsOAuthCallback(
-  code: string, 
-  ownerId: string, 
+  code: string,
+  ownerId: string,
   userId: string
 ): Promise<void> {
   const body = new URLSearchParams({
@@ -55,28 +59,26 @@ export async function handleMsOAuthCallback(
   const tokens = await res.json();
 
   const admin = createAdminClient();
-  const { error } = await admin.from("calendar_connections").upsert({
-    user_id: userId,
-    owner_id: ownerId,
-    provider: "microsoft",
-    access_token: tokens.access_token,
-    refresh_token: tokens.refresh_token,
-    expires_at: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : null,
-    updated_at: new Date().toISOString()
-  }, {
-    onConflict: "user_id,provider"
-  });
+  await admin.from("diviners").update({ outlook_calendar_token: tokens }).eq("id", ownerId);
 
-  if (error) {
-    console.error("[Microsoft OAuth] Upsert failed:", error);
-    throw new Error(`Failed to store Microsoft calendar connection: ${error.message}`);
-  }
+  // Dual-write into normalized calendar_connections (cutover from JSONB).
+  // Best-effort — never throws.
+  await upsertCalendarConnection(admin, {
+    divinerId: ownerId,
+    provider: "microsoft",
+    refreshToken: tokens.refresh_token,
+    accessToken: tokens.access_token ?? null,
+    expiresAt:
+      typeof tokens.expires_in === "number"
+        ? new Date(Date.now() + tokens.expires_in * 1000)
+        : null,
+  });
 }
 
 /** For proxy relay: directly persist the token object */
 export async function persistMsTokens(ownerId: string, tokens: any): Promise<void> {
   const admin = createAdminClient();
-  await admin.from("calendar_connections").upsert({ 
+  await admin.from("calendar_connections").upsert({
     owner_id: ownerId,
     provider: "microsoft",
     access_token: tokens.access_token,
@@ -91,28 +93,64 @@ export async function persistMsTokens(ownerId: string, tokens: any): Promise<voi
 /** Get a valid access token, refreshing if needed */
 async function getMsAccessToken(ownerId: string): Promise<string | null> {
   const admin = createAdminClient();
-  const { data: connection, error } = await admin
-    .from("calendar_connections")
-    .select("access_token, refresh_token, expires_at")
-    .eq("owner_id", ownerId)
-    .eq("provider", "microsoft")
-    .single();
 
-  if (error || !connection?.refresh_token) return null;
+  // Pull the legacy JSONB and the user_id needed for the new lookup in one query.
+  const { data: diviner } = await admin
+    .from("diviners")
+    .select("user_id, outlook_calendar_token")
+    .eq("id", ownerId)
+    .maybeSingle();
 
-  // If token is still valid (5 min buffer), return cached access_token
-  if (connection.access_token && connection.expires_at) {
-    const expiresAt = new Date(connection.expires_at).getTime();
-    if (expiresAt > Date.now() + 5 * 60 * 1000) {
-      return connection.access_token;
+  if (!diviner) return null;
+
+  let token: {
+    access_token: string;
+    refresh_token: string;
+    expires_at?: number;
+    expires_in?: number;
+  } | null = null;
+
+  // 1. Preferred: calendar_connections row for this user + provider
+  if (diviner.user_id) {
+    const { data: conn } = await admin
+      .from("calendar_connections")
+      .select("access_token, refresh_token, expires_at")
+      .eq("user_id", diviner.user_id)
+      .eq("provider", "microsoft")
+      .maybeSingle();
+
+    if (conn?.refresh_token) {
+      token = {
+        access_token: conn.access_token ?? "",
+        refresh_token: conn.refresh_token,
+        expires_at: conn.expires_at
+          ? Math.floor(new Date(conn.expires_at).getTime() / 1000)
+          : undefined,
+      };
     }
   }
+
+  // 2. Fallback: legacy JSONB column on the diviner row
+  if (!token && diviner.outlook_calendar_token) {
+    token = diviner.outlook_calendar_token as {
+      access_token: string;
+      refresh_token: string;
+      expires_at?: number;
+      expires_in?: number;
+    };
+  }
+
+  if (!token || !token.refresh_token) return null;
+
+  // If token is still valid (with 5 min buffer), return it
+  const expiresAtValue = token.expires_at ?? (Date.now() / 1000 + (token.expires_in ?? 3600));
+  if (expiresAtValue > Date.now() / 1000 + 300 && token.access_token) return token.access_token;
 
   // Refresh
   const body = new URLSearchParams({
     client_id: getMsClientId(),
     client_secret: getMsClientSecret(),
-    refresh_token: connection.refresh_token,
+    refresh_token: token.refresh_token,
     grant_type: "refresh_token",
     scope: "Calendars.ReadWrite offline_access User.Read",
   });
@@ -125,17 +163,17 @@ async function getMsAccessToken(ownerId: string): Promise<string | null> {
 
   if (!res.ok) return null;
   const newTokens = await res.json();
-  const expiresAt = new Date(Date.now() + newTokens.expires_in * 1000).toISOString();
+  
+  // Update both legacy and normalized storage
+  await admin.from("diviners").update({ outlook_calendar_token: newTokens }).eq("id", ownerId);
 
-  await admin
-    .from("calendar_connections")
-    .update({ 
-      access_token: newTokens.access_token,
-      expires_at: expiresAt,
-      updated_at: new Date().toISOString()
-    })
-    .eq("owner_id", ownerId)
-    .eq("provider", "microsoft");
+  await upsertCalendarConnection(admin, {
+    divinerId: ownerId,
+    provider: "microsoft",
+    refreshToken: newTokens.refresh_token ?? token.refresh_token,
+    accessToken: newTokens.access_token ?? null,
+    expiresAt: new Date(Date.now() + newTokens.expires_in * 1000),
+  });
 
   return newTokens.access_token;
 }
@@ -283,5 +321,7 @@ export async function deleteMsCalendarEvent(
 /** Disconnect Outlook calendar */
 export async function disconnectMsCalendar(ownerId: string): Promise<void> {
   const admin = createAdminClient();
-  await admin.from("calendar_connections").delete().eq("owner_id", ownerId).eq("provider", "microsoft");
+  await admin.from("diviners").update({ outlook_calendar_token: null }).eq("id", ownerId);
+  // Mirror the disconnect into the normalized calendar_connections table.
+  await deleteCalendarConnection(admin, ownerId, "microsoft");
 }

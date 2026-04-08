@@ -1,7 +1,7 @@
 # Task 05: Community PM-Only Guard
 
-- Status: Completed (2026-04-08, verified)
-- Completion Notes: /community layout (src/app/community/layout.tsx:30) redirects non-perennial users to /mystery-school.
+- Status: Completed (2026-04-08, re-audited)
+- Completion Notes: /community layout (src/app/community/layout.tsx:30) redirects non-perennial users to /mystery-school, so Mystery School-only users cannot remain inside the PM portal.
 Date: 2026-04-07
 Category: Mystery School Module
 

@@ -1,7 +1,7 @@
 # Task 01: Stripe Pricing And Catalog
 
-- Status: Completed (2026-04-08, verified)
-- Completion Notes: Stripe price IDs wired in src/app/api/community/checkout/route.ts:92-94 — STRIPE_PRICE_MYSTERY_ENROLLMENT, STRIPE_PRICE_MYSTERY_MONTHLY, STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT. PM individual/family priced via STRIPE_PRICE_COMMUNITY_INDIVIDUAL/FAMILY.
+- Status: Partially Complete (2026-04-08, re-audited)
+- Completion Notes: Stripe price IDs are wired in src/app/api/community/checkout/route.ts. On 2026-04-08, the incorrect `$33/month` Mystery School monthly price binding was corrected by creating and recording a new canonical `$27/month` test-mode Stripe price. The PM-discount price exists, but this task file still requires the env var to be present locally before the discounted checkout path is fully verified.
 Date: 2026-04-07
 Category: Mystery School Module
 
@@ -51,7 +51,7 @@ Define and prepare the Stripe product/price catalog required for Mystery School 
 | Env Var | Expected Price | Billing Type | Stripe Price ID | Status |
 |---|---|---|---|---|
 | `STRIPE_PRICE_MYSTERY_ENROLLMENT` | `97.00 USD` | One-time | `price_1TJOXjBcRXKECv5fQ4dz7W4z` | **Exists in .env.local** |
-| `STRIPE_PRICE_MYSTERY_MONTHLY` | `27.00 USD/month` | Monthly recurring | `price_1TJOXlBcRXKECv5f64n37Za2` | **Exists in .env.local** |
+| `STRIPE_PRICE_MYSTERY_MONTHLY` | `27.00 USD/month` | Monthly recurring | `price_1TJryQBcRXKECv5fs770puzb` | **Created in Stripe test mode and updated in .env.local** |
 | `STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT` | `17.03 USD/month` | Monthly recurring | `price_1TJZCPBcRXKECv5fhwdSCyXL` | **Created in Stripe test mode** |
 
 ## Manual Action Required
@@ -71,6 +71,6 @@ select this price for eligible PM users when the admin discount toggle is enable
 ## Success Criteria
 
 - [x] Enrollment price exists: `price_1TJOXjBcRXKECv5fQ4dz7W4z`
-- [x] Monthly price exists: `price_1TJOXlBcRXKECv5f64n37Za2`
+- [x] Monthly price exists: `price_1TJryQBcRXKECv5fs770puzb`
 - [x] PM discount price exists: `price_1TJZCPBcRXKECv5fhwdSCyXL`
 - [ ] Env var `STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT` added to `.env.local` after creation
