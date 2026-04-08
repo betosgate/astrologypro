@@ -329,7 +329,7 @@ function convertTo12HourFormat(hour: number, min: number): string {
 function buildAiPrompts(data: any, tab: string) {
   const prompts: { key: string; system: string; user: string; json: unknown[] }[] = [];
 
-  if (tab === "western_horoscope_v2" || ["jupiter_return_v2", "saturn_return_v2", "mars_return_v2", "uranus_return_v2"].includes(tab)) {
+  if (tab === "western_horoscope_v2" || tab === "solar_return_v2" || ["jupiter_return_v2", "saturn_return_v2", "mars_return_v2", "uranus_return_v2"].includes(tab)) {
     // Exact prompts ported from Angular westernhoroscop-v2.component.ts → stringModifier()
     prompts.push({
       key: "western_horoscope_ascendant_midheaven_vertex",
