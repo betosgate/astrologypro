@@ -1,6 +1,10 @@
 # Master Task - Custom Billing & Unsubscribe Modals - 2026-04-07
 
-- Status: Planned
+- Status: Completed (2026-04-08)
+- Completion Notes:
+  - 10.1: New `POST /api/community/billing/unsubscribe` route + new `UnsubscribeModal` (legacy "Alert!!" orange-header layout) wired into `MembershipCard`.
+  - 10.2: Setup-intent route and `UpdatePaymentModal` (Stripe Elements) already shipped upstream.
+  - 10.3: `MembershipCard` now exposes `Update Payment` (existing) and `Subscribed` (new) buttons; the legacy unsubscribe path no longer redirects to the Stripe Customer Portal.
 - Priority: P2
 - Scope: Dashboard UI Modals, Custom Stripe API integration
 - Estimate: 3-4 days

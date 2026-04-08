@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { useState } from "react";
 import { UpdatePaymentModal } from "@/components/community/update-payment-modal";
+import { UnsubscribeModal } from "@/components/community/unsubscribe-modal";
 
 export interface MembershipSubscription {
   membership_type: string;
@@ -62,6 +63,7 @@ export function MembershipCard({ subscription, userEmail }: MembershipCardProps)
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [unsubscribeOpen, setUnsubscribeOpen] = useState(false);
 
   const statusClass =
     STATUS_BADGE_CLASSES[subscription.status] ??
@@ -183,6 +185,16 @@ export function MembershipCard({ subscription, userEmail }: MembershipCardProps)
           >
             Update Payment
           </Button>
+          {subscription.status === "active" && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setUnsubscribeOpen(true)}
+              className="border-orange-500/40 text-orange-700 hover:bg-orange-500/10"
+            >
+              Subscribed
+            </Button>
+          )}
           <Button
             size="sm"
             variant="ghost"
@@ -205,6 +217,11 @@ export function MembershipCard({ subscription, userEmail }: MembershipCardProps)
         open={paymentModalOpen}
         onOpenChange={setPaymentModalOpen}
         email={userEmail ?? ""}
+      />
+
+      <UnsubscribeModal
+        open={unsubscribeOpen}
+        onOpenChange={setUnsubscribeOpen}
       />
     </Card>
   );

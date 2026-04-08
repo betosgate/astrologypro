@@ -1,6 +1,12 @@
 # Master Task - Ritual Video Player Integration - 2026-04-07
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes:
+  - DB migration `supabase/migrations/20260407000104_ritual_invocations_add_video_url.sql` adds `video_url TEXT` to `ritual_invocations`.
+  - Admin APIs (`src/app/api/admin/rituals/route.ts`, `src/app/api/admin/rituals/[id]/route.ts`) read/write `video_url`.
+  - Community APIs (`src/app/api/community/rituals/[id]/route.ts`, `src/app/api/rituals/[id]/playback/route.ts`) return `video_url`.
+  - Player UI: `src/components/community/ritual-video-player.tsx`.
+  - Admin UI: `src/app/admin/rituals/page.tsx`, `new/page.tsx`, `[id]/edit/page.tsx` expose video fields.
 - Priority: P1
 - Owner: Fullstack
 - Scope: Database updates, API integration, Interactive Video Player UI, Admin management

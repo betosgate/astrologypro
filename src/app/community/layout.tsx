@@ -34,8 +34,8 @@ export default async function CommunityLayout({ children }: { children: React.Re
   const membershipLabel = "Perennial Mandalism";
 
   const productSubItems = [
-    { label: "Product Category", href: "/community/product-categories" },
-    { label: "Product Management", href: "/community/products" },
+    { label: "Product Category", href: "/admin/perennial-content/categories" },
+    { label: "Product Management", href: "/admin/perennial-content/products" },
   ];
 
   const navLinks = [
