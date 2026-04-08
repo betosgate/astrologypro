@@ -7,6 +7,7 @@ import Link from "next/link";
 import { RouteTracker } from "@/components/shared/route-tracker";
 import { MobileNav } from "@/components/community/mobile-nav";
 import { NavLink } from "@/components/shared/nav-link";
+import { NavDropdown } from "@/components/shared/nav-dropdown";
 import { PortalLogoutButton } from "@/components/portal/logout-button";
 
 export const metadata = { title: "Community - AstrologyPro" };
@@ -31,6 +32,11 @@ export default async function CommunityLayout({ children }: { children: React.Re
 
   const portals = await getUserPortals(supabase, user.id);
   const membershipLabel = "Perennial Mandalism";
+
+  const productSubItems = [
+    { label: "Product Category", href: "/community/product-categories" },
+    { label: "Product Management", href: "/community/products" },
+  ];
 
   const navLinks = [
     { label: "Home", href: "/community" },
@@ -81,6 +87,9 @@ export default async function CommunityLayout({ children }: { children: React.Re
                 </NavLink>
               </li>
             ))}
+            <li>
+              <NavDropdown label="Product" items={productSubItems} />
+            </li>
           </ul>
         </nav>
         {/* Logout pinned to sidebar bottom */}

@@ -1,6 +1,10 @@
 # Master Task - Perennial Dashboard Navigation Dropdowns - 2026-04-07
 
-- Status: Planned
+- Status: Completed (2026-04-08)
+- Completion Notes:
+  - New `NavDropdown` component at `src/components/shared/nav-dropdown.tsx` (chevron toggle, auto-open when child route is active, active styling for parent + child).
+  - Wired into `src/app/community/layout.tsx` sidebar with sub-items: `Product Category` → `/community/product-categories`, `Product Management` → `/community/products`.
+  - Routes themselves are owned by tasks 06.3 / 07.3 — dropdown will resolve once those pages land.
 - Priority: P1
 - Owner: Frontend
 - Scope: Sidebar navigation logic, Dropdown/Accordion components, Product menu integration
