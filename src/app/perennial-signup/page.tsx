@@ -197,37 +197,58 @@ export default function PerennialSignupPage() {
     return null;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  const [checkingOut, setCheckingOut] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitNote(null);
     const err = validate();
     if (err) {
       setSubmitNote(err);
       return;
     }
-    // Payment + account creation are handled in tasks 05 + 09. For now log
-    // the payload so QA can see what would be submitted.
-    setSubmitNote(
-      "Form is valid. Payment + account provisioning is handled by Perennial signup tasks 05 and 09 — not yet wired to Stripe. See the browser console for the payload that would be sent.",
-    );
-    // eslint-disable-next-line no-console
-    console.log("[perennial-signup] would submit", {
-      plan: planKey,
-      total_monthly: plan.priceMonthly,
-      members: members.map((m) => ({
-        is_primary: m.isPrimary,
-        relation: m.relation,
-        first_name: m.firstName,
-        last_name: m.lastName,
-        email: m.email,
-        date_of_birth: m.dateOfBirth,
-        birth_time: m.birthTime || null,
-        birth_city: m.birthCity || null,
-        birth_country: m.birthCountry || null,
-        intentions: m.intentions || null,
-        challenges: m.challenges || null,
-        goals: m.goals || null,
-      })),
-    });
+
+    setCheckingOut(true);
+    try {
+      const res = await fetch("/api/perennial-signup/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan_key: planKey,
+          members: members.map((m) => ({
+            is_primary: m.isPrimary,
+            relation: m.relation,
+            first_name: m.firstName,
+            last_name: m.lastName,
+            email: m.email,
+            date_of_birth: m.dateOfBirth,
+            birth_time: m.birthTime || null,
+            birth_city: m.birthCity || null,
+            birth_country: m.birthCountry || null,
+            intentions: m.intentions || null,
+            challenges: m.challenges || null,
+            goals: m.goals || null,
+          })),
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setSubmitNote(body.error ?? `Checkout failed (HTTP ${res.status})`);
+        return;
+      }
+      if (body.checkout_url) {
+        // Stripe-hosted checkout. The webhook handler
+        // (handlePerennialSignupCheckoutCompleted) will provision the
+        // household accounts after payment succeeds.
+        window.location.href = body.checkout_url;
+        return;
+      }
+      setSubmitNote("Stripe returned no checkout URL.");
+    } catch (err) {
+      setSubmitNote(err instanceof Error ? err.message : String(err));
+    } finally {
+      setCheckingOut(false);
+    }
   }
 
   return (
@@ -576,8 +597,13 @@ export default function PerennialSignupPage() {
                 </div>
               )}
 
-              <Button type="submit" className="w-full" size="lg">
-                Continue to payment
+              <Button
+                type="submit"
+                className="w-full"
+                size="lg"
+                disabled={checkingOut}
+              >
+                {checkingOut ? "Redirecting to payment…" : "Continue to payment"}
               </Button>
               <p className="text-[11px] text-muted-foreground text-center">
                 Accounts are created after successful payment. You&apos;ll
