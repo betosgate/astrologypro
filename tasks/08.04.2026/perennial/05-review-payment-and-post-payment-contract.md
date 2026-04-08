@@ -11,6 +11,8 @@
 
 Define the frontend review/payment stage clearly enough that the implementing AI can wire a correct UI without inventing business rules.
 
+For exact Stripe lifecycle and pending-signup rules, this file must be read together with `09-payment-flow-contract-and-stripe-lifecycle.md`.
+
 ## Confirmed Business Rules
 
 1. The signup is completed as a full household flow before payment.
@@ -21,6 +23,7 @@ Define the frontend review/payment stage clearly enough that the implementing AI
    - all member accounts are created
    - all member accounts are active immediately
    - generated passwords are emailed automatically
+   - generated passwords must comply with the internal password-strength rule
 
 ## Required Review Step
 

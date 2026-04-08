@@ -15,7 +15,8 @@ If older Perennial notes elsewhere in the repo conflict with this folder, follow
 7. `06-ux-acceptance-criteria-and-edge-cases.md`
 8. `07-ui-copy-parity-and-adaptation.md`
 9. `08-field-mapping-and-payload-normalization.md`
-10. `99-implementation-checklist.md`
+10. `09-payment-flow-contract-and-stripe-lifecycle.md`
+11. `99-implementation-checklist.md`
 
 ## Key Rules
 
@@ -24,11 +25,15 @@ If older Perennial notes elsewhere in the repo conflict with this folder, follow
 3. Every member must have a unique email.
 4. Do not render password fields in the signup form.
 5. Passwords are generated automatically and emailed after payment.
-6. Use current project field names for common fields.
-7. Preserve old Perennial UI copy/tone where it does not conflict with the new model.
-8. Keep old `relation + sub_relation` behavior for additional members.
-9. Keep the full optional questionnaire for every member.
-10. Membership activates only after successful payment.
+6. Generated passwords must meet a strong internal password rule.
+7. Use current project field names for common fields.
+8. Preserve old Perennial UI copy/tone where it does not conflict with the new model.
+9. Keep old `relation + sub_relation` behavior for additional members.
+10. Keep the full optional questionnaire for every member.
+11. Membership activates only after successful payment.
+12. Use the current AstrologyPro theme and shared design system when implementing the page.
+13. Use the dedicated Perennial payment-flow contract; do not invent checkout lifecycle behavior.
+14. A dedicated Stripe env var is required for the `Couple` plan and is not currently present in `.env.local`.
 
 ## Final Reminder
 

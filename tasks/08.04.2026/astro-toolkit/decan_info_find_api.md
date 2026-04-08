@@ -1,5 +1,14 @@
 # Astro Decan Fetch Details API Documentation
 
+- Status: Completed (2026-04-08)
+- Completion Notes:
+  - Implemented at `src/app/api/astro-decan/fetch-decan-details/route.ts`.
+  - Route changed to `POST /api/astro-decan/fetch-decan-details` to match the existing Next.js API conventions in this project (the legacy NestJS path `astro_decan_new_infos/fetch-decan-details` would not have worked under the App Router).
+  - Looks up a single row in `astro_decan_new_infos` by `(planet, signs)` using `.maybeSingle()`.
+  - Returns the full document (every column including descriptions, image URLs, decan_img, mongo_id, timestamps).
+  - Status codes: 200 success, 400 missing/invalid body, 404 not found, 500 unhandled. Same `{ status, message, results }` shape as the legacy NestJS response.
+  - Public — RLS on `astro_decan_new_infos` allows public SELECT (reference content).
+
 ## Overview
 This document provides instructions for using the `astro_decan_new_infos/fetch-decan-details` API endpoint. This endpoint is designed to fetch detailed information about a specific decan based on the planet and zodiac sign provided in the request.
 

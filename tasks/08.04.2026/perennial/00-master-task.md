@@ -28,6 +28,7 @@ The implementation must cover:
 7. pre-payment review flow
 8. payment step handoff
 9. success/error/loading UX
+10. Stripe lifecycle clarity for pending signup, success, cancel, and finalization
 
 The implementation must not leave major business logic ambiguous for the implementing AI.
 
@@ -40,14 +41,34 @@ These decisions are already confirmed and must be treated as non-negotiable unle
 3. Every household member must have a unique email address.
 4. Passwords are not entered manually in the form.
 5. Passwords are system-generated after successful payment and emailed automatically.
-6. Accounts are created only after successful Stripe payment.
-7. After payment succeeds, all member accounts are created immediately as active.
-8. Only the main household purchaser manages billing.
-9. Non-billing members still receive full Perennial content access.
-10. Relationship handling must use the legacy `relation + sub_relation` behavior.
-11. The full old optional questionnaire remains for every member.
-12. The signup remains a full household signup flow before payment.
-13. Family plan limit is exactly 5 total members including the main user.
+6. System-generated passwords must satisfy a strong internal password policy.
+7. Accounts are created only after successful Stripe payment.
+8. After payment succeeds, all member accounts are created immediately as active.
+9. Only the main household purchaser manages billing.
+10. Non-billing members still receive full Perennial content access.
+11. Relationship handling must use the legacy `relation + sub_relation` behavior.
+12. The full old optional questionnaire remains for every member.
+13. The signup remains a full household signup flow before payment.
+14. Family plan limit is exactly 5 total members including the main user.
+
+## Generated Password Policy
+
+Although the signup form does not ask users to create passwords manually, automatically generated passwords must still meet a strong platform rule.
+
+Required generated-password standard:
+
+1. minimum length: `12`
+2. at least one uppercase letter
+3. at least one lowercase letter
+4. at least one number
+5. at least one special character
+6. avoid weak or trivial generated values
+
+Recommended validation pattern for generated-password compliance:
+
+```txt
+/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/
+```
 
 ## Critical Clarification From Earlier Notes
 
@@ -94,6 +115,25 @@ Plan rules:
 4. The page must prevent adding members beyond the selected plan limit.
 5. The page must clearly show current household count vs allowed count.
 
+## Stripe Price Configuration Requirement
+
+The current local env already contains:
+
+1. `STRIPE_PRICE_COMMUNITY_INDIVIDUAL`
+2. `STRIPE_PRICE_COMMUNITY_FAMILY`
+
+For the confirmed Perennial `Single / Couple / Family` model, one more dedicated Stripe price env var is required:
+
+1. `STRIPE_PRICE_COMMUNITY_COUPLE`
+
+Current status:
+
+1. `Single` price env exists
+2. `Family` price env exists
+3. `Couple` price env is missing and must be created/configured manually later
+
+The implementing AI must not assume the `Couple` plan can be fully wired without that env var and corresponding Stripe price.
+
 ## Route And UX Direction
 
 Use a dedicated Perennial signup page, not a tiny dialog or a generic join screen.
@@ -108,6 +148,18 @@ The page should feel like a premium long-form guided signup:
 6. visible progress state
 7. mobile-safe layout
 
+## Theme And Design-System Rule
+
+The new Perennial signup page must use the current AstrologyPro site's existing visual theme and component system.
+
+That means:
+
+1. reuse the current project's design tokens, component primitives, spacing rhythm, and typography patterns
+2. make the page feel native to the existing app and marketing site
+3. do not implement it as a disconnected microsite or an unrelated visual redesign
+4. prefer existing shared UI components and established layout conventions wherever possible
+5. only introduce Perennial-specific composition or section styling where needed for the signup journey, while still staying visually consistent with the current site
+
 ## Execution Order
 
 1. `01-page-shell-and-route.md`
@@ -118,6 +170,7 @@ The page should feel like a premium long-form guided signup:
 6. `06-ux-acceptance-criteria-and-edge-cases.md`
 7. `07-ui-copy-parity-and-adaptation.md`
 8. `08-field-mapping-and-payload-normalization.md`
+9. `09-payment-flow-contract-and-stripe-lifecycle.md`
 
 ## Non-Negotiable Implementation Constraints
 
@@ -131,6 +184,7 @@ The page should feel like a premium long-form guided signup:
 8. Do not leave first-invalid-field handling unspecified.
 9. Do not leave email uniqueness requirements implicit.
 10. Do not build the page as a small modal or embedded subform.
+11. Do not introduce a visual theme that clashes with the current AstrologyPro site.
 
 ## Expected Outcome
 
