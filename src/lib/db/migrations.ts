@@ -1,4 +1,5 @@
 import { MIGRATION_SQL as MIG_20260408000106 } from "@/data/migrations/20260408000106_astro_decan_new_infos";
+import { MIGRATION_SQL as MIG_20260408000107 } from "@/data/migrations/20260408000107_astro_system_settings";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -32,6 +33,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Creates astro_decan_new_infos table (planet/sign/decan reference content with tarot + Greek daemon mapping) and seeds 36 records ported from the legacy MongoDB collection. Idempotent: ON CONFLICT (mongo_id) DO NOTHING on every insert.",
     sortKey: "20260408000106",
     sql: MIG_20260408000106,
+  },
+  "20260408000107_astro_system_settings": {
+    id: "20260408000107_astro_system_settings",
+    title: "Astro System Settings (centralised credentials + URLs)",
+    description:
+      "Creates astro_system_settings table with three types: ASTROLOGY_API (key+secret pairs), FREEASTROLOGY_API (key only), SYSTEM_CONFIG (named URLs/values like ASTRO_AI_API_URL). Backfills existing astrology_api_keys rows as ASTROLOGY_API entries. Additive — does not drop the old table. Idempotent via UNIQUE (type, key_name).",
+    sortKey: "20260408000107",
+    sql: MIG_20260408000107,
   },
 };
 
