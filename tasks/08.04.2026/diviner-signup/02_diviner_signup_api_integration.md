@@ -10,8 +10,9 @@ Implement the external service integration and API calls needed for the Diviner 
 
 ### 1. IP Location & Pricing Fetch
 - Fetch user IP from `https://ipinfo.io/json?token=32b3c233366230` on load.
-- Determine pricing dynamically based on IP/Country.
-- Fetch actual price by calling `POST /wheel_signs/find-divination-certificate-price` with body `{ "place": "India" }` or `{ "place": "USA" }`.
+- Determine pricing dynamically:
+  - Call `/api/community/settings` to get the base `diviner_signup_price_inr`.
+  - (Optional) Fetch actual price by calling `POST /wheel_signs/find-divination-certificate-price` with body `{ "place": "India" }` or `{ "place": "USA" }` if specific regional overrides are still needed, otherwise priority goes to the Admin controlled `diviner_signup_price_inr`.
 
 ### 2. State & Country Management
 - Manage State dropdown dynamically based on Country selection.
