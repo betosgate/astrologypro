@@ -40,6 +40,7 @@ import {
   Shuffle,
   Flame,
   Settings2,
+  Database,
   TrendingUp,
   GraduationCap,
   LogOut,
@@ -253,6 +254,7 @@ const NAV_GROUPS = [
       { label: "Platform Settings", href: "/admin/platform-settings", icon: Settings2 },
       { label: "API Keys", href: "/admin/astrology-keys", icon: Key },
       { label: "Legal", href: "/admin/legal", icon: ScrollText },
+      { label: "DB Migrations", href: "/admin/db/migrations", icon: Database },
     ],
   },
 ];

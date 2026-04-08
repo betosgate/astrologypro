@@ -6,20 +6,19 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Lock,
   CheckCircle2,
   Circle,
   AlertTriangle,
   Zap,
-  Star,
   Eye,
   Clock,
   ArrowRight,
   Sparkles,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { ManageSubscriptionButton } from "@/components/mystery-school/manage-subscription-button";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -63,6 +62,17 @@ type DecanItem = {
 
 type PageData = {
   student: { id: string; trainingStatus: string; startQuarter: string };
+  subscription: {
+    status: string;
+    enrolled_at: string | null;
+    entry_quarter: string | null;
+    entry_year: number | null;
+    recurring_amount: number | null;
+    recurring_currency: string;
+    one_time_fee_amount: number | null;
+    renewal_date: string | null;
+    access_end_date: string | null;
+  } | null;
   decans: DecanItem[];
   completedCount: number;
   totalDecans: number;
@@ -123,6 +133,14 @@ function formatFullDate(iso: string): string {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function formatCurrency(amount: number, currency = "usd"): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+    minimumFractionDigits: 2,
+  }).format(amount);
 }
 
 // ─── Grid cell status icon ────────────────────────────────────────────────────
@@ -418,14 +436,62 @@ export default function DecansProgressPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/mystery-school/decans")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.error) setError(d.error);
-        else setData(d);
-      })
-      .catch(() => setError("Failed to load"))
-      .finally(() => setLoading(false));
+    let cancelled = false;
+
+    async function loadPageData(showLoader: boolean) {
+      if (showLoader) {
+        setLoading(true);
+      }
+
+      try {
+        const response = await fetch("/api/mystery-school/decans", {
+          cache: "no-store",
+        });
+        const payload = await response.json();
+
+        if (cancelled) return;
+
+        if (payload.error) {
+          setError(payload.error);
+          setData(null);
+          return;
+        }
+
+        setError(null);
+        setData(payload);
+      } catch {
+        if (!cancelled) {
+          setError("Failed to load");
+          setData(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    function handlePageShow() {
+      void loadPageData(false);
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        void loadPageData(false);
+      }
+    }
+
+    void loadPageData(true);
+    window.addEventListener("pageshow", handlePageShow);
+    window.addEventListener("focus", handlePageShow);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("focus", handlePageShow);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   if (loading) {
@@ -459,6 +525,15 @@ export default function DecansProgressPage() {
   const upcoming = data.decans
     .filter((d) => d.status === "upcoming" || d.status === "preview")
     .slice(0, 3);
+  const subscription = data.subscription;
+  const subscriptionEntryLabel =
+    subscription?.entry_quarter && subscription?.entry_year
+      ? `${subscription.entry_quarter.charAt(0).toUpperCase()}${subscription.entry_quarter.slice(1)} ${subscription.entry_year}`
+      : "Seasonal Entry";
+  const subscriptionBillingLabel =
+    subscription?.recurring_amount != null
+      ? `${formatCurrency(subscription.recurring_amount, subscription.recurring_currency)}/month`
+      : "Managed in Stripe";
 
   // Group by sign for compact grid
   const bySign: Record<string, DecanItem[]> = {};
@@ -528,6 +603,81 @@ export default function DecansProgressPage() {
               Congratulations, Priest/Priestess — graduation awaits.
             </p>
           )}
+
+          {subscription ? (
+            <>
+              <Separator className="opacity-20" />
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-yellow-500/80">
+                    Subscription
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Keep your Mystery School billing and cohort details in view while you work through the decan curriculum.
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                  <Card className="border-yellow-500/20 bg-black/10">
+                    <CardContent className="px-4 py-4">
+                      <p className="text-[11px] uppercase tracking-[0.14em] text-yellow-500/70">Status</p>
+                      <p className="mt-1 text-sm font-semibold capitalize">
+                        {subscription.status === "cancelled" && subscription.access_end_date
+                          ? "Cancelled · Access Active"
+                          : subscription.status}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-yellow-500/20 bg-black/10">
+                    <CardContent className="px-4 py-4">
+                      <p className="text-[11px] uppercase tracking-[0.14em] text-yellow-500/70">Enrolled</p>
+                      <p className="mt-1 text-sm font-semibold">
+                        {subscription.enrolled_at ? formatFullDate(subscription.enrolled_at) : "Recently"}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-yellow-500/20 bg-black/10">
+                    <CardContent className="px-4 py-4">
+                      <p className="text-[11px] uppercase tracking-[0.14em] text-yellow-500/70">Billing</p>
+                      <p className="mt-1 text-sm font-semibold">{subscriptionBillingLabel}</p>
+                      {typeof subscription.one_time_fee_amount === "number" ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Enrollment paid {formatCurrency(subscription.one_time_fee_amount)}
+                        </p>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                  <Card className="border-yellow-500/20 bg-black/10">
+                    <CardContent className="px-4 py-4">
+                      <p className="text-[11px] uppercase tracking-[0.14em] text-yellow-500/70">
+                        {subscription.status === "cancelled" ? "Access Until" : "Next Renewal"}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold">
+                        {subscription.status === "cancelled"
+                          ? subscription.access_end_date
+                            ? formatFullDate(subscription.access_end_date)
+                            : "Managed in Stripe"
+                          : subscription.renewal_date
+                            ? formatFullDate(subscription.renewal_date)
+                            : "Managed in Stripe"}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-yellow-500/20 bg-black/10">
+                    <CardContent className="px-4 py-4">
+                      <p className="text-[11px] uppercase tracking-[0.14em] text-yellow-500/70">Cohort</p>
+                      <p className="mt-1 text-sm font-semibold">{subscriptionEntryLabel}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <ManageSubscriptionButton
+                    variant="outline"
+                    className="border-yellow-500/30 bg-black/10 text-yellow-50 hover:bg-yellow-500/10"
+                  />
+                </div>
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
 
