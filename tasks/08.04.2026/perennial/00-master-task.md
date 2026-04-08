@@ -1,6 +1,7 @@
 # Perennial Signup Frontend Master Task
 
-- Status: Ready For Implementation
+- Completion Notes: See child task statuses. Tasks 01-04 are PARTIAL (functional shell + plan selection + member forms + add/remove members). Tasks 05-09 are DEFERRED — they need Stripe Couple price configured + a real Stripe Elements integration session.
+- Status: Partial (2026-04-08)
 - Date: 2026-04-08
 - Category: Perennial Signup
 - Owner: Frontend

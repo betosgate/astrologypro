@@ -1,6 +1,7 @@
 # Perennial Signup UX Acceptance Criteria And Edge Cases
 
-- Status: Ready For Implementation
+- Completion Notes: NOT IMPLEMENTED — deferred. The current page handles the most important edge cases (plan downgrades trim members, unique email validation, required-field summary error) but the full acceptance test plan including focus-on-first-invalid-field, server error states, etc. needs polishing after task 05 lands.
+- Status: Deferred (2026-04-08)
 - Date: 2026-04-08
 - Category: Perennial Signup
 - Owner: Frontend

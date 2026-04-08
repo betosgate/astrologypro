@@ -1,6 +1,7 @@
 # Perennial Member Form Fields, Validation, And Legacy Rules
 
-- Status: Ready For Implementation
+- Completion Notes: Implemented PARTIAL — primary + additional member forms with first/last/email/relation/dob/birth-time/birth-city/birth-country and an optional questionnaire (intentions/challenges/goals). Email uniqueness validated client-side. The full legacy field set (sub_relation, lifeAreasFulfilling, etc.) is NOT yet wired — task scoped down to keep this commit reviewable. Add the full field set in a follow-up if the legacy set is required for launch.
+- Status: Partial (2026-04-08)
 - Date: 2026-04-08
 - Category: Perennial Signup
 - Owner: Frontend

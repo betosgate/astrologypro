@@ -1,6 +1,7 @@
 # Perennial Plan Selection, Household Rules, And Pricing
 
-- Status: Ready For Implementation
+- Completion Notes: Implemented in src/app/perennial-signup/page.tsx — three-card plan selector (Single $19.95, Couple $29.95, Family $39.95). Capacity rules enforced: changing plan trims members down if needed. Family validates 3-5 members; Single/Couple require exactly the plan size. UI shows household count vs allowed and a callout when STRIPE_PRICE_COMMUNITY_COUPLE is missing.
+- Status: Partial (2026-04-08)
 - Date: 2026-04-08
 - Category: Perennial Signup
 - Owner: Frontend

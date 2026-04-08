@@ -1,6 +1,7 @@
 # Perennial Signup UI Copy Parity And Adaptation
 
-- Status: Ready For Implementation
+- Completion Notes: NOT IMPLEMENTED — deferred. Page uses generic friendly copy. Legacy copy parity can layer on top once the structure stabilises.
+- Status: Deferred (2026-04-08)
 - Date: 2026-04-08
 - Category: Perennial Signup
 - Owner: Frontend
