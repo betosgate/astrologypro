@@ -1,6 +1,14 @@
 
 # Fetch Planet Signs API Logic (Next.js + PostgreSQL)
 
+- Status: Completed (2026-04-08)
+- Completion Notes:
+  - Implemented at `src/app/api/astro-decan/fetch-planet-signs/route.ts`.
+  - Uses the Supabase admin client (`createAdminClient`) instead of a raw `pg` pool — matches the rest of the project's data-access pattern; no need for a new dependency.
+  - Adds a deterministic `ORDER BY planet, signs, id` (the `id` tie-breaker satisfies engineering rule #16 — never paginate without a unique tail key).
+  - Returns the spec-defined shape `{ status, message, results }`. On error returns the spec-defined `{ status: "error", message: "Something went wrong" }` with HTTP 500.
+  - Public endpoint — RLS on `astro_decan_new_infos` allows public SELECT because the data is reference content.
+
 ## Overview
 This API fetches **planet** and **signs** data from the PostgreSQL table `astro_decan_new_infos` and returns it in a structured JSON response.
 
