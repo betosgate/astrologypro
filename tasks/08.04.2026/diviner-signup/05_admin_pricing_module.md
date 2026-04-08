@@ -1,7 +1,7 @@
 # Admin Dashboard: Global Pricing Management Module
 
-- Status: Pending
-- Completion Notes:
+- Status: Completed (2026-04-08)
+- Completion Notes: Implemented end-to-end. Migration: supabase/migrations/20260408000112_global_pricing.sql (registered in /admin/db/migrations runner) creates global_pricing keyed on item_key with one seeded row (professional_divination_course = 25969 INR). Admin API: GET/POST /api/admin/pricing and PATCH/DELETE /api/admin/pricing/[id]. Public read API: GET /api/pricing/[itemKey] (RLS allows public SELECT for is_active=true). Admin UI: src/app/admin/pricing/page.tsx with a select-an-item dropdown + price/currency/name/description editors. Sidebar entry "Pricing Management" added under Config in admin-sidebar.tsx.
 
 ## Overview
 Implement a new "Pricing Management" module in the Admin Dashboard. This will serve as a centralized hub to manage prices for various purchasable items across the project, starting with the **Professional Divination Course**.

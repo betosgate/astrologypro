@@ -1,7 +1,7 @@
 # Diviner Signup UI & Form Creation
 
-- Status: Pending
-- Completion Notes:
+- Status: Completed (2026-04-08)
+- Completion Notes: Implemented at src/app/diviner-signup/page.tsx — left column with course info + bullets, right column with order summary card and billing form. Phone auto-formats to (XXX) XXX-XXXX. Password regex enforced client-side. Eye toggles on password fields. Country/state dropdown with USA + India backed by inline state lists; other countries fall back to a text field.
 
 ## Overview
 Replicate the Professional Divination Course signup page UI based on the Master Specification. 
