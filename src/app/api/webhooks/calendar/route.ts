@@ -9,15 +9,16 @@ const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 /**
  * Refresh a diviner's Google access token using their stored refresh token.
  */
-async function getGoogleAccessToken(divinerId: string): Promise<string | null> {
+async function getGoogleAccessToken(ownerId: string): Promise<string | null> {
   const supabase = createAdminClient();
   const { data } = await supabase
-    .from("diviners")
-    .select("google_calendar_token")
-    .eq("id", divinerId)
+    .from("calendar_connections")
+    .select("refresh_token")
+    .eq("owner_id", ownerId)
+    .eq("provider", "google")
     .single();
 
-  if (!data?.google_calendar_token) return null;
+  if (!data?.refresh_token) return null;
 
   const res = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
@@ -25,7 +26,7 @@ async function getGoogleAccessToken(divinerId: string): Promise<string | null> {
     body: new URLSearchParams({
       client_id: process.env.GOOGLE_CLIENT_ID!,
       client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-      refresh_token: data.google_calendar_token,
+      refresh_token: data.refresh_token,
       grant_type: "refresh_token",
     }),
   });
@@ -36,23 +37,23 @@ async function getGoogleAccessToken(divinerId: string): Promise<string | null> {
 }
 
 /**
- * Reconcile Google Calendar changes for a diviner.
+ * Reconcile Google Calendar changes for an owner.
  * Fetches recent events and checks if any linked booking's event was cancelled/deleted.
  */
-async function reconcileGoogleEvents(divinerId: string): Promise<void> {
-  const accessToken = await getGoogleAccessToken(divinerId);
+async function reconcileGoogleEvents(ownerId: string): Promise<void> {
+  const accessToken = await getGoogleAccessToken(ownerId);
   if (!accessToken) {
-    console.warn("[calendar/webhook] Could not get access token for diviner:", divinerId);
+    console.warn("[calendar/webhook] Could not get access token for owner:", ownerId);
     return;
   }
 
   const supabase = createAdminClient();
 
-  // Fetch confirmed bookings for this diviner that have a Google event ID
+  // Fetch confirmed bookings for this owner that have a Google event ID
   const { data: bookings } = await supabase
     .from("bookings")
     .select("id, google_calendar_event_id, status")
-    .eq("diviner_id", divinerId)
+    .eq("owner_id", ownerId)
     .eq("status", "confirmed")
     .not("google_calendar_event_id", "is", null);
 
@@ -77,7 +78,7 @@ async function reconcileGoogleEvents(divinerId: string): Promise<void> {
         );
         await supabase
           .from("bookings")
-          .update({ status: "cancelled_by_diviner" })
+          .update({ status: "cancelled_by_diviner" }) // TODO: generic status
           .eq("id", booking.id);
         continue;
       }

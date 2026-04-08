@@ -19,33 +19,33 @@ async function getDivinerId(): Promise<string | null> {
   return data?.id ?? null;
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ownerId: string }> }) {
   const divinerId = await getDivinerId();
   if (!divinerId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { id } = await params;
+  const { ownerId: id } = await params;
   const body = await req.json();
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("availability_templates")
     .update({ ...body, updated_at: new Date().toISOString() })
     .eq("id", id)
-    .eq("diviner_id", divinerId)
+    .eq("owner_id", divinerId)
     .select()
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ template: data });
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ ownerId: string }> }) {
   const divinerId = await getDivinerId();
   if (!divinerId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { id } = await params;
+  const { ownerId: id } = await params;
   const admin = createAdminClient();
   const { error } = await admin
     .from("availability_templates")
     .delete()
     .eq("id", id)
-    .eq("diviner_id", divinerId);
+    .eq("owner_id", divinerId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }
