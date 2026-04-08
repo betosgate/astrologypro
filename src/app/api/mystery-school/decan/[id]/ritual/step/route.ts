@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendMysterySchoolGraduation } from "@/lib/email";
+import { processGraduation } from "@/lib/mystery-school/graduation";
 
 export const dynamic = "force-dynamic";
 
@@ -119,32 +119,9 @@ export async function POST(
         .eq("student_id", student.id)
         .eq("decan_id", decanId);
 
-      // Check for Mystery School graduation (all 36 decans)
-      const { count } = await admin
-        .from("student_decan_progress")
-        .select("id", { count: "exact", head: true })
-        .eq("student_id", student.id)
-        .eq("status", "completed");
-
-      if ((count ?? 0) >= 36) {
-        const { data: studentRow } = await admin
-          .from("mystery_school_students")
-          .update({
-            training_status: "graduated",
-            graduated_at: now,
-          })
-          .eq("id", student.id)
-          .neq("training_status", "graduated")
-          .select("id")
-          .single();
-
-        if (studentRow) {
-          sendMysterySchoolGraduation({
-            to: user.email ?? "",
-            name: (user.email ?? "").split("@")[0],
-          }).catch((err) => console.error("[graduation-email]", err));
-        }
-      }
+      // Use the canonical graduation helper which checks Q1 foundation,
+      // all 36 decans completed, AND no unexcused missed decans.
+      await processGraduation(student.id, admin);
     }
   }
 
