@@ -1,7 +1,10 @@
 # Task: Admin Testimonial List — Parity with Old Project
+
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Implemented at src/app/admin/testimonials/{page,create,[id]/edit}.tsx with src/components/admin/testimonials-table-client.tsx using the standard SortHeader/pushParams/SearchAutocomplete pattern.
 Date: 2026-04-07
 Category: Testimonial Module
-Status: Pending
+Status: Completed (2026-04-08, verified)
 
 ## Objective
 Align the admin "Created Testimonial List" page (`/admin/testimonials`) and "Add/Edit Testimonial" form (`/admin/testimonials/create`, `/admin/testimonials/[id]/edit`) with the old project's full feature set, including all table columns, search filters, bulk actions, preview dialog, rich-text editor, and proper pagination.

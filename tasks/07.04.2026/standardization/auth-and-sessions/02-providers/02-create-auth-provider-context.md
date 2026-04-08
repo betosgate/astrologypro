@@ -1,5 +1,8 @@
 # Task 02 - Create Client-Side Auth Provider
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: `src/components/providers/auth-provider.tsx` (137 lines) — `useAuth()` context, listens to Supabase auth state, dispatches `dispatchUnauthorizedApiEvent` on 401, debounces with `unauthorizedInFlightRef`, mounted in `src/app/layout.tsx:124`.
+
 ## Objective
 Implement a client-side `AuthProvider` that listens for Supabase auth state changes and manages the session in a shared React context.
 

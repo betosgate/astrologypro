@@ -1,5 +1,8 @@
 # Add Global Navigation Highlighting
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: src/components/shared/nav-link.tsx ("use client") provides usePathname-based active styling; consumed across community/trainee/advocate/affiliate layouts.
+
 ## Objective
 Implement a standardized visual indicator for the active route in the top navigation bar across multiple dashboards.
 

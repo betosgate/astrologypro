@@ -1,4 +1,7 @@
 # Task 01: Stripe Pricing And Catalog
+
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Stripe price IDs wired in src/app/api/community/checkout/route.ts:92-94 — STRIPE_PRICE_MYSTERY_ENROLLMENT, STRIPE_PRICE_MYSTERY_MONTHLY, STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT. PM individual/family priced via STRIPE_PRICE_COMMUNITY_INDIVIDUAL/FAMILY.
 Date: 2026-04-07
 Category: Mystery School Module
 

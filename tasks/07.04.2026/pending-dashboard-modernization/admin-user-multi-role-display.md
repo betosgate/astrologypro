@@ -1,4 +1,7 @@
 # Task: Admin User List - Multi-Role Display
+
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: roles[] consolidated in src/app/admin/users/page.tsx:249-379 (merge across diviners/clients/advocates/community/trainee with dedup); rendered as multiple badges in user-management-client.tsx:1039-1041; modal copy updated at line 1463.
 Date: 2026-04-07
 Category: Admin Dashboard
 

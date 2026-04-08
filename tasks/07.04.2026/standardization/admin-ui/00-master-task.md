@@ -1,5 +1,8 @@
 # Admin UI Standardization Master Task
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Verified complete: SortHeader pattern from `user-management-client.tsx` adopted across testimonials-, mandalism-, blog-, activity-log-, invitations-, payments-, packages-table-client.tsx. Detail sheets standardised (user-detail-sheet, invitation-detail-sheet, activity-log-detail-sheet, activity-report-detail-sheet). Notes via admin-notes-section.tsx.
+
 ## Objective
 Standardize all administrative data tables, detail panels, and note-taking features across the project to match the performance and UX quality of the "Users" management module.
 

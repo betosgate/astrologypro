@@ -1,4 +1,7 @@
 # Task: Admin Tarot Spread Module
+
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Implemented at src/app/admin/tarot/spreads/{page,new,[id]}.tsx with API at src/app/api/admin/tarot/spreads/.
 Date: 2026-04-07
 Category: Tarot Module
 

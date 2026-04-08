@@ -1,5 +1,8 @@
 # Module 06 - Align Graduation and Certificate Flow With Trigger Completion
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Graduation centralised in src/lib/training/graduation.ts (checkAndAwardTrainingGraduation); called from lessons/[id]/complete and lessons/[id]/quiz, plus check-graduation endpoint as a recovery path.
+
 ## Objective
 Ensure graduation and certificate issuance follow the final trigger-based lesson completion model rather than the older legacy quiz-completion path.
 

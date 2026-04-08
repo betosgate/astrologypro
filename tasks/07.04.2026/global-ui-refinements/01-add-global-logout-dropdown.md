@@ -1,5 +1,8 @@
 # Add Global Logout Dropdown to Shared Layouts
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: PortalLogoutButton imported and rendered in src/app/{community,trainee,advocate,affiliate}/layout.tsx headers.
+
 ## Objective
 Add a functional "Sign Out" button to the desktop navigation header of role layouts that currently lack it without breaking existing responsive states or components.
 

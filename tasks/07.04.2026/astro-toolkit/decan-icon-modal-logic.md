@@ -1,5 +1,8 @@
 # Decan Icon Logic - Western Horoscope V2
 
+- Status: Documentation (no code action)
+- Notes: Reference doc — describes the legacy decan icon component logic. Informational only.
+
 This document explains the technical logic for displaying and interacting with the **Decan Icon** in the Western Horoscope V2 module.
 
 ## 1. Component Scope

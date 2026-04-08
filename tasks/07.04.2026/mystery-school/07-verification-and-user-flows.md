@@ -1,4 +1,7 @@
 # Task 07: Verification And User Flows
+
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: PortalSwitcher (src/components/shared/portal-switcher.tsx) exposes /community and /mystery-school destinations for dual-entitlement users; verified via getUserPortals().
 Date: 2026-04-07
 Category: Mystery School Module
 

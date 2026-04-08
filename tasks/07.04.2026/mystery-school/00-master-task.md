@@ -1,4 +1,7 @@
 # Mystery School Module Master Task
+
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Verified complete: parallel PM + Mystery School memberships, dedicated /mystery-school route base, Stripe price IDs (STRIPE_PRICE_MYSTERY_ENROLLMENT/MONTHLY/MONTHLY_PM_DISCOUNT), admin-controlled ms_pm_discount_enabled platform setting, /community PM-only guard.
 Date: 2026-04-07
 Category: Mystery School Module
 
