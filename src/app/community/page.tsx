@@ -710,7 +710,7 @@ export default async function CommunityDashboardPage() {
         )}
 
         {/* Rich membership card */}
-        <MembershipCard subscription={membershipSubscription} />
+        <MembershipCard subscription={membershipSubscription} userEmail={user.email} />
 
         {/* Profile completion — horizontal progress bar when not complete; badge when complete */}
         {profileIsComplete ? (

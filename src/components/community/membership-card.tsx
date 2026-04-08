@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { useState } from "react";
+import { UpdatePaymentModal } from "@/components/community/update-payment-modal";
 
 export interface MembershipSubscription {
   membership_type: string;
@@ -29,6 +30,8 @@ export interface MembershipSubscription {
 
 interface MembershipCardProps {
   subscription: MembershipSubscription;
+  /** Authenticated user's email — passed to payment modal */
+  userEmail?: string | null;
 }
 
 const STATUS_BADGE_CLASSES: Record<string, string> = {
@@ -55,9 +58,10 @@ function formatCurrency(amount: number, currency: string): string {
   }).format(amount);
 }
 
-export function MembershipCard({ subscription }: MembershipCardProps) {
+export function MembershipCard({ subscription, userEmail }: MembershipCardProps) {
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
   const statusClass =
     STATUS_BADGE_CLASSES[subscription.status] ??
@@ -167,6 +171,18 @@ export function MembershipCard({ subscription }: MembershipCardProps) {
               <Link href="/community/upgrade">Upgrade Plan</Link>
             </Button>
           )}
+          {isFamily && (
+            <Button asChild size="sm" variant="outline">
+              <Link href="/community/members/new">Add Member</Link>
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setPaymentModalOpen(true)}
+          >
+            Update Payment
+          </Button>
           <Button
             size="sm"
             variant="ghost"
@@ -184,6 +200,12 @@ export function MembershipCard({ subscription }: MembershipCardProps) {
           </p>
         )}
       </CardContent>
+
+      <UpdatePaymentModal
+        open={paymentModalOpen}
+        onOpenChange={setPaymentModalOpen}
+        email={userEmail ?? ""}
+      />
     </Card>
   );
 }
