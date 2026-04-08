@@ -58,7 +58,7 @@ function makeSubscription(
   } as Stripe.Subscription;
 }
 
-test("scheduled cancellation maps to cancelled with end-of-period access", () => {
+test("scheduled cancellation maps to cancelled with billing period end metadata", () => {
   const now = "2026-04-08T07:30:00.000Z";
   const subscription = makeSubscription("active", {
     cancel_at_period_end: true,
@@ -103,7 +103,7 @@ test("paused subscription maps to paused state", () => {
   });
 });
 
-test("deleted or canceled subscription keeps access only until period end", () => {
+test("deleted or canceled subscription records billing period end metadata", () => {
   const now = "2026-04-08T07:30:00.000Z";
   const subscription = makeSubscription("canceled", {
     current_period_end: 1_777_000_123,

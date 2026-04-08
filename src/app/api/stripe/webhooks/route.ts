@@ -19,6 +19,7 @@ import {
   getSubscriptionPeriodEndIso,
   mapMysterySchoolLifecycleUpdate,
 } from "@/lib/mystery-school/subscription-lifecycle";
+import { finalizeMysterySchoolCheckoutSession } from "@/lib/mystery-school/finalize-checkout";
 
 export const dynamic = "force-dynamic";
 
@@ -197,29 +198,10 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
   // Provision mystery school student record on enrollment
   if (isMysterySchool) {
     const entryQuarter = session.metadata?.entry_quarter ?? null;
-    const entryYearRaw = session.metadata?.entry_year;
-    const entryYear = entryYearRaw ? parseInt(entryYearRaw, 10) : null;
     const enrollmentDate = new Date().toISOString();
-
-    // Idempotent upsert — repeated webhook delivery is safe
-    const { error: studentError } = await supabase
-      .from("mystery_school_students")
-      .upsert(
-        {
-          user_id: userId,
-          community_member_id: communityMemberId,
-          enrolled_at: enrollmentDate,
-          enrollment_date: enrollmentDate,
-          training_status: "foundation",
-          entry_quarter: entryQuarter,
-          entry_year: entryYear,
-          stripe_subscription_id: subscriptionId ?? null,
-          one_time_fee_paid: true,
-          one_time_fee_amount: 97.00,
-          status: "active",
-        },
-        { onConflict: "user_id" }
-      );
+    const { error: studentError } = await finalizeMysterySchoolCheckoutSession(session)
+      .then(() => ({ error: null }))
+      .catch((error: unknown) => ({ error }));
 
     if (studentError) {
       console.error("[Webhook] Failed to upsert mystery_school_students:", studentError);
