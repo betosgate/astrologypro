@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireMysterySchoolAccess } from "@/lib/mystery-school/access";
 
 export const dynamic = "force-dynamic";
 
@@ -17,49 +18,23 @@ export const dynamic = "force-dynamic";
  *   missed    → grace_close passed, not completed
  */
 export async function GET() {
+  const result = await requireMysterySchoolAccess();
+  if (!result) {
+    return NextResponse.json({ error: "Mystery School access required" }, { status: 403 });
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: member } = await supabase
-    .from("community_members")
-    .select("membership_type, membership_status")
-    .eq("user_id", user.id)
-    .single();
-
-  const memberTyped = member as unknown as {
-    membership_type: string;
-    membership_status: string;
-  } | null;
-
-  if (
-    !memberTyped ||
-    memberTyped.membership_type !== "mystery_school" ||
-    memberTyped.membership_status !== "active"
-  ) {
-    return NextResponse.json(
-      { error: "Mystery School membership required" },
-      { status: 403 }
-    );
-  }
-
-  const { data: student } = await supabase
-    .from("mystery_school_students")
-    .select("id, training_status, start_quarter, enrolled_at")
-    .eq("user_id", user.id)
-    .single();
-
-  const studentTyped = student as unknown as {
+  const studentTyped = result.student as unknown as {
     id: string;
     training_status: string;
     start_quarter: string;
     enrolled_at: string;
-  } | null;
-
-  if (!studentTyped)
-    return NextResponse.json({ error: "Student record not found" }, { status: 404 });
+  };
 
   // Q1 complete check — count weeks where all tasks are done (week_completed_at set).
   // student_foundation_progress rows are created when the first task is completed,

@@ -1727,7 +1727,7 @@ export async function sendMysterySchoolEnrollmentConfirmation({
   entryDate: string;
   startDate?: string | null;
 }) {
-  const portalUrl = `${APP_URL}/community/mystery-school`;
+  const portalUrl = `${APP_URL}/mystery-school`;
 
   const content = `
     <p style="margin:0 0 16px;color:#d4d4d8;">Welcome, ${name}.</p>

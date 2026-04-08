@@ -6,6 +6,7 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import Link from "next/link";
 import { RouteTracker } from "@/components/shared/route-tracker";
 import { MobileNav } from "@/components/community/mobile-nav";
+import { requireMysterySchoolAccess } from "@/lib/mystery-school/access";
 
 export const metadata = { title: "Mystery School - AstrologyPro" };
 
@@ -14,15 +15,14 @@ export default async function MysterySchoolLayout({ children }: { children: Reac
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const result = await requireMysterySchoolAccess();
+  if (!result) redirect("/mystery-school/enroll");
+
   const { data: member } = await supabase
     .from("community_members")
-    .select("id, full_name, membership_type, membership_status")
+    .select("full_name, membership_type")
     .eq("user_id", user.id)
     .maybeSingle();
-
-  if (!member) redirect("/join/community");
-  if (member.membership_status !== "active") redirect("/join/community?status=inactive");
-  if (member.membership_type !== "mystery_school") redirect("/community");
 
   const portals = await getUserPortals(supabase, user.id);
 
@@ -44,7 +44,7 @@ export default async function MysterySchoolLayout({ children }: { children: Reac
         <div className="container mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <div className="flex items-center gap-2 md:gap-6">
             <MobileNav
-              membershipType={member.membership_type}
+              membershipType={member?.membership_type ?? "mystery_school"}
               navItems={navLinks}
               displayName={member.full_name ?? ""}
               membershipLabel="Mystery School"

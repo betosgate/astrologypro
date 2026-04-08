@@ -1,7 +1,7 @@
 # Task 01: Stripe Pricing And Catalog
 
-- Status: Completed (2026-04-08, verified)
-- Completion Notes: Stripe price IDs wired in src/app/api/community/checkout/route.ts:92-94 — STRIPE_PRICE_MYSTERY_ENROLLMENT, STRIPE_PRICE_MYSTERY_MONTHLY, STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT. PM individual/family priced via STRIPE_PRICE_COMMUNITY_INDIVIDUAL/FAMILY.
+- Status: Partially Complete (2026-04-08, re-audited)
+- Completion Notes: Stripe price IDs are wired in src/app/api/community/checkout/route.ts and the documented PM-discount price exists, but this task file still requires the env var to be present locally before the discounted checkout path is fully verified.
 Date: 2026-04-07
 Category: Mystery School Module
 

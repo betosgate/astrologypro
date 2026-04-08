@@ -1,7 +1,7 @@
 # Mystery School Module Master Task
 
-- Status: Completed (2026-04-08, verified)
-- Completion Notes: Verified complete: parallel PM + Mystery School memberships, dedicated /mystery-school route base, Stripe price IDs (STRIPE_PRICE_MYSTERY_ENROLLMENT/MONTHLY/MONTHLY_PM_DISCOUNT), admin-controlled ms_pm_discount_enabled platform setting, /community PM-only guard.
+- Status: Mostly Complete (2026-04-08, re-audited)
+- Completion Notes: Parallel PM + Mystery School memberships now work off mystery_school_students with legacy-user backfill completed; /mystery-school is the canonical product area and /mystery-school/enroll is the canonical enrollment URL via proxy rewrite. Remaining gap: the PM dashboard CTA still uses old-style +$17.03 wording when the discount is ON, so the task folder should not be treated as fully verified end-to-end.
 Date: 2026-04-07
 Category: Mystery School Module
 

@@ -8,6 +8,14 @@ const SHARE_TOKEN_RE = /^\/share\/([^/]+)$/;
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  if (pathname === "/community/upgrade") {
+    return NextResponse.redirect(new URL("/mystery-school/enroll", request.url), 307);
+  }
+
+  if (pathname === "/mystery-school/enroll") {
+    return NextResponse.rewrite(new URL("/join/mystery-school", request.url));
+  }
+
   const shareMatch = SHARE_TOKEN_RE.exec(pathname);
   if (shareMatch) {
     const userAgent = request.headers.get("user-agent") ?? "";
