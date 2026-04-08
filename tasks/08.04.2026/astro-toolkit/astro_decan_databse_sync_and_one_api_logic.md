@@ -1,5 +1,15 @@
 # Astro Decan New Infos Table Creation & API Task
 
+- Status: Completed (2026-04-08)
+- Completion Notes:
+  - Migration: `supabase/migrations/20260408000106_astro_decan_new_infos.sql` — additive only. Creates `astro_decan_new_infos` with `id UUID PK`, `mongo_id TEXT UNIQUE` (so we can re-import idempotently), all 13 content fields as `TEXT`, `created_at`/`updated_at` timestamps, and a `moddatetime` trigger when the extension is available.
+  - Indexes: `idx_astro_decan_new_infos_planet`, `idx_astro_decan_new_infos_signs`, `idx_astro_decan_new_infos_planet_sign` (covers the most common UI lookup patterns: list-by-planet, filter-by-sign, and the joint planet+sign query).
+  - RLS enabled with two policies: public SELECT (reference content, like decans) + service_role full access.
+  - Seed: 36 records embedded as `INSERT … ON CONFLICT (mongo_id) DO NOTHING` directly in the migration, so the table is populated on first apply and re-runs are safe.
+  - API: see `astro_decan_info_api_logic.md`.
+  - Data sync endpoint: `POST /api/admin/astro-decan/seed` — admin-only, idempotent upsert by `mongo_id`. Reads `src/data/astro_decan_new_infos.seed.json` (a copy of the source JSON kept inside `src/` so Next.js bundles it). Pre-flight detects PostgREST `42P01` and returns a 409 with instructions if the DDL hasn't been applied yet. Returns `{ ok, source_records, upserted, skipped_no_id, rows_before, rows_after }`.
+  - **DDL must still be applied separately** via the Supabase dashboard SQL editor or `supabase db push`. PostgREST cannot run `CREATE TABLE`, so a one-shot endpoint cannot do the schema and the data in one call without adding a `pg` runtime dependency.
+
 ## Overview
 This task involves migrating Astro Decan data from the previous project's MongoDB backup JSON file into a relational database table. The table will store planetary decan information, tarot card details, Greek daemon information, and descriptive texts related to planetary sign combinations.
 

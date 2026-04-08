@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireMysterySchoolAccess } from "@/lib/mystery-school/access";
+import { stripe } from "@/lib/stripe/client";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,91 @@ export async function GET() {
     training_status: string;
     start_quarter: string;
     enrolled_at: string;
+    enrollment_date?: string | null;
+    entry_quarter?: string | null;
+    entry_year?: number | null;
+    stripe_subscription_id?: string | null;
+    one_time_fee_amount?: number | null;
+    status?: string;
+    access_expires_at?: string | null;
   };
+
+  let subscriptionSummary: {
+    status: string;
+    enrolled_at: string | null;
+    entry_quarter: string | null;
+    entry_year: number | null;
+    recurring_amount: number | null;
+    recurring_currency: string;
+    one_time_fee_amount: number | null;
+    renewal_date: string | null;
+    access_end_date: string | null;
+  } | null = {
+    status: studentTyped.status ?? "active",
+    enrolled_at: studentTyped.enrollment_date ?? studentTyped.enrolled_at ?? null,
+    entry_quarter: studentTyped.entry_quarter ?? null,
+    entry_year: studentTyped.entry_year ?? null,
+    recurring_amount: null,
+    recurring_currency: "usd",
+    one_time_fee_amount: studentTyped.one_time_fee_amount ?? null,
+    renewal_date: null,
+    access_end_date: studentTyped.access_expires_at ?? null,
+  };
+
+  if (studentTyped.stripe_subscription_id) {
+    try {
+      const subscription = await stripe.subscriptions.retrieve(
+        studentTyped.stripe_subscription_id,
+        { expand: ["latest_invoice"] }
+      ) as unknown as {
+        current_period_end?: number;
+        billing_cycle_anchor?: number;
+        latest_invoice?: { period_end?: number | null } | string | null;
+        items?: {
+          data?: Array<{
+            price?: {
+              unit_amount?: number | null;
+              currency?: string | null;
+            };
+          }>;
+        };
+      };
+
+      const invoicePeriodEnd =
+        subscription.latest_invoice &&
+        typeof subscription.latest_invoice !== "string" &&
+        typeof subscription.latest_invoice.period_end === "number"
+          ? subscription.latest_invoice.period_end
+          : null;
+      const billingTimestamp =
+        subscription.current_period_end ??
+        invoicePeriodEnd ??
+        subscription.billing_cycle_anchor ??
+        null;
+      const price = subscription.items?.data?.[0]?.price;
+
+      subscriptionSummary = {
+        status: studentTyped.status ?? "active",
+        enrolled_at: studentTyped.enrollment_date ?? studentTyped.enrolled_at ?? null,
+        entry_quarter: studentTyped.entry_quarter ?? null,
+        entry_year: studentTyped.entry_year ?? null,
+        recurring_amount:
+          typeof price?.unit_amount === "number" ? price.unit_amount / 100 : null,
+        recurring_currency: price?.currency ?? "usd",
+        one_time_fee_amount: studentTyped.one_time_fee_amount ?? null,
+        renewal_date:
+          studentTyped.status === "active" && billingTimestamp
+            ? new Date(billingTimestamp * 1000).toISOString()
+            : null,
+        access_end_date:
+          studentTyped.status === "cancelled"
+            ? studentTyped.access_expires_at ?? (
+                billingTimestamp ? new Date(billingTimestamp * 1000).toISOString() : null
+              )
+            : null,
+      };
+    } catch {}
+  }
 
   // Q1 complete check — count weeks where all tasks are done (week_completed_at set).
   // student_foundation_progress rows are created when the first task is completed,
@@ -250,5 +335,6 @@ export async function GET() {
     q1_complete: q1Complete,
     graduation_eligible: graduationEligible,
     unexcused_missed_count: unexcusedMissedCount,
+    subscription: subscriptionSummary,
   });
 }

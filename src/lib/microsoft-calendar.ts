@@ -1,4 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  upsertCalendarConnection,
+  deleteCalendarConnection,
+} from "@/lib/calendar/connections";
 
 const TENANT_ID = "common"; // multi-tenant
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
@@ -45,29 +49,81 @@ export async function handleMsOAuthCallback(code: string, divinerId: string): Pr
 
   const admin = createAdminClient();
   await admin.from("diviners").update({ outlook_calendar_token: tokens }).eq("id", divinerId);
+
+  // Dual-write into normalized calendar_connections (cutover from JSONB).
+  // Best-effort — never throws.
+  await upsertCalendarConnection(admin, {
+    divinerId,
+    provider: "microsoft",
+    refreshToken: tokens.refresh_token,
+    accessToken: tokens.access_token ?? null,
+    expiresAt:
+      typeof tokens.expires_in === "number"
+        ? new Date(Date.now() + tokens.expires_in * 1000)
+        : null,
+  });
 }
 
-/** Get a valid access token, refreshing if needed */
+/** Get a valid access token, refreshing if needed.
+ *
+ * Read-side cutover: prefer the normalized calendar_connections table.
+ * Fall back to the legacy diviners.outlook_calendar_token JSONB during
+ * the cutover window so neither newly-connected nor pre-cutover diviners
+ * are broken.
+ */
 async function getMsAccessToken(divinerId: string): Promise<string | null> {
   const admin = createAdminClient();
+
+  // Pull the legacy JSONB and the user_id needed for the new lookup in one query.
   const { data: diviner } = await admin
     .from("diviners")
-    .select("outlook_calendar_token")
+    .select("user_id, outlook_calendar_token")
     .eq("id", divinerId)
     .single();
+  if (!diviner) return null;
 
-  if (!diviner?.outlook_calendar_token) return null;
-
-  const token = diviner.outlook_calendar_token as {
+  let token: {
     access_token: string;
     refresh_token: string;
     expires_at?: number;
     expires_in?: number;
-  };
+  } | null = null;
+
+  // 1. Preferred: calendar_connections row for this user + provider
+  if (diviner.user_id) {
+    const { data: conn } = await admin
+      .from("calendar_connections")
+      .select("access_token, refresh_token, expires_at")
+      .eq("user_id", diviner.user_id)
+      .eq("provider", "microsoft")
+      .maybeSingle();
+
+    if (conn?.refresh_token) {
+      token = {
+        access_token: conn.access_token ?? "",
+        refresh_token: conn.refresh_token,
+        expires_at: conn.expires_at
+          ? Math.floor(new Date(conn.expires_at).getTime() / 1000)
+          : undefined,
+      };
+    }
+  }
+
+  // 2. Fallback: legacy JSONB column on the diviner row
+  if (!token && diviner.outlook_calendar_token) {
+    token = diviner.outlook_calendar_token as {
+      access_token: string;
+      refresh_token: string;
+      expires_at?: number;
+      expires_in?: number;
+    };
+  }
+
+  if (!token) return null;
 
   // If token is still valid (with 5 min buffer), return it
   const expiresAt = token.expires_at ?? (Date.now() / 1000 + (token.expires_in ?? 3600));
-  if (expiresAt > Date.now() / 1000 + 300) return token.access_token;
+  if (expiresAt > Date.now() / 1000 + 300 && token.access_token) return token.access_token;
 
   // Refresh
   const body = new URLSearchParams({
@@ -92,6 +148,17 @@ async function getMsAccessToken(divinerId: string): Promise<string | null> {
   };
 
   await admin.from("diviners").update({ outlook_calendar_token: updatedTokens }).eq("id", divinerId);
+
+  // Dual-write the rotated token into calendar_connections so the
+  // normalized table stays current with the JSONB during the cutover.
+  await upsertCalendarConnection(admin, {
+    divinerId,
+    provider: "microsoft",
+    refreshToken: updatedTokens.refresh_token ?? token.refresh_token,
+    accessToken: updatedTokens.access_token ?? null,
+    expiresAt: new Date(updatedTokens.expires_at * 1000),
+  });
+
   return newTokens.access_token;
 }
 
@@ -239,4 +306,6 @@ export async function deleteMsCalendarEvent(
 export async function disconnectMsCalendar(divinerId: string): Promise<void> {
   const admin = createAdminClient();
   await admin.from("diviners").update({ outlook_calendar_token: null }).eq("id", divinerId);
+  // Mirror the disconnect into the normalized calendar_connections table.
+  await deleteCalendarConnection(admin, divinerId, "microsoft");
 }

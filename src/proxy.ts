@@ -16,6 +16,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.rewrite(new URL("/join/mystery-school", request.url));
   }
 
+  if (pathname === "/mystery-school/checkout/success") {
+    return NextResponse.rewrite(new URL("/join/mystery-school/checkout/success", request.url));
+  }
+
+  if (pathname === "/mystery-school/checkout/cancel") {
+    return NextResponse.rewrite(new URL("/join/mystery-school/checkout/cancel", request.url));
+  }
+
   const shareMatch = SHARE_TOKEN_RE.exec(pathname);
   if (shareMatch) {
     const userAgent = request.headers.get("user-agent") ?? "";
