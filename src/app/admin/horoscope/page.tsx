@@ -1925,7 +1925,7 @@ function PlanetReturnSummaryTable({ tab, birth, returnDate, natalData }: {
           <thead>
             <tr className="border-b bg-muted/20">
               {["Date of Birth", "Place of Birth", "Time of Birth", "House System", `${label} at Birth`, `Next ${label} Return`].map((h) => (
-                <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
@@ -2049,7 +2049,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
             <table className="w-full text-sm">
               <thead><tr className="border-b bg-muted/20">
                 {["Native Birth Date", "Solar Return Date", "Sun Degree", "Solar Return ASC"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr></thead>
               <tbody><tr className="bg-background">
@@ -2071,7 +2071,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
             <table className="w-full text-sm">
               <thead><tr className="border-b bg-muted/20">
                 {["Planet", "House", "Full Degree", "Sign", "Norm Degree", "Speed", "Retro?"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr></thead>
               <tbody>
@@ -2089,6 +2089,48 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex || houseList.length > 0) && (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return House Cusps</h3></div>
+          {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex) && (
+            <div className="overflow-x-auto border-b">
+              <table className="w-full text-sm">
+                <thead><tr className="border-b bg-muted/20">
+                  {["Point", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {[{ label: "Ascendant", val: cuspObj.ascendant }, { label: "Midheaven", val: cuspObj.midheaven }, { label: "Vertex", val: cuspObj.vertex }].filter((r) => r.val).map((r) => (
+                    <tr key={r.label} className="border-b last:border-0 bg-background">
+                      <td className="px-3 py-2 font-medium">{r.label}</td>
+                      <td className="px-3 py-2"><ZodiacSymbol sign={typeof r.val === "object" ? r.val?.sign : String(r.val)} /></td>
+                      <td className="px-3 py-2 font-mono text-xs">{typeof r.val === "object" ? `${Number(r.val?.degree ?? 0).toFixed(2)}°` : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {houseList.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="border-b bg-muted/20">
+                  {["House", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {houseList.map((h: any, i: number) => (
+                    <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                      <td className="px-3 py-2 font-medium">{h.house}</td>
+                      <td className="px-3 py-2"><ZodiacSymbol sign={h.sign} /></td>
+                      <td className="px-3 py-2 font-mono text-xs">{Number(h.degree ?? 0).toFixed(2)}°</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -2125,49 +2167,6 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
           </div>
         );
       })()}
-
-      {/* 4. Solar Return House Cusps */}
-      {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex || houseList.length > 0) && (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return House Cusps</h3></div>
-          {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex) && (
-            <div className="overflow-x-auto border-b">
-              <table className="w-full text-sm">
-                <thead><tr className="border-b bg-muted/20">
-                  {["Point", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>)}
-                </tr></thead>
-                <tbody>
-                  {[{ label: "Ascendant", val: cuspObj.ascendant }, { label: "Midheaven", val: cuspObj.midheaven }, { label: "Vertex", val: cuspObj.vertex }].filter((r) => r.val).map((r) => (
-                    <tr key={r.label} className="border-b last:border-0 bg-background">
-                      <td className="px-3 py-2 font-medium">{r.label}</td>
-                      <td className="px-3 py-2"><ZodiacSymbol sign={typeof r.val === "object" ? r.val?.sign : String(r.val)} /></td>
-                      <td className="px-3 py-2 font-mono text-xs">{typeof r.val === "object" ? `${Number(r.val?.degree ?? 0).toFixed(2)}°` : "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {houseList.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead><tr className="border-b bg-muted/20">
-                  {["House", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>)}
-                </tr></thead>
-                <tbody>
-                  {houseList.map((h: any, i: number) => (
-                    <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
-                      <td className="px-3 py-2 font-medium">{h.house}</td>
-                      <td className="px-3 py-2"><ZodiacSymbol sign={h.sign} /></td>
-                      <td className="px-3 py-2 font-mono text-xs">{Number(h.degree ?? 0).toFixed(2)}°</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* 5. Solar Return Aspects table */}
       {aspectList.length > 0 && (
@@ -2341,7 +2340,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
               <thead>
                 <tr className="border-b bg-muted/20">
                   {["Date / Month", "Moon Day", "Illumination", "Phase", "Moon Sign"].map((h) => (
-                    <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
