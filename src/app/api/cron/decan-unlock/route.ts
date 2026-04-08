@@ -69,12 +69,19 @@ export async function GET(request: NextRequest) {
     end_day: number;
   }, year: number = currentYear) {
     const crossesYear = d.start_month === 12 && d.end_month !== 12;
-    const windowOpen = new Date(year, d.start_month - 1, d.start_day, 0, 0, 0);
+    // Use Date.UTC so the window boundaries are not skewed by the
+    // server's local timezone (Vercel runs in UTC; running locally in a
+    // non-UTC zone would otherwise drift the boundaries by hours).
+    const windowOpen = new Date(
+      Date.UTC(year, d.start_month - 1, d.start_day, 0, 0, 0)
+    );
     const windowClose = new Date(
-      crossesYear ? year + 1 : year,
-      d.end_month - 1,
-      d.end_day,
-      23, 59, 59
+      Date.UTC(
+        crossesYear ? year + 1 : year,
+        d.end_month - 1,
+        d.end_day,
+        23, 59, 59
+      )
     );
     const graceClose = new Date(windowClose.getTime() + 2 * 24 * 60 * 60 * 1000);
     const previewOpen = new Date(windowOpen.getTime() - 7 * 24 * 60 * 60 * 1000);
