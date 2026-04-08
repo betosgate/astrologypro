@@ -1,5 +1,8 @@
 # Task: Planetary Zodiacal Ritual Configurator
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Dynamic configurator in rituals/new/page.tsx with planet/sign tag generation; persists via POST /api/community/rituals.
+
 ## Objective
 Build the advanced **Planetary Zodiacal Invocation Ritual** builder with dynamic tag generation and legacy-parity validation.
 

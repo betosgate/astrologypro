@@ -1,5 +1,8 @@
 # AstrologyAPI Authentication Error Documentation
 
+- Status: Documentation (no code action)
+- Notes: Reference doc — explains AstrologyAPI auth error. Resolution is operational (set ASTRO_API_KEY env var).
+
 ## Error Observed
 When calling the compute API endpoint:
 `https://astrologypro.com/api/admin/astro/compute`

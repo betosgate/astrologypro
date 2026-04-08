@@ -1,6 +1,7 @@
 # Close Community Membership Lifecycle And Email Gaps - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Umbrella — covered by completed children: welcome/enrollment emails (webhook), `src/app/api/community/plan/{cancel,uncancel,change-tier}/route.ts`, billing/unsubscribe route added in 2026-04-07/10.1.
 - Priority: P1
 - Owner: Fullstack
 - Scope: membership emails, checkout follow-up, subscription lifecycle

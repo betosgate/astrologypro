@@ -1,6 +1,7 @@
 # Close Sunday Service Admin And Notification Gaps - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Admin: `src/app/admin/sunday-service/` + API `src/app/api/admin/sunday-service/`. New-episode email and member filter/detail covered by 10/11.
 - Priority: P1
 - Owner: Fullstack
 - Scope: admin publish flow, book filtering, episode detail parity, new episode notifications

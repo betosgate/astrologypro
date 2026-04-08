@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { AdminNotesSection, type AdminNote } from "@/components/admin/admin-notes-section";
 
 interface TrainingNote {
   id: string;
@@ -18,24 +17,10 @@ interface TrainingNotesProps {
   entityId: string;
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function shortEmail(email: string): string {
-  return email.split("@")[0];
-}
-
 export function TrainingNotes({ entityType, entityId }: TrainingNotesProps) {
   const [notes, setNotes] = useState<TrainingNote[]>([]);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
+  const [currentAdminEmail, setCurrentAdminEmail] = useState<string | null>(null);
 
   const fetchNotes = useCallback(async () => {
     try {
@@ -44,13 +29,10 @@ export function TrainingNotes({ entityType, entityId }: TrainingNotesProps) {
       );
       if (!res.ok) {
         const data = await res.json();
-        toast.error(data.error ?? "Failed to load notes.");
-        return;
+        throw new Error(data.error ?? "Failed to load notes.");
       }
       const data = await res.json();
       setNotes(data.notes ?? []);
-    } catch {
-      toast.error("Failed to load notes.");
     } finally {
       setLoading(false);
     }
@@ -60,102 +42,72 @@ export function TrainingNotes({ entityType, entityId }: TrainingNotesProps) {
     fetchNotes();
   }, [fetchNotes]);
 
-  async function handleAddNote() {
-    if (!draft.trim()) return;
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.email) setCurrentAdminEmail(data.email);
+      })
+      .catch(() => {});
+  }, []);
 
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/admin/training/notes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          entity_type: entityType,
-          entity_id: entityId,
-          content: draft.trim(),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error ?? "Failed to add note.");
-        return;
-      }
-      setDraft("");
-      await fetchNotes();
-    } catch {
-      toast.error("Failed to add note.");
-    } finally {
-      setSubmitting(false);
+  async function handleAddNote(content: string) {
+    const res = await fetch("/api/admin/training/notes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        entity_type: entityType,
+        entity_id: entityId,
+        content,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error ?? "Failed to add note.");
     }
+    setNotes((prev) => [data.note, ...prev]);
   }
 
   async function handleDelete(id: string) {
-    setDeletingId(id);
-    try {
-      const res = await fetch(`/api/admin/training/notes/${id}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error ?? "Failed to delete note.");
-        return;
-      }
-      await fetchNotes();
-    } catch {
-      toast.error("Failed to delete note.");
-    } finally {
-      setDeletingId(null);
+    const res = await fetch(`/api/admin/training/notes/${id}`, {
+      method: "DELETE",
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error ?? "Failed to delete note.");
     }
+    setNotes((prev) => prev.filter((note) => note.id !== id));
+  }
+
+  async function handleEdit(id: string, content: string) {
+    const res = await fetch(`/api/admin/training/notes/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error ?? "Failed to update note.");
+    }
+    setNotes((prev) =>
+      prev.map((note) => (note.id === id ? data.note : note))
+    );
   }
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm font-medium">Notes</p>
-
-      {loading ? (
-        <p className="text-xs text-muted-foreground">Loading notes…</p>
-      ) : notes.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No notes yet.</p>
-      ) : (
-        <div className="divide-y rounded-md border">
-          {notes.map((note) => (
-            <div key={note.id} className="flex items-start justify-between gap-3 px-3 py-2.5">
-              <div className="space-y-0.5 min-w-0">
-                <p className="text-sm break-words">{note.content}</p>
-                <p className="text-xs text-muted-foreground">
-                  {shortEmail(note.created_by)} · {formatDate(note.created_at)}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleDelete(note.id)}
-                disabled={deletingId === note.id}
-                className="shrink-0 text-xs text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
-                aria-label="Delete note"
-              >
-                {deletingId === note.id ? "…" : "Delete"}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="space-y-2">
-        <textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          rows={3}
-          placeholder="Add a note…"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-        />
-        <Button
-          type="button"
-          size="sm"
-          onClick={handleAddNote}
-          disabled={submitting || !draft.trim()}
-        >
-          {submitting ? "Adding…" : "Add Note"}
-        </Button>
-      </div>
-    </div>
+    <AdminNotesSection
+      title="Add a training note…"
+      notes={notes.map((note): AdminNote => ({
+        id: note.id,
+        content: note.content,
+        created_by: note.created_by,
+        created_at: note.created_at,
+      }))}
+      loading={loading}
+      currentAdminEmail={currentAdminEmail}
+      onAdd={handleAddNote}
+      onDelete={handleDelete}
+      onEdit={handleEdit}
+    />
   );
 }

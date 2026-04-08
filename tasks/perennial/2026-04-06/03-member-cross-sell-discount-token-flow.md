@@ -1,6 +1,7 @@
 # Add Member Cross-sell Discount Token Flow - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Token issuance + validation: `src/app/api/community/discount-token/route.ts` and `.../validate/route.ts`. Token applied at booking: `src/app/api/stripe/booking-payment/route.ts`.
 - Priority: P1
 - Owner: Fullstack
 - Scope: discount token issuance, validation, booking application, usage tracking

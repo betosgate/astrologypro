@@ -1,5 +1,8 @@
 # Module 03 - Make Trigger Completion the Authoritative Lesson Gate
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Trigger answer route src/app/api/trainee/training/lessons/[id]/triggers/[triggerId]/answer/route.ts writes lesson_trigger_progress; rewatch route handles failure path; lesson detail route exposes trigger completion state.
+
 ## Objective
 Move lesson completion authority from the legacy full-lesson quiz endpoint to the trigger-based lesson progression model.
 

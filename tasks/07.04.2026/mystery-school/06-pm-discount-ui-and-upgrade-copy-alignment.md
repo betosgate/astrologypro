@@ -1,4 +1,7 @@
 # Task 06: PM Discount UI And Upgrade Copy Alignment
+
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Discount applied at checkout when caller is a PM member; copy in src/app/community/upgrade/page.tsx aligns with the discounted price.
 Date: 2026-04-07
 Category: Mystery School Module
 

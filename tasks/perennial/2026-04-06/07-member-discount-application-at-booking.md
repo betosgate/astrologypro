@@ -1,6 +1,7 @@
 # Apply Member Discount At Booking - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Token consumed when paying for a booking in `src/app/api/stripe/booking-payment/route.ts` — discount applied to PaymentIntent and token marked as used.
 - Priority: P1
 - Owner: Fullstack
 - Scope: transit CTA, Astro checkout application, token consumption

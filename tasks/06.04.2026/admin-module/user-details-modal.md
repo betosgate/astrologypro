@@ -1,4 +1,5 @@
 **Status:** Done
+**Verified 2026-04-08:** src/components/admin/user-detail-sheet.tsx (Sheet pattern) shows full user info with tabs.
 
 # Task: User Details View Modal
 

@@ -1,4 +1,5 @@
 **Status:** Done
+**Verified 2026-04-08:** src/app/admin/tarot/cards/page.tsx with src/components/admin/tarot-cards-table-client.tsx using SortHeader/pushParams pattern.
 
 # Task: Tarot Card List
 

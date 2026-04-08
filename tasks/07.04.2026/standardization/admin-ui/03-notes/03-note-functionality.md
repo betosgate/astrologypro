@@ -1,5 +1,8 @@
 # Task 03 - Standardize Add Note Functionality
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: src/components/admin/admin-notes-section.tsx provides the shared notes UI; consumed by user-detail-sheet, invitation-detail-sheet, and testimonial-requests-table-client.
+
 ## Objective
 Establish the "Users Note Section" pattern as the universal standard for all administrative note-taking across the project.
 

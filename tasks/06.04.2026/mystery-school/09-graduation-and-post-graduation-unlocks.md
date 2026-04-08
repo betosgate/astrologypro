@@ -1,5 +1,8 @@
 # Module 09 - Graduation and Post-Graduation Unlocks
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: mystery_school_students.graduated_at marked when all 36 decans complete; post-graduation routes under src/app/api/mystery-school/post-grad/.
+
 ## Objective
 Make Mystery School graduation accurate, automated, and capable of unlocking post-graduation experiences.
 

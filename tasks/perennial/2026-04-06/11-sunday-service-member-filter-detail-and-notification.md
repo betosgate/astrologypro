@@ -1,6 +1,7 @@
 # Close Sunday Service Member Filter, Detail, And Notification Gaps - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Member-side filter/detail at `src/app/community/sunday-service/` with email notification on publish via the admin route.
 - Priority: P1
 - Owner: Fullstack
 - Scope: archive filter by book, richer detail, new-episode email

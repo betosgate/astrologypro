@@ -1,5 +1,8 @@
 # Module 01 - Mystery School Enrollment and Subscription Lifecycle
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Stripe checkout in src/app/api/community/checkout/route.ts (mystery_school path), webhook provisions mystery_school_students with enrollment metadata.
+
 ## Objective
 Upgrade the current Mystery School entry flow so it supports the full enrollment lifecycle using the existing schema where possible, especially `mystery_school_students` in place of `mystery_school_enrollments`.
 

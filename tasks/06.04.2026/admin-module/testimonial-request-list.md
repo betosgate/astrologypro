@@ -1,4 +1,5 @@
 **Status:** Done
+**Verified 2026-04-08:** src/app/admin/testimonials/requests/page.tsx + testimonial-requests-table-client.tsx.
 
 # Task: Testimonial Request List
 

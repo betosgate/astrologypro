@@ -1,4 +1,5 @@
 **Status:** Done
+**Verified 2026-04-08:** src/app/admin/testimonials/page.tsx + testimonials-table-client.tsx (standard sort/search/pagination pattern).
 
 # Task: Testimonial List
 

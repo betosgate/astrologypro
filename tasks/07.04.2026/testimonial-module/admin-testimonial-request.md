@@ -1,7 +1,10 @@
 # Task: Admin Testimonial Request — Parity with Old Project
+
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Implemented at src/app/admin/testimonials/requests/ with src/components/admin/testimonial-requests-table-client.tsx; sidebar integration verified in admin-sidebar.tsx.
 Date: 2026-04-07
 Category: Request Testimonial Module
-Status: Pending
+Status: Completed (2026-04-08, verified)
 
 ## Objective
 Align the "Request Testimonial" module with the old project's specifications. This includes updating the list page (`/admin/testimonials/requests`), the request form (with Admin vs Astrologer conditional logic), and integrating "Manage Testimonial" into the main administrative sidebar.

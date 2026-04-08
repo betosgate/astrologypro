@@ -1,5 +1,8 @@
 # Task: Booking Flow - Notes Integration
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Booking notes column on bookings table; surfaced in booking-detail-sheet.tsx.
+
 ## Objective
 Ensure that clients can leave specific notes or requests during the booking process, and that these notes are correctly stored and displayed to the diviner.
 

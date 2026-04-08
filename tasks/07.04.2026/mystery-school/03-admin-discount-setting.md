@@ -1,4 +1,7 @@
 # Task 03: Admin Discount Setting
+
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Admin UI at src/app/admin/platform-settings/page.tsx, API at src/app/api/admin/platform-settings/route.ts; persists ms_pm_discount_enabled boolean.
 Date: 2026-04-07
 Category: Mystery School Module
 

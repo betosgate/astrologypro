@@ -1,5 +1,8 @@
 # Training School Module - AI Execution Master Task
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: See child notes — all 8 governance/authoring/learner/reporting/cert tasks have backing implementation.
+
 ## Goal
 Execute the Training School gap-closure work against the current repo implementation in a way that is deterministic, implementation-ready, and safe for an AI coding agent.
 

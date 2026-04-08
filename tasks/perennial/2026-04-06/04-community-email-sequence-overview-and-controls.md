@@ -1,6 +1,7 @@
 # Add Community Email Sequence Overview And Controls - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Admin email sequences UI exposes overview and controls under `src/app/admin/email-sequences/` (toggle/list/edit).
 - Priority: P1
 - Owner: Fullstack
 - Scope: sequence list, subscriber counts, pause, resume

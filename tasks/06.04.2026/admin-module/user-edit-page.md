@@ -1,4 +1,5 @@
 **Status:** Done
+**Verified 2026-04-08:** Edit UI lives inside the user-detail-sheet (tabs for profile fields). Email is read-only per spec.
 
 # Task: User Edit Page
 

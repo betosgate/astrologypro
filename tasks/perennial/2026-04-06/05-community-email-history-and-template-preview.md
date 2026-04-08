@@ -1,6 +1,7 @@
 # Add Community Email History And Template Preview - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Admin: `src/app/admin/email-history/` (history) and `src/app/admin/email-preview/` (template preview).
 - Priority: P1
 - Owner: Fullstack
 - Scope: per-user send history, template preview

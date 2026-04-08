@@ -1,5 +1,8 @@
 # Module 04 - Add Exact Playback Resume and Trigger State Persistence
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: lesson-viewer-client.tsx:106 + 290 + 314 + 353 + 663 + 677 — initial position resume from API, ~10s heartbeat persisting last_position_seconds for exact resume.
+
 ## Objective
 Store and restore actual lesson playback position and ensure trigger/rewatch state survives refresh and re-entry in a predictable way.
 

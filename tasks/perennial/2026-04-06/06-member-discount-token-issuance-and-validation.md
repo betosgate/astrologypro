@@ -1,6 +1,7 @@
 # Add Member Discount Token Issuance And Validation - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Issuance: `src/app/api/community/discount-token/route.ts`. Validation: `.../discount-token/validate/route.ts`.
 - Priority: P1
 - Owner: Fullstack
 - Scope: token creation, validation, expiry, usage state

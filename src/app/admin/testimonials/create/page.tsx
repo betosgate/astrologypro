@@ -87,19 +87,23 @@ export default function CreateTestimonialPage() {
   const [uploadingAudio, setUploadingAudio] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
 
-  const [form, setForm] = useState({
+  const INITIAL_FORM = {
     diviner_id: "",
     client_name: "",
+    client_email: "",
+    client_phone: "",
     rating: 0,
     text: "",
     service_type: "",
     title: "",
     is_featured: false,
-    status: "pending" as string,
+    is_active: true,
     images: [] as MediaItem[],
     audio: [] as MediaItem[],
     video: [] as MediaItem[],
-  });
+  };
+
+  const [form, setForm] = useState(INITIAL_FORM);
 
   useEffect(() => {
     async function loadDiviners() {
@@ -204,14 +208,26 @@ export default function CreateTestimonialPage() {
     }));
   }
 
+  function handleReset() {
+    setForm({ ...INITIAL_FORM, images: [], audio: [], video: [] });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.title.trim()) {
+      toast.error("Title is Required.");
+      return;
+    }
+    if (!form.client_name.trim()) {
+      toast.error("Customer Name is Required.");
+      return;
+    }
     if (!form.text.trim()) {
-      toast.error("Testimonial text is required.");
+      toast.error("Description is Required.");
       return;
     }
     if (!form.diviner_id) {
-      toast.error("Please select a diviner.");
+      toast.error("Select Astrologer Field.");
       return;
     }
 
@@ -226,9 +242,11 @@ export default function CreateTestimonialPage() {
           rating: form.rating || null,
           text: form.text.trim(),
           service_type: form.service_type.trim() || null,
-          title: form.title.trim() || null,
+          title: form.title.trim(),
           is_featured: form.is_featured,
-          status: form.status,
+          status: form.is_active ? "approved" : "pending",
+          requested_to_email: form.client_email.trim().toLowerCase() || null,
+          requested_to_phone_no: form.client_phone.trim() || null,
           images: form.images,
           audio: form.audio,
           video: form.video,
@@ -271,7 +289,7 @@ export default function CreateTestimonialPage() {
             {/* Title */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium" htmlFor="title">
-                Title
+                Title <span className="text-red-500">*</span>
               </label>
               <input
                 id="title"
@@ -279,6 +297,7 @@ export default function CreateTestimonialPage() {
                 type="text"
                 value={form.title}
                 onChange={handleChange}
+                required
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 placeholder="e.g. Life-changing reading"
               />
@@ -309,7 +328,7 @@ export default function CreateTestimonialPage() {
             {/* Client Name */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium" htmlFor="client_name">
-                Client Name
+                Customer Name <span className="text-red-500">*</span>
               </label>
               <input
                 id="client_name"
@@ -317,8 +336,41 @@ export default function CreateTestimonialPage() {
                 type="text"
                 value={form.client_name}
                 onChange={handleChange}
+                required
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 placeholder="e.g. Jane Doe"
+              />
+            </div>
+
+            {/* Customer Email */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium" htmlFor="client_email">
+                Customer Email
+              </label>
+              <input
+                id="client_email"
+                name="client_email"
+                type="email"
+                value={form.client_email}
+                onChange={handleChange}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder="e.g. jane@example.com"
+              />
+            </div>
+
+            {/* Customer Phone */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium" htmlFor="client_phone">
+                Phone No
+              </label>
+              <input
+                id="client_phone"
+                name="client_phone"
+                type="tel"
+                value={form.client_phone}
+                onChange={handleChange}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder="e.g. +1 555 000 1234"
               />
             </div>
 
@@ -364,40 +416,35 @@ export default function CreateTestimonialPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              {/* Status */}
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium" htmlFor="status">
-                  Status
-                </label>
-                <select
-                  id="status"
-                  name="status"
-                  value={form.status}
+            <div className="flex flex-wrap gap-6">
+              {/* Active */}
+              <div className="flex items-center gap-3">
+                <input
+                  id="is_active"
+                  name="is_active"
+                  type="checkbox"
+                  checked={form.is_active}
                   onChange={handleChange}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                </select>
+                  className="size-4 rounded border-input accent-primary"
+                />
+                <label className="text-sm font-medium" htmlFor="is_active">
+                  Active
+                </label>
               </div>
 
               {/* Featured */}
-              <div className="flex items-end pb-2">
-                <div className="flex items-center gap-3">
-                  <input
-                    id="is_featured"
-                    name="is_featured"
-                    type="checkbox"
-                    checked={form.is_featured}
-                    onChange={handleChange}
-                    className="size-4 rounded border-input accent-primary"
-                  />
-                  <label className="text-sm font-medium" htmlFor="is_featured">
-                    Featured
-                  </label>
-                </div>
+              <div className="flex items-center gap-3">
+                <input
+                  id="is_featured"
+                  name="is_featured"
+                  type="checkbox"
+                  checked={form.is_featured}
+                  onChange={handleChange}
+                  className="size-4 rounded border-input accent-primary"
+                />
+                <label className="text-sm font-medium" htmlFor="is_featured">
+                  Featured
+                </label>
               </div>
             </div>
 
@@ -508,7 +555,15 @@ export default function CreateTestimonialPage() {
               <Button type="submit" disabled={loading || uploadingImages || uploadingAudio || uploadingVideo}>
                 {loading ? "Saving…" : "Create Testimonial"}
               </Button>
-              <Button asChild type="button" variant="outline">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleReset}
+                disabled={loading}
+              >
+                Reset
+              </Button>
+              <Button asChild type="button" variant="ghost">
                 <Link href="/admin/testimonials">Cancel</Link>
               </Button>
             </div>

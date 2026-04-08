@@ -1,6 +1,11 @@
 # Master Task - Perennial Product Module Implementation - 2026-04-07
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes:
+  - DB: `supabase/migrations/20260407000097_perennial_products.sql` defines `perennial_product_categories` and `perennial_products` (mrp, offer_price, preorder_price, category_id, main_image_url, details_image_url, status, is_visible, priority).
+  - API: `src/app/api/admin/perennial-content/products/route.ts` (+ `[id]/route.ts`) implements CRUD.
+  - UI: `src/app/admin/perennial-content/products/page.tsx` (list), `new/page.tsx` (create), `[id]/page.tsx` (edit/detail).
+  - Sidebar dropdown (task 08) routes Product Management → `/admin/perennial-content/products`.
 - Priority: P1
 - Owner: Fullstack
 - Scope: Product CRUD APIs, Category integration, Add/Edit Form UI, Product List with filters, Image Uploads

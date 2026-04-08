@@ -60,7 +60,8 @@ import {
   ShieldCheck,
   ShieldOff,
   Loader2,
-  X
+  X,
+  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -114,6 +115,7 @@ export default function TarotCardsListPage() {
   const [allCards, setAllCards] = useState<TarotCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, startRefreshing] = useTransition();
+  const [previewCard, setPreviewCard] = useState<TarotCard | null>(null);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -322,6 +324,25 @@ export default function TarotCardsListPage() {
 
   return (
     <div className="space-y-6">
+      {/* Preview Dialog */}
+      <Dialog open={!!previewCard} onOpenChange={(o) => !o && setPreviewCard(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Card Preview</DialogTitle>
+          </DialogHeader>
+          {previewCard && (
+            <div className="space-y-2 text-sm">
+              <div><span className="font-medium text-muted-foreground">Name: </span>{previewCard.name}</div>
+              <div><span className="font-medium text-muted-foreground">Arcana: </span>{previewCard.arcana ?? "—"}</div>
+              <div><span className="font-medium text-muted-foreground">Suit: </span>{previewCard.suit ?? "—"}</div>
+              <div><span className="font-medium text-muted-foreground">Priority: </span>{previewCard.priority ?? "—"}</div>
+              <div><span className="font-medium text-muted-foreground">Status: </span>{previewCard.is_active ? "Active" : "Inactive"}</div>
+              <div><span className="font-medium text-muted-foreground">Created: </span>{fmt(previewCard.created_at)}</div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -560,6 +581,10 @@ export default function TarotCardsListPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-[160px]">
+                              <DropdownMenuItem onClick={() => setPreviewCard(c)}>
+                                <Eye className="mr-2 h-4 w-4 text-muted-foreground" />
+                                Preview
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => router.push(`/admin/tarot/cards/${c.id}/edit`)}>
                                 <Pencil className="mr-2 h-4 w-4 text-muted-foreground" />
                                 Edit

@@ -12,6 +12,52 @@ import {
 
 export const dynamic = "force-dynamic";
 
+type ProgramHierarchyLesson = {
+  id: string;
+  title: string;
+  completed: boolean;
+  is_locked: boolean;
+};
+
+type ProgramHierarchyCategory = {
+  id: string;
+  name: string;
+  is_locked: boolean;
+  next_lesson_id: string | null;
+  next_lesson_title: string | null;
+  lessons: ProgramHierarchyLesson[];
+};
+
+type ProgramHierarchyProgram = {
+  id: string;
+  next_category_id: string | null;
+  next_category_name: string | null;
+  categories: ProgramHierarchyCategory[];
+};
+
+function normalizeQuizOptions(options: unknown): { text: string }[] {
+  if (!Array.isArray(options)) return [];
+
+  return options.flatMap((option) => {
+    if (typeof option === "string") {
+      const text = option.trim();
+      return text ? [{ text }] : [];
+    }
+
+    if (
+      option &&
+      typeof option === "object" &&
+      "text" in option &&
+      typeof option.text === "string"
+    ) {
+      const text = option.text.trim();
+      return text ? [{ text }] : [];
+    }
+
+    return [];
+  });
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -60,6 +106,28 @@ async function fetchLessonDetail(lessonId: string) {
   return json.lesson ?? null;
 }
 
+async function fetchProgramHierarchy(programId: string) {
+  const base =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    `http://localhost:${process.env.PORT ?? 3000}`;
+
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((c) => `${c.name}=${c.value}`)
+    .join("; ");
+
+  const res = await fetch(`${base}/api/trainee/training/programs`, {
+    headers: { cookie: cookieHeader },
+    cache: "no-store",
+  });
+
+  if (!res.ok) return null;
+  const json = await res.json();
+  const programs = Array.isArray(json.programs) ? (json.programs as ProgramHierarchyProgram[]) : [];
+  return programs.find((program) => program.id === programId) ?? null;
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -92,8 +160,8 @@ export default async function LessonViewerPage({
 
   if (!lessonData || lessonData.category_id !== categoryId) notFound();
 
-  // Fetch program + category names for breadcrumb
-  const [programRes, categoryRes] = await Promise.all([
+  // Fetch program/category names plus programs hierarchy for consistent sidebar/next metadata
+  const [programRes, categoryRes, programHierarchy] = await Promise.all([
     supabase
       .from("training_programs")
       .select("id, name")
@@ -104,10 +172,14 @@ export default async function LessonViewerPage({
       .select("id, name")
       .eq("id", categoryId)
       .single(),
+    fetchProgramHierarchy(programId),
   ]);
 
   const program = programRes.data;
   const category = categoryRes.data;
+
+  const hierarchyCategory =
+    programHierarchy?.categories.find((cat) => cat.id === categoryId) ?? null;
 
   // Fetch all lessons in the category for sidebar nav
   const { data: allCatLessons } = await supabase
@@ -189,19 +261,30 @@ export default async function LessonViewerPage({
     );
   }
 
-  const sidebarLessons: SidebarLesson[] = catLessonList.map((l) => ({
-    id: l.id,
-    title: l.title,
-    completed: completedSet.has(l.id),
-    current: l.id === lessonId,
-    locked: isSidebarLessonLocked(l),
-  }));
+  const sidebarLessons: SidebarLesson[] = hierarchyCategory
+    ? hierarchyCategory.lessons.map((lesson) => ({
+        id: lesson.id,
+        title: lesson.title,
+        completed: lesson.completed,
+        current: lesson.id === lessonId,
+        locked: hierarchyCategory.is_locked || lesson.is_locked,
+      }))
+    : catLessonList.map((l) => ({
+        id: l.id,
+        title: l.title,
+        completed: completedSet.has(l.id),
+        current: l.id === lessonId,
+        locked: isSidebarLessonLocked(l),
+      }));
 
   // ── Next-item routing (consistent with sidebar lock logic) ──────────────────
   // Priority: next incomplete lesson in same category → next unlocked category → graduation
-  const nextLessonFromCache = catProgressResult.data?.next_lesson_id ?? null;
-  const nextCategoryId = programProgressResult.data?.next_category_id ?? null;
-  const nextCategoryName = programProgressResult.data?.next_category_name ?? null;
+  const nextLessonFromCache =
+    hierarchyCategory?.next_lesson_id ?? catProgressResult.data?.next_lesson_id ?? null;
+  const nextCategoryId =
+    programHierarchy?.next_category_id ?? programProgressResult.data?.next_category_id ?? null;
+  const nextCategoryName =
+    programHierarchy?.next_category_name ?? programProgressResult.data?.next_category_name ?? null;
 
   // Find the next lesson to go to: it should be after the current lesson by priority,
   // not completed, and not locked.
@@ -257,11 +340,7 @@ export default async function LessonViewerPage({
     }) => ({
       id: q.id,
       question: q.question,
-      options: Array.isArray(q.options)
-        ? q.options.map((opt: unknown) =>
-            typeof opt === "string" ? { text: opt } : (opt as { text: string })
-          )
-        : [],
+      options: normalizeQuizOptions(q.options),
       explanation: q.explanation ?? null,
     })
   );

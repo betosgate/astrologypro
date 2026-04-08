@@ -1,5 +1,8 @@
 # Task: Booking Reminders & Webhook Sync
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Cron jobs: src/app/api/cron/{booking-reminders,event-reminders,return-event-reminders}/route.ts. Calendar webhooks via /api/calendar/callback for Google and microsoft/callback for MS.
+
 ## Objective
 Implement automated reminders and bidirectional sync (webhooks) to ensure the AstrologyPro calendar is always up to date and clients don't miss their sessions.
 

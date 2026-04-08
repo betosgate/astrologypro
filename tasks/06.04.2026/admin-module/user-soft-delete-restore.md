@@ -1,4 +1,5 @@
 **Status:** Done
+**Verified 2026-04-08:** Soft delete: src/app/api/admin/users/[id]/delete/route.ts. Restore: src/app/api/admin/users/[id]/restore/route.ts. Deleted list UI: src/app/admin/users/deleted/page.tsx + src/app/api/admin/users/deleted-list/route.ts.
 
 # Task: User Soft Delete & Restore
 

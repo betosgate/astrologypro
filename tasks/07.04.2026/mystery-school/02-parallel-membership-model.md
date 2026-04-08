@@ -1,4 +1,7 @@
 # Task 02: Parallel Membership Model
+
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: mystery_school_students table provisioned in src/app/api/stripe/webhooks/route.ts on enrollment; community_members.membership_type is no longer the single source of truth — dual access supported.
 Date: 2026-04-07
 Category: Mystery School Module
 

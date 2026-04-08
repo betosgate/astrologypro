@@ -18,14 +18,31 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Loader2, ChevronDown, ChevronRight, Download } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Loader2,
+  ChevronDown,
+  ChevronRight,
+  Download,
+  MoreHorizontal,
+  Eye,
+} from "lucide-react";
 import type { ActivityItem } from "@/app/api/admin/reports/activity/route";
+import { useAdminTableParams } from "./admin-table-parts";
+import { ActivityReportDetailSheet } from "./activity-report-detail-sheet";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Source = "user_activity" | "admin_activity" | "security_events";
 
 interface Props {
+  initialSource: Source;
+  initialFilters: Filters;
   initialItems: ActivityItem[];
   initialCursor: string | null;
   initialTotal: number;
@@ -121,11 +138,13 @@ function ActivityTable({
   loading,
   cursor,
   onLoadMore,
+  onViewDetails,
 }: {
   items: ActivityItem[];
   loading: boolean;
   cursor: string | null;
   onLoadMore: () => void;
+  onViewDetails: (item: ActivityItem) => void;
 }) {
   if (!loading && items.length === 0) {
     return (
@@ -146,6 +165,7 @@ function ActivityTable({
             <TableHead>Event Type</TableHead>
             <TableHead>Details</TableHead>
             <TableHead>IP</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -168,6 +188,25 @@ function ActivityTable({
               </TableCell>
               <TableCell className="text-xs font-mono text-muted-foreground">
                 {item.ip_address ?? "—"}
+              </TableCell>
+              <TableCell className="text-right">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="size-8">
+                      <MoreHorizontal className="size-4" />
+                      <span className="sr-only">Activity row actions</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => onViewDetails(item)}
+                      className="flex items-center gap-2"
+                    >
+                      <Eye className="size-3.5" />
+                      View Details
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableCell>
             </TableRow>
           ))}
@@ -310,15 +349,20 @@ function FiltersBar({
 
 // ─── Per-tab state hook ───────────────────────────────────────────────────────
 
-function useTabState(source: Source, initial: ActivityItem[], initCursor: string | null, initTotal: number) {
-  const [items,   setItems]   = useState<ActivityItem[]>(source === "user_activity" ? initial : []);
-  const [cursor,  setCursor]  = useState<string | null>(source === "user_activity" ? initCursor : null);
-  const [total,   setTotal]   = useState<number>(source === "user_activity" ? initTotal : 0);
+function useTabState(
+  source: Source,
+  initial: ActivityItem[],
+  initCursor: string | null,
+  initTotal: number,
+  initialFilters: Filters,
+  isInitiallyActive: boolean,
+) {
+  const [items, setItems] = useState<ActivityItem[]>(isInitiallyActive ? initial : []);
+  const [cursor, setCursor] = useState<string | null>(isInitiallyActive ? initCursor : null);
+  const [total, setTotal] = useState<number>(isInitiallyActive ? initTotal : 0);
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState<Filters>({
-    category: "", eventType: "", userId: "", dateRange: "all",
-  });
-  const [initialized, setInitialized] = useState(source === "user_activity");
+  const [filters, setFilters] = useState<Filters>(initialFilters);
+  const [initialized, setInitialized] = useState(isInitiallyActive);
 
   const fetchPage = useCallback(
     async (nextCursor: string | null, newFilters: Filters, append: boolean) => {
@@ -377,18 +421,59 @@ function useTabState(source: Source, initial: ActivityItem[], initCursor: string
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function ActivityReportClient({ initialItems, initialCursor, initialTotal }: Props) {
-  const [activeTab, setActiveTab] = useState<Source>("user_activity");
+export function ActivityReportClient({
+  initialSource,
+  initialFilters,
+  initialItems,
+  initialCursor,
+  initialTotal,
+}: Props) {
+  const { pushParams } = useAdminTableParams();
+  const [activeTab, setActiveTab] = useState<Source>(initialSource);
+  const [detailItem, setDetailItem] = useState<ActivityItem | null>(null);
 
-  const ua = useTabState("user_activity",  initialItems, initialCursor, initialTotal);
-  const aa = useTabState("admin_activity", [],            null,          0);
-  const se = useTabState("security_events", [],           null,          0);
+  const ua = useTabState(
+    "user_activity",
+    initialItems,
+    initialCursor,
+    initialTotal,
+    initialSource === "user_activity" ? initialFilters : { category: "", eventType: "", userId: "", dateRange: "all" },
+    initialSource === "user_activity",
+  );
+  const aa = useTabState(
+    "admin_activity",
+    initialItems,
+    initialCursor,
+    initialTotal,
+    initialSource === "admin_activity" ? initialFilters : { category: "", eventType: "", userId: "", dateRange: "all" },
+    initialSource === "admin_activity",
+  );
+  const se = useTabState(
+    "security_events",
+    initialItems,
+    initialCursor,
+    initialTotal,
+    initialSource === "security_events" ? initialFilters : { category: "", eventType: "", userId: "", dateRange: "all" },
+    initialSource === "security_events",
+  );
+
+  function syncFiltersToUrl(source: Source, filters: Filters) {
+    pushParams({
+      source,
+      category: source === "user_activity" ? filters.category : "",
+      event_type: filters.eventType,
+      user_id: filters.userId,
+      date_range: filters.dateRange === "all" ? "" : filters.dateRange,
+    });
+  }
 
   function handleTabChange(tab: string) {
-    const t = tab as Source;
-    setActiveTab(t);
-    if (t === "admin_activity")  aa.ensureInit();
-    if (t === "security_events") se.ensureInit();
+    const nextSource = tab as Source;
+    setActiveTab(nextSource);
+    const nextState = nextSource === "user_activity" ? ua : nextSource === "admin_activity" ? aa : se;
+    syncFiltersToUrl(nextSource, nextState.filters);
+    if (nextSource === "admin_activity") aa.ensureInit();
+    if (nextSource === "security_events") se.ensureInit();
   }
 
   const activeState = activeTab === "user_activity" ? ua : activeTab === "admin_activity" ? aa : se;
@@ -442,7 +527,10 @@ export function ActivityReportClient({ initialItems, initialCursor, initialTotal
                   <FiltersBar
                     source={src}
                     filters={state.filters}
-                    onChange={state.handleFiltersChange}
+                    onChange={(nextFilters) => {
+                      state.handleFiltersChange(nextFilters);
+                      syncFiltersToUrl(src, nextFilters);
+                    }}
                   />
                 </CardHeader>
                 <CardContent className="pt-0">
@@ -451,6 +539,7 @@ export function ActivityReportClient({ initialItems, initialCursor, initialTotal
                     loading={state.loading}
                     cursor={state.cursor}
                     onLoadMore={state.handleLoadMore}
+                    onViewDetails={setDetailItem}
                   />
                 </CardContent>
               </Card>
@@ -458,6 +547,12 @@ export function ActivityReportClient({ initialItems, initialCursor, initialTotal
           );
         })}
       </Tabs>
+
+      <ActivityReportDetailSheet
+        item={detailItem}
+        open={!!detailItem}
+        onClose={() => setDetailItem(null)}
+      />
     </div>
   );
 }

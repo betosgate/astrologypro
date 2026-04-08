@@ -1,6 +1,7 @@
 # Improve Perennial Dashboard Content And Quick Actions Parity - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Content sections (resources, library, sessions, broadcasts, transits) + quick-action buttons present on `src/app/community/page.tsx`.
 - Priority: P2
 - Owner: Frontend
 - Scope: dashboard quick actions, sacred content entry points, CTA organization

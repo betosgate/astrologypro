@@ -1,4 +1,8 @@
 # AstrologyPro — Architecture Walkthrough Plan
+
+> **Status: Reference document** — 2026-04-08
+> Reference / requirements document — not an executable task. Implementation work derived from this doc has been split into the dated task folders (perennial/, mystery-school/, training-school/, etc.) which are individually marked complete on 2026-04-08.
+
 Generated: 2026-04-07
 
 ## Platform Overview

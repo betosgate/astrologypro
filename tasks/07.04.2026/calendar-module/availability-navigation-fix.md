@@ -1,4 +1,7 @@
 # Task: Availability Builder Navigation & UI Fix
+
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Sidebar shortcut: src/components/dashboard/sidebar.tsx:70 (Availability → /dashboard/availability). Calendar CTA: src/app/dashboard/calendar/page.tsx:85 (Manage Weekly Schedule). Back link: src/app/dashboard/availability/page.tsx:281-284 (icon-only ArrowLeft → /dashboard/calendar). RichTextEditor wired at line 560. Searchable timezone picker remains a UX polish (deferred).
 Date: 2026-04-07
 Category: Calendar Module
 

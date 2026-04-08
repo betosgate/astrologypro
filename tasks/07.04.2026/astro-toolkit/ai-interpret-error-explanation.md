@@ -1,5 +1,8 @@
 # AI Interpretation API Error Documentation
 
+- Status: Documentation (no code action)
+- Notes: Reference doc — explains the ASTRO_AI_API_URL configuration error. Resolution is operational (set the env var on the server), not a code change. No code action required.
+
 ## Error Observed
 When calling the AI interpretation API endpoint:
 `api/admin/astro/ai-interpret`

@@ -1,5 +1,8 @@
 # Refactor Community Profile Form
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: src/components/community/profile-form.tsx implements the editable client form (full_name, etc.) consumed by src/app/community/profile/page.tsx.
+
 ## Objective
 Convert the current static, read-only `/community/profile` page into an interactive form where users can edit their basic details, mirroring the standard set by the Client Portal profile.
 

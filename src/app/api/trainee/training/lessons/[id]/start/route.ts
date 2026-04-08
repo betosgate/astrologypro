@@ -62,16 +62,16 @@ export async function POST(
   if (lesson.category_id) {
     const { data: category } = await admin
       .from("training_categories")
-      .select("program_id")
+      .select("training_id")
       .eq("id", lesson.category_id)
       .single();
 
-    if (category?.program_id) {
+    if (category?.training_id) {
       const { data: enrollment } = await admin
         .from("program_enrollments")
         .select("id, started_at")
         .eq("user_id", user.id)
-        .eq("program_id", category.program_id)
+        .eq("program_id", category.training_id)
         .single();
 
       if (enrollment && !enrollment.started_at) {
@@ -82,7 +82,7 @@ export async function POST(
       } else if (!enrollment) {
         await admin.from("program_enrollments").insert({
           user_id: user.id,
-          program_id: category.program_id,
+          program_id: category.training_id,
           enrolled_at: now,
           started_at: now,
         });

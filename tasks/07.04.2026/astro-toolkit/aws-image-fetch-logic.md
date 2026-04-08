@@ -1,5 +1,8 @@
 # AWS Image Fetch Logic Documentation
 
+- Status: Documentation (no code action)
+- Notes: Reference doc — describes the legacy V2 picture-fetch API for context. Already informational; current Next.js implementation uses Supabase storage.
+
 This document explains the logic behind the `astro-picture-content/fetch_image_from_aws` API call, which is a core part of the "V2" Western Horoscope report system.
 
 ## 1. Purpose: Why is it called?

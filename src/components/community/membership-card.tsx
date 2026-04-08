@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { useState } from "react";
+import { UpdatePaymentModal } from "@/components/community/update-payment-modal";
+import { UnsubscribeModal } from "@/components/community/unsubscribe-modal";
 
 export interface MembershipSubscription {
   membership_type: string;
@@ -29,6 +31,8 @@ export interface MembershipSubscription {
 
 interface MembershipCardProps {
   subscription: MembershipSubscription;
+  /** Authenticated user's email — passed to payment modal */
+  userEmail?: string | null;
 }
 
 const STATUS_BADGE_CLASSES: Record<string, string> = {
@@ -55,9 +59,11 @@ function formatCurrency(amount: number, currency: string): string {
   }).format(amount);
 }
 
-export function MembershipCard({ subscription }: MembershipCardProps) {
+export function MembershipCard({ subscription, userEmail }: MembershipCardProps) {
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [unsubscribeOpen, setUnsubscribeOpen] = useState(false);
 
   const statusClass =
     STATUS_BADGE_CLASSES[subscription.status] ??
@@ -162,9 +168,31 @@ export function MembershipCard({ subscription }: MembershipCardProps) {
 
         {/* Action buttons */}
         <div className="flex flex-wrap gap-2 pt-1">
+          {isFamily && subscription.member_count < subscription.max_members && (
+            <Button asChild size="sm">
+              <Link href="/community/members/new">+ Add Member</Link>
+            </Button>
+          )}
           {canUpgrade && (
             <Button asChild size="sm" variant="outline">
               <Link href="/community/upgrade">Upgrade Plan</Link>
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setPaymentModalOpen(true)}
+          >
+            Update Payment
+          </Button>
+          {subscription.status === "active" && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setUnsubscribeOpen(true)}
+              className="border-orange-500/40 text-orange-700 hover:bg-orange-500/10"
+            >
+              Subscribed
             </Button>
           )}
           <Button
@@ -184,6 +212,17 @@ export function MembershipCard({ subscription }: MembershipCardProps) {
           </p>
         )}
       </CardContent>
+
+      <UpdatePaymentModal
+        open={paymentModalOpen}
+        onOpenChange={setPaymentModalOpen}
+        email={userEmail ?? ""}
+      />
+
+      <UnsubscribeModal
+        open={unsubscribeOpen}
+        onOpenChange={setUnsubscribeOpen}
+      />
     </Card>
   );
 }

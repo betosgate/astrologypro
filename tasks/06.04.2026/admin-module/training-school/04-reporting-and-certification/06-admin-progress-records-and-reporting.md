@@ -1,5 +1,8 @@
 # Module 06 - Admin Progress Records and Reporting Matrix
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: src/app/admin/training/analytics/page.tsx + src/app/api/admin/training/analytics/.
+
 ## Objective
 Implement the required training/category/lesson/user reporting model in a way that is concrete enough for direct coding.
 

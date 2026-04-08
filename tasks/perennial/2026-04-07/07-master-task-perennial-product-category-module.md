@@ -1,6 +1,7 @@
 # Master Task - Perennial Product Category Module Implementation - 2026-04-07
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: See task 06 / 07 master notes — full schema, CRUD API, and admin UI shipped under `src/app/admin/perennial-content/products` and `.../categories` plus migration `20260407000097_perennial_products.sql`.
 - Priority: P1
 - Owner: Fullstack
 - Scope: Category CRUD APIs, Add/Edit Form UI, Category List with actions, Image Upload

@@ -1,4 +1,7 @@
 # Task: Admin User List - Pagination Relocation
+
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Page-size selector lives in the table footer next to pagination controls in user-management-client.tsx (Standard table pattern).
 Date: 2026-04-07
 Category: Admin Dashboard
 

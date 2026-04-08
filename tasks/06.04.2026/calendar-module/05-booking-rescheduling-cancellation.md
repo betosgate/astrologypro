@@ -1,5 +1,8 @@
 # Task: Booking Rescheduling & Cancellation Flows
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Reschedule/cancel handled by src/app/api/dashboard/bookings/[id]/{reschedule,cancel}/route.ts (with calendar sync side effects).
+
 ## Objective
 Implement robust workflows for **Administrators, Diviners, and Clients** to reschedule or cancel appointments, ensuring all external calendars and notifications are synchronized.
 

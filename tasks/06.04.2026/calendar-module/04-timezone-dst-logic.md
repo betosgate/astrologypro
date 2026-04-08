@@ -1,5 +1,8 @@
 # Task: US Timezone & DST Scheduling Logic
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Centralised in src/lib/timezone-utils.ts; consumed across booking, availability, and email rendering.
+
 ## Objective
 Ensure the scheduling system is robust across all US timezones, correctly handling Daylight Saving Time (DST) transitions and displaying times in the viewer's local context.
 

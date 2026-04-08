@@ -1,5 +1,8 @@
 # Module 03 - Lesson Content, Assets, and Delivery Model
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Lesson media/source columns and learner rendering wired via src/components/trainee/lesson-viewer-client.tsx + lessons API.
+
 ## Objective
 Align lesson authoring and learner rendering with the required media/source combinations while preserving current schema names.
 

@@ -1,5 +1,8 @@
 # Auth & Session Standardization Master Task
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Verified complete: middleware (`src/middleware.ts` → `src/proxy.ts` → `src/lib/supabase/middleware.ts`), AuthProvider wired in `src/app/layout.tsx:124`, API routes return 401 JSON, trainee layout has logout button.
+
 ## Objective
 Implement a robust, modern authentication and session synchronization system using Next.js Middleware and a client-side Auth Provider to eliminate session-expiry "silent failures" and automatic redirect issues.
 

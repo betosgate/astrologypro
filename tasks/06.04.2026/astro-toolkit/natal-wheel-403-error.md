@@ -1,5 +1,8 @@
 # FreeAstrologyAPI 403 Forbidden Error Documentation
 
+- Status: Documentation (no code action)
+- Notes: Reference doc — explains FreeAstrologyAPI 403 error. Resolution is operational (verify API key + IP allowlist).
+
 ## Error Observed
 When calling the natal wheel API endpoint:
 `api/admin/astro/natal-wheel`

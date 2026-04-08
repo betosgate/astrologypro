@@ -1,5 +1,8 @@
 # Module 05 - Ritual Praxis Runner
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: decan_rituals (extended in migration 20260406000025), ritual_executions table, ritual step API at src/app/api/mystery-school/decan/[id]/ritual/{start,step,route.ts}.
+
 ## Objective
 Turn the current ritual display into a proper guided ritual runner with stronger step enforcement and admin publishing controls.
 
