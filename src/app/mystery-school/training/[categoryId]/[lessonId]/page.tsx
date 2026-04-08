@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Clock, FileText } from "lucide-react";
 import Link from "next/link";
+import { requireMysterySchoolAccess } from "@/lib/mystery-school/access";
 
 export const dynamic = "force-dynamic";
 
@@ -20,15 +21,8 @@ export default async function TrainingLessonPage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: member } = await supabase
-    .from("community_members")
-    .select("id, membership_type, membership_status")
-    .eq("user_id", user.id)
-    .single();
-
-  if (!member) redirect("/join/community");
-  if (member.membership_status !== "active") redirect("/join/community?status=inactive");
-  if (member.membership_type !== "mystery_school") redirect("/community/upgrade");
+  const result = await requireMysterySchoolAccess();
+  if (!result) redirect("/mystery-school/enroll");
 
   const admin = createAdminClient();
 

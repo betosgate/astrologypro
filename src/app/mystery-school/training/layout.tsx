@@ -3,15 +3,14 @@
  *
  * Guards all /mystery-school/training/* routes.
  *
- * Access requires:
- *   - community_members.membership_type = 'mystery_school'  AND  membership_status = 'active'
- *   - mystery_school_students.status = 'active'  (or cancelled-but-within-access window)
+ * Access requires an active Mystery School entitlement via
+ * mystery_school_students. Legacy users still stored only in
+ * community_members are provisioned on demand by requireMysterySchoolAccess().
  *
- * Non-qualifying users are redirected to /community/upgrade.
+ * Non-qualifying users are redirected to /mystery-school/enroll.
  *
  * The parent /mystery-school/layout.tsx already ensures the user is authenticated
- * and has an active community_members row with mystery_school membership_type,
- * so we only need to check the Mystery School student lifecycle here.
+ * and has valid Mystery School access.
  */
 
 import { redirect } from "next/navigation";
@@ -25,7 +24,7 @@ export default async function MysterySchoolTrainingLayout({
   const result = await requireMysterySchoolAccess();
 
   if (!result) {
-    redirect("/community/upgrade");
+    redirect("/mystery-school/enroll");
   }
 
   return <>{children}</>;

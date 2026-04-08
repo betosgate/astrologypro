@@ -57,7 +57,7 @@ async function getStudentGraduationData(studentId: string) {
 
 export default async function GraduationPage() {
   const result = await requireMysterySchoolAccess();
-  if (!result) redirect("/community/upgrade");
+  if (!result) redirect("/mystery-school/enroll");
 
   const { student } = result;
   const isGraduated = !!(student as unknown as { graduated_at?: string | null }).graduated_at;

@@ -1,16 +1,16 @@
 # Task 06: PM Discount UI And Upgrade Copy Alignment
 
-- Status: Completed (2026-04-08, verified)
-- Completion Notes: Discount applied at checkout when caller is a PM member; copy in src/app/community/upgrade/page.tsx aligns with the discounted price.
+- Status: Mostly Complete (2026-04-08, re-audited)
+- Completion Notes: The canonical enrollment flow now lives in src/components/mystery-school/enrollment-flow.tsx, reads the live admin discount toggle, and no longer uses the old “Upgrading adds just +$17.03/month net” wording. Remaining gap: the PM dashboard CTA in src/app/community/page.tsx still uses old-style +$17.03 wording when the discount is ON.
 Date: 2026-04-07
 Category: Mystery School Module
 
 ## Status
 
-- Not fully implemented
-- This is an active remaining bug-fix task
-- Current UI still contains stale hardcoded PM-discount and replacement-tier messaging
-- Audit current copy and pricing display first, then patch only the mismatches
+- Mostly implemented
+- Canonical enroll flow is discount-aware and replacement-tier copy is removed there
+- One PM dashboard CTA still needs wording cleanup for full parity
+- Audit remaining PM-facing copy before marking this fully done
 
 ## Objective
 Make PM-facing Mystery School pricing UI and enrollment copy match the real business rules and the current admin discount toggle state.
