@@ -58,17 +58,49 @@ export type PerennialPlanKey = "single" | "couple" | "family";
 
 export interface HouseholdMemberPayload {
   is_primary: boolean;
-  relation: string;
+  // Legacy relation rules. Primary uses relation_type='Self' / sub_relation=null.
+  // Additional members use relation_type='Couple'|'Family' + a gated sub_relation.
+  relation_type: string;
+  sub_relation: string | null;
+  // Required core fields
   first_name: string;
   last_name: string;
   email: string;
+  phone: string;
+  gender: string;
+  state: string;
+  city: string;
+  zip: string;
+  address: string;
+  occupation: string;
   date_of_birth: string;
-  birth_time: string | null;
-  birth_city: string | null;
-  birth_country: string | null;
-  intentions: string | null;
-  challenges: string | null;
-  goals: string | null;
+  birth_time: string;
+  // Full optional questionnaire (25 fields, all nullable)
+  relationship_status: string | null;
+  personality: string | null;
+  strengths: string | null;
+  lifeAreasFulfilling: string | null;
+  lifeAreasImprovement: string | null;
+  longTermGoals: string | null;
+  majorLifeEvents: string | null;
+  stressManagement: string | null;
+  workLifeBalance: string | null;
+  relationship_with_family: string | null;
+  biggest_current_challenges: string | null;
+  focus_on_specific_relationships: string | null;
+  guidance_on_specific_decision: string | null;
+  concerns_about_romantic_life: string | null;
+  ongoing_projects_or_plans: string | null;
+  social_life_fulfillment: string | null;
+  spiritualPractices: string | null;
+  selfDiscovery: string | null;
+  externalInfluences: string | null;
+  achieveFromReading: string | null;
+  specificQuestions: string | null;
+  goalsOutcomes: string | null;
+  practicalSpiritualPref: string | null;
+  mainConcern: string | null;
+  additionalInfo: string | null;
 }
 
 export interface HouseholdPayload {
@@ -131,7 +163,9 @@ export async function provisionPerennialHousehold(
             full_name: fullName,
             first_name: member.first_name,
             last_name: member.last_name,
-            relation: member.relation,
+            relation_type: member.relation_type,
+            sub_relation: member.sub_relation,
+            phone: member.phone,
             is_primary: member.is_primary,
           },
         });
@@ -170,6 +204,53 @@ export async function provisionPerennialHousehold(
       const isFamilyPlan =
         household.plan_key === "couple" || household.plan_key === "family";
 
+      // intake_data captures the full optional questionnaire (25 fields)
+      // for every member, plus core profile fields that don't have
+      // dedicated columns on community_members.
+      const intakeData = {
+        relation_type: member.relation_type,
+        sub_relation: member.sub_relation,
+        phone: member.phone,
+        gender: member.gender,
+        state: member.state,
+        city: member.city,
+        zip: member.zip,
+        address: member.address,
+        occupation: member.occupation,
+        date_of_birth: member.date_of_birth,
+        birth_time: member.birth_time,
+        // Optional questionnaire — every key from task 03
+        relationship_status: member.relationship_status,
+        personality: member.personality,
+        strengths: member.strengths,
+        lifeAreasFulfilling: member.lifeAreasFulfilling,
+        lifeAreasImprovement: member.lifeAreasImprovement,
+        longTermGoals: member.longTermGoals,
+        majorLifeEvents: member.majorLifeEvents,
+        stressManagement: member.stressManagement,
+        workLifeBalance: member.workLifeBalance,
+        relationship_with_family: member.relationship_with_family,
+        biggest_current_challenges: member.biggest_current_challenges,
+        focus_on_specific_relationships: member.focus_on_specific_relationships,
+        guidance_on_specific_decision: member.guidance_on_specific_decision,
+        concerns_about_romantic_life: member.concerns_about_romantic_life,
+        ongoing_projects_or_plans: member.ongoing_projects_or_plans,
+        social_life_fulfillment: member.social_life_fulfillment,
+        spiritualPractices: member.spiritualPractices,
+        selfDiscovery: member.selfDiscovery,
+        externalInfluences: member.externalInfluences,
+        achieveFromReading: member.achieveFromReading,
+        specificQuestions: member.specificQuestions,
+        goalsOutcomes: member.goalsOutcomes,
+        practicalSpiritualPref: member.practicalSpiritualPref,
+        mainConcern: member.mainConcern,
+        additionalInfo: member.additionalInfo,
+        // Household linkage for non-primary members
+        household_primary_email: member.is_primary
+          ? null
+          : primary.email.trim().toLowerCase(),
+      };
+
       const { data: cmRow, error: cmError } = await admin
         .from("community_members")
         .upsert(
@@ -177,21 +258,18 @@ export async function provisionPerennialHousehold(
             user_id: userId,
             email: emailNormalized,
             full_name: fullName,
+            phone: member.phone,
+            gender: member.gender,
+            state: member.state,
+            city: member.city,
+            zip: member.zip,
+            address: member.address,
+            relation_type: member.relation_type,
             membership_type: "perennial_mandalism",
             membership_status: "active",
             plan_type: isFamilyPlan ? "family" : "individual",
             joined_at: new Date().toISOString(),
-            // Tie additional household members to the primary's row via
-            // intake_data so the admin UI can group them.
-            intake_data: member.is_primary
-              ? null
-              : {
-                  household_primary_email: primary.email.trim().toLowerCase(),
-                  relation: member.relation,
-                  intentions: member.intentions,
-                  challenges: member.challenges,
-                  goals: member.goals,
-                },
+            intake_data: intakeData,
           },
           { onConflict: "user_id" },
         )
@@ -216,11 +294,12 @@ export async function provisionPerennialHousehold(
               member_id: primaryCommunityMemberId,
               full_name: fullName,
               email: emailNormalized,
-              relationship: member.relation,
+              // Use the legacy sub_relation as the relationship label —
+              // it's the most specific value (e.g. "Wife", "Son").
+              relationship:
+                member.sub_relation ?? member.relation_type ?? "Other",
               date_of_birth: member.date_of_birth,
               birth_time: member.birth_time,
-              birth_city: member.birth_city,
-              birth_country: member.birth_country,
             },
             { onConflict: "member_id,email" },
           );

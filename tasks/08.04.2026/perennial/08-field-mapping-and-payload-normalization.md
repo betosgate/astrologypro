@@ -1,7 +1,8 @@
 # Perennial Field Mapping And Payload Normalization
 
-- Completion Notes: NOT IMPLEMENTED — deferred. The console.log payload demonstrates the intended shape but the spec details (sub_relation handling, age_group derivation, profile_completion derivation) need a dedicated normalisation pass.
-- Status: Deferred (2026-04-08)
+- Completion Notes: Implemented. The page maps form state to the spec-defined canonical names (first_name, last_name, date_of_birth, birth_time — NOT firstname/lastname/dob). Optional questionnaire fields use their exact spec names (lifeAreasFulfilling, workLifeBalance, etc.). The /api/perennial-signup/checkout validator accepts every field, defaults missing optionals to null, and stores the household payload in pending_perennial_signups.household JSONB. The household-provisioning helper persists core profile fields to community_members columns (phone, gender, state, city, zip, address, relation_type) and the full intake — including the entire 25-field optional questionnaire — to community_members.intake_data. Non-primary members get a community_family_members row with relationship = sub_relation (the most specific legacy label). Primary member is recorded with relation_type="Self" and sub_relation=null in metadata + intake_data; non-primary members carry their full relation_type + sub_relation pair end-to-end.
+- Earlier notes: NOT IMPLEMENTED — deferred. The console.log payload demonstrates the intended shape but the spec details (sub_relation handling, age_group derivation, profile_completion derivation) need a dedicated normalisation pass.
+- Status: Completed (2026-04-08)
 - Date: 2026-04-08
 - Category: Perennial Signup
 - Owner: Fullstack

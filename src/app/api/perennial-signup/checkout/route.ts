@@ -43,32 +43,103 @@ function isPerennialPlanKey(v: unknown): v is PerennialPlanKey {
   return v === "single" || v === "couple" || v === "family";
 }
 
+function strOrNull(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const t = v.trim();
+  return t.length > 0 ? t : null;
+}
+
 function validateMember(m: unknown, idx: number): HouseholdMemberPayload | string {
   if (!m || typeof m !== "object") return `Member ${idx + 1}: not an object`;
   const r = m as Record<string, unknown>;
+
   const firstName = String(r.first_name ?? "").trim();
   const lastName = String(r.last_name ?? "").trim();
   const email = String(r.email ?? "").trim().toLowerCase();
-  const relation = String(r.relation ?? "").trim();
+  const phone = String(r.phone ?? "").trim();
+  const relationType = String(r.relation_type ?? "").trim();
+  const subRelation = strOrNull(r.sub_relation);
+  const gender = String(r.gender ?? "").trim();
+  const state = String(r.state ?? "").trim();
+  const city = String(r.city ?? "").trim();
+  const zip = String(r.zip ?? "").trim();
+  const address = String(r.address ?? "").trim();
+  const occupation = String(r.occupation ?? "").trim();
   const dob = String(r.date_of_birth ?? "").trim();
+  const birthTime = String(r.birth_time ?? "").trim();
+  const isPrimary = Boolean(r.is_primary);
+
+  // Required-field gate (mirrors the page-side validator).
   if (!firstName || !lastName) return `Member ${idx + 1}: first and last name are required`;
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return `Member ${idx + 1}: a valid email is required`;
-  if (!relation) return `Member ${idx + 1}: relation is required`;
+  if (phone.replace(/\D/g, "").length !== 10) {
+    return `Member ${idx + 1}: phone must be a 10-digit number`;
+  }
+  if (!gender) return `Member ${idx + 1}: gender is required`;
+  if (!state) return `Member ${idx + 1}: state is required`;
+  if (!city) return `Member ${idx + 1}: city is required`;
+  if (!/^\d{5}$/.test(zip)) return `Member ${idx + 1}: zip must be exactly 5 digits`;
+  if (!address) return `Member ${idx + 1}: address is required`;
+  if (!occupation) return `Member ${idx + 1}: occupation is required`;
   if (!dob) return `Member ${idx + 1}: date of birth is required`;
+  if (!birthTime) return `Member ${idx + 1}: birth time is required`;
+
+  if (!isPrimary) {
+    if (relationType !== "Couple" && relationType !== "Family") {
+      return `Member ${idx + 1}: relation_type must be 'Couple' or 'Family'`;
+    }
+    if (!subRelation) return `Member ${idx + 1}: sub_relation is required`;
+    const allowedSub: Record<string, string[]> = {
+      Couple: ["Husband", "Wife"],
+      Family: ["Son", "Daughter", "Spouse", "Partner", "Other"],
+    };
+    if (!allowedSub[relationType].includes(subRelation)) {
+      return `Member ${idx + 1}: sub_relation '${subRelation}' is not valid for relation_type '${relationType}'`;
+    }
+  }
+
   return {
-    is_primary: Boolean(r.is_primary),
-    relation,
+    is_primary: isPrimary,
+    relation_type: isPrimary ? "Self" : relationType,
+    sub_relation: isPrimary ? null : subRelation,
     first_name: firstName,
     last_name: lastName,
     email,
+    phone,
+    gender,
+    state,
+    city,
+    zip,
+    address,
+    occupation,
     date_of_birth: dob,
-    birth_time: typeof r.birth_time === "string" && r.birth_time ? r.birth_time : null,
-    birth_city: typeof r.birth_city === "string" && r.birth_city ? r.birth_city : null,
-    birth_country:
-      typeof r.birth_country === "string" && r.birth_country ? r.birth_country : null,
-    intentions: typeof r.intentions === "string" && r.intentions ? r.intentions : null,
-    challenges: typeof r.challenges === "string" && r.challenges ? r.challenges : null,
-    goals: typeof r.goals === "string" && r.goals ? r.goals : null,
+    birth_time: birthTime,
+    // Optional questionnaire — every field passed through as-is.
+    relationship_status: strOrNull(r.relationship_status),
+    personality: strOrNull(r.personality),
+    strengths: strOrNull(r.strengths),
+    lifeAreasFulfilling: strOrNull(r.lifeAreasFulfilling),
+    lifeAreasImprovement: strOrNull(r.lifeAreasImprovement),
+    longTermGoals: strOrNull(r.longTermGoals),
+    majorLifeEvents: strOrNull(r.majorLifeEvents),
+    stressManagement: strOrNull(r.stressManagement),
+    workLifeBalance: strOrNull(r.workLifeBalance),
+    relationship_with_family: strOrNull(r.relationship_with_family),
+    biggest_current_challenges: strOrNull(r.biggest_current_challenges),
+    focus_on_specific_relationships: strOrNull(r.focus_on_specific_relationships),
+    guidance_on_specific_decision: strOrNull(r.guidance_on_specific_decision),
+    concerns_about_romantic_life: strOrNull(r.concerns_about_romantic_life),
+    ongoing_projects_or_plans: strOrNull(r.ongoing_projects_or_plans),
+    social_life_fulfillment: strOrNull(r.social_life_fulfillment),
+    spiritualPractices: strOrNull(r.spiritualPractices),
+    selfDiscovery: strOrNull(r.selfDiscovery),
+    externalInfluences: strOrNull(r.externalInfluences),
+    achieveFromReading: strOrNull(r.achieveFromReading),
+    specificQuestions: strOrNull(r.specificQuestions),
+    goalsOutcomes: strOrNull(r.goalsOutcomes),
+    practicalSpiritualPref: strOrNull(r.practicalSpiritualPref),
+    mainConcern: strOrNull(r.mainConcern),
+    additionalInfo: strOrNull(r.additionalInfo),
   };
 }
 
