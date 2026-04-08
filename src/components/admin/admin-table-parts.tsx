@@ -9,6 +9,8 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   FilterX,
   X,
 } from "lucide-react";
@@ -137,6 +139,17 @@ export function AdminPagination({
           size="icon"
           className="size-8"
           disabled={currentPage <= 1 || isPending}
+          onClick={() => onPageChange(1)}
+          aria-label="First page"
+        >
+          <ChevronsLeft className="size-4" />
+        </Button>
+
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-8"
+          disabled={currentPage <= 1 || isPending}
           onClick={() => onPageChange(currentPage - 1)}
           aria-label="Previous page"
         >
@@ -177,6 +190,17 @@ export function AdminPagination({
           aria-label="Next page"
         >
           <ChevronRight className="size-4" />
+        </Button>
+
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-8"
+          disabled={currentPage >= totalPages || isPending}
+          onClick={() => onPageChange(totalPages)}
+          aria-label="Last page"
+        >
+          <ChevronsRight className="size-4" />
         </Button>
       </div>
     </div>

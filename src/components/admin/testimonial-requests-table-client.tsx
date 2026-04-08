@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { MoreHorizontal, Pencil, Trash2, Eye } from "lucide-react";
@@ -18,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -90,10 +92,13 @@ function StatusBadge({ status }: { status: string }) {
 
 const fmt = (d: string | null | undefined) =>
   d
-    ? new Date(d).toLocaleDateString("en-US", {
-        month: "short",
+    ? new Date(d).toLocaleString("en-US", {
+        month: "long",
         day: "numeric",
         year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
       })
     : "--";
 
@@ -135,6 +140,37 @@ export function TestimonialRequestsTableClient({
   const fromRecord = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const toRecord = Math.min(currentPage * pageSize, total);
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const allPageIds = requests.map((r) => r.id);
+  const allSelected =
+    allPageIds.length > 0 && allPageIds.every((id) => selectedIds.has(id));
+
+  function toggleAll(checked: boolean) {
+    if (checked) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        allPageIds.forEach((id) => next.add(id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        allPageIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    }
+  }
+
+  function toggleOne(id: string, checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
   // ── Sort ────────────────────────────────────────────────────────────────────
 
   function handleSort(col: string) {
@@ -159,9 +195,36 @@ export function TestimonialRequestsTableClient({
         return;
       }
       toast.success("Request deleted.");
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       pushParams({ page: String(currentPage) });
     } catch {
       toast.error("Failed to delete.");
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (
+      !window.confirm(
+        `Delete ${selectedIds.size} request(s)? This cannot be undone.`,
+      )
+    )
+      return;
+    try {
+      await Promise.all(
+        [...selectedIds].map((id) =>
+          fetch(`/api/admin/testimonials/requests/${id}`, { method: "DELETE" }),
+        ),
+      );
+      toast.success(`${selectedIds.size} request(s) deleted.`);
+      setSelectedIds(new Set());
+      pushParams({ page: String(currentPage) });
+    } catch {
+      toast.error("Bulk delete failed.");
     }
   }
 
@@ -292,6 +355,29 @@ export function TestimonialRequestsTableClient({
             />
           </div>
 
+          {/* Bulk actions */}
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-3 rounded-md border bg-muted/50 px-3 py-2">
+              <span className="text-sm font-medium">{selectedIds.size} selected</span>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={handleBulkDelete}
+                className="gap-1.5"
+              >
+                <Trash2 className="size-3.5" />
+                Delete Selected
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedIds(new Set())}
+              >
+                Clear
+              </Button>
+            </div>
+          )}
+
           {/* Table */}
           {requests.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
@@ -303,6 +389,15 @@ export function TestimonialRequestsTableClient({
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={allSelected}
+                          onCheckedChange={(checked) =>
+                            toggleAll(checked === true)
+                          }
+                          aria-label="Select all on this page"
+                        />
+                      </TableHead>
                       <TableHead className="w-10 text-muted-foreground">#</TableHead>
                       <TableHead>
                         <SortHeader
@@ -359,6 +454,15 @@ export function TestimonialRequestsTableClient({
                         key={r.id}
                         className={isPending ? "opacity-60" : undefined}
                       >
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedIds.has(r.id)}
+                            onCheckedChange={(checked) =>
+                              toggleOne(r.id, checked === true)
+                            }
+                            aria-label={`Select request ${r.id}`}
+                          />
+                        </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
                           {(currentPage - 1) * pageSize + idx + 1}
                         </TableCell>

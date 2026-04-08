@@ -55,6 +55,8 @@ export async function PUT(
     video?: object[];
     is_featured?: boolean;
     status?: string;
+    requested_to_email?: string | null;
+    requested_to_phone_no?: string | null;
   };
   try {
     body = await req.json();
@@ -74,8 +76,13 @@ export async function PUT(
     video,
     is_featured,
     status,
+    requested_to_email,
+    requested_to_phone_no,
   } = body;
 
+  if (!title || typeof title !== "string" || !title.trim()) {
+    return NextResponse.json({ error: "Title is required." }, { status: 400 });
+  }
   if (!text || typeof text !== "string" || !text.trim()) {
     return NextResponse.json({ error: "Text is required." }, { status: 400 });
   }
@@ -92,12 +99,14 @@ export async function PUT(
       rating: rating ?? null,
       text: text.trim(),
       service_type: service_type ?? null,
-      title: title ?? null,
+      title: title.trim(),
       images: images ?? [],
       audio: audio ?? [],
       video: video ?? [],
       is_featured: is_featured ?? false,
       status: status ?? "pending",
+      requested_to_email: requested_to_email?.toLowerCase() ?? null,
+      requested_to_phone_no: requested_to_phone_no ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
