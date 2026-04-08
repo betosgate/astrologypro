@@ -46,7 +46,7 @@ export default async function MysterySchoolLayout({ children }: { children: Reac
             <MobileNav
               membershipType={member?.membership_type ?? "mystery_school"}
               navItems={navLinks}
-              displayName={member.full_name ?? ""}
+              displayName={member?.full_name ?? ""}
               membershipLabel="Mystery School"
             />
             <Link href="/mystery-school" className="text-lg font-bold">AstrologyPro</Link>
