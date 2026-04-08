@@ -89,16 +89,44 @@ export async function handleOAuthCallback(
 
 /**
  * Refreshes the access token using the stored refresh token.
+ *
+ * Read-side cutover: prefer the normalized calendar_connections table.
+ * Fall back to the legacy diviners.google_calendar_token JSONB scalar
+ * during the cutover window so neither newly-connected nor pre-cutover
+ * diviners are broken.
  */
 async function getAccessToken(divinerId: string): Promise<string> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
+
+  let refreshToken: string | null = null;
+
+  // 1. Look up the diviner row (need user_id for the calendar_connections lookup
+  //    AND the legacy JSONB column for the fallback)
+  const { data: diviner } = await supabase
     .from("diviners")
-    .select("google_calendar_token")
+    .select("user_id, google_calendar_token")
     .eq("id", divinerId)
     .single();
 
-  if (error || !data?.google_calendar_token) {
+  // 2. Preferred: read from calendar_connections via diviners.user_id
+  if (diviner?.user_id) {
+    const { data: conn } = await supabase
+      .from("calendar_connections")
+      .select("refresh_token")
+      .eq("user_id", diviner.user_id)
+      .eq("provider", "google")
+      .maybeSingle();
+    if (conn?.refresh_token) {
+      refreshToken = conn.refresh_token;
+    }
+  }
+
+  // 3. Fallback: legacy JSONB column on the diviner row
+  if (!refreshToken && diviner?.google_calendar_token) {
+    refreshToken = diviner.google_calendar_token as string;
+  }
+
+  if (!refreshToken) {
     throw new Error("No Google Calendar token found for this diviner");
   }
 
@@ -108,7 +136,7 @@ async function getAccessToken(divinerId: string): Promise<string> {
     body: new URLSearchParams({
       client_id: GOOGLE_CLIENT_ID,
       client_secret: GOOGLE_CLIENT_SECRET,
-      refresh_token: data.google_calendar_token,
+      refresh_token: refreshToken,
       grant_type: "refresh_token",
     }),
   });
