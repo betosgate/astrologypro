@@ -11,7 +11,21 @@ import {
   EyeOff,
   Trash2,
   Eye,
+  Search,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  FilterX,
+  RefreshCw,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Power,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -49,12 +63,38 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  SortHeader,
   AdminPagination,
   AdminTableSearch,
   AdminResetButton,
   useAdminTableParams,
 } from "./admin-table-parts";
+
+function SortHeader({
+  label,
+  column,
+  currentSort,
+  currentDir,
+  onSort,
+}: {
+  label: string;
+  column: string;
+  currentSort: string;
+  currentDir: "asc" | "desc";
+  onSort: (col: string) => void;
+}) {
+  const active = currentSort === column;
+  const Icon = active ? (currentDir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <button
+      onClick={() => onSort(column)}
+      className={`flex items-center gap-1 font-medium transition-colors hover:text-foreground ${active ? "text-foreground" : "text-muted-foreground"
+        }`}
+    >
+      {label}
+      <Icon className={`size-3 ${active ? "opacity-100" : "opacity-40"}`} />
+    </button>
+  );
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -69,12 +109,12 @@ export type TestimonialRow = {
   service_name: string | null;
   title: string | null;
   status:
-    | "submitted"
-    | "pending_review"
-    | "approved"
-    | "rejected"
-    | "hidden"
-    | "pending";
+  | "submitted"
+  | "pending_review"
+  | "approved"
+  | "rejected"
+  | "hidden"
+  | "pending";
   is_featured: boolean;
   spam_score: number | null;
   created_at: string;
@@ -115,33 +155,28 @@ const STATUS_OPTIONS = [
 
 function StatusBadge({ status }: { status: string }) {
   const variants: Record<string, string> = {
-    submitted: "bg-blue-100 text-blue-800 border-blue-200",
-    pending_review: "bg-yellow-100 text-yellow-800 border-yellow-200",
-    pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
-    approved: "bg-green-100 text-green-800 border-green-200",
-    rejected: "bg-red-100 text-red-800 border-red-200",
-    hidden: "bg-gray-100 text-gray-700 border-gray-200",
+    submitted: "bg-blue-500/15 text-blue-700 dark:text-blue-400",
+    pending_review: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400",
+    pending: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400",
+    approved: "bg-green-500/15 text-green-700 dark:text-green-400",
+    rejected: "bg-red-500/15 text-red-700 dark:text-red-400",
+    hidden: "bg-gray-500/15 text-gray-700 dark:text-gray-400",
   };
   return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${variants[status] ?? "bg-gray-100 text-gray-800"}`}
+    <Badge
+      variant="secondary"
+      className={cn(
+        "text-[10px] uppercase font-bold tracking-wider",
+        variants[status] ?? "bg-gray-500/15 text-gray-700 dark:text-gray-400"
+      )}
     >
       {status.replace("_", " ")}
-    </span>
+    </Badge>
   );
 }
 
-const fmt = (d: string) =>
-  d
-    ? new Date(d).toLocaleString("en-US", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      })
-    : "--";
+const fmt = (d: string | undefined | null) =>
+  d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "—";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -327,91 +362,19 @@ export function TestimonialsTableClient({
       </Dialog>
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold tracking-tight">Testimonials</h1>
-        <div className="flex gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/admin/testimonials/requests">Request Testimonial</Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link href="/admin/testimonials/create">+ Add Testimonial</Link>
-          </Button>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Testimonials</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            {total} result{total !== 1 ? "s" : ""} · page {currentPage} of {totalPages}
+          </p>
         </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>All Testimonials</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Search by title */}
-            <div className="w-full max-w-[220px]">
-              <AdminTableSearch
-                defaultValue={currentQ}
-                onSearch={(v) => pushParams({ q: v })}
-                placeholder="Search by title…"
-              />
-            </div>
-
-            {/* Search by client name */}
-            <div className="w-full max-w-[220px]">
-              <AdminTableSearch
-                defaultValue={currentClient}
-                onSearch={(v) => pushParams({ client: v })}
-                placeholder="Search by client name…"
-              />
-            </div>
-
-            {/* Status */}
-            <Select
-              value={currentStatus}
-              onValueChange={(v) =>
-                pushParams({ status: v === "all" ? "" : v })
-              }
-            >
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Created From */}
-            <div className="flex items-center gap-1.5">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">
-                From
-              </label>
-              <input
-                type="date"
-                value={currentCreatedFrom}
-                onChange={(e) => pushParams({ createdFrom: e.target.value })}
-                className="rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-              />
-            </div>
-
-            {/* Created To */}
-            <div className="flex items-center gap-1.5">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">
-                To
-              </label>
-              <input
-                type="date"
-                value={currentCreatedTo}
-                onChange={(e) => pushParams({ createdTo: e.target.value })}
-                className="rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-              />
-            </div>
-
-            <AdminResetButton
-              hasActiveFilters={hasActiveFilters}
-              onReset={() =>
+        <div className="flex items-center gap-2">
+          {hasActiveFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
                 pushParams({
                   q: "",
                   client: "",
@@ -422,44 +385,126 @@ export function TestimonialsTableClient({
                   sortDir: "",
                 })
               }
-            />
-          </div>
-
-          {/* Bulk actions */}
-          {selectedIds.size > 0 && (
-            <div className="flex items-center gap-3 rounded-md border bg-muted/50 px-3 py-2">
-              <span className="text-sm font-medium">{selectedIds.size} selected</span>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={handleBulkDelete}
-                className="gap-1.5"
-              >
-                <Trash2 className="size-3.5" />
-                Delete Selected
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setSelectedIds(new Set())}
-              >
-                Clear
-              </Button>
-            </div>
+              className="gap-1.5 text-muted-foreground hover:text-foreground"
+            >
+              <FilterX className="size-4" />
+              Reset filters
+            </Button>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => pushParams({ page: String(currentPage) })}
+            className="gap-1.5"
+            disabled={isPending}
+          >
+            <RefreshCw className={cn("size-4", isPending && "animate-spin")} />
+            {isPending ? "Refreshing…" : "Refresh"}
+          </Button>
+          <Button size="sm" asChild>
+            <Link href="/admin/testimonials/create">
+              <Plus className="mr-2 size-4" />
+              Add Testimonial
+            </Link>
+          </Button>
+        </div>
+      </div>
 
-          {/* Table */}
-          {testimonials.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              No testimonials found.
-            </p>
-          ) : (
-            <>
-              <div className="rounded-md border">
+      <div className="space-y-4">
+        {/* Advanced Filters Block */}
+        <div className="bg-muted/40 p-4 rounded-xl border space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+              <Input
+                defaultValue={currentQ}
+                onChange={(e) => pushParams({ q: e.target.value })}
+                placeholder="Search by Title"
+                className="pl-9 bg-background"
+                autoComplete="off"
+              />
+            </div>
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+              <Input
+                defaultValue={currentClient}
+                onChange={(e) => pushParams({ client: e.target.value })}
+                placeholder="Search by Client Name"
+                className="pl-9 bg-background"
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <select
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={currentStatus}
+                onChange={(e) => pushParams({ status: e.target.value === "all" ? "" : e.target.value })}
+              >
+                {STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label === "All Statuses" ? "Search By Status (All)" : opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center space-x-2 bg-background border border-input rounded-md px-3 h-10 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+              <span className="text-xs text-muted-foreground whitespace-nowrap hidden lg:inline-block">Created Start </span>
+              <input
+                type="date"
+                className="w-full bg-transparent outline-none text-sm text-foreground"
+                value={currentCreatedFrom}
+                onChange={e => pushParams({ createdFrom: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center space-x-2 bg-background border border-input rounded-md px-3 h-10 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+              <span className="text-xs text-muted-foreground whitespace-nowrap hidden lg:inline-block">Created End </span>
+              <input
+                type="date"
+                className="w-full bg-transparent outline-none text-sm text-foreground"
+                value={currentCreatedTo}
+                onChange={e => pushParams({ createdTo: e.target.value })}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Bulk actions */}
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-3 rounded-md border bg-muted/50 px-3 py-2">
+            <span className="text-sm font-medium">{selectedIds.size} selected</span>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={handleBulkDelete}
+              className="gap-1.5"
+            >
+              <Trash2 className="size-3.5" />
+              Delete Selected
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Clear
+            </Button>
+          </div>
+        )}
+
+        {/* Table */}
+        {testimonials.length === 0 ? (
+          <p className="py-12 text-center text-sm text-muted-foreground">
+            No testimonials found.
+          </p>
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-muted/50">
                     <TableRow>
-                      <TableHead className="w-10">
+                      <TableHead className="w-8 pl-4 pr-2">
                         <Checkbox
                           checked={allSelected}
                           onCheckedChange={(checked) =>
@@ -474,7 +519,7 @@ export function TestimonialsTableClient({
                           label="Title"
                           column="title"
                           currentSort={currentSort}
-                          currentDir={currentDir}
+                          currentDir={currentDir as "asc" | "desc"}
                           onSort={handleSort}
                         />
                       </TableHead>
@@ -483,7 +528,7 @@ export function TestimonialsTableClient({
                           label="Client Email"
                           column="requested_to_email"
                           currentSort={currentSort}
-                          currentDir={currentDir}
+                          currentDir={currentDir as "asc" | "desc"}
                           onSort={handleSort}
                         />
                       </TableHead>
@@ -493,7 +538,7 @@ export function TestimonialsTableClient({
                           label="Client Name"
                           column="client_name"
                           currentSort={currentSort}
-                          currentDir={currentDir}
+                          currentDir={currentDir as "asc" | "desc"}
                           onSort={handleSort}
                         />
                       </TableHead>
@@ -503,7 +548,7 @@ export function TestimonialsTableClient({
                           label="Status"
                           column="status"
                           currentSort={currentSort}
-                          currentDir={currentDir}
+                          currentDir={currentDir as "asc" | "desc"}
                           onSort={handleSort}
                         />
                       </TableHead>
@@ -512,7 +557,7 @@ export function TestimonialsTableClient({
                           label="Created On"
                           column="created_at"
                           currentSort={currentSort}
-                          currentDir={currentDir}
+                          currentDir={currentDir as "asc" | "desc"}
                           onSort={handleSort}
                         />
                       </TableHead>
@@ -523,9 +568,9 @@ export function TestimonialsTableClient({
                     {testimonials.map((t, idx) => (
                       <TableRow
                         key={t.id}
-                        className={isPending ? "opacity-60" : undefined}
+                        className={cn("group transition-colors hover:bg-muted/50", isPending && "opacity-60")}
                       >
-                        <TableCell>
+                        <TableCell className="w-8 pl-4 pr-2">
                           <Checkbox
                             checked={selectedIds.has(t.id)}
                             onCheckedChange={(checked) =>
@@ -577,7 +622,7 @@ export function TestimonialsTableClient({
                         <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                           {fmt(t.created_at)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -657,31 +702,87 @@ export function TestimonialsTableClient({
                 </Table>
               </div>
 
-              {/* Showing X to Y of Z + pagination */}
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-muted-foreground">
-                  Showing {fromRecord} to {toRecord} of {total} records
-                  {selectedIds.size > 0 && (
-                    <span className="ml-2 text-amber-600 font-medium">
-                      ({selectedIds.size} selected)
-                    </span>
-                  )}
-                </p>
-              </div>
+              {/* Pagination footer */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-6 py-4 border-t text-sm">
+                <div className="flex items-center gap-3">
+                  <p className="text-muted-foreground whitespace-nowrap">
+                    Showing {fromRecord}–{toRecord} of {total}
+                    {selectedIds.size > 0 && (
+                      <span className="ml-2 text-amber-600 font-medium">
+                        ({selectedIds.size} selected)
+                      </span>
+                    )}
+                  </p>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(v) => pushParams({ pageSize: v, page: "1" })}
+                  >
+                    <SelectTrigger className="h-8 w-[110px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[10, 25, 50, 100].map((n) => (
+                        <SelectItem key={n} value={String(n)}>
+                          {n} / page
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <AdminPagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                total={total}
-                pageSize={pageSize}
-                onPageChange={(p) => pushParams({ page: String(p) })}
-                onPageSizeChange={(s) => pushParams({ pageSize: s })}
-                isPending={isPending}
-              />
-            </>
-          )}
-        </CardContent>
-      </Card>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      disabled={currentPage <= 1 || isPending}
+                      onClick={() => pushParams({ page: String(currentPage - 1) })}
+                    >
+                      <ChevronLeft className="size-4" />
+                    </Button>
+
+                    {/* Numeric page buttons logic */}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+                      .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+                        if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push("…");
+                        acc.push(p);
+                        return acc;
+                      }, [])
+                      .map((p, idx) =>
+                        p === "…" ? (
+                          <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">...</span>
+                        ) : (
+                          <Button
+                            key={p}
+                            variant={p === currentPage ? "default" : "outline"}
+                            size="sm"
+                            className={cn("h-8 w-8 p-0", p === currentPage && "bg-yellow-600 text-white hover:bg-yellow-700")}
+                            onClick={() => pushParams({ page: String(p) })}
+                            disabled={isPending}
+                          >
+                            {p}
+                          </Button>
+                        )
+                      )}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      disabled={currentPage >= totalPages || isPending}
+                      onClick={() => pushParams({ page: String(currentPage + 1) })}
+                    >
+                      <ChevronRight className="size-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </>
   );
 }

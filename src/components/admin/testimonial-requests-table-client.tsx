@@ -3,7 +3,25 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { MoreHorizontal, Pencil, Trash2, Eye } from "lucide-react";
+import {
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Eye,
+  Search,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  FilterX,
+  RefreshCw,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -35,12 +53,38 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  SortHeader,
   AdminPagination,
   AdminTableSearch,
   AdminResetButton,
   useAdminTableParams,
 } from "./admin-table-parts";
+
+function SortHeader({
+  label,
+  column,
+  currentSort,
+  currentDir,
+  onSort,
+}: {
+  label: string;
+  column: string;
+  currentSort: string;
+  currentDir: "asc" | "desc";
+  onSort: (col: string) => void;
+}) {
+  const active = currentSort === column;
+  const Icon = active ? (currentDir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <button
+      onClick={() => onSort(column)}
+      className={`flex items-center gap-1 font-medium transition-colors hover:text-foreground ${active ? "text-foreground" : "text-muted-foreground"
+        }`}
+    >
+      {label}
+      <Icon className={`size-3 ${active ? "opacity-100" : "opacity-40"}`} />
+    </button>
+  );
+}
 import type { TestimonialRequestRow } from "@/app/admin/testimonials/requests/page";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -76,31 +120,26 @@ const STATUS_OPTIONS = [
 
 function StatusBadge({ status }: { status: string }) {
   const variants: Record<string, string> = {
-    pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
-    sent: "bg-blue-100 text-blue-800 border-blue-200",
-    completed: "bg-green-100 text-green-800 border-green-200",
-    declined: "bg-red-100 text-red-800 border-red-200",
+    pending: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400",
+    sent: "bg-blue-500/15 text-blue-700 dark:text-blue-400",
+    completed: "bg-green-500/15 text-green-700 dark:text-green-400",
+    declined: "bg-red-500/15 text-red-700 dark:text-red-400",
   };
   return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${variants[status] ?? "bg-gray-100 text-gray-800"}`}
+    <Badge
+      variant="secondary"
+      className={cn(
+        "text-[10px] uppercase font-bold tracking-wider",
+        variants[status] ?? "bg-gray-500/15 text-gray-700 dark:text-gray-400"
+      )}
     >
       {status}
-    </span>
+    </Badge>
   );
 }
 
 const fmt = (d: string | null | undefined) =>
-  d
-    ? new Date(d).toLocaleString("en-US", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      })
-    : "--";
+  d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "—";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -233,113 +272,24 @@ export function TestimonialRequestsTableClient({
   return (
     <>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="sm">
+          <Button asChild variant="ghost" size="sm" className="h-8 px-2">
             <Link href="/admin/testimonials">← Testimonials</Link>
           </Button>
-          <h1 className="text-xl font-bold tracking-tight">Testimonial Requests</h1>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Testimonial Requests</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">
+              {total} result{total !== 1 ? "s" : ""} · page {currentPage} of {totalPages}
+            </p>
+          </div>
         </div>
-        <Button asChild size="sm">
-          <Link href="/admin/testimonials/requests/create">+ New Request</Link>
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>All Requests</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Search by name */}
-            <div className="w-full max-w-[220px]">
-              <AdminTableSearch
-                defaultValue={currentQ}
-                onSearch={(v) => pushParams({ q: v })}
-                placeholder="Search by name…"
-              />
-            </div>
-
-            {/* Search by email */}
-            <div className="w-full max-w-[220px]">
-              <AdminTableSearch
-                defaultValue={currentEmail}
-                onSearch={(v) => pushParams({ email: v })}
-                placeholder="Search by email…"
-              />
-            </div>
-
-            {/* Status */}
-            <Select
-              value={currentStatus}
-              onValueChange={(v) =>
-                pushParams({ status: v === "all" ? "" : v })
-              }
-            >
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Submitted date range */}
-            <div className="flex items-center gap-1.5">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">
-                Submitted From
-              </label>
-              <input
-                type="date"
-                value={currentSubmittedFrom}
-                onChange={(e) => pushParams({ submittedFrom: e.target.value })}
-                className="rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-              />
-            </div>
-            <div className="flex items-center gap-1.5">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">
-                To
-              </label>
-              <input
-                type="date"
-                value={currentSubmittedTo}
-                onChange={(e) => pushParams({ submittedTo: e.target.value })}
-                className="rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-              />
-            </div>
-
-            {/* Updated date range */}
-            <div className="flex items-center gap-1.5">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">
-                Updated From
-              </label>
-              <input
-                type="date"
-                value={currentUpdatedFrom}
-                onChange={(e) => pushParams({ updatedFrom: e.target.value })}
-                className="rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-              />
-            </div>
-            <div className="flex items-center gap-1.5">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">
-                To
-              </label>
-              <input
-                type="date"
-                value={currentUpdatedTo}
-                onChange={(e) => pushParams({ updatedTo: e.target.value })}
-                className="rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-              />
-            </div>
-
-            <AdminResetButton
-              hasActiveFilters={hasActiveFilters}
-              onReset={() =>
+        <div className="flex items-center gap-2">
+          {hasActiveFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
                 pushParams({
                   q: "",
                   email: "",
@@ -352,44 +302,145 @@ export function TestimonialRequestsTableClient({
                   sortDir: "",
                 })
               }
-            />
-          </div>
-
-          {/* Bulk actions */}
-          {selectedIds.size > 0 && (
-            <div className="flex items-center gap-3 rounded-md border bg-muted/50 px-3 py-2">
-              <span className="text-sm font-medium">{selectedIds.size} selected</span>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={handleBulkDelete}
-                className="gap-1.5"
-              >
-                <Trash2 className="size-3.5" />
-                Delete Selected
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setSelectedIds(new Set())}
-              >
-                Clear
-              </Button>
-            </div>
+              className="gap-1.5 text-muted-foreground hover:text-foreground"
+            >
+              <FilterX className="size-4" />
+              Reset filters
+            </Button>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => pushParams({ page: String(currentPage) })}
+            className="gap-1.5"
+            disabled={isPending}
+          >
+            <RefreshCw className={cn("size-4", isPending && "animate-spin")} />
+            {isPending ? "Refreshing…" : "Refresh"}
+          </Button>
+          <Button size="sm" asChild>
+            <Link href="/admin/testimonials/requests/create">
+              <Plus className="mr-2 size-4" />
+              New Request
+            </Link>
+          </Button>
+        </div>
+      </div>
 
-          {/* Table */}
-          {requests.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              No testimonial requests found.
-            </p>
-          ) : (
-            <>
-              <div className="rounded-md border">
+      <div className="space-y-4">
+        {/* Advanced Filters Block */}
+        <div className="bg-muted/40 p-4 rounded-xl border space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+              <Input
+                defaultValue={currentQ}
+                onChange={(e) => pushParams({ q: e.target.value })}
+                placeholder="Search by Name"
+                className="pl-9 bg-background"
+                autoComplete="off"
+              />
+            </div>
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+              <Input
+                defaultValue={currentEmail}
+                onChange={(e) => pushParams({ email: e.target.value })}
+                placeholder="Search by Email"
+                className="pl-9 bg-background"
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <select
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={currentStatus}
+                onChange={(e) => pushParams({ status: e.target.value === "all" ? "" : e.target.value })}
+              >
+                {STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label === "All Statuses" ? "Search By Status (All)" : opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center space-x-2 bg-background border border-input rounded-md px-3 h-10 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+              <span className="text-xs text-muted-foreground whitespace-nowrap hidden lg:inline-block">Submitted Start </span>
+              <input
+                type="date"
+                className="w-full bg-transparent outline-none text-sm text-foreground"
+                value={currentSubmittedFrom}
+                onChange={e => pushParams({ submittedFrom: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center space-x-2 bg-background border border-input rounded-md px-3 h-10 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+              <span className="text-xs text-muted-foreground whitespace-nowrap hidden lg:inline-block">Submitted End </span>
+              <input
+                type="date"
+                className="w-full bg-transparent outline-none text-sm text-foreground"
+                value={currentSubmittedTo}
+                onChange={e => pushParams({ submittedTo: e.target.value })}
+              />
+            </div>
+
+            <div className="flex items-center space-x-2 bg-background border border-input rounded-md px-3 h-10 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+              <span className="text-xs text-muted-foreground whitespace-nowrap hidden lg:inline-block">Updated Start </span>
+              <input
+                type="date"
+                className="w-full bg-transparent outline-none text-sm text-foreground"
+                value={currentUpdatedFrom}
+                onChange={e => pushParams({ updatedFrom: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center space-x-2 bg-background border border-input rounded-md px-3 h-10 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+              <span className="text-xs text-muted-foreground whitespace-nowrap hidden lg:inline-block">Updated End </span>
+              <input
+                type="date"
+                className="w-full bg-transparent outline-none text-sm text-foreground"
+                value={currentUpdatedTo}
+                onChange={e => pushParams({ updatedTo: e.target.value })}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Bulk actions */}
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-3 rounded-md border bg-muted/50 px-3 py-2">
+            <span className="text-sm font-medium">{selectedIds.size} selected</span>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={handleBulkDelete}
+              className="gap-1.5"
+            >
+              <Trash2 className="size-3.5" />
+              Delete Selected
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Clear
+            </Button>
+          </div>
+        )}
+
+        {/* Table */}
+        {requests.length === 0 ? (
+          <p className="py-12 text-center text-sm text-muted-foreground">
+            No testimonial requests found.
+          </p>
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-muted/50">
                     <TableRow>
-                      <TableHead className="w-10">
+                      <TableHead className="w-8 pl-4 pr-2">
                         <Checkbox
                           checked={allSelected}
                           onCheckedChange={(checked) =>
@@ -398,13 +449,14 @@ export function TestimonialRequestsTableClient({
                           aria-label="Select all on this page"
                         />
                       </TableHead>
-                      <TableHead className="w-10 text-muted-foreground">#</TableHead>
+                      <TableHead className="w-8 text-muted-foreground">#</TableHead>
+                      {/* ... Header columns handled above ... */}
                       <TableHead>
                         <SortHeader
                           label="Requested To Name"
                           column="requested_to_name"
                           currentSort={currentSort}
-                          currentDir={currentDir}
+                          currentDir={currentDir as "asc" | "desc"}
                           onSort={handleSort}
                         />
                       </TableHead>
@@ -413,7 +465,7 @@ export function TestimonialRequestsTableClient({
                           label="Email"
                           column="requested_to_email"
                           currentSort={currentSort}
-                          currentDir={currentDir}
+                          currentDir={currentDir as "asc" | "desc"}
                           onSort={handleSort}
                         />
                       </TableHead>
@@ -423,7 +475,7 @@ export function TestimonialRequestsTableClient({
                           label="Created On"
                           column="created_at"
                           currentSort={currentSort}
-                          currentDir={currentDir}
+                          currentDir={currentDir as "asc" | "desc"}
                           onSort={handleSort}
                         />
                       </TableHead>
@@ -432,7 +484,7 @@ export function TestimonialRequestsTableClient({
                           label="Updated On"
                           column="updated_at"
                           currentSort={currentSort}
-                          currentDir={currentDir}
+                          currentDir={currentDir as "asc" | "desc"}
                           onSort={handleSort}
                         />
                       </TableHead>
@@ -441,7 +493,7 @@ export function TestimonialRequestsTableClient({
                           label="Status"
                           column="status"
                           currentSort={currentSort}
-                          currentDir={currentDir}
+                          currentDir={currentDir as "asc" | "desc"}
                           onSort={handleSort}
                         />
                       </TableHead>
@@ -452,9 +504,9 @@ export function TestimonialRequestsTableClient({
                     {requests.map((r, idx) => (
                       <TableRow
                         key={r.id}
-                        className={isPending ? "opacity-60" : undefined}
+                        className={cn("group transition-colors hover:bg-muted/50", isPending && "opacity-60")}
                       >
-                        <TableCell>
+                        <TableCell className="w-8 pl-4 pr-2">
                           <Checkbox
                             checked={selectedIds.has(r.id)}
                             onCheckedChange={(checked) =>
@@ -484,7 +536,7 @@ export function TestimonialRequestsTableClient({
                           >
                             {r.notes
                               ? r.notes.slice(0, 60) +
-                                (r.notes.length > 60 ? "…" : "")
+                              (r.notes.length > 60 ? "…" : "")
                               : "--"}
                           </span>
                         </TableCell>
@@ -497,7 +549,7 @@ export function TestimonialRequestsTableClient({
                         <TableCell>
                           <StatusBadge status={r.status} />
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -545,24 +597,87 @@ export function TestimonialRequestsTableClient({
                 </Table>
               </div>
 
-              {/* Showing X to Y of Z */}
-              <p className="text-sm text-muted-foreground">
-                Showing {fromRecord} to {toRecord} of {total} records
-              </p>
+              {/* Pagination footer */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-6 py-4 border-t text-sm">
+                <div className="flex items-center gap-3">
+                  <p className="text-muted-foreground whitespace-nowrap">
+                    Showing {fromRecord}–{toRecord} of {total}
+                    {selectedIds.size > 0 && (
+                      <span className="ml-2 text-amber-600 font-medium">
+                        ({selectedIds.size} selected)
+                      </span>
+                    )}
+                  </p>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(v) => pushParams({ pageSize: v, page: "1" })}
+                  >
+                    <SelectTrigger className="h-8 w-[110px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[10, 25, 50, 100].map((n) => (
+                        <SelectItem key={n} value={String(n)}>
+                          {n} / page
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <AdminPagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                total={total}
-                pageSize={pageSize}
-                onPageChange={(p) => pushParams({ page: String(p) })}
-                onPageSizeChange={(s) => pushParams({ pageSize: s })}
-                isPending={isPending}
-              />
-            </>
-          )}
-        </CardContent>
-      </Card>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      disabled={currentPage <= 1 || isPending}
+                      onClick={() => pushParams({ page: String(currentPage - 1) })}
+                    >
+                      <ChevronLeft className="size-4" />
+                    </Button>
+
+                    {/* Numeric page buttons logic */}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+                      .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+                        if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push("…");
+                        acc.push(p);
+                        return acc;
+                      }, [])
+                      .map((p, idx) =>
+                        p === "…" ? (
+                          <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">...</span>
+                        ) : (
+                          <Button
+                            key={p}
+                            variant={p === currentPage ? "default" : "outline"}
+                            size="sm"
+                            className={cn("h-8 w-8 p-0", p === currentPage && "bg-yellow-600 text-white hover:bg-yellow-700")}
+                            onClick={() => pushParams({ page: String(p) })}
+                            disabled={isPending}
+                          >
+                            {p}
+                          </Button>
+                        )
+                      )}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      disabled={currentPage >= totalPages || isPending}
+                      onClick={() => pushParams({ page: String(currentPage + 1) })}
+                    >
+                      <ChevronRight className="size-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </>
   );
 }
