@@ -1,6 +1,7 @@
 # Add Holy Books Admin CMS - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Admin CMS at `src/app/admin/holy-books/` with API at `src/app/api/admin/holy-books/`.
 - Priority: P2
 - Owner: Fullstack
 - Scope: book metadata admin, file replacement, ordering, active state

@@ -1,6 +1,7 @@
 # Add Community Subscription Lifecycle Management - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Cancel: `src/app/api/community/plan/cancel/route.ts`. Uncancel: `.../uncancel/route.ts`. Tier change (upgrade/downgrade individual↔family): `.../change-tier/route.ts`. Period-end cancel from `src/app/api/community/billing/unsubscribe/route.ts` (added in 2026-04-07/10.1).
 - Priority: P1
 - Owner: Fullstack
 - Scope: cancel, upgrade, downgrade, plan enforcement

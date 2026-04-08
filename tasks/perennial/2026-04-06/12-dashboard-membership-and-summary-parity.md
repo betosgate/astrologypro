@@ -1,6 +1,7 @@
 # Improve Perennial Dashboard Membership And Summary Parity - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Top membership block uses `MembershipCard` (with status badge, plan, billing, renewal, slots progress, action buttons including Add Member, Update Payment, Subscribed/Unsubscribe).
 - Priority: P2
 - Owner: Frontend
 - Scope: membership summary, plan visibility, status messaging, top-level dashboard cards

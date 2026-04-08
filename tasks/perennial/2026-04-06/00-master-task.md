@@ -1,7 +1,8 @@
 # Master Task - Perennial Requirement Gaps - 2026-04-06
 
 - Module: Perennial / Community Membership
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Umbrella — see individual children 01-15.x marked complete in this folder.
 - Owner: Fullstack
 - Folder Path: `docs/tasks/perennial/2026-04-06`
 - Primary Next Route:
