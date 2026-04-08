@@ -2092,6 +2092,40 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
         </div>
       )}
 
+      {/* 3. Solar Return Planet Report — from AstrologyAPI solar_return_planet_report
+           Shape: [{name, forecast:[str,str,...], full_degree?, sign?, house?}]
+           Ported from Angular solar-return-v2 getHttpHoroscopePost("solar_return_planet_report") */}
+      {planetReport !== null && planetReport !== undefined && (() => {
+        const items: any[] = Array.isArray(planetReport) ? planetReport : [];
+        if (items.length === 0) return null;
+        return (
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold px-1">Solar Return Planet Interpretations</h3>
+            {items.map((p: any, i: number) => {
+              const forecasts: string[] = Array.isArray(p.forecast) ? p.forecast : (p.forecast ? [String(p.forecast)] : []);
+              return (
+                <div key={p.name ?? i} className="rounded-lg border overflow-hidden">
+                  <div className="px-4 py-2 bg-muted/30 border-b flex items-center justify-center gap-2">
+                    {p.name && PLANET_IMAGES[p.name] && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={PLANET_IMAGES[p.name]} alt={p.name} className="size-5 object-contain" />
+                    )}
+                    <h4 className="text-sm font-semibold text-center w-full">{p.name ?? `Planet ${i + 1}`}</h4>
+                    {p.sign && <Badge variant="outline" className="ml-auto text-[10px] text-amber-600 border-amber-400">{p.sign}{p.house ? ` · House ${p.house}` : ""}</Badge>}
+                  </div>
+                  <div className="px-4 py-3 space-y-1.5">
+                    {forecasts.map((f: string, fi: number) => (
+                      <p key={fi} className="text-sm leading-relaxed text-foreground">{f}</p>
+                    ))}
+                    {forecasts.length === 0 && <p className="text-sm text-muted-foreground italic">No forecast available.</p>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex || houseList.length > 0) && (
         <div className="rounded-lg border overflow-hidden">
           <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return House Cusps</h3></div>
@@ -2134,39 +2168,9 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
         </div>
       )}
 
-      {/* 3. Solar Return Planet Report — from AstrologyAPI solar_return_planet_report
-           Shape: [{name, forecast:[str,str,...], full_degree?, sign?, house?}]
-           Ported from Angular solar-return-v2 getHttpHoroscopePost("solar_return_planet_report") */}
-      {planetReport !== null && planetReport !== undefined && (() => {
-        const items: any[] = Array.isArray(planetReport) ? planetReport : [];
-        if (items.length === 0) return null;
-        return (
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold px-1">Solar Return Planet Interpretations</h3>
-            {items.map((p: any, i: number) => {
-              const forecasts: string[] = Array.isArray(p.forecast) ? p.forecast : (p.forecast ? [String(p.forecast)] : []);
-              return (
-                <div key={p.name ?? i} className="rounded-lg border overflow-hidden">
-                  <div className="px-4 py-2 bg-muted/30 border-b flex items-center justify-center gap-2">
-                    {p.name && PLANET_IMAGES[p.name] && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={PLANET_IMAGES[p.name]} alt={p.name} className="size-5 object-contain" />
-                    )}
-                    <h4 className="text-sm font-semibold text-center w-full">{p.name ?? `Planet ${i + 1}`}</h4>
-                    {p.sign && <Badge variant="outline" className="ml-auto text-[10px] text-amber-600 border-amber-400">{p.sign}{p.house ? ` · House ${p.house}` : ""}</Badge>}
-                  </div>
-                  <div className="px-4 py-3 space-y-1.5">
-                    {forecasts.map((f: string, fi: number) => (
-                      <p key={fi} className="text-sm leading-relaxed text-foreground">{f}</p>
-                    ))}
-                    {forecasts.length === 0 && <p className="text-sm text-muted-foreground italic">No forecast available.</p>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        );
-      })()}
+      {/* 7. General AI interpretation (solar_return_details key) */}
+      {detailsAi && <AiCards data={detailsAi} title="Solar Return Interpretation" />}
+      
 
       {/* 5. Solar Return Aspects table */}
       {aspectList.length > 0 && (
@@ -2202,7 +2206,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       {/* 6. Solar Return Aspects Report — from AstrologyAPI solar_return_aspects_report
            Shape: [{solar_return_planet, type, natal_planet, forecast}]
            Ported from Angular solar-return-v2 getHttpHoroscopePost("solar_return_aspects_report") */}
-      {aspectsReport !== null && aspectsReport !== undefined && (() => {
+      {/* {aspectsReport !== null && aspectsReport !== undefined && (() => {
         const items: any[] = Array.isArray(aspectsReport) ? aspectsReport : [];
         if (items.length === 0) return null;
         return (
@@ -2233,10 +2237,67 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
             })}
           </div>
         );
+      })()} */}
+      {/* 6. Solar Return Aspects Report — Unified Grouping */}
+      {aspectsReport !== null && aspectsReport !== undefined && (() => {
+        const items: any[] = Array.isArray(aspectsReport) ? aspectsReport : [];
+        if (items.length === 0) return null;
+
+        // Group reciprocal aspects to prevent duplicate headers
+        const seenAspects = new Set();
+        const groupedItems = items.filter(a => {
+          const srP = a.solar_return_planet ?? a.aspecting_planet ?? "";
+          const nP = a.natal_planet ?? a.aspected_planet ?? "";
+          const type = a.type ?? "";
+
+          // Create a unique key regardless of order (e.g., Uranus-Neptune-Opposition)
+          const key = [srP, nP].sort().join("-") + "-" + type;
+
+          if (seenAspects.has(key)) return false;
+          seenAspects.add(key);
+          return true;
+        });
+
+        return (
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold px-1">Solar Return Planet Aspects Interpretations</h3>
+            {groupedItems.map((a: any, i: number) => {
+              const srPlanet = a.solar_return_planet ?? a.aspecting_planet ?? "";
+              const nPlanet = a.natal_planet ?? a.aspected_planet ?? "";
+              const aType = a.type ?? "";
+
+              // Construct a unified title for the parser
+              const unifiedTitle = `${srPlanet} ${aType} ${nPlanet}`;
+              const forecast = a.forecast ?? a.interpretation ?? "";
+
+              return (
+                <div key={i} className="rounded-lg border overflow-hidden">
+                  {/* Header: Centered with Icons using existing AstroHeaderParts logic */}
+                  <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+                    <AstroHeaderParts title={unifiedTitle} />
+                  </div>
+
+                  <div className="px-4 py-3">
+                    <p className="text-sm leading-relaxed text-foreground text-center">
+                      {String(forecast)}
+                    </p>
+                    <div className="mt-2 flex justify-center">
+                      <button
+                        onClick={() => trigger(unifiedTitle, String(forecast), a, areaOfInquiry, unifiedTitle)}
+                        className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
+                      >
+                        Show More
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
       })()}
 
-      {/* 7. General AI interpretation (solar_return_details key) */}
-      {detailsAi && <AiCards data={detailsAi} title="Solar Return Interpretation" />}
+      
     </div>
   );
 }
