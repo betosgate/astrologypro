@@ -164,6 +164,20 @@ The form must explicitly state:
 2. passwords are generated automatically
 3. manual password creation is not part of the signup form
 
+## Generated Password Strength Rule
+
+The frontend does not validate user-entered passwords because the user does not type one.
+
+However, the implementation must still treat generated credentials as subject to a backend/internal password-strength policy.
+
+Required generated-password rule:
+
+1. minimum `12` characters
+2. at least one uppercase letter
+3. at least one lowercase letter
+4. at least one number
+5. at least one special character
+
 ## Acceptance Criteria
 
 1. every member form contains the confirmed required fields
