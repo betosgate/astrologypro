@@ -1,7 +1,7 @@
 # Task 07: Verification And User Flows
 
-- Status: Partially Verified (2026-04-08, re-audited)
-- Completion Notes: Code and DB were re-audited: dual-entitlement portal detection works through getUserPortals(), /mystery-school/enroll is now a valid cancel destination, legacy Mystery School users were backfilled so none are missing mystery_school_students rows, and enrollment email routes now point to /mystery-school. Full browser and Stripe checkout flows are still manual-verification items.
+- Status: Mostly Verified (2026-04-08, re-audited)
+- Completion Notes: Code and DB were re-audited: dual-entitlement portal detection works through getUserPortals(), /mystery-school/enroll is now a valid cancel destination, legacy Mystery School users were backfilled so none are missing mystery_school_students rows, enrollment email routes now point to /mystery-school, and Mystery School lifecycle webhooks now sync cancel/resume/delete state into mystery_school_students. A fully human-completed hosted Stripe card flow is still a manual-verification item.
 Date: 2026-04-07
 Category: Mystery School Module
 
@@ -57,12 +57,13 @@ Validate the complete Mystery School purchase and access behavior for all affect
 
 ## Verification Checklist
 
-- [ ] Stripe checkout uses correct prices for each user state
+- [ ] Stripe checkout uses correct prices for each user state in a human-completed hosted Stripe session
 - [x] PM subscription is not cancelled during Mystery School purchase
 - [x] Mystery School student provisioning still succeeds for legacy users after backfill and for code paths using the webhook/helper
 - [x] PM access still works after MS enrollment in the current access model
 - [x] Mystery School access works after enrollment in the current access model
 - [x] Route switching works for dual-entitlement users
+- [x] Mystery School subscription lifecycle webhooks sync status changes into `mystery_school_students`
 - [ ] Admin discount toggle changes checkout behavior correctly
 - [x] Success redirect after Mystery School checkout does not land in generic PM-only Community flow
 - [x] Cancel redirect after Mystery School checkout does not land in the wrong portal context
@@ -106,6 +107,13 @@ Validate the complete Mystery School purchase and access behavior for all affect
    - `/mystery-school/enroll` now resolves via `src/proxy.ts` to `src/app/join/mystery-school/page.tsx`
    - Enrollment email and admin email preview now point to `/mystery-school`
 
+6. **Mystery School Lifecycle Webhook Sync**
+   - `customer.subscription.updated` now updates `mystery_school_students` by `stripe_subscription_id`
+   - scheduled cancellation stores `status = 'cancelled'` plus future `access_expires_at`
+   - resumed subscriptions clear cancellation fields and return to `status = 'active'`
+   - `customer.subscription.deleted` marks the student cancelled while preserving end-of-period access
+   - regression coverage added in `tests/unit/mystery-school-subscription-lifecycle.test.ts`
+
 ### Migration
 
 - `20260407000095_ms_parallel_membership.sql` — creates `platform_settings` table, updates RLS on `mystery_school_foundation_weeks`
@@ -113,14 +121,16 @@ Validate the complete Mystery School purchase and access behavior for all affect
 ### Files Changed
 
 - `src/app/api/community/checkout/route.ts` — removed PM cancellation, added PM-discount pricing logic, fixed redirect URLs
-- `src/app/api/stripe/webhooks/route.ts` — parallel membership provisioning (MS does not overwrite PM)
+- `src/app/api/stripe/webhooks/route.ts` — parallel membership provisioning plus MS lifecycle sync
 - `src/lib/user-roles.ts` — dual-entitlement portal detection
 - `src/lib/mystery-school/access.ts` — shared access guard with legacy fallback/backfill-safe behavior
+- `src/lib/mystery-school/subscription-lifecycle.ts` — pure lifecycle mapping helper for webhook state sync
 - `src/app/api/admin/platform-settings/route.ts` — new admin settings API
 - `src/app/admin/platform-settings/page.tsx` — new admin settings UI
 - `src/components/admin/admin-sidebar.tsx` — added Platform Settings link
 - `src/components/mystery-school/enrollment-flow.tsx` — shared canonical Mystery School enrollment flow
 - `src/proxy.ts` — canonical `/mystery-school/enroll` routing
+- `tests/unit/mystery-school-subscription-lifecycle.test.ts` — focused lifecycle regression test
 
 ### Manual Test Flow
 
@@ -132,6 +142,7 @@ Validate the complete Mystery School purchase and access behavior for all affect
 5. Verify: `community_members` record created with `membership_type = 'mystery_school'`
 6. Verify: redirected to `/mystery-school?subscribed=true`
 7. Verify: portal switcher shows "Mystery School"
+8. Verify: later Stripe lifecycle events update `mystery_school_students` correctly
 
 **Scenario 2: PM user buys MS (discount OFF)**
 1. Log in as active PM user
@@ -142,6 +153,7 @@ Validate the complete Mystery School purchase and access behavior for all affect
 6. Verify: `community_members` record UNCHANGED (still `perennial_mandalism`, still `active`)
 7. Verify: `mystery_school_students` record created
 8. Verify: portal switcher shows BOTH "Community" and "Mystery School"
+9. Verify: later MS subscription lifecycle events do not overwrite PM membership fields
 
 **Scenario 3: PM user buys MS (discount ON)**
 1. Go to `/admin/platform-settings`, toggle discount ON
