@@ -62,8 +62,12 @@ export async function GET(
         .order("priority", { ascending: true }),
       admin
         .from("quiz_questions")
-        // Deliberately exclude correct_answer — it stays server-side
-        .select("id, question, options, explanation, priority")
+        // Deliberately exclude correct_answer — it stays server-side. The
+        // remediation_* fields are exposed because the new stepwise quiz
+        // runtime needs them on the client to drive the video seek + replay.
+        .select(
+          "id, question, options, explanation, priority, remediation_video_id, remediation_video_index, remediation_start_seconds, remediation_replay_until_seconds, remediation_message",
+        )
         .eq("lesson_id", id)
         .order("priority", { ascending: true }),
     ]);

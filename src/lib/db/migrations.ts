@@ -3,6 +3,7 @@ import { MIGRATION_SQL as MIG_20260408000107 } from "@/data/migrations/202604080
 import { MIGRATION_SQL as MIG_20260408000108 } from "@/data/migrations/20260408000108_owner_id_additive";
 import { MIGRATION_SQL as MIG_20260408000109 } from "@/data/migrations/20260408000109_calendar_connections";
 import { MIGRATION_SQL as MIG_20260408000110 } from "@/data/migrations/20260408000110_backfill_calendar_connections";
+import { MIGRATION_SQL as MIG_20260408000111 } from "@/data/migrations/20260408000111_quiz_question_remediation";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -68,6 +69,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "One-shot backfill. Reads every existing diviners.google_calendar_token (extracted from JSONB scalar string) and diviners.outlook_calendar_token (parsed as JSONB object) and inserts a normalized row into calendar_connections. owner_id ← diviners.id; user_id ← diviners.user_id. Idempotent via ON CONFLICT (user_id, provider) DO NOTHING — re-running is safe. Source columns are NOT touched. Run AFTER 20260408000109.",
     sortKey: "20260408000110",
     sql: MIG_20260408000110,
+  },
+  "20260408000111_quiz_question_remediation": {
+    id: "20260408000111_quiz_question_remediation",
+    title: "Quiz question remediation metadata (Module 04)",
+    description:
+      "Adds remediation_video_id, remediation_video_index, remediation_start_seconds, remediation_replay_until_seconds, remediation_message columns to quiz_questions. Drives the new per-question stepwise remediation flow (Module 05) — wrong answer sends the learner back to a specific video timestamp and required replay window. CHECK constraint guarantees replay_until > start when both are set. Partial index on lesson_id WHERE remediation_start_seconds IS NOT NULL. All columns nullable for backward compatibility — existing questions without remediation are treated as inline-retry by the runtime.",
+    sortKey: "20260408000111",
+    sql: MIG_20260408000111,
   },
 };
 
