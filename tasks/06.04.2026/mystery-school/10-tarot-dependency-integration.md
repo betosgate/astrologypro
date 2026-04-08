@@ -1,5 +1,8 @@
 # Module 10 - Tarot Dependency Integration
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Tarot mappings seeded in 20260406000028_decan_tarot_seed.sql; consumed by mystery school decan API.
+
 ## Objective
 Wire the existing Tarot system into Mystery School where the curriculum explicitly depends on tarot card mappings and card access.
 

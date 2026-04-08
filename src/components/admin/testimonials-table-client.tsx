@@ -10,7 +10,14 @@ import {
   X,
   EyeOff,
   Trash2,
+  Eye,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Card,
   CardContent,
@@ -126,10 +133,13 @@ function StatusBadge({ status }: { status: string }) {
 
 const fmt = (d: string) =>
   d
-    ? new Date(d).toLocaleDateString("en-US", {
-        month: "short",
+    ? new Date(d).toLocaleString("en-US", {
+        month: "long",
         day: "numeric",
         year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
       })
     : "--";
 
@@ -151,6 +161,7 @@ export function TestimonialsTableClient({
   } = useAdminTableParams({ sort: "created_at", dir: "desc" });
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [previewRow, setPreviewRow] = useState<TestimonialRow | null>(null);
 
   const currentStatus = searchParams.status ?? "all";
   const currentClient = searchParams.client ?? "";
@@ -246,6 +257,28 @@ export function TestimonialsTableClient({
     }
   }
 
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (
+      !window.confirm(
+        `Delete ${selectedIds.size} testimonial(s)? This cannot be undone.`,
+      )
+    )
+      return;
+    try {
+      await Promise.all(
+        [...selectedIds].map((id) =>
+          fetch(`/api/admin/testimonials/${id}`, { method: "DELETE" }),
+        ),
+      );
+      toast.success(`${selectedIds.size} testimonial(s) deleted.`);
+      setSelectedIds(new Set());
+      pushParams({ page: String(currentPage) });
+    } catch {
+      toast.error("Bulk delete failed.");
+    }
+  }
+
   // ── Sort handler ────────────────────────────────────────────────────────────
 
   function handleSort(col: string) {
@@ -260,6 +293,39 @@ export function TestimonialsTableClient({
 
   return (
     <>
+      {/* Preview Dialog */}
+      <Dialog open={!!previewRow} onOpenChange={(o) => !o && setPreviewRow(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Testimonial Preview</DialogTitle>
+          </DialogHeader>
+          {previewRow && (
+            <div className="space-y-3 text-sm">
+              <div>
+                <span className="font-medium text-muted-foreground">Title: </span>
+                {previewRow.title ?? "--"}
+              </div>
+              <div>
+                <span className="font-medium text-muted-foreground">Feedback: </span>
+                <p className="mt-1 whitespace-pre-wrap">{previewRow.text || "--"}</p>
+              </div>
+              <div>
+                <span className="font-medium text-muted-foreground">Added By: </span>
+                {previewRow.added_by_name ?? "--"}
+              </div>
+              <div>
+                <span className="font-medium text-muted-foreground">Added For: </span>
+                {previewRow.client_name ?? "--"}
+              </div>
+              <div>
+                <span className="font-medium text-muted-foreground">Phone: </span>
+                {previewRow.requested_to_phone_no ?? "--"}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold tracking-tight">Testimonials</h1>
@@ -358,6 +424,29 @@ export function TestimonialsTableClient({
               }
             />
           </div>
+
+          {/* Bulk actions */}
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-3 rounded-md border bg-muted/50 px-3 py-2">
+              <span className="text-sm font-medium">{selectedIds.size} selected</span>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={handleBulkDelete}
+                className="gap-1.5"
+              >
+                <Trash2 className="size-3.5" />
+                Delete Selected
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedIds(new Set())}
+              >
+                Clear
+              </Button>
+            </div>
+          )}
 
           {/* Table */}
           {testimonials.length === 0 ? (
@@ -501,6 +590,13 @@ export function TestimonialsTableClient({
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => setPreviewRow(t)}
+                                className="flex items-center gap-2"
+                              >
+                                <Eye className="size-3.5" />
+                                Preview
+                              </DropdownMenuItem>
                               <DropdownMenuItem asChild>
                                 <Link
                                   href={`/admin/testimonials/${t.id}/edit`}

@@ -60,7 +60,8 @@ import {
   ShieldCheck,
   ShieldOff,
   Loader2,
-  X
+  X,
+  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -113,6 +114,7 @@ export default function TarotSpreadsListPage() {
   const [allSpreads, setAllSpreads] = useState<TarotSpread[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, startRefreshing] = useTransition();
+  const [previewSpread, setPreviewSpread] = useState<TarotSpread | null>(null);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -318,6 +320,24 @@ export default function TarotSpreadsListPage() {
 
   return (
     <div className="space-y-6">
+      {/* Preview Dialog */}
+      <Dialog open={!!previewSpread} onOpenChange={(o) => !o && setPreviewSpread(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Spread Preview</DialogTitle>
+          </DialogHeader>
+          {previewSpread && (
+            <div className="space-y-2 text-sm">
+              <div><span className="font-medium text-muted-foreground">Name: </span>{previewSpread.name}</div>
+              <div><span className="font-medium text-muted-foreground">Card Count: </span>{previewSpread.card_count ?? "—"}</div>
+              <div><span className="font-medium text-muted-foreground">Priority: </span>{previewSpread.priority ?? "—"}</div>
+              <div><span className="font-medium text-muted-foreground">Status: </span>{previewSpread.is_active ? "Active" : "Inactive"}</div>
+              <div><span className="font-medium text-muted-foreground">Created: </span>{fmt(previewSpread.created_at)}</div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -542,6 +562,10 @@ export default function TarotSpreadsListPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-[160px]">
+                              <DropdownMenuItem onClick={() => setPreviewSpread(s)}>
+                                <Eye className="mr-2 h-4 w-4 text-muted-foreground" />
+                                Preview
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => router.push(`/admin/tarot/spreads/${s.id}/edit`)}>
                                 <Pencil className="mr-2 h-4 w-4 text-muted-foreground" />
                                 Edit

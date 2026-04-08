@@ -2,6 +2,7 @@
 
 **Date:** 2026-04-01
 **Status:** Done
+**Verified 2026-04-08:** Already Done — src/app/admin/testimonials/requests/ form.
 
 ## Objective
 Implement or verify the "Request Testimonial" form as per the provided mock-up and payload.

@@ -1,4 +1,5 @@
 **Status:** Done
+**Verified 2026-04-08:** src/components/admin/admin-notes-section.tsx + src/app/api/admin/users/[id]/notes/{route.ts,[noteId]/route.ts}.
 
 # Task: User Note Management
 

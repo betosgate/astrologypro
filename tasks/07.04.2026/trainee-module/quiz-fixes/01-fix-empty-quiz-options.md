@@ -1,5 +1,8 @@
 # Task - Fix Empty Quiz Options in Trainee Portal
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: normalizeQuizOptions() in src/app/trainee/training/[programId]/[categoryId]/[lessonId]/page.tsx:38-41 handles both string[] and {text}[] formats; lesson-viewer-quiz.tsx:40-45 also defends against both shapes.
+
 ## Objective
 Fix the issue where quiz options appear as empty bubbles in the Trainee Lesson Viewer.
 

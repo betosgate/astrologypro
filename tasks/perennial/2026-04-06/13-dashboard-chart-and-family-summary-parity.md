@@ -1,6 +1,7 @@
 # Improve Perennial Dashboard Chart And Family Summary Parity - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Astro charts section + family summary cards rendered on `src/app/community/page.tsx`.
 - Priority: P2
 - Owner: Fullstack
 - Scope: natal/transit summary cards, family preview, chart readiness visibility

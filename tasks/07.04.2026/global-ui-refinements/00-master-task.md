@@ -1,5 +1,8 @@
 # Global UI Refinements - AI Execution Master Task
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Verified — logout dropdown, community profile editability, and active nav highlighting all complete (see child notes).
+
 ## Objective
 Standardize and fix global UI deficiencies discovered across multiple user roles. Specifically, ensure all authenticated user dashboards have a functional Logout button logically placed in the desktop header, and ensure consistency in the editability of user profile pages across portals.
 

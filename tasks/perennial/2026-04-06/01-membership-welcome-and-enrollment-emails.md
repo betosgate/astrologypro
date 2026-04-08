@@ -1,6 +1,7 @@
 # Add Membership Welcome And Enrollment Emails - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Welcome + enrollment emails fire from `src/app/api/stripe/webhooks/route.ts` (community welcome ~line 181, MS enrollment confirmation ~line 224); SES dedup window provides idempotency.
 - Priority: P1
 - Owner: Fullstack
 - Scope: community welcome email, Mystery School enrollment confirmation

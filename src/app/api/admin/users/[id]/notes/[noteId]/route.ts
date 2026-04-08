@@ -11,7 +11,7 @@ export async function DELETE(
 ) {
   const adminUserObj = await getAdminUser();
   const adminEmail = adminUserObj?.email ?? null;
-  if (!adminEmail) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!adminEmail) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id, noteId } = await params;
   const admin = createAdminClient();
@@ -33,7 +33,7 @@ export async function PATCH(
 ) {
   const adminUserObj = await getAdminUser();
   const adminEmail = adminUserObj?.email ?? null;
-  if (!adminEmail) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!adminEmail) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id, noteId } = await params;
   const { note } = await req.json();

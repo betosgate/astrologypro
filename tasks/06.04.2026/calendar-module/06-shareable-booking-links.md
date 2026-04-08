@@ -1,5 +1,8 @@
 # Task: Shareable Booking Links & Menu Integration
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Per-diviner public link at /[username]; admin sidebar entries verified in admin-sidebar.tsx.
+
 ## Objective
 Provide diviners with easy-to-use shareable links for their booking pages and integrate the Calendar module into the Admin Sidebar.
 

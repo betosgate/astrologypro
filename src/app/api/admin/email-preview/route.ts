@@ -122,7 +122,7 @@ function buildPreviewHtml(templateName: string): string | null {
           </ul>
         `,
         ctaText: "Enter the Mystery School",
-        ctaUrl: `${APP_URL}/community/mystery-school`,
+        ctaUrl: `${APP_URL}/mystery-school`,
         footer: "AstrologyPro &mdash; Mystery School",
       });
 

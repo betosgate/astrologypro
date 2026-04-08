@@ -7,7 +7,7 @@
  *   - community_members.membership_type = 'mystery_school'  AND  membership_status = 'active'
  *   - mystery_school_students.status = 'active'  (or cancelled-but-within-access window)
  *
- * Non-qualifying users are redirected to /community/upgrade.
+ * Non-qualifying users are redirected to /mystery-school/enroll.
  *
  * The parent /community/layout.tsx already ensures the user is authenticated
  * and has an active community_members row, so we only need to check the
@@ -25,7 +25,7 @@ export default async function MysterySchoolTrainingLayout({
   const result = await requireMysterySchoolAccess();
 
   if (!result) {
-    redirect("/community/upgrade");
+    redirect("/mystery-school/enroll");
   }
 
   return <>{children}</>;

@@ -1,5 +1,8 @@
 # Decan Icon Logic - Western Horoscope V2
 
+- Status: Documentation (no code action)
+- Notes: Reference doc — describes the legacy decan icon component logic. Informational only.
+
 This document explains the technical logic for displaying and interacting with the **Decan Icon** in the Western Horoscope V2 module.
 
 ## 1. Component Scope
@@ -250,6 +253,7 @@ Returns the updated decan document if the operation is successful.
 The underlying MongoDB collection uses the following schema:
 - `planet`: `string`
 - `signs`: `string`
+- `tarot_name`: `string`
 - `tarot_card_big_image`: `string` (URL/Path)
 - `tarot_card_thumb_image`: `string` (URL/Path)
 - `greek_daemon`: `string`

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -13,12 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,8 +26,10 @@ import {
   AdminPagination,
   AdminTableSearch,
   AdminResetButton,
+  AdminSelectionBar,
   useAdminTableParams,
 } from "./admin-table-parts";
+import { ActivityLogDetailSheet } from "./activity-log-detail-sheet";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -131,6 +128,7 @@ export function ActivityLogTableClient({
     useAdminTableParams({ sort: sortBy, dir: sortDir });
 
   const [detailEntry, setDetailEntry] = useState<ActivityLogEntry | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const hasActiveFilters = !!(
     q ||
@@ -138,6 +136,10 @@ export function ActivityLogTableClient({
     dateFrom ||
     dateTo
   );
+  const allPageIds = entries.map((entry) => entry.id);
+  const allSelected =
+    allPageIds.length > 0 && allPageIds.every((id) => selectedIds.has(id));
+  const selectedEntries = entries.filter((entry) => selectedIds.has(entry.id));
 
   function handleSort(col: string) {
     const newDir =
@@ -184,6 +186,34 @@ export function ActivityLogTableClient({
     URL.revokeObjectURL(url);
   }
 
+  function handleExportSelectedCSV() {
+    const csv = toCSV(selectedEntries);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `activity-log-selected-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function toggleAll(checked: boolean) {
+    if (checked) {
+      setSelectedIds(new Set(allPageIds));
+      return;
+    }
+    setSelectedIds(new Set());
+  }
+
+  function toggleOne(id: string, checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -206,6 +236,21 @@ export function ActivityLogTableClient({
           Export CSV
         </Button>
       </div>
+
+      <AdminSelectionBar
+        count={selectedIds.size}
+        label="activity entr(y/ies) selected"
+        onClear={() => setSelectedIds(new Set())}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportSelectedCSV}
+          >
+            Export Selected CSV
+          </Button>
+        }
+      />
 
       {/* Filters */}
       <Card>
@@ -302,6 +347,13 @@ export function ActivityLogTableClient({
                   <thead>
                     <tr className="border-b bg-muted/40 text-xs">
                       <th className="px-4 py-2 text-left">
+                        <Checkbox
+                          checked={allSelected}
+                          onCheckedChange={(checked) => toggleAll(checked === true)}
+                          aria-label="Select all activity log entries on this page"
+                        />
+                      </th>
+                      <th className="px-4 py-2 text-left">
                         <SortHeader
                           label="Admin"
                           column="admin_user_id"
@@ -356,7 +408,15 @@ export function ActivityLogTableClient({
                       <tr
                         key={e.id}
                         className="border-b last:border-0 hover:bg-muted/20"
+                        data-selected={selectedIds.has(e.id) ? "true" : undefined}
                       >
+                        <td className="px-4 py-2">
+                          <Checkbox
+                            checked={selectedIds.has(e.id)}
+                            onCheckedChange={(checked) => toggleOne(e.id, checked === true)}
+                            aria-label={`Select activity entry ${e.id}`}
+                          />
+                        </td>
                         <td className="px-4 py-2 text-xs text-muted-foreground truncate max-w-[160px]">
                           {e.admin_user_id}
                         </td>
@@ -425,55 +485,11 @@ export function ActivityLogTableClient({
         </>
       )}
 
-      {/* Detail dialog */}
-      <Dialog
+      <ActivityLogDetailSheet
+        entry={detailEntry}
         open={!!detailEntry}
-        onOpenChange={(v) => {
-          if (!v) setDetailEntry(null);
-        }}
-      >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Entry Details</DialogTitle>
-          </DialogHeader>
-          {detailEntry && (
-            <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-3 gap-y-2">
-                <span className="text-muted-foreground text-xs">Admin</span>
-                <span className="col-span-2 text-xs break-all">
-                  {detailEntry.admin_user_id}
-                </span>
-                <span className="text-muted-foreground text-xs">Target</span>
-                <span className="col-span-2 text-xs break-all">
-                  {detailEntry.target_user_id ?? "\u2014"}
-                </span>
-                <span className="text-muted-foreground text-xs">Action</span>
-                <span className="col-span-2">
-                  <Badge variant="outline" className="text-xs font-mono">
-                    {detailEntry.action_type}
-                  </Badge>
-                </span>
-                <span className="text-muted-foreground text-xs">IP</span>
-                <span className="col-span-2 text-xs">
-                  {detailEntry.ip_address ?? "\u2014"}
-                </span>
-                <span className="text-muted-foreground text-xs">Time</span>
-                <span className="col-span-2 text-xs">
-                  {fmtDate(detailEntry.created_at)}
-                </span>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">
-                  Details (JSON)
-                </p>
-                <pre className="text-xs bg-muted rounded p-3 overflow-auto max-h-48 whitespace-pre-wrap break-all">
-                  {JSON.stringify(detailEntry.details, null, 2)}
-                </pre>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+        onClose={() => setDetailEntry(null)}
+      />
     </div>
   );
 }

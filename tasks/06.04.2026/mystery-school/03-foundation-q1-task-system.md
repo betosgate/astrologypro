@@ -1,5 +1,8 @@
 # Module 03 - Foundation Q1 Task System
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: mystery_school_foundation_weeks + student_foundation_progress tables, src/app/mystery-school/training/foundation/ + src/app/api/mystery-school/foundation/.
+
 ## Objective
 Convert the current 12-week foundation from a simple week-complete flow into a true task-driven Q1 system while reusing existing tables where possible.
 

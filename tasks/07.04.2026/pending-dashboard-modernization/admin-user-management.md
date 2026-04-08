@@ -1,4 +1,7 @@
 # Task: Admin User Management Enhancement (Add & Invite)
+
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: InviteUserForm at src/components/admin/invite-user-form.tsx, mounted in user-management-client.tsx:775. Add User flow available.
 Date: 2026-04-07
 Category: Admin Dashboard
 

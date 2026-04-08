@@ -1,4 +1,7 @@
 # Task: Admin Personal Scheduling System
+
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Admin calendar at src/app/admin/calendar/{page,new,[id]/edit}/page.tsx; admin bookings list at src/app/admin/bookings/page.tsx with detail view. Reuses the CalendarView/AvailabilityBuilder components.
 Date: 2026-04-07
 Category: Calendar Module
 

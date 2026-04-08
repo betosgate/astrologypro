@@ -1,6 +1,7 @@
 # Add Doctrine Links Admin Management - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Admin doctrine links CRUD: `src/app/admin/doctrine-links/` + `src/app/api/admin/doctrine-links/`.
 - Priority: P2
 - Owner: Fullstack
 - Scope: doctrine-link CRUD, ordering, active state

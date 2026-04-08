@@ -1,5 +1,8 @@
 # Module 07 - Decan Unlock Dates, Grace Period, and Timeline
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: src/app/api/cron/decan-unlock/route.ts handles daily unlock + grace; admin can override start/end dates.
+
 ## Objective
 Replace the current simplified decan timing behavior with a more explicit and requirement-aligned timing model.
 

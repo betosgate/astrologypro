@@ -13,7 +13,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const adminEmail = await getAdminUser();
-  if (!adminEmail) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!adminEmail) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
   const admin = createAdminClient();
@@ -74,7 +74,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const adminEmail = await getAdminUser();
-  if (!adminEmail) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!adminEmail) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
   const body = await req.json();

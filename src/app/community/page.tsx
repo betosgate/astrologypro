@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import {
   Card,
@@ -173,6 +174,7 @@ export default async function CommunityDashboardPage() {
     profileCompletionFamilyResult,
     profileCompletionRelChartResult,
     pmTierResult,
+    platformSettingsResult,
   ] = await Promise.all([
     // Client profile for progress ring calculation
     supabase
@@ -256,6 +258,13 @@ export default async function CommunityDashboardPage() {
           .eq("id", member.pm_tier_id)
           .single()
       : Promise.resolve({ data: null }),
+
+    // Admin discount toggle — read via admin client (RLS bypass)
+    createAdminClient()
+      .from("platform_settings")
+      .select("ms_pm_discount_enabled")
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const client = clientResult.data;
@@ -268,6 +277,7 @@ export default async function CommunityDashboardPage() {
   const pcFamilyMembers = profileCompletionFamilyResult.data ?? [];
   const pcRelCharts = profileCompletionRelChartResult.data ?? [];
   const pmTier = pmTierResult.data ?? null;
+  const pmDiscountEnabled = platformSettingsResult.data?.ms_pm_discount_enabled ?? false;
 
   // ── Membership card subscription prop ────────────────────────────────────
   // Max members: from tier table if available, else derive from plan_type
@@ -700,7 +710,25 @@ export default async function CommunityDashboardPage() {
         )}
 
         {/* Rich membership card */}
-        <MembershipCard subscription={membershipSubscription} />
+        <MembershipCard subscription={membershipSubscription} userEmail={user.email} />
+
+        {/* Dedicated Add Perennial Mandalism Member entry point */}
+        {membershipSubscription.plan_type === "family" &&
+          membershipSubscription.member_count < membershipSubscription.max_members && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="py-4 px-5 flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <p className="text-sm font-semibold">Add Perennial Mandalism Member</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Open the full add-member form to enroll a new family member.
+                  </p>
+                </div>
+                <Button asChild size="sm">
+                  <Link href="/community/members/new">+ Add Member</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
         {/* Profile completion — horizontal progress bar when not complete; badge when complete */}
         {profileIsComplete ? (
@@ -757,7 +785,7 @@ export default async function CommunityDashboardPage() {
                 </p>
               </div>
               <Button asChild size="sm" variant="outline" className="shrink-0 w-full sm:w-auto border-purple-500/40 text-purple-700 hover:bg-purple-500/10">
-                <Link href="/community/upgrade">Upgrade to Mystery School</Link>
+                <Link href="/mystery-school/enroll">Upgrade to Mystery School</Link>
               </Button>
             </CardContent>
           </Card>
@@ -1031,26 +1059,6 @@ export default async function CommunityDashboardPage() {
             </CardContent>
           </Card>
         </section>
-      )}
-
-      {/* Mystery School nav for existing MS members — redirect to dedicated portal */}
-      {isMysterySchool && (
-        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-violet-500/10">
-          <CardContent className="space-y-3 py-6">
-            <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
-              <GraduationCap className="size-5 text-primary" />
-            </div>
-            <div>
-              <p className="font-semibold text-base">Go to Mystery School</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Your dedicated Mystery School portal has your decan calendar, training, and curriculum.
-              </p>
-            </div>
-            <Button asChild size="sm">
-              <Link href="/mystery-school">Open Mystery School →</Link>
-            </Button>
-          </CardContent>
-        </Card>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -1405,9 +1413,13 @@ export default async function CommunityDashboardPage() {
                 <span className="font-bold text-white">$97 one-time</span>
                 {" "}+{" "}
                 <span className="font-bold text-white">$27/month</span>
-                {" "}— or{" "}
-                <span className="font-bold text-amber-300">+$17.03/month</span>
-                {" "}upgrade for PM members
+                {pmDiscountEnabled && (
+                  <>
+                    {" "}— or{" "}
+                    <span className="font-bold text-amber-300">+$17.03/month</span>
+                    {" "}for PM members
+                  </>
+                )}
               </div>
             </div>
             <Button
@@ -1415,7 +1427,7 @@ export default async function CommunityDashboardPage() {
               size="default"
               className="bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-600 hover:to-violet-600 text-white font-semibold shadow-lg shadow-purple-900/40"
             >
-              <Link href="/community/upgrade">Enter the Sacred Gateway →</Link>
+              <Link href="/mystery-school/enroll">Enter the Sacred Gateway →</Link>
             </Button>
           </div>
         </section>

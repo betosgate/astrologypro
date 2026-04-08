@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { checkAndAwardTrainingGraduation } from "@/lib/training/graduation";
+import { completeLessonAndProgressForUser } from "@/lib/training/completion";
 
 export const dynamic = "force-dynamic";
 
@@ -159,9 +159,7 @@ export async function POST(
       );
 
     // 6. Check if ALL triggers for this lesson are now passed.
-    // If so, auto-complete the lesson (unless it also has a legacy quiz that
-    // hasn't been passed yet — in that case, lesson stays incomplete until
-    // both triggers and quiz are passed).
+    // Trigger-enabled lessons complete authoritatively from trigger progress only.
     let allTriggersNowPassed = false;
     const { data: allTriggers } = await admin
       .from("lesson_quiz_triggers")
@@ -182,121 +180,8 @@ export async function POST(
     }
 
     if (allTriggersNowPassed) {
-      // Check if lesson has a legacy quiz that must also be passed
-      const { count: quizCount } = await admin
-        .from("quiz_questions")
-        .select("id", { count: "exact", head: true })
-        .eq("lesson_id", lessonId);
-
-      let quizPassed = true;
-      if ((quizCount ?? 0) > 0) {
-        const { data: lastAttempt } = await admin
-          .from("quiz_attempts")
-          .select("passed")
-          .eq("user_id", user.id)
-          .eq("lesson_id", lessonId)
-          .eq("passed", true)
-          .limit(1)
-          .maybeSingle();
-        quizPassed = !!lastAttempt;
-      }
-
-      if (quizPassed) {
-        // Auto-complete the lesson
-        const { data: lessonProgress } = await admin
-          .from("lesson_progress")
-          .select("id, started_at, time_spent_seconds")
-          .eq("user_id", user.id)
-          .eq("lesson_id", lessonId)
-          .maybeSingle();
-
-        if (lessonProgress) {
-          await admin
-            .from("lesson_progress")
-            .update({ completed_at: now })
-            .eq("id", lessonProgress.id);
-        }
-
-        await admin
-          .from("lesson_completions")
-          .upsert(
-            {
-              user_id: user.id,
-              lesson_id: lessonId,
-              ...(lessonProgress?.started_at ? { started_at: lessonProgress.started_at } : {}),
-              ...(lessonProgress?.time_spent_seconds != null
-                ? { time_spent_seconds: lessonProgress.time_spent_seconds }
-                : {}),
-            },
-            { onConflict: "user_id,lesson_id", ignoreDuplicates: true }
-          );
-
-        // Check if category is now fully complete
-        const { data: lessonRow } = await admin
-          .from("training_lessons")
-          .select("category_id")
-          .eq("id", lessonId)
-          .single();
-
-        if (lessonRow?.category_id) {
-          const catId = lessonRow.category_id;
-          const { data: catLessons } = await admin
-            .from("training_lessons")
-            .select("id")
-            .eq("category_id", catId)
-            .eq("is_active", true);
-
-          const catLessonIds = (catLessons ?? []).map((l) => l.id);
-          if (catLessonIds.length > 0) {
-            const { count: completedCount } = await admin
-              .from("lesson_completions")
-              .select("id", { count: "exact", head: true })
-              .eq("user_id", user.id)
-              .in("lesson_id", catLessonIds);
-
-            if ((completedCount ?? 0) >= catLessonIds.length) {
-              const { data: progressRows } = await admin
-                .from("lesson_progress")
-                .select("started_at, time_spent_seconds")
-                .eq("user_id", user.id)
-                .in("lesson_id", catLessonIds);
-
-              const catStartedAt =
-                progressRows && progressRows.length > 0
-                  ? progressRows.reduce((min, r) =>
-                      r.started_at && (!min || r.started_at < min) ? r.started_at : min,
-                      null as string | null
-                    )
-                  : null;
-
-              const catTimeSpent =
-                progressRows && progressRows.length > 0
-                  ? progressRows.reduce((sum, r) => sum + (r.time_spent_seconds ?? 0), 0)
-                  : null;
-
-              await admin
-                .from("category_completions")
-                .upsert(
-                  {
-                    user_id: user.id,
-                    category_id: catId,
-                    ...(catStartedAt ? { started_at: catStartedAt } : {}),
-                    ...(catTimeSpent != null ? { time_spent_seconds: catTimeSpent } : {}),
-                  },
-                  { onConflict: "user_id,category_id", ignoreDuplicates: true }
-                );
-            }
-          }
-        }
-
-        // Graduation check — runs after category completion is written.
-        // Idempotent; verifies every lesson across all programs is complete.
-        checkAndAwardTrainingGraduation(user.id).catch((err) =>
-          console.error("[training-graduation] check failed:", err)
-        );
-
-        return NextResponse.json({ correct: true, lesson_complete: true });
-      }
+      await completeLessonAndProgressForUser(admin, user.id, lessonId, now);
+      return NextResponse.json({ correct: true, lesson_complete: true });
     }
 
     return NextResponse.json({ correct: true });

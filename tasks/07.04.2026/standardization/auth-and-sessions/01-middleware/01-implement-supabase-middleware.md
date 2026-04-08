@@ -1,5 +1,8 @@
 # Task 01 - Implement Supabase Auth Middleware
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: `src/lib/supabase/middleware.ts` calls `supabase.auth.getUser()` to refresh tokens; protects /admin, /api/admin, /trainee, /api/trainee, /community, /mystery-school, /dashboard, /portal, /advocate, /affiliate, /onboarding. Browser → 302 to `/login?reason=<group>&redirect=<path>`; API → `401 JSON {error:"Unauthorized"}`. Matcher in `src/proxy.ts` excludes static assets.
+
 ## Objective
 Implement a global `middleware.ts` that handles session refreshing and provides a unified point for route protection.
 

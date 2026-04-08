@@ -1,5 +1,8 @@
 # Trainee Module Master Task
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Quiz fixes verified (see 01-fix-empty-quiz-options); trainee logout verified in auth-and-sessions/04.
+
 ## Objective
 Enhance and stabilize the Trainee Portal functionality, resolving session management issues, UI gaps, and data rendering bugs.
 

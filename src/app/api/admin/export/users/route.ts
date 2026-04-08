@@ -27,7 +27,7 @@ function toCSV(rows: Record<string, unknown>[], headers: string[]): string {
 async function buildExport(req: NextRequest, selectedIds?: string[]) {
   const adminUser = await getAdminUser();
   if (!adminUser) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const sp = req.nextUrl.searchParams;
@@ -297,7 +297,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const adminUser = await getAdminUser();
   if (!adminUser) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await req.json().catch(() => ({}));

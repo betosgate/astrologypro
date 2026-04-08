@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * Refreshes the Supabase session on every request and applies route-level
- * protection.  This helper is consumed by the root `src/middleware.ts`.
+ * protection. This helper is consumed by the root `src/proxy.ts`.
  *
  * Protected route groups:
  *  - /admin/**  and /api/admin/**
@@ -17,14 +17,31 @@ import { NextResponse, type NextRequest } from "next/server";
  * API requests return a 401 JSON response.
  */
 
-const PROTECTED_PREFIXES = [
-  "/admin",
-  "/dashboard",
-  "/portal",
-  "/community",
-  "/mystery-school",
-  "/trainee",
+type ProtectedRoute = {
+  prefix: string;
+  reason: string;
+  apiOnly?: boolean;
+};
+
+const PROTECTED_ROUTES: ProtectedRoute[] = [
+  { prefix: "/api/admin", reason: "admin", apiOnly: true },
+  { prefix: "/api/trainee", reason: "trainee", apiOnly: true },
+  { prefix: "/admin", reason: "admin" },
+  { prefix: "/dashboard", reason: "dashboard" },
+  { prefix: "/portal", reason: "portal" },
+  { prefix: "/community", reason: "community" },
+  { prefix: "/mystery-school", reason: "mystery-school" },
+  { prefix: "/trainee", reason: "trainee" },
+  { prefix: "/advocate", reason: "advocate" },
+  { prefix: "/affiliate", reason: "affiliate" },
+  { prefix: "/onboarding", reason: "onboarding" },
 ] as const;
+
+function matchProtectedRoute(pathname: string) {
+  return PROTECTED_ROUTES.find(
+    ({ prefix }) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -57,24 +74,24 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Check if the current path falls under a protected prefix.
-  const matchedPrefix = PROTECTED_PREFIXES.find(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
+  const matchedRoute = matchProtectedRoute(pathname);
+  const isApiRequest = pathname.startsWith("/api/");
 
-  if (matchedPrefix && !user) {
+  if (matchedRoute && !user) {
     // API routes get a JSON 401 instead of a redirect.
-    if (pathname.startsWith("/api/")) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 },
-      );
+    if (isApiRequest) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Browser routes redirect to login with the reason query param.
-    const reason = matchedPrefix.replace(/^\//, ""); // e.g. "admin"
-    const loginUrl = new URL(`/login?reason=${reason}`, request.url);
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("reason", matchedRoute.reason);
+    loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  if (matchedRoute?.apiOnly && !isApiRequest) {
+    return supabaseResponse;
   }
 
   return supabaseResponse;

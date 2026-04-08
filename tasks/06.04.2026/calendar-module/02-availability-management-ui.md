@@ -1,5 +1,8 @@
 # Task: Premium Availability Management UI
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: src/app/dashboard/availability/page.tsx + src/app/api/dashboard/availability/{route.ts,[id]/route.ts}. Admin parity via /admin/calendar/.
+
 ## Objective
 Implement a high-end interface for **Administrators and Diviners** to manage availability directly within the dashboard. Admins must be able to create, edit, and view availability on behalf of any selected Diviner.
 

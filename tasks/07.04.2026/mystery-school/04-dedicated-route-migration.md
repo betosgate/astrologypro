@@ -1,6 +1,17 @@
 # Task 04: Dedicated Route Migration
+
+- Status: Completed (2026-04-08, re-audited)
+- Completion Notes: Mystery School lives under src/app/mystery-school/*, legacy community decan/training routes redirect to the new base, and /mystery-school/enroll now resolves as the canonical enrollment URL via src/proxy.ts rewriting to src/app/join/mystery-school/page.tsx.
 Date: 2026-04-07
 Category: Mystery School Module
+
+## Status
+
+- Largely implemented
+- Dedicated `/mystery-school` routes already exist
+- Legacy Community Mystery School routes are already being redirected
+- Audit remaining gaps before editing
+- Do not rebuild route trees that are already in place
 
 ## Objective
 Move all Mystery School frontend routes from `/community/...` to `/mystery-school/...`.

@@ -1,5 +1,8 @@
 # Task 04 - Standardize Trainee Logout
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: `PortalLogoutButton` rendered in `src/app/trainee/layout.tsx:74`; same component reused on community sidebar (perennial/2026-04-07/05) and other portal layouts.
+
 ## Objective
 Implement a visible and functional "Log out" method for the Trainee Portal on both desktop and mobile, ensuring parity with the Admin UI.
 

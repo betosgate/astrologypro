@@ -2,6 +2,9 @@
 Date: 2026-04-07
 Category: Community Membership Module
 
+- Status: Completed (2026-04-08, superseded)
+- Completion Notes: Superseded by tasks/07.04.2026/mystery-school/ — verified that the dedicated /mystery-school route migration is complete (see mystery-school/04 + 05).
+
 ## Status
 Superseded by the dedicated Mystery School task set in:
 

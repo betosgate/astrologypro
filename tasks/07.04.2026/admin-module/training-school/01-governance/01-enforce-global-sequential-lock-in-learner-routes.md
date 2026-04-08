@@ -1,5 +1,8 @@
 # Module 01 - Enforce Global Sequential Lock in Learner Routes
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: global_sequential_lock now read in src/app/api/trainee/training/programs/route.ts:227 and src/app/api/trainee/training/lessons/[id]/route.ts:86 and used to gate sequential enforcement.
+
 ## Objective
 Make `training_settings.global_sequential_lock` actually control learner-side progression behavior.
 

@@ -1,6 +1,16 @@
 # Mystery School Module Master Task
+
+- Status: Mostly Complete (2026-04-08, re-audited)
+- Completion Notes: Parallel PM + Mystery School memberships now work off mystery_school_students with legacy-user backfill completed; /mystery-school is the canonical product area and /mystery-school/enroll is the canonical enrollment URL via proxy rewrite. Remaining gap: the PM dashboard CTA still uses old-style +$17.03 wording when the discount is ON, so the task folder should not be treated as fully verified end-to-end.
 Date: 2026-04-07
 Category: Mystery School Module
+
+## Status
+
+- Active coordination file
+- Use this folder as the source of truth for sequencing
+- Inspect current code before changing anything
+- Do not rebuild completed work; patch only remaining gaps
 
 ## Goal
 Implement Mystery School as a distinct product area with:
@@ -38,7 +48,9 @@ Implement Mystery School as a distinct product area with:
 2. `02-parallel-membership-model.md`
 3. `03-admin-discount-setting.md`
 4. `04-dedicated-route-migration.md`
-5. `05-verification-and-user-flows.md`
+5. `05-community-pm-only-guard.md`
+6. `06-pm-discount-ui-and-upgrade-copy-alignment.md`
+7. `07-verification-and-user-flows.md`
 
 ## Scope Notes
 
@@ -57,5 +69,6 @@ Implement Mystery School as a distinct product area with:
 
 - Mystery School is no longer modeled as a PM replacement
 - Mystery School is no longer hosted under `/community`
+- `/community` behaves as a PM-only portal and does not render Mystery School dashboard content
 - PM + Mystery School dual-access users can use a switcher to enter either portal
 - Stripe pricing and admin controls match the defined business rules

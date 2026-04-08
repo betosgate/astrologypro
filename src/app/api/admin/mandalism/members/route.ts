@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: NextRequest) {
   const user = await getAdminUser();
-  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const sp = req.nextUrl.searchParams;
   const search = sp.get("search") ?? "";
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   const user = await getAdminUser();
-  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
   const {

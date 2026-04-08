@@ -1,5 +1,8 @@
 # Module 04 - Decan Curriculum and Student Dashboard
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: decans + student_decan_progress tables, src/app/mystery-school/decans/{page,[id]}/ + src/app/api/mystery-school/{decan,decans}/.
+
 ## Objective
 Upgrade the decan curriculum model and student-facing dashboard so it covers the full operational behavior expected for Q2-Q5.
 

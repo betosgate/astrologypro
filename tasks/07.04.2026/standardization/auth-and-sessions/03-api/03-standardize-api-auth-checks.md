@@ -1,5 +1,8 @@
 # Task 03 - Standardize API Authentication
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: API routes use the standard pattern: `await createClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) return NextResponse.json({error:"Unauthorized"},{status:401});`. Verified across `src/app/api/portal/*`, `src/app/api/community/*`, `src/app/api/admin/*` and the new `unsubscribe`/`members/create` routes added in earlier tasks. Middleware is the first line of defense; API handlers are the second.
+
 ## Objective
 Establish a standard pattern for API authentication checks and 401 handling both on the server (Route Handlers) and the client (Fetch logic).
 

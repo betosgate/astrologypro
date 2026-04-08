@@ -1,5 +1,8 @@
 # Module 02 - Wire Trigger Player Into Trainee Lesson Page
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: src/components/trainee/lesson-viewer-client.tsx:59-248 implements LessonQuizTrigger with active trigger overlay, pause-on-trigger, and scrub prevention; lesson page consumes it directly.
+
 ## Objective
 Make the trigger-aware video quiz player the real trainee lesson experience where trigger records exist.
 

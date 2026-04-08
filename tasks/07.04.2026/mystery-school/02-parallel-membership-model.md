@@ -1,6 +1,16 @@
 # Task 02: Parallel Membership Model
+
+- Status: Completed (2026-04-08, re-audited)
+- Completion Notes: mystery_school_students is now the effective Mystery School entitlement source; stale membership_type-based guards were replaced with requireMysterySchoolAccess(), and legacy community_members mystery_school users were backfilled via 20260408000105_backfill_legacy_mystery_school_students.sql so no legacy user is missing a student row.
 Date: 2026-04-07
 Category: Mystery School Module
+
+## Status
+
+- Mostly implemented
+- Audit the existing code and data model before making changes
+- Do not reintroduce single-membership replacement logic
+- Only patch remaining mismatches or regressions
 
 ## Objective
 Change the membership model so Perennial Mandalism and Mystery School can coexist for the same user.

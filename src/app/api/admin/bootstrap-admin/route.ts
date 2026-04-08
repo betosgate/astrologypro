@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   const admin_user = await requireAdmin();
   if (!admin_user) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: { email?: string } = {};

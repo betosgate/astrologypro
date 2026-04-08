@@ -1,6 +1,7 @@
 # Add Sunday Service Admin Publishing - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Admin Sunday Service publishing flow: `src/app/admin/sunday-service/` + `src/app/api/admin/sunday-service/`.
 - Priority: P1
 - Owner: Fullstack
 - Scope: create, edit, publish, unpublish Sunday Service entries

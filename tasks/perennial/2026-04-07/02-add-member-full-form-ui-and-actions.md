@@ -1,6 +1,12 @@
 # Build Full Add Member Form UI And Actions - 2026-04-07
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes:
+  - Implemented in `src/app/community/members/new/page.tsx` (448 lines, merged from upstream master).
+  - Dedicated full-screen create page at route `/community/members/new`.
+  - Exposes the full legacy field set: relation_type, firstname, lastname, email, phone, gender, relationship_status, state, city, zip, address, personality, strengths, lifeAreasFulfilling, lifeAreasImprovement, longTermGoals, majorLifeEvents, relationship_with_family, biggest_current_challenges, mainConcern, additionalInfo, achieveFromReading, focus_on_specific_relationships, stressManagement, workLifeBalance, concerns_about_romantic_life, social_life_fulfillment, spiritualPractices, guidance_on_specific_decision, ongoing_projects_or_plans, selfDiscovery, externalInfluences, specificQuestions, goalsOutcomes, additional_info, status.
+  - Submit, Reset (handleReset), and Cancel buttons all present (lines 436–442).
+  - Not done: `password`/`confirmpassword` fields are NOT in upstream form (member is created without login credentials by design — consider follow-up if invite/login is required).
 - Priority: P1
 - Owner: Frontend
 - Scope: dedicated screen, legacy-aligned fields, layout parity, submit/reset/cancel buttons

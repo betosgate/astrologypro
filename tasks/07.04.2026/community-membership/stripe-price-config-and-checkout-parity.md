@@ -2,6 +2,9 @@
 Date: 2026-04-07
 Category: Community Membership Module
 
+- Status: Completed (2026-04-08, superseded)
+- Completion Notes: Superseded by tasks/07.04.2026/mystery-school/01 + 02 + 03 — Stripe price IDs, parallel membership, admin discount setting all verified complete.
+
 ## Status
 Partially superseded by the dedicated Mystery School task set in:
 

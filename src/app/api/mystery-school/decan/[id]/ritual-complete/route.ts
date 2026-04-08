@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendMysterySchoolGraduation } from "@/lib/email";
+import { processGraduation } from "@/lib/mystery-school/graduation";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +47,7 @@ export async function POST(
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Check if all three components done → mark completed
-  await checkAndCompleteDecan(admin, student.id, decanId, updated, user.email ?? "");
+  await checkAndCompleteDecan(admin, student.id, decanId, updated);
 
   return NextResponse.json({ success: true });
 }
@@ -57,7 +57,6 @@ async function checkAndCompleteDecan(
   studentId: string,
   decanId: string,
   current: { ritual_done: boolean; scry_done: boolean; journal_done: boolean; status: string },
-  userEmail: string
 ) {
   if (current.ritual_done && current.scry_done && current.journal_done && current.status !== "completed") {
     await admin
@@ -66,29 +65,8 @@ async function checkAndCompleteDecan(
       .eq("student_id", studentId)
       .eq("decan_id", decanId);
 
-    // Check for Mystery School graduation (all 36 decans)
-    const { count } = await admin
-      .from("student_decan_progress")
-      .select("id", { count: "exact", head: true })
-      .eq("student_id", studentId)
-      .eq("status", "completed");
-
-    if ((count ?? 0) >= 36) {
-      const { data: studentRow } = await admin
-        .from("mystery_school_students")
-        .update({ training_status: "graduated", graduated_at: new Date().toISOString() })
-        .eq("id", studentId)
-        .neq("training_status", "graduated")
-        .select("id")
-        .single();
-
-      if (studentRow) {
-        // Fire graduation email — do not await so it doesn't block the response
-        sendMysterySchoolGraduation({
-          to: userEmail,
-          name: userEmail.split("@")[0],
-        }).catch((err) => console.error("[graduation-email]", err));
-      }
-    }
+    // Use the canonical graduation helper which checks Q1 foundation,
+    // all 36 decans completed, AND no unexcused missed decans.
+    await processGraduation(studentId, admin);
   }
 }

@@ -1,6 +1,7 @@
 # Add Holy Books Admin Management - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Admin holy books CRUD: `src/app/admin/holy-books/` (list/new/edit) + `src/app/api/admin/holy-books/` route handlers.
 - Priority: P2
 - Owner: Fullstack
 - Scope: book CRUD, ordering, active state, file replacement

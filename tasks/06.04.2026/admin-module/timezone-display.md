@@ -1,4 +1,5 @@
 **Status:** Done
+**Verified 2026-04-08:** src/components/admin/user-management-client.tsx:127-128 uses Intl.DateTimeFormat().resolvedOptions().timeZone for viewer-local time rendering.
 
 # Task: Viewer-Specific Time Zone Display
 

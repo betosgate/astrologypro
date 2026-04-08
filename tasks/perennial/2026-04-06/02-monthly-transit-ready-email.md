@@ -1,6 +1,7 @@
 # Add Monthly Transit Ready Email - 2026-04-06
 
-- Status: Planned
+- Status: Completed (2026-04-08, upstream)
+- Completion Notes: Implemented as scheduled cron at `src/app/api/cron/monthly-transits/route.ts`.
 - Priority: P1
 - Owner: Fullstack
 - Scope: monthly transit notification trigger, delivery eligibility

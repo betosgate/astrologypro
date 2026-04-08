@@ -1,5 +1,8 @@
 # Module 05 - Progress Routing, Resume, and Completion Flow
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: lesson-viewer-client.tsx persists last_position_seconds at ~10s heartbeat; trigger answer route promotes to lesson_completions via completeLessonAndProgressForUser.
+
 ## Objective
 Finalize how progress is stored, resumed, and completed once the trigger-based quiz model is introduced.
 

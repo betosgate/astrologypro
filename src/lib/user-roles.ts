@@ -87,22 +87,6 @@ export async function getUserPortals(
     }
   }
 
-  // Legacy fallback: if community_members.membership_type is 'mystery_school'
-  // but no mystery_school_students record exists, still show MS portal
-  // (handles pre-migration users)
-  if (
-    community.data &&
-    community.data.membership_type === "mystery_school" &&
-    community.data.membership_status === "active" &&
-    !mysteryStudent.data
-  ) {
-    portals.push({
-      role: "mystery_school",
-      label: "Mystery School",
-      href: "/mystery-school",
-    });
-  }
-
   if (trainee.data)
     portals.push({ role: "trainee", label: "Trainee Portal", href: "/trainee" });
 

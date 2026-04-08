@@ -1,5 +1,8 @@
 # Module 04 - Slide Quiz Engine and Rewatch Enforcement
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: lesson_quiz_triggers table (migration 20260407000072) + lesson_trigger_progress; rewatch enforcement in src/app/api/trainee/training/lessons/[id]/triggers/[triggerId]/{answer,rewatch}/route.ts.
+
 ## Objective
 Implement the required slide-triggered video quiz engine with server-enforced rewind/rewatch behavior.
 

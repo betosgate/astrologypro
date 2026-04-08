@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,7 +64,6 @@ async function fetchPrograms(): Promise<Program[]> {
     process.env.NEXT_PUBLIC_APP_URL ??
     `http://localhost:${process.env.PORT ?? 3000}`;
 
-  const { createClient: makeClient } = await import("@/lib/supabase/server");
   const { cookies } = await import("next/headers");
   const cookieStore = await cookies();
   const cookieHeader = cookieStore
@@ -80,26 +78,22 @@ async function fetchPrograms(): Promise<Program[]> {
 
   if (!res.ok) return [];
   const json = await res.json();
-  return json.programs ?? [];
-}
+  if (!Array.isArray(json.programs)) return [];
 
-// ---------------------------------------------------------------------------
-// Skeleton loader
-// ---------------------------------------------------------------------------
-function ProgramCardSkeleton() {
-  return (
-    <div className="animate-pulse rounded-xl border bg-card p-6 space-y-4">
-      <div className="flex items-start gap-4">
-        <div className="size-20 rounded-full bg-muted shrink-0" />
-        <div className="flex-1 space-y-2 pt-1">
-          <div className="h-5 w-2/3 rounded bg-muted" />
-          <div className="h-3 w-full rounded bg-muted" />
-          <div className="h-3 w-3/4 rounded bg-muted" />
-        </div>
-      </div>
-      <div className="h-2 rounded-full bg-muted" />
-    </div>
-  );
+  return json.programs.map((program: Partial<Program>) => ({
+    id: program.id ?? "",
+    name: program.name ?? "Untitled Program",
+    description: program.description ?? null,
+    priority: program.priority ?? 0,
+    progress_pct: Number(program.progress_pct ?? 0),
+    completed_lessons: Number(program.completed_lessons ?? 0),
+    total_lessons: Number(program.total_lessons ?? 0),
+    completed_categories: Number(program.completed_categories ?? 0),
+    total_categories: Number(program.total_categories ?? 0),
+    next_category_id: program.next_category_id ?? null,
+    next_category_name: program.next_category_name ?? null,
+    categories: Array.isArray(program.categories) ? program.categories : [],
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -111,15 +105,23 @@ function ProgramCard({ program }: { program: Program }) {
   const completedCategories = program.completed_categories;
 
   // Find the current in-progress category (first not fully done)
-  const currentCategory = program.categories.find(
-    (c) => !c.completed && c.total_lessons > 0
-  );
+  const currentCategory =
+    program.categories.find((c) => c.id === program.next_category_id) ??
+    program.categories.find((c) => !c.is_locked && !c.completed && c.total_lessons > 0) ??
+    program.categories.find((c) => !c.completed && c.total_lessons > 0);
 
   const isComplete = program.progress_pct >= 100 && totalLessons > 0;
   const isStarted = completedLessons > 0;
 
+  const currentLessonId =
+    currentCategory?.next_lesson_id ??
+    currentCategory?.lessons.find((lesson) => !lesson.is_locked && !lesson.completed)?.id ??
+    null;
+
   const ctaHref = currentCategory
-    ? `/trainee/training/${program.id}/${currentCategory.id}`
+    ? currentLessonId
+      ? `/trainee/training/${program.id}/${currentCategory.id}/${currentLessonId}`
+      : `/trainee/training/${program.id}/${currentCategory.id}`
     : `/trainee/training/${program.id}`;
 
   return (

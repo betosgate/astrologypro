@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Video } from "lucide-react";
 
 export const metadata = { title: "Ritual Invocations — Admin" };
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ export default async function AdminRitualsPage() {
   const admin = createAdminClient();
   const { data: rituals } = await admin
     .from("ritual_invocations")
-    .select("id, name, priority, is_active, created_at")
+    .select("id, name, priority, is_active, video_url, created_at")
     .order("priority", { ascending: true });
 
   return (
@@ -57,6 +58,7 @@ export default async function AdminRitualsPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Priority</TableHead>
+                  <TableHead>Video</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -67,6 +69,15 @@ export default async function AdminRitualsPage() {
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{r.name}</TableCell>
                     <TableCell>{r.priority}</TableCell>
+                    <TableCell>
+                      {r.video_url ? (
+                        <span title={r.video_url}>
+                          <Video className="size-4 text-amber-500" />
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground/40">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={r.is_active ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"}>
                         {r.is_active ? "Active" : "Inactive"}

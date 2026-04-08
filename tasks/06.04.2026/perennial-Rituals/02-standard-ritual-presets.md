@@ -1,5 +1,8 @@
 # Task: Standard Ritual Presets
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: Preset selection in src/app/community/rituals/new/page.tsx wired through src/app/api/community/rituals/preview-steps/route.ts.
+
 ## Objective
 Provide a simplified creation experience using pre-defined ritual configurations.
 

@@ -12,7 +12,7 @@ export async function PATCH(
 ) {
   const user = await getAdminUser();
   if (!user) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { disputeId } = await params;

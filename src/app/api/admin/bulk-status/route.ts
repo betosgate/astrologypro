@@ -22,7 +22,7 @@ const ROLE_TABLE_MAP: Record<string, string> = {
 export async function POST(req: NextRequest) {
   const adminUser = await getAdminUser();
   if (!adminUser) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: { user_ids?: unknown; status?: unknown; role?: unknown };

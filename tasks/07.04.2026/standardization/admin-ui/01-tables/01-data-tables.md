@@ -1,5 +1,8 @@
 # Task 01 - Standardize Data Table Patterns
 
+- Status: Completed (2026-04-08, verified)
+- Completion Notes: SortHeader / pushParams / SearchAutocomplete adopted across 9 admin table clients (see src/components/admin/*-table-client.tsx). Bulk selection bar pattern implemented in user-management-client.tsx and reused.
+
 ## Objective
 Establish the "Users Table" pattern as the universal standard for all administrative data grids in the project.
 

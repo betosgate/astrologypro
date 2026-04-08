@@ -34,15 +34,14 @@ export async function GET() {
   const admin = createAdminClient();
 
   // ── 1. Resolve the user's role slugs ──────────────────────────────────────
-  const [traineeRow, divinerRow, communityRow, advocateRow, affiliateRow] =
+  const [traineeRow, divinerRow, communityRows, advocateRow, affiliateRow] =
     await Promise.all([
       admin.from("trainees").select("id").eq("user_id", user.id).maybeSingle(),
       admin.from("diviners").select("id").eq("user_id", user.id).maybeSingle(),
       admin
         .from("community_members")
         .select("membership_type")
-        .eq("user_id", user.id)
-        .maybeSingle(),
+        .eq("user_id", user.id),
       admin
         .from("social_advocates")
         .select("id")
@@ -60,10 +59,10 @@ export async function GET() {
   if (divinerRow.data) userSlugs.push("is_astrologer");
   if (advocateRow.data) userSlugs.push("is_social_advo");
   if (affiliateRow.data) userSlugs.push("is_affiliate");
-  if (communityRow.data) {
-    if (communityRow.data.membership_type === "mystery_school")
+  for (const communityRow of communityRows.data ?? []) {
+    if (communityRow.membership_type === "mystery_school")
       userSlugs.push("is_mystery_school");
-    if (communityRow.data.membership_type === "perennial_mandalism")
+    if (communityRow.membership_type === "perennial_mandalism")
       userSlugs.push("is_Perennial_Mandalism");
   }
 
@@ -85,7 +84,7 @@ export async function GET() {
   const accessiblePrograms = (programs ?? []).filter((prog) => {
     const allowed: string[] = prog.allowed_roles ?? [];
     if (allowed.length === 0) return true;
-    return userSlugs.some((s) => allowed.includes(s));
+    return [...new Set(userSlugs)].some((s) => allowed.includes(s));
   });
 
   if (accessiblePrograms.length === 0) {
