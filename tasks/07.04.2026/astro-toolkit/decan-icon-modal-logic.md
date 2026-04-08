@@ -253,6 +253,7 @@ Returns the updated decan document if the operation is successful.
 The underlying MongoDB collection uses the following schema:
 - `planet`: `string`
 - `signs`: `string`
+- `tarot_name`: `string`
 - `tarot_card_big_image`: `string` (URL/Path)
 - `tarot_card_thumb_image`: `string` (URL/Path)
 - `greek_daemon`: `string`
