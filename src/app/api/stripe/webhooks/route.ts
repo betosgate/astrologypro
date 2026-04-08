@@ -15,6 +15,10 @@ import {
 } from "@/lib/email";
 import { createCalendarEvent } from "@/lib/google-calendar";
 import { createMsCalendarEvent } from "@/lib/microsoft-calendar";
+import {
+  getSubscriptionPeriodEndIso,
+  mapMysterySchoolLifecycleUpdate,
+} from "@/lib/mystery-school/subscription-lifecycle";
 
 export const dynamic = "force-dynamic";
 
@@ -97,7 +101,7 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
   const subscriptionId =
     typeof session.subscription === "string"
       ? session.subscription
-      : (session.subscription as any)?.id;
+      : session.subscription?.id;
 
   if (!userId || !membershipType) return;
 
@@ -306,6 +310,28 @@ function getSubscriptionIdFromInvoice(invoice: Stripe.Invoice): string | null {
   return typeof sub === "string" ? sub : sub.id;
 }
 
+async function handleMysterySchoolSubscriptionUpdated(
+  subscription: Stripe.Subscription
+) {
+  const adminClient = createAdminClient();
+
+  const { data: student } = await adminClient
+    .from("mystery_school_students")
+    .select("id, status")
+    .eq("stripe_subscription_id", subscription.id)
+    .maybeSingle();
+
+  if (!student) return;
+
+  const now = new Date().toISOString();
+  const update = mapMysterySchoolLifecycleUpdate(subscription, now);
+
+  await adminClient
+    .from("mystery_school_students")
+    .update(update)
+    .eq("id", student.id);
+}
+
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
   const supabase = createAdminClient();
   const subscriptionId = getSubscriptionIdFromInvoice(invoice);
@@ -318,6 +344,24 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 
   if (error) {
     console.error("Failed to update subscription status on invoice.paid:", error);
+  }
+
+  // Mystery School: a paid invoice confirms the subscription is still billable.
+  // Do not undo scheduled cancellation windows, but clear a paused state.
+  const { data: student } = await supabase
+    .from("mystery_school_students")
+    .select("id, status")
+    .eq("stripe_subscription_id", subscriptionId)
+    .maybeSingle();
+
+  if (student && student.status === "paused") {
+    await supabase
+      .from("mystery_school_students")
+      .update({
+        status: "active",
+        paused_at: null,
+      })
+      .eq("id", student.id);
   }
 }
 
@@ -386,6 +430,9 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
       }
     }
   }
+
+  // Mystery School: keep access state unchanged for payment failure.
+  // Stripe will send subscription.updated / deleted when the lifecycle actually changes.
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
@@ -394,6 +441,8 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     typeof subscription.customer === "string"
       ? subscription.customer
       : (subscription.customer as Stripe.Customer).id;
+
+  await handleMysterySchoolSubscriptionUpdated(subscription);
 
   // ── Diviner SaaS plan upsert ────────────────────────────────────────────────
   await upsertDivinerPlanSubscription(adminClient, subscription, customerId);
@@ -583,6 +632,8 @@ async function handleSubscriptionDeleted(
   subscription: Stripe.Subscription
 ) {
   const supabase = createAdminClient();
+  const now = new Date().toISOString();
+  const periodEnd = getSubscriptionPeriodEndIso(subscription) ?? now;
 
   // Diviner legacy subscription cancelled
   await supabase
@@ -656,6 +707,24 @@ async function handleSubscriptionDeleted(
         rejoinUrl: `${process.env.NEXT_PUBLIC_APP_URL}/community/join`,
       }).catch(() => {});
     }
+  }
+
+  const { data: mysterySchoolStudent } = await supabase
+    .from("mystery_school_students")
+    .select("id")
+    .eq("stripe_subscription_id", subscription.id)
+    .maybeSingle();
+
+  if (mysterySchoolStudent) {
+    await supabase
+      .from("mystery_school_students")
+      .update({
+        status: "cancelled",
+        paused_at: null,
+        cancelled_at: now,
+        access_expires_at: periodEnd,
+      })
+      .eq("id", mysterySchoolStudent.id);
   }
 }
 

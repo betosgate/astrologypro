@@ -201,6 +201,17 @@ export async function callAstroAiApi(
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
+      console.log("Calling Astro AI API with details:", {
+        url: aiUrl,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: origin,
+          Host: aiUrl
+        },
+        body: enriched,
+      });
+
       const res = await fetch(aiUrl, {
         method: "POST",
         headers: {
@@ -217,6 +228,7 @@ export async function callAstroAiApi(
       }
 
       const data = (await res.json()) as AstroAiResponse;
+      console.log("Astro AI API success response:", data);
 
       // Strip markdown code fences if present (matches Angular post-processing)
       if (data.ai_response?.startsWith("```json")) {
