@@ -94,7 +94,8 @@ export async function callAstrologyApi<T = unknown>(
     throw new Error("AstrologyAPI credentials incomplete in fetch-config response");
   }
 
-  console.log(`[astrology-api] Credentials obtained successfully. AccessKey prefix: ${auth.access_key.slice(0, 3)}...`);
+  console.log(`[astrology-api] Credentials obtained successfully. AccessKey prefix: ${auth.access_key}`);
+  console.log(`[astrology-api] Credentials obtained successfully. SecretKey prefix: ${auth.secret_key}`);
 
   const authHeader = buildBasicAuthHeader(auth.access_key, auth.secret_key);
 

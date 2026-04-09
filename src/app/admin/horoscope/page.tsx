@@ -2479,8 +2479,132 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
         </div>
       )}
 
+      {/* Future Lunar Metrics Table — specifically for monthly v3 */}
+      {tabSlug === "tropical_transits_monthly_v3" && lunarMetrics && (
+        <div className="space-y-6">
+          <div className="rounded-lg border overflow-hidden">
+            <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+              <h3 className="text-sm font-semibold text-center w-full">Future Lunar Metrics</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/20">
+                    {["Month", "Moon Day", "Moon Illumination", "Moon Phase", "Moon Sign"].map((h) => (
+                      <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b bg-background">
+                    <td className="px-3 py-2 text-xs font-medium">
+                      {(() => {
+                        const mStr = String(lunarMetrics.month || "");
+                        if (mStr.includes("-")) {
+                          const [, m] = mStr.split("-").map(Number);
+                          return getMonthName(m);
+                        }
+                        return mStr || "—";
+                      })()}
+                    </td>
+                    <td className="px-3 py-2 text-xs">{lunarMetrics.moon_day ?? "—"}</td>
+                    <td className="px-3 py-2 text-xs">{lunarMetrics.moon_illumination != null ? `${lunarMetrics.moon_illumination}%` : "—"}</td>
+                    <td className="px-3 py-2 text-xs">{lunarMetrics.moon_phase ?? "—"}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      {lunarMetrics.moon_sign ? <ZodiacSymbol sign={lunarMetrics.moon_sign} /> : "—"}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Lunar AI Interpretations (Monthly v3) */}
+          {lunarAiData && typeof lunarAiData === "object" ? (
+            <div className="space-y-6">
+              {[
+                { key: "moon_sign_interpretation", label: "Moon Sign Interpretation", val: lunarMetrics?.moon_sign, title: "Moon Sign" },
+                { key: "moon_phase_interpretation", label: "Moon Phase Interpretation", val: lunarMetrics?.moon_phase, title: "Moon Phase" },
+                { key: "moon_age_interpretation", label: "Moon Age Interpretation", val: `${lunarMetrics?.moon_day ?? lunarMetrics?.day ?? "—"} days old`, title: "Moon Age" },
+                { key: "moon_day_interpretation", label: "Moon Day Interpretation", val: lunarMetrics?.moon_day, title: "Moon Day" },
+                { key: "moon_illumination_interpretation", label: "Moon Illumination Interpretation", val: `${lunarMetrics?.moon_illumination}%`, title: "Moon Illumination" },
+              ].map((sec) => {
+                const content = lunarAiData[sec.key];
+                if (!content || typeof content !== "string") return null;
+                const fullTitle = `${sec.label}${sec.val ? `: ${sec.val}` : ""}`;
+                return (
+                  <div key={sec.key} className="rounded-lg border overflow-hidden">
+                    <div className="px-4 py-2.5 bg-muted/40 border-b flex items-center justify-center gap-2">
+                      <h4 className="text-sm font-semibold text-center w-full uppercase tracking-wider">{fullTitle}</h4>
+                    </div>
+                    <div className="px-4 py-3">
+                      <p className="text-sm leading-relaxed line-clamp-3 text-muted-foreground">{content}</p>
+                      <div className="mt-2 flex justify-center border-t border-white/5 pt-2">
+                        <button
+                          onClick={() => trigger(fullTitle, content, null, areaOfInquiry)}
+                          className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
+                        >
+                          Show More
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <SectionSkeleton title="Moon Sign Interpretation" />
+              <SectionSkeleton title="Moon Phase Interpretation" />
+              <SectionSkeleton title="Moon Age Interpretation" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Future Tropical Transits Monthly Relation Table — specifically for monthly v3 */}
+      {tabSlug === "tropical_transits_monthly_v3" && transitRows.length > 0 && (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+            <h3 className="text-sm font-semibold text-center w-full">Future Tropical Transits Monthly Relation</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/20">
+                  {["Date", "Natal Planet", "Type", "Transit Planet"].map((h) => (
+                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {transitRows.map((row: any, i: number) => {
+                  const tPlanet = row.transit_planet ?? row.transiting_planet ?? "";
+                  const nPlanet = row.natal_planet ?? row.aspected_planet ?? "";
+                  const aspType = row.type ?? row.aspect ?? "";
+                  const dt = row.date ?? row.transit_date ?? "";
+                  return (
+                    <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{dt || "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5">
+                          {ASPECT_IMAGES[aspType] && <img src={ASPECT_IMAGES[aspType]} alt={aspType} className="size-4 object-contain" />}
+                          <span>{aspType || "—"}</span>
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Weekly / Monthly Transit Relation Table */}
-      {transitRows.length > 0 && (
+      {tabSlug !== "tropical_transits_monthly_v3" && transitRows.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
           <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
             <h3 className="text-sm font-semibold text-center w-full">{label} — Transit Aspects</h3>
@@ -2523,7 +2647,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       )}
 
       {/* Lunar Return Metrics (monthly only) */}
-      {!isWeekly && lunarRows.length > 0 && (
+      {tabSlug !== "tropical_transits_monthly_v3" && !isWeekly && lunarRows.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
           <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
             <h3 className="text-sm font-semibold text-center w-full">Lunar Return Metrics</h3>
@@ -2603,7 +2727,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       ))}
 
       {/* Lunar AI interpretation (monthly only) — from AI Lambda lunar_metrics prompt */}
-      {!isWeekly && lunarAiData && (() => {
+      {tabSlug !== "tropical_transits_monthly_v3" && !isWeekly && lunarAiData && (() => {
         const items: any[] = Array.isArray(lunarAiData) ? lunarAiData : (typeof lunarAiData === "object" ? [lunarAiData] : []);
         return items.length > 0 ? (
           <div className="space-y-2">
