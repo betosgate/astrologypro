@@ -23,7 +23,7 @@ export async function GET() {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("global_pricing")
-    .select("id, item_key, item_name, description, is_active, created_at, updated_at")
+    .select("id, item_key, item_name, description, is_active, stripe_product_id, stripe_product_name, created_at, updated_at")
     .order("item_key", { ascending: true });
 
   if (error) {
@@ -64,6 +64,8 @@ export async function POST(req: NextRequest) {
       item_name: itemName,
       description: typeof body.description === "string" ? body.description.trim() || null : null,
       is_active: typeof body.is_active === "boolean" ? body.is_active : true,
+      stripe_product_id: typeof body.stripe_product_id === "string" ? body.stripe_product_id.trim() || null : null,
+      stripe_product_name: typeof body.stripe_product_name === "string" ? body.stripe_product_name.trim() || null : null,
     })
     .select()
     .single();
