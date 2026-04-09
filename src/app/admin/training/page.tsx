@@ -83,11 +83,50 @@ function formatRoleName(role: string) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────
 
+// ── Shared table-state type ──────────────────────────────────────────────
+
+interface TableState {
+  page: number;
+  pageSize: number;
+  sortBy: string;
+  sortDir: "asc" | "desc";
+}
+
+interface EntityData<T> {
+  rows: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+function buildUrl(
+  base: string,
+  state: TableState,
+  search: string,
+  status: "all" | "active" | "inactive",
+): string {
+  const params = new URLSearchParams();
+  params.set("page", String(state.page));
+  params.set("pageSize", String(state.pageSize));
+  params.set("sortBy", state.sortBy);
+  params.set("sortDir", state.sortDir);
+  if (search) params.set("search", search);
+  if (status !== "all") params.set("status", status);
+  return `${base}?${params.toString()}`;
+}
+
 export default function TrainingPage() {
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  // ── Per-entity state: rows + server total + table state + loading ──────
+  const [programData, setProgramData] = useState<EntityData<Program>>({ rows: [], total: 0, page: 1, pageSize: 10 });
+  const [categoryData, setCategoryData] = useState<EntityData<Category>>({ rows: [], total: 0, page: 1, pageSize: 10 });
+  const [lessonData, setLessonData] = useState<EntityData<Lesson>>({ rows: [], total: 0, page: 1, pageSize: 10 });
+  const [quizData, setQuizData] = useState<EntityData<Quiz>>({ rows: [], total: 0, page: 1, pageSize: 10 });
+
+  const [programState, setProgramState] = useState<TableState>({ page: 1, pageSize: 10, sortBy: "priority", sortDir: "asc" });
+  const [categoryState, setCategoryState] = useState<TableState>({ page: 1, pageSize: 10, sortBy: "priority", sortDir: "asc" });
+  const [lessonState, setLessonState] = useState<TableState>({ page: 1, pageSize: 10, sortBy: "priority", sortDir: "asc" });
+  const [quizState, setQuizState] = useState<TableState>({ page: 1, pageSize: 10, sortBy: "created_at", sortDir: "desc" });
+
   const [programsRefreshing, setProgramsRefreshing] = useState(true);
   const [categoriesRefreshing, setCategoriesRefreshing] = useState(true);
   const [lessonsRefreshing, setLessonsRefreshing] = useState(true);
@@ -97,46 +136,96 @@ export default function TrainingPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
 
-  async function loadPrograms() {
+  // ── Server-driven fetch per entity ────────────────────────────────────
+  async function loadPrograms(stateOverride?: TableState) {
+    const st = stateOverride ?? programState;
     setProgramsRefreshing(true);
     try {
-      const res = await fetch("/api/admin/training/programs");
-      if (res.ok) setPrograms((await res.json()).programs ?? []);
+      const url = buildUrl("/api/admin/training/programs", st, searchTerm, statusFilter);
+      const res = await fetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        setProgramData({
+          rows: json.programs ?? [],
+          total: json.total ?? 0,
+          page: json.page ?? st.page,
+          pageSize: json.pageSize ?? st.pageSize,
+        });
+      }
     } finally {
       setProgramsRefreshing(false);
     }
   }
-  async function loadCategories() {
+  async function loadCategories(stateOverride?: TableState) {
+    const st = stateOverride ?? categoryState;
     setCategoriesRefreshing(true);
     try {
-      const res = await fetch("/api/admin/training/categories");
-      if (res.ok) setCategories((await res.json()).categories ?? []);
+      const url = buildUrl("/api/admin/training/categories", st, searchTerm, statusFilter);
+      const res = await fetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        setCategoryData({
+          rows: json.categories ?? [],
+          total: json.total ?? 0,
+          page: json.page ?? st.page,
+          pageSize: json.pageSize ?? st.pageSize,
+        });
+      }
     } finally {
       setCategoriesRefreshing(false);
     }
   }
-  async function loadLessons() {
+  async function loadLessons(stateOverride?: TableState) {
+    const st = stateOverride ?? lessonState;
     setLessonsRefreshing(true);
     try {
-      const res = await fetch("/api/admin/training/lessons");
-      if (res.ok) setLessons((await res.json()).lessons ?? []);
+      const url = buildUrl("/api/admin/training/lessons", st, searchTerm, statusFilter);
+      const res = await fetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        setLessonData({
+          rows: (json.lessons ?? []).map((l: Lesson) => ({ ...l, name: l.title })),
+          total: json.total ?? 0,
+          page: json.page ?? st.page,
+          pageSize: json.pageSize ?? st.pageSize,
+        });
+      }
     } finally {
       setLessonsRefreshing(false);
     }
   }
-  async function loadQuizzes() {
+  async function loadQuizzes(stateOverride?: TableState) {
+    const st = stateOverride ?? quizState;
     setQuizzesRefreshing(true);
     try {
-      const res = await fetch("/api/admin/training/quizzes");
-      if (res.ok) setQuizzes((await res.json()).quizzes ?? []);
+      const url = buildUrl("/api/admin/training/quizzes", st, searchTerm, statusFilter);
+      const res = await fetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        setQuizData({
+          rows: (json.quizzes ?? []).map((q: Quiz) => ({ ...q, name: q.title })),
+          total: json.total ?? 0,
+          page: json.page ?? st.page,
+          pageSize: json.pageSize ?? st.pageSize,
+        });
+      }
     } finally {
       setQuizzesRefreshing(false);
     }
   }
 
+  // ── Reload all on mount + when shared filters change ──────────────────
   useEffect(() => {
     void Promise.all([loadPrograms(), loadCategories(), loadLessons(), loadQuizzes()]);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, statusFilter]);
+
+  // Backward-compat: expose flat arrays for lookup maps. These are always
+  // only the current page's rows — sufficient for FK labels on screen.
+  const programs = programData.rows;
+  const categories = categoryData.rows;
+  const lessons = lessonData.rows;
+  // quizData.rows is used directly by quizConfig — no alias needed
 
   // ── Lookup maps ──────────────────────────────────────────────────────
   const programMap = useMemo(() => {
@@ -157,41 +246,9 @@ export default function TrainingPage() {
     return m;
   }, [lessons]);
 
-  // ── Shared filter predicate ──────────────────────────────────────────
-  const search = searchTerm.trim().toLowerCase();
-  const matchStatus = (active: boolean) =>
-    statusFilter === "all" || (statusFilter === "active" ? active : !active);
-
-  const filtersActive = !!search || statusFilter !== "all";
-
-  const filteredPrograms = programs.filter(
-    (p) =>
-      matchStatus(p.is_active) &&
-      (!search ||
-        p.name.toLowerCase().includes(search) ||
-        (p.description ?? "").toLowerCase().includes(search)),
-  );
-  const filteredCategories = categories.filter(
-    (c) =>
-      matchStatus(c.is_active) &&
-      (!search ||
-        c.name.toLowerCase().includes(search) ||
-        (c.description ?? "").toLowerCase().includes(search)),
-  );
-  const filteredLessons: Lesson[] = lessons
-    .filter(
-      (l) =>
-        matchStatus(l.is_active) &&
-        (!search ||
-          l.title.toLowerCase().includes(search) ||
-          (l.description ?? "").toLowerCase().includes(search)),
-    )
-    .map((l) => ({ ...l, name: l.title }));
-  const filteredQuizzes: Quiz[] = quizzes
-    .filter(
-      (q) => matchStatus(q.is_active) && (!search || q.title.toLowerCase().includes(search)),
-    )
-    .map((q) => ({ ...q, name: q.title }));
+  // Server-driven: filters are passed to the API, not applied client-side.
+  // The `filtersActive` flag drives the "(of {total})" label in the table.
+  const filtersActive = !!searchTerm.trim() || statusFilter !== "all";
 
   // ── Per-entity configs ───────────────────────────────────────────────
   const programCols: EntityColumn<Program>[] = [
@@ -630,50 +687,78 @@ export default function TrainingPage() {
 
       <TrainingEntityTable
         config={programConfig}
-        rows={filteredPrograms}
-        rawCount={programs.length}
+        rows={programData.rows}
+        serverTotal={programData.total}
+        rawCount={programData.total}
         filtersActive={filtersActive}
         currentSearch={searchTerm}
         currentStatus={statusFilter}
-        onMutated={loadPrograms}
-        onRefresh={loadPrograms}
+        onMutated={() => loadPrograms()}
+        onRefresh={() => loadPrograms()}
         isRefreshing={programsRefreshing}
+        serverPage={programData.page}
+        serverPageSize={programData.pageSize}
+        onTableStateChange={(st) => {
+          setProgramState(st);
+          void loadPrograms(st);
+        }}
       />
 
       <TrainingEntityTable
         config={categoryConfig}
-        rows={filteredCategories}
-        rawCount={categories.length}
+        rows={categoryData.rows}
+        serverTotal={categoryData.total}
+        rawCount={categoryData.total}
         filtersActive={filtersActive}
         currentSearch={searchTerm}
         currentStatus={statusFilter}
-        onMutated={loadCategories}
-        onRefresh={loadCategories}
+        onMutated={() => loadCategories()}
+        onRefresh={() => loadCategories()}
         isRefreshing={categoriesRefreshing}
+        serverPage={categoryData.page}
+        serverPageSize={categoryData.pageSize}
+        onTableStateChange={(st) => {
+          setCategoryState(st);
+          void loadCategories(st);
+        }}
       />
 
       <TrainingEntityTable
         config={lessonConfig}
-        rows={filteredLessons}
-        rawCount={lessons.length}
+        rows={lessonData.rows}
+        serverTotal={lessonData.total}
+        rawCount={lessonData.total}
         filtersActive={filtersActive}
         currentSearch={searchTerm}
         currentStatus={statusFilter}
-        onMutated={loadLessons}
-        onRefresh={loadLessons}
+        onMutated={() => loadLessons()}
+        onRefresh={() => loadLessons()}
         isRefreshing={lessonsRefreshing}
+        serverPage={lessonData.page}
+        serverPageSize={lessonData.pageSize}
+        onTableStateChange={(st) => {
+          setLessonState(st);
+          void loadLessons(st);
+        }}
       />
 
       <TrainingEntityTable
         config={quizConfig}
-        rows={filteredQuizzes}
-        rawCount={quizzes.length}
+        rows={quizData.rows}
+        serverTotal={quizData.total}
+        rawCount={quizData.total}
         filtersActive={filtersActive}
         currentSearch={searchTerm}
         currentStatus={statusFilter}
-        onMutated={loadQuizzes}
-        onRefresh={loadQuizzes}
+        onMutated={() => loadQuizzes()}
+        onRefresh={() => loadQuizzes()}
         isRefreshing={quizzesRefreshing}
+        serverPage={quizData.page}
+        serverPageSize={quizData.pageSize}
+        onTableStateChange={(st) => {
+          setQuizState(st);
+          void loadQuizzes(st);
+        }}
       />
     </div>
   );
