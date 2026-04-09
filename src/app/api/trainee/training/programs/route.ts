@@ -127,7 +127,7 @@ export async function GET() {
   const lessonIds = (lessons ?? []).map((l) => l.id);
 
   // ── 5. Fetch user's completion + quiz status + progress cache ─────────────
-  // All five queries run in parallel. The two cache queries are batch fetches
+  // All six queries run in parallel. The cache queries are batch fetches
   // (one per table) — not N+1.
   const [
     completionsResult,
@@ -135,6 +135,7 @@ export async function GET() {
     categoryCompletionsResult,
     programCacheResult,
     categoryCacheResult,
+    lessonInProgressResult,
   ] = await Promise.all([
     // Lesson-level completion flags (for per-lesson "completed" boolean)
     lessonIds.length > 0
@@ -219,6 +220,24 @@ export async function GET() {
           }[],
           error: null,
         }),
+
+    // Batch: lessons that are in progress — started but not completed. Used
+    // by the program workspace (Module 02) to light up the Ongoing status
+    // badge alongside Not Started / Completed. Without this the workspace
+    // only ever shows Not Started or Completed because nothing else
+    // populated lesson.in_progress.
+    lessonIds.length > 0
+      ? admin
+          .from("lesson_progress")
+          .select("lesson_id")
+          .eq("user_id", user.id)
+          .not("started_at", "is", null)
+          .is("completed_at", null)
+          .in("lesson_id", lessonIds)
+      : Promise.resolve({
+          data: [] as { lesson_id: string }[],
+          error: null,
+        }),
   ]);
 
   // ── 5b. Fetch global sequential lock setting ─────────────────────────────
@@ -247,6 +266,14 @@ export async function GET() {
 
   const completedCategories = new Set(
     (categoryCompletionsResult.data ?? []).map((r) => r.category_id)
+  );
+
+  // Lessons the learner has started but not completed (from lesson_progress).
+  // Drives the Ongoing status badge in the program workspace. A lesson that
+  // is in this set AND also in completedLessons is resolved as Completed at
+  // the assembly step below.
+  const inProgressLessons = new Set(
+    (lessonInProgressResult.data ?? []).map((r) => r.lesson_id)
   );
 
   // Index cache rows by their FK for O(1) lookup during assembly
@@ -334,6 +361,10 @@ export async function GET() {
           is_active: l.is_active,
           previous_lesson_id: l.previous_lesson_id,
           completed: lessonCompleted,
+          // "Ongoing" = started but not yet completed. Mutually exclusive
+          // with `completed` by construction. Used by ProgramWorkspace to
+          // light up the amber "Ongoing" status badge.
+          in_progress: !lessonCompleted && inProgressLessons.has(l.id),
           quiz_passed: quizPassMap.get(l.id) ?? null,
           is_locked: isLessonLocked,
           lock_reason: isLessonLocked

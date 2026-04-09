@@ -250,9 +250,11 @@ export function TrainingEntityTable<
   // ── Detail sheet ───────────────────────────────────────────────────────
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetRow, setSheetRow] = useState<T | null>(null);
+  const [sheetTab, setSheetTab] = useState<"overview" | "notes">("overview");
 
-  function openSheet(row: T) {
+  function openSheet(row: T, tab: "overview" | "notes" = "overview") {
     setSheetRow(row);
+    setSheetTab(tab);
     setSheetOpen(true);
   }
 
@@ -592,11 +594,7 @@ export function TrainingEntityTable<
                         className="px-3 py-2 w-10"
                         onClick={(e) => {
                           e.stopPropagation();
-                          openSheet(row);
-                          // Switch to notes tab — defer so the sheet state
-                          // settles first. Also achieves this via a direct
-                          // handle: just open the sheet and the user clicks
-                          // the Notes tab. Keeping it minimal here.
+                          openSheet(row, "notes");
                         }}
                       >
                         {noteCount > 0 ? (
@@ -672,6 +670,10 @@ export function TrainingEntityTable<
         entityType={config.entityType}
         row={sheetEntityRow}
         onMutated={onMutated}
+        initialTab={sheetTab}
+        onNotesCountChange={(id, n) =>
+          setNotesCounts((prev) => ({ ...prev, [id]: n }))
+        }
       />
     </Card>
   );

@@ -223,6 +223,11 @@ export default function PerennialSignupPage() {
   const [members, setMembers] = useState<MemberForm[]>([newMember(true)]);
   const [submitNote, setSubmitNote] = useState<string | null>(null);
 
+  // Two-step flow required by perennial task 05: the user fills out the
+  // form, then reviews every member + plan + credentials messaging before
+  // the actual Stripe checkout fires.
+  const [step, setStep] = useState<"form" | "review">("form");
+
   const householdCount = members.length;
   const remainingSlots = Math.max(0, plan.totalMembers - householdCount);
   const canAdd = householdCount < plan.totalMembers;
@@ -373,12 +378,34 @@ export default function PerennialSignupPage() {
     });
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  // Validate + switch to the review step. Nothing hits the network here —
+  // the Stripe call only fires from `confirmAndCheckout` below after the
+  // user sees the review screen.
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitNote(null);
     const failure = validate();
     if (failure) {
       setSubmitNote(failure.message);
+      focusInvalidField(failure.fieldId);
+      return;
+    }
+    setStep("review");
+    // Bring the user back to the top of the page so the review content is
+    // the first thing they see.
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
+  async function confirmAndCheckout() {
+    setSubmitNote(null);
+    // Defense in depth: re-validate in case the user navigated back, edited,
+    // and came back to review without re-clicking Review.
+    const failure = validate();
+    if (failure) {
+      setSubmitNote(failure.message);
+      setStep("form");
       focusInvalidField(failure.fieldId);
       return;
     }
@@ -516,9 +543,90 @@ export default function PerennialSignupPage() {
           onSubmit={handleSubmit}
           className="grid grid-cols-1 lg:grid-cols-3 gap-6"
         >
-          {/* LEFT: plan + members */}
+          {/* LEFT: plan + members (form step) or review (review step) */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Plan selection */}
+            {step === "review" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Review your household</CardTitle>
+                  <CardDescription className="text-xs">
+                    Check every member before payment. You can go back and
+                    edit anything. No charge happens until you confirm on
+                    the next step.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                  <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-xs text-muted-foreground">Plan</span>
+                      <span className="font-semibold">
+                        {plan.name} — {formatCurrency(plan.priceMonthly)}/month
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        Household
+                      </span>
+                      <span className="tabular-nums">
+                        {householdCount} member{householdCount === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground pt-1">
+                      {members[0]?.firstName || "Primary member"}{" "}
+                      {members[0]?.lastName || ""} is the billing owner.
+                      Every other member gets their own Perennial account
+                      with a system-generated password emailed after
+                      successful payment.
+                    </p>
+                  </div>
+
+                  <ul className="space-y-2">
+                    {members.map((m, idx) => (
+                      <li
+                        key={m.id}
+                        className="rounded-lg border p-3 text-xs space-y-0.5"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-sm">
+                            {m.firstName} {m.lastName}
+                          </span>
+                          <Badge variant="outline" className="text-[10px]">
+                            {m.isPrimary
+                              ? "Primary (billing)"
+                              : `Member ${idx + 1}`}
+                          </Badge>
+                        </div>
+                        <p className="text-muted-foreground">{m.email}</p>
+                        <p className="text-muted-foreground">
+                          {m.phone}
+                          {m.city && `  ·  ${m.city}, ${m.state} ${m.zip}`}
+                        </p>
+                        {!m.isPrimary && m.relationType && (
+                          <p className="text-muted-foreground">
+                            {m.relationType}
+                            {m.subRelation ? ` — ${m.subRelation}` : ""}
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs text-primary space-y-1">
+                    <p className="font-semibold">
+                      Nothing is created until payment succeeds.
+                    </p>
+                    <p>
+                      When you click Confirm and pay, you&apos;ll be
+                      redirected to Stripe. Accounts + login emails go out
+                      after Stripe confirms the charge.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Plan selection — only visible while editing */}
+            {step === "form" && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Choose your plan</CardTitle>
@@ -580,11 +688,12 @@ export default function PerennialSignupPage() {
                 )}
               </CardContent>
             </Card>
+            )}
 
             {/* Plan overflow warning — shown when switching to a smaller plan
                 leaves more members than the new plan allows. The user must
                 remove excess members manually; the page never auto-discards. */}
-            {hasOverflow && (
+            {step === "form" && hasOverflow && (
               <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive space-y-1">
                 <p className="font-semibold">
                   Too many members for the {plan.name} plan
@@ -603,8 +712,9 @@ export default function PerennialSignupPage() {
               </div>
             )}
 
-            {/* Member forms */}
-            {members.map((m, idx) => {
+            {/* Member forms — edit mode only. Review mode shows a summary
+                list from the review Card above instead. */}
+            {step === "form" && members.map((m, idx) => {
               const isPrimary = m.isPrimary;
               return (
                 <Card key={m.id}>
@@ -936,7 +1046,7 @@ export default function PerennialSignupPage() {
               );
             })}
 
-            {canAdd && (
+            {step === "form" && canAdd && (
               <Button
                 type="button"
                 variant="outline"
@@ -985,19 +1095,51 @@ export default function PerennialSignupPage() {
                 </div>
               )}
 
-              <Button
-                type="submit"
-                className="w-full"
-                size="lg"
-                disabled={checkingOut || hasOverflow}
-              >
-                {checkingOut ? "Redirecting to payment…" : "Continue to payment"}
-              </Button>
-              <p className="text-[11px] text-muted-foreground text-center">
-                Accounts are created after successful payment. You&apos;ll
-                receive an email with a system-generated password for each
-                household member.
-              </p>
+              {step === "form" ? (
+                <>
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    size="lg"
+                    disabled={checkingOut || hasOverflow}
+                  >
+                    Review your household
+                  </Button>
+                  <p className="text-[11px] text-muted-foreground text-center">
+                    You&apos;ll get to check everything before any charge.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    className="w-full"
+                    size="lg"
+                    disabled={checkingOut || hasOverflow}
+                    onClick={confirmAndCheckout}
+                  >
+                    {checkingOut ? "Redirecting to payment…" : "Confirm and pay"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    size="sm"
+                    disabled={checkingOut}
+                    onClick={() => {
+                      setStep("form");
+                      setSubmitNote(null);
+                    }}
+                  >
+                    Back to edit
+                  </Button>
+                  <p className="text-[11px] text-muted-foreground text-center">
+                    Accounts are created after successful payment. You&apos;ll
+                    receive an email with a system-generated password for
+                    each household member.
+                  </p>
+                </>
+              )}
             </div>
           </aside>
         </form>

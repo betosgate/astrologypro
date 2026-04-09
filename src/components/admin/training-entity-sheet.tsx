@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Sheet,
@@ -55,6 +55,13 @@ interface TrainingEntitySheetProps {
   row: TrainingEntityRow | null;
   /** Called after a successful activate/deactivate/delete so the parent can refresh. */
   onMutated: () => void;
+  /**
+   * Fires when notes are added or removed inside the Notes tab. The parent
+   * table uses it to update its notes-count column without a full refetch.
+   */
+  onNotesCountChange?: (entityId: string, nextCount: number) => void;
+  /** Which tab to show when the sheet opens. Defaults to "overview". */
+  initialTab?: "overview" | "notes";
 }
 
 const ENTITY_LABEL: Record<TrainingEntityType, string> = {
@@ -77,10 +84,17 @@ export function TrainingEntitySheet({
   entityType,
   row,
   onMutated,
+  onNotesCountChange,
+  initialTab = "overview",
 }: TrainingEntitySheetProps) {
-  const [tab, setTab] = useState<"overview" | "notes">("overview");
+  const [tab, setTab] = useState<"overview" | "notes">(initialTab);
   const [busy, setBusy] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  // Reset to the requested initial tab every time the sheet opens.
+  useEffect(() => {
+    if (open) setTab(initialTab);
+  }, [open, initialTab]);
 
   if (!row) return null;
 
@@ -141,13 +155,7 @@ export function TrainingEntitySheet({
 
   return (
     <>
-      <Sheet
-        open={open}
-        onOpenChange={(v) => {
-          onOpenChange(v);
-          if (v) setTab("overview");
-        }}
-      >
+      <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent className="w-full sm:max-w-lg flex flex-col gap-0 p-0">
           <SheetHeader className="px-5 pt-5 pb-3 border-b">
             <div className="flex items-start justify-between gap-3">
@@ -212,8 +220,14 @@ export function TrainingEntitySheet({
             >
               {/* Reuses the existing TrainingNotes client which talks to
                   /api/admin/training/notes. Quiz support requires the
-                  20260408000116 migration to widen the entity_type CHECK. */}
-              <TrainingNotes entityType={entityType} entityId={row.id} />
+                  20260408000116 migration to widen the entity_type CHECK.
+                  Notes count changes propagate up to the parent table so
+                  the count column stays in sync without a full refetch. */}
+              <TrainingNotes
+                entityType={entityType}
+                entityId={row.id}
+                onCountChange={(n) => onNotesCountChange?.(row.id, n)}
+              />
             </TabsContent>
           </Tabs>
 
