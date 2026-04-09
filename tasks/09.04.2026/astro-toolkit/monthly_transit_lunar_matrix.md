@@ -98,7 +98,6 @@ Each AI interpretation is hooked into `useShowMore()`. When triggered, it:
 - **`natal_wheel_chart`**: Populates the visualization at the top.
 - **`save-astro-AI-Response`**: Called at the end of the `handleSubmit` process to cache the entire generated report.
 
-
 # Monthly Transits + Lunar Return API Documentation
 
 This document describes the API endpoints used for calculating and retrieving Monthly Transits and Lunar Return metrics.
@@ -345,7 +344,7 @@ Generates a SVG wheel chart for natal details.
 ## 6. Get Free Natal Wheel Chart
 Alternative endpoint for generating a natal wheel chart.
 
-- **URL:** `https://d36fwfwo4vnk9h.cloudfront.net/astro_decan_new_infos/get-free-natal-wheel-chart`
+- **URL:** `api/admin/astro/natal-wheel`
 
 ### Payload
 ```json
@@ -364,12 +363,9 @@ Alternative endpoint for generating a natal wheel chart.
 ### Response
 ```json
 {
-    "status": "success",
     "results": {
-        "statusCode": 200,
-        "output": "https://western-astrology.s3.ap-south-1.amazonaws.com/Chart_1775716643926.svg"
-    },
-    "message": "astro tool kit get successfully"
+        "output": "https://western-astrology.s3.ap-south-1.amazonaws.com/Chart_1775721430232.svg"
+    }
 }
 ```
 
@@ -500,4 +496,3 @@ Saves the generated AI interpretations and associated data for a specific tool.
     }
 }
 ```
-
