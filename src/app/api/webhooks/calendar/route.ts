@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getGoogleCredentials } from "@/lib/calendar/provider-credentials";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,8 @@ const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 
 /**
  * Refresh a diviner's Google access token using their stored refresh token.
+ * Client credentials come from google_api_keys (admin-managed) with env
+ * var fallback via getGoogleCredentials().
  */
 async function getGoogleAccessToken(ownerId: string): Promise<string | null> {
   const supabase = createAdminClient();
@@ -20,12 +23,13 @@ async function getGoogleAccessToken(ownerId: string): Promise<string | null> {
 
   if (!data?.refresh_token) return null;
 
+  const creds = await getGoogleCredentials();
   const res = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: process.env.GOOGLE_CLIENT_ID!,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+      client_id: creds.clientId,
+      client_secret: creds.clientSecret,
       refresh_token: data.refresh_token,
       grant_type: "refresh_token",
     }),

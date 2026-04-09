@@ -9,6 +9,7 @@ import { MIGRATION_SQL as MIG_20260408000113 } from "@/data/migrations/202604080
 import { MIGRATION_SQL as MIG_20260408000114 } from "@/data/migrations/20260408000114_drop_unique_astro_system_settings";
 import { MIGRATION_SQL as MIG_20260408000115 } from "@/data/migrations/20260408000115_pending_perennial_signups";
 import { MIGRATION_SQL as MIG_20260408000116 } from "@/data/migrations/20260408000116_training_notes_allow_quiz";
+import { MIGRATION_SQL as MIG_20260409000117 } from "@/data/migrations/20260409000117_calendar_provider_credentials";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -122,6 +123,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Extends the training_notes.entity_type CHECK constraint to allow 'quiz' in addition to program/category/lesson. Required by the admin Training Management standardization task so the entity detail sheet can host notes for quiz rows as well. Additive and idempotent — drops and recreates the named check constraint with the wider value list.",
     sortKey: "20260408000116",
     sql: MIG_20260408000116,
+  },
+  "20260409000117_calendar_provider_credentials": {
+    id: "20260409000117_calendar_provider_credentials",
+    title: "Calendar provider credentials (Google + Microsoft)",
+    description:
+      "Creates google_api_keys and microsoft_api_keys tables — admin-managed key-value storage for per-provider OAuth client credentials (client_id / client_secret / redirect_uri / tenant_id). Service-role only RLS; reads go through the admin Supabase client. Separate from calendar_connections (per-user tokens). Runtime read path in src/lib/calendar/provider-credentials.ts falls back to the existing env vars if no row is set, so deploy-time behavior does not change until an admin populates the tables via /admin/calendar-config.",
+    sortKey: "20260409000117",
+    sql: MIG_20260409000117,
   },
 };
 
