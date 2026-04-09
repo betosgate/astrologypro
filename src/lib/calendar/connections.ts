@@ -16,6 +16,20 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type CalendarProvider = "google" | "microsoft";
 
+export interface CalendarConnectionRecord {
+  id: string;
+  user_id: string;
+  owner_id: string;
+  provider: CalendarProvider;
+  email: string | null;
+  account_identifier: string;
+  access_token: string | null;
+  refresh_token: string;
+  expires_at: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
 interface UpsertCalendarConnectionInput {
   divinerId: string;
   provider: CalendarProvider;
@@ -26,6 +40,13 @@ interface UpsertCalendarConnectionInput {
   expiresAt?: Date | string | number | null;
   /** Optional connected-account email, when the OAuth response provides one. */
   email?: string | null;
+  /** Stable provider-side account key for reconnect/update dedupe. */
+  accountIdentifier?: string | null;
+}
+
+function normalizeConnectionIdentity(value: string | null | undefined): string | null {
+  const normalized = value?.trim();
+  return normalized ? normalized.toLowerCase() : null;
 }
 
 export async function upsertCalendarConnection(
@@ -33,7 +54,7 @@ export async function upsertCalendarConnection(
   input: UpsertCalendarConnectionInput,
 ): Promise<void> {
   try {
-    const { divinerId, provider, refreshToken, accessToken, expiresAt, email } = input;
+    const { divinerId, provider, refreshToken, accessToken, expiresAt, email, accountIdentifier } = input;
     if (!divinerId || !refreshToken) return;
 
     // Resolve auth user_id from the diviner row.
@@ -60,6 +81,12 @@ export async function upsertCalendarConnection(
       expiresAtIso = expiresAt;
     }
 
+    const normalizedEmail = normalizeConnectionIdentity(email);
+    const normalizedAccountIdentifier =
+      normalizeConnectionIdentity(accountIdentifier) ??
+      normalizedEmail ??
+      `${provider}:${refreshToken}`;
+
     const { error } = await admin
       .from("calendar_connections")
       .upsert(
@@ -70,9 +97,10 @@ export async function upsertCalendarConnection(
           refresh_token: refreshToken,
           access_token: accessToken ?? null,
           expires_at: expiresAtIso,
-          email: email ?? null,
+          email: normalizedEmail,
+          account_identifier: normalizedAccountIdentifier,
         },
-        { onConflict: "user_id,provider" },
+        { onConflict: "user_id,provider,account_identifier" },
       );
 
     if (error) {
@@ -91,6 +119,38 @@ export async function upsertCalendarConnection(
   }
 }
 
+export async function listCalendarConnections(
+  admin: SupabaseClient,
+  divinerId: string,
+  provider?: CalendarProvider,
+): Promise<CalendarConnectionRecord[]> {
+  try {
+    let query = admin
+      .from("calendar_connections")
+      .select(
+        "id, user_id, owner_id, provider, email, account_identifier, access_token, refresh_token, expires_at, created_at, updated_at"
+      )
+      .eq("owner_id", divinerId)
+      .order("updated_at", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (provider) {
+      query = query.eq("provider", provider);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error("[calendar/connections] list error:", error);
+      return [];
+    }
+
+    return (data ?? []) as CalendarConnectionRecord[];
+  } catch (err) {
+    console.error("[calendar/connections] unhandled list error:", err);
+    return [];
+  }
+}
+
 /**
  * Soft-delete: clear the connection row when a user disconnects a provider.
  * Best-effort like upsertCalendarConnection — never throws.
@@ -99,20 +159,20 @@ export async function deleteCalendarConnection(
   admin: SupabaseClient,
   divinerId: string,
   provider: CalendarProvider,
+  connectionId?: string,
 ): Promise<void> {
   try {
-    const { data: diviner } = await admin
-      .from("diviners")
-      .select("user_id")
-      .eq("id", divinerId)
-      .maybeSingle();
-    if (!diviner?.user_id) return;
-
-    await admin
+    let query = admin
       .from("calendar_connections")
       .delete()
-      .eq("user_id", diviner.user_id)
+      .eq("owner_id", divinerId)
       .eq("provider", provider);
+
+    if (connectionId) {
+      query = query.eq("id", connectionId);
+    }
+
+    await query;
   } catch (err) {
     console.error("[calendar/connections] delete error:", err);
   }

@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
-import { addDays, format, startOfMonth, endOfMonth, isBefore, startOfDay } from "date-fns";
+import { format, isBefore, startOfDay } from "date-fns";
 
 interface CalendarPickerProps {
   divinerId: string;
-  serviceId: string;
+  serviceId?: string | null;
   duration: number;
   onDateSelect: (date: Date) => void;
   selectedDate: Date | undefined;
@@ -23,39 +23,24 @@ export function CalendarPicker({
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
   const [loadedMonth, setLoadedMonth] = useState(false);
+  const serviceQuery = serviceId ? `&serviceId=${serviceId}` : "";
 
   useEffect(() => {
     async function fetchMonthAvailability() {
       setLoading(true);
       setLoadedMonth(false);
       try {
-        const start = startOfMonth(currentMonth);
-        const end = endOfMonth(currentMonth);
-        const dates = new Set<string>();
-
-        // Check each day in the month for availability
-        let day = start;
-        const today = startOfDay(new Date());
-
-        while (day <= end) {
-          if (!isBefore(day, today)) {
-            const dateStr = format(day, "yyyy-MM-dd");
-            const res = await fetch(
-              `/api/availability/${divinerId}?date=${dateStr}&duration=${duration}&serviceId=${serviceId}`
-            );
-            if (res.ok) {
-              const slots = await res.json();
-              if (slots.length > 0) {
-                dates.add(dateStr);
-              }
-            }
-          }
-          day = addDays(day, 1);
-        }
-
-        setAvailableDates(dates);
+        const monthKey = format(currentMonth, "yyyy-MM");
+        const res = await fetch(
+          `/api/availability/${divinerId}/month?month=${monthKey}&duration=${duration}${serviceQuery}`
+        );
+        const data = res.ok ? await res.json() : null;
+        setAvailableDates(
+          new Set(Array.isArray(data?.availableDates) ? data.availableDates : [])
+        );
       } catch {
         // Silently handle fetch errors
+        setAvailableDates(new Set());
       } finally {
         setLoadedMonth(true);
         setLoading(false);
@@ -63,7 +48,7 @@ export function CalendarPicker({
     }
 
     fetchMonthAvailability();
-  }, [currentMonth, divinerId, duration, serviceId]);
+  }, [currentMonth, divinerId, duration, serviceQuery]);
 
   const today = startOfDay(new Date());
 

@@ -107,7 +107,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} dark`}
     >
-      <body className="cosmic-bg noise-overlay min-h-screen bg-background font-sans text-foreground antialiased">
+      <body
+        suppressHydrationWarning
+        className="cosmic-bg noise-overlay min-h-screen bg-background font-sans text-foreground antialiased"
+      >
         {/* Global page-transition progress bar — amber to match brand */}
         <NextTopLoader
           color="#f59e0b"

@@ -300,7 +300,7 @@ export default function AvailabilityPage() {
   const serviceLabel = (serviceId?: string | null) =>
     serviceId
       ? services.find((service) => service.id === serviceId)?.name ?? "Selected service"
-      : "All services";
+      : "No service selected";
 
   return (
     <div className="space-y-6">
@@ -474,16 +474,19 @@ export default function AvailabilityPage() {
             <div className="space-y-1.5">
               <Label htmlFor="av-service">Service</Label>
               <Select
-                value={form.service_id || "__all__"}
+                value={form.service_id || "__none"}
                 onValueChange={(v) =>
-                  setForm((p) => ({ ...p, service_id: v === "__all__" ? "" : v }))
+                  setForm((p) => ({
+                    ...p,
+                    service_id: v === "__none" ? "" : v,
+                  }))
                 }
               >
                 <SelectTrigger id="av-service" className="w-full">
-                  <SelectValue placeholder="Choose a service" />
+                  <SelectValue placeholder="No specific service" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">All services</SelectItem>
+                  <SelectItem value="__none">No specific service</SelectItem>
                   {services.map((service) => (
                     <SelectItem key={service.id} value={service.id}>
                       {service.name}
@@ -492,7 +495,7 @@ export default function AvailabilityPage() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Choose one service to scope this schedule, or leave it on all services.
+                Leave this blank if the schedule should be available without tying it to a specific service.
               </p>
             </div>
 

@@ -48,6 +48,8 @@ interface PricingItem {
   is_active: boolean;
   stripe_product_id: string | null;
   stripe_product_name: string | null;
+  payment_provider: string | null;
+  payment_provider_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -95,10 +97,23 @@ interface PricingPlan {
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
+interface StripeAccount {
+  id: string;
+  business_name: string | null;
+  email: string | null;
+  country: string | null;
+  default_currency: string | null;
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
+  livemode: boolean;
+  key_prefix: string;
+}
+
 export default function AdminPricingPage() {
   const [items, setItems] = useState<PricingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [stripeAccount, setStripeAccount] = useState<StripeAccount | null>(null);
   const [selectedKey, setSelectedKey] = useState<string>("");
   const [formItemKey, setFormItemKey] = useState<string>("");
   const [formItemName, setFormItemName] = useState<string>("");
@@ -201,6 +216,11 @@ export default function AdminPricingPage() {
 
   useEffect(() => {
     void load();
+    // Load Stripe account info
+    fetch("/api/admin/stripe/account")
+      .then((r) => r.json())
+      .then((b) => { if (b.account) setStripeAccount(b.account as StripeAccount); })
+      .catch(() => { /* ignore */ });
   }, [load]);
 
   const selected = items.find((i) => i.item_key === selectedKey) ?? null;
@@ -558,6 +578,8 @@ export default function AdminPricingPage() {
           description: newItem.description.trim() || null,
           stripe_product_id: stripeProductId,
           stripe_product_name: stripeProductName,
+          payment_provider: "stripe",
+          payment_provider_id: stripeAccount?.id ?? null,
         }),
       });
       const body = await r.json();
@@ -772,12 +794,12 @@ export default function AdminPricingPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-xs uppercase text-muted-foreground">
-                  <th className="py-2">plan_id</th>
-                  <th className="py-2">name</th>
-                  <th className="py-2 text-right">amount</th>
-                  <th className="py-2 text-right">mrp</th>
-                  <th className="py-2">stripe price</th>
-                  <th className="py-2">status</th>
+                  <th className="py-2 pr-3">name</th>
+                  <th className="py-2 pr-3 text-right">amount</th>
+                  <th className="py-2 pr-3 text-right">mrp</th>
+                  <th className="py-2 pr-3">currency</th>
+                  <th className="py-2 pr-3">stripe price id</th>
+                  <th className="py-2 pr-3">status</th>
                   <th className="py-2 text-center">fields</th>
                   <th className="py-2 text-center">toggle</th>
                   <th className="py-2 text-center">actions</th>
@@ -787,14 +809,14 @@ export default function AdminPricingPage() {
                 {plans.map((plan) => (
                   <React.Fragment key={plan.id}>
                   <tr className="border-b last:border-0">
-                    <td className="py-2 font-mono text-xs max-w-[140px] truncate" title={plan.plan_id}>{plan.plan_id}</td>
-                    <td className="py-2">
-                      <div>{plan.display_name}</div>
-                      {plan.description && <div className="text-xs text-muted-foreground truncate max-w-[200px]" title={plan.description}>{plan.description}</div>}
+                    <td className="py-2 pr-3">
+                      <div className="font-medium">{plan.display_name}</div>
+                      {plan.description && <div className="text-xs text-muted-foreground truncate max-w-[220px]" title={plan.description}>{plan.description}</div>}
                     </td>
-                    <td className="py-2 text-right tabular-nums">{plan.currency} {plan.amount.toLocaleString()}</td>
-                    <td className="py-2 text-right tabular-nums text-muted-foreground">{plan.mrp !== null ? `${plan.currency} ${plan.mrp.toLocaleString()}` : "\u2014"}</td>
-                    <td className="py-2 font-mono text-xs max-w-[120px] truncate" title={plan.stripe_price_id ?? ""}>{plan.stripe_price_id ?? "\u2014"}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums whitespace-nowrap">{plan.amount.toLocaleString()}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground whitespace-nowrap">{plan.mrp !== null ? plan.mrp.toLocaleString() : "\u2014"}</td>
+                    <td className="py-2 pr-3 text-xs">{plan.currency}</td>
+                    <td className="py-2 pr-3 font-mono text-xs max-w-[180px] truncate" title={plan.stripe_price_id ?? ""}>{plan.stripe_price_id ?? "\u2014"}</td>
                     <td className="py-2">
                       <Badge variant="outline" className={plan.is_active ? "border-emerald-500/40 text-emerald-700" : "border-red-500/40 text-red-600"}>
                         {plan.is_active ? "active" : "inactive"}
@@ -830,20 +852,51 @@ export default function AdminPricingPage() {
                           <Button variant="ghost" size="sm" onClick={() => setEditPlanId(null)}><X className="size-4" /></Button>
                         </div>
                         <div className="grid gap-3 sm:grid-cols-2">
-                          <div className="space-y-1.5"><Label className="text-xs">Display Name *</Label><Input value={editPlanForm.display_name} onChange={(e) => setEditPlanForm({ ...editPlanForm, display_name: e.target.value })} /></div>
-                          <div className="space-y-1.5"><Label className="text-xs">Stripe Price Name</Label><Input value={plan.stripe_price_name ?? ""} disabled className="opacity-60" /></div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Display Name *</Label>
+                            <Input value={editPlanForm.display_name} onChange={(e) => setEditPlanForm({ ...editPlanForm, display_name: e.target.value })} />
+                            <p className="text-[11px] text-muted-foreground">Name shown to customers on signup pages.</p>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Stripe Price Name</Label>
+                            <Input value={plan.stripe_price_name ?? ""} disabled className="opacity-60" />
+                            <p className="text-[11px] text-muted-foreground">Locked — set when the Stripe price was created.</p>
+                          </div>
                         </div>
                         <div className="grid gap-3 sm:grid-cols-4">
-                          <div className="space-y-1.5"><Label className="text-xs">Amount</Label><Input type="number" value={editPlanForm.amount} disabled className="opacity-60" /></div>
-                          <div className="space-y-1.5"><Label className="text-xs">Currency</Label><Input value={editPlanForm.currency} disabled className="opacity-60" /></div>
-                          <div className="space-y-1.5"><Label className="text-xs">Stripe Price ID</Label><Input value={editPlanForm.stripe_price_id} disabled className="opacity-60 font-mono text-xs" /></div>
-                          <div className="space-y-1.5"><Label className="text-xs">MRP</Label><Input type="number" min="0" step="0.01" placeholder="Original price" value={editPlanForm.mrp} onChange={(e) => setEditPlanForm({ ...editPlanForm, mrp: e.target.value })} /></div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Amount</Label>
+                            <Input type="number" value={editPlanForm.amount} disabled className="opacity-60" />
+                            <p className="text-[11px] text-muted-foreground">From Stripe. To change, create a new plan.</p>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Currency</Label>
+                            <Input value={editPlanForm.currency} disabled className="opacity-60" />
+                            <p className="text-[11px] text-muted-foreground">Set by Stripe.</p>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Stripe Price ID</Label>
+                            <Input value={editPlanForm.stripe_price_id} disabled className="opacity-60 font-mono text-xs" />
+                            <p className="text-[11px] text-muted-foreground">Auto-generated by Stripe.</p>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">MRP</Label>
+                            <Input type="number" min="0" step="0.01" placeholder="Original price" value={editPlanForm.mrp} onChange={(e) => setEditPlanForm({ ...editPlanForm, mrp: e.target.value })} />
+                            <p className="text-[11px] text-muted-foreground">Strikethrough price shown to customers. Optional.</p>
+                          </div>
                         </div>
-                        <div className="space-y-1.5"><Label className="text-xs">Description</Label><Input placeholder="Optional" value={editPlanForm.description} onChange={(e) => setEditPlanForm({ ...editPlanForm, description: e.target.value })} /></div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Description</Label>
+                          <Input placeholder="Optional" value={editPlanForm.description} onChange={(e) => setEditPlanForm({ ...editPlanForm, description: e.target.value })} />
+                          <p className="text-[11px] text-muted-foreground">Short description shown under the plan name on signup pages.</p>
+                        </div>
                         {/* Custom fields inline */}
                         <div className="border-t pt-3 space-y-2">
                           <div className="flex items-center justify-between">
-                            <Label className="text-xs font-medium">Custom Fields</Label>
+                            <div>
+                              <Label className="text-xs font-medium">Custom Fields</Label>
+                              <p className="text-[11px] text-muted-foreground mt-0.5">Extra details displayed on signup pages (e.g. Members, Duration, Support level).</p>
+                            </div>
                             <Button type="button" variant="outline" size="sm" onClick={handleAddCustomField}><Plus className="mr-1 size-3" />Add Field</Button>
                           </div>
                           {editCustomFields.length === 0 && <p className="text-xs text-muted-foreground italic">No custom fields.</p>}
@@ -886,9 +939,16 @@ export default function AdminPricingPage() {
     const hasProductId = !!selected?.stripe_product_id;
     return (
       <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
-        <p className="text-sm font-medium">New Plan</p>
+        <div>
+          <p className="text-sm font-medium">New Plan</p>
+          <p className="text-xs text-muted-foreground mt-1">A plan is a specific pricing option under this item (e.g. &ldquo;Individual $19.95/mo&rdquo;, &ldquo;Family $39.95/mo&rdquo;). Each plan links to a Stripe Price for billing.</p>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label>Display Name *</Label><Input placeholder="e.g. Monthly Plan" value={newPlan.display_name} onChange={(e) => setNewPlan({ ...newPlan, display_name: e.target.value })} /></div>
+          <div className="space-y-1.5">
+            <Label>Display Name *</Label>
+            <Input placeholder="e.g. Monthly Plan" value={newPlan.display_name} onChange={(e) => setNewPlan({ ...newPlan, display_name: e.target.value })} />
+            <p className="text-[11px] text-muted-foreground">Name shown to customers on signup pages. Can differ from the Stripe price name.</p>
+          </div>
           <div className="space-y-1.5">
             <Label>Stripe Price Name *</Label>
             <div className="relative">
@@ -930,23 +990,43 @@ export default function AdminPricingPage() {
             </div>
             {hasStripePrice && <p className="text-xs text-muted-foreground">Linked: <span className="font-mono">{newPlan.stripe_price_id}</span></p>}
             {!hasStripePrice && newPlan.stripe_price_name.trim() && hasProductId && <p className="text-xs text-muted-foreground">A new Stripe price will be created.</p>}
+            {!hasStripePrice && !newPlan.stripe_price_name.trim() && (
+              <p className="text-[11px] text-muted-foreground">Search existing Stripe prices for this product, or type a new name. If creating new, set the amount and currency below — a Stripe Price will be created automatically.</p>
+            )}
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="space-y-1.5"><Label>Amount *</Label><Input type="number" min="0" step="0.01" value={newPlan.amount} disabled={hasStripePrice} onChange={(e) => setNewPlan({ ...newPlan, amount: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label>MRP</Label><Input type="number" min="0" step="0.01" placeholder="Original price" value={newPlan.mrp} onChange={(e) => setNewPlan({ ...newPlan, mrp: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label>Currency</Label>
+          <div className="space-y-1.5">
+            <Label>Amount *</Label>
+            <Input type="number" min="0" step="0.01" value={newPlan.amount} disabled={hasStripePrice} onChange={(e) => setNewPlan({ ...newPlan, amount: e.target.value })} />
+            <p className="text-[11px] text-muted-foreground">{hasStripePrice ? "Auto-filled from Stripe. Cannot be changed here." : "The price customers will pay. This will be sent to Stripe."}</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label>MRP</Label>
+            <Input type="number" min="0" step="0.01" placeholder="Original price" value={newPlan.mrp} onChange={(e) => setNewPlan({ ...newPlan, mrp: e.target.value })} />
+            <p className="text-[11px] text-muted-foreground">Original / strikethrough price shown to customers. Optional — used for &ldquo;was $X, now $Y&rdquo; display.</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Currency</Label>
             <Select value={newPlan.currency} disabled={hasStripePrice} onValueChange={(v) => setNewPlan({ ...newPlan, currency: v as "USD" | "INR" })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent><SelectItem value="USD">USD</SelectItem><SelectItem value="INR">INR</SelectItem></SelectContent>
             </Select>
+            <p className="text-[11px] text-muted-foreground">{hasStripePrice ? "Set by Stripe." : "Currency for this plan."}</p>
           </div>
         </div>
-        <div className="space-y-1.5"><Label>Description</Label><Input placeholder="Optional plan description" value={newPlan.description} onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })} /></div>
+        <div className="space-y-1.5">
+          <Label>Description</Label>
+          <Input placeholder="Optional plan description" value={newPlan.description} onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })} />
+          <p className="text-[11px] text-muted-foreground">Short description shown to customers under the plan name on signup pages.</p>
+        </div>
         {/* Custom fields */}
         <div className="border-t pt-3 space-y-2">
           <div className="flex items-center justify-between">
-            <Label className="text-xs font-medium">Custom Fields</Label>
+            <div>
+              <Label className="text-xs font-medium">Custom Fields</Label>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Extra details shown on signup pages (e.g. &ldquo;Members: 5&rdquo;, &ldquo;Duration: Monthly&rdquo;). Label is displayed, Value is the content, Slug is the machine key.</p>
+            </div>
             <Button type="button" variant="outline" size="sm" onClick={() => setNewPlan({ ...newPlan, custom_fields: [...newPlan.custom_fields, { label: "", value: "", slug: "" }] })}>
               <Plus className="mr-1 size-3" />Add Field
             </Button>
@@ -1007,24 +1087,92 @@ export default function AdminPricingPage() {
         </Card>
       )}
 
+      {/* Stripe account info */}
+      {stripeAccount && (
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Badge variant={stripeAccount.livemode ? "default" : "outline"} className={stripeAccount.livemode ? "bg-emerald-600" : "border-amber-500 text-amber-600"}>
+                {stripeAccount.livemode ? "LIVE" : "TEST MODE"}
+              </Badge>
+              <span className="text-sm font-semibold">Stripe Configuration</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-xs">
+              <div>
+                <p className="text-muted-foreground mb-0.5">Business Name</p>
+                <p className="font-medium">{stripeAccount.business_name ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground mb-0.5">Account ID</p>
+                <p className="font-mono">{stripeAccount.id}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground mb-0.5">Email</p>
+                <p>{stripeAccount.email ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground mb-0.5">Default Currency</p>
+                <p className="font-medium">{stripeAccount.default_currency ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground mb-0.5">API Key</p>
+                <p className="font-mono">{stripeAccount.key_prefix}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground mb-0.5">Status</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <Badge variant="outline" className={`text-[10px] ${stripeAccount.charges_enabled ? "border-emerald-500/40 text-emerald-700" : "border-red-500/40 text-red-600"}`}>
+                    Charges {stripeAccount.charges_enabled ? "OK" : "Off"}
+                  </Badge>
+                  <Badge variant="outline" className={`text-[10px] ${stripeAccount.payouts_enabled ? "border-emerald-500/40 text-emerald-700" : "border-red-500/40 text-red-600"}`}>
+                    Payouts {stripeAccount.payouts_enabled ? "OK" : "Off"}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Add item form */}
       {showAddItem && (
         <Card>
-          <CardContent className="pt-6 space-y-3">
-            <p className="text-sm font-medium">New Item</p>
+          <CardContent className="pt-6 space-y-4">
+            <div>
+              <p className="text-sm font-medium">New Item</p>
+              <p className="text-xs text-muted-foreground mt-1">An item is a product category (e.g. &ldquo;Mystery School&rdquo;, &ldquo;Perennial Mandalism&rdquo;). Each item can have multiple pricing plans under it.</p>
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="new-item-key">Item Key *</Label>
                 <Input id="new-item-key" placeholder="e.g. mystery_school" className="font-mono text-sm" value={newItem.item_key} onChange={(e) => setNewItem({ ...newItem, item_key: e.target.value })} />
+                <p className="text-[11px] text-muted-foreground">Unique machine-readable identifier. Use lowercase with underscores. Used in API calls: <code className="text-[10px]">/api/pricing/[item_key]</code></p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="new-item-name">Display Name *</Label>
                 <Input id="new-item-name" placeholder="e.g. Mystery School" value={newItem.item_name} onChange={(e) => setNewItem({ ...newItem, item_name: e.target.value })} />
+                <p className="text-[11px] text-muted-foreground">Human-readable name shown in the admin dashboard. Can differ from the Stripe product name.</p>
               </div>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="new-item-desc">Description</Label>
               <Input id="new-item-desc" placeholder="Optional description" value={newItem.description} onChange={(e) => setNewItem({ ...newItem, description: e.target.value })} />
+              <p className="text-[11px] text-muted-foreground">Internal description for admin reference. Not shown to customers.</p>
+            </div>
+            {/* Payment Account */}
+            <div className="border-t pt-3 space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Payment Provider</Label>
+                  <Input value="stripe" disabled className="opacity-60" />
+                  <p className="text-[11px] text-muted-foreground">Payment gateway for this item.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Account</Label>
+                  <Input value={stripeAccount ? `${stripeAccount.business_name ?? "Stripe"} (${stripeAccount.id})` : "Loading..."} disabled className="opacity-60 text-xs" />
+                  <p className="text-[11px] text-muted-foreground">The Stripe account this item will be linked to. Auto-set from current config.</p>
+                </div>
+              </div>
             </div>
             {/* Stripe Product */}
             <div className="border-t pt-3 space-y-1.5">
@@ -1063,6 +1211,9 @@ export default function AdminPricingPage() {
               )}
               {!selectedStripeProduct && newItem.stripe_product_name.trim() && (
                 <p className="text-xs text-muted-foreground">A new Stripe product will be created.</p>
+              )}
+              {!selectedStripeProduct && !newItem.stripe_product_name.trim() && (
+                <p className="text-[11px] text-muted-foreground">Type to search your existing Stripe products, or enter a new name to create one. This links the item to a Stripe Product for billing.</p>
               )}
             </div>
             <div className="flex gap-2 pt-1">
@@ -1125,6 +1276,7 @@ export default function AdminPricingPage() {
                   <th className="py-2 cursor-pointer select-none hover:text-foreground" onClick={() => handleSort("item_name")}>
                     name{sortIcon("item_name")}
                   </th>
+                  <th className="py-2">account</th>
                   <th className="py-2 cursor-pointer select-none hover:text-foreground" onClick={() => handleSort("status")}>
                     status{sortIcon("status")}
                   </th>
@@ -1142,6 +1294,10 @@ export default function AdminPricingPage() {
                       </td>
                       <td className="py-2 font-mono text-xs">{item.item_key}</td>
                       <td className="py-2 font-medium">{item.item_name}</td>
+                      <td className="py-2 text-xs text-muted-foreground">
+                        <div>{item.payment_provider ?? "stripe"}</div>
+                        <div className="font-mono truncate max-w-[160px]" title={item.payment_provider_id ?? ""}>{item.payment_provider_id ?? "—"}</div>
+                      </td>
                       <td className="py-2">
                         <Badge variant="outline" className={item.is_active ? "border-emerald-500/40 text-emerald-700" : "border-red-500/40 text-red-600"}>
                           {item.is_active ? "active" : "inactive"}
@@ -1164,7 +1320,7 @@ export default function AdminPricingPage() {
                     {/* Inline edit form */}
                     {selectedKey === item.item_key && selected && (
                       <tr>
-                        <td colSpan={6} className="p-4 bg-muted/20 border-b">
+                        <td colSpan={7} className="p-4 bg-muted/20 border-b">
                           <div className="space-y-6">
                             <div className="space-y-4">
                               <div className="flex items-center justify-between">
@@ -1172,14 +1328,44 @@ export default function AdminPricingPage() {
                                 <Button variant="ghost" size="sm" onClick={() => setSelectedKey("")}><X className="size-4" /></Button>
                               </div>
                               <div className="grid gap-4 sm:grid-cols-2">
-                                <div className="space-y-1.5"><Label>Item Key</Label><Input value={formItemKey} onChange={(e) => setFormItemKey(e.target.value)} className="font-mono text-sm" /></div>
-                                <div className="space-y-1.5"><Label>Display Name</Label><Input value={formItemName} onChange={(e) => setFormItemName(e.target.value)} /></div>
+                                <div className="space-y-1.5">
+                                  <Label>Item Key</Label>
+                                  <Input value={formItemKey} onChange={(e) => setFormItemKey(e.target.value)} className="font-mono text-sm" />
+                                  <p className="text-[11px] text-muted-foreground">Unique identifier used in API calls. Changing this may break existing integrations.</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label>Display Name</Label>
+                                  <Input value={formItemName} onChange={(e) => setFormItemName(e.target.value)} />
+                                  <p className="text-[11px] text-muted-foreground">Human-readable name shown in the admin dashboard.</p>
+                                </div>
                               </div>
-                              <div className="space-y-1.5"><Label>Description (optional)</Label><Input value={formDescription} onChange={(e) => setFormDescription(e.target.value)} /></div>
-                              {/* Stripe product info (read-only) */}
-                              <div className="grid gap-4 sm:grid-cols-2 border-t pt-3">
-                                <div className="space-y-1.5"><Label className="text-xs">Stripe Product Name</Label><Input value={selected.stripe_product_name ?? "Not linked"} disabled className="opacity-60" /></div>
-                                <div className="space-y-1.5"><Label className="text-xs">Stripe Product ID</Label><Input value={selected.stripe_product_id ?? "—"} disabled className="opacity-60 font-mono text-xs" /></div>
+                              <div className="space-y-1.5">
+                                <Label>Description (optional)</Label>
+                                <Input value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
+                                <p className="text-[11px] text-muted-foreground">Internal description for admin reference.</p>
+                              </div>
+                              {/* Payment & Stripe info (read-only) */}
+                              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 border-t pt-3">
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs">Payment Provider</Label>
+                                  <Input value={selected.payment_provider ?? "stripe"} disabled className="opacity-60" />
+                                  <p className="text-[11px] text-muted-foreground">The payment gateway used for this item.</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs">Provider Account ID</Label>
+                                  <Input value={selected.payment_provider_id ?? "—"} disabled className="opacity-60 font-mono text-xs" />
+                                  <p className="text-[11px] text-muted-foreground">Account ID on the payment provider.</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs">Stripe Product Name</Label>
+                                  <Input value={selected.stripe_product_name ?? "Not linked"} disabled className="opacity-60" />
+                                  <p className="text-[11px] text-muted-foreground">Locked — set when the item was created.</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs">Stripe Product ID</Label>
+                                  <Input value={selected.stripe_product_id ?? "—"} disabled className="opacity-60 font-mono text-xs" />
+                                  <p className="text-[11px] text-muted-foreground">Auto-generated by Stripe.</p>
+                                </div>
                               </div>
                               <div className="flex items-center gap-3">
                                 <Button onClick={handleSave} disabled={saving} size="sm">
@@ -1198,9 +1384,9 @@ export default function AdminPricingPage() {
                     {expandedItems.has(item.id) && selectedKey !== item.item_key && (
                       <>
                         {itemPlansLoading === item.id ? (
-                          <tr><td colSpan={6} className="py-3 pl-10"><div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3 animate-spin" /> Loading plans...</div></td></tr>
+                          <tr><td colSpan={7} className="py-3 pl-10"><div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3 animate-spin" /> Loading plans...</div></td></tr>
                         ) : (itemPlansCache[item.id] ?? []).length === 0 ? (
-                          <tr><td colSpan={6} className="py-3 pl-10"><p className="text-xs text-muted-foreground italic">No plans for this item.</p></td></tr>
+                          <tr><td colSpan={7} className="py-3 pl-10"><p className="text-xs text-muted-foreground italic">No plans for this item.</p></td></tr>
                         ) : (
                           (itemPlansCache[item.id] ?? []).map((plan, idx, arr) => (
                             <tr key={plan.id} className={idx === arr.length - 1 ? "border-b" : ""}>

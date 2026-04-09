@@ -67,25 +67,41 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const { data, error } = await admin
+  const insertPayload: Record<string, unknown> = {
+    owner_id: diviner.id,
+    diviner_id: diviner.id,
+    title: title || "Available",
+    start_date,
+    end_date,
+    weekdays,
+    start_time,
+    end_time,
+    timezone,
+    duration_minutes: duration_minutes || 60,
+    description: description || null,
+    is_active: is_active ?? true,
+  };
+
+  if (service_id) {
+    insertPayload.service_id = service_id;
+  }
+
+  const insertQuery = admin
     .from("availability_templates")
-    .insert({
-      owner_id: diviner.id,
-      diviner_id: diviner.id,
-      title: title || "Available",
-      start_date,
-      end_date,
-      weekdays,
-      start_time,
-      end_time,
-      timezone,
-      duration_minutes: duration_minutes || 60,
-      description: description || null,
-      is_active: is_active ?? true,
-      service_id: service_id || null,
-    })
-    .select()
-    .single();
+    .insert(insertPayload)
+    .select();
+
+  let { data, error } = await insertQuery.single();
+
+  if (error && service_id && error.message.toLowerCase().includes("service_id")) {
+    delete insertPayload.service_id;
+    ({ data, error } = await admin
+      .from("availability_templates")
+      .insert(insertPayload)
+      .select()
+      .single());
+  }
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ template: data }, { status: 201 });
 }

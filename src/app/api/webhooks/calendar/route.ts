@@ -19,7 +19,10 @@ async function getGoogleAccessToken(ownerId: string): Promise<string | null> {
     .select("refresh_token")
     .eq("owner_id", ownerId)
     .eq("provider", "google")
-    .single();
+    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   if (!data?.refresh_token) return null;
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAvailableSlots } from "@/lib/availability";
-import { getAvailableSlotsFromGoogle } from "@/lib/google-calendar";
+import { getAvailableSlotsFromGoogle, getGoogleBusySchedule } from "@/lib/google-calendar";
 import { getMsFreeBusy } from "@/lib/microsoft-calendar";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +15,7 @@ export async function GET(
   const date = searchParams.get("date");
   const duration = searchParams.get("duration");
   const serviceId = searchParams.get("serviceId");
+  const debugBusy = searchParams.get("debugBusy") === "1";
 
   if (!date || !duration) {
     return NextResponse.json(
@@ -45,7 +46,7 @@ export async function GET(
     // Fetch diviner timezone
     const { data: diviner } = await admin
       .from("diviners")
-      .select("timezone")
+      .select("timezone, user_id, google_calendar_token, outlook_calendar_token")
       .eq("id", ownerId)
       .single();
 // Note: We use admin client here because this is a public fetch of a profile's timezone
@@ -58,18 +59,27 @@ export async function GET(
     }
 
     // Check calendar connections for this owner
+    const connectionFilters = [`owner_id.eq.${ownerId}`];
+    if (diviner.user_id) {
+      connectionFilters.push(`user_id.eq.${diviner.user_id}`);
+    }
+
     const { data: connections } = await admin
       .from("calendar_connections")
       .select("provider")
-      .eq("owner_id", ownerId);
+      .or(connectionFilters.join(","));
 
-    const isGoogleConnected = connections?.some(c => c.provider === "google");
-    const isOutlookConnected = connections?.some(c => c.provider === "microsoft");
+    const isGoogleConnected =
+      connections?.some(c => c.provider === "google") ||
+      Boolean(diviner.google_calendar_token);
+    const isOutlookConnected =
+      connections?.some(c => c.provider === "microsoft") ||
+      Boolean(diviner.outlook_calendar_token);
 
     // New date-ranged schedules created from the dashboard.
     const { data: templates } = await admin
       .from("availability_templates")
-      .select("id, title, service_id, start_date, end_date, weekdays, start_time, end_time, timezone, duration_minutes, description, is_active")
+      .select("*")
       .or(`owner_id.eq.${ownerId},diviner_id.eq.${ownerId}`)
       .eq("is_active", true);
 
@@ -87,6 +97,47 @@ export async function GET(
       .or(`owner_id.eq.${ownerId},diviner_id.eq.${ownerId}`)
       .eq("date", date);
 
+    const requestedDayOfWeek = new Date(`${date}T12:00:00.000Z`).getUTCDay();
+    const relevantTemplates = (templates ?? []).filter((template) => {
+      const record = template as Record<string, unknown>;
+      if (record.is_active === false) return false;
+
+      const templateServiceId =
+        typeof record.service_id === "string" ? record.service_id : null;
+      if (serviceId) {
+        if (templateServiceId !== serviceId) return false;
+      } else if (templateServiceId) {
+        return false;
+      }
+
+      const startDate = String(record.start_date ?? "");
+      const endDate = String(record.end_date ?? "");
+      if (date < startDate || date > endDate) return false;
+
+      const weekdays = Array.isArray(record.weekdays)
+        ? record.weekdays.map((value) => Number(value))
+        : [];
+
+      return weekdays.includes(requestedDayOfWeek);
+    });
+
+    const availabilityTimezones = Array.from(
+      new Set(
+        relevantTemplates
+          .map((template) => String((template as Record<string, unknown>).timezone ?? ""))
+          .filter(Boolean)
+      )
+    );
+
+    const fallbackTemplateTimezone = (templates ?? [])
+      .map((template) => String((template as Record<string, unknown>).timezone ?? ""))
+      .find(Boolean);
+
+    const primaryScheduleTimezone =
+      availabilityTimezones[0] ?? fallbackTemplateTimezone ?? "UTC";
+    const calendarQueryTimezones =
+      availabilityTimezones.length > 0 ? availabilityTimezones : [primaryScheduleTimezone];
+
     // Query a widened UTC range so timezone-converted schedule windows
     // near midnight are still blocked correctly.
     const selectedDayUtc = new Date(`${date}T00:00:00.000Z`);
@@ -95,7 +146,7 @@ export async function GET(
 
     const { data: bookings } = await admin
       .from("bookings")
-      .select("scheduled_at, duration_minutes")
+      .select("id, scheduled_at, duration_minutes, status, services(name), clients(full_name)")
       .eq("owner_id", ownerId)
       .gte("scheduled_at", queryStart)
       .lte("scheduled_at", queryEnd)
@@ -104,7 +155,7 @@ export async function GET(
     // Also treat active holds as booked (prevents race-condition double-booking)
     const { data: holds } = await admin
       .from("booking_holds")
-      .select("scheduled_at, duration_minutes")
+      .select("id, scheduled_at, duration_minutes, expires_at, session_token")
       .eq("owner_id", ownerId)
       .gt("expires_at", new Date().toISOString())
       .gte("scheduled_at", queryStart)
@@ -114,16 +165,55 @@ export async function GET(
     // Each call is individually guarded and caught so a missing token never
     // blocks the internal availability calculation.
     let externalBusy: { start: string; end: string }[] = [];
+    let googleBusyDebug: Awaited<ReturnType<typeof getGoogleBusySchedule>> = [];
+    let outlookBusyDebug: Array<{ start: string; end: string; source: "microsoft"; title: string }> = [];
     try {
-      const [googleBusy, outlookBusy] = await Promise.all([
-        isGoogleConnected
-          ? getAvailableSlotsFromGoogle(ownerId, new Date(`${date}T12:00:00.000Z`)).catch(() => [] as { start: string; end: string }[])
-          : Promise.resolve([] as { start: string; end: string }[]),
-        isOutlookConnected
-          ? getMsFreeBusy(ownerId, date).catch(() => [] as { start: string; end: string }[])
-          : Promise.resolve([] as { start: string; end: string }[]),
-      ]);
-      externalBusy = [...googleBusy, ...outlookBusy];
+      const googleResults = isGoogleConnected
+        ? await Promise.all(
+            calendarQueryTimezones.map((timezone) =>
+              debugBusy
+                ? getGoogleBusySchedule(ownerId, date, timezone).catch(() => [])
+                : getAvailableSlotsFromGoogle(ownerId, date, timezone).catch(
+                    () => [] as { start: string; end: string }[]
+                  )
+            )
+          )
+        : [];
+
+      const outlookResults = isOutlookConnected
+        ? await Promise.all(
+            calendarQueryTimezones.map((timezone) =>
+              getMsFreeBusy(ownerId, date, timezone).catch(
+                () => [] as { start: string; end: string }[]
+              )
+            )
+          )
+        : [];
+
+      const googleBusy = googleResults.flat();
+      const outlookBusy = outlookResults.flat();
+
+      if (debugBusy) {
+        googleBusyDebug = Array.from(
+          new Map(
+            (googleBusy as Awaited<ReturnType<typeof getGoogleBusySchedule>>).map((entry) => [
+              `${entry.start}-${entry.end}-${entry.title}`,
+              entry,
+            ])
+          ).values()
+        );
+        outlookBusyDebug = (outlookBusy as { start: string; end: string }[]).map((slot) => ({
+          ...slot,
+          source: "microsoft" as const,
+          title: "Microsoft Calendar busy",
+        }));
+        externalBusy = [
+          ...googleBusyDebug.map((slot) => ({ start: slot.start, end: slot.end })),
+          ...(outlookBusy as { start: string; end: string }[]),
+        ];
+      } else {
+        externalBusy = [...(googleBusy as { start: string; end: string }[]), ...(outlookBusy as { start: string; end: string }[])];
+      }
     } catch {
       // External calendar unavailable — proceed with internal data only
     }
@@ -146,20 +236,24 @@ export async function GET(
 
     const slots = getAvailableSlots({
       date,
-      templates: (templates ?? []).map((template) => ({
-        id: template.id,
-        title: template.title,
-        serviceId: template.service_id ?? null,
-        startDate: template.start_date,
-        endDate: template.end_date,
-        weekdays: template.weekdays ?? [],
-        startTime: template.start_time,
-        endTime: template.end_time,
-        timezone: template.timezone,
-        durationMinutes: template.duration_minutes,
-        description: template.description ?? null,
-        isActive: template.is_active,
-      })),
+      templates: (templates ?? []).map((template) => {
+        const record = template as Record<string, unknown>;
+        return {
+          id: String(record.id ?? ""),
+          title: String(record.title ?? "Available"),
+          serviceId: typeof record.service_id === "string" ? record.service_id : null,
+          startDate: String(record.start_date ?? ""),
+          endDate: String(record.end_date ?? ""),
+          weekdays: Array.isArray(record.weekdays) ? (record.weekdays as number[]) : [],
+          startTime: String(record.start_time ?? ""),
+          endTime: String(record.end_time ?? ""),
+          timezone: String(record.timezone ?? primaryScheduleTimezone),
+          durationMinutes:
+            typeof record.duration_minutes === "number" ? record.duration_minutes : durationMinutes,
+          description: typeof record.description === "string" ? record.description : null,
+          isActive: record.is_active !== false,
+        };
+      }),
       serviceId,
       weeklySlots: (weeklySlots ?? []).map((s) => ({
         dayOfWeek: s.day_of_week,
@@ -174,8 +268,61 @@ export async function GET(
         endTime: o.end_time ?? undefined,
       })),
       durationMinutes,
-      timezone: diviner.timezone ?? "America/New_York",
+      timezone: primaryScheduleTimezone,
     });
+
+    if (debugBusy) {
+      const busySchedule = [
+        ...((bookings ?? []).map((booking) => ({
+          id: String(booking.id),
+          title:
+            booking.services && typeof booking.services === "object" && "name" in booking.services
+              ? `${String((booking.services as { name?: string | null }).name ?? "Booking")}`
+              : "Booking",
+          start: booking.scheduled_at,
+          end: new Date(
+            new Date(booking.scheduled_at).getTime() + booking.duration_minutes * 60_000
+          ).toISOString(),
+          source: "booking" as const,
+          details:
+            booking.clients && typeof booking.clients === "object" && "full_name" in booking.clients
+              ? `${String((booking.clients as { full_name?: string | null }).full_name ?? "Client")} • ${booking.status}`
+              : booking.status,
+        })) ?? []),
+        ...((holds ?? []).map((hold) => ({
+          id: String(hold.id),
+          title: "Pending hold",
+          start: hold.scheduled_at,
+          end: new Date(
+            new Date(hold.scheduled_at).getTime() + (hold.duration_minutes ?? 60) * 60_000
+          ).toISOString(),
+          source: "hold" as const,
+          details: hold.expires_at ? `Reserved until ${hold.expires_at}` : hold.session_token ?? null,
+        })) ?? []),
+        ...googleBusyDebug.map((entry) => ({
+          id: entry.id,
+          title: entry.title,
+          start: entry.start,
+          end: entry.end,
+          source: entry.source,
+          details: entry.location || entry.description || entry.status || null,
+        })),
+        ...outlookBusyDebug.map((entry, index) => ({
+          id: `${entry.source}-${index}-${entry.start}`,
+          title: entry.title,
+          start: entry.start,
+          end: entry.end,
+          source: entry.source,
+          details: null,
+        })),
+      ].sort((a, b) => a.start.localeCompare(b.start));
+
+      return NextResponse.json({
+        slots,
+        busySchedule,
+        timezone: primaryScheduleTimezone,
+      });
+    }
 
     return NextResponse.json(slots);
   } catch {

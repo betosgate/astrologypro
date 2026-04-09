@@ -1,5 +1,10 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { upsertCalendarConnection, deleteCalendarConnection } from "@/lib/calendar/connections";
+import {
+  deleteCalendarConnection,
+  listCalendarConnections,
+  upsertCalendarConnection,
+  type CalendarConnectionRecord,
+} from "@/lib/calendar/connections";
 import { getGoogleCredentials } from "@/lib/calendar/provider-credentials";
 
 // Google OAuth client credentials are now resolved at call time via
@@ -9,12 +14,507 @@ import { getGoogleCredentials } from "@/lib/calendar/provider-credentials";
 
 const SCOPES = [
   "https://www.googleapis.com/auth/calendar.events.owned",
-  "https://www.googleapis.com/auth/userinfo.email",
 ];
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_CALENDAR_API = "https://www.googleapis.com/calendar/v3";
-const TABLE_NAME = "calendar_connections";
+
+export interface GoogleBusyScheduleEntry {
+  id: string;
+  title: string;
+  start: string;
+  end: string;
+  status?: string | null;
+  description?: string | null;
+  location?: string | null;
+  source: "google";
+}
+
+interface GoogleEventBoundary {
+  dateTime?: unknown;
+  date?: unknown;
+  timeZone?: unknown;
+}
+
+interface GoogleAccountMetadata {
+  accountIdentifier: string;
+  email: string | null;
+}
+
+function parseDate(date: string): { year: number; month: number; day: number } {
+  const [year, month, day] = date.split("-").map(Number);
+  return { year, month, day };
+}
+
+function parseTime(time: string): { hour: number; minute: number; second: number } {
+  const [hour = 0, minute = 0, second = 0] = time.split(":").map(Number);
+  return { hour, minute, second };
+}
+
+function getTimeZoneParts(date: Date, timeZone: string) {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+
+  const map = new Map<string, string>();
+  for (const part of formatter.formatToParts(date)) {
+    if (part.type !== "literal") {
+      map.set(part.type, part.value);
+    }
+  }
+
+  return {
+    year: Number(map.get("year") ?? "0"),
+    month: Number(map.get("month") ?? "1"),
+    day: Number(map.get("day") ?? "1"),
+    hour: Number(map.get("hour") ?? "0"),
+    minute: Number(map.get("minute") ?? "0"),
+    second: Number(map.get("second") ?? "0"),
+  };
+}
+
+function getTimeZoneOffsetMs(date: Date, timeZone: string): number {
+  const parts = getTimeZoneParts(date, timeZone);
+  const asUtc = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second
+  );
+  return asUtc - date.getTime();
+}
+
+function zonedDateTimeToUtc(date: string, time: string, timeZone: string): Date {
+  const { year, month, day } = parseDate(date);
+  const { hour, minute, second } = parseTime(time);
+  const utcGuess = Date.UTC(year, month - 1, day, hour, minute, second);
+
+  let offsetMs = getTimeZoneOffsetMs(new Date(utcGuess), timeZone);
+  let actualUtc = utcGuess - offsetMs;
+
+  const refinedOffsetMs = getTimeZoneOffsetMs(new Date(actualUtc), timeZone);
+  if (refinedOffsetMs !== offsetMs) {
+    offsetMs = refinedOffsetMs;
+    actualUtc = utcGuess - offsetMs;
+  }
+
+  return new Date(actualUtc);
+}
+
+function getUtcDayRange(date: string, timeZone: string) {
+  return {
+    timeMin: zonedDateTimeToUtc(date, "00:00:00", timeZone).toISOString(),
+    timeMax: zonedDateTimeToUtc(date, "23:59:59", timeZone).toISOString(),
+  };
+}
+
+function extractLegacyGoogleRefreshToken(token: unknown): string | null {
+  if (typeof token === "string" && token.length > 0) {
+    return token;
+  }
+
+  if (
+    token &&
+    typeof token === "object" &&
+    "refresh_token" in token &&
+    typeof (token as { refresh_token?: unknown }).refresh_token === "string"
+  ) {
+    return (token as { refresh_token: string }).refresh_token;
+  }
+
+  return null;
+}
+
+function normalizeGoogleEventBoundary(
+  boundary: GoogleEventBoundary | undefined,
+  fallbackTimeZone: string
+): string | null {
+  if (!boundary) return null;
+
+  if (typeof boundary.dateTime === "string" && boundary.dateTime.length > 0) {
+    return boundary.dateTime;
+  }
+
+  if (typeof boundary.date === "string" && boundary.date.length > 0) {
+    const boundaryTimeZone =
+      typeof boundary.timeZone === "string" && boundary.timeZone.length > 0
+        ? boundary.timeZone
+        : fallbackTimeZone;
+
+    return zonedDateTimeToUtc(
+      boundary.date,
+      "00:00:00",
+      boundaryTimeZone
+    ).toISOString();
+  }
+
+  return null;
+}
+
+function normalizeGoogleEventBounds(
+  event: Record<string, unknown>,
+  fallbackTimeZone: string
+): { start: string; end: string } | null {
+  const startBoundary = event.start as GoogleEventBoundary | undefined;
+  const endBoundary = event.end as GoogleEventBoundary | undefined;
+  const eventTimeZone =
+    (typeof startBoundary?.timeZone === "string" && startBoundary.timeZone) ||
+    (typeof endBoundary?.timeZone === "string" && endBoundary.timeZone) ||
+    fallbackTimeZone;
+
+  const start = normalizeGoogleEventBoundary(startBoundary, eventTimeZone);
+  let end = normalizeGoogleEventBoundary(endBoundary, eventTimeZone);
+
+  if (!start || !end) {
+    return null;
+  }
+
+  if (
+    new Date(end).getTime() <= new Date(start).getTime() &&
+    typeof startBoundary?.date === "string" &&
+    typeof startBoundary?.dateTime !== "string"
+  ) {
+    end = new Date(new Date(start).getTime() + 24 * 60 * 60 * 1000).toISOString();
+  }
+
+  return { start, end };
+}
+
+async function getGoogleConnections(ownerId: string): Promise<CalendarConnectionRecord[]> {
+  const supabase = createAdminClient();
+  const connections = await listCalendarConnections(supabase, ownerId, "google");
+  if (connections.length > 0) {
+    return connections;
+  }
+
+  const { data: diviner } = await supabase
+    .from("diviners")
+    .select("id, user_id, google_calendar_token")
+    .eq("id", ownerId)
+    .maybeSingle();
+
+  if (!diviner) {
+    return [];
+  }
+
+  const legacyRefreshToken = extractLegacyGoogleRefreshToken(diviner.google_calendar_token);
+  if (!legacyRefreshToken) {
+    return [];
+  }
+
+  return [
+    {
+      id: `legacy-google-${ownerId}`,
+      user_id: diviner.user_id ?? "",
+      owner_id: diviner.id,
+      provider: "google",
+      email: null,
+      account_identifier: `legacy-google:${ownerId}`,
+      access_token: null,
+      refresh_token: legacyRefreshToken,
+      expires_at: null,
+      created_at: null,
+      updated_at: null,
+    },
+  ];
+}
+
+async function getPreferredGoogleConnection(
+  ownerId: string
+): Promise<CalendarConnectionRecord | null> {
+  const connections = await getGoogleConnections(ownerId);
+  return connections[0] ?? null;
+}
+
+async function getGoogleAccountMetadata(accessToken: string): Promise<GoogleAccountMetadata> {
+  try {
+    const response = await fetch(`${GOOGLE_CALENDAR_API}/calendars/primary?fields=id,summary`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Google primary calendar lookup failed");
+    }
+
+    const payload = await response.json();
+    const rawId = typeof payload.id === "string" ? payload.id.trim() : "";
+    const rawSummary = typeof payload.summary === "string" ? payload.summary.trim() : "";
+    const emailCandidate = [rawId, rawSummary].find((value) => value.includes("@")) ?? null;
+
+    return {
+      accountIdentifier: (rawId || emailCandidate || `google:${accessToken.slice(0, 16)}`).toLowerCase(),
+      email: emailCandidate ? emailCandidate.toLowerCase() : null,
+    };
+  } catch {
+    return {
+      accountIdentifier: `google:${accessToken.slice(0, 16)}`.toLowerCase(),
+      email: null,
+    };
+  }
+}
+
+async function getAccessToken(
+  ownerId: string,
+  connection: CalendarConnectionRecord
+): Promise<string | null> {
+  if (connection.access_token && connection.expires_at) {
+    const expiresAt = new Date(connection.expires_at).getTime();
+    if (expiresAt > Date.now() + 5 * 60 * 1000) {
+      return connection.access_token;
+    }
+  }
+
+  const creds = await getGoogleCredentials();
+  const response = await fetch(GOOGLE_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: creds.clientId,
+      client_secret: creds.clientSecret,
+      refresh_token: connection.refresh_token,
+      grant_type: "refresh_token",
+    }),
+  });
+
+  if (!response.ok) {
+    console.error("[google-calendar] Failed to refresh Google access token");
+    return null;
+  }
+
+  const tokens = await response.json();
+  const accessToken =
+    typeof tokens.access_token === "string" && tokens.access_token.length > 0
+      ? tokens.access_token
+      : null;
+
+  if (!accessToken) {
+    return null;
+  }
+
+  const metadata = await getGoogleAccountMetadata(accessToken);
+  await upsertCalendarConnection(createAdminClient(), {
+    divinerId: ownerId,
+    provider: "google",
+    refreshToken:
+      typeof tokens.refresh_token === "string" && tokens.refresh_token.length > 0
+        ? tokens.refresh_token
+        : connection.refresh_token,
+    accessToken,
+    expiresAt:
+      typeof tokens.expires_in === "number"
+        ? new Date(Date.now() + tokens.expires_in * 1000)
+        : null,
+    email: metadata.email ?? connection.email,
+    accountIdentifier: metadata.accountIdentifier ?? connection.account_identifier,
+  });
+
+  return accessToken;
+}
+
+async function getGoogleBusyScheduleByRange(
+  ownerId: string,
+  timeMin: string,
+  timeMax: string,
+  timeZone: string
+): Promise<GoogleBusyScheduleEntry[]> {
+  const connections = await getGoogleConnections(ownerId);
+  if (connections.length === 0) {
+    return [];
+  }
+
+  const connectionResults = await Promise.all(
+    connections.map(async (connection) => {
+      const accessToken = await getAccessToken(ownerId, connection);
+      if (!accessToken) {
+        return [] as GoogleBusyScheduleEntry[];
+      }
+
+      const busyByKey = new Map<string, GoogleBusyScheduleEntry>();
+      let calendarIds: string[] = ["primary"];
+      const calendarTimezones = new Map<string, string>();
+
+      try {
+        const calendarListResponse = await fetch(
+          `${GOOGLE_CALENDAR_API}/users/me/calendarList?showHidden=false`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (calendarListResponse.ok) {
+          const calendarList = await calendarListResponse.json();
+          const ids = (calendarList.items ?? [])
+            .filter((calendar: { id?: string; deleted?: boolean; selected?: boolean }) => {
+              if (!calendar.id || calendar.deleted) return false;
+              if (typeof calendar.timeZone === "string" && calendar.timeZone.length > 0) {
+                calendarTimezones.set(calendar.id, calendar.timeZone);
+              }
+              return calendar.selected !== false;
+            })
+            .map((calendar: { id: string }) => calendar.id);
+
+          if (ids.length > 0) {
+            calendarIds = ids;
+          }
+        }
+      } catch (error) {
+        console.warn(
+          "[google-calendar] calendarList lookup failed; falling back to primary events",
+          error
+        );
+      }
+
+      try {
+        const freeBusyResponse = await fetch(`${GOOGLE_CALENDAR_API}/freeBusy`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            timeMin,
+            timeMax,
+            items: calendarIds.map((id) => ({ id })),
+          }),
+        });
+
+        if (freeBusyResponse.ok) {
+          const freeBusyPayload = (await freeBusyResponse.json()) as {
+            calendars?: Record<string, { busy?: Array<{ start?: string; end?: string }> }>;
+          };
+
+          for (const calendarId of calendarIds) {
+            const busyEntries = freeBusyPayload.calendars?.[calendarId]?.busy ?? [];
+            for (const busyEntry of busyEntries) {
+              if (
+                typeof busyEntry.start !== "string" ||
+                busyEntry.start.length === 0 ||
+                typeof busyEntry.end !== "string" ||
+                busyEntry.end.length === 0
+              ) {
+                continue;
+              }
+
+              busyByKey.set(`${busyEntry.start}-${busyEntry.end}`, {
+                id: `${calendarId}-${busyEntry.start}-${busyEntry.end}`,
+                title: "Google Calendar busy",
+                start: busyEntry.start,
+                end: busyEntry.end,
+                status: "busy",
+                description: null,
+                location: null,
+                source: "google",
+              });
+            }
+          }
+        } else {
+          console.warn(
+            "[google-calendar] freeBusy lookup failed:",
+            await freeBusyResponse.text()
+          );
+        }
+      } catch (error) {
+        console.warn("[google-calendar] freeBusy lookup threw:", error);
+      }
+
+      try {
+        const responses = await Promise.all(
+          calendarIds.map((calendarId) =>
+            fetch(
+              `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events?singleEvents=true&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&showDeleted=false&maxResults=2500&timeZone=${encodeURIComponent(timeZone)}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  "Content-Type": "application/json",
+                },
+              }
+            ).then(async (response) => ({
+              calendarId,
+              ok: response.ok,
+              body: response.ok ? await response.json() : await response.text(),
+            }))
+          )
+        );
+
+        for (const response of responses) {
+          if (!response.ok) {
+            console.warn(
+              `[google-calendar] events lookup failed for ${response.calendarId}:`,
+              response.body
+            );
+            continue;
+          }
+
+          const items = Array.isArray((response.body as { items?: unknown[] }).items)
+            ? ((response.body as { items: unknown[] }).items as Array<Record<string, unknown>>)
+            : [];
+
+          for (const event of items) {
+            if (event.status === "cancelled") continue;
+            const startBoundary = event.start as GoogleEventBoundary | undefined;
+            const isAllDayEvent =
+              typeof startBoundary?.date === "string" &&
+              typeof startBoundary?.dateTime !== "string";
+            if (event.transparency === "transparent" && !isAllDayEvent) continue;
+
+            const normalizedBounds = normalizeGoogleEventBounds(
+              event,
+              calendarTimezones.get(response.calendarId) ?? timeZone
+            );
+            if (!normalizedBounds) continue;
+            const { start, end } = normalizedBounds;
+            const key = `${start}-${end}`;
+            const existing = busyByKey.get(key);
+
+            busyByKey.set(key, {
+              id: String(event.id ?? existing?.id ?? `${response.calendarId}-${start}-${end}`),
+              title: String(event.summary ?? existing?.title ?? "Google Calendar event"),
+              start,
+              end,
+              status:
+                typeof event.status === "string" ? event.status : existing?.status ?? null,
+              description:
+                typeof event.description === "string"
+                  ? event.description
+                  : existing?.description ?? null,
+              location:
+                typeof event.location === "string" ? event.location : existing?.location ?? null,
+              source: "google",
+            });
+          }
+        }
+      } catch (error) {
+        console.warn("[google-calendar] events lookup threw:", error);
+      }
+
+      return Array.from(busyByKey.values());
+    })
+  );
+
+  const busyByKey = new Map<string, GoogleBusyScheduleEntry>();
+  for (const connectionResult of connectionResults) {
+    for (const entry of connectionResult) {
+      busyByKey.set(`${entry.start}-${entry.end}-${entry.title}`, entry);
+    }
+  }
+
+  return Array.from(busyByKey.values());
+}
 
 /**
  * Builds the Google OAuth2 consent URL for calendar access.
@@ -68,109 +568,39 @@ export async function handleOAuthCallback(
   }
 
   const tokens = await response.json();
+  const accessToken =
+    typeof tokens.access_token === "string" ? tokens.access_token : null;
+  const refreshToken =
+    typeof tokens.refresh_token === "string" ? tokens.refresh_token : null;
   console.log("[Google OAuth] Exchange response:", {
-    has_access: !!tokens.access_token,
-    has_refresh: !!tokens.refresh_token,
+    has_access: !!accessToken,
+    has_refresh: !!refreshToken,
   });
 
-  const supabase = createAdminClient();
-
-  // We identify the user's connection by both userId and provider
-  const { error } = await supabase
-    .from(TABLE_NAME)
-    .upsert({
-      user_id: userId,
-      owner_id: ownerId,
-      provider: "google",
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token, // Google refresh tokens are long-lived
-      expires_at: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : null,
-      updated_at: new Date().toISOString()
-    }, {
-      onConflict: "user_id,provider"
-    });
-
-  if (error) {
-    console.error("[Google OAuth] Upsert failed:", error);
-    throw new Error(`Failed to store calendar connection: ${error.message}`);
+  if (!refreshToken) {
+    throw new Error("Google did not return a refresh token for this account");
   }
 
-  // Dual-write to the normalized calendar_connections table. Best-effort —
-  // never throws because we don't want the cutover write to break the
-  // legacy success path. (Pre-existing bug fix: the surrounding function
-  // renamed its parameter from divinerId to ownerId but this call site
-  // still used the old name.)
+  const supabase = createAdminClient();
+  const metadata = accessToken
+    ? await getGoogleAccountMetadata(accessToken)
+    : {
+        accountIdentifier: `google:${userId}:${Date.now()}`.toLowerCase(),
+        email: null,
+      };
+
   await upsertCalendarConnection(supabase, {
     divinerId: ownerId,
     provider: "google",
-    refreshToken: tokens.refresh_token,
+    refreshToken,
+    accessToken,
     expiresAt:
       typeof tokens.expires_in === "number"
         ? new Date(Date.now() + tokens.expires_in * 1000)
         : null,
+    email: metadata.email,
+    accountIdentifier: metadata.accountIdentifier,
   });
-}
-
-/**
- * Refreshes the access token using the stored refresh token.
- *
- * Read-side cutover: prefer the normalized calendar_connections table.
- * Fall back to the legacy diviners.google_calendar_token JSONB scalar
- * during the cutover window so neither newly-connected nor pre-cutover
- * diviners are broken.
- */
-async function getAccessToken(ownerId: string): Promise<string> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from(TABLE_NAME)
-    .select("access_token, refresh_token, expires_at")
-    .eq("owner_id", ownerId)
-    .eq("provider", "google")
-    .single();
-
-  if (error || !data?.refresh_token) {
-    throw new Error("No Google Calendar connection found for this owner");
-  }
-
-  // If token is still valid (5 min buffer), return cached access_token
-  if (data.access_token && data.expires_at) {
-    const expiresAt = new Date(data.expires_at).getTime();
-    if (expiresAt > Date.now() + 5 * 60 * 1000) {
-      return data.access_token;
-    }
-  }
-
-  // Otherwise, refresh it
-  const creds = await getGoogleCredentials();
-  const response = await fetch(GOOGLE_TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: creds.clientId,
-      client_secret: creds.clientSecret,
-      refresh_token: data.refresh_token,
-      grant_type: "refresh_token",
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to refresh Google access token");
-  }
-
-  const tokens = await response.json();
-
-  // Cache the new access token
-  await supabase
-    .from(TABLE_NAME)
-    .update({
-      access_token: tokens.access_token,
-      expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
-      updated_at: new Date().toISOString()
-    })
-    .eq("owner_id", ownerId)
-    .eq("provider", "google");
-
-  return tokens.access_token;
 }
 
 /**
@@ -179,37 +609,33 @@ async function getAccessToken(ownerId: string): Promise<string> {
  */
 export async function getAvailableSlotsFromGoogle(
   ownerId: string,
-  date: Date
+  date: string,
+  timeZone: string
 ): Promise<{ start: string; end: string }[]> {
-  const accessToken = await getAccessToken(ownerId);
+  const busyEntries = await getGoogleBusySchedule(ownerId, date, timeZone);
 
-  const timeMin = new Date(date);
-  timeMin.setHours(0, 0, 0, 0);
+  return busyEntries.map((entry) => ({
+    start: entry.start,
+    end: entry.end,
+  }));
+}
 
-  const timeMax = new Date(date);
-  timeMax.setHours(23, 59, 59, 999);
+export async function getGoogleBusySchedule(
+  ownerId: string,
+  date: string,
+  timeZone: string
+): Promise<GoogleBusyScheduleEntry[]> {
+  const { timeMin, timeMax } = getUtcDayRange(date, timeZone);
+  return getGoogleBusyScheduleByRange(ownerId, timeMin, timeMax, timeZone);
+}
 
-  const response = await fetch(`${GOOGLE_CALENDAR_API}/freeBusy`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      timeMin: timeMin.toISOString(),
-      timeMax: timeMax.toISOString(),
-      items: [{ id: "primary" }],
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch Google Calendar availability");
-  }
-
-  const data = await response.json();
-  const busySlots = data.calendars?.primary?.busy ?? [];
-
-  return busySlots as { start: string; end: string }[];
+export async function getGoogleBusyScheduleInRange(
+  ownerId: string,
+  timeMin: string,
+  timeMax: string,
+  timeZone: string
+): Promise<GoogleBusyScheduleEntry[]> {
+  return getGoogleBusyScheduleByRange(ownerId, timeMin, timeMax, timeZone);
 }
 
 /**
@@ -226,7 +652,14 @@ export async function createCalendarEvent(
     clientName?: string;
   }
 ): Promise<{ eventId: string; htmlLink: string }> {
-  const accessToken = await getAccessToken(ownerId);
+  const connection = await getPreferredGoogleConnection(ownerId);
+  if (!connection) {
+    throw new Error("No Google Calendar connection found for this owner");
+  }
+  const accessToken = await getAccessToken(ownerId, connection);
+  if (!accessToken) {
+    throw new Error("Failed to refresh Google access token");
+  }
 
   const event: Record<string, unknown> = {
     summary: booking.title,
@@ -283,7 +716,9 @@ export async function updateGoogleCalendarEvent(
   durationMinutes: number
 ): Promise<boolean> {
   try {
-    const accessToken = await getAccessToken(ownerId);
+    const connection = await getPreferredGoogleConnection(ownerId);
+    if (!connection) return false;
+    const accessToken = await getAccessToken(ownerId, connection);
     if (!accessToken) return false;
 
     const start = new Date(newScheduledAt);
@@ -314,7 +749,9 @@ export async function deleteGoogleCalendarEvent(
   eventId: string
 ): Promise<boolean> {
   try {
-    const accessToken = await getAccessToken(ownerId);
+    const connection = await getPreferredGoogleConnection(ownerId);
+    if (!connection) return false;
+    const accessToken = await getAccessToken(ownerId, connection);
     if (!accessToken) return false;
 
     const res = await fetch(
@@ -342,7 +779,9 @@ export async function watchGoogleCalendar(
   webhookUrl: string
 ): Promise<{ channelId: string; expiration: string } | null> {
   try {
-    const accessToken = await getAccessToken(ownerId);
+    const connection = await getPreferredGoogleConnection(ownerId);
+    if (!connection) return null;
+    const accessToken = await getAccessToken(ownerId, connection);
     if (!accessToken) return null;
 
     const channelId = crypto.randomUUID();
@@ -401,22 +840,9 @@ export async function watchGoogleCalendar(
  * Disconnects Google Calendar by clearing the stored connection.
  */
 export async function disconnectGoogleCalendar(
-  ownerId: string
+  ownerId: string,
+  connectionId?: string
 ): Promise<void> {
   const supabase = createAdminClient();
-  // Note: do NOT write google_calendar_connected — it is GENERATED ALWAYS
-  // (see migration 20260403000001) and is automatically derived from
-  // google_calendar_token IS NOT NULL.
-  const { error } = await supabase
-    .from(TABLE_NAME)
-    .delete()
-    .eq("owner_id", ownerId)
-    .eq("provider", "google");
-
-  if (error) {
-    throw new Error(`Failed to disconnect Google Calendar: ${error.message}`);
-  }
-
-  // Mirror the disconnect into the normalized calendar_connections table.
-  await deleteCalendarConnection(supabase, ownerId, "google");
+  await deleteCalendarConnection(supabase, ownerId, "google", connectionId);
 }
