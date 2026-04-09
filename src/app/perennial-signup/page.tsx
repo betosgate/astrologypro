@@ -678,14 +678,6 @@ export default function PerennialSignupPage() {
                   })}
                 </div>
 
-                {plan.key === "couple" && (
-                  <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800">
-                    Heads up: the <code>STRIPE_PRICE_COMMUNITY_COUPLE</code>{" "}
-                    env var is missing in this environment. The Couple plan
-                    will be visible but checkout will not complete until the
-                    Stripe price is configured.
-                  </div>
-                )}
               </CardContent>
             </Card>
             )}
