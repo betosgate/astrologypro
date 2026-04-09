@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -127,14 +127,55 @@ export default function TrainingPage() {
   const [lessonState, setLessonState] = useState<TableState>({ page: 1, pageSize: 10, sortBy: "priority", sortDir: "asc" });
   const [quizState, setQuizState] = useState<TableState>({ page: 1, pageSize: 10, sortBy: "created_at", sortDir: "desc" });
 
-  const [programsRefreshing, setProgramsRefreshing] = useState(true);
-  const [categoriesRefreshing, setCategoriesRefreshing] = useState(true);
-  const [lessonsRefreshing, setLessonsRefreshing] = useState(true);
-  const [quizzesRefreshing, setQuizzesRefreshing] = useState(true);
+  const [programsRefreshing, setProgramsRefreshing] = useState(false);
+  const [categoriesRefreshing, setCategoriesRefreshing] = useState(false);
+  const [lessonsRefreshing, setLessonsRefreshing] = useState(false);
+  const [quizzesRefreshing, setQuizzesRefreshing] = useState(false);
+
+  // Distinguish first load (show skeletons) from subsequent refreshes (show overlay).
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   // Shared filters
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+
+  // ── FK lookup maps ────────────────────────────────────────────────────
+  // Built from UNPAGINATED fetches so every category/lesson label resolves
+  // even when the related entity is on a different page. Lightweight — only
+  // id + name/title selected. Refreshed on mount + after any mutation.
+  const [programMap, setProgramMap] = useState<Record<string, string>>({});
+  const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
+  const [lessonMap, setLessonMap] = useState<Record<string, string>>({});
+  // Count of categories per program (needed for the "Categories" column on
+  // the programs table). Built from the unpaginated category fetch.
+  const [categoriesPerProgram, setCategoriesPerProgram] = useState<Record<string, number>>({});
+
+  async function refreshLookupMaps() {
+    const [progRes, catRes, lesRes] = await Promise.all([
+      fetch("/api/admin/training/programs?pageSize=100"),
+      fetch("/api/admin/training/categories?pageSize=100"),
+      fetch("/api/admin/training/lessons?pageSize=100"),
+    ]);
+    const [progJson, catJson, lesJson] = await Promise.all([
+      progRes.ok ? progRes.json() : { programs: [] },
+      catRes.ok ? catRes.json() : { categories: [] },
+      lesRes.ok ? lesRes.json() : { lessons: [] },
+    ]);
+    const pm: Record<string, string> = {};
+    for (const p of progJson.programs ?? []) pm[p.id] = p.name;
+    setProgramMap(pm);
+    const cm: Record<string, string> = {};
+    const cpp: Record<string, number> = {};
+    for (const c of catJson.categories ?? []) {
+      cm[c.id] = c.name;
+      cpp[c.training_id] = (cpp[c.training_id] ?? 0) + 1;
+    }
+    setCategoryMap(cm);
+    setCategoriesPerProgram(cpp);
+    const lm: Record<string, string> = {};
+    for (const l of lesJson.lessons ?? []) lm[l.id] = l.title;
+    setLessonMap(lm);
+  }
 
   // ── Server-driven fetch per entity ────────────────────────────────────
   async function loadPrograms(stateOverride?: TableState) {
@@ -216,39 +257,42 @@ export default function TrainingPage() {
 
   // ── Reload all on mount + when shared filters change ──────────────────
   useEffect(() => {
-    void Promise.all([loadPrograms(), loadCategories(), loadLessons(), loadQuizzes()]);
+    async function init() {
+      await Promise.all([
+        loadPrograms(),
+        loadCategories(),
+        loadLessons(),
+        loadQuizzes(),
+        refreshLookupMaps(),
+      ]);
+      setInitialLoadDone(true);
+    }
+    void init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, statusFilter]);
 
-  // Backward-compat: expose flat arrays for lookup maps. These are always
-  // only the current page's rows — sufficient for FK labels on screen.
-  const programs = programData.rows;
-  const categories = categoryData.rows;
-  const lessons = lessonData.rows;
-  // quizData.rows is used directly by quizConfig — no alias needed
-
-  // ── Lookup maps ──────────────────────────────────────────────────────
-  const programMap = useMemo(() => {
-    const m: Record<string, string> = {};
-    for (const p of programs) m[p.id] = p.name;
-    return m;
-  }, [programs]);
-
-  const categoryMap = useMemo(() => {
-    const m: Record<string, string> = {};
-    for (const c of categories) m[c.id] = c.name;
-    return m;
-  }, [categories]);
-
-  const lessonMap = useMemo(() => {
-    const m: Record<string, string> = {};
-    for (const l of lessons) m[l.id] = l.title;
-    return m;
-  }, [lessons]);
-
   // Server-driven: filters are passed to the API, not applied client-side.
-  // The `filtersActive` flag drives the "(of {total})" label in the table.
   const filtersActive = !!searchTerm.trim() || statusFilter !== "all";
+
+  // ── Mutation handlers that also refresh lookup maps ──────────────────
+  // After a mutation (edit/activate/deactivate/delete), refresh both the
+  // affected table AND the lookup maps so FK labels stay correct.
+  async function mutatePrograms() {
+    await loadPrograms(programState);
+    void refreshLookupMaps();
+  }
+  async function mutateCategories() {
+    await loadCategories(categoryState);
+    void refreshLookupMaps();
+  }
+  async function mutateLessons() {
+    await loadLessons(lessonState);
+    void refreshLookupMaps();
+  }
+  async function mutateQuizzes() {
+    await loadQuizzes(quizState);
+    void refreshLookupMaps();
+  }
 
   // ── Per-entity configs ───────────────────────────────────────────────
   const programCols: EntityColumn<Program>[] = [
@@ -281,10 +325,10 @@ export default function TrainingPage() {
       key: "categories",
       label: "Categories",
       sortable: true,
-      sortValue: (p) => categories.filter((c) => c.training_id === p.id).length,
+      sortValue: (p) => categoriesPerProgram[p.id] ?? 0,
       render: (p) => (
         <span className="text-sm">
-          {categories.filter((c) => c.training_id === p.id).length}
+          {categoriesPerProgram[p.id] ?? 0}
         </span>
       ),
     },
@@ -328,7 +372,7 @@ export default function TrainingPage() {
       sortValue: (c) => programMap[c.training_id] ?? "",
       render: (c) => (
         <span className="text-sm text-muted-foreground">
-          {programMap[c.training_id] ?? "—"}
+          {programMap[c.training_id] ?? "Unknown program"}
         </span>
       ),
     },
@@ -381,7 +425,7 @@ export default function TrainingPage() {
       sortValue: (l) => categoryMap[l.category_id] ?? "",
       render: (l) => (
         <span className="text-sm text-muted-foreground">
-          {categoryMap[l.category_id] ?? "—"}
+          {categoryMap[l.category_id] ?? "Unknown category"}
         </span>
       ),
     },
@@ -436,7 +480,7 @@ export default function TrainingPage() {
       sortValue: (q) => lessonMap[q.lesson_id] ?? "",
       render: (q) => (
         <span className="text-sm text-muted-foreground">
-          {lessonMap[q.lesson_id] ?? "—"}
+          {lessonMap[q.lesson_id] ?? "Unknown lesson"}
         </span>
       ),
     },
@@ -496,7 +540,7 @@ export default function TrainingPage() {
       },
       {
         label: "Categories",
-        value: categories.filter((c) => c.training_id === p.id).length,
+        value: categoriesPerProgram[p.id] ?? 0,
       },
       {
         label: "Access",
@@ -685,6 +729,32 @@ export default function TrainingPage() {
         )}
       </div>
 
+      {/* Initial loading skeleton — shown only on first load before data arrives */}
+      {!initialLoadDone && (
+        <div className="space-y-6">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="rounded-xl border bg-card p-6 space-y-4 animate-pulse">
+              <div className="flex items-center justify-between">
+                <div className="h-5 w-40 rounded bg-muted" />
+                <div className="h-8 w-24 rounded bg-muted" />
+              </div>
+              <div className="space-y-2">
+                {[1, 2, 3].map((r) => (
+                  <div key={r} className="flex gap-4">
+                    <div className="h-4 w-1/4 rounded bg-muted" />
+                    <div className="h-4 w-1/3 rounded bg-muted" />
+                    <div className="h-4 w-1/6 rounded bg-muted" />
+                    <div className="h-4 w-1/6 rounded bg-muted" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {initialLoadDone && (
+      <>
       <TrainingEntityTable
         config={programConfig}
         rows={programData.rows}
@@ -693,8 +763,8 @@ export default function TrainingPage() {
         filtersActive={filtersActive}
         currentSearch={searchTerm}
         currentStatus={statusFilter}
-        onMutated={() => loadPrograms()}
-        onRefresh={() => loadPrograms()}
+        onMutated={mutatePrograms}
+        onRefresh={() => loadPrograms(programState)}
         isRefreshing={programsRefreshing}
         serverPage={programData.page}
         serverPageSize={programData.pageSize}
@@ -712,8 +782,8 @@ export default function TrainingPage() {
         filtersActive={filtersActive}
         currentSearch={searchTerm}
         currentStatus={statusFilter}
-        onMutated={() => loadCategories()}
-        onRefresh={() => loadCategories()}
+        onMutated={mutateCategories}
+        onRefresh={() => loadCategories(categoryState)}
         isRefreshing={categoriesRefreshing}
         serverPage={categoryData.page}
         serverPageSize={categoryData.pageSize}
@@ -731,8 +801,8 @@ export default function TrainingPage() {
         filtersActive={filtersActive}
         currentSearch={searchTerm}
         currentStatus={statusFilter}
-        onMutated={() => loadLessons()}
-        onRefresh={() => loadLessons()}
+        onMutated={mutateLessons}
+        onRefresh={() => loadLessons(lessonState)}
         isRefreshing={lessonsRefreshing}
         serverPage={lessonData.page}
         serverPageSize={lessonData.pageSize}
@@ -750,8 +820,8 @@ export default function TrainingPage() {
         filtersActive={filtersActive}
         currentSearch={searchTerm}
         currentStatus={statusFilter}
-        onMutated={() => loadQuizzes()}
-        onRefresh={() => loadQuizzes()}
+        onMutated={mutateQuizzes}
+        onRefresh={() => loadQuizzes(quizState)}
         isRefreshing={quizzesRefreshing}
         serverPage={quizData.page}
         serverPageSize={quizData.pageSize}
@@ -760,6 +830,8 @@ export default function TrainingPage() {
           void loadQuizzes(st);
         }}
       />
+      </>
+      )}
     </div>
   );
 }
