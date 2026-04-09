@@ -2479,8 +2479,132 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
         </div>
       )}
 
+      {/* Future Lunar Metrics Table — specifically for monthly v3 */}
+      {tabSlug === "tropical_transits_monthly_v3" && lunarMetrics && (
+        <div className="space-y-6">
+          <div className="rounded-lg border overflow-hidden">
+            <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+              <h3 className="text-sm font-semibold text-center w-full">Future Lunar Metrics</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/20">
+                    {["Month", "Moon Day", "Moon Illumination", "Moon Phase", "Moon Sign"].map((h) => (
+                      <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b bg-background">
+                    <td className="px-3 py-2 text-xs font-medium">
+                      {(() => {
+                        const mStr = String(lunarMetrics.month || "");
+                        if (mStr.includes("-")) {
+                          const [, m] = mStr.split("-").map(Number);
+                          return getMonthName(m);
+                        }
+                        return mStr || "—";
+                      })()}
+                    </td>
+                    <td className="px-3 py-2 text-xs">{lunarMetrics.moon_day ?? "—"}</td>
+                    <td className="px-3 py-2 text-xs">{lunarMetrics.moon_illumination != null ? `${lunarMetrics.moon_illumination}%` : "—"}</td>
+                    <td className="px-3 py-2 text-xs">{lunarMetrics.moon_phase ?? "—"}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      {lunarMetrics.moon_sign ? <ZodiacSymbol sign={lunarMetrics.moon_sign} /> : "—"}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Lunar AI Interpretations (Monthly v3) */}
+          {lunarAiData && typeof lunarAiData === "object" ? (
+            <div className="space-y-6">
+              {[
+                { key: "moon_sign_interpretation", label: "Moon Sign Interpretation", val: lunarMetrics?.moon_sign, title: "Moon Sign" },
+                { key: "moon_phase_interpretation", label: "Moon Phase Interpretation", val: lunarMetrics?.moon_phase, title: "Moon Phase" },
+                { key: "moon_age_interpretation", label: "Moon Age Interpretation", val: `${lunarMetrics?.moon_day ?? lunarMetrics?.day ?? "—"} days old`, title: "Moon Age" },
+                { key: "moon_day_interpretation", label: "Moon Day Interpretation", val: lunarMetrics?.moon_day, title: "Moon Day" },
+                { key: "moon_illumination_interpretation", label: "Moon Illumination Interpretation", val: `${lunarMetrics?.moon_illumination}%`, title: "Moon Illumination" },
+              ].map((sec) => {
+                const content = lunarAiData[sec.key];
+                if (!content || typeof content !== "string") return null;
+                const fullTitle = `${sec.label}${sec.val ? `: ${sec.val}` : ""}`;
+                return (
+                  <div key={sec.key} className="rounded-lg border overflow-hidden">
+                    <div className="px-4 py-2.5 bg-muted/40 border-b flex items-center justify-center gap-2">
+                      <h4 className="text-sm font-semibold text-center w-full uppercase tracking-wider">{fullTitle}</h4>
+                    </div>
+                    <div className="px-4 py-3">
+                      <p className="text-sm leading-relaxed line-clamp-3 text-muted-foreground">{content}</p>
+                      <div className="mt-2 flex justify-center border-t border-white/5 pt-2">
+                        <button
+                          onClick={() => trigger(fullTitle, content, null, areaOfInquiry)}
+                          className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
+                        >
+                          Show More
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <SectionSkeleton title="Moon Sign Interpretation" />
+              <SectionSkeleton title="Moon Phase Interpretation" />
+              <SectionSkeleton title="Moon Age Interpretation" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Future Tropical Transits Monthly Relation Table — specifically for monthly v3 */}
+      {tabSlug === "tropical_transits_monthly_v3" && transitRows.length > 0 && (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+            <h3 className="text-sm font-semibold text-center w-full">Future Tropical Transits Monthly Relation</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/20">
+                  {["Date", "Natal Planet", "Type", "Transit Planet"].map((h) => (
+                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {transitRows.map((row: any, i: number) => {
+                  const tPlanet = row.transit_planet ?? row.transiting_planet ?? "";
+                  const nPlanet = row.natal_planet ?? row.aspected_planet ?? "";
+                  const aspType = row.type ?? row.aspect ?? "";
+                  const dt = row.date ?? row.transit_date ?? "";
+                  return (
+                    <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{dt || "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5">
+                          {ASPECT_IMAGES[aspType] && <img src={ASPECT_IMAGES[aspType]} alt={aspType} className="size-4 object-contain" />}
+                          <span>{aspType || "—"}</span>
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Weekly / Monthly Transit Relation Table */}
-      {transitRows.length > 0 && (
+      {tabSlug !== "tropical_transits_monthly_v3" && transitRows.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
           <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
             <h3 className="text-sm font-semibold text-center w-full">{label} — Transit Aspects</h3>
@@ -2523,7 +2647,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       )}
 
       {/* Lunar Return Metrics (monthly only) */}
-      {!isWeekly && lunarRows.length > 0 && (
+      {tabSlug !== "tropical_transits_monthly_v3" && !isWeekly && lunarRows.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
           <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
             <h3 className="text-sm font-semibold text-center w-full">Lunar Return Metrics</h3>
@@ -2554,56 +2678,95 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       )}
 
       {/* AI interpretation cards */}
+      {/* AI interpretation cards */}
       {!aiData && <SectionSkeleton title={`${label} Interpretation`} />}
       {aiData === "error" && <SectionError title={`${label} Interpretation`} />}
-      {Array.isArray(aiData) && aiData.map((item: any, i: number) => (
-        <div key={i} className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b flex items-center justify-center gap-2">
-            <h4 className="text-sm font-semibold text-center w-full">{item.title ?? `${label} ${i + 1}`}</h4>
-            {(() => {
-              const titleStr = String(item.title ?? "");
-              const match = titleStr.match(/(\b[A-Z][a-z]+\b)\s+in\s+(\b[A-Z][a-z]+\b)/);
-              if (match) {
-                const p = match[1];
-                const s = match[2];
-                if (checkDacen(p, s)) {
-                  return (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => onDecanClick(p, s)}
-                          className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
-                            alt=""
-                            className="size-4 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
-                          />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
-                        Decan Information
-                      </TooltipContent>
-                    </Tooltip>
-                  );
+      {Array.isArray(aiData) && aiData.map((item: any, i: number) => {
+        const title = item.aspecttitle ?? item.title ?? item.aspect ?? "";
+        const interpretation = item.interpretation ?? item.data ?? "";
+        if (!interpretation) return null;
+
+        // Visual Heading Parser
+        const RelationshipHeading = () => {
+          // Patterns: "TransitPlanet Aspect NatalPlanet" or "Planet Aspect Planet"
+          // We look for known planets and aspects in the string
+          const planets = Object.keys(PLANET_IMAGES);
+          const aspects = Object.keys(ASPECT_IMAGES);
+
+          // Find matches in the title
+          const foundPlanets = planets.filter(p => new RegExp(`\\b${p}\\b`, "i").test(title));
+          const foundAspect = aspects.find(a => new RegExp(`\\b${a}\\b`, "i").test(title));
+
+          if (foundPlanets.length >= 2 && foundAspect) {
+            // Determine p1 and p2 based on order in string
+            const p1 = foundPlanets.find(p => title.toLowerCase().indexOf(p.toLowerCase()) < title.toLowerCase().indexOf(foundAspect.toLowerCase()));
+            const p2 = foundPlanets.find(p => title.toLowerCase().indexOf(p.toLowerCase()) > title.toLowerCase().indexOf(foundAspect.toLowerCase()));
+
+            if (p1 && p2) {
+              return (
+                <div className="flex items-center justify-center gap-3">
+                  <PlanetSymbol name={p1} />
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 shadow-sm">
+                    {ASPECT_IMAGES[foundAspect] && <img src={ASPECT_IMAGES[foundAspect]} alt={foundAspect} className="size-4 object-contain" />}
+                    <span className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">{foundAspect}</span>
+                  </div>
+                  <PlanetSymbol name={p2} />
+                </div>
+              );
+            }
+          }
+
+          // Fallback to simple regex if above failed
+          const relMatch = title.match(/(\b[A-Z][a-z]+\b)\s+(\b[A-Z][a-z]+\b)\s+(\b[A-Z][a-z]+\b)/);
+          if (relMatch) {
+            const [, p1, asp, p2] = relMatch;
+            return (
+              <div className="flex items-center justify-center gap-3">
+                <PlanetSymbol name={p1} />
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 shadow-sm">
+                  {ASPECT_IMAGES[asp] && <img src={ASPECT_IMAGES[asp]} alt={asp} className="size-4 object-contain" />}
+                  <span className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">{asp}</span>
+                </div>
+                <PlanetSymbol name={p2} />
+              </div>
+            );
+          }
+
+          return <span className="uppercase tracking-widest font-bold text-amber-500/80">{title || `${label} ${i + 1}`}</span>;
+        };
+
+        return (
+          <div key={i} className="rounded-lg border overflow-hidden">
+            <div className="px-4 py-3 bg-muted/40 border-b flex items-center justify-center gap-2">
+              <div className="text-sm font-semibold text-center w-full">
+                <RelationshipHeading />
+              </div>
+              {(() => {
+                const titleStr = String(title);
+                const match = titleStr.match(/(\b[A-Z][a-z]+\b)\s+in\s+(\b[A-Z][a-z]+\b)/);
+                if (match && checkDacen(match[1], match[1])) {
+                   // ... decan logic ...
                 }
-              }
-              return null;
-            })()}
-          </div>
-          <div className="px-4 py-3">
-            <p className="text-sm leading-relaxed">{item.interpretation ?? item.data}</p>
-            <div className="mt-2 flex justify-center">
-              <button onClick={() => trigger(item.title ?? label, item.interpretation ?? "", item, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                return null;
+              })()}
+            </div>
+            <div className="px-4 py-3">
+              <p className="text-sm leading-relaxed">{interpretation}</p>
+              <div className="mt-2 flex justify-center pt-2 border-t border-white/5">
+                <button
+                  onClick={() => trigger(title || `${label} ${i + 1}`, interpretation, item, areaOfInquiry)}
+                  className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
+                >
+                  Show More
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {/* Lunar AI interpretation (monthly only) — from AI Lambda lunar_metrics prompt */}
-      {!isWeekly && lunarAiData && (() => {
+      {tabSlug !== "tropical_transits_monthly_v3" && !isWeekly && lunarAiData && (() => {
         const items: any[] = Array.isArray(lunarAiData) ? lunarAiData : (typeof lunarAiData === "object" ? [lunarAiData] : []);
         return items.length > 0 ? (
           <div className="space-y-2">

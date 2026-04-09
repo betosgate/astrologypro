@@ -64,6 +64,9 @@ export async function PATCH(
   if (body.stripe_price_id !== undefined) {
     updates.stripe_price_id = body.stripe_price_id === null ? null : String(body.stripe_price_id).trim() || null;
   }
+  if (body.stripe_price_name !== undefined) {
+    updates.stripe_price_name = body.stripe_price_name === null ? null : String(body.stripe_price_name).trim() || null;
+  }
   if (body.description !== undefined) {
     updates.description = body.description === null ? null : String(body.description).trim() || null;
   }

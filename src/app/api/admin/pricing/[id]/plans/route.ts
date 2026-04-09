@@ -98,6 +98,7 @@ export async function POST(
       amount,
       mrp,
       stripe_price_id: stripePriceId,
+      stripe_price_name: typeof body.stripe_price_name === "string" ? body.stripe_price_name.trim() || null : null,
       currency,
       description,
       sort_order: sortOrder,
