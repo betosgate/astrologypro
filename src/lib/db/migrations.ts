@@ -138,7 +138,7 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
     title: "Calendar provider credentials (Google + Microsoft)",
     description:
       "Creates google_api_keys and microsoft_api_keys tables — admin-managed key-value storage for per-provider OAuth client credentials (client_id / client_secret / redirect_uri / tenant_id). Service-role only RLS; reads go through the admin Supabase client. Separate from calendar_connections (per-user tokens). Runtime read path in src/lib/calendar/provider-credentials.ts falls back to the existing env vars if no row is set, so deploy-time behavior does not change until an admin populates the tables via /admin/calendar-config.",
-    sortKey: "20260409000118`",
+    sortKey: "20260409000118",
     sql: MIG_20260409000118,
   },
 };

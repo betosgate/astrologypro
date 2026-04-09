@@ -298,7 +298,7 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
     }
 
     fetchSlots();
-  }, [requestedTimeIso, selectedDate, diviner.id, service.duration_minutes]);
+  }, [requestedTimeIso, selectedDate, diviner.id, service.duration_minutes, service.id]);
 
   function canProceed(): boolean {
     switch (step) {
