@@ -3619,6 +3619,12 @@ export default function AdminHoroscopePage() {
                 ai_interpretations: { ...prevAi, [p.key]: parsed },
               };
             });
+            // Mirror into `collected` so the save-results call can access
+            // the final AI data without reading React state.
+            collected.ai_interpretations = {
+              ...(collected.ai_interpretations as Record<string, unknown> ?? {}),
+              [p.key]: parsed,
+            };
           } catch {
             setResults((prev) => {
               const prevAi = prev?.ai_interpretations ?? {};
@@ -3757,6 +3763,37 @@ export default function AdminHoroscopePage() {
           }
         });
         await Promise.allSettled(aiPromises);
+      }
+
+      // ── Save results to the legacy NestJS store (fire-and-forget) ──────
+      // The spec for tropical_transits_monthly_v3 (and potentially other tabs
+      // in the future) calls for persisting the generated AI interpretations
+      // and raw data to avoid repeated AI costs. The external endpoint is the
+      // legacy CloudFront-fronted NestJS API. We fire-and-forget because a
+      // save failure should not block the user from seeing their results.
+      if (currentTab.slug === "tropical_transits_monthly_v3") {
+        try {
+          const savePayload = {
+            toolname: "tropical_transits_monthly_v3",
+            ai_response: collected.ai_interpretations ?? {},
+            formData: birth1,
+            astro_api_data: collected.natal_chart_data ?? {},
+            freeNatalWheelChart: natalSvg ?? "",
+            freeNatalWheelChartForTrasit: natalSvgTransit ?? "",
+          };
+          fetch(
+            "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(savePayload),
+            },
+          ).catch(() => {
+            /* fire-and-forget — save failure does not block the user */
+          });
+        } catch {
+          /* ignore save errors */
+        }
       }
 
       addProgress("Done ✓");
