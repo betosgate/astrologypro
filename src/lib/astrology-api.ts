@@ -183,7 +183,7 @@ export async function callAstroAiApi(
   // Angular sends this automatically as a browser app; we must add it explicitly server-side.
   const origin =
     process.env.NEXT_PUBLIC_SITE_URL ||
-    "https://www.backofficeportal.divineinfinitebeing.com";
+    "https://astrologypro.com";
 
   let lastError: unknown;
   const maxRetries = 1;
