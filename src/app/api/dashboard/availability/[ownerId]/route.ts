@@ -25,9 +25,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ow
   const { ownerId: id } = await params;
   const body = await req.json();
   const admin = createAdminClient();
+
+  if (body.service_id) {
+    const { data: service } = await admin
+      .from("services")
+      .select("id")
+      .or(`owner_id.eq.${divinerId},diviner_id.eq.${divinerId}`)
+      .eq("id", body.service_id)
+      .maybeSingle();
+
+    if (!service) {
+      return NextResponse.json({ error: "Selected service not found." }, { status: 422 });
+    }
+  }
+
   const { data, error } = await admin
     .from("availability_templates")
-    .update({ ...body, updated_at: new Date().toISOString() })
+    .update({ ...body, service_id: body.service_id || null, updated_at: new Date().toISOString() })
     .eq("id", id)
     .eq("owner_id", divinerId)
     .select()

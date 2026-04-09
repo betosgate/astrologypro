@@ -2,22 +2,39 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Calendar, Clock, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { Clock, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface AvailabilityPreviewProps {
   divinerId: string;
   username: string;
+  serviceId: string;
+  serviceSlug: string;
+  durationMinutes: number;
+  serviceName?: string;
 }
 
 interface TimeSlot {
   start: string;
   end: string;
+  availabilityId?: string;
+  availabilityTitle?: string;
+  availabilityDescription?: string | null;
+  availabilityTimezone?: string;
+  availabilityStartTime?: string;
+  availabilityEndTime?: string;
 }
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-export function AvailabilityPreview({ divinerId, username }: AvailabilityPreviewProps) {
+export function AvailabilityPreview({
+  divinerId,
+  username,
+  serviceId,
+  serviceSlug,
+  durationMinutes,
+  serviceName,
+}: AvailabilityPreviewProps) {
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -36,6 +53,8 @@ export function AvailabilityPreview({ divinerId, username }: AvailabilityPreview
     async function fetchMonthAvailability() {
       setLoadingDates(true);
       const dates = new Set<string>();
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
 
       // Check each day of the month
       const year = currentMonth.getFullYear();
@@ -45,10 +64,10 @@ export function AvailabilityPreview({ divinerId, username }: AvailabilityPreview
       const promises = [];
       for (let d = 1; d <= daysInMonth; d++) {
         const date = new Date(year, month, d);
-        if (date < today) continue;
+        if (date < todayStart) continue;
         const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
         promises.push(
-          fetch(`/api/availability/${divinerId}?date=${dateStr}&duration=60`)
+          fetch(`/api/availability/${divinerId}?date=${dateStr}&duration=${durationMinutes}&serviceId=${serviceId}`)
             .then((r) => r.ok ? r.json() : null)
             .then((data) => {
               if (data && Array.isArray(data) && data.length > 0) {
@@ -68,18 +87,29 @@ export function AvailabilityPreview({ divinerId, username }: AvailabilityPreview
       setLoadingDates(false);
     }
     fetchMonthAvailability();
-  }, [divinerId, currentMonth]);
+  }, [divinerId, currentMonth, durationMinutes, serviceId]);
 
   // Fetch time slots when a date is selected
   useEffect(() => {
     if (!selectedDate) return;
-    setLoadingSlots(true);
-    fetch(`/api/availability/${divinerId}?date=${selectedDate}&duration=60`)
-      .then((r) => r.ok ? r.json() : [])
-      .then((data) => setTimeSlots(Array.isArray(data) ? data : []))
-      .catch(() => setTimeSlots([]))
-      .finally(() => setLoadingSlots(false));
-  }, [selectedDate, divinerId]);
+
+    async function fetchSlots() {
+      setLoadingSlots(true);
+      try {
+        const response = await fetch(
+          `/api/availability/${divinerId}?date=${selectedDate}&duration=${durationMinutes}&serviceId=${serviceId}`
+        );
+        const data = response.ok ? await response.json() : [];
+        setTimeSlots(Array.isArray(data) ? data : []);
+      } catch {
+        setTimeSlots([]);
+      } finally {
+        setLoadingSlots(false);
+      }
+    }
+
+    fetchSlots();
+  }, [selectedDate, divinerId, durationMinutes, serviceId]);
 
   // Calendar grid
   const year = currentMonth.getFullYear();
@@ -189,17 +219,36 @@ export function AvailabilityPreview({ divinerId, username }: AvailabilityPreview
               <div className="size-4 animate-spin rounded-full border-2 border-[#c9a84c]/30 border-t-[#c9a84c]" />
             </div>
           ) : timeSlots.length > 0 ? (
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {timeSlots.map((slot) => (
-                <Link
-                  key={slot.start}
-                  href={`/${username}/book/natal-chart?date=${selectedDate}&time=${encodeURIComponent(slot.start)}`}
-                  className="rounded-lg border border-white/8 bg-white/5 px-2 py-2 text-center text-xs font-medium text-[#f5f0e8] transition-all hover:border-[#c9a84c]/30 hover:bg-[#c9a84c]/10 hover:text-[#c9a84c]"
-                >
-                  {formatTime(slot.start)}
-                </Link>
-              ))}
-            </div>
+            <>
+              {timeSlots[0]?.availabilityTitle && (
+                <div className="mb-3 rounded-lg border border-[#c9a84c]/20 bg-[#c9a84c]/8 px-3 py-2 text-left">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#c9a84c]">
+                    {timeSlots[0].availabilityTitle}
+                  </p>
+                  <p className="mt-1 text-xs text-[#b8bcd0]/70">
+                    {timeSlots[0].availabilityStartTime} - {timeSlots[0].availabilityEndTime}
+                    {timeSlots[0].availabilityTimezone ? ` • ${timeSlots[0].availabilityTimezone.replace(/_/g, " ")}` : ""}
+                  </p>
+                  {timeSlots[0].availabilityDescription && (
+                    <p className="mt-1 text-xs text-[#b8bcd0]/60">
+                      {timeSlots[0].availabilityDescription}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {timeSlots.map((slot) => (
+                  <Link
+                    key={slot.start}
+                    href={`/${username}/book/${serviceSlug}?date=${selectedDate}&time=${encodeURIComponent(slot.start)}`}
+                    className="rounded-lg border border-white/8 bg-white/5 px-2 py-2 text-center text-xs font-medium text-[#f5f0e8] transition-all hover:border-[#c9a84c]/30 hover:bg-[#c9a84c]/10 hover:text-[#c9a84c]"
+                  >
+                    {formatTime(slot.start)}
+                  </Link>
+                ))}
+              </div>
+            </>
           ) : (
             <p className="py-2 text-center text-xs text-[#b8bcd0]/40">No slots available this day</p>
           )}
@@ -209,10 +258,10 @@ export function AvailabilityPreview({ divinerId, username }: AvailabilityPreview
       {/* See all link */}
       <div className="mt-3 text-center">
         <Link
-          href={`/${username}/book/natal-chart`}
+          href={`/${username}/book/${serviceSlug}`}
           className="inline-flex items-center gap-1.5 text-xs font-medium text-[#c9a84c]/70 transition-colors hover:text-[#c9a84c]"
         >
-          See All Available Times & Book
+          See All {serviceName ?? "Available"} Times & Book
           <ArrowRight className="size-3" />
         </Link>
       </div>
