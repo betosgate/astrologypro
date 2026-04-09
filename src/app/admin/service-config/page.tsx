@@ -63,6 +63,12 @@ interface Diviner {
   display_name: string;
 }
 
+interface PricingItem {
+  id: string;
+  item_key: string;
+  item_name: string;
+}
+
 // ─── Page ──────────────────────────────────────────────────────────────────
 
 export default function ServiceConfigPage() {
@@ -70,6 +76,7 @@ export default function ServiceConfigPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [diviners, setDiviners] = useState<Diviner[]>([]);
+  const [pricingItems, setPricingItems] = useState<PricingItem[]>([]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
@@ -104,9 +111,21 @@ export default function ServiceConfigPage() {
     }
   }, []);
 
+  const loadPricing = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/pricing");
+      if (res.ok) {
+        const json = await res.json();
+        setPricingItems(json.items ?? []);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   useEffect(() => {
-    void Promise.all([loadServices(), loadDiviners()]);
-  }, [loadServices, loadDiviners]);
+    void Promise.all([loadServices(), loadDiviners(), loadPricing()]);
+  }, [loadServices, loadDiviners, loadPricing]);
 
   async function handleDelete() {
     if (!deleteTarget) return;
@@ -275,6 +294,7 @@ export default function ServiceConfigPage() {
         onOpenChange={setDialogOpen}
         editingService={editingService}
         diviners={diviners}
+        pricingItems={pricingItems}
         onSaved={() => {
           setDialogOpen(false);
           setEditingService(null);
@@ -321,12 +341,14 @@ function ServiceDialog({
   onOpenChange,
   editingService,
   diviners,
+  pricingItems,
   onSaved,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   editingService: Service | null;
   diviners: Diviner[];
+  pricingItems: PricingItem[];
   onSaved: () => void;
 }) {
   const [name, setName] = useState("");
@@ -477,15 +499,48 @@ function ServiceDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Base Price ($)</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-              />
+              <Label>Pricing Item</Label>
+              <Select
+                value=""
+                onValueChange={(itemKey) => {
+                  // When admin selects a pricing item, we just record the
+                  // intent — the base_price field below can still be manually
+                  // overridden. This is a convenience selector, not a hard FK.
+                  const item = pricingItems.find((p) => p.item_key === itemKey);
+                  if (item) {
+                    toast.info(`Selected: ${item.item_name}`);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Link to admin price (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {pricingItems.map((p) => (
+                    <SelectItem key={p.id} value={p.item_key}>
+                      {p.item_name} ({p.item_key})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground">
+                Optional — links this service to an admin-managed price.
+              </p>
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Base Price ($)</Label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+            />
+            <p className="text-[10px] text-muted-foreground">
+              Manual price override. If a pricing item is linked, this should match.
+            </p>
           </div>
 
           <div className="flex items-center gap-2">

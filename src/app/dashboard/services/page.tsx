@@ -18,11 +18,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  ActiveToggle,
-  FeaturedToggle,
-} from "@/components/dashboard/service-toggles";
-import { ServiceEditSheet } from "@/components/dashboard/service-edit-sheet";
 import { Sparkles } from "lucide-react";
 
 export const metadata = {
@@ -58,10 +53,12 @@ export default async function ServicesPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Services</h1>
           <p className="text-muted-foreground">
-            Manage the services you offer to clients.
+            Services assigned to you by admin. Contact your administrator to
+            make changes.
           </p>
         </div>
-        <ServiceEditSheet mode="create" divinerId={diviner.id} />
+        {/* Create button removed — services are now managed by admin via
+            /admin/service-config. See souradip/admin-module/task 04. */}
       </div>
 
       <Card>
@@ -78,12 +75,12 @@ export default async function ServicesPage() {
                 <Sparkles className="size-7 text-muted-foreground" />
               </div>
               <div>
-                <h3 className="text-lg font-medium">No services yet</h3>
+                <h3 className="text-lg font-medium">No services assigned</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Add your first service to start accepting client bookings.
+                  Your admin has not yet assigned any services to your account.
+                  Contact your administrator for assistance.
                 </p>
               </div>
-              <ServiceEditSheet mode="create" divinerId={diviner.id} />
             </div>
           ) : (
             <Table>
@@ -94,8 +91,7 @@ export default async function ServicesPage() {
                   <TableHead>Duration</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Featured</TableHead>
-                  <TableHead>Active</TableHead>
-                  <TableHead className="w-[60px]">Actions</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -116,28 +112,25 @@ export default async function ServicesPage() {
                       {formatCurrency(service.base_price)}
                     </TableCell>
                     <TableCell>
-                      <FeaturedToggle
-                        serviceId={service.id}
-                        featured={service.is_featured ?? false}
-                      />
+                      {service.is_featured ? (
+                        <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/30">
+                          Featured
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
-                      <ActiveToggle
-                        serviceId={service.id}
-                        active={service.is_active ?? true}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <ServiceEditSheet
-                        service={{
-                          id: service.id,
-                          name: service.name,
-                          description: service.description,
-                          duration_minutes: service.duration_minutes,
-                          base_price: service.base_price,
-                          is_featured: service.is_featured ?? false,
-                        }}
-                      />
+                      <Badge
+                        variant="outline"
+                        className={
+                          service.is_active
+                            ? "bg-green-500/10 text-green-500"
+                            : "bg-red-500/10 text-red-500"
+                        }
+                      >
+                        {service.is_active ? "Active" : "Inactive"}
+                      </Badge>
                     </TableCell>
                   </TableRow>
                 ))}
