@@ -794,12 +794,12 @@ export default function AdminPricingPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-xs uppercase text-muted-foreground">
-                  <th className="py-2">plan_id</th>
-                  <th className="py-2">name</th>
-                  <th className="py-2 text-right">amount</th>
-                  <th className="py-2 text-right">mrp</th>
-                  <th className="py-2">stripe price</th>
-                  <th className="py-2">status</th>
+                  <th className="py-2 pr-3">name</th>
+                  <th className="py-2 pr-3 text-right">amount</th>
+                  <th className="py-2 pr-3 text-right">mrp</th>
+                  <th className="py-2 pr-3">currency</th>
+                  <th className="py-2 pr-3">stripe price id</th>
+                  <th className="py-2 pr-3">status</th>
                   <th className="py-2 text-center">fields</th>
                   <th className="py-2 text-center">toggle</th>
                   <th className="py-2 text-center">actions</th>
@@ -809,14 +809,14 @@ export default function AdminPricingPage() {
                 {plans.map((plan) => (
                   <React.Fragment key={plan.id}>
                   <tr className="border-b last:border-0">
-                    <td className="py-2 font-mono text-xs max-w-[140px] truncate" title={plan.plan_id}>{plan.plan_id}</td>
-                    <td className="py-2">
-                      <div>{plan.display_name}</div>
-                      {plan.description && <div className="text-xs text-muted-foreground truncate max-w-[200px]" title={plan.description}>{plan.description}</div>}
+                    <td className="py-2 pr-3">
+                      <div className="font-medium">{plan.display_name}</div>
+                      {plan.description && <div className="text-xs text-muted-foreground truncate max-w-[220px]" title={plan.description}>{plan.description}</div>}
                     </td>
-                    <td className="py-2 text-right tabular-nums">{plan.currency} {plan.amount.toLocaleString()}</td>
-                    <td className="py-2 text-right tabular-nums text-muted-foreground">{plan.mrp !== null ? `${plan.currency} ${plan.mrp.toLocaleString()}` : "\u2014"}</td>
-                    <td className="py-2 font-mono text-xs max-w-[120px] truncate" title={plan.stripe_price_id ?? ""}>{plan.stripe_price_id ?? "\u2014"}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums whitespace-nowrap">{plan.amount.toLocaleString()}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground whitespace-nowrap">{plan.mrp !== null ? plan.mrp.toLocaleString() : "\u2014"}</td>
+                    <td className="py-2 pr-3 text-xs">{plan.currency}</td>
+                    <td className="py-2 pr-3 font-mono text-xs max-w-[180px] truncate" title={plan.stripe_price_id ?? ""}>{plan.stripe_price_id ?? "\u2014"}</td>
                     <td className="py-2">
                       <Badge variant="outline" className={plan.is_active ? "border-emerald-500/40 text-emerald-700" : "border-red-500/40 text-red-600"}>
                         {plan.is_active ? "active" : "inactive"}
