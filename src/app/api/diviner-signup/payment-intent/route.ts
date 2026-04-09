@@ -67,15 +67,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Read the live course price.
-  const { data: pricing } = await admin
+  // Read the live course price from pricing_plans.
+  // Find the item first, then its first active plan.
+  const { data: item } = await admin
     .from("global_pricing")
-    .select("price, currency, item_name")
+    .select("id, item_name")
     .eq("item_key", COURSE_ITEM_KEY)
     .eq("is_active", true)
     .maybeSingle();
 
-  if (!pricing) {
+  if (!item) {
     return NextResponse.json(
       {
         error:
@@ -85,15 +86,34 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const currency = (pricing.currency as string).toLowerCase();
-  const multiplier = SMALLEST_UNIT_MULTIPLIER[pricing.currency as string];
+  const { data: plan } = await admin
+    .from("pricing_plans")
+    .select("amount, currency, display_name, stripe_price_id")
+    .eq("item_id", item.id)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (!plan) {
+    return NextResponse.json(
+      {
+        error:
+          "No active plan found for this course. An admin must create a plan under /admin/pricing.",
+      },
+      { status: 404 },
+    );
+  }
+
+  const currency = (plan.currency as string).toLowerCase();
+  const multiplier = SMALLEST_UNIT_MULTIPLIER[plan.currency as string];
   if (!multiplier) {
     return NextResponse.json(
-      { error: `Unsupported currency: ${pricing.currency}` },
+      { error: `Unsupported currency: ${plan.currency}` },
       { status: 500 },
     );
   }
-  const amount = Math.round(Number(pricing.price) * multiplier);
+  const amount = Math.round(Number(plan.amount) * multiplier);
 
   try {
     const intent = await stripe.paymentIntents.create({
@@ -101,7 +121,7 @@ export async function POST(req: NextRequest) {
       currency,
       receipt_email: email,
       automatic_payment_methods: { enabled: true },
-      description: pricing.item_name ?? "Professional Divination Course",
+      description: plan.display_name ?? item.item_name ?? "Professional Divination Course",
       metadata: {
         type: "diviner_signup",
         user_id: userId,

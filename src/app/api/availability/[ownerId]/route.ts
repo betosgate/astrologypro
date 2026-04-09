@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAvailableSlots } from "@/lib/availability";
 import { getAvailableSlotsFromGoogle } from "@/lib/google-calendar";
@@ -15,6 +14,7 @@ export async function GET(
   const { searchParams } = request.nextUrl;
   const date = searchParams.get("date");
   const duration = searchParams.get("duration");
+  const serviceId = searchParams.get("serviceId");
 
   if (!date || !duration) {
     return NextResponse.json(
@@ -40,7 +40,6 @@ export async function GET(
   }
 
   try {
-    const supabase = await createClient();
     const admin = createAdminClient();
 
     // Fetch diviner timezone
@@ -67,30 +66,39 @@ export async function GET(
     const isGoogleConnected = connections?.some(c => c.provider === "google");
     const isOutlookConnected = connections?.some(c => c.provider === "microsoft");
 
-    // Fetch weekly availability slots (active only)
-    const { data: weeklySlots } = await supabase
+    // New date-ranged schedules created from the dashboard.
+    const { data: templates } = await admin
+      .from("availability_templates")
+      .select("id, title, service_id, start_date, end_date, weekdays, start_time, end_time, timezone, duration_minutes, description, is_active")
+      .or(`owner_id.eq.${ownerId},diviner_id.eq.${ownerId}`)
+      .eq("is_active", true);
+
+    // Legacy recurring slots kept as a fallback while older data is still present.
+    const { data: weeklySlots } = await admin
       .from("availability_slots")
       .select("day_of_week, start_time, end_time")
-      .eq("owner_id", ownerId)
+      .or(`owner_id.eq.${ownerId},diviner_id.eq.${ownerId}`)
       .eq("is_active", true);
 
     // Fetch overrides for the given date
-    const { data: overrides } = await supabase
+    const { data: overrides } = await admin
       .from("availability_overrides")
       .select("date, is_available, start_time, end_time")
-      .eq("owner_id", ownerId)
+      .or(`owner_id.eq.${ownerId},diviner_id.eq.${ownerId}`)
       .eq("date", date);
 
-    // Fetch existing bookings for the date
-    const dayStart = `${date}T00:00:00`;
-    const dayEnd = `${date}T23:59:59`;
+    // Query a widened UTC range so timezone-converted schedule windows
+    // near midnight are still blocked correctly.
+    const selectedDayUtc = new Date(`${date}T00:00:00.000Z`);
+    const queryStart = new Date(selectedDayUtc.getTime() - 24 * 60 * 60 * 1000).toISOString();
+    const queryEnd = new Date(selectedDayUtc.getTime() + 48 * 60 * 60 * 1000).toISOString();
 
-    const { data: bookings } = await supabase
+    const { data: bookings } = await admin
       .from("bookings")
       .select("scheduled_at, duration_minutes")
       .eq("owner_id", ownerId)
-      .gte("scheduled_at", dayStart)
-      .lte("scheduled_at", dayEnd)
+      .gte("scheduled_at", queryStart)
+      .lte("scheduled_at", queryEnd)
       .in("status", ["pending", "confirmed", "in_progress"]);
 
     // Also treat active holds as booked (prevents race-condition double-booking)
@@ -99,8 +107,8 @@ export async function GET(
       .select("scheduled_at, duration_minutes")
       .eq("owner_id", ownerId)
       .gt("expires_at", new Date().toISOString())
-      .gte("scheduled_at", dayStart)
-      .lte("scheduled_at", dayEnd);
+      .gte("scheduled_at", queryStart)
+      .lte("scheduled_at", queryEnd);
 
     // Fetch external calendar busy slots only when the diviner has connected
     // Each call is individually guarded and caught so a missing token never
@@ -109,7 +117,7 @@ export async function GET(
     try {
       const [googleBusy, outlookBusy] = await Promise.all([
         isGoogleConnected
-          ? getAvailableSlotsFromGoogle(ownerId, new Date(date)).catch(() => [] as { start: string; end: string }[])
+          ? getAvailableSlotsFromGoogle(ownerId, new Date(`${date}T12:00:00.000Z`)).catch(() => [] as { start: string; end: string }[])
           : Promise.resolve([] as { start: string; end: string }[]),
         isOutlookConnected
           ? getMsFreeBusy(ownerId, date).catch(() => [] as { start: string; end: string }[])
@@ -138,6 +146,21 @@ export async function GET(
 
     const slots = getAvailableSlots({
       date,
+      templates: (templates ?? []).map((template) => ({
+        id: template.id,
+        title: template.title,
+        serviceId: template.service_id ?? null,
+        startDate: template.start_date,
+        endDate: template.end_date,
+        weekdays: template.weekdays ?? [],
+        startTime: template.start_time,
+        endTime: template.end_time,
+        timezone: template.timezone,
+        durationMinutes: template.duration_minutes,
+        description: template.description ?? null,
+        isActive: template.is_active,
+      })),
+      serviceId,
       weeklySlots: (weeklySlots ?? []).map((s) => ({
         dayOfWeek: s.day_of_week,
         startTime: s.start_time,

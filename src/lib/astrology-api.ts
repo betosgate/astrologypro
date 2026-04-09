@@ -27,9 +27,9 @@ function buildBasicAuthHeader(accessKey: string, secretKey: string): string {
  * Fetch resolved configuration from the centralised fetch-config API.
  */
 async function fetchConfigFromApi<T = any>(keys: string[]): Promise<T | null> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://astrologypro.com";
   const url = `${baseUrl}/api/astro/fetch-config`;
-  
+
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -83,12 +83,12 @@ export async function callAstrologyApi<T = unknown>(
   // Get credentials from the centralised config API
   console.log(`[astrology-api] Requesting credentials for endpoint: ${endpoint}`);
   const auth = await getAstrologyApiAuth();
-  
+
   if (!auth) {
     console.error("[astrology-api] CRITICAL: fetch-config returned null or failed. Cannot proceed with API call.");
     throw new Error("AstrologyAPI credentials not configured (fetch-config failed)");
   }
-  
+
   if (!auth.access_key || !auth.secret_key) {
     console.error("[astrology-api] CRITICAL: fetch-config returned object but keys are missing:", auth);
     throw new Error("AstrologyAPI credentials incomplete in fetch-config response");
@@ -183,7 +183,7 @@ export async function callAstroAiApi(
   // Angular sends this automatically as a browser app; we must add it explicitly server-side.
   const origin =
     process.env.NEXT_PUBLIC_SITE_URL ||
-    "https://www.backofficeportal.divineinfinitebeing.com";
+    "https://astrologypro.com";
 
   let lastError: unknown;
   const maxRetries = 1;

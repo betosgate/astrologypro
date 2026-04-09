@@ -28,6 +28,6 @@ export async function GET() {
     ownerId = user.id;
   }
 
-  const oauthUrl = getOAuthUrl(ownerId);
+  const oauthUrl = await getOAuthUrl(ownerId);
   return NextResponse.redirect(oauthUrl);
 }

@@ -16,14 +16,14 @@ const FREE_ASTRO_URL = "https://json.freeastrologyapi.com/western/natal-wheel-ch
  * astro_system_settings, the env var can be removed.
  */
 async function getFreeAstroKeys(): Promise<string[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://astrologypro.com";
   const configRes = await fetch(`${baseUrl}/api/astro/fetch-config`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ keys: ["FREEASTROLOGY_API_KEYS"] }),
+    body: JSON.stringify({ keys: ["FREEASTROLOGY_API"] }),
   });
   const config = await configRes.json().catch(() => ({}));
-  const raw = config?.FREEASTROLOGY_API_KEYS;
+  const raw = config?.FREEASTROLOGY_API.api_key;
 
   if (!raw || typeof raw !== "string") return [];
 

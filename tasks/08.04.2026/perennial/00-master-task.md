@@ -1,8 +1,8 @@
 # Perennial Signup Frontend Master Task
 
-- Completion Notes: See child task statuses. Tasks 01-04 are PARTIAL (functional shell + plan selection + member forms + add/remove members). Tasks 05-09 are DEFERRED — they need Stripe Couple price configured + a real Stripe Elements integration session.
-- Status: Partial (2026-04-08)
-- Date: 2026-04-08
+- Completion Notes: The Perennial signup flow is implemented across tasks 01-09, including route/UI, validation, review step, checkout handoff, pending-signup persistence, Stripe webhook provisioning, success page, payload normalization, and generated-credentials delivery. The earlier Stripe Couple env blocker has been cleared. Remaining follow-up is environment/ops verification: set `STRIPE_WEBHOOK_SECRET` in the target environment and run a real end-to-end Stripe webhook test.
+- Status: Implemented with environment follow-up (2026-04-09)
+- Date: 2026-04-09
 - Category: Perennial Signup
 - Owner: Frontend
 - Priority: P0
@@ -130,8 +130,9 @@ For the confirmed Perennial `Single / Couple / Family` model, one more dedicated
 Current status:
 
 1. `Single` price env exists
-2. `Family` price env exists
-3. `Couple` price env is missing and must be created/configured manually later
+2. `Couple` price env exists
+3. `Family` price env exists
+4. checkout still depends on the Stripe webhook secret being configured in the deployment environment
 
 The implementing AI must not assume the `Couple` plan can be fully wired without that env var and corresponding Stripe price.
 

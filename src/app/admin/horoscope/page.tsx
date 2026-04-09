@@ -268,17 +268,17 @@ async function callNatalWheel(body: Record<string, unknown>) {
   return r.json();
 }
 async function callDecanLookup(signs: string, planet: string) {
-  const r = await fetch("/api/astro-decan/fetch-decan-details", { 
-    method: "POST", 
-    headers: { "Content-Type": "application/json" }, 
-    body: JSON.stringify({ signs, planet }) 
+  const r = await fetch("/api/astro-decan/fetch-decan-details", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ signs, planet })
   });
-  if (!r.ok) { 
-    const d = await r.json(); 
-    throw new Error(d.message || d.error || r.statusText); 
+  if (!r.ok) {
+    const d = await r.json();
+    throw new Error(d.message || d.error || r.statusText);
   }
   const json = await r.json();
-  
+
   // The new API returns a single object in json.results.
   // The frontend component expects an array of DecanRow.
   const row = json.results;
@@ -639,23 +639,23 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
 
               {/* Pictorial Representation — Below the text */}
               {pictureUrl && (
-                <div className="p-6 flex flex-col items-center justify-center bg-slate-900/20 border-b border-white/5">
-                  <div className="relative group rounded-2xl border border-amber-500/20 overflow-hidden bg-slate-950 shadow-[0_0_50px_rgba(245,158,11,0.08)] transition-all hover:border-amber-500/40 max-w-lg w-full">
+                <div className="px-6 pb-6 pt-2 flex flex-col items-center justify-center bg-slate-900/20">
+                  <div className="relative group rounded-xl border border-amber-500/20 overflow-hidden bg-slate-950 shadow-[0_0_50px_rgba(245,158,11,0.08)] transition-all hover:border-amber-500/40 max-w-sm w-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={pictureUrl} alt={title} className="w-full h-auto max-h-[60vh] object-contain transition-transform duration-1000 group-hover:scale-[1.05]" />
+                    <img src={pictureUrl} alt={title} className="w-full h-auto max-h-[280px] object-contain transition-transform duration-1000 group-hover:scale-[1.05]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
 
                     {/* Maximize Icon */}
                     <button
                       onClick={() => setShowFullImage(true)}
-                      className="absolute top-4 right-4 size-10 flex items-center justify-center rounded-xl bg-slate-950/80 border border-white/10 text-amber-500/80 hover:text-amber-500 hover:border-amber-500/50 transition-all shadow-2xl backdrop-blur-md z-10 group/btn"
+                      className="absolute top-3 right-3 size-9 flex items-center justify-center rounded-lg bg-slate-950/80 border border-white/10 text-amber-500/80 hover:text-amber-500 hover:border-amber-500/50 transition-all shadow-2xl backdrop-blur-md z-10 group/btn"
                       title="Enlarge Cosmic Map"
                     >
-                      <Maximize2 className="size-5 transition-transform group-hover/btn:scale-125" />
+                      <Maximize2 className="size-4 transition-transform group-hover/btn:scale-110" />
                     </button>
 
-                    <div className="absolute bottom-4 left-0 right-0 text-center px-4">
-                      <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-500/50 mix-blend-overlay">Celestial Configuration</span>
+                    <div className="absolute bottom-3 left-0 right-0 text-center px-4">
+                      <span className="text-[8px] font-black uppercase tracking-[0.2em] text-amber-500/40 mix-blend-overlay">Celestial Configuration</span>
                     </div>
                   </div>
                 </div>
@@ -667,13 +667,10 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
 
 
       {pictureUrl && (
-        <ChartImageModal 
-          src={pictureUrl} 
-          open={showFullImage} 
-          onClose={() => {
-            setShowFullImage(false);
-            onClose();
-          }} 
+        <ChartImageModal
+          src={pictureUrl}
+          open={showFullImage}
+          onClose={() => setShowFullImage(false)}
         />
       )}
     </>
@@ -1120,6 +1117,39 @@ function DecanAiBlock({ title, data, loading }: { title: string; data: DecanAi |
   );
 }
 
+function DecanImage({ src, alt, onFull }: { src: string; alt: string; onFull: (src: string) => void }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className="relative group/img bg-slate-950 border-b border-white/5 flex justify-center p-4 min-h-[160px]">
+      {!loaded && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/40 animate-pulse gap-2">
+          <Loader2 className="size-6 animate-spin text-amber-500/40" />
+          <span className="text-[10px] uppercase tracking-widest text-amber-500/20 font-bold">Loading Vision...</span>
+        </div>
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        onLoad={() => setLoaded(true)}
+        className={cn(
+          "max-h-[320px] w-auto object-contain rounded-lg shadow-2xl transition-all duration-700 ease-in-out hover:scale-[1.02]",
+          loaded ? "opacity-100 scale-100" : "opacity-0 scale-95"
+        )}
+      />
+      {loaded && (
+        <button
+          className="absolute bottom-6 right-6 p-2 rounded-full bg-slate-900/80 border border-white/10 text-amber-500 hover:bg-slate-800 transition-all shadow-lg active:scale-90"
+          onClick={() => onFull(src)}
+          title="Open Full Image"
+        >
+          <Maximize2 className="size-4" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 function DecanModal({ planet, sign, open, onClose }: {
   planet: string; sign: string; open: boolean; onClose: () => void;
 }) {
@@ -1178,13 +1208,10 @@ function DecanModal({ planet, sign, open, onClose }: {
 
   return (
     <>
-      <ChartImageModal 
-        src={fullscreenImg || ""} 
-        open={!!fullscreenImg} 
-        onClose={() => {
-          setFullscreenImg(null);
-          onClose();
-        }} 
+      <ChartImageModal
+        src={fullscreenImg || ""}
+        open={!!fullscreenImg}
+        onClose={() => setFullscreenImg(null)}
       />
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
         <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
@@ -1238,21 +1265,11 @@ function DecanModal({ planet, sign, open, onClose }: {
 
                       {/* Decan Image if available */}
                       {row.decan_img && (
-                        <div className="relative group/img bg-slate-950 border-b border-white/5 flex justify-center p-4">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={row.decan_img}
-                            alt={`${ordinalDecan(row.decan)} Decan Imagery`}
-                            className="max-h-[320px] w-auto object-contain rounded-lg shadow-2xl transition-transform hover:scale-[1.02]"
-                          />
-                          <button
-                            className="absolute bottom-6 right-6 p-2 rounded-full bg-slate-900/80 border border-white/10 text-amber-500 hover:bg-slate-800 transition-all shadow-lg"
-                            onClick={() => setFullscreenImg(row.decan_img || null)}
-                            title="Open Full Image"
-                          >
-                            <Maximize2 className="size-4" />
-                          </button>
-                        </div>
+                        <DecanImage
+                          src={row.decan_img}
+                          alt={`${ordinalDecan(row.decan)} Decan Imagery`}
+                          onFull={(src) => setFullscreenImg(src)}
+                        />
                       )}
 
                       {/* Static labels row */}
@@ -2395,10 +2412,12 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
 
 // ─── Transit Section ──────────────────────────────────────────────────────────
 
-function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, areaOfInquiry, checkDacen, onDecanClick }: {
+function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, areaOfInquiry, checkDacen, onDecanClick, transitWheelSvg, setChartModal }: {
   data: any; lunarMetrics?: any; aiData: any; lunarAiData?: any; tabSlug: string; areaOfInquiry?: string;
   checkDacen: (p: string, s: string) => boolean;
   onDecanClick: (p: string, s: string) => void;
+  transitWheelSvg?: string | null;
+  setChartModal: (src: string) => void;
 }) {
   const { modal, trigger, close } = useShowMore();
   const isWeekly = tabSlug === "tropical_transits_weekly_v2";
@@ -2439,6 +2458,26 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
   return (
     <div className="space-y-4">
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
+
+      {/* Transit Chart Image Section */}
+      {transitWheelSvg && (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+            <h3 className="text-sm font-semibold text-center w-full">Transit Chart</h3>
+          </div>
+          <div className="p-6 bg-slate-950 flex justify-center border-b border-white/5">
+            <div className="relative group max-w-lg w-full">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={transitWheelSvg}
+                alt="Transit Chart"
+                className="w-full h-auto drop-shadow-[0_0_15px_rgba(245,158,11,0.2)] transition-transform duration-700 hover:scale-[1.02] cursor-pointer"
+                onClick={() => setChartModal(transitWheelSvg)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Weekly / Monthly Transit Relation Table */}
       {transitRows.length > 0 && (
@@ -2524,33 +2563,33 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
             {(() => {
               const titleStr = String(item.title ?? "");
               const match = titleStr.match(/(\b[A-Z][a-z]+\b)\s+in\s+(\b[A-Z][a-z]+\b)/);
-                  if (match) {
-                    const p = match[1];
-                    const s = match[2];
-                    if (checkDacen(p, s)) {
-                      return (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              onClick={() => onDecanClick(p, s)}
-                              className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
-                                alt=""
-                                className="size-4 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
-                              />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
-                            Decan Information
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    }
-                  }
+              if (match) {
+                const p = match[1];
+                const s = match[2];
+                if (checkDacen(p, s)) {
+                  return (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => onDecanClick(p, s)}
+                          className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
+                            alt=""
+                            className="size-4 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
+                          />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
+                        Decan Information
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                }
+              }
               return null;
             })()}
           </div>
@@ -2631,7 +2670,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
 
 // ─── Horary Section ───────────────────────────────────────────────────────────
 
-function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: { 
+function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
   data: any; areaOfInquiry?: string;
   checkDacen: (p: string, s: string) => boolean;
   onDecanClick: (p: string, s: string) => void;
@@ -2867,7 +2906,7 @@ const RELATIONSHIP_AI_SECTIONS = [
   { key: "professional_alignment_and_goals", label: "Professional Alignment & Goals" },
 ];
 
-function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen, onDecanClick }: { 
+function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen, onDecanClick }: {
   aiMap: Record<string, any>; areaOfInquiry?: string; tabSlug: string;
   checkDacen: (p: string, s: string) => boolean;
   onDecanClick: (p: string, s: string) => void;
@@ -2892,33 +2931,33 @@ function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen, onDeca
                   const titleStr = String(item.title ?? item.name ?? "");
                   // Simple parsing for "Planet in Sign" pattern
                   const match = titleStr.match(/(\b[A-Z][a-z]+\b)\s+in\s+(\b[A-Z][a-z]+\b)/);
-                    if (match) {
-                      const p = match[1];
-                      const s = match[2];
-                      if (checkDacen(p, s)) {
-                        return (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                type="button"
-                                onClick={() => onDecanClick(p, s)}
-                                className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
-                              >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
-                                  alt=""
-                                  className="size-4 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
-                                />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
-                              Decan Information
-                            </TooltipContent>
-                          </Tooltip>
-                        );
-                      }
+                  if (match) {
+                    const p = match[1];
+                    const s = match[2];
+                    if (checkDacen(p, s)) {
+                      return (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => onDecanClick(p, s)}
+                              className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
+                                alt=""
+                                className="size-4 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
+                              />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
+                            Decan Information
+                          </TooltipContent>
+                        </Tooltip>
+                      );
                     }
+                  }
                   return null;
                 })()}
               </div>
@@ -3195,6 +3234,16 @@ export default function AdminHoroscopePage() {
   const currentTab = TABS.find((t) => t.slug === currentSlug) ?? TABS[0];
 
   const [form, setForm] = useState<FormState>(defaultForm());
+  const isFormValid = (() => {
+    const p1 = form.person1;
+    if (!p1.dob || !p1.tob || !p1.city) return false;
+    if (currentTab.type === "two-person") {
+      const p2 = form.person2;
+      if (!p2.dob || !p2.tob || !p2.city) return false;
+    }
+    if (currentTab.extras?.includes("question") && !form.question.trim()) return false;
+    return true;
+  })();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -3206,6 +3255,7 @@ export default function AdminHoroscopePage() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showChartBtn, setShowChartBtn] = useState(false);
   const [chartModal, setChartModal] = useState<string | null>(null);
+  const [transitChartSvg, setTransitChartSvg] = useState<string | null>(null);
   const [dacenPsibality, setDacenPsibality] = useState<DecanPossibility[]>([]);
   const [decanPlanet, setDecanPlanet] = useState<{ name: string; sign: string } | null>(null);
 
@@ -3224,7 +3274,7 @@ export default function AdminHoroscopePage() {
   useEffect(() => {
     setResults(null); setNatalSvg(null); setNatalSvgTransit(null);
     setReturnDate(null); setError(null); setProgress([]); setForm(defaultForm());
-    setShowScrollTop(false); setShowChartBtn(false);
+    setShowScrollTop(false); setShowChartBtn(false); setTransitChartSvg(null);
   }, [currentSlug]);
 
   // Pre-fetch decan possibilities (distinct planet+sign pairs)
@@ -3425,13 +3475,16 @@ export default function AdminHoroscopePage() {
         if (currentTab.slug === "tropical_transits_monthly_v3") {
           tasks.push(
             (async () => {
+              let tYear, tMonth;
               if (form.futureMonth) {
                 const [mYear, mMonth] = form.futureMonth.split("-").map(Number);
+                tYear = mYear;
+                tMonth = mMonth;
                 const md = await callPlanetReturn({
                   steps: "astrology_report_monthly",
                   birth_details: birth1,
-                  target_year: mYear,
-                  target_month: mMonth,
+                  target_year: tYear,
+                  target_month: tMonth,
                 });
                 const val = md?.astrology_report_monthly ?? md;
                 const lu = md?.astrology_report_monthly?.lunar_data ?? null;
@@ -3447,6 +3500,9 @@ export default function AdminHoroscopePage() {
                   future_transit_date: form.futureMonth,
                 }));
               } else {
+                const d = new Date();
+                tYear = d.getFullYear();
+                tMonth = d.getMonth() + 1;
                 const [mt, lu] = await Promise.allSettled([
                   callCompute(
                     "tropical_transits/monthly",
@@ -3465,6 +3521,27 @@ export default function AdminHoroscopePage() {
                   lunar_metrics: luV,
                   is_future_transit: false,
                 }));
+              }
+
+              // Fetch Transit Chart Wheel (at day 1 of target month/year)
+              try {
+                const [bYear, bMonth, bDay] = form.person1.dob.split("-").map(Number);
+                const [bHour, bMin] = form.person1.tob.split(":").map(Number);
+                const transitWheelPayload = {
+                  hours: bHour,
+                  minutes: bMin,
+                  date: 1,
+                  month: tMonth,
+                  year: tYear,
+                  latitude: form.person1.city!.lat,
+                  longitude: form.person1.city!.lng,
+                  timezone: parseDecimalTz(form.person1.city!.timezone.offset_string)
+                };
+                const wheelRes = await callNatalWheel(transitWheelPayload);
+                const svg = wheelRes?.results?.output;
+                if (svg) setTransitChartSvg(svg);
+              } catch (e) {
+                console.error("Transit wheel error:", e);
               }
             })()
           );
@@ -3592,6 +3669,12 @@ export default function AdminHoroscopePage() {
                 ai_interpretations: { ...prevAi, [p.key]: parsed },
               };
             });
+            // Mirror into `collected` so the save-results call can access
+            // the final AI data without reading React state.
+            collected.ai_interpretations = {
+              ...(collected.ai_interpretations as Record<string, unknown> ?? {}),
+              [p.key]: parsed,
+            };
           } catch {
             setResults((prev) => {
               const prevAi = prev?.ai_interpretations ?? {};
@@ -3732,6 +3815,37 @@ export default function AdminHoroscopePage() {
         await Promise.allSettled(aiPromises);
       }
 
+      // ── Save results to the legacy NestJS store (fire-and-forget) ──────
+      // The spec for tropical_transits_monthly_v3 (and potentially other tabs
+      // in the future) calls for persisting the generated AI interpretations
+      // and raw data to avoid repeated AI costs. The external endpoint is the
+      // legacy CloudFront-fronted NestJS API. We fire-and-forget because a
+      // save failure should not block the user from seeing their results.
+      if (currentTab.slug === "tropical_transits_monthly_v3") {
+        try {
+          const savePayload = {
+            toolname: "tropical_transits_monthly_v3",
+            ai_response: collected.ai_interpretations ?? {},
+            formData: birth1,
+            astro_api_data: collected.natal_chart_data ?? {},
+            freeNatalWheelChart: natalSvg ?? "",
+            freeNatalWheelChartForTrasit: natalSvgTransit ?? "",
+          };
+          fetch(
+            "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(savePayload),
+            },
+          ).catch(() => {
+            /* fire-and-forget — save failure does not block the user */
+          });
+        } catch {
+          /* ignore save errors */
+        }
+      }
+
       addProgress("Done ✓");
       setShowScrollTop(true);
     } catch (err: unknown) {
@@ -3816,8 +3930,24 @@ export default function AdminHoroscopePage() {
 
                 {error && <p className="text-sm text-destructive rounded-md bg-destructive/10 px-3 py-2">{error}</p>}
 
-                <Button type="submit" disabled={loading} className="bg-amber-500 hover:bg-amber-600 text-white h-9">
-                  {loading ? <><Loader2 className="mr-2 size-4 animate-spin" />Processing…</> : "Generate Reading"}
+                <Button
+                  type="submit"
+                  disabled={loading || !isFormValid}
+                  className={cn(
+                    "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
+                    loading || !isFormValid
+                      ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
+                      : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
+                  )}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      Processing Cosmic Data…
+                    </>
+                  ) : (
+                    "Generate Reading"
+                  )}
                 </Button>
               </form>
             </CardContent>
@@ -3839,149 +3969,155 @@ export default function AdminHoroscopePage() {
           {results && (
             <TooltipProvider delayDuration={200}>
               <div className="space-y-6">
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold">Results</h2>
-                <Badge variant="outline" className="text-amber-600 border-amber-400 text-xs">{currentTab.label}</Badge>
-                <button onClick={printResult} className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors border rounded px-2 py-1">
-                  <Printer className="size-3" />Print
-                </button>
-              </div>
-
-              {/* Return date banner */}
-              {returnDate && (
-                <div className="rounded-md border border-amber-400/40 bg-amber-500/10 px-4 py-3">
-                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">Return Date: <span className="font-bold">{returnDate}</span></p>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold">Results</h2>
+                  <Badge variant="outline" className="text-amber-600 border-amber-400 text-xs">{currentTab.label}</Badge>
+                  <button onClick={printResult} className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors border rounded px-2 py-1">
+                    <Printer className="size-3" />Print
+                  </button>
                 </div>
-              )}
 
-              {/* Natal charts — always show first */}
-              <div id="natal-charts-row">
-                <NatalChartsRow
-                  svg1={natalSvg}
-                  svg2={natalSvgTransit}
-                  label1={isTwoPersonAiTab ? "Person 1 Natal Wheel" : "Natal Wheel Chart (AstrologyAPI)"}
-                  label2={isTwoPersonAiTab ? "Person 2 Natal Wheel" : "Natal Wheel Chart (FreeAstrology)"}
-                  onExpandImg={(src) => setChartModal(src)}
-                />
-              </div>
+                {/* Return date banner */}
+                {returnDate && (
+                  <div className="rounded-md border border-amber-400/40 bg-amber-500/10 px-4 py-3">
+                    <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">Return Date: <span className="font-bold">{returnDate}</span></p>
+                  </div>
+                )}
 
-              {/* ─── Planet Return Summary ──────────────────── */}
-              {isPlanetReturn && (
-                <PlanetReturnSummaryTable tab={currentSlug} birth={form.person1} returnDate={returnDate} natalData={natalData} />
-              )}
+                {/* Natal charts — always show first */}
+                <div id="natal-charts-row">
+                  <NatalChartsRow
+                    svg1={natalSvg}
+                    svg2={natalSvgTransit}
+                    label1={isTwoPersonAiTab ? "Person 1 Natal Wheel" : "Natal Wheel Chart (AstrologyAPI)"}
+                    label2={isTwoPersonAiTab ? "Person 2 Natal Wheel" : "Natal Wheel Chart (FreeAstrology)"}
+                    onExpandImg={(src) => setChartModal(src)}
+                  />
+                </div>
 
-              {/* ─── Solar Return ───────────────────────────── */}
-              {isSolarReturn && (
-                <SolarReturnSection 
-                  details={results.solar_return_details} 
-                  planets={results.solar_return_planets} 
-                  cusps={results.solar_return_cusps} 
-                  aspects={results.solar_return_aspects} 
-                  planetReport={results.solar_return_planet_report} 
-                  aspectsReport={results.solar_return_aspects_report} 
-                  aiData={ai} 
-                  areaOfInquiry={form.areaOfInquiry} 
-                  checkDacen={checkDacen}
-                  onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                />
-              )}
+                {/* ─── Planet Return Summary ──────────────────── */}
+                {isPlanetReturn && (
+                  <PlanetReturnSummaryTable tab={currentSlug} birth={form.person1} returnDate={returnDate} natalData={natalData} />
+                )}
 
-              {/* ─── Saturn Return also shows solar return ──── */}
-              {currentSlug === "saturn_return_v2" && results.solar_return_details && (
-                <SolarReturnSection 
-                  details={results.solar_return_details} 
-                  planets={results.solar_return_planets} 
-                  cusps={results.solar_return_cusps} 
-                  aspects={results.solar_return_aspects} 
-                  planetReport={results.solar_return_planet_report} 
-                  aspectsReport={results.solar_return_aspects_report} 
-                  aiData={null} 
-                  areaOfInquiry={form.areaOfInquiry} 
-                  checkDacen={checkDacen}
-                  onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                />
-              )}
-
-              {/* ─── Transits ───────────────────────────────── */}
-              {isTransit && (
-                <TransitSection 
-                  data={results.transit_data} 
-                  lunarMetrics={results.lunar_metrics} 
-                  aiData={currentSlug === "tropical_transits_weekly_v2" ? ai.tropical_transits_weekly : ai.tropical_transits_monthly} 
-                  lunarAiData={currentSlug === "tropical_transits_monthly_v3" ? ai.lunar_metrics : undefined} 
-                  tabSlug={currentSlug} 
-                  areaOfInquiry={form.areaOfInquiry} 
-                  checkDacen={checkDacen}
-                  onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                />
-              )}
-
-              {/* ─── Horary ─────────────────────────────────── */}
-              {isHorary && (
-                <HorarySection 
-                  data={ai.horary_chart_question} 
-                  areaOfInquiry={form.areaOfInquiry} 
-                  checkDacen={checkDacen}
-                  onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                />
-              )}
-
-              {/* ─── Two-person relationship (all 8 AI sections) ─ */}
-              {isTwoPersonAiTab && (
-                <RelationshipSection 
-                  aiMap={ai} 
-                  areaOfInquiry={form.areaOfInquiry} 
-                  tabSlug={currentSlug} 
-                  checkDacen={checkDacen}
-                  onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                />
-              )}
-
-              {/* ─── Natal chart sections (all single tabs + planet return tabs) ─ */}
-              {natalData && (
-                <div className="space-y-6">
-                  <PlanetsSection 
-                    planets={natalData.planets} 
-                    aiData={ai.western_horoscope_planets} 
-                    areaOfInquiry={form.areaOfInquiry} 
+                {/* ─── Solar Return ───────────────────────────── */}
+                {isSolarReturn && (
+                  <SolarReturnSection
+                    details={results.solar_return_details}
+                    planets={results.solar_return_planets}
+                    cusps={results.solar_return_cusps}
+                    aspects={results.solar_return_aspects}
+                    planetReport={results.solar_return_planet_report}
+                    aspectsReport={results.solar_return_aspects_report}
+                    aiData={ai}
+                    areaOfInquiry={form.areaOfInquiry}
                     checkDacen={checkDacen}
                     onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
                   />
-                  <div className="rounded-lg border overflow-hidden">
-                    <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">House Information</h2></div>
-                    <div className="p-4">
-                      <HousesSection houses={natalData.houses} planets={natalData.planets} aiData={ai.western_horoscope_houses} areaOfInquiry={form.areaOfInquiry} />
-                    </div>
-                  </div>
-                  <div className="rounded-lg border overflow-hidden">
-                    <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20"><h2 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Dharma & Karma</h2></div>
-                    <div className="p-4">
-                      <DharmaKarmaSection data={ai.dharma_karma} rawData={natalData} areaOfInquiry={form.areaOfInquiry} />
-                    </div>
-                  </div>
-                  <div className="rounded-lg border overflow-hidden">
-                    <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">Aspects</h2></div>
-                    <div className="p-4">
-                      <AspectsSection aspects={natalData.aspects} planets={natalData.planets} aiData={ai.western_horoscope_aspects} areaOfInquiry={form.areaOfInquiry} />
-                    </div>
-                  </div>
-                  <AscMidheavenVertexSection natalData={natalData} aiData={ai.western_horoscope_ascendant_midheaven_vertex} areaOfInquiry={form.areaOfInquiry} />
-                  <LilithSection 
-                    lilith={natalData.lilith} 
-                    aiData={ai.western_horoscope_lilith} 
-                    areaOfInquiry={form.areaOfInquiry} 
+                )}
+
+                {/* ─── Saturn Return also shows solar return ──── */}
+                {currentSlug === "saturn_return_v2" && results.solar_return_details && (
+                  <SolarReturnSection
+                    details={results.solar_return_details}
+                    planets={results.solar_return_planets}
+                    cusps={results.solar_return_cusps}
+                    aspects={results.solar_return_aspects}
+                    planetReport={results.solar_return_planet_report}
+                    aspectsReport={results.solar_return_aspects_report}
+                    aiData={null}
+                    areaOfInquiry={form.areaOfInquiry}
                     checkDacen={checkDacen}
                     onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
                   />
-                </div>
-              )}
+                )}
 
-              {isPlanetReturn && (
-                <PlanetReturnInterpretation tab={currentSlug} aiData={ai[currentSlug]} areaOfInquiry={form.areaOfInquiry} />
-              )}
-            </div>
-          </TooltipProvider>
-        )}
+                {/* ─── Transits ───────────────────────────────── */}
+                {isTransit && (
+                  <TransitSection
+                    data={results.transit_data}
+                    lunarMetrics={results.lunar_metrics}
+                    aiData={currentSlug === "tropical_transits_weekly_v2" ? ai.tropical_transits_weekly : ai.tropical_transits_monthly}
+                    lunarAiData={currentSlug === "tropical_transits_monthly_v3" ? ai.lunar_metrics : undefined}
+                    tabSlug={currentSlug}
+                    areaOfInquiry={form.areaOfInquiry}
+                    checkDacen={checkDacen}
+                    onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                    transitWheelSvg={transitChartSvg}
+                    setChartModal={setChartModal}
+                  />
+                )}
+
+                {/* ─── Horary ─────────────────────────────────── */}
+                {isHorary && (
+                  <HorarySection
+                    data={ai.horary_chart_question}
+                    areaOfInquiry={form.areaOfInquiry}
+                    checkDacen={checkDacen}
+                    onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                  />
+                )}
+
+                {/* ─── Two-person relationship (all 8 AI sections) ─ */}
+                {isTwoPersonAiTab && (
+                  <RelationshipSection
+                    aiMap={ai}
+                    areaOfInquiry={form.areaOfInquiry}
+                    tabSlug={currentSlug}
+                    checkDacen={checkDacen}
+                    onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                  />
+                )}
+
+                {/* ─── Natal chart sections (all single tabs + planet return tabs) ─ */}
+                {natalData && (
+                  <div className="space-y-6">
+                    {currentSlug !== "tropical_transits_monthly_v3" && (
+                      <>
+                        <PlanetsSection
+                          planets={natalData.planets}
+                          aiData={ai.western_horoscope_planets}
+                          areaOfInquiry={form.areaOfInquiry}
+                          checkDacen={checkDacen}
+                          onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                        />
+                        <div className="rounded-lg border overflow-hidden">
+                          <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">House Information</h2></div>
+                          <div className="p-4">
+                            <HousesSection houses={natalData.houses} planets={natalData.planets} aiData={ai.western_horoscope_houses} areaOfInquiry={form.areaOfInquiry} />
+                          </div>
+                        </div>
+                        <div className="rounded-lg border overflow-hidden">
+                          <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20"><h2 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Dharma & Karma</h2></div>
+                          <div className="p-4">
+                            <DharmaKarmaSection data={ai.dharma_karma} rawData={natalData} areaOfInquiry={form.areaOfInquiry} />
+                          </div>
+                        </div>
+                        <div className="rounded-lg border overflow-hidden">
+                          <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">Aspects</h2></div>
+                          <div className="p-4">
+                            <AspectsSection aspects={natalData.aspects} planets={natalData.planets} aiData={ai.western_horoscope_aspects} areaOfInquiry={form.areaOfInquiry} />
+                          </div>
+                        </div>
+                        <AscMidheavenVertexSection natalData={natalData} aiData={ai.western_horoscope_ascendant_midheaven_vertex} areaOfInquiry={form.areaOfInquiry} />
+                        <LilithSection
+                          lilith={natalData.lilith}
+                          aiData={ai.western_horoscope_lilith}
+                          areaOfInquiry={form.areaOfInquiry}
+                          checkDacen={checkDacen}
+                          onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                        />
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {isPlanetReturn && (
+                  <PlanetReturnInterpretation tab={currentSlug} aiData={ai[currentSlug]} areaOfInquiry={form.areaOfInquiry} />
+                )}
+              </div>
+            </TooltipProvider>
+          )}
         </div>
       </div>
 

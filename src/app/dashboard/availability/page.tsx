@@ -47,6 +47,8 @@ const DURATION_OPTIONS = [30, 45, 60, 75, 90, 120];
 type AvailabilityTemplate = {
   id: string;
   diviner_id: string;
+  owner_id?: string;
+  service_id?: string | null;
   title: string;
   start_date: string;
   end_date: string;
@@ -60,7 +62,14 @@ type AvailabilityTemplate = {
   created_at: string;
 };
 
+type ServiceOption = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
 type FormState = {
+  service_id: string;
   title: string;
   start_date: string;
   end_date: string;
@@ -74,6 +83,7 @@ type FormState = {
 };
 
 const defaultForm = (): FormState => ({
+  service_id: "",
   title: "",
   start_date: "",
   end_date: "",
@@ -136,6 +146,7 @@ function validate(form: FormState): string | null {
 
 export default function AvailabilityPage() {
   const [templates, setTemplates] = useState<AvailabilityTemplate[]>([]);
+  const [services, setServices] = useState<ServiceOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<AvailabilityTemplate | null>(null);
@@ -159,9 +170,21 @@ export default function AvailabilityPage() {
     }
   }, []);
 
+  const loadServices = useCallback(async () => {
+    try {
+      const res = await fetch("/api/dashboard/services?active=true&limit=100");
+      if (!res.ok) return;
+      const json = await res.json();
+      setServices(json.services ?? []);
+    } catch (err) {
+      console.error("[AvailabilityPage] Failed to load services:", err);
+    }
+  }, []);
+
   useEffect(() => {
     loadTemplates();
-  }, [loadTemplates]);
+    loadServices();
+  }, [loadServices, loadTemplates]);
 
   function openCreate() {
     setEditTarget(null);
@@ -173,6 +196,7 @@ export default function AvailabilityPage() {
   function openEdit(t: AvailabilityTemplate) {
     setEditTarget(t);
     setForm({
+      service_id: t.service_id ?? "",
       title: t.title,
       start_date: t.start_date,
       end_date: t.end_date,
@@ -207,6 +231,7 @@ export default function AvailabilityPage() {
     setSaving(true);
     try {
       const payload = {
+        service_id: form.service_id || null,
         title: form.title.trim() || "Available",
         start_date: form.start_date,
         end_date: form.end_date,
@@ -272,6 +297,10 @@ export default function AvailabilityPage() {
 
   const tzLabel = (tz: string) =>
     TIMEZONE_OPTIONS.find((o) => o.value === tz)?.label ?? tz;
+  const serviceLabel = (serviceId?: string | null) =>
+    serviceId
+      ? services.find((service) => service.id === serviceId)?.name ?? "Selected service"
+      : "All services";
 
   return (
     <div className="space-y-6">
@@ -362,6 +391,12 @@ export default function AvailabilityPage() {
                 {/* Time + duration */}
                 <div className="space-y-1 text-sm">
                   <div className="flex items-center justify-between text-muted-foreground">
+                    <span className="text-xs uppercase tracking-wide font-medium">Service</span>
+                    <span className="text-foreground font-medium text-xs truncate max-w-[160px] text-right">
+                      {serviceLabel(t.service_id)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-muted-foreground">
                     <span className="text-xs uppercase tracking-wide font-medium">Time</span>
                     <span className="text-foreground font-medium text-xs">
                       {formatTimeRange(t.start_time, t.end_time)}
@@ -436,6 +471,31 @@ export default function AvailabilityPage() {
 
           <div className="space-y-4 py-2">
             {/* Title */}
+            <div className="space-y-1.5">
+              <Label htmlFor="av-service">Service</Label>
+              <Select
+                value={form.service_id || "__all__"}
+                onValueChange={(v) =>
+                  setForm((p) => ({ ...p, service_id: v === "__all__" ? "" : v }))
+                }
+              >
+                <SelectTrigger id="av-service" className="w-full">
+                  <SelectValue placeholder="Choose a service" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All services</SelectItem>
+                  {services.map((service) => (
+                    <SelectItem key={service.id} value={service.id}>
+                      {service.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Choose one service to scope this schedule, or leave it on all services.
+              </p>
+            </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="av-title">Title</Label>
               <Input

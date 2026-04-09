@@ -6,6 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -16,12 +23,14 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  ChevronLeft,
   ChevronRight,
   Download,
   Eye,
   Loader2,
   MoreHorizontal,
   Pencil,
+  RefreshCw,
   ShieldCheck,
   ShieldOff,
   StickyNote,
@@ -90,14 +99,32 @@ export interface EntityTableConfig<T extends { id: string; is_active: boolean }>
 
 interface TrainingEntityTableProps<T extends { id: string; is_active: boolean; name?: string; title?: string }> {
   config: EntityTableConfig<T>;
+  /** The current page of rows returned by the server. */
   rows: T[];
+  /** Server-reported total matching rows (across all pages). */
+  serverTotal: number;
   rawCount: number;
   filtersActive: boolean;
   /** Filter state needed by the export query. */
   currentSearch: string;
   currentStatus: "all" | "active" | "inactive";
   /** Called after a successful mutation (activate/deactivate/delete) so the parent refetches. */
-  onMutated: () => void;
+  onMutated: () => Promise<void>;
+  /** Table-local refresh button handler. */
+  onRefresh: () => Promise<void>;
+  /** Users-style loading overlay state. */
+  isRefreshing?: boolean;
+  /** Called when the user changes page or pageSize so the parent can refetch. */
+  onTableStateChange?: (state: {
+    page: number;
+    pageSize: number;
+    sortBy: string;
+    sortDir: "asc" | "desc";
+  }) => void;
+  /** Externally controlled page (from server response). */
+  serverPage?: number;
+  /** Externally controlled pageSize. */
+  serverPageSize?: number;
 }
 
 function entityLabel(type: TrainingEntityType): string {
@@ -120,20 +147,32 @@ const ENTITY_API_PATH: Record<TrainingEntityType, string> = {
   quiz: "quizzes",
 };
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
+
 export function TrainingEntityTable<
   T extends { id: string; is_active: boolean; name?: string; title?: string },
 >(props: TrainingEntityTableProps<T>) {
   const {
     config,
     rows,
+    serverTotal,
     rawCount,
     filtersActive,
     currentSearch,
     currentStatus,
     onMutated,
+    onRefresh,
+    isRefreshing = false,
+    onTableStateChange,
+    serverPage,
+    serverPageSize,
   } = props;
 
   const label = entityLabel(config.entityType);
+
+  // Server-driven mode: sorting, pagination, and filtering happen on the
+  // server. The table receives pre-sorted, pre-paged rows from the parent.
+  const isServerDriven = !!onTableStateChange;
 
   // ── Sorting ────────────────────────────────────────────────────────────
   const [sortKey, setSortKey] = useState<string>(config.defaultSortKey ?? "priority");
@@ -142,18 +181,31 @@ export function TrainingEntityTable<
   );
 
   function toggleSort(key: string) {
+    let nextDir: "asc" | "desc";
     if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      nextDir = sortDir === "asc" ? "desc" : "asc";
     } else {
-      setSortKey(key);
-      // First click on a new column: asc for strings, desc for everything
-      // else (numbers/dates), matching user-management-client behavior.
       const col = config.columns.find((c) => c.key === key);
-      setSortDir(col?.key.includes("name") || col?.key.includes("title") ? "asc" : "desc");
+      nextDir = col?.key.includes("name") || col?.key.includes("title") ? "asc" : "desc";
+    }
+    setSortKey(key);
+    setSortDir(nextDir);
+    if (isServerDriven) {
+      // Reset to page 1 on sort change and delegate to server
+      setCurrentPage(1);
+      onTableStateChange?.({
+        page: 1,
+        pageSize,
+        sortBy: key,
+        sortDir: nextDir,
+      });
     }
   }
 
-  const sortedRows = useMemo(() => {
+  // When server-driven, rows arrive pre-sorted — skip client sort.
+  // When client-driven (fallback), sort in memory as before.
+  const displayRows = useMemo(() => {
+    if (isServerDriven) return rows; // already sorted + paged by server
     const col = config.columns.find((c) => c.key === sortKey);
     if (!col || !col.sortable || !col.sortValue) return rows;
     const arr = [...rows];
@@ -172,7 +224,28 @@ export function TrainingEntityTable<
       return sortDir === "asc" ? cmp : -cmp;
     });
     return arr;
-  }, [rows, sortKey, sortDir, config.columns]);
+  }, [rows, sortKey, sortDir, config.columns, isServerDriven]);
+
+  // ── Pagination ─────────────────────────────────────────────────────────
+  const [currentPage, setCurrentPage] = useState(serverPage ?? 1);
+  const [pageSize, setPageSize] = useState<number>(serverPageSize ?? 10);
+
+  // In server-driven mode, total comes from the server response.
+  // In client-driven mode, total is the filtered array length.
+  const totalRows = isServerDriven ? serverTotal : displayRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
+  // In server-driven mode, rows are already one page — no slicing needed.
+  // In client-driven mode, slice the sorted array.
+  const pagedRows = useMemo(() => {
+    if (isServerDriven) return displayRows;
+    const start = (currentPage - 1) * pageSize;
+    return displayRows.slice(start, start + pageSize);
+  }, [displayRows, currentPage, pageSize, isServerDriven]);
 
   // ── Row selection ──────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -193,7 +266,7 @@ export function TrainingEntityTable<
     });
   }, [rows]);
 
-  const pageIds = sortedRows.map((r) => r.id);
+  const pageIds = pagedRows.map((r) => r.id);
   const allOnPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
   const someOnPageSelected = pageIds.some((id) => selectedIds.has(id));
 
@@ -223,6 +296,33 @@ export function TrainingEntityTable<
       else next.add(id);
       return next;
     });
+  }
+
+  function handlePage(page: number) {
+    const clamped = Math.max(1, Math.min(page, totalPages));
+    setCurrentPage(clamped);
+    if (isServerDriven) {
+      onTableStateChange?.({
+        page: clamped,
+        pageSize,
+        sortBy: sortKey,
+        sortDir,
+      });
+    }
+  }
+
+  function handlePageSizeChange(value: string) {
+    const newSize = Number(value);
+    setPageSize(newSize);
+    setCurrentPage(1);
+    if (isServerDriven) {
+      onTableStateChange?.({
+        page: 1,
+        pageSize: newSize,
+        sortBy: sortKey,
+        sortDir,
+      });
+    }
   }
 
   // ── Notes counts ───────────────────────────────────────────────────────
@@ -296,7 +396,7 @@ export function TrainingEntityTable<
         );
       }
       setSelectedIds(new Set());
-      onMutated();
+      await onMutated();
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : `Bulk ${action} failed.`,
@@ -365,7 +465,7 @@ export function TrainingEntityTable<
         throw new Error(body.error ?? `HTTP ${res.status}`);
       }
       toast.success(`${label} deleted.`);
-      onMutated();
+      await onMutated();
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : `Failed to delete ${label}.`,
@@ -387,7 +487,7 @@ export function TrainingEntityTable<
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
       toast.success(`${label} ${row.is_active ? "deactivated" : "activated"}.`);
-      onMutated();
+      await onMutated();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Update failed.");
     }
@@ -396,7 +496,15 @@ export function TrainingEntityTable<
   const filteredCount = rows.length;
 
   return (
-    <Card>
+    <Card className="relative">
+      {isRefreshing && (
+        <div className="absolute inset-0 z-10 rounded-lg bg-background/60 backdrop-blur-[1px] flex items-center justify-center pointer-events-none">
+          <div className="flex items-center gap-2 rounded-full bg-background/90 border px-4 py-2 shadow-md text-sm text-muted-foreground">
+            <RefreshCw className="size-4 animate-spin text-amber-500" />
+            Loading…
+          </div>
+        </div>
+      )}
       <CardHeader className="flex flex-row items-start justify-between gap-4">
         <div>
           <CardTitle>{config.title}</CardTitle>
@@ -407,6 +515,10 @@ export function TrainingEntityTable<
           </CardDescription>
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => void onRefresh()} disabled={isRefreshing}>
+            <RefreshCw className={cn("size-3.5 mr-1.5", isRefreshing && "animate-spin")} />
+            Refresh
+          </Button>
           <Button size="sm" variant="outline" onClick={exportAll}>
             <Download className="size-3.5 mr-1.5" />
             Export
@@ -494,7 +606,7 @@ export function TrainingEntityTable<
         )}
 
         {/* ── Table ───────────────────────────────────────────────────── */}
-        {sortedRows.length === 0 ? (
+        {pagedRows.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
             {rawCount === 0 ? config.emptyText : config.noMatchText}
           </p>
@@ -558,7 +670,7 @@ export function TrainingEntityTable<
                 </tr>
               </thead>
               <tbody>
-                {sortedRows.map((row) => {
+                {pagedRows.map((row) => {
                   const isSelected = selectedIds.has(row.id);
                   const noteCount = notesCounts[row.id] ?? 0;
                   return (
@@ -662,6 +774,80 @@ export function TrainingEntityTable<
             </table>
           </div>
         )}
+
+        <div
+          className={cn(
+            "flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm",
+            isRefreshing && "opacity-50 pointer-events-none",
+          )}
+        >
+          <div className="flex items-center gap-3">
+            <p className="text-muted-foreground">
+              Showing {totalRows === 0 ? 0 : Math.min((currentPage - 1) * pageSize + 1, totalRows)}–
+              {Math.min(currentPage * pageSize, totalRows)} of {totalRows}
+            </p>
+            <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+              <SelectTrigger className="h-8 w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n} / page
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0"
+                disabled={currentPage <= 1}
+                onClick={() => handlePage(currentPage - 1)}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+                .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+                  if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push("…");
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, idx) =>
+                  p === "…" ? (
+                    <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">
+                      ...
+                    </span>
+                  ) : (
+                    <Button
+                      key={p}
+                      variant={p === currentPage ? "default" : "outline"}
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => handlePage(p as number)}
+                    >
+                      {p}
+                    </Button>
+                  ),
+                )}
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0"
+                disabled={currentPage >= totalPages}
+                onClick={() => handlePage(currentPage + 1)}
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          )}
+        </div>
       </CardContent>
 
       <TrainingEntitySheet
