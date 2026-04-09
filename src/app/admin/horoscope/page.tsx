@@ -362,7 +362,7 @@ function convertTo12HourFormat(hour: number, min: number): string {
 function buildAiPrompts(data: any, tab: string) {
   const prompts: { key: string; system: string; user: string; json: unknown[] }[] = [];
 
-  if (tab === "western_horoscope_v2" || tab === "solar_return_v2" || tab === "tropical_transits_monthly_v3" || ["jupiter_return_v2", "saturn_return_v2", "mars_return_v2", "uranus_return_v2"].includes(tab)) {
+  if (tab === "western_horoscope_v2" || tab === "solar_return_v2" || ["jupiter_return_v2", "saturn_return_v2", "mars_return_v2", "uranus_return_v2"].includes(tab)) {
     // Exact prompts ported from Angular westernhoroscop-v2.component.ts → stringModifier()
     prompts.push({
       key: "western_horoscope_ascendant_midheaven_vertex",
@@ -4020,39 +4020,43 @@ export default function AdminHoroscopePage() {
                 {/* ─── Natal chart sections (all single tabs + planet return tabs) ─ */}
                 {natalData && (
                   <div className="space-y-6">
-                    <PlanetsSection
-                      planets={natalData.planets}
-                      aiData={ai.western_horoscope_planets}
-                      areaOfInquiry={form.areaOfInquiry}
-                      checkDacen={checkDacen}
-                      onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                    />
-                    <div className="rounded-lg border overflow-hidden">
-                      <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">House Information</h2></div>
-                      <div className="p-4">
-                        <HousesSection houses={natalData.houses} planets={natalData.planets} aiData={ai.western_horoscope_houses} areaOfInquiry={form.areaOfInquiry} />
-                      </div>
-                    </div>
-                    <div className="rounded-lg border overflow-hidden">
-                      <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20"><h2 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Dharma & Karma</h2></div>
-                      <div className="p-4">
-                        <DharmaKarmaSection data={ai.dharma_karma} rawData={natalData} areaOfInquiry={form.areaOfInquiry} />
-                      </div>
-                    </div>
-                    <div className="rounded-lg border overflow-hidden">
-                      <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">Aspects</h2></div>
-                      <div className="p-4">
-                        <AspectsSection aspects={natalData.aspects} planets={natalData.planets} aiData={ai.western_horoscope_aspects} areaOfInquiry={form.areaOfInquiry} />
-                      </div>
-                    </div>
-                    <AscMidheavenVertexSection natalData={natalData} aiData={ai.western_horoscope_ascendant_midheaven_vertex} areaOfInquiry={form.areaOfInquiry} />
-                    <LilithSection
-                      lilith={natalData.lilith}
-                      aiData={ai.western_horoscope_lilith}
-                      areaOfInquiry={form.areaOfInquiry}
-                      checkDacen={checkDacen}
-                      onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                    />
+                    {currentSlug !== "tropical_transits_monthly_v3" && (
+                      <>
+                        <PlanetsSection
+                          planets={natalData.planets}
+                          aiData={ai.western_horoscope_planets}
+                          areaOfInquiry={form.areaOfInquiry}
+                          checkDacen={checkDacen}
+                          onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                        />
+                        <div className="rounded-lg border overflow-hidden">
+                          <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">House Information</h2></div>
+                          <div className="p-4">
+                            <HousesSection houses={natalData.houses} planets={natalData.planets} aiData={ai.western_horoscope_houses} areaOfInquiry={form.areaOfInquiry} />
+                          </div>
+                        </div>
+                        <div className="rounded-lg border overflow-hidden">
+                          <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20"><h2 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Dharma & Karma</h2></div>
+                          <div className="p-4">
+                            <DharmaKarmaSection data={ai.dharma_karma} rawData={natalData} areaOfInquiry={form.areaOfInquiry} />
+                          </div>
+                        </div>
+                        <div className="rounded-lg border overflow-hidden">
+                          <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">Aspects</h2></div>
+                          <div className="p-4">
+                            <AspectsSection aspects={natalData.aspects} planets={natalData.planets} aiData={ai.western_horoscope_aspects} areaOfInquiry={form.areaOfInquiry} />
+                          </div>
+                        </div>
+                        <AscMidheavenVertexSection natalData={natalData} aiData={ai.western_horoscope_ascendant_midheaven_vertex} areaOfInquiry={form.areaOfInquiry} />
+                        <LilithSection
+                          lilith={natalData.lilith}
+                          aiData={ai.western_horoscope_lilith}
+                          areaOfInquiry={form.areaOfInquiry}
+                          checkDacen={checkDacen}
+                          onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                        />
+                      </>
+                    )}
                   </div>
                 )}
 
