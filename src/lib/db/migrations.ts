@@ -14,6 +14,7 @@ import { MIGRATION_SQL as MIG_20260409000118 } from "@/data/migrations/202604090
 import { MIGRATION_SQL as MIG_20260409000119 } from "@/data/migrations/20260409000119_pricing_plans";
 import { MIGRATION_SQL as MIG_20260409000120 } from "@/data/migrations/20260409000120_pricing_plan_custom_fields";
 import { MIGRATION_SQL as MIG_20260409000121 } from "@/data/migrations/20260409000121_seed_pricing_plans";
+import { MIGRATION_SQL as MIG_20260409000122 } from "@/data/migrations/20260409000122_drop_item_price_currency";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -167,6 +168,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Seeds global_pricing items (perennial_mandalism_community, mystery_school) and 6 pricing_plans with Stripe Price IDs and custom_fields: PM Individual/Couple/Family, Mystery Enrollment/Monthly/Monthly PM Discount. Idempotent via ON CONFLICT DO NOTHING.",
     sortKey: "20260409000121",
     sql: MIG_20260409000121,
+  },
+  "20260409000122_drop_item_price_currency": {
+    id: "20260409000122_drop_item_price_currency",
+    title: "Drop price/currency from global_pricing (moved to plans)",
+    description:
+      "Drops price and currency columns from global_pricing. All pricing now lives exclusively on pricing_plans. Run AFTER 000121 (seed). Destructive — columns are permanently removed.",
+    sortKey: "20260409000122",
+    sql: MIG_20260409000122,
   },
 };
 
