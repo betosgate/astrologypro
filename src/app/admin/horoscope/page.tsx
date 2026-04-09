@@ -268,17 +268,17 @@ async function callNatalWheel(body: Record<string, unknown>) {
   return r.json();
 }
 async function callDecanLookup(signs: string, planet: string) {
-  const r = await fetch("/api/astro-decan/fetch-decan-details", { 
-    method: "POST", 
-    headers: { "Content-Type": "application/json" }, 
-    body: JSON.stringify({ signs, planet }) 
+  const r = await fetch("/api/astro-decan/fetch-decan-details", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ signs, planet })
   });
-  if (!r.ok) { 
-    const d = await r.json(); 
-    throw new Error(d.message || d.error || r.statusText); 
+  if (!r.ok) {
+    const d = await r.json();
+    throw new Error(d.message || d.error || r.statusText);
   }
   const json = await r.json();
-  
+
   // The new API returns a single object in json.results.
   // The frontend component expects an array of DecanRow.
   const row = json.results;
@@ -362,7 +362,7 @@ function convertTo12HourFormat(hour: number, min: number): string {
 function buildAiPrompts(data: any, tab: string) {
   const prompts: { key: string; system: string; user: string; json: unknown[] }[] = [];
 
-  if (tab === "western_horoscope_v2" || tab === "solar_return_v2" || ["jupiter_return_v2", "saturn_return_v2", "mars_return_v2", "uranus_return_v2"].includes(tab)) {
+  if (tab === "western_horoscope_v2" || tab === "solar_return_v2" || tab === "tropical_transits_monthly_v3" || ["jupiter_return_v2", "saturn_return_v2", "mars_return_v2", "uranus_return_v2"].includes(tab)) {
     // Exact prompts ported from Angular westernhoroscop-v2.component.ts → stringModifier()
     prompts.push({
       key: "western_horoscope_ascendant_midheaven_vertex",
@@ -667,13 +667,13 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
 
 
       {pictureUrl && (
-        <ChartImageModal 
-          src={pictureUrl} 
-          open={showFullImage} 
+        <ChartImageModal
+          src={pictureUrl}
+          open={showFullImage}
           onClose={() => {
             setShowFullImage(false);
             onClose();
-          }} 
+          }}
         />
       )}
     </>
@@ -1178,13 +1178,13 @@ function DecanModal({ planet, sign, open, onClose }: {
 
   return (
     <>
-      <ChartImageModal 
-        src={fullscreenImg || ""} 
-        open={!!fullscreenImg} 
+      <ChartImageModal
+        src={fullscreenImg || ""}
+        open={!!fullscreenImg}
         onClose={() => {
           setFullscreenImg(null);
           onClose();
-        }} 
+        }}
       />
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
         <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
@@ -2524,33 +2524,33 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
             {(() => {
               const titleStr = String(item.title ?? "");
               const match = titleStr.match(/(\b[A-Z][a-z]+\b)\s+in\s+(\b[A-Z][a-z]+\b)/);
-                  if (match) {
-                    const p = match[1];
-                    const s = match[2];
-                    if (checkDacen(p, s)) {
-                      return (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              onClick={() => onDecanClick(p, s)}
-                              className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
-                                alt=""
-                                className="size-4 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
-                              />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
-                            Decan Information
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    }
-                  }
+              if (match) {
+                const p = match[1];
+                const s = match[2];
+                if (checkDacen(p, s)) {
+                  return (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => onDecanClick(p, s)}
+                          className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
+                            alt=""
+                            className="size-4 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
+                          />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
+                        Decan Information
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                }
+              }
               return null;
             })()}
           </div>
@@ -2631,7 +2631,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
 
 // ─── Horary Section ───────────────────────────────────────────────────────────
 
-function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: { 
+function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
   data: any; areaOfInquiry?: string;
   checkDacen: (p: string, s: string) => boolean;
   onDecanClick: (p: string, s: string) => void;
@@ -2867,7 +2867,7 @@ const RELATIONSHIP_AI_SECTIONS = [
   { key: "professional_alignment_and_goals", label: "Professional Alignment & Goals" },
 ];
 
-function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen, onDecanClick }: { 
+function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen, onDecanClick }: {
   aiMap: Record<string, any>; areaOfInquiry?: string; tabSlug: string;
   checkDacen: (p: string, s: string) => boolean;
   onDecanClick: (p: string, s: string) => void;
@@ -2892,33 +2892,33 @@ function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen, onDeca
                   const titleStr = String(item.title ?? item.name ?? "");
                   // Simple parsing for "Planet in Sign" pattern
                   const match = titleStr.match(/(\b[A-Z][a-z]+\b)\s+in\s+(\b[A-Z][a-z]+\b)/);
-                    if (match) {
-                      const p = match[1];
-                      const s = match[2];
-                      if (checkDacen(p, s)) {
-                        return (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                type="button"
-                                onClick={() => onDecanClick(p, s)}
-                                className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
-                              >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
-                                  alt=""
-                                  className="size-4 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
-                                />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
-                              Decan Information
-                            </TooltipContent>
-                          </Tooltip>
-                        );
-                      }
+                  if (match) {
+                    const p = match[1];
+                    const s = match[2];
+                    if (checkDacen(p, s)) {
+                      return (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => onDecanClick(p, s)}
+                              className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
+                                alt=""
+                                className="size-4 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
+                              />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
+                            Decan Information
+                          </TooltipContent>
+                        </Tooltip>
+                      );
                     }
+                  }
                   return null;
                 })()}
               </div>
@@ -3839,149 +3839,149 @@ export default function AdminHoroscopePage() {
           {results && (
             <TooltipProvider delayDuration={200}>
               <div className="space-y-6">
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold">Results</h2>
-                <Badge variant="outline" className="text-amber-600 border-amber-400 text-xs">{currentTab.label}</Badge>
-                <button onClick={printResult} className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors border rounded px-2 py-1">
-                  <Printer className="size-3" />Print
-                </button>
-              </div>
-
-              {/* Return date banner */}
-              {returnDate && (
-                <div className="rounded-md border border-amber-400/40 bg-amber-500/10 px-4 py-3">
-                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">Return Date: <span className="font-bold">{returnDate}</span></p>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold">Results</h2>
+                  <Badge variant="outline" className="text-amber-600 border-amber-400 text-xs">{currentTab.label}</Badge>
+                  <button onClick={printResult} className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors border rounded px-2 py-1">
+                    <Printer className="size-3" />Print
+                  </button>
                 </div>
-              )}
 
-              {/* Natal charts — always show first */}
-              <div id="natal-charts-row">
-                <NatalChartsRow
-                  svg1={natalSvg}
-                  svg2={natalSvgTransit}
-                  label1={isTwoPersonAiTab ? "Person 1 Natal Wheel" : "Natal Wheel Chart (AstrologyAPI)"}
-                  label2={isTwoPersonAiTab ? "Person 2 Natal Wheel" : "Natal Wheel Chart (FreeAstrology)"}
-                  onExpandImg={(src) => setChartModal(src)}
-                />
-              </div>
+                {/* Return date banner */}
+                {returnDate && (
+                  <div className="rounded-md border border-amber-400/40 bg-amber-500/10 px-4 py-3">
+                    <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">Return Date: <span className="font-bold">{returnDate}</span></p>
+                  </div>
+                )}
 
-              {/* ─── Planet Return Summary ──────────────────── */}
-              {isPlanetReturn && (
-                <PlanetReturnSummaryTable tab={currentSlug} birth={form.person1} returnDate={returnDate} natalData={natalData} />
-              )}
+                {/* Natal charts — always show first */}
+                <div id="natal-charts-row">
+                  <NatalChartsRow
+                    svg1={natalSvg}
+                    svg2={natalSvgTransit}
+                    label1={isTwoPersonAiTab ? "Person 1 Natal Wheel" : "Natal Wheel Chart (AstrologyAPI)"}
+                    label2={isTwoPersonAiTab ? "Person 2 Natal Wheel" : "Natal Wheel Chart (FreeAstrology)"}
+                    onExpandImg={(src) => setChartModal(src)}
+                  />
+                </div>
 
-              {/* ─── Solar Return ───────────────────────────── */}
-              {isSolarReturn && (
-                <SolarReturnSection 
-                  details={results.solar_return_details} 
-                  planets={results.solar_return_planets} 
-                  cusps={results.solar_return_cusps} 
-                  aspects={results.solar_return_aspects} 
-                  planetReport={results.solar_return_planet_report} 
-                  aspectsReport={results.solar_return_aspects_report} 
-                  aiData={ai} 
-                  areaOfInquiry={form.areaOfInquiry} 
-                  checkDacen={checkDacen}
-                  onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                />
-              )}
+                {/* ─── Planet Return Summary ──────────────────── */}
+                {isPlanetReturn && (
+                  <PlanetReturnSummaryTable tab={currentSlug} birth={form.person1} returnDate={returnDate} natalData={natalData} />
+                )}
 
-              {/* ─── Saturn Return also shows solar return ──── */}
-              {currentSlug === "saturn_return_v2" && results.solar_return_details && (
-                <SolarReturnSection 
-                  details={results.solar_return_details} 
-                  planets={results.solar_return_planets} 
-                  cusps={results.solar_return_cusps} 
-                  aspects={results.solar_return_aspects} 
-                  planetReport={results.solar_return_planet_report} 
-                  aspectsReport={results.solar_return_aspects_report} 
-                  aiData={null} 
-                  areaOfInquiry={form.areaOfInquiry} 
-                  checkDacen={checkDacen}
-                  onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                />
-              )}
-
-              {/* ─── Transits ───────────────────────────────── */}
-              {isTransit && (
-                <TransitSection 
-                  data={results.transit_data} 
-                  lunarMetrics={results.lunar_metrics} 
-                  aiData={currentSlug === "tropical_transits_weekly_v2" ? ai.tropical_transits_weekly : ai.tropical_transits_monthly} 
-                  lunarAiData={currentSlug === "tropical_transits_monthly_v3" ? ai.lunar_metrics : undefined} 
-                  tabSlug={currentSlug} 
-                  areaOfInquiry={form.areaOfInquiry} 
-                  checkDacen={checkDacen}
-                  onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                />
-              )}
-
-              {/* ─── Horary ─────────────────────────────────── */}
-              {isHorary && (
-                <HorarySection 
-                  data={ai.horary_chart_question} 
-                  areaOfInquiry={form.areaOfInquiry} 
-                  checkDacen={checkDacen}
-                  onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                />
-              )}
-
-              {/* ─── Two-person relationship (all 8 AI sections) ─ */}
-              {isTwoPersonAiTab && (
-                <RelationshipSection 
-                  aiMap={ai} 
-                  areaOfInquiry={form.areaOfInquiry} 
-                  tabSlug={currentSlug} 
-                  checkDacen={checkDacen}
-                  onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                />
-              )}
-
-              {/* ─── Natal chart sections (all single tabs + planet return tabs) ─ */}
-              {natalData && (
-                <div className="space-y-6">
-                  <PlanetsSection 
-                    planets={natalData.planets} 
-                    aiData={ai.western_horoscope_planets} 
-                    areaOfInquiry={form.areaOfInquiry} 
+                {/* ─── Solar Return ───────────────────────────── */}
+                {isSolarReturn && (
+                  <SolarReturnSection
+                    details={results.solar_return_details}
+                    planets={results.solar_return_planets}
+                    cusps={results.solar_return_cusps}
+                    aspects={results.solar_return_aspects}
+                    planetReport={results.solar_return_planet_report}
+                    aspectsReport={results.solar_return_aspects_report}
+                    aiData={ai}
+                    areaOfInquiry={form.areaOfInquiry}
                     checkDacen={checkDacen}
                     onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
                   />
-                  <div className="rounded-lg border overflow-hidden">
-                    <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">House Information</h2></div>
-                    <div className="p-4">
-                      <HousesSection houses={natalData.houses} planets={natalData.planets} aiData={ai.western_horoscope_houses} areaOfInquiry={form.areaOfInquiry} />
-                    </div>
-                  </div>
-                  <div className="rounded-lg border overflow-hidden">
-                    <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20"><h2 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Dharma & Karma</h2></div>
-                    <div className="p-4">
-                      <DharmaKarmaSection data={ai.dharma_karma} rawData={natalData} areaOfInquiry={form.areaOfInquiry} />
-                    </div>
-                  </div>
-                  <div className="rounded-lg border overflow-hidden">
-                    <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">Aspects</h2></div>
-                    <div className="p-4">
-                      <AspectsSection aspects={natalData.aspects} planets={natalData.planets} aiData={ai.western_horoscope_aspects} areaOfInquiry={form.areaOfInquiry} />
-                    </div>
-                  </div>
-                  <AscMidheavenVertexSection natalData={natalData} aiData={ai.western_horoscope_ascendant_midheaven_vertex} areaOfInquiry={form.areaOfInquiry} />
-                  <LilithSection 
-                    lilith={natalData.lilith} 
-                    aiData={ai.western_horoscope_lilith} 
-                    areaOfInquiry={form.areaOfInquiry} 
+                )}
+
+                {/* ─── Saturn Return also shows solar return ──── */}
+                {currentSlug === "saturn_return_v2" && results.solar_return_details && (
+                  <SolarReturnSection
+                    details={results.solar_return_details}
+                    planets={results.solar_return_planets}
+                    cusps={results.solar_return_cusps}
+                    aspects={results.solar_return_aspects}
+                    planetReport={results.solar_return_planet_report}
+                    aspectsReport={results.solar_return_aspects_report}
+                    aiData={null}
+                    areaOfInquiry={form.areaOfInquiry}
                     checkDacen={checkDacen}
                     onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
                   />
-                </div>
-              )}
+                )}
 
-              {isPlanetReturn && (
-                <PlanetReturnInterpretation tab={currentSlug} aiData={ai[currentSlug]} areaOfInquiry={form.areaOfInquiry} />
-              )}
-            </div>
-          </TooltipProvider>
-        )}
+                {/* ─── Transits ───────────────────────────────── */}
+                {isTransit && (
+                  <TransitSection
+                    data={results.transit_data}
+                    lunarMetrics={results.lunar_metrics}
+                    aiData={currentSlug === "tropical_transits_weekly_v2" ? ai.tropical_transits_weekly : ai.tropical_transits_monthly}
+                    lunarAiData={currentSlug === "tropical_transits_monthly_v3" ? ai.lunar_metrics : undefined}
+                    tabSlug={currentSlug}
+                    areaOfInquiry={form.areaOfInquiry}
+                    checkDacen={checkDacen}
+                    onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                  />
+                )}
+
+                {/* ─── Horary ─────────────────────────────────── */}
+                {isHorary && (
+                  <HorarySection
+                    data={ai.horary_chart_question}
+                    areaOfInquiry={form.areaOfInquiry}
+                    checkDacen={checkDacen}
+                    onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                  />
+                )}
+
+                {/* ─── Two-person relationship (all 8 AI sections) ─ */}
+                {isTwoPersonAiTab && (
+                  <RelationshipSection
+                    aiMap={ai}
+                    areaOfInquiry={form.areaOfInquiry}
+                    tabSlug={currentSlug}
+                    checkDacen={checkDacen}
+                    onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                  />
+                )}
+
+                {/* ─── Natal chart sections (all single tabs + planet return tabs) ─ */}
+                {natalData && (
+                  <div className="space-y-6">
+                    <PlanetsSection
+                      planets={natalData.planets}
+                      aiData={ai.western_horoscope_planets}
+                      areaOfInquiry={form.areaOfInquiry}
+                      checkDacen={checkDacen}
+                      onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                    />
+                    <div className="rounded-lg border overflow-hidden">
+                      <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">House Information</h2></div>
+                      <div className="p-4">
+                        <HousesSection houses={natalData.houses} planets={natalData.planets} aiData={ai.western_horoscope_houses} areaOfInquiry={form.areaOfInquiry} />
+                      </div>
+                    </div>
+                    <div className="rounded-lg border overflow-hidden">
+                      <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20"><h2 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Dharma & Karma</h2></div>
+                      <div className="p-4">
+                        <DharmaKarmaSection data={ai.dharma_karma} rawData={natalData} areaOfInquiry={form.areaOfInquiry} />
+                      </div>
+                    </div>
+                    <div className="rounded-lg border overflow-hidden">
+                      <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">Aspects</h2></div>
+                      <div className="p-4">
+                        <AspectsSection aspects={natalData.aspects} planets={natalData.planets} aiData={ai.western_horoscope_aspects} areaOfInquiry={form.areaOfInquiry} />
+                      </div>
+                    </div>
+                    <AscMidheavenVertexSection natalData={natalData} aiData={ai.western_horoscope_ascendant_midheaven_vertex} areaOfInquiry={form.areaOfInquiry} />
+                    <LilithSection
+                      lilith={natalData.lilith}
+                      aiData={ai.western_horoscope_lilith}
+                      areaOfInquiry={form.areaOfInquiry}
+                      checkDacen={checkDacen}
+                      onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                    />
+                  </div>
+                )}
+
+                {isPlanetReturn && (
+                  <PlanetReturnInterpretation tab={currentSlug} aiData={ai[currentSlug]} areaOfInquiry={form.areaOfInquiry} />
+                )}
+              </div>
+            </TooltipProvider>
+          )}
         </div>
       </div>
 
