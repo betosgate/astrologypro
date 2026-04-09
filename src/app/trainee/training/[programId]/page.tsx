@@ -34,6 +34,9 @@ type LessonSummary = {
   title: string;
   priority: number;
   completed: boolean;
+  /** "Started but not completed" hint from lesson_progress — drives the
+   *  Ongoing status badge in the program workspace. */
+  in_progress?: boolean;
   quiz_passed: boolean | null;
   previous_lesson_id: string | null;
   is_locked: boolean;

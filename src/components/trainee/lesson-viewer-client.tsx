@@ -22,6 +22,7 @@ import { PdfPreviewModal } from "@/components/trainee/pdf-preview-modal";
 import { LessonViewerQuiz, QuizQuestionClient } from "@/components/trainee/lesson-viewer-quiz";
 import { LessonCompleteButton } from "@/components/trainee/lesson-complete-button";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
 // Types (mirrors the API response shape)
@@ -969,6 +970,15 @@ export function LessonViewerClient(props: LessonViewerProps) {
                 {sidebarLessons.map((l, i) => (
                   <div
                     key={l.id}
+                    onClick={
+                      l.locked
+                        ? () =>
+                            toast.warning("Locked", {
+                              description:
+                                "Complete the previous lesson first to continue in sequence.",
+                            })
+                        : undefined
+                    }
                     className={cn(
                       "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors",
                       l.current ? "bg-primary/5" : "hover:bg-muted/40",

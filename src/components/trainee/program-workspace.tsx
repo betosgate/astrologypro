@@ -15,6 +15,7 @@ import {
   PlayCircle,
 } from "lucide-react";
 import { LockedLink } from "@/components/trainee/locked-link";
+import { toast } from "sonner";
 
 // ─── Types (mirror the shape returned by /api/trainee/training/programs) ────
 
@@ -127,7 +128,14 @@ export function ProgramWorkspace({
             const isLocked = cat.is_locked;
 
             const handleSelect = () => {
-              if (isLocked) return;
+              if (isLocked) {
+                toast.warning("Locked", {
+                  description:
+                    cat.lock_reason ??
+                    "Complete the previous category first to unlock this section.",
+                });
+                return;
+              }
               setSelectedCategoryId(cat.id);
               // Reset to the next lesson in the new category
               setExpandedLessonId(cat.next_lesson_id);
@@ -138,7 +146,6 @@ export function ProgramWorkspace({
                 <button
                   type="button"
                   onClick={handleSelect}
-                  disabled={isLocked}
                   className={[
                     "w-full text-left rounded-lg border px-3 py-2.5 transition-colors",
                     isSelected
@@ -146,7 +153,6 @@ export function ProgramWorkspace({
                       : "hover:border-primary/30 hover:bg-muted/40",
                     isLocked ? "opacity-60 cursor-not-allowed" : "",
                   ].join(" ")}
-                  title={isLocked ? cat.lock_reason ?? undefined : undefined}
                 >
                   <div className="flex items-start gap-2">
                     <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground mt-0.5">
