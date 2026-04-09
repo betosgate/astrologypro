@@ -69,6 +69,36 @@ export async function POST(
     );
   }
 
+  // ── Standard quiz gate ─────────────────────────────────────────────────────
+  // If the lesson has quiz questions, the learner must have at least one
+  // passing quiz attempt before the lesson can be marked complete. This
+  // server-side check mirrors the client canComplete gate and prevents
+  // bypass via a direct API call.
+  const { count: quizQuestionCount } = await admin
+    .from("quiz_questions")
+    .select("id", { count: "exact", head: true })
+    .eq("lesson_id", lessonId);
+
+  if (quizQuestionCount && quizQuestionCount > 0) {
+    const { data: passedAttempt } = await admin
+      .from("quiz_attempts")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("lesson_id", lessonId)
+      .eq("passed", true)
+      .limit(1)
+      .maybeSingle();
+
+    if (!passedAttempt) {
+      return NextResponse.json(
+        {
+          error: "Pass the lesson quiz before marking the lesson complete.",
+        },
+        { status: 422 },
+      );
+    }
+  }
+
   let isNewCompletion = false;
   let categoryCompleted = false;
   try {

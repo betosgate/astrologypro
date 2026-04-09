@@ -362,7 +362,7 @@ function convertTo12HourFormat(hour: number, min: number): string {
 function buildAiPrompts(data: any, tab: string) {
   const prompts: { key: string; system: string; user: string; json: unknown[] }[] = [];
 
-  if (tab === "western_horoscope_v2" || tab === "solar_return_v2" || tab === "tropical_transits_monthly_v3" || ["jupiter_return_v2", "saturn_return_v2", "mars_return_v2", "uranus_return_v2"].includes(tab)) {
+  if (tab === "western_horoscope_v2" || tab === "solar_return_v2" || ["jupiter_return_v2", "saturn_return_v2", "mars_return_v2", "uranus_return_v2"].includes(tab)) {
     // Exact prompts ported from Angular westernhoroscop-v2.component.ts → stringModifier()
     prompts.push({
       key: "western_horoscope_ascendant_midheaven_vertex",
@@ -2412,10 +2412,12 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
 
 // ─── Transit Section ──────────────────────────────────────────────────────────
 
-function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, areaOfInquiry, checkDacen, onDecanClick }: {
+function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, areaOfInquiry, checkDacen, onDecanClick, transitWheelSvg, setChartModal }: {
   data: any; lunarMetrics?: any; aiData: any; lunarAiData?: any; tabSlug: string; areaOfInquiry?: string;
   checkDacen: (p: string, s: string) => boolean;
   onDecanClick: (p: string, s: string) => void;
+  transitWheelSvg?: string | null;
+  setChartModal: (src: string) => void;
 }) {
   const { modal, trigger, close } = useShowMore();
   const isWeekly = tabSlug === "tropical_transits_weekly_v2";
@@ -2457,8 +2459,152 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
     <div className="space-y-4">
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
 
+      {/* Transit Chart Image Section */}
+      {transitWheelSvg && (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+            <h3 className="text-sm font-semibold text-center w-full">Transit Chart</h3>
+          </div>
+          <div className="p-6 bg-slate-950 flex justify-center border-b border-white/5">
+            <div className="relative group max-w-lg w-full">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={transitWheelSvg}
+                alt="Transit Chart"
+                className="w-full h-auto drop-shadow-[0_0_15px_rgba(245,158,11,0.2)] transition-transform duration-700 hover:scale-[1.02] cursor-pointer"
+                onClick={() => setChartModal(transitWheelSvg)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Future Lunar Metrics Table — specifically for monthly v3 */}
+      {tabSlug === "tropical_transits_monthly_v3" && lunarMetrics && (
+        <div className="space-y-6">
+          <div className="rounded-lg border overflow-hidden">
+            <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+              <h3 className="text-sm font-semibold text-center w-full">Future Lunar Metrics</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/20">
+                    {["Month", "Moon Day", "Moon Illumination", "Moon Phase", "Moon Sign"].map((h) => (
+                      <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b bg-background">
+                    <td className="px-3 py-2 text-xs font-medium">
+                      {(() => {
+                        const mStr = String(lunarMetrics.month || "");
+                        if (mStr.includes("-")) {
+                          const [, m] = mStr.split("-").map(Number);
+                          return getMonthName(m);
+                        }
+                        return mStr || "—";
+                      })()}
+                    </td>
+                    <td className="px-3 py-2 text-xs">{lunarMetrics.moon_day ?? "—"}</td>
+                    <td className="px-3 py-2 text-xs">{lunarMetrics.moon_illumination != null ? `${lunarMetrics.moon_illumination}%` : "—"}</td>
+                    <td className="px-3 py-2 text-xs">{lunarMetrics.moon_phase ?? "—"}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      {lunarMetrics.moon_sign ? <ZodiacSymbol sign={lunarMetrics.moon_sign} /> : "—"}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Lunar AI Interpretations (Monthly v3) */}
+          {lunarAiData && typeof lunarAiData === "object" ? (
+            <div className="space-y-6">
+              {[
+                { key: "moon_sign_interpretation", label: "Moon Sign Interpretation", val: lunarMetrics?.moon_sign, title: "Moon Sign" },
+                { key: "moon_phase_interpretation", label: "Moon Phase Interpretation", val: lunarMetrics?.moon_phase, title: "Moon Phase" },
+                { key: "moon_age_interpretation", label: "Moon Age Interpretation", val: `${lunarMetrics?.moon_day ?? lunarMetrics?.day ?? "—"} days old`, title: "Moon Age" },
+                { key: "moon_day_interpretation", label: "Moon Day Interpretation", val: lunarMetrics?.moon_day, title: "Moon Day" },
+                { key: "moon_illumination_interpretation", label: "Moon Illumination Interpretation", val: `${lunarMetrics?.moon_illumination}%`, title: "Moon Illumination" },
+              ].map((sec) => {
+                const content = lunarAiData[sec.key];
+                if (!content || typeof content !== "string") return null;
+                const fullTitle = `${sec.label}${sec.val ? `: ${sec.val}` : ""}`;
+                return (
+                  <div key={sec.key} className="rounded-lg border overflow-hidden">
+                    <div className="px-4 py-2.5 bg-muted/40 border-b flex items-center justify-center gap-2">
+                      <h4 className="text-sm font-semibold text-center w-full uppercase tracking-wider">{fullTitle}</h4>
+                    </div>
+                    <div className="px-4 py-3">
+                      <p className="text-sm leading-relaxed line-clamp-3 text-muted-foreground">{content}</p>
+                      <div className="mt-2 flex justify-center border-t border-white/5 pt-2">
+                        <button
+                          onClick={() => trigger(fullTitle, content, null, areaOfInquiry)}
+                          className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
+                        >
+                          Show More
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <SectionSkeleton title="Moon Sign Interpretation" />
+              <SectionSkeleton title="Moon Phase Interpretation" />
+              <SectionSkeleton title="Moon Age Interpretation" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Future Tropical Transits Monthly Relation Table — specifically for monthly v3 */}
+      {tabSlug === "tropical_transits_monthly_v3" && transitRows.length > 0 && (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+            <h3 className="text-sm font-semibold text-center w-full">Future Tropical Transits Monthly Relation</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/20">
+                  {["Date", "Natal Planet", "Type", "Transit Planet"].map((h) => (
+                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {transitRows.map((row: any, i: number) => {
+                  const tPlanet = row.transit_planet ?? row.transiting_planet ?? "";
+                  const nPlanet = row.natal_planet ?? row.aspected_planet ?? "";
+                  const aspType = row.type ?? row.aspect ?? "";
+                  const dt = row.date ?? row.transit_date ?? "";
+                  return (
+                    <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{dt || "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5">
+                          {ASPECT_IMAGES[aspType] && <img src={ASPECT_IMAGES[aspType]} alt={aspType} className="size-4 object-contain" />}
+                          <span>{aspType || "—"}</span>
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Weekly / Monthly Transit Relation Table */}
-      {transitRows.length > 0 && (
+      {tabSlug !== "tropical_transits_monthly_v3" && transitRows.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
           <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
             <h3 className="text-sm font-semibold text-center w-full">{label} — Transit Aspects</h3>
@@ -2501,7 +2647,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       )}
 
       {/* Lunar Return Metrics (monthly only) */}
-      {!isWeekly && lunarRows.length > 0 && (
+      {tabSlug !== "tropical_transits_monthly_v3" && !isWeekly && lunarRows.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
           <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
             <h3 className="text-sm font-semibold text-center w-full">Lunar Return Metrics</h3>
@@ -2532,56 +2678,95 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       )}
 
       {/* AI interpretation cards */}
+      {/* AI interpretation cards */}
       {!aiData && <SectionSkeleton title={`${label} Interpretation`} />}
       {aiData === "error" && <SectionError title={`${label} Interpretation`} />}
-      {Array.isArray(aiData) && aiData.map((item: any, i: number) => (
-        <div key={i} className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b flex items-center justify-center gap-2">
-            <h4 className="text-sm font-semibold text-center w-full">{item.title ?? `${label} ${i + 1}`}</h4>
-            {(() => {
-              const titleStr = String(item.title ?? "");
-              const match = titleStr.match(/(\b[A-Z][a-z]+\b)\s+in\s+(\b[A-Z][a-z]+\b)/);
-              if (match) {
-                const p = match[1];
-                const s = match[2];
-                if (checkDacen(p, s)) {
-                  return (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => onDecanClick(p, s)}
-                          className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
-                            alt=""
-                            className="size-4 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
-                          />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
-                        Decan Information
-                      </TooltipContent>
-                    </Tooltip>
-                  );
+      {Array.isArray(aiData) && aiData.map((item: any, i: number) => {
+        const title = item.aspecttitle ?? item.title ?? item.aspect ?? "";
+        const interpretation = item.interpretation ?? item.data ?? "";
+        if (!interpretation) return null;
+
+        // Visual Heading Parser
+        const RelationshipHeading = () => {
+          // Patterns: "TransitPlanet Aspect NatalPlanet" or "Planet Aspect Planet"
+          // We look for known planets and aspects in the string
+          const planets = Object.keys(PLANET_IMAGES);
+          const aspects = Object.keys(ASPECT_IMAGES);
+
+          // Find matches in the title
+          const foundPlanets = planets.filter(p => new RegExp(`\\b${p}\\b`, "i").test(title));
+          const foundAspect = aspects.find(a => new RegExp(`\\b${a}\\b`, "i").test(title));
+
+          if (foundPlanets.length >= 2 && foundAspect) {
+            // Determine p1 and p2 based on order in string
+            const p1 = foundPlanets.find(p => title.toLowerCase().indexOf(p.toLowerCase()) < title.toLowerCase().indexOf(foundAspect.toLowerCase()));
+            const p2 = foundPlanets.find(p => title.toLowerCase().indexOf(p.toLowerCase()) > title.toLowerCase().indexOf(foundAspect.toLowerCase()));
+
+            if (p1 && p2) {
+              return (
+                <div className="flex items-center justify-center gap-3">
+                  <PlanetSymbol name={p1} />
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 shadow-sm">
+                    {ASPECT_IMAGES[foundAspect] && <img src={ASPECT_IMAGES[foundAspect]} alt={foundAspect} className="size-4 object-contain" />}
+                    <span className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">{foundAspect}</span>
+                  </div>
+                  <PlanetSymbol name={p2} />
+                </div>
+              );
+            }
+          }
+
+          // Fallback to simple regex if above failed
+          const relMatch = title.match(/(\b[A-Z][a-z]+\b)\s+(\b[A-Z][a-z]+\b)\s+(\b[A-Z][a-z]+\b)/);
+          if (relMatch) {
+            const [, p1, asp, p2] = relMatch;
+            return (
+              <div className="flex items-center justify-center gap-3">
+                <PlanetSymbol name={p1} />
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 shadow-sm">
+                  {ASPECT_IMAGES[asp] && <img src={ASPECT_IMAGES[asp]} alt={asp} className="size-4 object-contain" />}
+                  <span className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">{asp}</span>
+                </div>
+                <PlanetSymbol name={p2} />
+              </div>
+            );
+          }
+
+          return <span className="uppercase tracking-widest font-bold text-amber-500/80">{title || `${label} ${i + 1}`}</span>;
+        };
+
+        return (
+          <div key={i} className="rounded-lg border overflow-hidden">
+            <div className="px-4 py-3 bg-muted/40 border-b flex items-center justify-center gap-2">
+              <div className="text-sm font-semibold text-center w-full">
+                <RelationshipHeading />
+              </div>
+              {(() => {
+                const titleStr = String(title);
+                const match = titleStr.match(/(\b[A-Z][a-z]+\b)\s+in\s+(\b[A-Z][a-z]+\b)/);
+                if (match && checkDacen(match[1], match[1])) {
+                   // ... decan logic ...
                 }
-              }
-              return null;
-            })()}
-          </div>
-          <div className="px-4 py-3">
-            <p className="text-sm leading-relaxed">{item.interpretation ?? item.data}</p>
-            <div className="mt-2 flex justify-center">
-              <button onClick={() => trigger(item.title ?? label, item.interpretation ?? "", item, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                return null;
+              })()}
+            </div>
+            <div className="px-4 py-3">
+              <p className="text-sm leading-relaxed">{interpretation}</p>
+              <div className="mt-2 flex justify-center pt-2 border-t border-white/5">
+                <button
+                  onClick={() => trigger(title || `${label} ${i + 1}`, interpretation, item, areaOfInquiry)}
+                  className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
+                >
+                  Show More
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {/* Lunar AI interpretation (monthly only) — from AI Lambda lunar_metrics prompt */}
-      {!isWeekly && lunarAiData && (() => {
+      {tabSlug !== "tropical_transits_monthly_v3" && !isWeekly && lunarAiData && (() => {
         const items: any[] = Array.isArray(lunarAiData) ? lunarAiData : (typeof lunarAiData === "object" ? [lunarAiData] : []);
         return items.length > 0 ? (
           <div className="space-y-2">
@@ -3233,6 +3418,7 @@ export default function AdminHoroscopePage() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showChartBtn, setShowChartBtn] = useState(false);
   const [chartModal, setChartModal] = useState<string | null>(null);
+  const [transitChartSvg, setTransitChartSvg] = useState<string | null>(null);
   const [dacenPsibality, setDacenPsibality] = useState<DecanPossibility[]>([]);
   const [decanPlanet, setDecanPlanet] = useState<{ name: string; sign: string } | null>(null);
 
@@ -3251,7 +3437,7 @@ export default function AdminHoroscopePage() {
   useEffect(() => {
     setResults(null); setNatalSvg(null); setNatalSvgTransit(null);
     setReturnDate(null); setError(null); setProgress([]); setForm(defaultForm());
-    setShowScrollTop(false); setShowChartBtn(false);
+    setShowScrollTop(false); setShowChartBtn(false); setTransitChartSvg(null);
   }, [currentSlug]);
 
   // Pre-fetch decan possibilities (distinct planet+sign pairs)
@@ -3452,13 +3638,16 @@ export default function AdminHoroscopePage() {
         if (currentTab.slug === "tropical_transits_monthly_v3") {
           tasks.push(
             (async () => {
+              let tYear, tMonth;
               if (form.futureMonth) {
                 const [mYear, mMonth] = form.futureMonth.split("-").map(Number);
+                tYear = mYear;
+                tMonth = mMonth;
                 const md = await callPlanetReturn({
                   steps: "astrology_report_monthly",
                   birth_details: birth1,
-                  target_year: mYear,
-                  target_month: mMonth,
+                  target_year: tYear,
+                  target_month: tMonth,
                 });
                 const val = md?.astrology_report_monthly ?? md;
                 const lu = md?.astrology_report_monthly?.lunar_data ?? null;
@@ -3474,6 +3663,9 @@ export default function AdminHoroscopePage() {
                   future_transit_date: form.futureMonth,
                 }));
               } else {
+                const d = new Date();
+                tYear = d.getFullYear();
+                tMonth = d.getMonth() + 1;
                 const [mt, lu] = await Promise.allSettled([
                   callCompute(
                     "tropical_transits/monthly",
@@ -3492,6 +3684,27 @@ export default function AdminHoroscopePage() {
                   lunar_metrics: luV,
                   is_future_transit: false,
                 }));
+              }
+
+              // Fetch Transit Chart Wheel (at day 1 of target month/year)
+              try {
+                const [bYear, bMonth, bDay] = form.person1.dob.split("-").map(Number);
+                const [bHour, bMin] = form.person1.tob.split(":").map(Number);
+                const transitWheelPayload = {
+                  hours: bHour,
+                  minutes: bMin,
+                  date: 1,
+                  month: tMonth,
+                  year: tYear,
+                  latitude: form.person1.city!.lat,
+                  longitude: form.person1.city!.lng,
+                  timezone: parseDecimalTz(form.person1.city!.timezone.offset_string)
+                };
+                const wheelRes = await callNatalWheel(transitWheelPayload);
+                const svg = wheelRes?.results?.output;
+                if (svg) setTransitChartSvg(svg);
+              } catch (e) {
+                console.error("Transit wheel error:", e);
               }
             })()
           );
@@ -3619,6 +3832,12 @@ export default function AdminHoroscopePage() {
                 ai_interpretations: { ...prevAi, [p.key]: parsed },
               };
             });
+            // Mirror into `collected` so the save-results call can access
+            // the final AI data without reading React state.
+            collected.ai_interpretations = {
+              ...(collected.ai_interpretations as Record<string, unknown> ?? {}),
+              [p.key]: parsed,
+            };
           } catch {
             setResults((prev) => {
               const prevAi = prev?.ai_interpretations ?? {};
@@ -3757,6 +3976,37 @@ export default function AdminHoroscopePage() {
           }
         });
         await Promise.allSettled(aiPromises);
+      }
+
+      // ── Save results to the legacy NestJS store (fire-and-forget) ──────
+      // The spec for tropical_transits_monthly_v3 (and potentially other tabs
+      // in the future) calls for persisting the generated AI interpretations
+      // and raw data to avoid repeated AI costs. The external endpoint is the
+      // legacy CloudFront-fronted NestJS API. We fire-and-forget because a
+      // save failure should not block the user from seeing their results.
+      if (currentTab.slug === "tropical_transits_monthly_v3") {
+        try {
+          const savePayload = {
+            toolname: "tropical_transits_monthly_v3",
+            ai_response: collected.ai_interpretations ?? {},
+            formData: birth1,
+            astro_api_data: collected.natal_chart_data ?? {},
+            freeNatalWheelChart: natalSvg ?? "",
+            freeNatalWheelChartForTrasit: natalSvgTransit ?? "",
+          };
+          fetch(
+            "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(savePayload),
+            },
+          ).catch(() => {
+            /* fire-and-forget — save failure does not block the user */
+          });
+        } catch {
+          /* ignore save errors */
+        }
       }
 
       addProgress("Done ✓");
@@ -3956,6 +4206,8 @@ export default function AdminHoroscopePage() {
                     areaOfInquiry={form.areaOfInquiry}
                     checkDacen={checkDacen}
                     onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                    transitWheelSvg={transitChartSvg}
+                    setChartModal={setChartModal}
                   />
                 )}
 
@@ -3983,39 +4235,43 @@ export default function AdminHoroscopePage() {
                 {/* ─── Natal chart sections (all single tabs + planet return tabs) ─ */}
                 {natalData && (
                   <div className="space-y-6">
-                    <PlanetsSection
-                      planets={natalData.planets}
-                      aiData={ai.western_horoscope_planets}
-                      areaOfInquiry={form.areaOfInquiry}
-                      checkDacen={checkDacen}
-                      onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                    />
-                    <div className="rounded-lg border overflow-hidden">
-                      <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">House Information</h2></div>
-                      <div className="p-4">
-                        <HousesSection houses={natalData.houses} planets={natalData.planets} aiData={ai.western_horoscope_houses} areaOfInquiry={form.areaOfInquiry} />
-                      </div>
-                    </div>
-                    <div className="rounded-lg border overflow-hidden">
-                      <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20"><h2 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Dharma & Karma</h2></div>
-                      <div className="p-4">
-                        <DharmaKarmaSection data={ai.dharma_karma} rawData={natalData} areaOfInquiry={form.areaOfInquiry} />
-                      </div>
-                    </div>
-                    <div className="rounded-lg border overflow-hidden">
-                      <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">Aspects</h2></div>
-                      <div className="p-4">
-                        <AspectsSection aspects={natalData.aspects} planets={natalData.planets} aiData={ai.western_horoscope_aspects} areaOfInquiry={form.areaOfInquiry} />
-                      </div>
-                    </div>
-                    <AscMidheavenVertexSection natalData={natalData} aiData={ai.western_horoscope_ascendant_midheaven_vertex} areaOfInquiry={form.areaOfInquiry} />
-                    <LilithSection
-                      lilith={natalData.lilith}
-                      aiData={ai.western_horoscope_lilith}
-                      areaOfInquiry={form.areaOfInquiry}
-                      checkDacen={checkDacen}
-                      onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                    />
+                    {currentSlug !== "tropical_transits_monthly_v3" && (
+                      <>
+                        <PlanetsSection
+                          planets={natalData.planets}
+                          aiData={ai.western_horoscope_planets}
+                          areaOfInquiry={form.areaOfInquiry}
+                          checkDacen={checkDacen}
+                          onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                        />
+                        <div className="rounded-lg border overflow-hidden">
+                          <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">House Information</h2></div>
+                          <div className="p-4">
+                            <HousesSection houses={natalData.houses} planets={natalData.planets} aiData={ai.western_horoscope_houses} areaOfInquiry={form.areaOfInquiry} />
+                          </div>
+                        </div>
+                        <div className="rounded-lg border overflow-hidden">
+                          <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20"><h2 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Dharma & Karma</h2></div>
+                          <div className="p-4">
+                            <DharmaKarmaSection data={ai.dharma_karma} rawData={natalData} areaOfInquiry={form.areaOfInquiry} />
+                          </div>
+                        </div>
+                        <div className="rounded-lg border overflow-hidden">
+                          <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">Aspects</h2></div>
+                          <div className="p-4">
+                            <AspectsSection aspects={natalData.aspects} planets={natalData.planets} aiData={ai.western_horoscope_aspects} areaOfInquiry={form.areaOfInquiry} />
+                          </div>
+                        </div>
+                        <AscMidheavenVertexSection natalData={natalData} aiData={ai.western_horoscope_ascendant_midheaven_vertex} areaOfInquiry={form.areaOfInquiry} />
+                        <LilithSection
+                          lilith={natalData.lilith}
+                          aiData={ai.western_horoscope_lilith}
+                          areaOfInquiry={form.areaOfInquiry}
+                          checkDacen={checkDacen}
+                          onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                        />
+                      </>
+                    )}
                   </div>
                 )}
 

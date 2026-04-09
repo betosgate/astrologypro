@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid steps value" }, { status: 400 });
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://astrologypro.com";
   const configRes = await fetch(`${baseUrl}/api/astro/fetch-config`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

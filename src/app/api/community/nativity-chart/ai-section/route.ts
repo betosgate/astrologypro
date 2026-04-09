@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://astrologypro.com";
   const configRes = await fetch(`${baseUrl}/api/astro/fetch-config`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
 
   const origin =
     process.env.NEXT_PUBLIC_SITE_URL ||
-    "https://www.backofficeportal.divineinfinitebeing.com";
+    "https://astrologypro.com";
 
   try {
     const res = await fetch(aiUrl, {

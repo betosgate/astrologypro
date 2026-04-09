@@ -8,7 +8,7 @@ const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || "divineastroimage";
 const REGION = process.env.AWS_S3_REGION || "us-east-1";
 
 async function fetchS3Config() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://astrologypro.com";
   const url = `${baseUrl}/api/astro/fetch-config`;
 
   try {
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const config = await fetchS3Config();
-    
+
     // Debug info for the user to see in production if it fails later
     const maskedAccessKey = config.accessKeyId ? `${config.accessKeyId.substring(0, 5)}...` : "missing";
     const maskedSecretKey = config.secretAccessKey ? `${config.secretAccessKey.substring(0, 5)}...` : "missing";
@@ -135,10 +135,10 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "S3 fetch error";
     console.error("[astro-picture-content] Error:", err);
-    
+
     // Return more details for production debugging as requested
-    return NextResponse.json({ 
-      status: "error", 
+    return NextResponse.json({
+      status: "error",
       message: msg,
       errorType: err instanceof Error ? err.name : typeof err,
       timestamp: new Date().toISOString()

@@ -1,11 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  parsePaginationParams,
+  paginatedList,
+} from "@/lib/training/admin-list";
 
 export const dynamic = "force-dynamic";
 
+const SELECT_COLS =
+  "id, name, description, priority, is_active, is_sequential, allowed_roles, created_at";
 
-// GET /api/admin/training/programs — list all
+const ALLOWED_SORTS: Record<string, string> = {
+  name: "name",
+  priority: "priority",
+  is_active: "is_active",
+  created_at: "created_at",
+};
+
+/**
+ * GET /api/admin/training/programs
+ *
+ * Server-driven paginated list. Supports:
+ *   page, pageSize, search, status, sortBy, sortDir, created_from, created_to
+ *
+ * Returns: { programs, total, page, pageSize }
+ */
 export async function GET(req: NextRequest) {
   const user = await getAdminUser();
   if (!user) {
@@ -13,24 +33,41 @@ export async function GET(req: NextRequest) {
   }
 
   const sp = req.nextUrl.searchParams;
+  const params = parsePaginationParams(sp);
   const createdFrom = sp.get("created_from");
   const createdTo = sp.get("created_to");
 
   const admin = createAdminClient();
-  let query = admin
-    .from("training_programs")
-    .select("id, name, description, priority, is_active, is_sequential, allowed_roles, created_at")
-    .order("priority", { ascending: true });
 
-  if (createdFrom) query = query.gte("created_at", createdFrom);
-  if (createdTo) query = query.lte("created_at", createdTo + "T23:59:59");
-
-  const { data, error } = await query;
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  try {
+    const result = await paginatedList(
+      admin,
+      "training_programs",
+      SELECT_COLS,
+      params,
+      ["name", "description"],
+      ALLOWED_SORTS,
+      { column: "priority", ascending: true },
+      (q) => {
+        let filtered = q;
+        if (createdFrom) filtered = filtered.gte("created_at", createdFrom);
+        if (createdTo)
+          filtered = filtered.lte("created_at", createdTo + "T23:59:59");
+        return filtered;
+      },
+    );
+    return NextResponse.json({
+      programs: result.rows,
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : String(err) },
+      { status: 500 },
+    );
   }
-
-  return NextResponse.json({ programs: data });
 }
 
 // POST /api/admin/training/programs — create

@@ -7,8 +7,9 @@ export const runtime = "nodejs";
 
 /**
  * GET  /api/admin/pricing                — list all rows (admin)
- * POST /api/admin/pricing                — create a new pricing row (admin)
- *   Body: { item_key, item_name, price, currency?, description?, is_active? }
+ * POST /api/admin/pricing                — create a new pricing item (admin)
+ *   Body: { item_key, item_name, description?, is_active? }
+ *   Note: price/currency live on pricing_plans, not on the item.
  *
  * Per-item edit/delete lives at /api/admin/pricing/[id].
  */
@@ -22,7 +23,7 @@ export async function GET() {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("global_pricing")
-    .select("id, item_key, item_name, price, currency, description, is_active, created_at, updated_at")
+    .select("id, item_key, item_name, description, is_active, stripe_product_id, stripe_product_name, created_at, updated_at")
     .order("item_key", { ascending: true });
 
   if (error) {
@@ -47,8 +48,6 @@ export async function POST(req: NextRequest) {
 
   const itemKey = String(body.item_key ?? "").trim();
   const itemName = String(body.item_name ?? "").trim();
-  const priceRaw = body.price;
-  const currencyRaw = body.currency;
 
   if (!itemKey) {
     return NextResponse.json({ error: "item_key is required" }, { status: 422 });
@@ -56,14 +55,6 @@ export async function POST(req: NextRequest) {
   if (!itemName) {
     return NextResponse.json({ error: "item_name is required" }, { status: 422 });
   }
-  const price = typeof priceRaw === "number" ? priceRaw : Number(priceRaw);
-  if (!Number.isFinite(price) || price < 0) {
-    return NextResponse.json(
-      { error: "price must be a non-negative number" },
-      { status: 422 },
-    );
-  }
-  const currency = currencyRaw === "USD" ? "USD" : "INR";
 
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -71,10 +62,10 @@ export async function POST(req: NextRequest) {
     .insert({
       item_key: itemKey,
       item_name: itemName,
-      price,
-      currency,
       description: typeof body.description === "string" ? body.description.trim() || null : null,
       is_active: typeof body.is_active === "boolean" ? body.is_active : true,
+      stripe_product_id: typeof body.stripe_product_id === "string" ? body.stripe_product_id.trim() || null : null,
+      stripe_product_name: typeof body.stripe_product_name === "string" ? body.stripe_product_name.trim() || null : null,
     })
     .select()
     .single();

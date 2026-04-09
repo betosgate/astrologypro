@@ -119,7 +119,7 @@ export default async function BookingsPage({
           clientPrevSessions[session.client_id] = {
             count: 0,
             lastDate: session.scheduled_at,
-            lastNotes: session.session_notes,
+            lastNotes: session.notes,
           };
         }
         clientPrevSessions[session.client_id].count++;
