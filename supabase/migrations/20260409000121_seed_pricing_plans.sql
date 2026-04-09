@@ -12,20 +12,16 @@
 -- 1. Global pricing items
 -- -------------------------------------------------------
 
-INSERT INTO global_pricing (item_key, item_name, price, currency, description)
+INSERT INTO global_pricing (item_key, item_name, description)
 VALUES
   (
     'perennial_mandalism_community',
     'Perennial Mandalism Community',
-    29.99,
-    'USD',
     'Perennial Mandalism community membership — access to sacred teachings, live ceremonies, and community forums.'
   ),
   (
     'mystery_school',
     'Mystery School',
-    49.99,
-    'USD',
     'Mystery School enrollment and subscription — advanced esoteric training, live classes, and exclusive content.'
   )
 ON CONFLICT (item_key) DO NOTHING;
