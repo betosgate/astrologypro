@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DivinerHero } from "@/components/landing/diviner-hero";
 import { ServiceCard } from "@/components/landing/service-card";
@@ -160,15 +159,50 @@ async function getDivinerStats(divinerId: string) {
   endOfWeek.setDate(now.getDate() + (7 - now.getDay()));
   endOfWeek.setHours(23, 59, 59, 999);
 
-  // availability_slots stores weekly recurring templates (day_of_week + TIME, not TIMESTAMP).
-  // Count active slot patterns for days remaining this week, then subtract confirmed bookings.
-  const todayDow = now.getDay(); // 0 = Sunday
-  const { count: slotPatterns } = await supabase
-    .from("availability_slots")
-    .select("*", { count: "exact", head: true })
-    .eq("diviner_id", divinerId)
-    .eq("is_active", true)
-    .gte("day_of_week", todayDow);
+  const [templatesResult, legacySlotsResult] = await Promise.all([
+    supabase
+      .from("availability_templates")
+      .select("start_date, end_date, weekdays, start_time, end_time, duration_minutes")
+      .or(`owner_id.eq.${divinerId},diviner_id.eq.${divinerId}`)
+      .eq("is_active", true),
+    supabase
+      .from("availability_slots")
+      .select("day_of_week, start_time, end_time")
+      .or(`owner_id.eq.${divinerId},diviner_id.eq.${divinerId}`)
+      .eq("is_active", true),
+  ]);
+
+  let slotPatterns = 0;
+  const cursor = new Date(now);
+  cursor.setHours(0, 0, 0, 0);
+  const templates = templatesResult.data ?? [];
+  const legacySlots = legacySlotsResult.data ?? [];
+
+  while (cursor <= endOfWeek) {
+    const dayStr = cursor.toISOString().slice(0, 10);
+    const dayOfWeek = cursor.getDay();
+
+    for (const template of templates) {
+      if (!template.weekdays?.includes(dayOfWeek)) continue;
+      if (dayStr < template.start_date || dayStr > template.end_date) continue;
+
+      const [startHour = 0, startMinute = 0] = (template.start_time ?? "00:00").split(":").map(Number);
+      const [endHour = 0, endMinute = 0] = (template.end_time ?? "00:00").split(":").map(Number);
+      const windowMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
+      const cadence = Math.max(1, template.duration_minutes ?? 60);
+      slotPatterns += Math.max(0, Math.floor(windowMinutes / cadence));
+    }
+
+    for (const slot of legacySlots) {
+      if (slot.day_of_week !== dayOfWeek) continue;
+      const [startHour = 0, startMinute = 0] = (slot.start_time ?? "00:00").split(":").map(Number);
+      const [endHour = 0, endMinute = 0] = (slot.end_time ?? "00:00").split(":").map(Number);
+      const windowMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
+      slotPatterns += Math.max(0, Math.floor(windowMinutes / 60));
+    }
+
+    cursor.setDate(cursor.getDate() + 1);
+  }
 
   const { count: bookedThisWeek } = await supabase
     .from("bookings")
@@ -184,7 +218,7 @@ async function getDivinerStats(divinerId: string) {
     completedSessions: completedSessions ?? 0,
     averageRating,
     reviewCount,
-    openSlotsThisWeek: slotPatterns !== null ? openSlots : undefined,
+    openSlotsThisWeek: openSlots,
   };
 }
 
@@ -250,6 +284,8 @@ export default async function DivinerPage({ params }: PageProps) {
 
   const astroServices = services.filter((s) => s.category === "astrology");
   const tarotServices = services.filter((s) => s.category === "tarot");
+  const primaryBookingService =
+    services.find((service) => service.is_featured) ?? services[0] ?? null;
 
   // Build slug → image URL map for all services
   const serviceImages: Record<string, string | null> = {};
@@ -531,10 +567,20 @@ export default async function DivinerPage({ params }: PageProps) {
           <p className="mx-auto mb-10 max-w-md text-sm text-silver/60">
             Reserve your spot for a personal reading
           </p>
-          <AvailabilityPreview
-            divinerId={diviner.id}
-            username={username}
-          />
+          {primaryBookingService ? (
+            <AvailabilityPreview
+              divinerId={diviner.id}
+              username={username}
+              serviceId={primaryBookingService.id}
+              serviceSlug={primaryBookingService.slug}
+              durationMinutes={primaryBookingService.duration_minutes}
+              serviceName={primaryBookingService.name}
+            />
+          ) : (
+            <p className="text-sm text-silver/60">
+              Services will appear here once {diviner.display_name} publishes a booking offer.
+            </p>
+          )}
         </div>
 
         {/* Cosmic divider */}
