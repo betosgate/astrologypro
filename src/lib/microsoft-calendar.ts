@@ -3,53 +3,54 @@ import {
   upsertCalendarConnection,
   deleteCalendarConnection,
 } from "@/lib/calendar/connections";
+import { getMicrosoftCredentials } from "@/lib/calendar/provider-credentials";
 
-const TENANT_ID = "common"; // multi-tenant
+// Tenant ID now comes from microsoft_api_keys (falls back to "common" inside
+// getMicrosoftCredentials) — do not hardcode it here anymore.
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 
-function getMsClientId() { return process.env.MICROSOFT_CLIENT_ID ?? ""; }
-function getMsClientSecret() { return process.env.MICROSOFT_CLIENT_SECRET ?? ""; }
-function getMsRedirectUri() {
-  return process.env.MICROSOFT_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/api/calendar/microsoft/callback`;
-}
-
 /** Build the Microsoft OAuth2 consent URL */
-export function getMsOAuthUrl(divinerId: string): string {
+export async function getMsOAuthUrl(divinerId: string): Promise<string> {
+  const creds = await getMicrosoftCredentials();
   // Wrap divinerId and redirect_api in a JSON for the proxy Lambda
   const state = JSON.stringify({
     id: divinerId,
-    redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/api/calendar/microsoft/callback`,
-    astrologypro: true
+    redirect_uri: creds.redirectUri,
+    astrologypro: true,
   });
 
   const params = new URLSearchParams({
-    client_id: getMsClientId(),
+    client_id: creds.clientId,
     response_type: "code",
-    redirect_uri: getMsRedirectUri(),
+    redirect_uri: creds.redirectUri,
     scope: "Calendars.ReadWrite offline_access User.Read",
     response_mode: "query",
     state: state,
     prompt: "select_account",
   });
-  return `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/authorize?${params}`;
+  return `https://login.microsoftonline.com/${creds.tenantId}/oauth2/v2.0/authorize?${params}`;
 }
 
 /** Exchange auth code for tokens and persist to calendar_connections */
 export async function handleMsOAuthCallback(
   code: string,
   ownerId: string,
+  // Pre-existing parameter; kept for call-site compatibility. Will be used
+  // when dual-writing to calendar_connections by user_id is required.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   userId: string
 ): Promise<void> {
+  const creds = await getMicrosoftCredentials();
   const body = new URLSearchParams({
-    client_id: getMsClientId(),
-    client_secret: getMsClientSecret(),
+    client_id: creds.clientId,
+    client_secret: creds.clientSecret,
     code,
-    redirect_uri: getMsRedirectUri(),
+    redirect_uri: creds.redirectUri,
     grant_type: "authorization_code",
     scope: "Calendars.ReadWrite offline_access User.Read",
   });
 
-  const res = await fetch(`https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`, {
+  const res = await fetch(`https://login.microsoftonline.com/${creds.tenantId}/oauth2/v2.0/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
@@ -76,6 +77,7 @@ export async function handleMsOAuthCallback(
 }
 
 /** For proxy relay: directly persist the token object */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function persistMsTokens(ownerId: string, tokens: any): Promise<void> {
   const admin = createAdminClient();
   await admin.from("calendar_connections").upsert({
@@ -147,15 +149,16 @@ async function getMsAccessToken(ownerId: string): Promise<string | null> {
   if (expiresAtValue > Date.now() / 1000 + 300 && token.access_token) return token.access_token;
 
   // Refresh
+  const creds = await getMicrosoftCredentials();
   const body = new URLSearchParams({
-    client_id: getMsClientId(),
-    client_secret: getMsClientSecret(),
+    client_id: creds.clientId,
+    client_secret: creds.clientSecret,
     refresh_token: token.refresh_token,
     grant_type: "refresh_token",
     scope: "Calendars.ReadWrite offline_access User.Read",
   });
 
-  const res = await fetch(`https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`, {
+  const res = await fetch(`https://login.microsoftonline.com/${creds.tenantId}/oauth2/v2.0/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,

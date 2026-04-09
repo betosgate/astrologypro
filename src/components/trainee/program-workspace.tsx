@@ -110,9 +110,23 @@ export function ProgramWorkspace({
   const hiddenCount = Math.max(0, categories.length - INITIAL_CATEGORY_VISIBLE);
 
   return (
+    // Lessons are the primary working surface — they render on the LEFT and
+    // get two-thirds of the width. Categories are secondary navigation —
+    // they render on the RIGHT as a narrower rail. On small screens the
+    // grid collapses and stacks naturally (lessons first via lg:order-1,
+    // categories below via lg:order-2). See tasks/09.04.2026/
+    // admin-module/training-school/02-learner-experience/
+    // 02-move-program-workspace-lessons-left-and-categories-right.md.
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* ── LEFT 1/3 — categories pane ────────────────────────────────────── */}
-      <aside className="lg:col-span-1 space-y-2">
+      {/* ── RIGHT rail on desktop — categories pane (order: 2 everywhere)
+          Sticky near the top so navigation stays visible while the learner
+          scrolls the lessons pane. When the expanded rail is taller than
+          the viewport it scrolls internally via overflow-y-auto so every
+          category stays reachable. See tasks/09.04.2026/admin-module/
+          training-school/02-learner-experience/
+          03-progressively-reveal-large-category-lists-and-make-category
+          -rail-sticky.md. */}
+      <aside className="lg:col-span-1 order-2 space-y-2 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
             Categories
@@ -200,8 +214,8 @@ export function ProgramWorkspace({
         )}
       </aside>
 
-      {/* ── RIGHT 2/3 — lessons pane ──────────────────────────────────────── */}
-      <section className="lg:col-span-2 space-y-3">
+      {/* ── LEFT 2/3 on desktop — lessons pane (order: 1 everywhere) ────── */}
+      <section className="lg:col-span-2 order-1 space-y-3">
         {!selectedCategory ? (
           <div className="rounded-xl border bg-card py-16 text-center text-sm text-muted-foreground">
             Select a category to see its lessons.

@@ -1,7 +1,31 @@
 # Mystery School Navigation Parity Implementation Checklist
 
-- Status: Checklist
-- Date: 2026-04-08
+- Status: Completed (2026-04-09)
+- Completion Notes:
+  - Tasks 01, 02 and the shell-level parts of 03 implemented in a single
+    layout rewrite at `src/app/mystery-school/layout.tsx` on commit
+    `9c34196` (pushed to `origin/master`).
+  - Top-nav shell replaced with the Perennial left-sidebar structure:
+    fixed `md:w-60` aside, `md:ml-60` content offset, `NavLink` for
+    active-state highlighting, `PortalLogoutButton` pinned to sidebar
+    bottom, mobile logout in the header.
+  - `/community/*` nav items removed (Mundane, Ingress Charts, Horoscope,
+    Library, Profile — all redirect Mystery School-only users away per
+    the PM-only gate in `community/layout.tsx`). Visible primary nav is
+    now only: Decans (`/mystery-school`), Training
+    (`/mystery-school/training`), Graduation
+    (`/mystery-school/training/graduation`).
+  - Auth guards preserved: `requireMysterySchoolAccess()`,
+    `getUserPortals()`, `RouteTracker`, `NotificationBell`,
+    `PortalSwitcher`, `MobileNav`.
+  - Mystery School thematic identity (gold-on-dark accents, membership
+    badge) left in place — only the shell structure was aligned.
+- Task 03 internal-page review (section hierarchy, title treatment,
+  card grouping) inside individual `src/app/mystery-school/**/page.tsx`
+  files has NOT been done — flagged as a follow-up pass. The acceptance
+  criteria for task 03 around shell-level consistency are met by the
+  layout rewrite.
+- Date: 2026-04-09
 - Category: Mystery School Dashboard
 - Owner: Frontend
 - Priority: P1

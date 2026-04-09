@@ -39,9 +39,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ow
     }
   }
 
+  const updatePayload = {
+    ...body,
+    updated_at: new Date().toISOString(),
+  } as Record<string, unknown>;
+
+  if (Object.prototype.hasOwnProperty.call(body, "service_id")) {
+    updatePayload.service_id = body.service_id || null;
+  }
+
   const { data, error } = await admin
     .from("availability_templates")
-    .update({ ...body, service_id: body.service_id || null, updated_at: new Date().toISOString() })
+    .update(updatePayload)
     .eq("id", id)
     .eq("owner_id", divinerId)
     .select()
