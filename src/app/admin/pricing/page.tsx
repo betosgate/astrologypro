@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -28,6 +28,8 @@ import {
   RefreshCcw,
   Plus,
   Trash2,
+  Settings2,
+  X,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -46,6 +48,12 @@ interface PricingItem {
   updated_at: string;
 }
 
+interface CustomField {
+  label: string;
+  value: string;
+  slug: string;
+}
+
 interface PricingPlan {
   id: string;
   plan_id: string;
@@ -58,6 +66,7 @@ interface PricingPlan {
   description: string | null;
   is_active: boolean;
   sort_order: number;
+  custom_fields: CustomField[];
   created_at: string;
   updated_at: string;
 }
@@ -92,8 +101,12 @@ export default function AdminPricingPage() {
     stripe_price_id: "",
     currency: "INR" as "USD" | "INR",
     description: "",
+    custom_fields: [] as CustomField[],
   });
   const [addingPlan, setAddingPlan] = useState(false);
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [editCustomFields, setEditCustomFields] = useState<CustomField[]>([]);
+  const [savingCustomFields, setSavingCustomFields] = useState(false);
 
   /* ---- Load items ---- */
   const load = useCallback(async () => {
@@ -251,17 +264,78 @@ export default function AdminPricingPage() {
           stripe_price_id: newPlan.stripe_price_id.trim() || null,
           currency: newPlan.currency,
           description: newPlan.description.trim() || null,
+          custom_fields: newPlan.custom_fields.map((f) => ({
+            label: f.label.trim(),
+            value: f.value.trim(),
+            slug: f.slug.trim().toLowerCase().replace(/\s+/g, "_"),
+          })),
         }),
       });
       const body = await r.json();
       if (!r.ok) throw new Error(body.error ?? `HTTP ${r.status}`);
       setPlans((prev) => [...prev, body.plan as PricingPlan]);
-      setNewPlan({ display_name: "", amount: "", mrp: "", stripe_price_id: "", currency: "INR", description: "" });
+      setNewPlan({ display_name: "", amount: "", mrp: "", stripe_price_id: "", currency: "INR", description: "", custom_fields: [] });
       setShowAddPlan(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setAddingPlan(false);
+    }
+  }
+
+  /* ---- Open custom fields editor ---- */
+  function handleEditCustomFields(plan: PricingPlan) {
+    if (editingPlanId === plan.id) {
+      setEditingPlanId(null);
+      return;
+    }
+    setEditingPlanId(plan.id);
+    setEditCustomFields(plan.custom_fields?.length ? [...plan.custom_fields] : []);
+  }
+
+  function handleAddCustomField() {
+    setEditCustomFields((prev) => [...prev, { label: "", value: "", slug: "" }]);
+  }
+
+  function handleRemoveCustomField(idx: number) {
+    setEditCustomFields((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function handleCustomFieldChange(idx: number, field: keyof CustomField, val: string) {
+    setEditCustomFields((prev) =>
+      prev.map((f, i) => (i === idx ? { ...f, [field]: val } : f)),
+    );
+  }
+
+  async function handleSaveCustomFields(plan: PricingPlan) {
+    const valid = editCustomFields.every((f) => f.label.trim() && f.value.trim() && f.slug.trim());
+    if (!valid) {
+      setError("Each custom field must have label, value, and slug filled in");
+      return;
+    }
+    setSavingCustomFields(true);
+    setError(null);
+    try {
+      const cleaned = editCustomFields.map((f) => ({
+        label: f.label.trim(),
+        value: f.value.trim(),
+        slug: f.slug.trim().toLowerCase().replace(/\s+/g, "_"),
+      }));
+      const r = await fetch(`/api/admin/pricing/plans/${plan.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ custom_fields: cleaned }),
+      });
+      const body = await r.json();
+      if (!r.ok) throw new Error(body.error ?? `HTTP ${r.status}`);
+      setPlans((prev) =>
+        prev.map((p) => (p.id === plan.id ? (body.plan as PricingPlan) : p)),
+      );
+      setEditingPlanId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSavingCustomFields(false);
     }
   }
 
@@ -525,6 +599,80 @@ export default function AdminPricingPage() {
                     onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })}
                   />
                 </div>
+                {/* Custom fields for new plan */}
+                <div className="border-t pt-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-medium">Custom Fields</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setNewPlan({
+                          ...newPlan,
+                          custom_fields: [...newPlan.custom_fields, { label: "", value: "", slug: "" }],
+                        })
+                      }
+                    >
+                      <Plus className="mr-1 size-3" />
+                      Add Field
+                    </Button>
+                  </div>
+                  {newPlan.custom_fields.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic">No custom fields added.</p>
+                  )}
+                  {newPlan.custom_fields.map((cf, idx) => (
+                    <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end">
+                      <div className="space-y-1">
+                        {idx === 0 && <Label className="text-xs">Label</Label>}
+                        <Input
+                          placeholder="e.g. Duration"
+                          value={cf.label}
+                          onChange={(e) => {
+                            const updated = [...newPlan.custom_fields];
+                            updated[idx] = { ...updated[idx], label: e.target.value };
+                            setNewPlan({ ...newPlan, custom_fields: updated });
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        {idx === 0 && <Label className="text-xs">Value</Label>}
+                        <Input
+                          placeholder="e.g. 3 Months"
+                          value={cf.value}
+                          onChange={(e) => {
+                            const updated = [...newPlan.custom_fields];
+                            updated[idx] = { ...updated[idx], value: e.target.value };
+                            setNewPlan({ ...newPlan, custom_fields: updated });
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        {idx === 0 && <Label className="text-xs">Slug</Label>}
+                        <Input
+                          placeholder="e.g. duration"
+                          value={cf.slug}
+                          onChange={(e) => {
+                            const updated = [...newPlan.custom_fields];
+                            updated[idx] = { ...updated[idx], slug: e.target.value };
+                            setNewPlan({ ...newPlan, custom_fields: updated });
+                          }}
+                        />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => {
+                          const updated = newPlan.custom_fields.filter((_, i) => i !== idx);
+                          setNewPlan({ ...newPlan, custom_fields: updated });
+                        }}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
                 <div className="flex gap-2 pt-1">
                   <Button size="sm" onClick={handleAddPlan} disabled={addingPlan || !newPlan.display_name.trim()}>
                     {addingPlan && <Loader2 className="mr-2 size-4 animate-spin" />}
@@ -557,13 +705,15 @@ export default function AdminPricingPage() {
                       <th className="py-2 text-right">mrp</th>
                       <th className="py-2">stripe price</th>
                       <th className="py-2">status</th>
+                      <th className="py-2 text-center">fields</th>
                       <th className="py-2 text-center">toggle</th>
                       <th className="py-2 text-center">actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {plans.map((plan) => (
-                      <tr key={plan.id} className="border-b last:border-0">
+                      <React.Fragment key={plan.id}>
+                      <tr className="border-b last:border-0">
                         <td className="py-2 font-mono text-xs max-w-[140px] truncate" title={plan.plan_id}>
                           {plan.plan_id}
                         </td>
@@ -597,6 +747,21 @@ export default function AdminPricingPage() {
                           </Badge>
                         </td>
                         <td className="py-2 text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditCustomFields(plan)}
+                            title="Edit custom fields"
+                          >
+                            <Settings2 className="size-4" />
+                            {plan.custom_fields?.length > 0 && (
+                              <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">
+                                {plan.custom_fields.length}
+                              </Badge>
+                            )}
+                          </Button>
+                        </td>
+                        <td className="py-2 text-center">
                           <div className="flex items-center justify-center gap-2">
                             <Switch
                               checked={plan.is_active}
@@ -625,6 +790,78 @@ export default function AdminPricingPage() {
                           </Button>
                         </td>
                       </tr>
+                      {/* Custom fields editor row */}
+                      {editingPlanId === plan.id && (
+                        <tr>
+                          <td colSpan={8} className="py-3 px-2">
+                            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium">
+                                  Custom Fields for &ldquo;{plan.display_name}&rdquo;
+                                </p>
+                                <Button variant="ghost" size="sm" onClick={() => setEditingPlanId(null)}>
+                                  <X className="size-4" />
+                                </Button>
+                              </div>
+                              {editCustomFields.length === 0 && (
+                                <p className="text-xs text-muted-foreground italic">No custom fields. Click &ldquo;Add Field&rdquo; to create one.</p>
+                              )}
+                              {editCustomFields.map((cf, idx) => (
+                                <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end">
+                                  <div className="space-y-1">
+                                    {idx === 0 && <Label className="text-xs">Label</Label>}
+                                    <Input
+                                      placeholder="e.g. Duration"
+                                      value={cf.label}
+                                      onChange={(e) => handleCustomFieldChange(idx, "label", e.target.value)}
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    {idx === 0 && <Label className="text-xs">Value</Label>}
+                                    <Input
+                                      placeholder="e.g. 3 Months"
+                                      value={cf.value}
+                                      onChange={(e) => handleCustomFieldChange(idx, "value", e.target.value)}
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    {idx === 0 && <Label className="text-xs">Slug</Label>}
+                                    <Input
+                                      placeholder="e.g. duration"
+                                      value={cf.slug}
+                                      onChange={(e) => handleCustomFieldChange(idx, "slug", e.target.value)}
+                                    />
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive"
+                                    onClick={() => handleRemoveCustomField(idx)}
+                                  >
+                                    <Trash2 className="size-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                              <div className="flex gap-2 pt-1">
+                                <Button variant="outline" size="sm" onClick={handleAddCustomField}>
+                                  <Plus className="mr-1 size-4" />
+                                  Add Field
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSaveCustomFields(plan)}
+                                  disabled={savingCustomFields}
+                                >
+                                  {savingCustomFields && <Loader2 className="mr-2 size-4 animate-spin" />}
+                                  <Save className="mr-1 size-4" />
+                                  Save Fields
+                                </Button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>

@@ -80,6 +80,17 @@ export async function PATCH(
     }
     updates.sort_order = v;
   }
+  if (body.custom_fields !== undefined) {
+    if (!Array.isArray(body.custom_fields)) {
+      return NextResponse.json({ error: "custom_fields must be an array" }, { status: 422 });
+    }
+    for (const f of body.custom_fields) {
+      if (!f || typeof f !== "object" || !f.label || !f.value || !f.slug) {
+        return NextResponse.json({ error: "Each custom field must have label, value, and slug" }, { status: 422 });
+      }
+    }
+    updates.custom_fields = body.custom_fields;
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 422 });
