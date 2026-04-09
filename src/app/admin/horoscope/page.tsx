@@ -639,23 +639,23 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
 
               {/* Pictorial Representation — Below the text */}
               {pictureUrl && (
-                <div className="p-6 flex flex-col items-center justify-center bg-slate-900/20 border-b border-white/5">
-                  <div className="relative group rounded-2xl border border-amber-500/20 overflow-hidden bg-slate-950 shadow-[0_0_50px_rgba(245,158,11,0.08)] transition-all hover:border-amber-500/40 max-w-lg w-full">
+                <div className="px-6 pb-6 pt-2 flex flex-col items-center justify-center bg-slate-900/20">
+                  <div className="relative group rounded-xl border border-amber-500/20 overflow-hidden bg-slate-950 shadow-[0_0_50px_rgba(245,158,11,0.08)] transition-all hover:border-amber-500/40 max-w-sm w-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={pictureUrl} alt={title} className="w-full h-auto max-h-[60vh] object-contain transition-transform duration-1000 group-hover:scale-[1.05]" />
+                    <img src={pictureUrl} alt={title} className="w-full h-auto max-h-[280px] object-contain transition-transform duration-1000 group-hover:scale-[1.05]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
 
                     {/* Maximize Icon */}
                     <button
                       onClick={() => setShowFullImage(true)}
-                      className="absolute top-4 right-4 size-10 flex items-center justify-center rounded-xl bg-slate-950/80 border border-white/10 text-amber-500/80 hover:text-amber-500 hover:border-amber-500/50 transition-all shadow-2xl backdrop-blur-md z-10 group/btn"
+                      className="absolute top-3 right-3 size-9 flex items-center justify-center rounded-lg bg-slate-950/80 border border-white/10 text-amber-500/80 hover:text-amber-500 hover:border-amber-500/50 transition-all shadow-2xl backdrop-blur-md z-10 group/btn"
                       title="Enlarge Cosmic Map"
                     >
-                      <Maximize2 className="size-5 transition-transform group-hover/btn:scale-125" />
+                      <Maximize2 className="size-4 transition-transform group-hover/btn:scale-110" />
                     </button>
 
-                    <div className="absolute bottom-4 left-0 right-0 text-center px-4">
-                      <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-500/50 mix-blend-overlay">Celestial Configuration</span>
+                    <div className="absolute bottom-3 left-0 right-0 text-center px-4">
+                      <span className="text-[8px] font-black uppercase tracking-[0.2em] text-amber-500/40 mix-blend-overlay">Celestial Configuration</span>
                     </div>
                   </div>
                 </div>
@@ -670,10 +670,7 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
         <ChartImageModal
           src={pictureUrl}
           open={showFullImage}
-          onClose={() => {
-            setShowFullImage(false);
-            onClose();
-          }}
+          onClose={() => setShowFullImage(false)}
         />
       )}
     </>
@@ -1120,6 +1117,39 @@ function DecanAiBlock({ title, data, loading }: { title: string; data: DecanAi |
   );
 }
 
+function DecanImage({ src, alt, onFull }: { src: string; alt: string; onFull: (src: string) => void }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className="relative group/img bg-slate-950 border-b border-white/5 flex justify-center p-4 min-h-[160px]">
+      {!loaded && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/40 animate-pulse gap-2">
+          <Loader2 className="size-6 animate-spin text-amber-500/40" />
+          <span className="text-[10px] uppercase tracking-widest text-amber-500/20 font-bold">Loading Vision...</span>
+        </div>
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        onLoad={() => setLoaded(true)}
+        className={cn(
+          "max-h-[320px] w-auto object-contain rounded-lg shadow-2xl transition-all duration-700 ease-in-out hover:scale-[1.02]",
+          loaded ? "opacity-100 scale-100" : "opacity-0 scale-95"
+        )}
+      />
+      {loaded && (
+        <button
+          className="absolute bottom-6 right-6 p-2 rounded-full bg-slate-900/80 border border-white/10 text-amber-500 hover:bg-slate-800 transition-all shadow-lg active:scale-90"
+          onClick={() => onFull(src)}
+          title="Open Full Image"
+        >
+          <Maximize2 className="size-4" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 function DecanModal({ planet, sign, open, onClose }: {
   planet: string; sign: string; open: boolean; onClose: () => void;
 }) {
@@ -1181,10 +1211,7 @@ function DecanModal({ planet, sign, open, onClose }: {
       <ChartImageModal
         src={fullscreenImg || ""}
         open={!!fullscreenImg}
-        onClose={() => {
-          setFullscreenImg(null);
-          onClose();
-        }}
+        onClose={() => setFullscreenImg(null)}
       />
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
         <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
@@ -1238,21 +1265,11 @@ function DecanModal({ planet, sign, open, onClose }: {
 
                       {/* Decan Image if available */}
                       {row.decan_img && (
-                        <div className="relative group/img bg-slate-950 border-b border-white/5 flex justify-center p-4">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={row.decan_img}
-                            alt={`${ordinalDecan(row.decan)} Decan Imagery`}
-                            className="max-h-[320px] w-auto object-contain rounded-lg shadow-2xl transition-transform hover:scale-[1.02]"
-                          />
-                          <button
-                            className="absolute bottom-6 right-6 p-2 rounded-full bg-slate-900/80 border border-white/10 text-amber-500 hover:bg-slate-800 transition-all shadow-lg"
-                            onClick={() => setFullscreenImg(row.decan_img || null)}
-                            title="Open Full Image"
-                          >
-                            <Maximize2 className="size-4" />
-                          </button>
-                        </div>
+                        <DecanImage
+                          src={row.decan_img}
+                          alt={`${ordinalDecan(row.decan)} Decan Imagery`}
+                          onFull={(src) => setFullscreenImg(src)}
+                        />
                       )}
 
                       {/* Static labels row */}
@@ -3195,6 +3212,16 @@ export default function AdminHoroscopePage() {
   const currentTab = TABS.find((t) => t.slug === currentSlug) ?? TABS[0];
 
   const [form, setForm] = useState<FormState>(defaultForm());
+  const isFormValid = (() => {
+    const p1 = form.person1;
+    if (!p1.dob || !p1.tob || !p1.city) return false;
+    if (currentTab.type === "two-person") {
+      const p2 = form.person2;
+      if (!p2.dob || !p2.tob || !p2.city) return false;
+    }
+    if (currentTab.extras?.includes("question") && !form.question.trim()) return false;
+    return true;
+  })();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -3816,8 +3843,24 @@ export default function AdminHoroscopePage() {
 
                 {error && <p className="text-sm text-destructive rounded-md bg-destructive/10 px-3 py-2">{error}</p>}
 
-                <Button type="submit" disabled={loading} className="bg-amber-500 hover:bg-amber-600 text-white h-9">
-                  {loading ? <><Loader2 className="mr-2 size-4 animate-spin" />Processing…</> : "Generate Reading"}
+                <Button
+                  type="submit"
+                  disabled={loading || !isFormValid}
+                  className={cn(
+                    "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
+                    loading || !isFormValid
+                      ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
+                      : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
+                  )}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      Processing Cosmic Data…
+                    </>
+                  ) : (
+                    "Generate Reading"
+                  )}
                 </Button>
               </form>
             </CardContent>
