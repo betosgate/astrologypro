@@ -74,7 +74,7 @@ export async function POST(
   }
 
   // Check Astro AI API URL from the centralised config API
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://astrologypro.com";
   const configRes = await fetch(`${baseUrl}/api/astro/fetch-config`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
