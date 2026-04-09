@@ -6,6 +6,7 @@ import { addDays, format, startOfMonth, endOfMonth, isBefore, startOfDay } from 
 
 interface CalendarPickerProps {
   divinerId: string;
+  serviceId: string;
   duration: number;
   onDateSelect: (date: Date) => void;
   selectedDate: Date | undefined;
@@ -13,6 +14,7 @@ interface CalendarPickerProps {
 
 export function CalendarPicker({
   divinerId,
+  serviceId,
   duration,
   onDateSelect,
   selectedDate,
@@ -20,10 +22,12 @@ export function CalendarPicker({
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
+  const [loadedMonth, setLoadedMonth] = useState(false);
 
   useEffect(() => {
     async function fetchMonthAvailability() {
       setLoading(true);
+      setLoadedMonth(false);
       try {
         const start = startOfMonth(currentMonth);
         const end = endOfMonth(currentMonth);
@@ -37,7 +41,7 @@ export function CalendarPicker({
           if (!isBefore(day, today)) {
             const dateStr = format(day, "yyyy-MM-dd");
             const res = await fetch(
-              `/api/availability/${divinerId}?date=${dateStr}&duration=${duration}`
+              `/api/availability/${divinerId}?date=${dateStr}&duration=${duration}&serviceId=${serviceId}`
             );
             if (res.ok) {
               const slots = await res.json();
@@ -53,12 +57,13 @@ export function CalendarPicker({
       } catch {
         // Silently handle fetch errors
       } finally {
+        setLoadedMonth(true);
         setLoading(false);
       }
     }
 
     fetchMonthAvailability();
-  }, [currentMonth, divinerId, duration]);
+  }, [currentMonth, divinerId, duration, serviceId]);
 
   const today = startOfDay(new Date());
 
@@ -79,8 +84,7 @@ export function CalendarPicker({
         disabled={(date) => {
           if (isBefore(date, today)) return true;
           const dateStr = format(date, "yyyy-MM-dd");
-          // If we have loaded availability data and this date has no slots, disable it
-          if (availableDates.size > 0 && !availableDates.has(dateStr)) {
+          if (loadedMonth && !availableDates.has(dateStr)) {
             return true;
           }
           return false;

@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { owner_id, diviner_id, title, start_date, end_date, weekdays, start_time, end_time, timezone, duration_minutes, description, is_active } = body;
+  const { owner_id, diviner_id, title, start_date, end_date, weekdays, start_time, end_time, timezone, duration_minutes, description, is_active, service_id } = body;
   const finalOwnerId = owner_id || diviner_id;
 
   if (!finalOwnerId || !start_date || !end_date || !weekdays || !start_time || !end_time || !timezone) {
@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
       duration_minutes: duration_minutes || 60,
       description: description || null,
       is_active: is_active ?? true,
+      service_id: service_id || null,
     })
     .select()
     .single();

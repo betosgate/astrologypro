@@ -1,7 +1,33 @@
 # Task: API Keys & Config Management (Google & Microsoft)
 
-- Status: Pending
-- Completion Notes: 
+- Status: Completed (2026-04-09)
+- Completion Notes:
+  - This task was duplicated as `tasks/09.04.2026/calendar-module/
+    11-api-keys-config.md` and executed there. Implementation delivered
+    in commit `de8e7d5` pushed to `origin/master`:
+      - Migration `20260409000117_calendar_provider_credentials` creates
+        `google_api_keys` and `microsoft_api_keys` (key/value/
+        description/is_active), service-role-only RLS, partial indexes
+        on `lower(key)`, `moddatetime` trigger where available. Applied
+        live via the Supabase Management API (HTTP 201).
+      - Admin CRUD API under `/api/admin/calendar-config/{google,
+        microsoft}` + `[id]` with `getAdminUser()` gate, masked values
+        by default on list, raw value on explicit single-row GET.
+      - Admin UI at `/admin/calendar-config` with two provider cards,
+        reveal/edit/delete per row, create/edit dialog with masked
+        password input, well-known keys datalist (client_id,
+        client_secret, redirect_uri, tenant_id for MS), warning banner
+        listing missing keys.
+      - Sidebar entry "Calendar Config" added under CONFIG group.
+      - Runtime wire-in: `src/lib/calendar/provider-credentials.ts`
+        resolves credentials via DB → env var → default with 60s TTL
+        cache. `google-calendar.ts`, `microsoft-calendar.ts`, and the
+        Google webhook route now all call `getGoogleCredentials()` /
+        `getMicrosoftCredentials()` at request time instead of reading
+        `process.env.*` directly.
+  - Runtime silently falls back to existing env vars when a key row is
+    absent — no breakage at deploy time. Admins populate the tables
+    from `/admin/calendar-config` to take over.
 
 ## Objective
 Enable **Administrators** to manage the configurations for Google and Microsoft Calendar integrations directly from the Admin Dashboard. These configurations must be stored securely in separate Supabase database tables utilizing a key-value structure with full CRUD (Create, Read, Update, Delete) functionality.

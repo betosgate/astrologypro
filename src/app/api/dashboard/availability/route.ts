@@ -26,7 +26,7 @@ export async function GET() {
   const { data, error } = await admin
     .from("availability_templates")
     .select("*")
-    .eq("diviner_id", diviner.id)
+    .or(`owner_id.eq.${diviner.id},diviner_id.eq.${diviner.id}`)
     .order("start_date", { ascending: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ templates: data });
@@ -47,14 +47,30 @@ export async function POST(req: NextRequest) {
     duration_minutes,
     description,
     is_active,
+    service_id,
   } = body;
   if (!start_date || !end_date || !weekdays?.length || !start_time || !end_time || !timezone) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 422 });
   }
   const admin = createAdminClient();
+
+  if (service_id) {
+    const { data: service } = await admin
+      .from("services")
+      .select("id")
+      .or(`owner_id.eq.${diviner.id},diviner_id.eq.${diviner.id}`)
+      .eq("id", service_id)
+      .maybeSingle();
+
+    if (!service) {
+      return NextResponse.json({ error: "Selected service not found." }, { status: 422 });
+    }
+  }
+
   const { data, error } = await admin
     .from("availability_templates")
     .insert({
+      owner_id: diviner.id,
       diviner_id: diviner.id,
       title: title || "Available",
       start_date,
@@ -66,6 +82,7 @@ export async function POST(req: NextRequest) {
       duration_minutes: duration_minutes || 60,
       description: description || null,
       is_active: is_active ?? true,
+      service_id: service_id || null,
     })
     .select()
     .single();
