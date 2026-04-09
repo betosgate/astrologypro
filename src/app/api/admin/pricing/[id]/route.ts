@@ -58,6 +58,12 @@ export async function PATCH(
   if (body.stripe_product_name !== undefined) {
     updates.stripe_product_name = body.stripe_product_name === null ? null : String(body.stripe_product_name).trim() || null;
   }
+  if (body.payment_provider !== undefined) {
+    updates.payment_provider = body.payment_provider === null ? null : String(body.payment_provider).trim() || null;
+  }
+  if (body.payment_provider_id !== undefined) {
+    updates.payment_provider_id = body.payment_provider_id === null ? null : String(body.payment_provider_id).trim() || null;
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 422 });

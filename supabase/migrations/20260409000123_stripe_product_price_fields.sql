@@ -9,7 +9,9 @@
 
 ALTER TABLE global_pricing
   ADD COLUMN IF NOT EXISTS stripe_product_id   TEXT,
-  ADD COLUMN IF NOT EXISTS stripe_product_name TEXT;
+  ADD COLUMN IF NOT EXISTS stripe_product_name TEXT,
+  ADD COLUMN IF NOT EXISTS payment_provider    TEXT DEFAULT 'stripe',
+  ADD COLUMN IF NOT EXISTS payment_provider_id TEXT;
 
 ALTER TABLE pricing_plans
   ADD COLUMN IF NOT EXISTS stripe_price_name TEXT;
@@ -19,10 +21,19 @@ CREATE INDEX IF NOT EXISTS idx_global_pricing_stripe_product
   ON global_pricing (stripe_product_id)
   WHERE stripe_product_id IS NOT NULL;
 
+-- Index for filtering items by payment provider account
+CREATE INDEX IF NOT EXISTS idx_global_pricing_payment_provider
+  ON global_pricing (payment_provider, payment_provider_id)
+  WHERE payment_provider_id IS NOT NULL;
+
 COMMENT ON COLUMN global_pricing.stripe_product_id IS
   'Stripe Product ID (prod_xxx) — one product per pricing item.';
 COMMENT ON COLUMN global_pricing.stripe_product_name IS
   'Product name as it appears in Stripe (may differ from item_name).';
+COMMENT ON COLUMN global_pricing.payment_provider IS
+  'Payment provider name (stripe, paypal, razorpay, etc.). Defaults to stripe.';
+COMMENT ON COLUMN global_pricing.payment_provider_id IS
+  'Account ID on the payment provider (e.g. acct_xxx for Stripe).';
 COMMENT ON COLUMN pricing_plans.stripe_price_name IS
   'Price nickname/name as it appears in Stripe.';
 
@@ -32,15 +43,25 @@ COMMENT ON COLUMN pricing_plans.stripe_price_name IS
 
 UPDATE global_pricing
 SET stripe_product_id = 'prod_SpR5ZxnOxiW80x',
-    stripe_product_name = 'Perennial Mandalism Dashboard Single'
+    stripe_product_name = 'Perennial Mandalism Dashboard Single',
+    payment_provider = 'stripe',
+    payment_provider_id = 'acct_10JJg0BcRXKECv5f'
 WHERE item_key = 'perennial_mandalism_community'
   AND stripe_product_id IS NULL;
 
 UPDATE global_pricing
 SET stripe_product_id = 'prod_SpR54cIddD0uy7',
-    stripe_product_name = 'Mystery School dashboard'
+    stripe_product_name = 'Mystery School dashboard',
+    payment_provider = 'stripe',
+    payment_provider_id = 'acct_10JJg0BcRXKECv5f'
 WHERE item_key = 'mystery_school'
   AND stripe_product_id IS NULL;
+
+-- Backfill any remaining items without payment_provider_id
+UPDATE global_pricing
+SET payment_provider = 'stripe',
+    payment_provider_id = 'acct_10JJg0BcRXKECv5f'
+WHERE payment_provider_id IS NULL;
 
 -- -------------------------------------------------------
 -- Backfill existing plans with Stripe price names
