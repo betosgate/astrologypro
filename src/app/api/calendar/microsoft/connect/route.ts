@@ -16,5 +16,5 @@ export async function GET() {
   // ownerId is either the Diviner ID or the User ID
   const ownerId = diviner?.id || user.id;
 
-  return NextResponse.redirect(getMsOAuthUrl(ownerId));
+  return NextResponse.redirect(await getMsOAuthUrl(ownerId));
 }

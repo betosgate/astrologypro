@@ -1,11 +1,11 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { upsertCalendarConnection, deleteCalendarConnection } from "@/lib/calendar/connections";
+import { getGoogleCredentials } from "@/lib/calendar/provider-credentials";
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
-const GOOGLE_REDIRECT_URI =
-  process.env.GOOGLE_REDIRECT_URI ||
-  "http://localhost:3000/api/calendar/callback";
+// Google OAuth client credentials are now resolved at call time via
+// getGoogleCredentials() — it reads the admin-managed google_api_keys table
+// first, then falls back to env vars. See tasks/09.04.2026/calendar-module/
+// 11-api-keys-config.md for why.
 
 const SCOPES = [
   "https://www.googleapis.com/auth/calendar.events.owned",
@@ -18,11 +18,16 @@ const TABLE_NAME = "calendar_connections";
 
 /**
  * Builds the Google OAuth2 consent URL for calendar access.
+ *
+ * Async because client_id / redirect_uri now come from the admin-managed
+ * google_api_keys table (with env var fallback). Callers that were
+ * synchronous have been updated to await this.
  */
-export function getOAuthUrl(ownerId: string): string {
+export async function getOAuthUrl(ownerId: string): Promise<string> {
+  const creds = await getGoogleCredentials();
   const params = new URLSearchParams({
-    client_id: GOOGLE_CLIENT_ID,
-    redirect_uri: GOOGLE_REDIRECT_URI,
+    client_id: creds.clientId,
+    redirect_uri: creds.redirectUri,
     response_type: "code",
     scope: SCOPES.join(" "),
     access_type: "offline",
@@ -44,14 +49,15 @@ export async function handleOAuthCallback(
   ownerId: string, // Changed from divinerId
   userId: string   // Added userId
 ): Promise<void> {
+  const creds = await getGoogleCredentials();
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       code,
-      client_id: GOOGLE_CLIENT_ID,
-      client_secret: GOOGLE_CLIENT_SECRET,
-      redirect_uri: GOOGLE_REDIRECT_URI,
+      client_id: creds.clientId,
+      client_secret: creds.clientSecret,
+      redirect_uri: creds.redirectUri,
       grant_type: "authorization_code",
     }),
   });
@@ -91,9 +97,11 @@ export async function handleOAuthCallback(
 
   // Dual-write to the normalized calendar_connections table. Best-effort —
   // never throws because we don't want the cutover write to break the
-  // legacy success path.
+  // legacy success path. (Pre-existing bug fix: the surrounding function
+  // renamed its parameter from divinerId to ownerId but this call site
+  // still used the old name.)
   await upsertCalendarConnection(supabase, {
-    divinerId,
+    divinerId: ownerId,
     provider: "google",
     refreshToken: tokens.refresh_token,
     expiresAt:
@@ -133,12 +141,13 @@ async function getAccessToken(ownerId: string): Promise<string> {
   }
 
   // Otherwise, refresh it
+  const creds = await getGoogleCredentials();
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: GOOGLE_CLIENT_ID,
-      client_secret: GOOGLE_CLIENT_SECRET,
+      client_id: creds.clientId,
+      client_secret: creds.clientSecret,
       refresh_token: data.refresh_token,
       grant_type: "refresh_token",
     }),
