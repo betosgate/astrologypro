@@ -1,7 +1,26 @@
 # Database Remediation: Direct SQL Bypass
 
-- Status: Todo
-- Completion Notes: 
+- Status: Completed (2026-04-09)
+- Completion Notes:
+  - A fresh `SUPABASE_ACCESS_TOKEN` was supplied mid-session and used to
+    run three pending migrations directly against the project database
+    via the Supabase Management API (`POST https://api.supabase.com/
+    v1/projects/wyluvclvtvwptsvvtgkv/database/query`):
+      - `20260408000112_global_pricing` — HTTP 201
+      - `20260408000116_training_notes_allow_quiz` — HTTP 201
+      - `20260409000117_calendar_provider_credentials` — HTTP 201
+  - Post-run verification confirmed:
+      - `global_pricing`, `google_api_keys`, `microsoft_api_keys`
+        tables all exist in `public`.
+      - `training_notes_entity_type_check` constraint now admits
+        `program | category | lesson | quiz`.
+      - `global_pricing` is seeded with
+        `professional_divination_course = 25969.00 INR`.
+  - The manual SQL-Editor bypass documented below is no longer needed —
+    it is preserved as a reference for any future case where the admin
+    runner is unavailable and a direct-console fallback is required.
+  - The token used for this run was flagged for rotation immediately
+    because it passed through a chat transcript.
 
 ## Overview
 Because the `SUPABASE_ACCESS_TOKEN` is expired—preventing the automated API from running the migration—the fastest way to resolve the "public.global_pricing table not found" error is to run the migration script manually in the Supabase Dashboard. 
