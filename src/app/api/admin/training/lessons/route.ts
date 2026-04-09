@@ -1,11 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parsePaginationParams, paginatedList } from "@/lib/training/admin-list";
 
 export const dynamic = "force-dynamic";
 
+const SELECT_COLS =
+  "id, category_id, title, description, video_url, duration_mins, priority, previous_lesson_id, is_active, created_at";
 
-// GET /api/admin/training/lessons — list all
+const ALLOWED_SORTS: Record<string, string> = {
+  title: "title",
+  priority: "priority",
+  duration_mins: "duration_mins",
+  is_active: "is_active",
+  created_at: "created_at",
+};
+
+/**
+ * GET /api/admin/training/lessons
+ * Server-driven paginated list.
+ */
 export async function GET(req: NextRequest) {
   const user = await getAdminUser();
   if (!user) {
@@ -13,28 +27,41 @@ export async function GET(req: NextRequest) {
   }
 
   const sp = req.nextUrl.searchParams;
+  const params = parsePaginationParams(sp);
   const createdFrom = sp.get("created_from");
   const createdTo = sp.get("created_to");
   const categoryId = sp.get("category_id");
 
   const admin = createAdminClient();
-  let query = admin
-    .from("training_lessons")
-    .select(
-      "id, category_id, title, description, video_url, duration_mins, priority, previous_lesson_id, is_active, created_at"
-    )
-    .order("priority", { ascending: true });
-
-  if (categoryId) query = query.eq("category_id", categoryId);
-  if (createdFrom) query = query.gte("created_at", createdFrom);
-  if (createdTo) query = query.lte("created_at", createdTo + "T23:59:59");
-
-  const { data, error } = await query;
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  try {
+    const result = await paginatedList(
+      admin,
+      "training_lessons",
+      SELECT_COLS,
+      params,
+      ["title", "description"],
+      ALLOWED_SORTS,
+      { column: "priority", ascending: true },
+      (q) => {
+        let filtered = q;
+        if (categoryId) filtered = filtered.eq("category_id", categoryId);
+        if (createdFrom) filtered = filtered.gte("created_at", createdFrom);
+        if (createdTo) filtered = filtered.lte("created_at", createdTo + "T23:59:59");
+        return filtered;
+      },
+    );
+    return NextResponse.json({
+      lessons: result.rows,
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : String(err) },
+      { status: 500 },
+    );
   }
-
-  return NextResponse.json({ lessons: data });
 }
 
 // POST /api/admin/training/lessons — create

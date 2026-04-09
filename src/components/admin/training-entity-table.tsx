@@ -99,7 +99,10 @@ export interface EntityTableConfig<T extends { id: string; is_active: boolean }>
 
 interface TrainingEntityTableProps<T extends { id: string; is_active: boolean; name?: string; title?: string }> {
   config: EntityTableConfig<T>;
+  /** The current page of rows returned by the server. */
   rows: T[];
+  /** Server-reported total matching rows (across all pages). */
+  serverTotal: number;
   rawCount: number;
   filtersActive: boolean;
   /** Filter state needed by the export query. */
@@ -111,6 +114,17 @@ interface TrainingEntityTableProps<T extends { id: string; is_active: boolean; n
   onRefresh: () => Promise<void>;
   /** Users-style loading overlay state. */
   isRefreshing?: boolean;
+  /** Called when the user changes page or pageSize so the parent can refetch. */
+  onTableStateChange?: (state: {
+    page: number;
+    pageSize: number;
+    sortBy: string;
+    sortDir: "asc" | "desc";
+  }) => void;
+  /** Externally controlled page (from server response). */
+  serverPage?: number;
+  /** Externally controlled pageSize. */
+  serverPageSize?: number;
 }
 
 function entityLabel(type: TrainingEntityType): string {
@@ -141,6 +155,7 @@ export function TrainingEntityTable<
   const {
     config,
     rows,
+    serverTotal,
     rawCount,
     filtersActive,
     currentSearch,
@@ -148,9 +163,16 @@ export function TrainingEntityTable<
     onMutated,
     onRefresh,
     isRefreshing = false,
+    onTableStateChange,
+    serverPage,
+    serverPageSize,
   } = props;
 
   const label = entityLabel(config.entityType);
+
+  // Server-driven mode: sorting, pagination, and filtering happen on the
+  // server. The table receives pre-sorted, pre-paged rows from the parent.
+  const isServerDriven = !!onTableStateChange;
 
   // ── Sorting ────────────────────────────────────────────────────────────
   const [sortKey, setSortKey] = useState<string>(config.defaultSortKey ?? "priority");
@@ -159,18 +181,31 @@ export function TrainingEntityTable<
   );
 
   function toggleSort(key: string) {
+    let nextDir: "asc" | "desc";
     if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      nextDir = sortDir === "asc" ? "desc" : "asc";
     } else {
-      setSortKey(key);
-      // First click on a new column: asc for strings, desc for everything
-      // else (numbers/dates), matching user-management-client behavior.
       const col = config.columns.find((c) => c.key === key);
-      setSortDir(col?.key.includes("name") || col?.key.includes("title") ? "asc" : "desc");
+      nextDir = col?.key.includes("name") || col?.key.includes("title") ? "asc" : "desc";
+    }
+    setSortKey(key);
+    setSortDir(nextDir);
+    if (isServerDriven) {
+      // Reset to page 1 on sort change and delegate to server
+      setCurrentPage(1);
+      onTableStateChange?.({
+        page: 1,
+        pageSize,
+        sortBy: key,
+        sortDir: nextDir,
+      });
     }
   }
 
-  const sortedRows = useMemo(() => {
+  // When server-driven, rows arrive pre-sorted — skip client sort.
+  // When client-driven (fallback), sort in memory as before.
+  const displayRows = useMemo(() => {
+    if (isServerDriven) return rows; // already sorted + paged by server
     const col = config.columns.find((c) => c.key === sortKey);
     if (!col || !col.sortable || !col.sortValue) return rows;
     const arr = [...rows];
@@ -189,23 +224,28 @@ export function TrainingEntityTable<
       return sortDir === "asc" ? cmp : -cmp;
     });
     return arr;
-  }, [rows, sortKey, sortDir, config.columns]);
+  }, [rows, sortKey, sortDir, config.columns, isServerDriven]);
 
   // ── Pagination ─────────────────────────────────────────────────────────
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState(serverPage ?? 1);
+  const [pageSize, setPageSize] = useState<number>(serverPageSize ?? 10);
 
-  const totalRows = sortedRows.length;
+  // In server-driven mode, total comes from the server response.
+  // In client-driven mode, total is the filtered array length.
+  const totalRows = isServerDriven ? serverTotal : displayRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
 
   useEffect(() => {
     setCurrentPage((prev) => Math.min(prev, totalPages));
   }, [totalPages]);
 
+  // In server-driven mode, rows are already one page — no slicing needed.
+  // In client-driven mode, slice the sorted array.
   const pagedRows = useMemo(() => {
+    if (isServerDriven) return displayRows;
     const start = (currentPage - 1) * pageSize;
-    return sortedRows.slice(start, start + pageSize);
-  }, [sortedRows, currentPage, pageSize]);
+    return displayRows.slice(start, start + pageSize);
+  }, [displayRows, currentPage, pageSize, isServerDriven]);
 
   // ── Row selection ──────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -259,12 +299,30 @@ export function TrainingEntityTable<
   }
 
   function handlePage(page: number) {
-    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+    const clamped = Math.max(1, Math.min(page, totalPages));
+    setCurrentPage(clamped);
+    if (isServerDriven) {
+      onTableStateChange?.({
+        page: clamped,
+        pageSize,
+        sortBy: sortKey,
+        sortDir,
+      });
+    }
   }
 
   function handlePageSizeChange(value: string) {
-    setPageSize(Number(value));
+    const newSize = Number(value);
+    setPageSize(newSize);
     setCurrentPage(1);
+    if (isServerDriven) {
+      onTableStateChange?.({
+        page: 1,
+        pageSize: newSize,
+        sortBy: sortKey,
+        sortDir,
+      });
+    }
   }
 
   // ── Notes counts ───────────────────────────────────────────────────────
