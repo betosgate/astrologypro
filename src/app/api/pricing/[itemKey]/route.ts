@@ -6,12 +6,10 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/pricing/[itemKey]
  *
- * Public read of an active global_pricing row by item_key. Used by signup
- * pages (e.g. /diviner-signup) to display the current price. Public is fine
- * because the values are advertised on the marketing site anyway and the
- * RLS policy on global_pricing allows public SELECT for is_active = true.
+ * Public read of an active global_pricing item and its active plans.
+ * Used by signup pages to display available plans and prices.
  *
- * Response (200): { item_key, item_name, price, currency, description }
+ * Response (200): { item_key, item_name, description, plans: [...] }
  * Response (404): { error: "Pricing item not found or inactive" }
  */
 export async function GET(
@@ -24,21 +22,41 @@ export async function GET(
   }
 
   const admin = createAdminClient();
-  const { data, error } = await admin
+
+  // Fetch the item
+  const { data: item, error: itemErr } = await admin
     .from("global_pricing")
-    .select("item_key, item_name, price, currency, description")
+    .select("id, item_key, item_name, description")
     .eq("item_key", itemKey)
     .eq("is_active", true)
     .maybeSingle();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (itemErr) {
+    return NextResponse.json({ error: itemErr.message }, { status: 500 });
   }
-  if (!data) {
+  if (!item) {
     return NextResponse.json(
       { error: "Pricing item not found or inactive" },
       { status: 404 },
     );
   }
-  return NextResponse.json(data);
+
+  // Fetch active plans for this item
+  const { data: plans, error: plansErr } = await admin
+    .from("pricing_plans")
+    .select("plan_id, display_name, amount, mrp, stripe_price_id, currency, description, custom_fields, sort_order")
+    .eq("item_id", item.id)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  if (plansErr) {
+    return NextResponse.json({ error: plansErr.message }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    item_key: item.item_key,
+    item_name: item.item_name,
+    description: item.description,
+    plans: plans ?? [],
+  });
 }

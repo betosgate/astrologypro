@@ -26,12 +26,21 @@ import { toast } from "sonner";
 const COURSE_ITEM_KEY = "professional_divination_course";
 const PASSWORD_REGEX = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).{8,15}$/;
 
+interface PricingPlanResponse {
+  plan_id: string;
+  display_name: string;
+  amount: number;
+  mrp: number | null;
+  stripe_price_id: string | null;
+  currency: "USD" | "INR";
+  description: string | null;
+}
+
 interface PricingResponse {
   item_key: string;
   item_name: string;
-  price: number;
-  currency: "USD" | "INR";
   description: string | null;
+  plans: PricingPlanResponse[];
 }
 
 const COUNTRIES = ["United States", "India", "United Kingdom", "Canada", "Australia", "Other"] as const;
@@ -198,8 +207,9 @@ function DivinerSignupContent() {
     }
   }
 
+  const activePlan = pricing?.plans?.[0] ?? null;
   const priceLabel =
-    pricing != null ? formatCurrency(pricing.price, pricing.currency) : "—";
+    activePlan != null ? formatCurrency(activePlan.amount, activePlan.currency) : "—";
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-orange-500/30">

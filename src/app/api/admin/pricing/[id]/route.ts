@@ -6,8 +6,9 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
- * PATCH  /api/admin/pricing/[id]   — update price / item_name / currency / is_active / description
+ * PATCH  /api/admin/pricing/[id]   — update item_name / is_active / description
  * DELETE /api/admin/pricing/[id]   — hard delete (rare; usually you'd toggle is_active)
+ * Note: price/currency live on pricing_plans, not on the item.
  */
 
 export async function PATCH(
@@ -38,25 +39,6 @@ export async function PATCH(
       return NextResponse.json({ error: "item_name cannot be empty" }, { status: 422 });
     }
     updates.item_name = v;
-  }
-  if (body.price !== undefined) {
-    const v = typeof body.price === "number" ? body.price : Number(body.price);
-    if (!Number.isFinite(v) || v < 0) {
-      return NextResponse.json(
-        { error: "price must be a non-negative number" },
-        { status: 422 },
-      );
-    }
-    updates.price = v;
-  }
-  if (body.currency !== undefined) {
-    if (body.currency !== "USD" && body.currency !== "INR") {
-      return NextResponse.json(
-        { error: "currency must be 'USD' or 'INR'" },
-        { status: 422 },
-      );
-    }
-    updates.currency = body.currency;
   }
   if (body.is_active !== undefined) {
     if (typeof body.is_active !== "boolean") {
