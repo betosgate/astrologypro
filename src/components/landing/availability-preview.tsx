@@ -7,8 +7,8 @@ import { Clock, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 interface AvailabilityPreviewProps {
   divinerId: string;
   username: string;
-  serviceId: string;
-  serviceSlug: string;
+  serviceId?: string | null;
+  bookPath: string;
   durationMinutes: number;
   serviceName?: string;
 }
@@ -24,14 +24,38 @@ interface TimeSlot {
   availabilityEndTime?: string;
 }
 
+interface BusyEntry {
+  id: string;
+  title: string;
+  start: string;
+  end: string;
+  source: "google" | "microsoft" | "booking" | "hold";
+  details?: string | null;
+}
+
+interface AvailabilityDebugResponse {
+  slots: TimeSlot[];
+  busySchedule: BusyEntry[];
+  timezone: string;
+}
+
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+function formatSlotTime(iso: string, timezone?: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    ...(timezone ? { timeZone: timezone } : {}),
+  }).format(new Date(iso));
+}
 
 export function AvailabilityPreview({
   divinerId,
   username,
   serviceId,
-  serviceSlug,
+  bookPath,
   durationMinutes,
   serviceName,
 }: AvailabilityPreviewProps) {
@@ -41,53 +65,43 @@ export function AvailabilityPreview({
   });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [busySchedule, setBusySchedule] = useState<BusyEntry[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const [loadingDates, setLoadingDates] = useState(true);
+  const [activeTab, setActiveTab] = useState<"available" | "busy">("available");
+  const viewerTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  const serviceQuery = serviceId ? `&serviceId=${serviceId}` : "";
 
   // Fetch which dates have availability this month
   useEffect(() => {
     async function fetchMonthAvailability() {
       setLoadingDates(true);
-      const dates = new Set<string>();
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-
-      // Check each day of the month
       const year = currentMonth.getFullYear();
       const month = currentMonth.getMonth();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
 
-      const promises = [];
-      for (let d = 1; d <= daysInMonth; d++) {
-        const date = new Date(year, month, d);
-        if (date < todayStart) continue;
-        const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-        promises.push(
-          fetch(`/api/availability/${divinerId}?date=${dateStr}&duration=${durationMinutes}&serviceId=${serviceId}`)
-            .then((r) => r.ok ? r.json() : null)
-            .then((data) => {
-              if (data && Array.isArray(data) && data.length > 0) {
-                dates.add(dateStr);
-              }
-            })
-            .catch(() => {})
+      try {
+        const response = await fetch(
+          `/api/availability/${divinerId}/month?month=${monthKey}&duration=${durationMinutes}${serviceQuery}`
         );
+        const data = response.ok ? await response.json() : null;
+        const dates = Array.isArray(data?.availableDates)
+          ? new Set<string>(data.availableDates)
+          : new Set<string>();
+        setAvailableDates(dates);
+      } catch {
+        setAvailableDates(new Set());
+      } finally {
+        setLoadingDates(false);
       }
-
-      // Batch in groups of 7 to not overload
-      for (let i = 0; i < promises.length; i += 7) {
-        await Promise.all(promises.slice(i, i + 7));
-      }
-
-      setAvailableDates(dates);
-      setLoadingDates(false);
     }
     fetchMonthAvailability();
-  }, [divinerId, currentMonth, durationMinutes, serviceId]);
+  }, [divinerId, currentMonth, durationMinutes, serviceQuery]);
 
   // Fetch time slots when a date is selected
   useEffect(() => {
@@ -97,19 +111,30 @@ export function AvailabilityPreview({
       setLoadingSlots(true);
       try {
         const response = await fetch(
-          `/api/availability/${divinerId}?date=${selectedDate}&duration=${durationMinutes}&serviceId=${serviceId}`
+          `/api/availability/${divinerId}?date=${selectedDate}&duration=${durationMinutes}${serviceQuery}&debugBusy=1`
         );
-        const data = response.ok ? await response.json() : [];
-        setTimeSlots(Array.isArray(data) ? data : []);
+        const data: AvailabilityDebugResponse | TimeSlot[] = response.ok ? await response.json() : [];
+        if (Array.isArray(data)) {
+          setTimeSlots(data);
+          setBusySchedule([]);
+        } else {
+          setTimeSlots(Array.isArray(data.slots) ? data.slots : []);
+          setBusySchedule(Array.isArray(data.busySchedule) ? data.busySchedule : []);
+        }
       } catch {
         setTimeSlots([]);
+        setBusySchedule([]);
       } finally {
         setLoadingSlots(false);
       }
     }
 
     fetchSlots();
-  }, [selectedDate, divinerId, durationMinutes, serviceId]);
+  }, [selectedDate, divinerId, durationMinutes, serviceQuery]);
+
+  useEffect(() => {
+    setActiveTab("available");
+  }, [selectedDate]);
 
   // Calendar grid
   const year = currentMonth.getFullYear();
@@ -121,10 +146,6 @@ export function AvailabilityPreview({
   const nextMonth = () => setCurrentMonth(new Date(year, month + 1, 1));
 
   const canGoPrev = new Date(year, month, 1) > today;
-
-  function formatTime(iso: string) {
-    return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
-  }
 
   return (
     <div className="mx-auto max-w-lg">
@@ -209,16 +230,48 @@ export function AvailabilityPreview({
       {/* Time slots (shown when date is selected) */}
       {selectedDate && (
         <div className="mt-3 glass-card rounded-xl p-4">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#b8bcd0]/50">
-            <Clock className="mr-1 inline size-3" />
-            Available times for {new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
-          </p>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#b8bcd0]/50">
+                <Clock className="mr-1 inline size-3" />
+                Available times for {new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+              </p>
+              <p className="mt-1 text-[11px] text-[#b8bcd0]/45">
+                Shown in your timezone: {viewerTimezone.replace(/_/g, " ")}
+              </p>
+            </div>
+            <div className="inline-flex rounded-full border border-white/10 bg-white/5 p-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab("available")}
+                className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+                  activeTab === "available"
+                    ? "bg-[#c9a84c] text-black"
+                    : "text-[#b8bcd0]/70 hover:text-[#f5f0e8]"
+                }`}
+              >
+                Available
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("busy")}
+                className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+                  activeTab === "busy"
+                    ? "bg-[#c9a84c] text-black"
+                    : "text-[#b8bcd0]/70 hover:text-[#f5f0e8]"
+                }`}
+              >
+                Busy
+              </button>
+            </div>
+          </div>
 
           {loadingSlots ? (
             <div className="flex items-center justify-center py-4">
               <div className="size-4 animate-spin rounded-full border-2 border-[#c9a84c]/30 border-t-[#c9a84c]" />
             </div>
-          ) : timeSlots.length > 0 ? (
+          ) : activeTab === "available" ? (
+            timeSlots.length > 0 ? (
             <>
               {timeSlots[0]?.availabilityTitle && (
                 <div className="mb-3 rounded-lg border border-[#c9a84c]/20 bg-[#c9a84c]/8 px-3 py-2 text-left">
@@ -241,16 +294,51 @@ export function AvailabilityPreview({
                 {timeSlots.map((slot) => (
                   <Link
                     key={slot.start}
-                    href={`/${username}/book/${serviceSlug}?date=${selectedDate}&time=${encodeURIComponent(slot.start)}`}
+                    href={`/${username}${bookPath}?date=${selectedDate}&time=${encodeURIComponent(slot.start)}`}
                     className="rounded-lg border border-white/8 bg-white/5 px-2 py-2 text-center text-xs font-medium text-[#f5f0e8] transition-all hover:border-[#c9a84c]/30 hover:bg-[#c9a84c]/10 hover:text-[#c9a84c]"
                   >
-                    {formatTime(slot.start)}
+                    {formatSlotTime(slot.start)}
                   </Link>
                 ))}
               </div>
             </>
-          ) : (
+            ) : (
             <p className="py-2 text-center text-xs text-[#b8bcd0]/40">No slots available this day</p>
+            )
+          ) : busySchedule.length > 0 ? (
+            <div className="space-y-2">
+              {busySchedule.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="rounded-lg border border-white/8 bg-white/5 px-3 py-3 text-left"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-[#f5f0e8]">
+                        {entry.title}
+                      </p>
+                      <p className="mt-1 text-xs text-[#b8bcd0]/70">
+                        {formatSlotTime(entry.start)} -{" "}
+                        {formatSlotTime(entry.end)}
+                        {viewerTimezone ? ` • ${viewerTimezone.replace(/_/g, " ")}` : ""}
+                      </p>
+                      {entry.details && (
+                        <p className="mt-1 text-xs text-[#b8bcd0]/55">
+                          {entry.details}
+                        </p>
+                      )}
+                    </div>
+                    <span className="shrink-0 rounded-full border border-[#c9a84c]/20 bg-[#c9a84c]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#c9a84c]">
+                      {entry.source}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="py-2 text-center text-xs text-[#b8bcd0]/40">
+              No busy schedule found for this day.
+            </p>
           )}
         </div>
       )}
@@ -258,7 +346,7 @@ export function AvailabilityPreview({
       {/* See all link */}
       <div className="mt-3 text-center">
         <Link
-          href={`/${username}/book/${serviceSlug}`}
+          href={`/${username}${bookPath}`}
           className="inline-flex items-center gap-1.5 text-xs font-medium text-[#c9a84c]/70 transition-colors hover:text-[#c9a84c]"
         >
           See All {serviceName ?? "Available"} Times & Book

@@ -11,6 +11,7 @@ import { MIGRATION_SQL as MIG_20260408000115 } from "@/data/migrations/202604080
 import { MIGRATION_SQL as MIG_20260408000116 } from "@/data/migrations/20260408000116_training_notes_allow_quiz";
 import { MIGRATION_SQL as MIG_20260409000117 } from "@/data/migrations/20260409000117_availability_template_service_scope";
 import { MIGRATION_SQL as MIG_20260409000118 } from "@/data/migrations/20260409000118_calendar_provider_credentials";
+import { MIGRATION_SQL as MIG_20260409000119 } from "@/data/migrations/20260409000119_calendar_connections_multi_account";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -140,6 +141,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Creates google_api_keys and microsoft_api_keys tables — admin-managed key-value storage for per-provider OAuth client credentials (client_id / client_secret / redirect_uri / tenant_id). Service-role only RLS; reads go through the admin Supabase client. Separate from calendar_connections (per-user tokens). Runtime read path in src/lib/calendar/provider-credentials.ts falls back to the existing env vars if no row is set, so deploy-time behavior does not change until an admin populates the tables via /admin/calendar-config.",
     sortKey: "20260409000118",
     sql: MIG_20260409000118,
+  },
+  "20260409000119_calendar_connections_multi_account": {
+    id: "20260409000119_calendar_connections_multi_account",
+    title: "Calendar connections multi-account support",
+    description:
+      "Adds account_identifier to calendar_connections, drops the old UNIQUE (user_id, provider), and replaces it with a multi-account-safe unique key on (user_id, provider, account_identifier). Backfills legacy rows using email when present and provider:id otherwise. Enables connecting multiple Google and/or Microsoft accounts for one user without overwriting existing rows.",
+    sortKey: "20260409000119",
+    sql: MIG_20260409000119,
   },
 };
 

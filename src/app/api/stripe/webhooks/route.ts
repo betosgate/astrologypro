@@ -862,7 +862,7 @@ async function handlePaymentIntentSucceeded(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, duration_minutes, diviner_id, client_id, services(name, duration_minutes), diviners(id, display_name, google_calendar_connected, outlook_calendar_connected), clients(email, full_name, user_id)"
+      "id, scheduled_at, duration_minutes, diviner_id, client_id, services(name, duration_minutes), diviners(id, display_name), clients(email, full_name, user_id)"
     )
     .eq("id", bookingId)
     .single();
@@ -876,8 +876,6 @@ async function handlePaymentIntentSucceeded(
   const div = (booking as Record<string, unknown>).diviners as {
     id: string;
     display_name: string;
-    google_calendar_connected: boolean;
-    outlook_calendar_connected: boolean;
   } | null;
   const clientRecord = (booking as Record<string, unknown>).clients as {
     email: string;
@@ -886,6 +884,16 @@ async function handlePaymentIntentSucceeded(
   } | null;
 
   if (!svc || !div) return;
+
+  const { data: connections } = await supabase
+    .from("calendar_connections")
+    .select("provider")
+    .eq("owner_id", div.id);
+
+  const hasGoogleCalendar =
+    connections?.some((connection) => connection.provider === "google") ?? false;
+  const hasMicrosoftCalendar =
+    connections?.some((connection) => connection.provider === "microsoft") ?? false;
 
   if (clientRecord?.user_id) {
     const amount = paymentIntent.amount / 100
@@ -938,7 +946,7 @@ async function handlePaymentIntentSucceeded(
   ]);
 
   // Push event to diviner's Google Calendar if connected
-  if (div.google_calendar_connected) {
+  if (hasGoogleCalendar) {
     createCalendarEvent(div.id, {
       title: `${svc.name} — ${clientRecord?.full_name ?? clientEmail}`,
       description: `Client: ${clientEmail}\nSession link: ${sessionLink}`,
@@ -959,7 +967,7 @@ async function handlePaymentIntentSucceeded(
   }
 
   // Push event to diviner's Outlook Calendar if connected (non-blocking)
-  if (div.outlook_calendar_connected) {
+  if (hasMicrosoftCalendar) {
     createMsCalendarEvent(div.id, {
       id: bookingId,
       scheduled_at: startTime.toISOString(),

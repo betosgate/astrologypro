@@ -5,6 +5,8 @@ import { ShieldCheck, Star, Calendar, Sparkles, Zap, BadgeCheck } from "lucide-r
 interface DivinerHeroProps {
   username: string;
   displayName: string;
+  hasServices?: boolean;
+  bookHref?: string;
   tagline: string | null;
   avatarUrl: string | null;
   coverImageUrl: string | null;
@@ -22,6 +24,8 @@ interface DivinerHeroProps {
 export function DivinerHero({
   username,
   displayName,
+  hasServices = true,
+  bookHref = "#booking",
   tagline,
   avatarUrl,
   coverImageUrl,
@@ -71,10 +75,12 @@ export function DivinerHero({
           </Link>
           <div className="flex items-center gap-4 text-xs">
             <a href="#about" className="text-[#b8bcd0]/70 transition-colors hover:text-[#c9a84c]">About</a>
-            <a href="#services" className="text-[#b8bcd0]/70 transition-colors hover:text-[#c9a84c]">Services</a>
+            {hasServices && (
+              <a href="#services" className="text-[#b8bcd0]/70 transition-colors hover:text-[#c9a84c]">Services</a>
+            )}
             <a href="#reviews" className="text-[#b8bcd0]/70 transition-colors hover:text-[#c9a84c]">Reviews</a>
             <Link
-              href={`/${username}/book`}
+              href={bookHref}
               className="rounded-full bg-[#c9a84c] px-3 py-1 text-xs font-semibold text-black transition-colors hover:bg-[#e2c97e]"
             >
               Book Now
@@ -228,17 +234,19 @@ export function DivinerHero({
             {/* CTA buttons */}
             <div className="mt-5 flex flex-wrap gap-3">
               <Link
-                href={`/${username}/book`}
+                href={bookHref}
                 className="rounded-full bg-[#c9a84c] px-6 py-2.5 text-sm font-semibold text-black shadow-lg shadow-[#c9a84c]/20 transition-colors hover:bg-[#e2c97e]"
               >
                 Book a Reading
               </Link>
-              <a
-                href="#services"
-                className="rounded-full border border-[#c9a84c]/30 px-6 py-2.5 text-sm text-[#e2c97e] transition-colors hover:border-[#c9a84c] hover:bg-[#c9a84c]/10"
-              >
-                View Services
-              </a>
+              {hasServices && (
+                <a
+                  href="#services"
+                  className="rounded-full border border-[#c9a84c]/30 px-6 py-2.5 text-sm text-[#e2c97e] transition-colors hover:border-[#c9a84c] hover:bg-[#c9a84c]/10"
+                >
+                  View Services
+                </a>
+              )}
             </div>
           </div>
         </div>

@@ -1,7 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
-import { CalendarConnections } from "@/components/dashboard/calendar-connections";
+import {
+  CalendarConnections,
+  type CalendarConnectionSummary,
+} from "@/components/dashboard/calendar-connections";
 
 export default async function CalendarConnectionsPage() {
   const supabase = await createClient();
@@ -13,9 +16,40 @@ export default async function CalendarConnectionsPage() {
   const admin = createAdminClient();
   const { data: diviner } = await admin
     .from("diviners")
-    .select("google_calendar_connected, outlook_calendar_connected")
+    .select("id")
     .eq("user_id", user.id)
     .single();
+
+  const { data: connections } = diviner
+    ? await admin
+        .from("calendar_connections")
+        .select("id, provider, email, account_identifier, created_at, updated_at")
+        .eq("owner_id", diviner.id)
+        .order("updated_at", { ascending: false })
+        .order("created_at", { ascending: false })
+    : { data: [] as Array<Record<string, unknown>> };
+
+  const googleConnections: CalendarConnectionSummary[] = (connections ?? [])
+    .filter((connection) => connection.provider === "google")
+    .map((connection) => ({
+      id: String(connection.id),
+      provider: "google",
+      email: typeof connection.email === "string" ? connection.email : null,
+      accountIdentifier: String(connection.account_identifier ?? ""),
+      createdAt: typeof connection.created_at === "string" ? connection.created_at : null,
+      updatedAt: typeof connection.updated_at === "string" ? connection.updated_at : null,
+    }));
+
+  const microsoftConnections: CalendarConnectionSummary[] = (connections ?? [])
+    .filter((connection) => connection.provider === "microsoft")
+    .map((connection) => ({
+      id: String(connection.id),
+      provider: "microsoft",
+      email: typeof connection.email === "string" ? connection.email : null,
+      accountIdentifier: String(connection.account_identifier ?? ""),
+      createdAt: typeof connection.created_at === "string" ? connection.created_at : null,
+      updatedAt: typeof connection.updated_at === "string" ? connection.updated_at : null,
+    }));
 
   return (
     <div className="space-y-6">
@@ -26,8 +60,8 @@ export default async function CalendarConnectionsPage() {
         </p>
       </div>
       <CalendarConnections
-        googleConnected={diviner?.google_calendar_connected ?? false}
-        outlookConnected={diviner?.outlook_calendar_connected ?? false}
+        googleConnections={googleConnections}
+        microsoftConnections={microsoftConnections}
       />
     </div>
   );

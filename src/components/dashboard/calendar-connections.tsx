@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,19 +11,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, CheckCircle2, Circle, RefreshCw, Unplug } from "lucide-react";
+import { CheckCircle2, Circle, Loader2, Plus, RefreshCw, Unplug } from "lucide-react";
+
+export interface CalendarConnectionSummary {
+  id: string;
+  provider: "google" | "microsoft";
+  email: string | null;
+  accountIdentifier: string;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
 
 interface CalendarConnectionsProps {
-  googleConnected: boolean;
-  outlookConnected: boolean;
-  /** ISO string of last successful Google sync (optional) */
-  googleLastSync?: string | null;
-  /** ISO string of last successful Outlook sync (optional) */
-  outlookLastSync?: string | null;
+  googleConnections: CalendarConnectionSummary[];
+  microsoftConnections: CalendarConnectionSummary[];
 }
 
 function relativeTime(iso: string | null | undefined): string {
-  if (!iso) return "Never synced";
+  if (!iso) return "Just connected";
   const diff = Date.now() - new Date(iso).getTime();
   const minutes = Math.floor(diff / 60_000);
   if (minutes < 1) return "Just now";
@@ -33,27 +38,37 @@ function relativeTime(iso: string | null | undefined): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+function getConnectionLabel(connection: CalendarConnectionSummary): string {
+  if (connection.email) {
+    return connection.email;
+  }
+
+  const identifier = connection.accountIdentifier.trim();
+  return identifier.length > 28 ? `${identifier.slice(0, 28)}...` : identifier;
+}
+
 interface ProviderCardProps {
   provider: "google" | "microsoft";
   name: string;
   description: string;
-  connected: boolean;
-  lastSync?: string | null;
   connectHref: string;
-  disconnecting: boolean;
-  onDisconnect: () => void;
+  connections: CalendarConnectionSummary[];
+  disconnectingConnectionId: string | null;
+  onDisconnect: (provider: "google" | "microsoft", connectionId: string) => void;
 }
 
 function ProviderCard({
   provider,
   name,
   description,
-  connected,
-  lastSync,
   connectHref,
-  disconnecting,
+  connections,
+  disconnectingConnectionId,
   onDisconnect,
 }: ProviderCardProps) {
+  const connected = connections.length > 0;
+  const latestSync = connections[0]?.updatedAt ?? connections[0]?.createdAt ?? null;
+
   return (
     <Card
       className={`relative overflow-hidden transition-all ${
@@ -68,7 +83,6 @@ function ProviderCard({
 
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
-          {/* Provider logo placeholder — colored circle with initial */}
           <div
             className={`flex size-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold shadow-sm ${
               provider === "google"
@@ -79,7 +93,7 @@ function ProviderCard({
             {provider === "google" ? "G" : "M"}
           </div>
 
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <CardTitle className="text-base leading-tight">{name}</CardTitle>
               <Badge
@@ -93,7 +107,7 @@ function ProviderCard({
                 {connected ? (
                   <span className="flex items-center gap-1">
                     <CheckCircle2 className="size-2.5" />
-                    Connected
+                    {connections.length} connected
                   </span>
                 ) : (
                   <span className="flex items-center gap-1">
@@ -109,67 +123,93 @@ function ProviderCard({
       </CardHeader>
 
       <CardContent className="space-y-3 pt-0">
-        {/* Last sync row */}
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <RefreshCw className="size-3 shrink-0" />
           <span>
             Last sync:{" "}
             <span className={connected ? "text-foreground/80" : ""}>
-              {connected ? relativeTime(lastSync) : "—"}
+              {connected ? relativeTime(latestSync) : "—"}
             </span>
           </span>
         </div>
 
-        {/* Action button */}
-        {connected ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onDisconnect}
-            disabled={disconnecting}
-            className="w-full border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-          >
-            {disconnecting ? (
-              <>
-                <Loader2 className="mr-2 size-3.5 animate-spin" />
-                Disconnecting…
-              </>
-            ) : (
-              <>
-                <Unplug className="mr-2 size-3.5" />
-                Disconnect
-              </>
-            )}
-          </Button>
-        ) : (
-          <Button asChild size="sm" className="w-full">
-            <a href={connectHref}>
-              Connect {name}
-            </a>
-          </Button>
+        {connected && (
+          <div className="space-y-2">
+            {connections.map((connection, index) => (
+              <div
+                key={connection.id}
+                className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/30 px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {getConnectionLabel(connection)}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {index === 0 ? "Primary invite account" : "Also blocks availability"} • Added{" "}
+                    {relativeTime(connection.createdAt)}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onDisconnect(provider, connection.id)}
+                  disabled={disconnectingConnectionId === connection.id}
+                  className="shrink-0 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                  {disconnectingConnectionId === connection.id ? (
+                    <>
+                      <Loader2 className="mr-2 size-3.5 animate-spin" />
+                      Disconnecting…
+                    </>
+                  ) : (
+                    <>
+                      <Unplug className="mr-2 size-3.5" />
+                      Disconnect
+                    </>
+                  )}
+                </Button>
+              </div>
+            ))}
+          </div>
         )}
+
+        <Button asChild size="sm" className="w-full">
+          <a href={connectHref}>
+            <Plus className="mr-2 size-3.5" />
+            {connected ? `Connect another ${name}` : `Connect ${name}`}
+          </a>
+        </Button>
       </CardContent>
     </Card>
   );
 }
 
 export function CalendarConnections({
-  googleConnected: initialGoogleConnected,
-  outlookConnected: initialOutlookConnected,
-  googleLastSync,
-  outlookLastSync,
+  googleConnections,
+  microsoftConnections,
 }: CalendarConnectionsProps) {
-  const [googleConnected, setGoogleConnected] = useState(initialGoogleConnected);
-  const [outlookConnected, setOutlookConnected] = useState(initialOutlookConnected);
-  const [disconnecting, setDisconnecting] = useState<"google" | "microsoft" | null>(null);
+  const [googleState, setGoogleState] = useState(googleConnections);
+  const [microsoftState, setMicrosoftState] = useState(microsoftConnections);
+  const [disconnectingConnectionId, setDisconnectingConnectionId] = useState<string | null>(null);
 
-  async function handleDisconnect(provider: "google" | "microsoft") {
-    setDisconnecting(provider);
+  useEffect(() => {
+    setGoogleState(googleConnections);
+  }, [googleConnections]);
+
+  useEffect(() => {
+    setMicrosoftState(microsoftConnections);
+  }, [microsoftConnections]);
+
+  async function handleDisconnect(
+    provider: "google" | "microsoft",
+    connectionId: string
+  ) {
+    setDisconnectingConnectionId(connectionId);
     try {
       const res = await fetch("/api/calendar/disconnect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider }),
+        body: JSON.stringify({ provider, connectionId }),
       });
 
       if (!res.ok) {
@@ -179,33 +219,37 @@ export function CalendarConnections({
       }
 
       if (provider === "google") {
-        setGoogleConnected(false);
+        setGoogleState((current) => current.filter((connection) => connection.id !== connectionId));
       } else {
-        setOutlookConnected(false);
+        setMicrosoftState((current) =>
+          current.filter((connection) => connection.id !== connectionId)
+        );
       }
+
       toast.success(
-        `${provider === "google" ? "Google" : "Outlook"} calendar disconnected`
+        `${provider === "google" ? "Google" : "Microsoft"} calendar disconnected`
       );
     } catch {
       toast.error("Failed to disconnect calendar");
     } finally {
-      setDisconnecting(null);
+      setDisconnectingConnectionId(null);
     }
   }
 
+  const totalConnections = useMemo(
+    () => googleState.length + microsoftState.length,
+    [googleState.length, microsoftState.length]
+  );
+
   return (
     <div className="space-y-4">
-      {/* Summary banner when at least one is connected */}
-      {(googleConnected || outlookConnected) && (
+      {totalConnections > 0 && (
         <div className="rounded-xl border border-green-500/20 bg-green-500/5 px-4 py-3 text-sm text-green-300">
           <span className="font-medium">
-            {[googleConnected && "Google", outlookConnected && "Outlook"]
-              .filter(Boolean)
-              .join(" & ")}{" "}
-            calendar{googleConnected && outlookConnected ? "s are" : " is"} connected.
+            {totalConnections} calendar account{totalConnections === 1 ? "" : "s"} connected.
           </span>{" "}
           <span className="text-green-200/60">
-            Availability is syncing automatically.
+            All connected accounts block availability. The newest account per provider sends booking invites.
           </span>
         </div>
       )}
@@ -215,24 +259,20 @@ export function CalendarConnections({
           provider="google"
           name="Google Calendar"
           description="Sync availability and send native Google Calendar invites to clients."
-          connected={googleConnected}
-          lastSync={googleLastSync}
           connectHref="/api/calendar/connect"
-          disconnecting={disconnecting === "google"}
-          onDisconnect={() => handleDisconnect("google")}
+          connections={googleState}
+          disconnectingConnectionId={disconnectingConnectionId}
+          onDisconnect={handleDisconnect}
         />
-        {/* 
         <ProviderCard
           provider="microsoft"
           name="Outlook Calendar"
           description="Sync with Outlook / Microsoft 365 and send native calendar invites."
-          connected={outlookConnected}
-          lastSync={outlookLastSync}
           connectHref="/api/calendar/microsoft/connect"
-          disconnecting={disconnecting === "microsoft"}
-          onDisconnect={() => handleDisconnect("microsoft")}
+          connections={microsoftState}
+          disconnectingConnectionId={disconnectingConnectionId}
+          onDisconnect={handleDisconnect}
         />
-        */}
       </div>
     </div>
   );

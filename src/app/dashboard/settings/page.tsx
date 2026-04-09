@@ -5,6 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
+  CalendarConnections,
+  type CalendarConnectionSummary,
+} from "@/components/dashboard/calendar-connections";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -45,8 +49,6 @@ interface DivinerSettings {
   payouts_enabled: boolean;
   paypal_onboarded: boolean;
   paypal_merchant_id: string | null;
-  google_calendar_connected: boolean;
-  outlook_calendar_connected: boolean;
   youtube_channel_id: string | null;
   notification_email: boolean;
   notification_sms: boolean;
@@ -132,6 +134,9 @@ function SettingsContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<DivinerSettings | null>(null);
+  const [calendarConnections, setCalendarConnections] = useState<
+    CalendarConnectionSummary[]
+  >([]);
 
   // Phone state
   const [phoneProvisioning, setPhoneProvisioning] = useState(false);
@@ -187,17 +192,47 @@ function SettingsContent() {
       const { data } = await supabase
         .from("diviners")
         .select(
-          "id, subscription_status, plan_id, stripe_subscription_id, stripe_account_id, charges_enabled, payouts_enabled, paypal_onboarded, paypal_merchant_id, google_calendar_connected, youtube_channel_id, notification_email, notification_sms, notification_booking_confirmed, notification_booking_cancelled, notification_payout, twilio_phone_number, twilio_phone_sid, phone_dialin_enabled, phone_mobile, phone_answer_mode"
+          "id, subscription_status, plan_id, stripe_subscription_id, stripe_account_id, charges_enabled, payouts_enabled, paypal_onboarded, paypal_merchant_id, youtube_channel_id, notification_email, notification_sms, notification_booking_confirmed, notification_booking_cancelled, notification_payout, twilio_phone_number, twilio_phone_sid, phone_dialin_enabled, phone_mobile, phone_answer_mode"
         )
         .eq("user_id", user.id)
         .single();
 
       if (data) {
-        // Load connection status from calendar_connections
         const { data: connections } = await supabase
           .from("calendar_connections")
-          .select("provider")
-          .eq("user_id", user.id);
+          .select("id, provider, email, account_identifier, created_at, updated_at")
+          .eq("owner_id", data.id)
+          .order("updated_at", { ascending: false })
+          .order("created_at", { ascending: false });
+
+        setCalendarConnections(
+          (connections ?? []).flatMap((connection) => {
+            if (
+              connection.provider !== "google" &&
+              connection.provider !== "microsoft"
+            ) {
+              return [];
+            }
+
+            return [
+              {
+                id: String(connection.id),
+                provider: connection.provider,
+                email:
+                  typeof connection.email === "string" ? connection.email : null,
+                accountIdentifier: String(connection.account_identifier ?? ""),
+                createdAt:
+                  typeof connection.created_at === "string"
+                    ? connection.created_at
+                    : null,
+                updatedAt:
+                  typeof connection.updated_at === "string"
+                    ? connection.updated_at
+                    : null,
+              },
+            ];
+          })
+        );
 
         setSettings({
           id: data.id,
@@ -209,8 +244,6 @@ function SettingsContent() {
           payouts_enabled: data.payouts_enabled ?? false,
           paypal_onboarded: data.paypal_onboarded ?? false,
           paypal_merchant_id: data.paypal_merchant_id ?? null,
-          google_calendar_connected: connections?.some(c => c.provider === "google") ?? false,
-          outlook_calendar_connected: connections?.some(c => c.provider === "microsoft") ?? false,
           youtube_channel_id: data.youtube_channel_id ?? null,
           notification_email: data.notification_email ?? true,
           notification_sms: data.notification_sms ?? false,
@@ -389,6 +422,13 @@ function SettingsContent() {
       </div>
     );
   }
+
+  const googleConnections = calendarConnections.filter(
+    (connection) => connection.provider === "google"
+  );
+  const microsoftConnections = calendarConnections.filter(
+    (connection) => connection.provider === "microsoft"
+  );
 
   return (
     <div className="space-y-6">
@@ -614,137 +654,16 @@ function SettingsContent() {
         <TabsContent value="calendar" className="mt-6 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Google Calendar</CardTitle>
+              <CardTitle>Calendar Sync</CardTitle>
               <CardDescription>
-                Sync your bookings with Google Calendar.
+                Connect one or more Google or Microsoft accounts to block availability and send invites from your newest connected account.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3 rounded-lg border p-4">
-                {settings.google_calendar_connected ? (
-                  <CheckCircle2 className="size-5 text-green-500" />
-                ) : (
-                  <XCircle className="size-5 text-muted-foreground" />
-                )}
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Google Calendar Status</p>
-                  <p className="text-xs text-muted-foreground">
-                    {settings.google_calendar_connected
-                      ? "Connected and syncing"
-                      : "Not connected"}
-                  </p>
-                </div>
-                {settings.google_calendar_connected && (
-                  <Badge variant="default" className="bg-green-600 hover:bg-green-700">
-                    Connected
-                  </Badge>
-                )}
-              </div>
-              {settings.google_calendar_connected ? (
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      const supabase = createClient();
-                      const { error } = await supabase
-                        .from("calendar_connections")
-                        .delete()
-                        .eq("owner_id", settings.id)
-                        .eq("provider", "google");
-                      if (error) {
-                        toast.error("Failed to disconnect Google Calendar");
-                      } else {
-                        setSettings({
-                          ...settings,
-                          google_calendar_connected: false,
-                        });
-                        toast.success("Google Calendar disconnected");
-                      }
-                    } catch {
-                      toast.error("Failed to disconnect Google Calendar");
-                    }
-                  }}
-                >
-                  Disconnect Google Calendar
-                </Button>
-              ) : (
-                <Button
-                  onClick={() => {
-                    window.location.href = "/api/calendar/connect";
-                  }}
-                >
-                  <CalendarDays className="mr-2 size-4" />
-                  Connect Google Calendar
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Microsoft Calendar</CardTitle>
-              <CardDescription>
-                Sync your bookings with Outlook / Office 365.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3 rounded-lg border p-4">
-                {settings.outlook_calendar_connected ? (
-                  <CheckCircle2 className="size-5 text-green-500" />
-                ) : (
-                  <XCircle className="size-5 text-muted-foreground" />
-                )}
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Outlook Status</p>
-                  <p className="text-xs text-muted-foreground">
-                    {settings.outlook_calendar_connected
-                      ? "Connected and syncing"
-                      : "Not connected"}
-                  </p>
-                </div>
-                {settings.outlook_calendar_connected && (
-                  <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">
-                    Connected
-                  </Badge>
-                )}
-              </div>
-              {settings.outlook_calendar_connected ? (
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      const supabase = createClient();
-                      const { error } = await supabase
-                        .from("calendar_connections")
-                        .delete()
-                        .eq("owner_id", settings.id)
-                        .eq("provider", "microsoft");
-                      if (error) {
-                        toast.error("Failed to disconnect Microsoft Calendar");
-                      } else {
-                        setSettings({
-                          ...settings,
-                          outlook_calendar_connected: false,
-                        });
-                        toast.success("Microsoft Calendar disconnected");
-                      }
-                    } catch {
-                      toast.error("Failed to disconnect Microsoft Calendar");
-                    }
-                  }}
-                >
-                  Disconnect Microsoft Calendar
-                </Button>
-              ) : (
-                <Button
-                  onClick={() => {
-                    window.location.href = "/api/calendar/microsoft/connect";
-                  }}
-                >
-                  <CalendarDays className="mr-2 size-4" />
-                  Connect Microsoft Calendar
-                </Button>
-              )}
+            <CardContent>
+              <CalendarConnections
+                googleConnections={googleConnections}
+                microsoftConnections={microsoftConnections}
+              />
             </CardContent>
           </Card>
         </TabsContent>

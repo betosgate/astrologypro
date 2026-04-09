@@ -11,16 +11,19 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { provider } = await req.json() as { provider: "google" | "microsoft" };
+  const { provider, connectionId } = await req.json() as {
+    provider: "google" | "microsoft";
+    connectionId?: string;
+  };
 
   const admin = createAdminClient();
   const { data: diviner } = await admin.from("diviners").select("id").eq("user_id", user.id).single();
   if (!diviner) return NextResponse.json({ error: "Diviner not found" }, { status: 404 });
 
   if (provider === "google") {
-    await disconnectGoogleCalendar(diviner.id);
+    await disconnectGoogleCalendar(diviner.id, connectionId);
   } else if (provider === "microsoft") {
-    await disconnectMsCalendar(diviner.id);
+    await disconnectMsCalendar(diviner.id, connectionId);
   } else {
     return NextResponse.json({ error: "Invalid provider" }, { status: 400 });
   }

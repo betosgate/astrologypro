@@ -11,15 +11,19 @@ import { createAdminClient } from "@/lib/supabase/admin";
  *   google_api_keys      — key | value | description | is_active
  *   microsoft_api_keys   — key | value | description | is_active
  *
- * Runtime reads now flow through the helpers below. The lookup order is:
+ * Runtime reads now flow through the helpers below.
  *
- *   1. active row in the provider table with a matching `key`, newest first
- *   2. the corresponding env var (existing behavior)
+ * Local development:
+ *   1. the corresponding env var
+ *   2. active row in the provider table with a matching `key`
  *
- * This means deploying this code change does NOT break anything — if no
- * admin populates the tables, every read falls through to the env vars
- * that were already there. Once an admin saves a `client_id` row via
- * /admin/calendar-config, that value takes precedence on the next read.
+ * Deployed environments:
+ *   1. active row in the provider table with a matching `key`
+ *   2. the corresponding env var
+ *
+ * The DB lookup also supports both canonical admin keys (`client_id`) and
+ * env-style aliases (`GOOGLE_CLIENT_ID`, `MICROSOFT_CLIENT_ID`) so existing
+ * production rows continue to work during the naming transition.
  *
  * The result is cached in-process for 60 seconds so a high-traffic
  * OAuth callback or webhook burst doesn't hammer the DB. Cache is
@@ -37,6 +41,21 @@ interface CacheEntry {
 
 const CACHE_TTL_MS = 60 * 1000;
 const cache = new Map<string, CacheEntry>();
+const IS_LOCAL_RUNTIME = process.env.NODE_ENV !== "production";
+
+const PROVIDER_KEY_ALIASES = {
+  google: {
+    client_id: ["client_id", "GOOGLE_CLIENT_ID"],
+    client_secret: ["client_secret", "GOOGLE_CLIENT_SECRET"],
+    redirect_uri: ["redirect_uri", "GOOGLE_REDIRECT_URI"],
+  },
+  microsoft: {
+    client_id: ["client_id", "MICROSOFT_CLIENT_ID"],
+    client_secret: ["client_secret", "MICROSOFT_CLIENT_SECRET"],
+    redirect_uri: ["redirect_uri", "MICROSOFT_REDIRECT_URI"],
+    tenant_id: ["tenant_id", "MICROSOFT_TENANT_ID"],
+  },
+} as const;
 
 async function readSetting(
   table: ProviderTable,
@@ -79,12 +98,26 @@ async function readSetting(
  */
 async function resolveCredential(
   table: ProviderTable,
-  key: string,
+  keys: readonly string[],
   envValue: string | undefined,
 ): Promise<string | null> {
-  const dbValue = await readSetting(table, key);
-  if (dbValue && dbValue.trim().length > 0) return dbValue;
-  if (envValue && envValue.trim().length > 0) return envValue;
+  const normalizedEnvValue = envValue?.trim();
+
+  if (IS_LOCAL_RUNTIME && normalizedEnvValue) {
+    return normalizedEnvValue;
+  }
+
+  for (const key of keys) {
+    const dbValue = await readSetting(table, key);
+    if (dbValue && dbValue.trim().length > 0) {
+      return dbValue;
+    }
+  }
+
+  if (normalizedEnvValue) {
+    return normalizedEnvValue;
+  }
+
   return null;
 }
 
@@ -98,16 +131,20 @@ export interface GoogleCredentials {
 
 export async function getGoogleCredentials(): Promise<GoogleCredentials> {
   const [clientId, clientSecret, redirectUri] = await Promise.all([
-    resolveCredential("google_api_keys", "client_id", process.env.GOOGLE_CLIENT_ID),
     resolveCredential(
       "google_api_keys",
-      "client_secret",
-      process.env.GOOGLE_CLIENT_SECRET,
+      PROVIDER_KEY_ALIASES.google.client_id,
+      process.env.GOOGLE_CLIENT_ID
     ),
     resolveCredential(
       "google_api_keys",
-      "redirect_uri",
-      process.env.GOOGLE_REDIRECT_URI,
+      PROVIDER_KEY_ALIASES.google.client_secret,
+      process.env.GOOGLE_CLIENT_SECRET
+    ),
+    resolveCredential(
+      "google_api_keys",
+      PROVIDER_KEY_ALIASES.google.redirect_uri,
+      process.env.GOOGLE_REDIRECT_URI
     ),
   ]);
 
@@ -133,23 +170,23 @@ export async function getMicrosoftCredentials(): Promise<MicrosoftCredentials> {
   const [clientId, clientSecret, redirectUri, tenantId] = await Promise.all([
     resolveCredential(
       "microsoft_api_keys",
-      "client_id",
-      process.env.MICROSOFT_CLIENT_ID,
+      PROVIDER_KEY_ALIASES.microsoft.client_id,
+      process.env.MICROSOFT_CLIENT_ID
     ),
     resolveCredential(
       "microsoft_api_keys",
-      "client_secret",
-      process.env.MICROSOFT_CLIENT_SECRET,
+      PROVIDER_KEY_ALIASES.microsoft.client_secret,
+      process.env.MICROSOFT_CLIENT_SECRET
     ),
     resolveCredential(
       "microsoft_api_keys",
-      "redirect_uri",
-      process.env.MICROSOFT_REDIRECT_URI,
+      PROVIDER_KEY_ALIASES.microsoft.redirect_uri,
+      process.env.MICROSOFT_REDIRECT_URI
     ),
     resolveCredential(
       "microsoft_api_keys",
-      "tenant_id",
-      process.env.MICROSOFT_TENANT_ID,
+      PROVIDER_KEY_ALIASES.microsoft.tenant_id,
+      process.env.MICROSOFT_TENANT_ID
     ),
   ]);
 
