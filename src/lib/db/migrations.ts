@@ -12,6 +12,7 @@ import { MIGRATION_SQL as MIG_20260408000116 } from "@/data/migrations/202604080
 import { MIGRATION_SQL as MIG_20260409000117 } from "@/data/migrations/20260409000117_availability_template_service_scope";
 import { MIGRATION_SQL as MIG_20260409000118 } from "@/data/migrations/20260409000118_calendar_provider_credentials";
 import { MIGRATION_SQL as MIG_20260409000119 } from "@/data/migrations/20260409000119_pricing_plans";
+import { MIGRATION_SQL as MIG_20260409000120 } from "@/data/migrations/20260409000120_pricing_plan_custom_fields";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -149,6 +150,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Creates pricing_plans table — multiple purchasable plans per global_pricing item, each with display_name, amount, MRP, stripe_price_id, currency, description, and is_active toggle. Seeds the existing professional_divination_course row as a default plan. Also improves global_pricing index: replaces single-column boolean index with composite (is_active, item_key) matching the public lookup pattern.",
     sortKey: "20260409000119",
     sql: MIG_20260409000119,
+  },
+  "20260409000120_pricing_plan_custom_fields": {
+    id: "20260409000120_pricing_plan_custom_fields",
+    title: "Pricing plan custom fields (JSONB metadata array)",
+    description:
+      "Adds custom_fields JSONB column to pricing_plans — array of {label, value, slug} objects for flexible plan metadata displayed on signup pages (e.g. duration, sessions, support level). CHECK constraint ensures the value is always a JSON array.",
+    sortKey: "20260409000120",
+    sql: MIG_20260409000120,
   },
 };
 
