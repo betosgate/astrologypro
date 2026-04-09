@@ -8,6 +8,7 @@ import { MIGRATION_SQL as MIG_20260408000112 } from "@/data/migrations/202604080
 import { MIGRATION_SQL as MIG_20260408000113 } from "@/data/migrations/20260408000113_trainees_payment_fields";
 import { MIGRATION_SQL as MIG_20260408000114 } from "@/data/migrations/20260408000114_drop_unique_astro_system_settings";
 import { MIGRATION_SQL as MIG_20260408000115 } from "@/data/migrations/20260408000115_pending_perennial_signups";
+import { MIGRATION_SQL as MIG_20260408000116 } from "@/data/migrations/20260408000116_training_notes_allow_quiz";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -113,6 +114,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Creates pending_perennial_signups table — temporary storage for in-flight household signups between Stripe Checkout creation and webhook receipt. Holds the full household JSONB payload (1-5 members) keyed on stripe_session_id. Service-role-only RLS because the payload contains personal data. Status enum (pending/processing/completed/failed) drives the webhook handler that provisions Supabase auth users + community_members rows after payment.",
     sortKey: "20260408000115",
     sql: MIG_20260408000115,
+  },
+  "20260408000116_training_notes_allow_quiz": {
+    id: "20260408000116_training_notes_allow_quiz",
+    title: "Training notes allow quiz entity type",
+    description:
+      "Extends the training_notes.entity_type CHECK constraint to allow 'quiz' in addition to program/category/lesson. Required by the admin Training Management standardization task so the entity detail sheet can host notes for quiz rows as well. Additive and idempotent — drops and recreates the named check constraint with the wider value list.",
+    sortKey: "20260408000116",
+    sql: MIG_20260408000116,
   },
 };
 

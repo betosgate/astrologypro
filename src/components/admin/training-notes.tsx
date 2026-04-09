@@ -13,7 +13,7 @@ interface TrainingNote {
 }
 
 interface TrainingNotesProps {
-  entityType: "program" | "category" | "lesson";
+  entityType: "program" | "category" | "lesson" | "quiz";
   entityId: string;
 }
 

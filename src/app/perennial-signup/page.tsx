@@ -227,23 +227,31 @@ export default function PerennialSignupPage() {
   const remainingSlots = Math.max(0, plan.totalMembers - householdCount);
   const canAdd = householdCount < plan.totalMembers;
 
+  // When the selected plan cannot hold the current household count, overflow
+  // is > 0. The page blocks submission and shows an explicit warning so the
+  // user manually removes the excess members — plan changes must not silently
+  // discard member data (task 04 / task 02 non-negotiable rule).
+  const overflowCount = Math.max(0, householdCount - plan.totalMembers);
+  const hasOverflow = overflowCount > 0;
+
   function changePlan(next: PlanKey) {
-    const nextPlan = PLANS.find((p) => p.key === next)!;
+    // Never auto-trim members on plan downgrade. If the new plan has fewer
+    // slots than the current household, the overflow warning handles it.
     setPlanKey(next);
-    // Trim members down if the new plan has fewer slots
-    setMembers((prev) => {
-      if (prev.length <= nextPlan.totalMembers) return prev;
-      return prev.slice(0, nextPlan.totalMembers);
-    });
+    // Clear any stale submit error so the new overflow banner is the only
+    // active guidance.
+    setSubmitNote(null);
   }
 
   function addMember() {
     if (!canAdd) return;
     setMembers((prev) => [...prev, newMember(false)]);
+    setSubmitNote(null);
   }
 
   function removeMember(id: string) {
     setMembers((prev) => prev.filter((m) => m.id !== id || m.isPrimary));
+    setSubmitNote(null);
   }
 
   function patch(id: string, patchFields: Partial<MemberForm>) {
@@ -572,6 +580,28 @@ export default function PerennialSignupPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Plan overflow warning — shown when switching to a smaller plan
+                leaves more members than the new plan allows. The user must
+                remove excess members manually; the page never auto-discards. */}
+            {hasOverflow && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive space-y-1">
+                <p className="font-semibold">
+                  Too many members for the {plan.name} plan
+                </p>
+                <p className="text-xs">
+                  The {plan.name} plan allows{" "}
+                  {plan.key === "family"
+                    ? "3–5"
+                    : plan.totalMembers}{" "}
+                  member{plan.totalMembers === 1 ? "" : "s"}. You currently
+                  have {householdCount}. Please remove{" "}
+                  {overflowCount} household member
+                  {overflowCount === 1 ? "" : "s"} below, or choose a larger
+                  plan.
+                </p>
+              </div>
+            )}
 
             {/* Member forms */}
             {members.map((m, idx) => {
@@ -959,7 +989,7 @@ export default function PerennialSignupPage() {
                 type="submit"
                 className="w-full"
                 size="lg"
-                disabled={checkingOut}
+                disabled={checkingOut || hasOverflow}
               >
                 {checkingOut ? "Redirecting to payment…" : "Continue to payment"}
               </Button>

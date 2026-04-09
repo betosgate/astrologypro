@@ -337,7 +337,7 @@ export async function GET() {
           quiz_passed: quizPassMap.get(l.id) ?? null,
           is_locked: isLessonLocked,
           lock_reason: isLessonLocked
-            ? "Complete previous lessons in order first"
+            ? "Complete the previous lesson first to continue in sequence."
             : null,
         };
       });
@@ -352,7 +352,7 @@ export async function GET() {
         completed: catCompleted,
         is_locked: isCatLocked,
         lock_reason: isCatLocked
-          ? "Complete previous categories in order first"
+          ? "Complete the previous category first to unlock this section."
           : null,
         // Cache-sourced progress fields
         progress_pct: catCache ? Number(catCache.progress_pct) : 0,
