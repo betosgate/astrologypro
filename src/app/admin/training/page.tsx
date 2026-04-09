@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RefreshCw } from "lucide-react";
 import {
   TrainingEntityTable,
   StatusBadge,
@@ -89,41 +88,54 @@ export default function TrainingPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [programsRefreshing, setProgramsRefreshing] = useState(true);
+  const [categoriesRefreshing, setCategoriesRefreshing] = useState(true);
+  const [lessonsRefreshing, setLessonsRefreshing] = useState(true);
+  const [quizzesRefreshing, setQuizzesRefreshing] = useState(true);
 
   // Shared filters
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
 
   async function loadPrograms() {
-    const res = await fetch("/api/admin/training/programs");
-    if (res.ok) setPrograms((await res.json()).programs ?? []);
+    setProgramsRefreshing(true);
+    try {
+      const res = await fetch("/api/admin/training/programs");
+      if (res.ok) setPrograms((await res.json()).programs ?? []);
+    } finally {
+      setProgramsRefreshing(false);
+    }
   }
   async function loadCategories() {
-    const res = await fetch("/api/admin/training/categories");
-    if (res.ok) setCategories((await res.json()).categories ?? []);
+    setCategoriesRefreshing(true);
+    try {
+      const res = await fetch("/api/admin/training/categories");
+      if (res.ok) setCategories((await res.json()).categories ?? []);
+    } finally {
+      setCategoriesRefreshing(false);
+    }
   }
   async function loadLessons() {
-    const res = await fetch("/api/admin/training/lessons");
-    if (res.ok) setLessons((await res.json()).lessons ?? []);
+    setLessonsRefreshing(true);
+    try {
+      const res = await fetch("/api/admin/training/lessons");
+      if (res.ok) setLessons((await res.json()).lessons ?? []);
+    } finally {
+      setLessonsRefreshing(false);
+    }
   }
   async function loadQuizzes() {
-    const res = await fetch("/api/admin/training/quizzes");
-    if (res.ok) setQuizzes((await res.json()).quizzes ?? []);
-  }
-
-  async function loadAll() {
-    setLoading(true);
-    await Promise.all([loadPrograms(), loadCategories(), loadLessons(), loadQuizzes()]);
-    setLoading(false);
+    setQuizzesRefreshing(true);
+    try {
+      const res = await fetch("/api/admin/training/quizzes");
+      if (res.ok) setQuizzes((await res.json()).quizzes ?? []);
+    } finally {
+      setQuizzesRefreshing(false);
+    }
   }
 
   useEffect(() => {
-    // Intentional one-shot mount fetch of all four entity lists. loadAll
-    // is a stable closure over the page setters — deliberately kept out of
-    // the dep list so it only runs on mount.
-    loadAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    void Promise.all([loadPrograms(), loadCategories(), loadLessons(), loadQuizzes()]);
   }, []);
 
   // ── Lookup maps ──────────────────────────────────────────────────────
@@ -574,10 +586,6 @@ export default function TrainingPage() {
             Manage training programs, categories, lessons, and quizzes.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={loadAll} disabled={loading}>
-          <RefreshCw className={`size-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
       </div>
 
       {/* Shared filters */}
@@ -620,10 +628,6 @@ export default function TrainingPage() {
         )}
       </div>
 
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      )}
-
       <TrainingEntityTable
         config={programConfig}
         rows={filteredPrograms}
@@ -632,6 +636,8 @@ export default function TrainingPage() {
         currentSearch={searchTerm}
         currentStatus={statusFilter}
         onMutated={loadPrograms}
+        onRefresh={loadPrograms}
+        isRefreshing={programsRefreshing}
       />
 
       <TrainingEntityTable
@@ -642,6 +648,8 @@ export default function TrainingPage() {
         currentSearch={searchTerm}
         currentStatus={statusFilter}
         onMutated={loadCategories}
+        onRefresh={loadCategories}
+        isRefreshing={categoriesRefreshing}
       />
 
       <TrainingEntityTable
@@ -652,6 +660,8 @@ export default function TrainingPage() {
         currentSearch={searchTerm}
         currentStatus={statusFilter}
         onMutated={loadLessons}
+        onRefresh={loadLessons}
+        isRefreshing={lessonsRefreshing}
       />
 
       <TrainingEntityTable
@@ -662,6 +672,8 @@ export default function TrainingPage() {
         currentSearch={searchTerm}
         currentStatus={statusFilter}
         onMutated={loadQuizzes}
+        onRefresh={loadQuizzes}
+        isRefreshing={quizzesRefreshing}
       />
     </div>
   );

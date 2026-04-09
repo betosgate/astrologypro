@@ -22,6 +22,7 @@ import {
   Loader2,
   MoreHorizontal,
   Pencil,
+  RefreshCw,
   ShieldCheck,
   ShieldOff,
   StickyNote,
@@ -97,7 +98,11 @@ interface TrainingEntityTableProps<T extends { id: string; is_active: boolean; n
   currentSearch: string;
   currentStatus: "all" | "active" | "inactive";
   /** Called after a successful mutation (activate/deactivate/delete) so the parent refetches. */
-  onMutated: () => void;
+  onMutated: () => Promise<void>;
+  /** Table-local refresh button handler. */
+  onRefresh: () => Promise<void>;
+  /** Users-style loading overlay state. */
+  isRefreshing?: boolean;
 }
 
 function entityLabel(type: TrainingEntityType): string {
@@ -131,6 +136,8 @@ export function TrainingEntityTable<
     currentSearch,
     currentStatus,
     onMutated,
+    onRefresh,
+    isRefreshing = false,
   } = props;
 
   const label = entityLabel(config.entityType);
@@ -296,7 +303,7 @@ export function TrainingEntityTable<
         );
       }
       setSelectedIds(new Set());
-      onMutated();
+      await onMutated();
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : `Bulk ${action} failed.`,
@@ -365,7 +372,7 @@ export function TrainingEntityTable<
         throw new Error(body.error ?? `HTTP ${res.status}`);
       }
       toast.success(`${label} deleted.`);
-      onMutated();
+      await onMutated();
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : `Failed to delete ${label}.`,
@@ -387,7 +394,7 @@ export function TrainingEntityTable<
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
       toast.success(`${label} ${row.is_active ? "deactivated" : "activated"}.`);
-      onMutated();
+      await onMutated();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Update failed.");
     }
@@ -396,7 +403,15 @@ export function TrainingEntityTable<
   const filteredCount = rows.length;
 
   return (
-    <Card>
+    <Card className="relative">
+      {isRefreshing && (
+        <div className="absolute inset-0 z-10 rounded-lg bg-background/60 backdrop-blur-[1px] flex items-center justify-center pointer-events-none">
+          <div className="flex items-center gap-2 rounded-full bg-background/90 border px-4 py-2 shadow-md text-sm text-muted-foreground">
+            <RefreshCw className="size-4 animate-spin text-amber-500" />
+            Loading…
+          </div>
+        </div>
+      )}
       <CardHeader className="flex flex-row items-start justify-between gap-4">
         <div>
           <CardTitle>{config.title}</CardTitle>
@@ -407,6 +422,10 @@ export function TrainingEntityTable<
           </CardDescription>
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => void onRefresh()} disabled={isRefreshing}>
+            <RefreshCw className={cn("size-3.5 mr-1.5", isRefreshing && "animate-spin")} />
+            Refresh
+          </Button>
           <Button size="sm" variant="outline" onClick={exportAll}>
             <Download className="size-3.5 mr-1.5" />
             Export
