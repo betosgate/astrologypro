@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parsePaginationParams, paginatedList } from "@/lib/training/admin-list";
 
 export const dynamic = "force-dynamic";
 
+const SELECT_COLS =
+  "id, training_id, name, description, priority, is_active, is_sequential, created_at";
 
-// GET /api/admin/training/categories — list all
+const ALLOWED_SORTS: Record<string, string> = {
+  name: "name",
+  priority: "priority",
+  is_active: "is_active",
+  created_at: "created_at",
+};
+
+/**
+ * GET /api/admin/training/categories
+ * Server-driven paginated list.
+ */
 export async function GET(req: NextRequest) {
   const user = await getAdminUser();
   if (!user) {
@@ -13,24 +26,39 @@ export async function GET(req: NextRequest) {
   }
 
   const sp = req.nextUrl.searchParams;
+  const params = parsePaginationParams(sp);
   const createdFrom = sp.get("created_from");
   const createdTo = sp.get("created_to");
 
   const admin = createAdminClient();
-  let query = admin
-    .from("training_categories")
-    .select("id, training_id, name, description, priority, is_active, is_sequential, created_at")
-    .order("priority", { ascending: true });
-
-  if (createdFrom) query = query.gte("created_at", createdFrom);
-  if (createdTo) query = query.lte("created_at", createdTo + "T23:59:59");
-
-  const { data, error } = await query;
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  try {
+    const result = await paginatedList(
+      admin,
+      "training_categories",
+      SELECT_COLS,
+      params,
+      ["name", "description"],
+      ALLOWED_SORTS,
+      { column: "priority", ascending: true },
+      (q) => {
+        let filtered = q;
+        if (createdFrom) filtered = filtered.gte("created_at", createdFrom);
+        if (createdTo) filtered = filtered.lte("created_at", createdTo + "T23:59:59");
+        return filtered;
+      },
+    );
+    return NextResponse.json({
+      categories: result.rows,
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : String(err) },
+      { status: 500 },
+    );
   }
-
-  return NextResponse.json({ categories: data });
 }
 
 // POST /api/admin/training/categories — create

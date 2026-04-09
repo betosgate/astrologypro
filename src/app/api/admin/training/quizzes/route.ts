@@ -1,28 +1,56 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parsePaginationParams, paginatedList } from "@/lib/training/admin-list";
 
 export const dynamic = "force-dynamic";
 
+const SELECT_COLS =
+  "id, lesson_id, title, questions, pass_score, is_active, created_at";
 
-// GET /api/admin/training/quizzes — list all
-export async function GET() {
+const ALLOWED_SORTS: Record<string, string> = {
+  title: "title",
+  pass_score: "pass_score",
+  is_active: "is_active",
+  created_at: "created_at",
+};
+
+/**
+ * GET /api/admin/training/quizzes
+ * Server-driven paginated list.
+ */
+export async function GET(req: NextRequest) {
   const user = await getAdminUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const sp = req.nextUrl.searchParams;
+  const params = parsePaginationParams(sp);
+
   const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("training_quizzes")
-    .select("id, lesson_id, title, questions, pass_score, is_active, created_at")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  try {
+    const result = await paginatedList(
+      admin,
+      "training_quizzes",
+      SELECT_COLS,
+      params,
+      ["title"],
+      ALLOWED_SORTS,
+      { column: "created_at", ascending: false },
+    );
+    return NextResponse.json({
+      quizzes: result.rows,
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : String(err) },
+      { status: 500 },
+    );
   }
-
-  return NextResponse.json({ quizzes: data });
 }
 
 // POST /api/admin/training/quizzes — create
