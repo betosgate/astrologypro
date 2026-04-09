@@ -1,7 +1,8 @@
 # Perennial Signup UI Copy Parity And Adaptation
 
-- Completion Notes: NOT IMPLEMENTED — deferred. Page uses generic friendly copy. Legacy copy parity can layer on top once the structure stabilises.
-- Status: Deferred (2026-04-08)
+- Completion Notes: Implemented. Hero section now uses the legacy "Welcome to Our Living Circle of Wisdom" heading + the three-paragraph intro copy verbatim, ending with the highlighted closing line "Come take your place in a community devoted to awakening...". The conflict resolution from the spec is honored: the manual-password copy is gone, replaced with system-generated-password messaging (each member receives credentials by email after successful payment).
+- Earlier notes: NOT IMPLEMENTED — deferred. Page uses generic friendly copy. Legacy copy parity can layer on top once the structure stabilises.
+- Status: Completed (2026-04-08)
 - Date: 2026-04-08
 - Category: Perennial Signup
 - Owner: Frontend

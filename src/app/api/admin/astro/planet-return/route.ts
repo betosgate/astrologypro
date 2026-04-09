@@ -31,12 +31,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid steps value" }, { status: 400 });
   }
 
-  const lambdaUrl = await getSystemConfigValue("ASTRO_PLANET_RETURN_URL");
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const configRes = await fetch(`${baseUrl}/api/astro/fetch-config`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ keys: ["ASTRO_PLANET_RETURN_URL"] }),
+  });
+  const config = await configRes.json().catch(() => ({}));
+  const lambdaUrl = config?.ASTRO_PLANET_RETURN_URL;
+
   if (!lambdaUrl) {
     return NextResponse.json(
       {
         error:
-          "ASTRO_PLANET_RETURN_URL is not configured. Add a SYSTEM_CONFIG row at /admin/astro-system-settings or set the env var.",
+          "ASTRO_PLANET_RETURN_URL is not configured (fetch-config returned null).",
       },
       { status: 500 }
     );

@@ -13,11 +13,18 @@ interface TrainingNote {
 }
 
 interface TrainingNotesProps {
-  entityType: "program" | "category" | "lesson";
+  entityType: "program" | "category" | "lesson" | "quiz";
   entityId: string;
+  /**
+   * Called after a successful add / edit / delete so parents that show a
+   * notes count (e.g. the Training Management table) can refetch. The
+   * argument is the new local count — callers that cache counts by id can
+   * apply it directly without a round trip.
+   */
+  onCountChange?: (nextCount: number) => void;
 }
 
-export function TrainingNotes({ entityType, entityId }: TrainingNotesProps) {
+export function TrainingNotes({ entityType, entityId, onCountChange }: TrainingNotesProps) {
   const [notes, setNotes] = useState<TrainingNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentAdminEmail, setCurrentAdminEmail] = useState<string | null>(null);
@@ -65,7 +72,11 @@ export function TrainingNotes({ entityType, entityId }: TrainingNotesProps) {
     if (!res.ok) {
       throw new Error(data.error ?? "Failed to add note.");
     }
-    setNotes((prev) => [data.note, ...prev]);
+    setNotes((prev) => {
+      const next = [data.note, ...prev];
+      onCountChange?.(next.length);
+      return next;
+    });
   }
 
   async function handleDelete(id: string) {
@@ -76,7 +87,11 @@ export function TrainingNotes({ entityType, entityId }: TrainingNotesProps) {
     if (!res.ok) {
       throw new Error(data.error ?? "Failed to delete note.");
     }
-    setNotes((prev) => prev.filter((note) => note.id !== id));
+    setNotes((prev) => {
+      const next = prev.filter((note) => note.id !== id);
+      onCountChange?.(next.length);
+      return next;
+    });
   }
 
   async function handleEdit(id: string, content: string) {

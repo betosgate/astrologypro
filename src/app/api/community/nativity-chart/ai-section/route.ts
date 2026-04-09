@@ -120,7 +120,15 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const aiUrl = process.env.ASTRO_AI_API_URL;
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const configRes = await fetch(`${baseUrl}/api/astro/fetch-config`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ keys: ["ASTRO_AI_API_URL"] }),
+  });
+  const config = await configRes.json().catch(() => ({}));
+  const aiUrl = config?.ASTRO_AI_API_URL;
+
   if (!aiUrl) {
     return NextResponse.json({ error: "AI service not configured" }, { status: 503 });
   }

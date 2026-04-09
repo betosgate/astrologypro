@@ -73,8 +73,16 @@ export async function POST(
     );
   }
 
-  // Check Astro AI API URL
-  const astroApiUrl = process.env.ASTRO_AI_API_URL;
+  // Check Astro AI API URL from the centralised config API
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const configRes = await fetch(`${baseUrl}/api/astro/fetch-config`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ keys: ["ASTRO_AI_API_URL"] }),
+  });
+  const config = await configRes.json().catch(() => ({}));
+  const astroApiUrl = config?.ASTRO_AI_API_URL;
+
   if (!astroApiUrl) {
     return NextResponse.json(
       {
