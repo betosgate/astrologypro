@@ -76,6 +76,19 @@ export async function POST(
   const description = typeof body.description === "string" ? body.description.trim() || null : null;
   const sortOrder = typeof body.sort_order === "number" ? body.sort_order : 0;
 
+  let customFields: unknown[] = [];
+  if (body.custom_fields !== undefined) {
+    if (!Array.isArray(body.custom_fields)) {
+      return NextResponse.json({ error: "custom_fields must be an array" }, { status: 422 });
+    }
+    for (const f of body.custom_fields) {
+      if (!f || typeof f !== "object" || !f.label || !f.value || !f.slug) {
+        return NextResponse.json({ error: "Each custom field must have label, value, and slug" }, { status: 422 });
+      }
+    }
+    customFields = body.custom_fields;
+  }
+
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("pricing_plans")
@@ -89,6 +102,7 @@ export async function POST(
       description,
       sort_order: sortOrder,
       is_active: typeof body.is_active === "boolean" ? body.is_active : true,
+      custom_fields: customFields,
     })
     .select()
     .single();
