@@ -3686,16 +3686,26 @@ export default function AdminHoroscopePage() {
                 }));
               }
 
-              // Fetch Transit Chart Wheel (at day 1 of target month/year)
+              // Fetch Transit Chart Wheel (using month_start_date from report)
               try {
-                const [bYear, bMonth, bDay] = form.person1.dob.split("-").map(Number);
+                const reportMonth = (collected.transit_data as any) ?? {};
+                const stDate = reportMonth?.month_start_date;
+                let wheelDate = 1, wheelMonth = tMonth, wheelYear = tYear;
+
+                if (stDate && typeof stDate === "string") {
+                  const parts = stDate.split("-").map(Number);
+                  if (parts.length === 3) {
+                    [wheelYear, wheelMonth, wheelDate] = parts;
+                  }
+                }
+
                 const [bHour, bMin] = form.person1.tob.split(":").map(Number);
                 const transitWheelPayload = {
                   hours: bHour,
                   minutes: bMin,
-                  date: 1,
-                  month: tMonth,
-                  year: tYear,
+                  date: wheelDate,
+                  month: wheelMonth,
+                  year: wheelYear,
                   latitude: form.person1.city!.lat,
                   longitude: form.person1.city!.lng,
                   timezone: parseDecimalTz(form.person1.city!.timezone.offset_string)

@@ -742,6 +742,12 @@ export function TrainingEntityTable<
                                 Edit
                               </Link>
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openSheet(row, "notes")}>
+                              <StickyNote className="mr-2 size-3.5" />
+                              {(notesCounts[row.id] ?? 0) > 0
+                                ? "Edit Notes"
+                                : "Add Notes"}
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => toggleRowActive(row)}>
                               {row.is_active ? (

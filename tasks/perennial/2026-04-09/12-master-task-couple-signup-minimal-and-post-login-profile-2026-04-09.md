@@ -10,18 +10,23 @@
 
 Implement a two-phase Perennial onboarding flow for the `Couple` plan:
 
-1. Signup phase collects only basic fields for primary and partner.
-2. After payment + login, show a couple profile-completion form with prefilled signup values and required birth/guidance fields.
+1. Signup phase collects essential fields for primary and partner, including `date_of_birth`, `birth_time`, `birth_location_label`.
+2. After payment + login, show a couple profile-completion form with prefilled signup values and remaining guidance fields.
 
 ## Child Tasks
 
 1. `12.1-couple-signup-minimal-fields-and-validation-2026-04-09.md`
 2. `12.2-couple-post-login-profile-completion-form-and-prefill-2026-04-09.md`
-3. `12.2.1-couple-post-login-profile-save-api-contract-and-user-id-update-rules-2026-04-09.md`
-4. `12.3-couple-birth-location-city-search-integration-2026-04-09.md`
-5. `12.4-couple-natal-and-monthly-transit-readiness-rules-2026-04-09.md`
-6. `12.5-couple-ux-routing-guards-and-first-login-experience-2026-04-09.md`
-7. `12.6-couple-acceptance-qa-checklist-2026-04-09.md`
+3. `12.2a-couple-post-login-profile-frontend-form-and-prefill-2026-04-09.md`
+4. `12.2b-couple-post-login-profile-backend-prefill-and-save-2026-04-09.md`
+5. `12.3-couple-birth-location-city-search-integration-2026-04-09.md`
+6. `12.3a-couple-birth-location-frontend-integration-2026-04-09.md`
+7. `12.3b-couple-birth-location-backend-contract-2026-04-09.md`
+8. `12.4-couple-natal-and-monthly-transit-readiness-rules-2026-04-09.md`
+9. `12.4a-couple-readiness-ui-gating-and-status-2026-04-09.md`
+10. `12.4b-couple-readiness-backend-rules-and-state-2026-04-09.md`
+11. `12.5-couple-ux-routing-guards-and-first-login-experience-2026-04-09.md`
+12. `12.6-couple-acceptance-qa-checklist-2026-04-09.md`
 
 ## Couple Signup Fields (Phase A)
 
@@ -37,6 +42,9 @@ Implement a two-phase Perennial onboarding flow for the `Couple` plan:
 8. `city`
 9. `state`
 10. `zip`
+11. `date_of_birth`
+12. `birth_time`
+13. `birth_location_label`
 
 ### Second member (partner)
 
@@ -52,17 +60,11 @@ Implement a two-phase Perennial onboarding flow for the `Couple` plan:
 10. `city`
 11. `state`
 12. `zip`
+13. `date_of_birth`
+14. `birth_time`
+15. `birth_location_label`
 
 ## Couple Post-Login Fields (Phase B)
-
-### Must fill first (both members)
-
-1. `date_of_birth`
-2. `birth_time`
-3. `birth_location_label`
-4. `birth_lat`
-5. `birth_lng`
-6. `birth_tzone`
 
 ### Must keep for mapping
 
@@ -86,7 +88,7 @@ Implement a two-phase Perennial onboarding flow for the `Couple` plan:
 
 ## Done Definition
 
-1. Couple signup only asks minimal basic fields for both members.
+1. Couple signup includes `date_of_birth`, `birth_time`, `birth_location_label` for both members.
 2. After login, completion form opens with signup values prefilled.
 3. Birth location search uses same city API contract as single flow.
 4. Couple chart/transit readiness gates are enforced.

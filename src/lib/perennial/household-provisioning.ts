@@ -75,6 +75,10 @@ export interface HouseholdMemberPayload {
   occupation: string;
   date_of_birth: string;
   birth_time: string;
+  birth_location_label: string;
+  birth_lat: number;
+  birth_lng: number;
+  birth_tzone: string;
   // Full optional questionnaire (25 fields, all nullable)
   relationship_status: string | null;
   personality: string | null;
@@ -219,6 +223,10 @@ export async function provisionPerennialHousehold(
         occupation: member.occupation,
         date_of_birth: member.date_of_birth,
         birth_time: member.birth_time,
+        birth_location_label: member.birth_location_label,
+        birth_lat: member.birth_lat,
+        birth_lng: member.birth_lng,
+        birth_tzone: member.birth_tzone,
         // Optional questionnaire — every key from task 03
         relationship_status: member.relationship_status,
         personality: member.personality,
