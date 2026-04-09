@@ -6,6 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -16,6 +23,7 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  ChevronLeft,
   ChevronRight,
   Download,
   Eye,
@@ -125,6 +133,8 @@ const ENTITY_API_PATH: Record<TrainingEntityType, string> = {
   quiz: "quizzes",
 };
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
+
 export function TrainingEntityTable<
   T extends { id: string; is_active: boolean; name?: string; title?: string },
 >(props: TrainingEntityTableProps<T>) {
@@ -181,6 +191,22 @@ export function TrainingEntityTable<
     return arr;
   }, [rows, sortKey, sortDir, config.columns]);
 
+  // ── Pagination ─────────────────────────────────────────────────────────
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+
+  const totalRows = sortedRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
+  const pagedRows = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedRows.slice(start, start + pageSize);
+  }, [sortedRows, currentPage, pageSize]);
+
   // ── Row selection ──────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -200,7 +226,7 @@ export function TrainingEntityTable<
     });
   }, [rows]);
 
-  const pageIds = sortedRows.map((r) => r.id);
+  const pageIds = pagedRows.map((r) => r.id);
   const allOnPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
   const someOnPageSelected = pageIds.some((id) => selectedIds.has(id));
 
@@ -230,6 +256,15 @@ export function TrainingEntityTable<
       else next.add(id);
       return next;
     });
+  }
+
+  function handlePage(page: number) {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  }
+
+  function handlePageSizeChange(value: string) {
+    setPageSize(Number(value));
+    setCurrentPage(1);
   }
 
   // ── Notes counts ───────────────────────────────────────────────────────
@@ -513,7 +548,7 @@ export function TrainingEntityTable<
         )}
 
         {/* ── Table ───────────────────────────────────────────────────── */}
-        {sortedRows.length === 0 ? (
+        {pagedRows.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
             {rawCount === 0 ? config.emptyText : config.noMatchText}
           </p>
@@ -577,7 +612,7 @@ export function TrainingEntityTable<
                 </tr>
               </thead>
               <tbody>
-                {sortedRows.map((row) => {
+                {pagedRows.map((row) => {
                   const isSelected = selectedIds.has(row.id);
                   const noteCount = notesCounts[row.id] ?? 0;
                   return (
@@ -681,6 +716,80 @@ export function TrainingEntityTable<
             </table>
           </div>
         )}
+
+        <div
+          className={cn(
+            "flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm",
+            isRefreshing && "opacity-50 pointer-events-none",
+          )}
+        >
+          <div className="flex items-center gap-3">
+            <p className="text-muted-foreground">
+              Showing {totalRows === 0 ? 0 : Math.min((currentPage - 1) * pageSize + 1, totalRows)}–
+              {Math.min(currentPage * pageSize, totalRows)} of {totalRows}
+            </p>
+            <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+              <SelectTrigger className="h-8 w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n} / page
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0"
+                disabled={currentPage <= 1}
+                onClick={() => handlePage(currentPage - 1)}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+                .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+                  if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push("…");
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, idx) =>
+                  p === "…" ? (
+                    <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">
+                      ...
+                    </span>
+                  ) : (
+                    <Button
+                      key={p}
+                      variant={p === currentPage ? "default" : "outline"}
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => handlePage(p as number)}
+                    >
+                      {p}
+                    </Button>
+                  ),
+                )}
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0"
+                disabled={currentPage >= totalPages}
+                onClick={() => handlePage(currentPage + 1)}
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          )}
+        </div>
       </CardContent>
 
       <TrainingEntitySheet
