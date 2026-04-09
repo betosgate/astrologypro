@@ -52,6 +52,12 @@ export async function PATCH(
         ? null
         : String(body.description).trim() || null;
   }
+  if (body.stripe_product_id !== undefined) {
+    updates.stripe_product_id = body.stripe_product_id === null ? null : String(body.stripe_product_id).trim() || null;
+  }
+  if (body.stripe_product_name !== undefined) {
+    updates.stripe_product_name = body.stripe_product_name === null ? null : String(body.stripe_product_name).trim() || null;
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 422 });

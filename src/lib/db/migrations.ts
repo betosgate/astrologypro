@@ -15,6 +15,7 @@ import { MIGRATION_SQL as MIG_20260409000119 } from "@/data/migrations/202604090
 import { MIGRATION_SQL as MIG_20260409000120 } from "@/data/migrations/20260409000120_pricing_plan_custom_fields";
 import { MIGRATION_SQL as MIG_20260409000121 } from "@/data/migrations/20260409000121_seed_pricing_plans";
 import { MIGRATION_SQL as MIG_20260409000122 } from "@/data/migrations/20260409000122_drop_item_price_currency";
+import { MIGRATION_SQL as MIG_20260409000123 } from "@/data/migrations/20260409000123_stripe_product_price_fields";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -176,6 +177,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Drops price and currency columns from global_pricing. All pricing now lives exclusively on pricing_plans. Run AFTER 000121 (seed). Destructive — columns are permanently removed.",
     sortKey: "20260409000122",
     sql: MIG_20260409000122,
+  },
+  "20260409000123_stripe_product_price_fields": {
+    id: "20260409000123_stripe_product_price_fields",
+    title: "Stripe product/price fields on items and plans",
+    description:
+      "Adds stripe_product_id and stripe_product_name to global_pricing (one Stripe product per item), and stripe_price_name to pricing_plans. Index on stripe_product_id.",
+    sortKey: "20260409000123",
+    sql: MIG_20260409000123,
   },
 };
 

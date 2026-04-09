@@ -46,8 +46,25 @@ interface PricingItem {
   item_name: string;
   description: string | null;
   is_active: boolean;
+  stripe_product_id: string | null;
+  stripe_product_name: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface StripeProduct {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+interface StripePrice {
+  id: string;
+  nickname: string | null;
+  unit_amount: number | null;
+  currency: string;
+  type: string;
+  recurring: { interval: string; interval_count: number } | null;
 }
 
 interface CustomField {
@@ -64,6 +81,7 @@ interface PricingPlan {
   amount: number;
   mrp: number | null;
   stripe_price_id: string | null;
+  stripe_price_name: string | null;
   currency: "USD" | "INR";
   description: string | null;
   is_active: boolean;
@@ -100,6 +118,7 @@ export default function AdminPricingPage() {
     amount: "",
     mrp: "",
     stripe_price_id: "",
+    stripe_price_name: "",
     currency: "INR" as "USD" | "INR",
     description: "",
     custom_fields: [] as CustomField[],
@@ -111,8 +130,20 @@ export default function AdminPricingPage() {
 
   // Add item state
   const [showAddItem, setShowAddItem] = useState(false);
-  const [newItem, setNewItem] = useState({ item_key: "", item_name: "", description: "" });
+  const [newItem, setNewItem] = useState({ item_key: "", item_name: "", description: "", stripe_product_name: "" });
   const [addingItem, setAddingItem] = useState(false);
+
+  // Stripe product state (for item form)
+  const [stripeProducts, setStripeProducts] = useState<StripeProduct[]>([]);
+  const [stripeProductQuery, setStripeProductQuery] = useState("");
+  const [stripeProductsLoading, setStripeProductsLoading] = useState(false);
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
+  const [selectedStripeProduct, setSelectedStripeProduct] = useState<StripeProduct | null>(null);
+
+  // Stripe price state (for plan form)
+  const [stripePrices, setStripePrices] = useState<StripePrice[]>([]);
+  const [stripePricesLoading, setStripePricesLoading] = useState(false);
+  const [showPriceDropdown, setShowPriceDropdown] = useState(false);
 
   // Edit plan state
   const [editPlanId, setEditPlanId] = useState<string | null>(null);
@@ -121,6 +152,7 @@ export default function AdminPricingPage() {
     amount: "",
     mrp: "",
     stripe_price_id: "",
+    stripe_price_name: "",
     currency: "INR" as "USD" | "INR",
     description: "",
   });
@@ -344,15 +376,35 @@ export default function AdminPricingPage() {
         setError("MRP must be a non-negative number");
         return;
       }
+
+      let stripePriceId = newPlan.stripe_price_id.trim() || null;
+      let stripePriceName = newPlan.stripe_price_name ?? "";
+      let finalAmount = amount;
+      let finalCurrency = newPlan.currency;
+
+      // If no existing stripe price selected, create one via Stripe
+      if (!stripePriceId && selected.stripe_product_id && stripePriceName) {
+        const stripePrice = await createStripePrice(
+          selected.stripe_product_id,
+          stripePriceName.trim(),
+          amount,
+          newPlan.currency,
+        );
+        stripePriceId = stripePrice.id;
+        finalAmount = stripePrice.unit_amount ? stripePrice.unit_amount / 100 : amount;
+        finalCurrency = stripePrice.currency as "USD" | "INR";
+      }
+
       const r = await fetch(`/api/admin/pricing/${selected.id}/plans`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           display_name: newPlan.display_name.trim(),
-          amount,
+          amount: finalAmount,
           mrp,
-          stripe_price_id: newPlan.stripe_price_id.trim() || null,
-          currency: newPlan.currency,
+          stripe_price_id: stripePriceId,
+          stripe_price_name: stripePriceName.trim() || null,
+          currency: finalCurrency,
           description: newPlan.description.trim() || null,
           custom_fields: newPlan.custom_fields.map((f) => ({
             label: f.label.trim(),
@@ -364,7 +416,8 @@ export default function AdminPricingPage() {
       const body = await r.json();
       if (!r.ok) throw new Error(body.error ?? `HTTP ${r.status}`);
       setPlans((prev) => [...prev, body.plan as PricingPlan]);
-      setNewPlan({ display_name: "", amount: "", mrp: "", stripe_price_id: "", currency: "INR", description: "", custom_fields: [] });
+      setNewPlan({ display_name: "", amount: "", mrp: "", stripe_price_id: "", stripe_price_name: "", currency: "INR", description: "", custom_fields: [] });
+      setShowPriceDropdown(false);
       setShowAddPlan(false);
       // Invalidate cache
       setItemPlansCache((prev) => { const n = { ...prev }; delete n[selected.id]; return n; });
@@ -478,6 +531,24 @@ export default function AdminPricingPage() {
     setAddingItem(true);
     setError(null);
     try {
+      // Step 1: Create or reuse Stripe product
+      let stripeProductId = selectedStripeProduct?.id ?? null;
+      let stripeProductName = newItem.stripe_product_name.trim() || newItem.item_name.trim();
+
+      if (!stripeProductId && stripeProductName) {
+        // Create new Stripe product
+        const pr = await fetch("/api/admin/stripe/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: stripeProductName }),
+        });
+        const pb = await pr.json();
+        if (!pr.ok) throw new Error(pb.error ?? "Failed to create Stripe product");
+        stripeProductId = pb.product.id;
+        stripeProductName = pb.product.name;
+      }
+
+      // Step 2: Create item in DB
       const r = await fetch("/api/admin/pricing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -485,14 +556,17 @@ export default function AdminPricingPage() {
           item_key: newItem.item_key.trim().toLowerCase().replace(/\s+/g, "_"),
           item_name: newItem.item_name.trim(),
           description: newItem.description.trim() || null,
+          stripe_product_id: stripeProductId,
+          stripe_product_name: stripeProductName,
         }),
       });
       const body = await r.json();
       if (!r.ok) throw new Error(body.error ?? `HTTP ${r.status}`);
       setItems((prev) => [...prev, body.item as PricingItem]);
-      setNewItem({ item_key: "", item_name: "", description: "" });
+      setNewItem({ item_key: "", item_name: "", description: "", stripe_product_name: "" });
+      setSelectedStripeProduct(null);
+      setStripeProductQuery("");
       setShowAddItem(false);
-      // Auto-select the new item
       setSelectedKey((body.item as PricingItem).item_key);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -513,6 +587,7 @@ export default function AdminPricingPage() {
       amount: String(plan.amount),
       mrp: plan.mrp !== null ? String(plan.mrp) : "",
       stripe_price_id: plan.stripe_price_id ?? "",
+      stripe_price_name: plan.stripe_price_name ?? "",
       currency: plan.currency,
       description: plan.description ?? "",
     });
@@ -543,6 +618,7 @@ export default function AdminPricingPage() {
           amount,
           mrp,
           stripe_price_id: editPlanForm.stripe_price_id.trim() || null,
+          stripe_price_name: editPlanForm.stripe_price_name.trim() || null,
           currency: editPlanForm.currency,
           description: editPlanForm.description.trim() || null,
         }),
@@ -565,6 +641,63 @@ export default function AdminPricingPage() {
   }
 
   /* ---- Edit item inline ---- */
+  /* ---- Stripe product search ---- */
+  async function searchStripeProducts(q: string) {
+    setStripeProductQuery(q);
+    if (!q.trim()) { setStripeProducts([]); setShowProductDropdown(false); return; }
+    setStripeProductsLoading(true);
+    setShowProductDropdown(true);
+    try {
+      const r = await fetch(`/api/admin/stripe/products?q=${encodeURIComponent(q)}`);
+      const body = await r.json();
+      if (r.ok) setStripeProducts(body.products as StripeProduct[]);
+    } catch { /* ignore */ }
+    finally { setStripeProductsLoading(false); }
+  }
+
+  function selectStripeProduct(product: StripeProduct) {
+    setSelectedStripeProduct(product);
+    setNewItem((prev) => ({ ...prev, stripe_product_name: product.name }));
+    setStripeProductQuery(product.name);
+    setShowProductDropdown(false);
+  }
+
+  /* ---- Stripe price search for a product ---- */
+  async function loadStripePrices(productId: string) {
+    setStripePricesLoading(true);
+    try {
+      const r = await fetch(`/api/admin/stripe/prices?product_id=${encodeURIComponent(productId)}`);
+      const body = await r.json();
+      if (r.ok) setStripePrices(body.prices as StripePrice[]);
+    } catch { /* ignore */ }
+    finally { setStripePricesLoading(false); }
+  }
+
+  function selectStripePrice(price: StripePrice) {
+    const amount = price.unit_amount ? price.unit_amount / 100 : 0;
+    setNewPlan((prev) => ({
+      ...prev,
+      stripe_price_id: price.id,
+      stripe_price_name: price.nickname ?? "",
+      amount: String(amount),
+      currency: price.currency as "USD" | "INR",
+      display_name: prev.display_name || price.nickname || "",
+    }));
+    setShowPriceDropdown(false);
+  }
+
+  /* ---- Create Stripe price during plan creation ---- */
+  async function createStripePrice(productId: string, nickname: string, amount: number, currency: string) {
+    const r = await fetch("/api/admin/stripe/prices", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ product_id: productId, nickname, amount, currency }),
+    });
+    const body = await r.json();
+    if (!r.ok) throw new Error(body.error ?? "Failed to create Stripe price");
+    return body.price as StripePrice;
+  }
+
   function handleEditItem(item: PricingItem) {
     if (selectedKey === item.item_key) {
       // Collapse
@@ -698,17 +831,13 @@ export default function AdminPricingPage() {
                         </div>
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div className="space-y-1.5"><Label className="text-xs">Display Name *</Label><Input value={editPlanForm.display_name} onChange={(e) => setEditPlanForm({ ...editPlanForm, display_name: e.target.value })} /></div>
-                          <div className="space-y-1.5"><Label className="text-xs">Stripe Price ID</Label><Input placeholder="price_..." value={editPlanForm.stripe_price_id} onChange={(e) => setEditPlanForm({ ...editPlanForm, stripe_price_id: e.target.value })} /></div>
+                          <div className="space-y-1.5"><Label className="text-xs">Stripe Price Name</Label><Input value={plan.stripe_price_name ?? ""} disabled className="opacity-60" /></div>
                         </div>
-                        <div className="grid gap-3 sm:grid-cols-3">
-                          <div className="space-y-1.5"><Label className="text-xs">Amount *</Label><Input type="number" min="0" step="0.01" value={editPlanForm.amount} onChange={(e) => setEditPlanForm({ ...editPlanForm, amount: e.target.value })} /></div>
+                        <div className="grid gap-3 sm:grid-cols-4">
+                          <div className="space-y-1.5"><Label className="text-xs">Amount</Label><Input type="number" value={editPlanForm.amount} disabled className="opacity-60" /></div>
+                          <div className="space-y-1.5"><Label className="text-xs">Currency</Label><Input value={editPlanForm.currency} disabled className="opacity-60" /></div>
+                          <div className="space-y-1.5"><Label className="text-xs">Stripe Price ID</Label><Input value={editPlanForm.stripe_price_id} disabled className="opacity-60 font-mono text-xs" /></div>
                           <div className="space-y-1.5"><Label className="text-xs">MRP</Label><Input type="number" min="0" step="0.01" placeholder="Original price" value={editPlanForm.mrp} onChange={(e) => setEditPlanForm({ ...editPlanForm, mrp: e.target.value })} /></div>
-                          <div className="space-y-1.5"><Label className="text-xs">Currency</Label>
-                            <Select value={editPlanForm.currency} onValueChange={(v) => setEditPlanForm({ ...editPlanForm, currency: v as "USD" | "INR" })}>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent><SelectItem value="USD">USD</SelectItem><SelectItem value="INR">INR</SelectItem></SelectContent>
-                            </Select>
-                          </div>
                         </div>
                         <div className="space-y-1.5"><Label className="text-xs">Description</Label><Input placeholder="Optional" value={editPlanForm.description} onChange={(e) => setEditPlanForm({ ...editPlanForm, description: e.target.value })} /></div>
                         {/* Custom fields inline */}
@@ -753,18 +882,61 @@ export default function AdminPricingPage() {
 
   /* Helper: render the add plan form */
   function renderAddPlanForm() {
+    const hasStripePrice = !!newPlan.stripe_price_id;
+    const hasProductId = !!selected?.stripe_product_id;
     return (
       <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
         <p className="text-sm font-medium">New Plan</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5"><Label>Display Name *</Label><Input placeholder="e.g. Monthly Plan" value={newPlan.display_name} onChange={(e) => setNewPlan({ ...newPlan, display_name: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label>Stripe Price ID</Label><Input placeholder="price_..." value={newPlan.stripe_price_id} onChange={(e) => setNewPlan({ ...newPlan, stripe_price_id: e.target.value })} /></div>
+          <div className="space-y-1.5">
+            <Label>Stripe Price Name *</Label>
+            <div className="relative">
+              <Input
+                placeholder={hasProductId ? "Search existing or type new price name..." : "Set Stripe product on item first"}
+                disabled={!hasProductId}
+                value={newPlan.stripe_price_name}
+                onChange={(e) => {
+                  setNewPlan({ ...newPlan, stripe_price_name: e.target.value, stripe_price_id: "" });
+                  if (selected?.stripe_product_id && e.target.value.trim()) {
+                    void loadStripePrices(selected.stripe_product_id);
+                    setShowPriceDropdown(true);
+                  } else {
+                    setShowPriceDropdown(false);
+                  }
+                }}
+                onFocus={() => { if (stripePrices.length > 0) setShowPriceDropdown(true); }}
+                onBlur={() => setTimeout(() => setShowPriceDropdown(false), 200)}
+              />
+              {showPriceDropdown && (
+                <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
+                  {stripePricesLoading ? (
+                    <div className="p-3 text-xs text-muted-foreground flex items-center gap-2"><Loader2 className="size-3 animate-spin" />Loading prices...</div>
+                  ) : stripePrices.length === 0 ? (
+                    <div className="p-3 text-xs text-muted-foreground">No existing prices. A new one will be created.</div>
+                  ) : (
+                    stripePrices.filter((p) => !newPlan.stripe_price_name || (p.nickname ?? "").toLowerCase().includes(newPlan.stripe_price_name.toLowerCase())).map((p) => (
+                      <button key={p.id} type="button" className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors" onMouseDown={() => {
+                        selectStripePrice(p);
+                        setNewPlan((prev) => ({ ...prev, stripe_price_name: p.nickname ?? "" }));
+                      }}>
+                        <div className="font-medium">{p.nickname || p.id}</div>
+                        <div className="text-xs text-muted-foreground">{p.currency} {p.unit_amount ? (p.unit_amount / 100).toLocaleString() : 0} &middot; <span className="font-mono">{p.id}</span></div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+            {hasStripePrice && <p className="text-xs text-muted-foreground">Linked: <span className="font-mono">{newPlan.stripe_price_id}</span></p>}
+            {!hasStripePrice && newPlan.stripe_price_name.trim() && hasProductId && <p className="text-xs text-muted-foreground">A new Stripe price will be created.</p>}
+          </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="space-y-1.5"><Label>Amount *</Label><Input type="number" min="0" step="0.01" value={newPlan.amount} onChange={(e) => setNewPlan({ ...newPlan, amount: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label>Amount *</Label><Input type="number" min="0" step="0.01" value={newPlan.amount} disabled={hasStripePrice} onChange={(e) => setNewPlan({ ...newPlan, amount: e.target.value })} /></div>
           <div className="space-y-1.5"><Label>MRP</Label><Input type="number" min="0" step="0.01" placeholder="Original price" value={newPlan.mrp} onChange={(e) => setNewPlan({ ...newPlan, mrp: e.target.value })} /></div>
           <div className="space-y-1.5"><Label>Currency</Label>
-            <Select value={newPlan.currency} onValueChange={(v) => setNewPlan({ ...newPlan, currency: v as "USD" | "INR" })}>
+            <Select value={newPlan.currency} disabled={hasStripePrice} onValueChange={(v) => setNewPlan({ ...newPlan, currency: v as "USD" | "INR" })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent><SelectItem value="USD">USD</SelectItem><SelectItem value="INR">INR</SelectItem></SelectContent>
             </Select>
@@ -853,6 +1025,45 @@ export default function AdminPricingPage() {
             <div className="space-y-1.5">
               <Label htmlFor="new-item-desc">Description</Label>
               <Input id="new-item-desc" placeholder="Optional description" value={newItem.description} onChange={(e) => setNewItem({ ...newItem, description: e.target.value })} />
+            </div>
+            {/* Stripe Product */}
+            <div className="border-t pt-3 space-y-1.5">
+              <Label>Stripe Product Name</Label>
+              <div className="relative">
+                <Input
+                  placeholder="Search existing or type new product name..."
+                  value={stripeProductQuery || newItem.stripe_product_name}
+                  onChange={(e) => {
+                    setNewItem({ ...newItem, stripe_product_name: e.target.value });
+                    setSelectedStripeProduct(null);
+                    void searchStripeProducts(e.target.value);
+                  }}
+                  onFocus={() => { if (stripeProducts.length > 0) setShowProductDropdown(true); }}
+                  onBlur={() => setTimeout(() => setShowProductDropdown(false), 200)}
+                />
+                {showProductDropdown && (
+                  <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
+                    {stripeProductsLoading ? (
+                      <div className="p-3 text-xs text-muted-foreground flex items-center gap-2"><Loader2 className="size-3 animate-spin" />Searching Stripe...</div>
+                    ) : stripeProducts.length === 0 ? (
+                      <div className="p-3 text-xs text-muted-foreground">No matching products. A new one will be created.</div>
+                    ) : (
+                      stripeProducts.map((p) => (
+                        <button key={p.id} type="button" className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors" onMouseDown={() => selectStripeProduct(p)}>
+                          <div className="font-medium">{p.name}</div>
+                          <div className="text-xs text-muted-foreground font-mono">{p.id}</div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+              {selectedStripeProduct && (
+                <p className="text-xs text-muted-foreground">Linked to existing: <span className="font-mono">{selectedStripeProduct.id}</span></p>
+              )}
+              {!selectedStripeProduct && newItem.stripe_product_name.trim() && (
+                <p className="text-xs text-muted-foreground">A new Stripe product will be created.</p>
+              )}
             </div>
             <div className="flex gap-2 pt-1">
               <Button size="sm" onClick={handleAddItem} disabled={addingItem || !newItem.item_key.trim() || !newItem.item_name.trim()}>
@@ -965,6 +1176,11 @@ export default function AdminPricingPage() {
                                 <div className="space-y-1.5"><Label>Display Name</Label><Input value={formItemName} onChange={(e) => setFormItemName(e.target.value)} /></div>
                               </div>
                               <div className="space-y-1.5"><Label>Description (optional)</Label><Input value={formDescription} onChange={(e) => setFormDescription(e.target.value)} /></div>
+                              {/* Stripe product info (read-only) */}
+                              <div className="grid gap-4 sm:grid-cols-2 border-t pt-3">
+                                <div className="space-y-1.5"><Label className="text-xs">Stripe Product Name</Label><Input value={selected.stripe_product_name ?? "Not linked"} disabled className="opacity-60" /></div>
+                                <div className="space-y-1.5"><Label className="text-xs">Stripe Product ID</Label><Input value={selected.stripe_product_id ?? "—"} disabled className="opacity-60 font-mono text-xs" /></div>
+                              </div>
                               <div className="flex items-center gap-3">
                                 <Button onClick={handleSave} disabled={saving} size="sm">
                                   {saving && <Loader2 className="mr-2 size-4 animate-spin" />}<Save className="mr-2 size-4" />Save Item
