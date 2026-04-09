@@ -30,6 +30,7 @@ import {
   Users,
   User,
 } from "lucide-react";
+import { CitySearchInput } from "@/components/shared/city-search-input";
 
 // ─── Plans ─────────────────────────────────────────────────────────────────
 
@@ -130,6 +131,10 @@ interface MemberForm {
   occupation: string;
   dateOfBirth: string;
   birthTime: string;
+  birthLocationLabel: string;
+  birthLat: number | null;
+  birthLng: number | null;
+  birthTzone: string;
   // Optional questionnaire — collapsed by default per the spec
   questionnaireOpen: boolean;
   relationship_status: string;
@@ -161,7 +166,7 @@ interface MemberForm {
 
 function newMember(isPrimary: boolean): MemberForm {
   return {
-    id: Math.random().toString(36).slice(2),
+    id: isPrimary ? "primary" : Math.random().toString(36).slice(2),
     isPrimary,
     relationType: "",
     subRelation: "",
@@ -177,6 +182,10 @@ function newMember(isPrimary: boolean): MemberForm {
     occupation: "",
     dateOfBirth: "",
     birthTime: "",
+    birthLocationLabel: "",
+    birthLat: null,
+    birthLng: null,
+    birthTzone: "",
     questionnaireOpen: false,
     relationship_status: "",
     personality: "",
@@ -355,6 +364,9 @@ export default function PerennialSignupPage() {
       if (!m.birthTime) {
         return { message: `${memberLabel}: birth time is required.`, fieldId: fid(m.id, "birthTime") };
       }
+      if (!m.birthLocationLabel) {
+        return { message: `${memberLabel}: birth location is required.`, fieldId: fid(m.id, "birthLocationLabel") };
+      }
     }
     return null;
   }
@@ -436,6 +448,10 @@ export default function PerennialSignupPage() {
             occupation: m.occupation,
             date_of_birth: m.dateOfBirth,
             birth_time: m.birthTime,
+            birth_location_label: m.birthLocationLabel,
+            birth_lat: m.birthLat,
+            birth_lng: m.birthLng,
+            birth_tzone: m.birthTzone,
             // Full optional questionnaire (every member)
             relationship_status: m.relationship_status || null,
             personality: m.personality || null,
@@ -953,86 +969,33 @@ export default function PerennialSignupPage() {
                       </div>
                     </div>
 
-                    {/* ── Optional questionnaire (25 fields, collapsed by default) ── */}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        patch(m.id, { questionnaireOpen: !m.questionnaireOpen })
-                      }
-                      className="flex w-full items-center justify-between text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors pt-2"
-                    >
-                      <span>Optional questionnaire (25 fields)</span>
-                      {m.questionnaireOpen ? (
-                        <ChevronUp className="size-3.5" />
-                      ) : (
-                        <ChevronDown className="size-3.5" />
-                      )}
-                    </button>
-                    {m.questionnaireOpen && (
-                      <div className="space-y-3 border-t pt-3">
-                        <div className="space-y-1.5">
-                          <Label htmlFor={fid(m.id, "relationship_status")}>
-                            Relationship status
-                          </Label>
-                          <Select
-                            value={m.relationship_status}
-                            onValueChange={(v) =>
-                              patch(m.id, { relationship_status: v })
-                            }
-                          >
-                            <SelectTrigger id={fid(m.id, "relationship_status")}>
-                              <SelectValue placeholder="Select" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {RELATIONSHIP_STATUSES.map((rs) => (
-                                <SelectItem key={rs} value={rs}>
-                                  {rs}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor={fid(m.id, "birthLocationLabel")}>Birth location</Label>
+                      <CitySearchInput
+                        id={fid(m.id, "birthLocationLabel")}
+                        value={m.birthLocationLabel}
+                        onChange={(res, text) => {
+                          if (res) {
+                            patch(m.id, {
+                              birthLocationLabel: res.label,
+                              birthLat: res.lat,
+                              birthLng: res.lng,
+                              birthTzone: res.timezone.offset_string,
+                            });
+                          } else {
+                            patch(m.id, {
+                              birthLocationLabel: text,
+                              birthLat: null,
+                              birthLng: null,
+                              birthTzone: "",
+                            });
+                          }
+                        }}
+                        placeholder="Search for your birth city..."
+                      />
+                    </div>
 
-                        {(
-                          [
-                            ["personality", "Personality"],
-                            ["strengths", "Strengths"],
-                            ["lifeAreasFulfilling", "Life areas — most fulfilling"],
-                            ["lifeAreasImprovement", "Life areas needing improvement"],
-                            ["longTermGoals", "Long-term goals"],
-                            ["majorLifeEvents", "Major life events"],
-                            ["stressManagement", "How you manage stress"],
-                            ["workLifeBalance", "Work / life balance"],
-                            ["relationship_with_family", "Relationship with family"],
-                            ["biggest_current_challenges", "Biggest current challenges"],
-                            ["focus_on_specific_relationships", "Focus on specific relationships"],
-                            ["guidance_on_specific_decision", "Guidance on a specific decision"],
-                            ["concerns_about_romantic_life", "Concerns about romantic life"],
-                            ["ongoing_projects_or_plans", "Ongoing projects or plans"],
-                            ["social_life_fulfillment", "Social life fulfillment"],
-                            ["spiritualPractices", "Current spiritual practices"],
-                            ["selfDiscovery", "Self-discovery focus"],
-                            ["externalInfluences", "External influences"],
-                            ["achieveFromReading", "What you hope to achieve from a reading"],
-                            ["specificQuestions", "Specific questions"],
-                            ["goalsOutcomes", "Desired outcomes"],
-                            ["practicalSpiritualPref", "Practical / spiritual preference"],
-                            ["mainConcern", "Main concern"],
-                            ["additionalInfo", "Anything else you'd like to share"],
-                          ] as const
-                        ).map(([key, label]) => (
-                          <div key={key} className="space-y-1.5">
-                            <Label htmlFor={fid(m.id, key)}>{label}</Label>
-                            <Textarea
-                              id={fid(m.id, key)}
-                              rows={2}
-                              value={m[key] as string}
-                              onChange={(e) => patch(m.id, { [key]: e.target.value } as Partial<MemberForm>)}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {/* Optional questionnaire was completely moved to post-login profile completion. */}
                   </CardContent>
                 </Card>
               );

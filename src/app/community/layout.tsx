@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getUserPortals } from "@/lib/user-roles";
 import { PortalSwitcher } from "@/components/shared/portal-switcher";
@@ -9,6 +10,7 @@ import { MobileNav } from "@/components/community/mobile-nav";
 import { NavLink } from "@/components/shared/nav-link";
 import { NavDropdown } from "@/components/shared/nav-dropdown";
 import { PortalLogoutButton } from "@/components/portal/logout-button";
+import { ProfileGuard } from "@/components/community/profile-guard";
 
 export const metadata = { title: "Community - AstrologyPro" };
 
@@ -21,7 +23,7 @@ export default async function CommunityLayout({ children }: { children: React.Re
   // throwing a PostgREST single-row error.
   const { data: member } = await supabase
     .from("community_members")
-    .select("id, full_name, membership_type, membership_status")
+    .select("id, full_name, membership_type, membership_status, plan_type, intake_data")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -29,6 +31,18 @@ export default async function CommunityLayout({ children }: { children: React.Re
   if (member.membership_status !== "active") redirect("/join/community?status=inactive");
   // PM-only gate: legacy Mystery School-only users must use /mystery-school
   if (member.membership_type !== "perennial_mandalism") redirect("/mystery-school");
+
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") || "";
+
+  // Universal Plan readiness gating (Single, Couple, Family)
+  const intake = (member.intake_data || {}) as Record<string, any>;
+  const isProfileIncomplete = !intake.relationship_status || !intake.mainConcern;
+
+  // Server-side block for hard navigations
+  if (isProfileIncomplete && !pathname.startsWith("/community/profile/complete")) {
+    redirect("/community/profile/complete");
+  }
 
   const portals = await getUserPortals(supabase, user.id);
   const membershipLabel = "Perennial Mandalism";
@@ -130,7 +144,9 @@ export default async function CommunityLayout({ children }: { children: React.Re
           </div>
         </header>
         <main className="container mx-auto w-full max-w-5xl p-4 py-6 lg:p-8">
-          {children}
+          <ProfileGuard isComplete={!isProfileIncomplete}>
+            {children}
+          </ProfileGuard>
         </main>
       </div>
     </div>

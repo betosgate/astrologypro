@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -149,9 +150,11 @@ export default function CommunityFamilyPage() {
           </p>
         </div>
         {isFamily && !atLimit && !showForm && (
-          <Button size="sm" onClick={startAdd}>
-            <Plus className="mr-2 size-4" />
-            Add Member
+          <Button size="sm" asChild>
+            <Link href="/community/family/new">
+              <Plus className="mr-2 size-4" />
+              Add Member
+            </Link>
           </Button>
         )}
       </div>
@@ -321,9 +324,11 @@ export default function CommunityFamilyPage() {
               </p>
             </div>
             {isFamily && (
-              <Button size="sm" onClick={startAdd}>
-                <Plus className="mr-2 size-4" />
-                Add First Member
+              <Button size="sm" asChild>
+                <Link href="/community/family/new">
+                  <Plus className="mr-2 size-4" />
+                  Add First Member
+                </Link>
               </Button>
             )}
           </CardContent>
@@ -333,9 +338,11 @@ export default function CommunityFamilyPage() {
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>{members.length}/{FAMILY_LIMIT} family members</span>
             {isFamily && !atLimit && !showForm && (
-              <Button size="sm" variant="outline" onClick={startAdd}>
-                <Plus className="mr-1.5 size-3.5" />
-                Add
+              <Button size="sm" variant="outline" asChild>
+                <Link href="/community/family/new">
+                  <Plus className="mr-1.5 size-3.5" />
+                  Add
+                </Link>
               </Button>
             )}
           </div>
