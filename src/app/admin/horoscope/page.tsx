@@ -2412,10 +2412,12 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
 
 // ─── Transit Section ──────────────────────────────────────────────────────────
 
-function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, areaOfInquiry, checkDacen, onDecanClick }: {
+function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, areaOfInquiry, checkDacen, onDecanClick, transitWheelSvg, setChartModal }: {
   data: any; lunarMetrics?: any; aiData: any; lunarAiData?: any; tabSlug: string; areaOfInquiry?: string;
   checkDacen: (p: string, s: string) => boolean;
   onDecanClick: (p: string, s: string) => void;
+  transitWheelSvg?: string | null;
+  setChartModal: (src: string) => void;
 }) {
   const { modal, trigger, close } = useShowMore();
   const isWeekly = tabSlug === "tropical_transits_weekly_v2";
@@ -2456,6 +2458,26 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
   return (
     <div className="space-y-4">
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
+
+      {/* Transit Chart Image Section */}
+      {transitWheelSvg && (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+            <h3 className="text-sm font-semibold text-center w-full">Transit Chart</h3>
+          </div>
+          <div className="p-6 bg-slate-950 flex justify-center border-b border-white/5">
+            <div className="relative group max-w-lg w-full">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={transitWheelSvg}
+                alt="Transit Chart"
+                className="w-full h-auto drop-shadow-[0_0_15px_rgba(245,158,11,0.2)] transition-transform duration-700 hover:scale-[1.02] cursor-pointer"
+                onClick={() => setChartModal(transitWheelSvg)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Weekly / Monthly Transit Relation Table */}
       {transitRows.length > 0 && (
@@ -3233,6 +3255,7 @@ export default function AdminHoroscopePage() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showChartBtn, setShowChartBtn] = useState(false);
   const [chartModal, setChartModal] = useState<string | null>(null);
+  const [transitChartSvg, setTransitChartSvg] = useState<string | null>(null);
   const [dacenPsibality, setDacenPsibality] = useState<DecanPossibility[]>([]);
   const [decanPlanet, setDecanPlanet] = useState<{ name: string; sign: string } | null>(null);
 
@@ -3251,7 +3274,7 @@ export default function AdminHoroscopePage() {
   useEffect(() => {
     setResults(null); setNatalSvg(null); setNatalSvgTransit(null);
     setReturnDate(null); setError(null); setProgress([]); setForm(defaultForm());
-    setShowScrollTop(false); setShowChartBtn(false);
+    setShowScrollTop(false); setShowChartBtn(false); setTransitChartSvg(null);
   }, [currentSlug]);
 
   // Pre-fetch decan possibilities (distinct planet+sign pairs)
@@ -3452,13 +3475,16 @@ export default function AdminHoroscopePage() {
         if (currentTab.slug === "tropical_transits_monthly_v3") {
           tasks.push(
             (async () => {
+              let tYear, tMonth;
               if (form.futureMonth) {
                 const [mYear, mMonth] = form.futureMonth.split("-").map(Number);
+                tYear = mYear;
+                tMonth = mMonth;
                 const md = await callPlanetReturn({
                   steps: "astrology_report_monthly",
                   birth_details: birth1,
-                  target_year: mYear,
-                  target_month: mMonth,
+                  target_year: tYear,
+                  target_month: tMonth,
                 });
                 const val = md?.astrology_report_monthly ?? md;
                 const lu = md?.astrology_report_monthly?.lunar_data ?? null;
@@ -3474,6 +3500,9 @@ export default function AdminHoroscopePage() {
                   future_transit_date: form.futureMonth,
                 }));
               } else {
+                const d = new Date();
+                tYear = d.getFullYear();
+                tMonth = d.getMonth() + 1;
                 const [mt, lu] = await Promise.allSettled([
                   callCompute(
                     "tropical_transits/monthly",
@@ -3492,6 +3521,27 @@ export default function AdminHoroscopePage() {
                   lunar_metrics: luV,
                   is_future_transit: false,
                 }));
+              }
+
+              // Fetch Transit Chart Wheel (at day 1 of target month/year)
+              try {
+                const [bYear, bMonth, bDay] = form.person1.dob.split("-").map(Number);
+                const [bHour, bMin] = form.person1.tob.split(":").map(Number);
+                const transitWheelPayload = {
+                  hours: bHour,
+                  minutes: bMin,
+                  date: 1,
+                  month: tMonth,
+                  year: tYear,
+                  latitude: form.person1.city!.lat,
+                  longitude: form.person1.city!.lng,
+                  timezone: parseDecimalTz(form.person1.city!.timezone.offset_string)
+                };
+                const wheelRes = await callNatalWheel(transitWheelPayload);
+                const svg = wheelRes?.results?.output;
+                if (svg) setTransitChartSvg(svg);
+              } catch (e) {
+                console.error("Transit wheel error:", e);
               }
             })()
           );
@@ -3993,6 +4043,8 @@ export default function AdminHoroscopePage() {
                     areaOfInquiry={form.areaOfInquiry}
                     checkDacen={checkDacen}
                     onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                    transitWheelSvg={transitChartSvg}
+                    setChartModal={setChartModal}
                   />
                 )}
 
