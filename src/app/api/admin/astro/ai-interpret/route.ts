@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   //   - DO NOT retry 4xx — they won't recover and just waste serverless time
   //   - exponential-ish backoff with jitter so multiple instances don't thunder
   //   - never log the payload (it contains birth data) — log only the error
-  const maxRetries = 5;
+  const maxRetries = 10;
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
