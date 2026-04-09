@@ -11,6 +11,7 @@ import { MIGRATION_SQL as MIG_20260408000115 } from "@/data/migrations/202604080
 import { MIGRATION_SQL as MIG_20260408000116 } from "@/data/migrations/20260408000116_training_notes_allow_quiz";
 import { MIGRATION_SQL as MIG_20260409000117 } from "@/data/migrations/20260409000117_availability_template_service_scope";
 import { MIGRATION_SQL as MIG_20260409000118 } from "@/data/migrations/20260409000118_calendar_provider_credentials";
+import { MIGRATION_SQL as MIG_20260409000119 } from "@/data/migrations/20260409000119_pricing_plans";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -140,6 +141,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Creates google_api_keys and microsoft_api_keys tables — admin-managed key-value storage for per-provider OAuth client credentials (client_id / client_secret / redirect_uri / tenant_id). Service-role only RLS; reads go through the admin Supabase client. Separate from calendar_connections (per-user tokens). Runtime read path in src/lib/calendar/provider-credentials.ts falls back to the existing env vars if no row is set, so deploy-time behavior does not change until an admin populates the tables via /admin/calendar-config.",
     sortKey: "20260409000118",
     sql: MIG_20260409000118,
+  },
+  "20260409000119_pricing_plans": {
+    id: "20260409000119_pricing_plans",
+    title: "Pricing plans (multiple plans per item)",
+    description:
+      "Creates pricing_plans table — multiple purchasable plans per global_pricing item, each with display_name, amount, MRP, stripe_price_id, currency, description, and is_active toggle. Seeds the existing professional_divination_course row as a default plan. Also improves global_pricing index: replaces single-column boolean index with composite (is_active, item_key) matching the public lookup pattern.",
+    sortKey: "20260409000119",
+    sql: MIG_20260409000119,
   },
 };
 
