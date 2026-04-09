@@ -398,6 +398,18 @@ export async function GET() {
       };
     });
 
+    // Fallback totals derived from the already-fetched active hierarchy.
+    // Used only when the user_program_progress cache row is missing (i.e.
+    // the learner has never started this program). Without this fallback,
+    // unstarted program cards would render "0 lessons" and "0/0 lessons
+    // complete", which misrepresents the real accessible workload — see
+    // tasks/09.04.2026/admin-module/training-school/02-learner-experience/
+    // 01-fix-unstarted-program-card-total-lesson-count.md.
+    const fallbackTotalLessons = enrichedCategories.reduce(
+      (sum, c) => sum + (c.total_lessons ?? 0),
+      0,
+    );
+
     return {
       id: prog.id,
       name: prog.name,
@@ -406,10 +418,12 @@ export async function GET() {
       is_active: prog.is_active,
       is_sequential: !!(prog as { is_sequential?: boolean }).is_sequential,
       allowed_roles: prog.allowed_roles ?? [],
-      // Cache-sourced progress fields; zeroed defaults when cache row absent
+      // Cache-sourced progress fields; zeroed defaults when cache row absent.
+      // total_lessons / total_categories fall back to the real hierarchy
+      // counts instead of 0 so unstarted cards show accurate totals.
       progress_pct: progCache ? Number(progCache.progress_pct) : 0,
       completed_lessons: progCache ? progCache.completed_lessons : 0,
-      total_lessons: progCache ? progCache.total_lessons : 0,
+      total_lessons: progCache ? progCache.total_lessons : fallbackTotalLessons,
       completed_categories: progCache ? progCache.completed_categories : 0,
       total_categories: progCache ? progCache.total_categories : progCategories.length,
       started_at: progCache?.started_at ?? null,
