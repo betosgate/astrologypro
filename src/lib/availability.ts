@@ -175,8 +175,11 @@ function buildWindowsForDate({
   const templateWindows = (templates ?? [])
     .filter((template) => {
       if (template.isActive === false) return false;
-      if (template.serviceId && serviceId && template.serviceId !== serviceId) return false;
-      if (template.serviceId && !serviceId) return false;
+      if (serviceId) {
+        if (template.serviceId !== serviceId) return false;
+      } else if (template.serviceId) {
+        return false;
+      }
       if (!template.weekdays?.includes(dayOfWeek)) return false;
       return date >= template.startDate && date <= template.endDate;
     })

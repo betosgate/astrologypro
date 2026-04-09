@@ -13,6 +13,21 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
+interface CalendarBooking {
+  id: string;
+  scheduled_at: string;
+  duration_minutes: number;
+  status: string;
+  session_notes: string | null;
+  metadata?: {
+    is_reminder?: boolean;
+    is_manual?: boolean;
+    timezone?: string;
+  } | null;
+  services: { name: string } | null;
+  clients: { full_name: string | null } | null;
+}
+
 export default async function CalendarPage() {
   const supabase = await createClient();
   const admin = createAdminClient();
@@ -24,12 +39,24 @@ export default async function CalendarPage() {
 
   const { data: diviner } = await admin
     .from("diviners")
-    .select("id, username, google_calendar_connected, outlook_calendar_connected")
+    .select("id, username")
     .eq("user_id", user.id)
     .maybeSingle();
 
   // ownerId is either ownerId or user.id
   const ownerId = diviner?.id || user.id;
+
+  const { data: calendarConnections } = diviner
+    ? await admin
+        .from("calendar_connections")
+        .select("id")
+        .eq("owner_id", diviner.id)
+        .limit(1)
+    : { data: [] as Array<Record<string, unknown>> };
+
+  const now = new Date();
+  const recentDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const futureDate = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
 
   // Fetch all relevant data in parallel
   const [slotsResult, overridesResult, bookingsResult] = await Promise.all([
@@ -41,22 +68,8 @@ export default async function CalendarPage() {
       .from("availability_overrides")
       .select("id, date, is_available, start_time, end_time")
       .eq("owner_id", ownerId)
-      .gte(
-        "date",
-        new Date(
-          Date.now() - 7 * 24 * 60 * 60 * 1000
-        )
-          .toISOString()
-          .split("T")[0]
-      )
-      .lte(
-        "date",
-        new Date(
-          Date.now() + 60 * 24 * 60 * 60 * 1000
-        )
-          .toISOString()
-          .split("T")[0]
-      ),
+      .gte("date", recentDate.toISOString().split("T")[0])
+      .lte("date", futureDate.toISOString().split("T")[0]),
     supabase
       .from("bookings")
       .select(
@@ -64,17 +77,11 @@ export default async function CalendarPage() {
       )
       .eq("owner_id", ownerId)
       .in("status", ["pending", "confirmed", "in_progress"])
-      .gte(
-        "scheduled_at",
-        new Date(
-          Date.now() - 7 * 24 * 60 * 60 * 1000
-        ).toISOString()
-      )
+      .gte("scheduled_at", recentDate.toISOString())
       .order("scheduled_at", { ascending: true }),
   ]);
 
-  const hasExternalCalendar =
-    diviner?.google_calendar_connected || diviner?.outlook_calendar_connected;
+  const hasExternalCalendar = (calendarConnections?.length ?? 0) > 0;
 
   return (
     <div className="space-y-6">
@@ -119,7 +126,7 @@ export default async function CalendarPage() {
         divinerId={ownerId}
         availabilitySlots={slotsResult.data ?? []}
         overrides={overridesResult.data ?? []}
-        bookings={(bookingsResult.data as any[]) ?? []}
+        bookings={(bookingsResult.data as CalendarBooking[] | null) ?? []}
       />
     </div>
   );

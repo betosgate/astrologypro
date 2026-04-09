@@ -5,10 +5,10 @@ import Link from "next/link";
 
 interface StickyNavProps {
   displayName: string;
-  username: string;
   hasBio: boolean;
   hasServices: boolean;
   hasTestimonials: boolean;
+  bookHref?: string;
 }
 
 const sections = [
@@ -20,10 +20,10 @@ const sections = [
 
 export function StickyNav({
   displayName,
-  username,
   hasBio,
   hasServices,
   hasTestimonials,
+  bookHref = "#booking",
 }: StickyNavProps) {
   const [visible, setVisible] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("");
@@ -121,7 +121,7 @@ export function StickyNav({
 
             {/* Book Now CTA — always visible in sticky nav */}
             <Link
-              href={`/${username}/book`}
+              href={bookHref}
               className="ml-3 inline-flex h-7 items-center rounded-full bg-gold px-4 text-xs font-semibold text-cosmos-900 shadow-[0_0_12px_rgba(201,168,76,0.25)] transition-all hover:bg-gold-light hover:shadow-[0_0_18px_rgba(201,168,76,0.35)]"
             >
               Book Now

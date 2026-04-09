@@ -3,11 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Info, ChevronLeft, ChevronRight } from "lucide-react";
-import { formatCurrency } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -68,15 +66,6 @@ function formatDate(d: Date): string {
 // ---------------------------------------------------------------------------
 // Status colours (mirrors bookings page)
 // ---------------------------------------------------------------------------
-
-const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-  confirmed: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  completed: "bg-green-500/10 text-green-500 border-green-500/20",
-  canceled: "bg-red-500/10 text-red-500 border-red-500/20",
-  in_progress: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-  no_show: "bg-gray-500/10 text-gray-500 border-gray-500/20",
-};
 
 // ---------------------------------------------------------------------------
 // Booking type
@@ -204,7 +193,6 @@ function ScheduleGrid({
 
             // Calculate left/width from column index
             // We have 7 columns from x=52px onward; each column = (100% - 52px) / 7
-            const colFraction = 1 / 7;
             const leftPercent = `calc(52px + ${colIdx} * (100% - 52px) / 7)`;
             const widthPercent = `calc((100% - 52px) / 7 - 4px)`;
 
@@ -323,13 +311,18 @@ export default async function SchedulePage({
   const admin = createAdminClient();
   const { data: diviner } = await admin
     .from("diviners")
-    .select("id, google_calendar_connected, outlook_calendar_connected")
+    .select("id")
     .eq("user_id", user.id)
     .maybeSingle();
   if (!diviner) redirect("/admin");
 
-  const hasExternalCalendar =
-    diviner.google_calendar_connected || diviner.outlook_calendar_connected;
+  const { data: calendarConnections } = await admin
+    .from("calendar_connections")
+    .select("id")
+    .eq("owner_id", diviner.id)
+    .limit(1);
+
+  const hasExternalCalendar = (calendarConnections?.length ?? 0) > 0;
 
   // --- Fetch bookings for the week ---
   let bookingsQuery = supabase

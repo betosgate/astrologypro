@@ -92,7 +92,12 @@ export default async function BookingPage({ params }: PageProps) {
         </div>
 
         {/* Booking Wizard */}
-        <BookingWizard diviner={diviner} service={service} />
+        <BookingWizard
+          diviner={diviner}
+          service={service}
+          availabilityServiceId={service.id}
+          bookingLabel={service.name}
+        />
       </div>
     </div>
   );

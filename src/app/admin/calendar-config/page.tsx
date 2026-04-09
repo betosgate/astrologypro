@@ -68,6 +68,20 @@ const PROVIDER_WELL_KNOWN_KEYS: Record<Provider, string[]> = {
   microsoft: ["client_id", "client_secret", "redirect_uri", "tenant_id"],
 };
 
+const PROVIDER_KEY_ALIASES: Record<Provider, Record<string, string[]>> = {
+  google: {
+    client_id: ["client_id", "google_client_id"],
+    client_secret: ["client_secret", "google_client_secret"],
+    redirect_uri: ["redirect_uri", "google_redirect_uri"],
+  },
+  microsoft: {
+    client_id: ["client_id", "microsoft_client_id"],
+    client_secret: ["client_secret", "microsoft_client_secret"],
+    redirect_uri: ["redirect_uri", "microsoft_redirect_uri"],
+    tenant_id: ["tenant_id", "microsoft_tenant_id"],
+  },
+};
+
 const PROVIDER_DEFAULT_DESCRIPTION: Record<string, string> = {
   client_id: "OAuth client / application ID issued by the provider.",
   client_secret: "OAuth client secret — keep private.",
@@ -179,7 +193,12 @@ function ProviderPanel({ provider }: { provider: Provider }) {
   }
 
   const missingWellKnown = PROVIDER_WELL_KNOWN_KEYS[provider].filter(
-    (k) => !rows.some((r) => r.key.toLowerCase() === k && r.is_active),
+    (key) =>
+      !rows.some((row) => {
+        if (!row.is_active) return false;
+        const aliases = PROVIDER_KEY_ALIASES[provider][key] ?? [key];
+        return aliases.includes(row.key.toLowerCase());
+      }),
   );
 
   return (
