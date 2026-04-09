@@ -59,6 +59,14 @@ interface Diviner {
 interface TimeSlot {
   start: string;
   end: string;
+  availabilityId?: string;
+  availabilityTitle?: string;
+  availabilityDescription?: string | null;
+  availabilityTimezone?: string;
+  availabilityStartTime?: string;
+  availabilityEndTime?: string;
+  availabilitySlotIntervalMinutes?: number;
+  source?: "template" | "legacy" | "override";
 }
 
 interface BookingWizardProps {
@@ -188,6 +196,7 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
   const [error, setError] = useState<string | null>(null);
   const [creatingPaymentIntent, setCreatingPaymentIntent] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
+  const [requestedTimeIso, setRequestedTimeIso] = useState<string | null>(null);
 
   // Prefill intake data from stored client profile when ?prefill=true
   useEffect(() => {
@@ -234,6 +243,23 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
     prefillFromProfile();
   }, []);
 
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const date = urlParams.get("date");
+    const time = urlParams.get("time");
+
+    if (date) {
+      const nextDate = new Date(`${date}T12:00:00`);
+      if (!Number.isNaN(nextDate.getTime())) {
+        setSelectedDate(nextDate);
+      }
+    }
+
+    if (time) {
+      setRequestedTimeIso(time);
+    }
+  }, []);
+
   // Detect client timezone
   const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -247,11 +273,18 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
       try {
         const dateStr = format(selectedDate!, "yyyy-MM-dd");
         const res = await fetch(
-          `/api/availability/${diviner.id}?date=${dateStr}&duration=${service.duration_minutes}`
+          `/api/availability/${diviner.id}?date=${dateStr}&duration=${service.duration_minutes}&serviceId=${service.id}`
         );
         if (res.ok) {
           const slots: TimeSlot[] = await res.json();
           setTimeSlots(slots);
+          if (requestedTimeIso) {
+            const requestedSlot = slots.find((slot) => slot.start === requestedTimeIso);
+            if (requestedSlot) {
+              setSelectedSlot(requestedSlot);
+              setRequestedTimeIso(null);
+            }
+          }
         } else {
           setTimeSlots([]);
           toast.error("Could not load available times. Please try again.");
@@ -265,7 +298,7 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
     }
 
     fetchSlots();
-  }, [selectedDate, diviner.id, service.duration_minutes]);
+  }, [requestedTimeIso, selectedDate, diviner.id, service.duration_minutes]);
 
   function canProceed(): boolean {
     switch (step) {
@@ -399,6 +432,9 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
     ? `/${diviner.username}/session/${bookingId}`
     : null;
 
+  const selectedAvailabilityTz =
+    selectedSlot?.availabilityTimezone || diviner.timezone || clientTimezone;
+
   // Confirmation screen
   if (bookingComplete) {
     return (
@@ -421,6 +457,11 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
                 {format(new Date(selectedSlot.start), "h:mm a")} -{" "}
                 {format(new Date(selectedSlot.end), "h:mm a")} ({clientTimezone})
               </p>
+              {selectedSlot.availabilityTitle && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Schedule: {selectedSlot.availabilityTitle}
+                </p>
+              )}
             </div>
           )}
 
@@ -505,6 +546,7 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
               <div className="flex flex-col items-center gap-6 md:flex-row md:items-start">
                 <CalendarPicker
                   divinerId={diviner.id}
+                  serviceId={service.id}
                   duration={service.duration_minutes}
                   selectedDate={selectedDate}
                   onDateSelect={setSelectedDate}
@@ -524,6 +566,24 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
                         </span>
                         {" "}(your local time)
                       </p>
+
+                      {selectedSlot?.availabilityTitle && (
+                        <div className="mb-4 rounded-lg border border-amber-500/25 bg-amber-500/5 p-4 text-left">
+                          <p className="text-sm font-semibold text-foreground">
+                            {selectedSlot.availabilityTitle}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {selectedSlot.availabilityStartTime} - {selectedSlot.availabilityEndTime}
+                            {" • "}
+                            {selectedAvailabilityTz.replace(/_/g, " ")}
+                          </p>
+                          {selectedSlot.availabilityDescription && (
+                            <p className="mt-2 text-sm text-muted-foreground">
+                              {selectedSlot.availabilityDescription}
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                       {loadingSlots ? (
                         <div className="animate-pulse space-y-3">
@@ -649,7 +709,28 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
                         {format(new Date(selectedSlot.end), "h:mm a")}
                       </span>
                     </div>
-                    <Separator />
+                    {selectedSlot.availabilityTitle && (
+                      <>
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Schedule</span>
+                          <span className="font-medium">
+                            {selectedSlot.availabilityTitle}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                    {selectedSlot.availabilityTimezone && (
+                      <>
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Availability Timezone</span>
+                          <span className="font-medium">
+                            {selectedSlot.availabilityTimezone.replace(/_/g, " ")}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
                 <div className="flex items-center justify-between">
