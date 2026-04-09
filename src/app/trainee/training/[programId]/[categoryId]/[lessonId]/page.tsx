@@ -81,8 +81,18 @@ export async function generateMetadata({
 
 // ---------------------------------------------------------------------------
 // Fetch lesson detail via our trainee API (correct_answer never exposed)
+// Returns { lesson, locked } so the page can distinguish a 403 lock from a
+// genuine 404, and redirect the learner to the program workspace instead of
+// showing a generic not-found page.
 // ---------------------------------------------------------------------------
-async function fetchLessonDetail(lessonId: string) {
+async function fetchLessonDetail(
+  lessonId: string
+  // The API returns a large, loosely-typed lesson payload that the existing
+  // downstream code consumes via ad-hoc property access. Keeping it typed as
+  // `any` preserves the prior behavior without bringing in a full shared
+  // LessonDetail interface (out of scope for the lock/redirect fix).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<{ lesson: any; locked: boolean }> {
   const base =
     process.env.NEXT_PUBLIC_APP_URL ??
     `http://localhost:${process.env.PORT ?? 3000}`;
@@ -101,9 +111,10 @@ async function fetchLessonDetail(lessonId: string) {
     }
   );
 
-  if (!res.ok) return null;
+  if (res.status === 403) return { lesson: null, locked: true };
+  if (!res.ok) return { lesson: null, locked: false };
   const json = await res.json();
-  return json.lesson ?? null;
+  return { lesson: json.lesson ?? null, locked: false };
 }
 
 async function fetchProgramHierarchy(programId: string) {
@@ -155,9 +166,14 @@ export default async function LessonViewerPage({
     .single();
   if (!trainee) redirect("/join/trainee");
 
-  // Validate lesson belongs to the correct category
-  const lessonData = await fetchLessonDetail(lessonId);
+  // Validate lesson belongs to the correct category.
+  // A 403 from the API means the lesson is sequentially locked — redirect the
+  // learner to the program workspace (which shows the lock state visually)
+  // rather than surfacing a generic 404.
+  const { lesson: lessonData, locked: lessonLocked } =
+    await fetchLessonDetail(lessonId);
 
+  if (lessonLocked) redirect(`/trainee/training/${programId}`);
   if (!lessonData || lessonData.category_id !== categoryId) notFound();
 
   // Fetch program/category names plus programs hierarchy for consistent sidebar/next metadata

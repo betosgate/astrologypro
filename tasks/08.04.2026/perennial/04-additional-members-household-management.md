@@ -1,6 +1,7 @@
 # Perennial Additional Members And Household Management
 
-- Status: Ready For Implementation
+- Completion Notes: Implemented in src/app/perennial-signup/page.tsx — Add/Remove member buttons, capacity-aware Add (disabled when at limit), Remove disabled on the primary member, member counter in the order summary.
+- Status: Partial (2026-04-08)
 - Date: 2026-04-08
 - Category: Perennial Signup
 - Owner: Frontend

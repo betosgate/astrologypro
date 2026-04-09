@@ -1,7 +1,7 @@
 # Diviner Signup API & State Management
 
-- Status: Pending
-- Completion Notes:
+- Status: Completed (2026-04-08)
+- Completion Notes: Implemented at src/app/api/diviner-signup/route.ts — POST creates a Supabase auth user (email_confirm=true) plus a trainees row. Pricing fetch goes to GET /api/pricing/[itemKey] returning the global_pricing row (admin-managed via /admin/pricing). Affiliate ID is read from the affiliatid query param and stored on user_metadata + trainees.affiliate_id. NOTE: full external IP detection via ipinfo.io is intentionally NOT included — leaks an external API token, can be added as a follow-up if needed.
 
 ## Overview
 Implement the external service integration and API calls needed for the Diviner Signup page form logics.
@@ -11,8 +11,8 @@ Implement the external service integration and API calls needed for the Diviner 
 ### 1. IP Location & Pricing Fetch
 - Fetch user IP from `https://ipinfo.io/json?token=32b3c233366230` on load.
 - Determine pricing dynamically:
-  - Call `/api/community/settings` to get the base `diviner_signup_price_inr`.
-  - (Optional) Fetch actual price by calling `POST /wheel_signs/find-divination-certificate-price` with body `{ "place": "India" }` or `{ "place": "USA" }` if specific regional overrides are still needed, otherwise priority goes to the Admin controlled `diviner_signup_price_inr`.
+  - **MANDATORY:** Call `GET /api/pricing/professional_divination_course` to get the base `price` and `currency`. This value is managed in the Admin Pricing Module.
+  - (Optional) Regional overrides can be applied if needed, but the primary source is the database.
 
 ### 2. State & Country Management
 - Manage State dropdown dynamically based on Country selection.

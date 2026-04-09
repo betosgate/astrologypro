@@ -225,6 +225,72 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
   }
 }
 
+async function handlePerennialSignupCheckoutCompleted(
+  session: Stripe.Checkout.Session
+) {
+  const supabase = createAdminClient();
+
+  // 1. Look up the pending row.
+  const { data: pending, error: lookupError } = await supabase
+    .from("pending_perennial_signups")
+    .select("id, plan_key, household, primary_email, status")
+    .eq("stripe_session_id", session.id)
+    .maybeSingle();
+
+  if (lookupError || !pending) {
+    console.error(
+      "[stripe/webhooks] perennial_signup pending row missing:",
+      session.id,
+      lookupError?.message,
+    );
+    return;
+  }
+
+  // 2. Idempotency: if already completed, do nothing.
+  if (pending.status === "completed") {
+    return;
+  }
+
+  // 3. Mark processing.
+  await supabase
+    .from("pending_perennial_signups")
+    .update({ status: "processing" })
+    .eq("id", pending.id);
+
+  // 4. Provision the household.
+  const { provisionPerennialHousehold } = await import(
+    "@/lib/perennial/household-provisioning"
+  );
+  const household = pending.household as Parameters<
+    typeof provisionPerennialHousehold
+  >[1];
+  const result = await provisionPerennialHousehold(supabase, household);
+
+  // 5. Persist the outcome.
+  const updateFields: Record<string, unknown> = {
+    provisioned_user_ids: result.user_ids,
+    processed_at: new Date().toISOString(),
+  };
+  if (result.ok) {
+    updateFields.status = "completed";
+    updateFields.error_message = null;
+  } else {
+    updateFields.status = "failed";
+    updateFields.error_message = result.errors
+      .map((e) => `${e.email}: ${e.error}`)
+      .join("; ");
+  }
+
+  await supabase
+    .from("pending_perennial_signups")
+    .update(updateFields)
+    .eq("id", pending.id);
+
+  console.log(
+    `[stripe/webhooks] perennial_signup ${result.ok ? "completed" : "PARTIAL"} session=${session.id} provisioned=${result.user_ids.length} errors=${result.errors.length}`,
+  );
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Route gift certificate checkouts to their own handler
   if (session.metadata?.type === "gift_certificate") {
@@ -234,6 +300,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Route community subscription checkouts
   if (session.metadata?.type === "community") {
     return handleCommunityCheckoutCompleted(session);
+  }
+
+  // Route Perennial multi-member household signups
+  if (session.metadata?.type === "perennial_signup") {
+    return handlePerennialSignupCheckoutCompleted(session);
   }
 
   const supabase = createAdminClient();
@@ -726,9 +797,55 @@ async function handleAccountUpdated(account: Stripe.Account) {
   }
 }
 
+async function handleDivinerSignupPaymentSucceeded(
+  paymentIntent: Stripe.PaymentIntent
+) {
+  const userId = paymentIntent.metadata?.user_id;
+  const email = paymentIntent.metadata?.email;
+  if (!userId) {
+    console.warn(
+      "[stripe/webhooks] diviner_signup payment_intent missing user_id metadata"
+    );
+    return;
+  }
+
+  const supabase = createAdminClient();
+
+  // Mark the trainee as having paid. Idempotent — re-running with the same
+  // payment_intent_id is a no-op.
+  const { error: updateError } = await supabase
+    .from("trainees")
+    .update({
+      training_status: "paid",
+      payment_intent_id: paymentIntent.id,
+      paid_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId);
+
+  if (updateError) {
+    // Defensive: payment_intent_id / paid_at columns may not exist on
+    // every environment yet. Don't fail the webhook — log and move on.
+    console.warn(
+      "[stripe/webhooks] diviner_signup trainees update warning:",
+      updateError.message
+    );
+  }
+
+  console.log(
+    `[stripe/webhooks] diviner_signup payment succeeded user=${userId} email=${email ?? "?"} intent=${paymentIntent.id}`
+  );
+}
+
 async function handlePaymentIntentSucceeded(
   paymentIntent: Stripe.PaymentIntent
 ) {
+  // Diviner signup payments use type=diviner_signup metadata. Route them to
+  // the dedicated handler and return — they don't have bookingId.
+  if (paymentIntent.metadata?.type === "diviner_signup") {
+    await handleDivinerSignupPaymentSucceeded(paymentIntent);
+    return;
+  }
+
   const bookingId = paymentIntent.metadata?.bookingId;
   const clientEmail = paymentIntent.metadata?.clientEmail;
   if (!bookingId || !clientEmail) return;

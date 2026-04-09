@@ -32,7 +32,13 @@ export function UnsubscribeModal({ open, onOpenChange }: UnsubscribeModalProps) 
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/community/billing/unsubscribe", {
+      // Delegate to the canonical /api/community/plan/cancel route which has
+      // idempotent guards (already-cancelling / already-cancelled checks),
+      // captures current_period_end, and is the same code path used by every
+      // other cancel surface in the app. The legacy
+      // /api/community/billing/unsubscribe route is kept for now but is
+      // functionally a subset.
+      const res = await fetch("/api/community/plan/cancel", {
         method: "POST",
       });
       const data = await res.json().catch(() => ({}));

@@ -1,6 +1,8 @@
 # Perennial Review, Payment, And Post-Payment Contract
 
-- Status: Ready For Implementation
+- Completion Notes: Implemented. Page Submit now POSTs to /api/perennial-signup/checkout which validates the household, persists it to pending_perennial_signups, creates a Stripe Checkout session for the selected plan, and redirects the browser to the Stripe-hosted checkout. After payment, /perennial-signup/success renders the welcome page and the Stripe webhook (handlePerennialSignupCheckoutCompleted) provisions every household member as a Supabase auth user + community_members row. Each member receives a credentials email. The Couple plan returns 503 with `missing_env: STRIPE_PRICE_COMMUNITY_COUPLE` until the Stripe price is configured — Single and Family work end-to-end.
+- Earlier deferred-notes: NOT IMPLEMENTED — deferred. The current Submit button validates and logs the would-submit payload to the console with a UI note. A real review step + Stripe Elements + post-payment provisioning needs the Couple Stripe price configured first (the Single + Family price IDs already exist) plus an /api/perennial-signup endpoint that creates accounts after a successful charge.
+- Status: Completed (2026-04-08)
 - Date: 2026-04-08
 - Category: Perennial Signup
 - Owner: Frontend

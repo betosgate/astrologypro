@@ -46,6 +46,7 @@ interface DivinerSettings {
   paypal_onboarded: boolean;
   paypal_merchant_id: string | null;
   google_calendar_connected: boolean;
+  outlook_calendar_connected: boolean;
   youtube_channel_id: string | null;
   notification_email: boolean;
   notification_sms: boolean;
@@ -153,10 +154,13 @@ function SettingsContent() {
     if (calendarStatus === "connected") {
       toast.success("Google Calendar connected successfully!");
       router.replace("/dashboard/settings", { scroll: false });
-    } else if (calendarStatus === "error") {
+    } else if (calendarStatus === "outlook_connected") {
+      toast.success("Microsoft Calendar connected successfully!");
+      router.replace("/dashboard/settings", { scroll: false });
+    } else if (calendarStatus === "error" || calendarStatus === "outlook_error") {
       const reason = searchParams.get("reason");
       toast.error(
-        `Failed to connect Google Calendar${reason ? `: ${reason}` : ""}`
+        `Failed to connect Calendar${reason ? `: ${reason}` : ""}`
       );
       router.replace("/dashboard/settings", { scroll: false });
     }
@@ -189,6 +193,12 @@ function SettingsContent() {
         .single();
 
       if (data) {
+        // Load connection status from calendar_connections
+        const { data: connections } = await supabase
+          .from("calendar_connections")
+          .select("provider")
+          .eq("user_id", user.id);
+
         setSettings({
           id: data.id,
           subscription_status: data.subscription_status ?? null,
@@ -199,7 +209,8 @@ function SettingsContent() {
           payouts_enabled: data.payouts_enabled ?? false,
           paypal_onboarded: data.paypal_onboarded ?? false,
           paypal_merchant_id: data.paypal_merchant_id ?? null,
-          google_calendar_connected: data.google_calendar_connected ?? false,
+          google_calendar_connected: connections?.some(c => c.provider === "google") ?? false,
+          outlook_calendar_connected: connections?.some(c => c.provider === "microsoft") ?? false,
           youtube_channel_id: data.youtube_channel_id ?? null,
           notification_email: data.notification_email ?? true,
           notification_sms: data.notification_sms ?? false,
@@ -600,7 +611,7 @@ function SettingsContent() {
         </TabsContent>
 
         {/* Calendar Tab */}
-        <TabsContent value="calendar" className="mt-6">
+        <TabsContent value="calendar" className="mt-6 space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Google Calendar</CardTitle>
@@ -616,10 +627,10 @@ function SettingsContent() {
                   <XCircle className="size-5 text-muted-foreground" />
                 )}
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Google Calendar</p>
+                  <p className="text-sm font-medium">Google Calendar Status</p>
                   <p className="text-xs text-muted-foreground">
                     {settings.google_calendar_connected
-                      ? "Connected"
+                      ? "Connected and syncing"
                       : "Not connected"}
                   </p>
                 </div>
@@ -636,12 +647,10 @@ function SettingsContent() {
                     try {
                       const supabase = createClient();
                       const { error } = await supabase
-                        .from("diviners")
-                        .update({
-                          google_calendar_token: null,
-                          google_calendar_connected: false,
-                        })
-                        .eq("id", settings.id);
+                        .from("calendar_connections")
+                        .delete()
+                        .eq("owner_id", settings.id)
+                        .eq("provider", "google");
                       if (error) {
                         toast.error("Failed to disconnect Google Calendar");
                       } else {
@@ -668,10 +677,74 @@ function SettingsContent() {
                   Connect Google Calendar
                 </Button>
               )}
-              <p className="text-sm text-muted-foreground">
-                When connected, client bookings will automatically appear on
-                your Google Calendar.
-              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Microsoft Calendar</CardTitle>
+              <CardDescription>
+                Sync your bookings with Outlook / Office 365.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3 rounded-lg border p-4">
+                {settings.outlook_calendar_connected ? (
+                  <CheckCircle2 className="size-5 text-green-500" />
+                ) : (
+                  <XCircle className="size-5 text-muted-foreground" />
+                )}
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Outlook Status</p>
+                  <p className="text-xs text-muted-foreground">
+                    {settings.outlook_calendar_connected
+                      ? "Connected and syncing"
+                      : "Not connected"}
+                  </p>
+                </div>
+                {settings.outlook_calendar_connected && (
+                  <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">
+                    Connected
+                  </Badge>
+                )}
+              </div>
+              {settings.outlook_calendar_connected ? (
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      const supabase = createClient();
+                      const { error } = await supabase
+                        .from("calendar_connections")
+                        .delete()
+                        .eq("owner_id", settings.id)
+                        .eq("provider", "microsoft");
+                      if (error) {
+                        toast.error("Failed to disconnect Microsoft Calendar");
+                      } else {
+                        setSettings({
+                          ...settings,
+                          outlook_calendar_connected: false,
+                        });
+                        toast.success("Microsoft Calendar disconnected");
+                      }
+                    } catch {
+                      toast.error("Failed to disconnect Microsoft Calendar");
+                    }
+                  }}
+                >
+                  Disconnect Microsoft Calendar
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => {
+                    window.location.href = "/api/calendar/microsoft/connect";
+                  }}
+                >
+                  <CalendarDays className="mr-2 size-4" />
+                  Connect Microsoft Calendar
+                </Button>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

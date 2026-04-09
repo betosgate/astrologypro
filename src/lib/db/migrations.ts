@@ -4,6 +4,11 @@ import { MIGRATION_SQL as MIG_20260408000108 } from "@/data/migrations/202604080
 import { MIGRATION_SQL as MIG_20260408000109 } from "@/data/migrations/20260408000109_calendar_connections";
 import { MIGRATION_SQL as MIG_20260408000110 } from "@/data/migrations/20260408000110_backfill_calendar_connections";
 import { MIGRATION_SQL as MIG_20260408000111 } from "@/data/migrations/20260408000111_quiz_question_remediation";
+import { MIGRATION_SQL as MIG_20260408000112 } from "@/data/migrations/20260408000112_global_pricing";
+import { MIGRATION_SQL as MIG_20260408000113 } from "@/data/migrations/20260408000113_trainees_payment_fields";
+import { MIGRATION_SQL as MIG_20260408000114 } from "@/data/migrations/20260408000114_drop_unique_astro_system_settings";
+import { MIGRATION_SQL as MIG_20260408000115 } from "@/data/migrations/20260408000115_pending_perennial_signups";
+import { MIGRATION_SQL as MIG_20260408000116 } from "@/data/migrations/20260408000116_training_notes_allow_quiz";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -77,6 +82,46 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds remediation_video_id, remediation_video_index, remediation_start_seconds, remediation_replay_until_seconds, remediation_message columns to quiz_questions. Drives the new per-question stepwise remediation flow (Module 05) — wrong answer sends the learner back to a specific video timestamp and required replay window. CHECK constraint guarantees replay_until > start when both are set. Partial index on lesson_id WHERE remediation_start_seconds IS NOT NULL. All columns nullable for backward compatibility — existing questions without remediation are treated as inline-retry by the runtime.",
     sortKey: "20260408000111",
     sql: MIG_20260408000111,
+  },
+  "20260408000112_global_pricing": {
+    id: "20260408000112_global_pricing",
+    title: "Global pricing (admin-managed prices for purchasable items)",
+    description:
+      "Creates global_pricing table with one row per purchasable item, keyed on item_key. Public SELECT (signup pages need it; the values are not secrets). Seeds the professional_divination_course at 25969 INR. Edited via the new /admin/pricing UI. Read by the diviner-signup page at runtime.",
+    sortKey: "20260408000112",
+    sql: MIG_20260408000112,
+  },
+  "20260408000113_trainees_payment_fields": {
+    id: "20260408000113_trainees_payment_fields",
+    title: "Trainees payment fields (diviner-signup webhook)",
+    description:
+      "Adds payment_intent_id, paid_at, affiliate_id columns to trainees so the diviner-signup Stripe webhook (handleDivinerSignupPaymentSucceeded) can persist payment confirmation state. All columns nullable + additive only. Re-running is safe via ADD COLUMN IF NOT EXISTS.",
+    sortKey: "20260408000113",
+    sql: MIG_20260408000113,
+  },
+  "20260408000114_drop_unique_astro_system_settings": {
+    id: "20260408000114_drop_unique_astro_system_settings",
+    title: "Allow duplicate astro_system_settings rows (drop UNIQUE)",
+    description:
+      "Drops the (type, key_name) UNIQUE constraint on astro_system_settings so admins can store rotation pools (e.g. multiple ASTROLOGY_API keys with the same key_name label) without 409 conflicts. Reads still pick the first active row by created_at via getActiveAstroSetting. Idempotent — DROP CONSTRAINT IF EXISTS plus a defensive loop that drops any other UNIQUE on the same column pair.",
+    sortKey: "20260408000114",
+    sql: MIG_20260408000114,
+  },
+  "20260408000115_pending_perennial_signups": {
+    id: "20260408000115_pending_perennial_signups",
+    title: "Pending Perennial signups (Stripe checkout intermediate state)",
+    description:
+      "Creates pending_perennial_signups table — temporary storage for in-flight household signups between Stripe Checkout creation and webhook receipt. Holds the full household JSONB payload (1-5 members) keyed on stripe_session_id. Service-role-only RLS because the payload contains personal data. Status enum (pending/processing/completed/failed) drives the webhook handler that provisions Supabase auth users + community_members rows after payment.",
+    sortKey: "20260408000115",
+    sql: MIG_20260408000115,
+  },
+  "20260408000116_training_notes_allow_quiz": {
+    id: "20260408000116_training_notes_allow_quiz",
+    title: "Training notes allow quiz entity type",
+    description:
+      "Extends the training_notes.entity_type CHECK constraint to allow 'quiz' in addition to program/category/lesson. Required by the admin Training Management standardization task so the entity detail sheet can host notes for quiz rows as well. Additive and idempotent — drops and recreates the named check constraint with the wider value list.",
+    sortKey: "20260408000116",
+    sql: MIG_20260408000116,
   },
 };
 

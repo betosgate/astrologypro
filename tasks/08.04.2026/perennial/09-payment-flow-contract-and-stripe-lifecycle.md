@@ -1,6 +1,8 @@
 # Perennial Payment Flow Contract And Stripe Lifecycle
 
-- Status: Ready For Implementation
+- Completion Notes: Implemented. Lifecycle: (1) page POST -> /api/perennial-signup/checkout -> insert pending_perennial_signups row + create Stripe Checkout session -> redirect to Stripe. (2) Stripe completes payment -> checkout.session.completed webhook -> handlePerennialSignupCheckoutCompleted reads the pending row by stripe_session_id, calls provisionPerennialHousehold which generates strong passwords (12+ chars, mixed-case, digit, special) via crypto.randomBytes, creates auth users with email_confirm=true, upserts community_members + community_family_members rows, and emails credentials. The pending row is marked completed (or failed with error_message). Idempotent — re-running the webhook is a no-op once status=completed. Couple plan is gated on STRIPE_PRICE_COMMUNITY_COUPLE env var: returns 503 with the missing_env name until configured. Single + Family work as soon as migration 20260408000115 has been applied.
+- Earlier deferred-notes: NOT IMPLEMENTED — deferred. Requires the Couple Stripe price + a checkout-session-style endpoint + webhook hooks for post-payment provisioning. This is the largest single piece of remaining perennial work and needs its own focused session.
+- Status: Completed (2026-04-08)
 - Date: 2026-04-08
 - Category: Perennial Signup
 - Owner: Fullstack

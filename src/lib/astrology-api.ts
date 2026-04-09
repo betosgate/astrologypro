@@ -11,9 +11,6 @@
  *      No auth, POST with condition object, returns { ai_response: string }
  *      Called by: all AI-narrated horoscope interpretations
  *
- * Required env vars:
- *   ASTROLOGY_API_ACCESS_KEY   — access_key for json.astrologyapi.com
- *   ASTROLOGY_API_SECRET_KEY   — secret_key for json.astrologyapi.com
  *   ASTRO_AI_API_URL           — Lambda URL for AI horoscope (new_astrology_api_url)
  */
 
@@ -22,80 +19,56 @@ import { getSystemConfigValue } from "@/lib/astro/system-settings";
 
 const ASTROLOGY_API_BASE = "https://json.astrologyapi.com/v1";
 
-// ---------------------------------------------------------------------------
-// DB-backed key rotation (least-recently-used active key)
-// Falls back to env vars if no DB keys are available.
-// ---------------------------------------------------------------------------
-
-interface DbApiKey {
-  id: string;
-  access_key: string;
-  secret_key: string;
-}
-
-/**
- * Fetch the least-recently-used active key from astrology_api_keys.
- * After selection, updates last_used_at and increments requests_today.
- * Returns null if no active keys exist.
- */
-async function getDbKey(): Promise<DbApiKey | null> {
-  try {
-    const admin = createAdminClient();
-
-    // Pick the active key with the oldest (or null) last_used_at
-    const { data, error } = await admin
-      .from("astrology_api_keys")
-      .select("id, access_key, secret_key")
-      .eq("is_active", true)
-      .order("last_used_at", { ascending: true, nullsFirst: true })
-      .limit(1)
-      .maybeSingle();
-
-    if (error || !data) return null;
-
-    // Fire-and-forget usage tracking: read current count, increment, update
-    admin
-      .from("astrology_api_keys")
-      .select("requests_today")
-      .eq("id", data.id)
-      .single()
-      .then(({ data: row }) => {
-        const current = (row as Record<string, unknown> | null)?.requests_today as number ?? 0;
-        admin
-          .from("astrology_api_keys")
-          .update({
-            requests_today: current + 1,
-            last_used_at: new Date().toISOString(),
-          })
-          .eq("id", data.id)
-          .then(() => { /* fire-and-forget */ });
-      });
-
-    return data as DbApiKey;
-  } catch {
-    return null;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// AstrologyAPI.com client (Basic auth)
-// ---------------------------------------------------------------------------
-
 function buildBasicAuthHeader(accessKey: string, secretKey: string): string {
   return "Basic " + Buffer.from(`${accessKey}:${secretKey}`).toString("base64");
 }
 
-function getEnvBasicAuthHeader(): string {
-  const accessKey = process.env.ASTROLOGY_API_ACCESS_KEY ?? "";
-  const secretKey = process.env.ASTROLOGY_API_SECRET_KEY ?? "";
-  return buildBasicAuthHeader(accessKey, secretKey);
+/**
+ * Fetch resolved configuration from the centralised fetch-config API.
+ */
+async function fetchConfigFromApi<T = any>(keys: string[]): Promise<T | null> {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const url = `${baseUrl}/api/astro/fetch-config`;
+  
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keys }),
+    });
+
+    if (!res.ok) {
+      console.error(`[astrology-api] fetch-config failed with status ${res.status} at ${url}`);
+      return null;
+    }
+
+    return await res.json();
+  } catch (err) {
+    console.error(`[astrology-api] Exception during fetch-config at ${url}:`, err);
+    return null;
+  }
+}
+
+async function getAstrologyApiAuth(): Promise<{ access_key: string; secret_key: string } | null> {
+  const config = await fetchConfigFromApi<{ ASTROLOGY_API: { access_key: string; secret_key: string } }>(["ASTROLOGY_API"]);
+  if (!config?.ASTROLOGY_API) {
+    console.warn(`[astrology-api] ASTROLOGY_API key missing in fetch-config response`);
+    return null;
+  }
+  return config.ASTROLOGY_API;
+}
+
+async function getAstroAiUrl(): Promise<string | null> {
+  const config = await fetchConfigFromApi<{ ASTRO_AI_API_URL: string }>(["ASTRO_AI_API_URL"]);
+  return config?.ASTRO_AI_API_URL ?? null;
 }
 
 /**
  * POST to json.astrologyapi.com/v1/<endpoint>
  * Ported from Angular getHttpHoroscopePost().
  *
- * Key selection: DB-backed round-robin (least-recently-used) with env var fallback.
+ * Key selection: Fetched from /api/astro/fetch-config which resolves active keys
+ * from astro_system_settings with legacy fallbacks.
  *
  * @param endpoint  e.g. "western_horoscope", "synastry_horoscope"
  * @param body      request payload
@@ -107,11 +80,23 @@ export async function callAstrologyApi<T = unknown>(
 ): Promise<T> {
   const url = `${ASTROLOGY_API_BASE}/${endpoint}`;
 
-  // Try DB key first, fall back to env
-  const dbKey = await getDbKey();
-  const authHeader = dbKey
-    ? buildBasicAuthHeader(dbKey.access_key, dbKey.secret_key)
-    : getEnvBasicAuthHeader();
+  // Get credentials from the centralised config API
+  console.log(`[astrology-api] Requesting credentials for endpoint: ${endpoint}`);
+  const auth = await getAstrologyApiAuth();
+  
+  if (!auth) {
+    console.error("[astrology-api] CRITICAL: fetch-config returned null or failed. Cannot proceed with API call.");
+    throw new Error("AstrologyAPI credentials not configured (fetch-config failed)");
+  }
+  
+  if (!auth.access_key || !auth.secret_key) {
+    console.error("[astrology-api] CRITICAL: fetch-config returned object but keys are missing:", auth);
+    throw new Error("AstrologyAPI credentials incomplete in fetch-config response");
+  }
+
+  console.log(`[astrology-api] Credentials obtained successfully. AccessKey prefix: ${auth.access_key.slice(0, 3)}...`);
+
+  const authHeader = buildBasicAuthHeader(auth.access_key, auth.secret_key);
 
   const res = await fetch(url, {
     method: "POST",
@@ -164,13 +149,12 @@ export async function callAstroAiApi(
   body: AstroAiBody,
   areaOfInquiry?: string
 ): Promise<AstroAiResponse> {
-  // Read from astro_system_settings (SYSTEM_CONFIG/ASTRO_AI_API_URL) first,
-  // fall back to the env var. The helper does both lookups internally.
-  const aiUrl = await getSystemConfigValue("ASTRO_AI_API_URL");
+  // Get AI URL from the centralised config API
+  const aiUrl = await getAstroAiUrl();
 
   if (!aiUrl) {
     throw new Error(
-      "ASTRO_AI_API_URL is not configured (no astro_system_settings row and no env var)"
+      "ASTRO_AI_API_URL is not configured (fetch-config returned null)"
     );
   }
 

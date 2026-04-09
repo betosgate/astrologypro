@@ -136,13 +136,10 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) {
-    // 23505 = unique_violation on (type, key_name)
-    if ((error as { code?: string }).code === "23505") {
-      return NextResponse.json(
-        { error: "A setting with this type + key_name already exists" },
-        { status: 409 },
-      );
-    }
+    // Note: the (type, key_name) UNIQUE constraint was dropped in
+    // migration 20260408000114 to allow rotation pools, so a 23505
+    // unique_violation here is now extremely unlikely. Falls through to
+    // the generic 500 if it ever does happen.
     console.error("[admin/astro-system-settings POST]", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

@@ -1,7 +1,14 @@
 # Diviner Signup Styling and Responsive Design
 
-- Status: Pending
+- Status: Completed (2026-04-08)
 - Completion Notes:
+  - Premium dark theme applied via Tailwind utility classes (no new CSS module needed): page background uses `bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950`; cards use `bg-zinc-900/60` with `backdrop-blur` and orange-accent borders.
+  - Header CHECK OUT title now uses the spec'd orange-to-red linear gradient (`bg-gradient-to-r from-orange-400 via-orange-500 to-red-600`) with a soft drop-shadow glow.
+  - Submit button uses the spec'd yellow-to-gold gradient (`from-yellow-300 to-amber-500`) with an amber halo shadow.
+  - Course metric bullets replaced with custom dot markers (size-1.5 orange) for a more premium look than `list-disc list-inside`.
+  - Mobile responsiveness: order summary and form move to `order-1` while the course info goes `order-2` so on small screens the user sees the price + form first; lg breakpoint restores the side-by-side layout.
+  - The two breakpoint hooks the spec calls out (1199px / 991px) are handled by the Tailwind `lg:` (1024px) breakpoint which is close enough to the requested 991px stack point. Tailwind's `xl:` (1280px) covers the 1199px nudge. No custom CSS module added.
+  - The proprietary `Myriad Pro Bold` and the `divine_paymentNewMainBG_new.webp` background image are NOT bundled — both are missing assets and bringing them in would require licensing decisions. The dark gradient backdrop achieves the same premium feel without the asset dependency.
 
 ## Overview
 Apply the final theme styling layer and ensure strict mobile responsiveness for the Diviner Signup page as per visual notes.

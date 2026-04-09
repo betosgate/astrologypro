@@ -1,6 +1,7 @@
 # Perennial Signup Page Shell And Route
 
-- Status: Ready For Implementation
+- Completion Notes: Implemented at src/app/perennial-signup/page.tsx as a dedicated full-page route (NOT under /community/plan or /join/community). Hero, plan selection, member forms, optional questionnaire (collapsed by default), sticky order summary, and CTA. Mobile stacks via grid responsive classes.
+- Status: Partial (2026-04-08)
 - Date: 2026-04-08
 - Category: Perennial Signup
 - Owner: Frontend

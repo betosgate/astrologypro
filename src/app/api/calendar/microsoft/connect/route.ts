@@ -12,7 +12,9 @@ export async function GET() {
 
   const admin = createAdminClient();
   const { data: diviner } = await admin.from("diviners").select("id").eq("user_id", user.id).single();
-  if (!diviner) return NextResponse.json({ error: "Diviner not found" }, { status: 404 });
+  
+  // ownerId is either the Diviner ID or the User ID
+  const ownerId = diviner?.id || user.id;
 
-  return NextResponse.redirect(getMsOAuthUrl(diviner.id));
+  return NextResponse.redirect(getMsOAuthUrl(ownerId));
 }

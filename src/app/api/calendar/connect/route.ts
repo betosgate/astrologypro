@@ -14,16 +14,20 @@ export async function GET() {
     return NextResponse.redirect(new URL("/login", process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"));
   }
 
+  // First, check if they are a Diviner
   const { data: diviner } = await supabase
     .from("diviners")
     .select("id")
     .eq("user_id", user.id)
     .single();
 
-  if (!diviner) {
-    return NextResponse.redirect(new URL("/dashboard", process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"));
+  let ownerId = diviner?.id;
+
+  // If not a Diviner, use their User ID (for Admins)
+  if (!ownerId) {
+    ownerId = user.id;
   }
 
-  const oauthUrl = getOAuthUrl(diviner.id);
+  const oauthUrl = getOAuthUrl(ownerId);
   return NextResponse.redirect(oauthUrl);
 }

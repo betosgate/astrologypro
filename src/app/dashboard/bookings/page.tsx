@@ -40,6 +40,7 @@ const statusColors: Record<string, string> = {
 };
 
 const PAGE_SIZE = 50;
+export const dynamic = "force-dynamic";
 
 export default async function BookingsPage({
   searchParams,
@@ -63,15 +64,16 @@ export default async function BookingsPage({
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!diviner) redirect("/admin");
+  // ownerId is either diviner.id or user.id
+  const ownerId = diviner?.id || user.id;
 
-  let query = supabase
+  let query = admin
     .from("bookings")
     .select(
-      "id, scheduled_at, status, duration_minutes, base_price, notes, session_notes, questionnaire_responses, client_id, refund_amount, refunded_at, refund_reason, services(name), clients(full_name, email, birth_date, birth_time, birth_city)",
+      "id, scheduled_at, status, duration_minutes, base_price, session_notes, metadata, questionnaire_responses, client_id, refund_amount, refunded_at, refund_reason, services(name), clients(full_name, email, birth_date, birth_time, birth_city)",
       { count: "exact" }
     )
-    .eq("diviner_id", diviner.id)
+    .eq("owner_id", ownerId)
     .order("scheduled_at", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
@@ -79,7 +81,8 @@ export default async function BookingsPage({
     query = query.eq("status", status);
   }
 
-  const { data: bookings, count: totalCount } = await query;
+  const { data: bookings, count: totalCount, error } = await query;
+  console.log(`[BookingsPage] ownerId: ${ownerId}, count: ${bookings?.length}, total: ${totalCount}, error:`, error);
   const totalPages = Math.ceil((totalCount ?? 0) / PAGE_SIZE);
 
   // For upcoming bookings, fetch previous session counts per client
@@ -104,7 +107,7 @@ export default async function BookingsPage({
     const { data: prevSessions } = await supabase
       .from("bookings")
       .select("client_id, scheduled_at, notes")
-      .eq("diviner_id", diviner.id)
+      .eq("owner_id", ownerId)
       .eq("status", "completed")
       .in("client_id", uniqueClientIds)
       .order("scheduled_at", { ascending: false });
@@ -116,7 +119,7 @@ export default async function BookingsPage({
           clientPrevSessions[session.client_id] = {
             count: 0,
             lastDate: session.scheduled_at,
-            lastNotes: session.notes,
+            lastNotes: session.session_notes,
           };
         }
         clientPrevSessions[session.client_id].count++;
@@ -186,7 +189,6 @@ export default async function BookingsPage({
                   <TableHead>Service</TableHead>
                   <TableHead>Duration</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Amount</TableHead>
                   <TableHead className="w-[120px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -204,7 +206,9 @@ export default async function BookingsPage({
                       <TableCell>
                         <div>
                           <p className="font-medium">
-                            {booking.clients?.full_name ?? "Unknown"}
+                            {booking.metadata?.is_reminder 
+                              ? "Personal Reminder (Self)" 
+                              : booking.clients?.full_name ?? "Unknown"}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {booking.clients?.email}
@@ -222,9 +226,6 @@ export default async function BookingsPage({
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {formatCurrency(booking.base_price ?? 0)}
-                      </TableCell>
-                      <TableCell>
                         <div className="flex items-center gap-1">
                           <BookingDetailSheet
                             booking={{
@@ -233,7 +234,7 @@ export default async function BookingsPage({
                               status: booking.status,
                               duration: booking.duration_minutes,
                               amount: booking.base_price ?? 0,
-                              notes: booking.notes,
+                              notes: booking.session_notes,
                               session_notes: booking.session_notes ?? null,
                               client_name:
                                 booking.clients?.full_name ?? "Unknown",
@@ -266,7 +267,7 @@ export default async function BookingsPage({
                                 previous_session_count: prev?.count ?? 0,
                                 last_session_date: prev?.lastDate ?? null,
                                 session_notes: prev?.lastNotes ?? null,
-                                username: diviner.username,
+                                username: diviner?.username || "admin",
                               }}
                             />
                           )}
