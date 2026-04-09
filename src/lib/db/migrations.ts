@@ -13,6 +13,7 @@ import { MIGRATION_SQL as MIG_20260409000117 } from "@/data/migrations/202604090
 import { MIGRATION_SQL as MIG_20260409000118 } from "@/data/migrations/20260409000118_calendar_provider_credentials";
 import { MIGRATION_SQL as MIG_20260409000119 } from "@/data/migrations/20260409000119_pricing_plans";
 import { MIGRATION_SQL as MIG_20260409000120 } from "@/data/migrations/20260409000120_pricing_plan_custom_fields";
+import { MIGRATION_SQL as MIG_20260409000121 } from "@/data/migrations/20260409000121_seed_pricing_plans";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -158,6 +159,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds custom_fields JSONB column to pricing_plans — array of {label, value, slug} objects for flexible plan metadata displayed on signup pages (e.g. duration, sessions, support level). CHECK constraint ensures the value is always a JSON array.",
     sortKey: "20260409000120",
     sql: MIG_20260409000120,
+  },
+  "20260409000121_seed_pricing_plans": {
+    id: "20260409000121_seed_pricing_plans",
+    title: "Seed Perennial Mandalism & Mystery School pricing plans",
+    description:
+      "Seeds global_pricing items (perennial_mandalism_community, mystery_school) and 6 pricing_plans with Stripe Price IDs and custom_fields: PM Individual/Couple/Family, Mystery Enrollment/Monthly/Monthly PM Discount. Idempotent via ON CONFLICT DO NOTHING.",
+    sortKey: "20260409000121",
+    sql: MIG_20260409000121,
   },
 };
 
