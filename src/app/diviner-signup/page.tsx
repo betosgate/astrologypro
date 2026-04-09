@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Card,
@@ -61,7 +61,18 @@ function formatCurrency(amount: number, currency: string): string {
   }
 }
 
+// Next.js requires useSearchParams() to be inside a Suspense boundary so
+// the page can be statically generated with a fallback while the client-side
+// params are resolved. The default export wraps the real page component.
 export default function DivinerSignupPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading…</div>}>
+      <DivinerSignupContent />
+    </Suspense>
+  );
+}
+
+function DivinerSignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const affiliateId = searchParams.get("affiliatid") ?? null;

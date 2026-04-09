@@ -1,8 +1,8 @@
 # Perennial Signup Implementation Checklist
 
-- Completion Notes: Tracks progress against the master task. Tasks 01-04 are partially shipped; tasks 05-09 are deferred pending Stripe configuration.
-- Status: Partial (2026-04-08)
-- Date: 2026-04-08
+- Completion Notes: Tasks 01-09 are implemented in code. The remaining operational follow-up is to configure `STRIPE_WEBHOOK_SECRET` in the target environment and verify the full hosted-checkout -> webhook -> account-provisioning flow with a real Stripe test transaction.
+- Status: Implemented with environment follow-up (2026-04-09)
+- Date: 2026-04-09
 - Category: Perennial Signup
 - Owner: Frontend
 - Priority: P0
@@ -46,7 +46,7 @@ Before coding, lock these rules:
 15. `Family` requires 3 to 5 completed members.
 16. The page must use the current AstrologyPro theme and shared design-system patterns.
 17. The Perennial payment lifecycle must follow the dedicated payment-flow contract rather than ad-hoc checkout logic.
-18. `STRIPE_PRICE_COMMUNITY_COUPLE` is required for full `Couple` checkout support and is currently missing from `.env.local`.
+18. the deployed environment must have the Perennial Stripe prices configured and a valid `STRIPE_WEBHOOK_SECRET` so post-payment provisioning can run
 
 ## Recommended Build Order
 
