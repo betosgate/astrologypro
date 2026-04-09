@@ -3,8 +3,7 @@
 This folder contains rewritten admin-module tasks in a clearer AI-agent-friendly format.
 
 Scope rules:
-- Include tasks from `tasks/09.04.2026/admin-module`
-- Exclude everything inside the `training` folder
+
 - Keep each task small, direct, and implementation-focused
 
 Included tasks:
