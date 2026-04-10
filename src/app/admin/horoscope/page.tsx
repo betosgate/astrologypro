@@ -29,13 +29,14 @@ import { toast } from "sonner";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
+import "./horoscope-tables.css";
 
 // ─── Planet & Zodiac symbols ─────────────────────────────────────────────────
 
 const PLANET_SYMBOLS: Record<string, string> = {
   Sun: "☉", Moon: "☽", Mercury: "☿", Venus: "♀", Mars: "♂",
   Jupiter: "♃", Saturn: "♄", Uranus: "♅", Neptune: "♆", Pluto: "♇",
-  Node: "☊", "Part of Fortune": "⊕", Chiron: "⚷", Lilith: "⚸",
+  Node: "☊", "Part of Fortune": "⊕", Fortune: "⊕", Chiron: "⚷", Lilith: "⚸",
 };
 
 const ZODIAC_SYMBOLS: Record<string, string> = {
@@ -62,6 +63,11 @@ const PLANET_IMAGES: Record<string, string> = {
   Uranus: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_png/urenus.png",
   Neptune: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_png/neptune+(1).png",
   Pluto: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_png/pluto+(1).png",
+  // Manual icons requested for these
+  Node: "",
+  "Part of Fortune": "",
+  Fortune: "",
+  Chiron: "",
 };
 
 // Planet sign images + aspect images — exact URLs from Angular's astroHeaderModifierPipe
@@ -85,19 +91,19 @@ const ASTRO_HEADER_IMAGES: Record<string, string> = {
   Square: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/squar.png",
   Trine: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/trine.png",
   Sextile: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/sextile.png",
-  // Zodiac signs (zodic_singn/ folder — standard filenames)
-  Aries: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Aries.png",
-  Taurus: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Taurus.png",
-  Gemini: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Gemini.png",
-  Cancer: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Cancer.png",
-  Leo: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Leo.png",
-  Virgo: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Virgo.png",
-  Libra: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Libra.png",
-  Scorpio: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Scorpio.png",
-  Sagittarius: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Sagittarius.png",
-  Capricorn: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Capricorn.png",
-  Aquarius: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Aquarius.png",
-  Pisces: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Pisces.png",
+  // Zodiac signs (Manual icons requested - S3 disabled for signs)
+  Aries: "",
+  Taurus: "",
+  Gemini: "",
+  Cancer: "",
+  Leo: "",
+  Virgo: "",
+  Libra: "",
+  Scorpio: "",
+  Sagittarius: "",
+  Capricorn: "",
+  Aquarius: "",
+  Pisces: "",
 };
 
 // Keep ASPECT_IMAGES alias for table column aspect-type icon (same URLs as above)
@@ -192,13 +198,20 @@ function AstroHeaderParts({ title }: { title?: string }) {
     <div className="flex items-center justify-center gap-2 flex-wrap w-full">
       {terms.map((term, i) => {
         const img = getImg(term);
+        // Special manual handling for zodiac signs in headers
+        const isZodiac = ZODIAC_SYMBOLS[term.charAt(0).toUpperCase() + term.slice(1).toLowerCase()];
+
         return (
           <span key={i} className="flex items-center gap-1.5 grow-0">
-            <span className="text-xs font-bold uppercase tracking-widest text-foreground whitespace-nowrap">{term}</span>
-            {img && (
+            <span className="font-bold uppercase tracking-widest text-current whitespace-nowrap">{term}</span>
+            {img ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={img} alt={term} className="size-5 object-contain shrink-0" />
-            )}
+              <img src={img} alt="" className="size-5 object-contain shrink-0" />
+            ) : isZodiac ? (
+              <ManualZodiacIcon sign={term} />
+            ) : PLANET_SYMBOLS[term.charAt(0).toUpperCase() + term.slice(1).toLowerCase()] || PLANET_SYMBOLS[term] ? (
+              <ManualPlanetIcon name={term} />
+            ) : null}
           </span>
         );
       })}
@@ -724,7 +737,10 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
         <ChartImageModal
           src={pictureUrl}
           open={showFullImage}
-          onClose={() => setShowFullImage(false)}
+          onClose={() => {
+            setShowFullImage(false);
+            onClose();
+          }}
         />
       )}
     </>
@@ -781,15 +797,53 @@ function ChartImageModal({ src, open, onClose }: { src: string; open: boolean; o
 
 // ─── Planet Symbol ────────────────────────────────────────────────────────────
 
+function ManualPlanetIcon({ name, size = "size-5" }: { name: string; size?: string }) {
+  const clean = String(name || "").trim().replace(/[(),]/g, "");
+  const titled = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+  const symbol = PLANET_SYMBOLS[titled] ?? PLANET_SYMBOLS[clean] ?? "•";
+
+  const colors: Record<string, string> = {
+    Node: "from-indigo-600 to-purple-700 border-indigo-400/30 shadow-indigo-500/20",
+    "Part of Fortune": "from-yellow-400 to-amber-600 border-yellow-300/30 shadow-yellow-500/20",
+    Fortune: "from-yellow-400 to-amber-600 border-yellow-300/30 shadow-yellow-500/20",
+    Chiron: "from-stone-500 to-emerald-800 border-stone-400/30 shadow-stone-500/20",
+    Lilith: "from-slate-700 to-slate-900 border-slate-600/30 shadow-slate-800/20",
+    Default: "from-amber-400 to-orange-600 border-amber-300/30 shadow-amber-500/20"
+  };
+
+  const colorClass = colors[titled] ?? colors[clean] ?? colors.Default;
+
+  return (
+    <div className={cn(
+      "flex items-center justify-center rounded-sm bg-gradient-to-br border shadow-md transition-all hover:scale-110",
+      colorClass,
+      size
+    )}>
+      <span className="text-white font-bold leading-none select-none drop-shadow-md text-[13px]">
+        {symbol}
+      </span>
+    </div>
+  );
+}
+
 function PlanetSymbol({ name, showImage = true }: { name: string; showImage?: boolean }) {
-  const imgSrc = PLANET_IMAGES[name];
+  const [imgError, setImgError] = useState(false);
+  const clean = String(name || "").trim().replace(/[(),]/g, "");
+  const titled = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+  const imgSrc = PLANET_IMAGES[titled] ?? PLANET_IMAGES[clean];
+
   return (
     <span className="inline-flex items-center gap-1.5">
-      {showImage && imgSrc ? (
+      {showImage && imgSrc && !imgError ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={imgSrc} alt={name} className="size-5 object-contain shrink-0" />
+        <img
+          src={imgSrc}
+          alt={name}
+          className="size-5 object-contain shrink-0"
+          onError={() => setImgError(true)}
+        />
       ) : (
-        <span className="text-amber-500 font-semibold text-base leading-none shrink-0" aria-hidden>{PLANET_SYMBOLS[name] ?? "✦"}</span>
+        <ManualPlanetIcon name={name} />
       )}
       <span>{name}</span>
     </span>
@@ -840,11 +894,85 @@ function WordAssociationChips({ aspecting, type, aspected }: { aspecting: string
   );
 }
 
-function ZodiacSymbol({ sign }: { sign: string }) {
+function AspectSymbol({ type, showText = true }: { type: string; showText?: boolean }) {
+  const [imgError, setImgError] = useState(false);
+  const clean = String(type || "").trim().replace(/[(),]/g, "");
+  // Normalize "Conjunct" -> "Conjunction"
+  const normalized = clean.toLowerCase() === "conjunct" ? "Conjunction" : clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+  const imgSrc = ASPECT_IMAGES[normalized] ?? ASPECT_IMAGES[clean];
+
   return (
-    <span className="inline-flex items-center gap-1">
-      <span className="text-amber-500" aria-hidden>{ZODIAC_SYMBOLS[sign] ?? "•"}</span>
-      <span>{sign}</span>
+    <span className="inline-flex items-center gap-1.5">
+      {imgSrc && !imgError ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imgSrc}
+          alt={type}
+          className="size-4 object-contain shrink-0"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <span className="text-amber-500 text-sm leading-none shrink-0" aria-hidden>
+          {ASPECT_SYMBOLS[normalized] ?? ASPECT_SYMBOLS[clean] ?? ""}
+        </span>
+      )}
+      {showText && <span>{type}</span>}
+    </span>
+  );
+}
+
+function ManualZodiacIcon({ sign, size = "size-6" }: { sign: string; size?: string }) {
+  const symbol = ZODIAC_SYMBOLS[sign] || ZODIAC_SYMBOLS[sign.charAt(0).toUpperCase() + sign.slice(1).toLowerCase()] || "";
+  if (!symbol) return null;
+
+  // Determine element color for background/border
+  const elements: Record<string, string> = {
+    Aries: "fire", Leo: "fire", Sagittarius: "fire",
+    Taurus: "earth", Virgo: "earth", Capricorn: "earth",
+    Gemini: "air", Libra: "air", Aquarius: "air",
+    Cancer: "water", Scorpio: "water", Pisces: "water"
+  };
+  const type = elements[sign.charAt(0).toUpperCase() + sign.slice(1).toLowerCase()] || "fire";
+  const colors: Record<string, string> = {
+    fire: "from-orange-500 to-red-600 border-orange-400/30 shadow-orange-500/20",
+    earth: "from-emerald-600 to-green-800 border-emerald-400/30 shadow-emerald-500/20",
+    air: "from-blue-400 to-indigo-600 border-blue-300/30 shadow-blue-500/20",
+    water: "from-cyan-500 to-blue-700 border-cyan-400/30 shadow-cyan-500/20"
+  };
+
+  return (
+    <div className={cn(
+      "flex items-center justify-center rounded-md bg-gradient-to-br border shadow-lg transition-transform hover:scale-110",
+      colors[type],
+      size
+    )}>
+      <span className="text-white font-bold leading-none select-none drop-shadow-md" style={{ fontSize: 'calc(100% + 2px)' }}>
+        {symbol}
+      </span>
+    </div>
+  );
+}
+
+function ZodiacSymbol({ sign }: { sign: string }) {
+  const [imgError, setImgError] = useState(false);
+  const clean = String(sign || "").trim().replace(/[(),]/g, "");
+  const titled = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+  const imgSrc = ASTRO_HEADER_IMAGES[titled] ?? ASTRO_HEADER_IMAGES[clean];
+
+  return (
+    <span className="inline-flex items-center gap-2">
+      {imgSrc && !imgError ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imgSrc}
+          alt={sign}
+          className="size-5 object-contain shrink-0"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <ManualZodiacIcon sign={sign} size="size-5" />
+      )}
+      <span className="font-medium">{sign}</span>
     </span>
   );
 }
@@ -1266,36 +1394,26 @@ function DecanModal({ planet, sign, open, onClose }: {
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(o) => {
-        // Only allow background/escape to close if there's no fullscreen image active
-        if (!fullscreenImg) {
-          !o && onClose();
-        }
-      }}>
-        <DialogContent className="max-w-5xl max-h-[90vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}
-          onInteractOutside={(e) => {
-            if (fullscreenImg) e.preventDefault();
-          }}
-          onEscapeKeyDown={(e) => {
-            if (fullscreenImg) {
-              e.preventDefault();
-              setFullscreenImg(null);
-            }
-          }}
-        >
-          <ChartImageModal
-            src={fullscreenImg || ""}
-            open={!!fullscreenImg}
-            onClose={() => setFullscreenImg(null)}
-          />
-          {/* Custom Close Icon - Fixed to top-right */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.15)] group"
-            aria-label="Close modal"
-          >
-            <X className="size-5 transition-transform group-hover:rotate-90" />
-          </button>
+      <ChartImageModal
+        src={fullscreenImg || ""}
+        open={!!fullscreenImg}
+        onClose={() => {
+          setFullscreenImg(null);
+          onClose();
+        }}
+      />
+      <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <DialogContent className="max-w-5xl max-h-[90vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
+          {/* Custom Close Icon - Fixed to top-right (hide when image is fullscreen) */}
+          {!fullscreenImg && (
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.15)] group"
+              aria-label="Close modal"
+            >
+              <X className="size-5 transition-transform group-hover:rotate-90" />
+            </button>
+          )}
 
           {/* Sticky Header Section */}
           <div className="px-6 py-5 border-b border-white/5 bg-slate-900/40 pr-16 shrink-0 flex items-center justify-between">
@@ -1463,23 +1581,23 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
 
       {/* Table */}
-      <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
-        <div className="horoscope-section-header px-4 py-2.5 text-center">
-          <h3 className="text-[20px] font-semibold text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 600, lineHeight: '26px' }}>Planet Information</h3>
+      <div className="horoscope-table-container">
+        <div className="horoscope-table-header">
+          <h3>Planet Information</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm" style={{ fontFamily: "'Roboto', sans-serif" }}>
+        <div className="horoscope-table-wrapper">
+          <table className="horoscope-table">
             <thead>
-              <tr className="horoscope-thead">
+              <tr>
                 {["Planet", "Sign", "Full Degree", "House", "Norm Degree", "Speed", "Retro?"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {ordered.map((p, i) => (
-                <tr key={p.name} className="horoscope-tbody-row">
-                  <td className="px-3 py-2 font-medium whitespace-nowrap">
+                <tr key={p.name}>
+                  <td className="td-planet">
                     <div className="flex items-center gap-2">
                       <PlanetSymbol name={p.name} />
                       {checkDacen(p.name, p.sign) && (
@@ -1507,15 +1625,15 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
                       )}
                     </div>
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap"><ZodiacSymbol sign={p.sign} /></td>
-                  <td className="px-3 py-2 font-mono text-xs">{Number(p.full_degree).toFixed(2)}°</td>
-                  <td className="px-3 py-2">{p.house}</td>
-                  <td className="px-3 py-2 font-mono text-xs">{Number(p.norm_degree).toFixed(2)}°</td>
-                  <td className="px-3 py-2 font-mono text-xs">{Number(p.speed).toFixed(4)}</td>
-                  <td className="px-3 py-2">
-                    <Badge variant={p.is_retro === "true" ? "destructive" : "outline"} className="text-[10px]">
-                      {p.is_retro === "true" ? "R" : "—"}
-                    </Badge>
+                  <td><ZodiacSymbol sign={p.sign} /></td>
+                  <td className="td-mono">{Number(p.full_degree).toFixed(2)}°</td>
+                  <td>{p.house}</td>
+                  <td className="td-mono">{Number(p.norm_degree).toFixed(2)}°</td>
+                  <td className="td-mono">{Number(p.speed).toFixed(4)}</td>
+                  <td>
+                    <span className={cn("retro-badge-v2", p.is_retro === "true" ? "retro" : "direct")}>
+                      {p.is_retro === "true" ? "Yes" : "No"}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -1542,7 +1660,7 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={planetImg} alt={p.name} className="size-[30px] object-contain shrink-0" />
                   )}
-                  <h4 className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>{p.name}</h4>
+                  <h4 className="uppercase tracking-wide" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>{p.name}</h4>
                   {hasDecan && (
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -1615,31 +1733,32 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
 
       {/* House table */}
-      <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
-        <div className="horoscope-section-header px-4 py-2.5 text-center">
-          <h3 className="text-[20px] font-semibold text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 600, lineHeight: '26px' }}>House Information</h3>
+      <div className="horoscope-table-container">
+        <div className="horoscope-table-header">
+          <h3>House Information</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm" style={{ fontFamily: "'Roboto', sans-serif" }}>
+        <div className="horoscope-table-wrapper">
+          <table className="horoscope-table">
             <thead>
-              <tr className="horoscope-thead">
+              <tr>
                 {["House", "Sign", "Degree", "Planets"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {houses.map((h: any, i: number) => (
-                <tr key={h.house} className="horoscope-tbody-row">
-                  <td className="px-3 py-2 font-semibold">House {h.house}</td>
-                  <td className="px-3 py-2"><ZodiacSymbol sign={h.sign} /></td>
-                  <td className="px-3 py-2 font-mono text-xs">{Number(h.degree).toFixed(2)}°</td>
-                  <td className="px-3 py-2">
-                    <div className="flex flex-wrap gap-1">
+                <tr key={h.house}>
+                  <td className="font-semibold">House {h.house}</td>
+                  <td><ZodiacSymbol sign={h.sign} /></td>
+                  <td className="td-mono">{Number(h.degree).toFixed(2)}°</td>
+                  <td>
+                    <div className="flex flex-wrap gap-2">
                       {(houseMap[Number(h.house)] ?? []).map((pName) => (
-                        <Badge key={pName} variant="secondary" className="text-[10px]">
-                          <span className="text-amber-500 mr-1">{PLANET_SYMBOLS[pName] ?? "✦"}</span>{pName}
-                        </Badge>
+                        <div key={pName} className="planet-tag-v2">
+                          <span className="symbol">{PLANET_SYMBOLS[pName] ?? "✦"}</span>
+                          <span>{pName}</span>
+                        </div>
                       ))}
                     </div>
                   </td>
@@ -1804,7 +1923,7 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
             return (
               <div key={item.house} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
                 <div className="horoscope-interp-header px-4 py-2.5 flex justify-center" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
-                  <h4 className="text-sm font-semibold uppercase tracking-wide text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>House {item.house}</h4>
+                  <h4 className="uppercase tracking-wide text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>House {item.house}</h4>
                 </div>
                 <div className="interp-gradient-default px-4 py-3">
                   <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{item.interpretation}</p>
@@ -1847,44 +1966,36 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
       <AspectsLegend />
 
-      <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
-        <div className="horoscope-section-header px-4 py-2.5 text-center">
-          <h3 className="text-[20px] font-semibold text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 600, lineHeight: '26px' }}>Aspects</h3>
+      <div className="horoscope-table-container">
+        <div className="horoscope-table-header">
+          <h3>Aspects</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm" style={{ fontFamily: "'Roboto', sans-serif" }}>
+        <div className="horoscope-table-wrapper">
+          <table className="horoscope-table">
             <thead>
-              <tr className="horoscope-thead">
+              <tr>
                 {["Aspected Planet", "Aspecting Planet", "Orb", "Type", "Diff", "Aspected °", "Aspecting °"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {enriched.map((a: any, i: number) => (
-                <tr key={i} className="horoscope-tbody-row">
-                  <td className="px-3 py-2 whitespace-nowrap"><PlanetSymbol name={a.aspected_planet} /></td>
-                  <td className="px-3 py-2 whitespace-nowrap"><PlanetSymbol name={a.aspecting_planet} /></td>
-                  <td className="px-3 py-2">
+                <tr key={i}>
+                  <td><PlanetSymbol name={a.aspected_planet} /></td>
+                  <td><PlanetSymbol name={a.aspecting_planet} /></td>
+                  <td>
                     <div className="flex items-center gap-2">
                       <OrbCircle orb={Number(a.orb ?? 0)} color={a.color} />
-                      <span className="font-mono text-xs">{Number(a.orb ?? 0).toFixed(2)}°</span>
+                      <span className="td-mono">{Number(a.orb ?? 0).toFixed(2)}°</span>
                     </div>
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1.5">
-                      {ASPECT_IMAGES[a.type] ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={ASPECT_IMAGES[a.type]} alt={a.type} className="size-4 object-contain" />
-                      ) : (
-                        <span className="text-amber-500 text-sm">{ASPECT_SYMBOLS[a.type] ?? ""}</span>
-                      )}
-                      <span>{a.type}</span>
-                    </span>
+                  <td>
+                    <AspectSymbol type={a.type} />
                   </td>
-                  <td className="px-3 py-2 font-mono text-xs">{a.diff}</td>
-                  <td className="px-3 py-2 font-mono text-xs">{a.aspected_degree ?? "—"}°</td>
-                  <td className="px-3 py-2 font-mono text-xs">{a.aspecting_degree ?? "—"}°</td>
+                  <td className="td-mono">{a.diff}</td>
+                  <td className="td-mono">{a.aspected_degree ?? "—"}°</td>
+                  <td className="td-mono">{a.aspecting_degree ?? "—"}°</td>
                 </tr>
               ))}
             </tbody>
@@ -1941,7 +2052,7 @@ function DharmaKarmaSection({ data, rawData, areaOfInquiry }: { data: any; rawDa
         text ? (
           <div key={key} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
             <div className="horoscope-interp-header px-4 py-2.5 flex justify-center" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
-              <h4 className="text-sm font-semibold text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>{label}</h4>
+              <h4 className="text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>{label}</h4>
             </div>
             <div className="interp-gradient-default px-4 py-3">
               <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{text}</p>
@@ -1972,40 +2083,39 @@ function LilithSection({ lilith, aiData, areaOfInquiry, checkDacen, onDecanClick
   return (
     <div className="space-y-4">
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
-      <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
-        <div className="horoscope-section-header px-4 py-2.5 text-center">
-          <h3 className="text-[20px] font-semibold flex items-center justify-center gap-2" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 600, lineHeight: '26px' }}>
-            <span>Lilith</span>
-            <span className="text-amber-500">⚸</span>
-            {lilith.sign && checkDacen("Lilith", lilith.sign) && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => onDecanClick("Lilith", lilith.sign)}
-                    className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
-                      alt=""
-                      className="size-4 cursor-pointer hover:scale-125 transition-transform"
-                    />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
-                  Decan Information
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </h3>
+      <div className="horoscope-table-container">
+        <div className="horoscope-table-header flex items-center justify-center gap-2">
+          <h3>Lilith</h3>
+          <span className="text-amber-500 text-xl">⚸</span>
+          {lilith.sign && checkDacen("Lilith", lilith.sign) && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => onDecanClick("Lilith", lilith.sign)}
+                  className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
+                    alt=""
+                    className="size-4 cursor-pointer hover:scale-125 transition-transform"
+                    style={{ filter: 'none' }}
+                  />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
+                Decan Information
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm" style={{ fontFamily: "'Roboto', sans-serif" }}>
+        <div className="horoscope-table-wrapper">
+          <table className="horoscope-table">
             <thead>
               <tr className="horoscope-thead">
                 {["Planet", "Sign", "Full Degree", "House", "Norm Degree", "Speed", "Retro?"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -2017,7 +2127,11 @@ function LilithSection({ lilith, aiData, areaOfInquiry, checkDacen, onDecanClick
                 <td className="px-3 py-2">{lilith.house}</td>
                 <td className="px-3 py-2 font-mono text-xs">{Number(lilith.norm_degree).toFixed(2)}°</td>
                 <td className="px-3 py-2 font-mono text-xs">{Number(lilith.speed).toFixed(4)}</td>
-                <td className="px-3 py-2"><Badge variant={lilith.is_retro === "true" ? "destructive" : "outline"} className="text-[10px]">{lilith.is_retro === "true" ? "R" : "—"}</Badge></td>
+                <td>
+                  <span className={cn("retro-badge-v2", lilith.is_retro === "true" ? "retro" : "direct")}>
+                    {lilith.is_retro === "true" ? "Yes" : "No"}
+                  </span>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -2067,7 +2181,7 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry }: { natal
           return (
             <div key={key}>
               <div className="horoscope-interp-header px-4 py-2 flex items-center gap-2" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-center" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>{key}</h4>
+                <h4 className="uppercase tracking-wider text-center" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>{key}</h4>
                 {degree && <Badge variant="outline" className="text-[10px]">{typeof degree === "object" ? `${degree.sign ?? ""} ${Number(degree.degree ?? 0).toFixed(2)}°` : String(degree)}</Badge>}
               </div>
               <div className="interp-gradient-default px-4 py-3">
@@ -2233,7 +2347,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={PLANET_IMAGES[item.name]} alt={item.name} className="size-5 object-contain" />
               )}
-              <h4 className="text-sm font-semibold text-center w-full">{item.title ?? item.name ?? `${title} ${i + 1}`}</h4>
+              <h4 className="text-center w-full">{item.title ?? item.name ?? `${title} ${i + 1}`}</h4>
             </div>
             <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
               <p className="leading-relaxed">{item.interpretation ?? item.data ?? item.forecast}</p>
@@ -2258,21 +2372,27 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
 
       {/* 1. Solar Return Details */}
       {details && (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return Details</h3></div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="horoscope-thead">
-                {["Native Birth Date", "Solar Return Date", "Sun Degree", "Solar Return ASC"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
-                ))}
-              </tr></thead>
-              <tbody><tr className="horoscope-tbody-row">
-                <td className="px-3 py-2">{details.native_birth_date ?? details.date_of_birth ?? "—"}</td>
-                <td className="px-3 py-2 font-semibold text-amber-600">{details.solar_return_date ?? details.return_date ?? "—"}</td>
-                <td className="px-3 py-2 font-mono text-xs">{details.sun_degree ?? "—"}</td>
-                <td className="px-3 py-2">{details.solar_return_asc ?? details.ascendant ?? "—"}</td>
-              </tr></tbody>
+        <div className="horoscope-table-container">
+          <div className="horoscope-table-header">
+            <h3>Solar Return Details</h3>
+          </div>
+          <div className="horoscope-table-wrapper">
+            <table className="horoscope-table">
+              <thead>
+                <tr>
+                  {["Native Birth Date", "Solar Return Date", "Sun Degree", "Solar Return ASC"].map((h) => (
+                    <th key={h}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{details.native_birth_date ?? details.date_of_birth ?? "—"}</td>
+                  <td className="font-semibold text-amber-500">{details.solar_return_date ?? details.return_date ?? "—"}</td>
+                  <td className="td-mono">{details.sun_degree ?? "—"}</td>
+                  <td>{details.solar_return_asc ?? details.ascendant ?? "—"}</td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </div>
@@ -2280,25 +2400,33 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
 
       {/* 2. Solar Return Planets table */}
       {planetList.length > 0 && (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return Planets</h3></div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="horoscope-thead">
-                {["Planet", "House", "Full Degree", "Sign", "Norm Degree", "Speed", "Retro?"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
-                ))}
-              </tr></thead>
+        <div className="horoscope-table-container">
+          <div className="horoscope-table-header">
+            <h3>Solar Return Planets</h3>
+          </div>
+          <div className="horoscope-table-wrapper">
+            <table className="horoscope-table">
+              <thead>
+                <tr>
+                  {["Planet", "House", "Full Degree", "Sign", "Norm Degree", "Speed", "Retro?"].map((h) => (
+                    <th key={h}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
               <tbody>
                 {planetList.map((p: any, i: number) => (
-                  <tr key={p.name ?? i} className="horoscope-tbody-row">
-                    <td className="px-3 py-2 font-medium whitespace-nowrap"><PlanetSymbol name={p.name} /></td>
-                    <td className="px-3 py-2 text-center">{p.house ?? "—"}</td>
-                    <td className="px-3 py-2 font-mono text-xs">{Number(p.full_degree ?? 0).toFixed(2)}°</td>
-                    <td className="px-3 py-2 whitespace-nowrap"><ZodiacSymbol sign={p.sign} /></td>
-                    <td className="px-3 py-2 font-mono text-xs">{Number(p.norm_degree ?? 0).toFixed(2)}°</td>
-                    <td className="px-3 py-2 font-mono text-xs">{Number(p.speed ?? 0).toFixed(4)}</td>
-                    <td className="px-3 py-2"><Badge variant={p.is_retro === "true" || p.is_retro === true ? "destructive" : "outline"} className="text-[10px]">{p.is_retro === "true" || p.is_retro === true ? "R" : "—"}</Badge></td>
+                  <tr key={p.name ?? i}>
+                    <td className="td-planet"><PlanetSymbol name={p.name} /></td>
+                    <td className="text-center">{p.house ?? "—"}</td>
+                    <td className="td-mono">{Number(p.full_degree ?? 0).toFixed(2)}°</td>
+                    <td><ZodiacSymbol sign={p.sign} /></td>
+                    <td className="td-mono">{Number(p.norm_degree ?? 0).toFixed(2)}°</td>
+                    <td className="td-mono">{Number(p.speed ?? 0).toFixed(4)}</td>
+                    <td>
+                      <span className={cn("retro-badge-v2", p.is_retro === "true" || p.is_retro === true ? "retro" : "direct")}>
+                        {p.is_retro === "true" || p.is_retro === true ? "Yes" : "No"}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -2325,7 +2453,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={PLANET_IMAGES[p.name]} alt={p.name} className="size-5 object-contain" />
                     )}
-                    <h4 className="text-sm font-semibold text-center w-full">{p.name ?? `Planet ${i + 1}`}</h4>
+                    <h4 className="text-center w-full">{p.name ?? `Planet ${i + 1}`}</h4>
                     {p.name && p.sign && checkDacen(p.name, p.sign) && (
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -2519,11 +2647,9 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
   // Normalise transit relation rows — handles both Lambda and AstrologyAPI shapes
   const transitRows: any[] = (() => {
     if (!data) return [];
-    // Lambda: {transit_relation: [...] } or direct array
     if (Array.isArray(data?.transit_relation)) return data.transit_relation;
     if (Array.isArray(data?.transits)) return data.transits;
     if (Array.isArray(data)) return data;
-    // AstrologyAPI weekly shape: {transit_planet: {Sun: {...}, ... } } — flatten
     if (data?.transit_planet && typeof data.transit_planet === "object") {
       return Object.entries(data.transit_planet).flatMap(([tPlanet, aspects]: [string, any]) =>
         Object.entries(aspects ?? {}).map(([nPlanet, detail]: [string, any]) => ({
@@ -2538,12 +2664,10 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
     return [];
   })();
 
-  // Lunar metrics rows
   const lunarRows: any[] = (() => {
     const src = lunarMetrics ?? data?.lunar_data ?? data?.lunar_metrics;
     if (!src) return [];
     if (Array.isArray(src)) return src;
-    // Object keyed by month or numeric index
     if (typeof src === "object") return Object.values(src);
     return [];
   })();
@@ -2556,7 +2680,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {transitWheelSvg && (
         <div className="rounded-lg border overflow-hidden">
           <div className="px-4 py-2.5 horoscope-section-header text-center">
-            <h3 className="text-sm font-semibold text-center w-full">Transit Chart</h3>
+            <h3 className="text-[20px] font-semibold text-center w-full" style={{ fontFamily: "'Roboto', sans-serif" }}>Transit Chart</h3>
           </div>
           <div className="p-6 bg-slate-950 flex justify-center border-b border-white/5">
             <div className="relative group max-w-lg w-full">
@@ -2575,22 +2699,22 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {/* Future Lunar Metrics Table — specifically for monthly v3 */}
       {tabSlug === "tropical_transits_monthly_v3" && lunarMetrics && (
         <div className="space-y-6">
-          <div className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-2.5 horoscope-section-header text-center">
-              <h3 className="text-sm font-semibold text-center w-full">Future Lunar Metrics</h3>
+          <div className="horoscope-table-container">
+            <div className="horoscope-table-header">
+              <h3>Future Lunar Metrics</h3>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="horoscope-table-wrapper">
+              <table className="horoscope-table">
                 <thead>
-                  <tr className="horoscope-thead">
+                  <tr>
                     {["Month", "Moon Day", "Moon Illumination", "Moon Phase", "Moon Sign"].map((h) => (
-                      <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
+                      <th key={h}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="horoscope-tbody-row">
-                    <td className="px-3 py-2 text-xs font-medium">
+                  <tr>
+                    <td>
                       {(() => {
                         const mStr = String(lunarMetrics.month || "");
                         if (mStr.includes("-")) {
@@ -2600,12 +2724,10 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                         return mStr || "—";
                       })()}
                     </td>
-                    <td className="px-3 py-2 text-xs">{lunarMetrics.moon_day ?? "—"}</td>
-                    <td className="px-3 py-2 text-xs">{lunarMetrics.moon_illumination != null ? `${lunarMetrics.moon_illumination}%` : "—"}</td>
-                    <td className="px-3 py-2 text-xs">{lunarMetrics.moon_phase ?? "—"}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {lunarMetrics.moon_sign ? <ZodiacSymbol sign={lunarMetrics.moon_sign} /> : "—"}
-                    </td>
+                    <td>{lunarMetrics.moon_day ?? "—"}</td>
+                    <td>{lunarMetrics.moon_illumination != null ? `${lunarMetrics.moon_illumination}%` : "—"}</td>
+                    <td>{lunarMetrics.moon_phase ?? "—"}</td>
+                    <td>{lunarMetrics.moon_sign ? <ZodiacSymbol sign={lunarMetrics.moon_sign} /> : "—"}</td>
                   </tr>
                 </tbody>
               </table>
@@ -2657,16 +2779,16 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
 
       {/* Future Tropical Transits Monthly Relation Table — specifically for monthly v3 */}
       {tabSlug === "tropical_transits_monthly_v3" && transitRows.length > 0 && (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 horoscope-section-header text-center">
-            <h3 className="text-sm font-semibold text-center w-full">Future Tropical Transits Monthly Relation</h3>
+        <div className="horoscope-table-container">
+          <div className="horoscope-table-header">
+            <h3>Future Tropical Transits Monthly Relation</h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="horoscope-table-wrapper">
+            <table className="horoscope-table">
               <thead>
-                <tr className="horoscope-thead">
+                <tr>
                   {["Date", "Natal Planet", "Type", "Transit Planet"].map((h) => (
-                    <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -2677,16 +2799,11 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                   const aspType = row.type ?? row.aspect ?? "";
                   const dt = row.date ?? row.transit_date ?? "";
                   return (
-                    <tr key={i} className="horoscope-tbody-row">
-                      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{dt || "—"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5">
-                          {ASPECT_IMAGES[aspType] && <img src={ASPECT_IMAGES[aspType]} alt={aspType} className="size-4 object-contain" />}
-                          <span>{aspType || "—"}</span>
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
+                    <tr key={i}>
+                      <td className="td-mono">{dt || "—"}</td>
+                      <td>{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
+                      <td><AspectSymbol type={aspType} /></td>
+                      <td>{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
                     </tr>
                   );
                 })}
@@ -2698,22 +2815,22 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
 
       {/* Weekly / Monthly Transit Relation Table */}
       {tabSlug !== "tropical_transits_monthly_v3" && transitRows.length > 0 && (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 horoscope-section-header text-center">
-            <h3 className="text-sm font-semibold text-center w-full">
+        <div className="horoscope-table-container">
+          <div className="horoscope-table-header">
+            <h3>
               {tabSlug === "tropical_transits_weekly_v2" ? "Tropical Transits Weekly Relation" : `${label} — Transit Aspects`}
             </h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="horoscope-table-wrapper">
+            <table className="horoscope-table">
               <thead>
-                <tr className="horoscope-thead">
+                <tr>
                   {(() => {
                     const headers = tabSlug === "tropical_transits_weekly_v2"
                       ? ["Date", "Transit Planet", "Aspect", "Natal Planet"]
                       : ["Transit Planet", "Aspect", "Natal Planet", "Orb", "Date"];
                     return headers.map((h) => (
-                      <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
+                      <th key={h}>{h}</th>
                     ));
                   })()}
                 </tr>
@@ -2727,31 +2844,21 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                   const dt = row.date ?? row.transit_date ?? "";
 
                   return (
-                    <tr key={i} className="horoscope-tbody-row">
+                    <tr key={i}>
                       {tabSlug === "tropical_transits_weekly_v2" ? (
                         <>
-                          <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{dt || "—"}</td>
-                          <td className="px-3 py-2 whitespace-nowrap">{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
-                          <td className="px-3 py-2 whitespace-nowrap">
-                            <span className="inline-flex items-center gap-1.5">
-                              {ASPECT_IMAGES[aspType] && <img src={ASPECT_IMAGES[aspType]} alt={aspType} className="size-4 object-contain" />}
-                              <span>{aspType || "—"}</span>
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap">{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
+                          <td className="td-mono">{dt || "—"}</td>
+                          <td>{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
+                          <td><AspectSymbol type={aspType} /></td>
+                          <td>{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
                         </>
                       ) : (
                         <>
-                          <td className="px-3 py-2 whitespace-nowrap">{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
-                          <td className="px-3 py-2 whitespace-nowrap">
-                            <span className="inline-flex items-center gap-1.5">
-                              {ASPECT_IMAGES[aspType] && <img src={ASPECT_IMAGES[aspType]} alt={aspType} className="size-4 object-contain" />}
-                              <span>{aspType || "—"}</span>
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap">{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
-                          <td className="px-3 py-2 font-mono text-xs">{orb}</td>
-                          <td className="px-3 py-2 text-xs text-muted-foreground">{dt || "—"}</td>
+                          <td>{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
+                          <td><AspectSymbol type={aspType} /></td>
+                          <td>{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
+                          <td className="td-mono">{orb}</td>
+                          <td className="td-mono">{dt || "—"}</td>
                         </>
                       )}
                     </tr>
@@ -2765,27 +2872,27 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
 
       {/* Lunar Return Metrics (monthly only) */}
       {tabSlug !== "tropical_transits_monthly_v3" && !isWeekly && lunarRows.length > 0 && (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 horoscope-section-header text-center">
-            <h3 className="text-sm font-semibold text-center w-full">Lunar Return Metrics</h3>
+        <div className="horoscope-table-container">
+          <div className="horoscope-table-header">
+            <h3>Lunar Return Metrics</h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="horoscope-table-wrapper">
+            <table className="horoscope-table">
               <thead>
-                <tr className="horoscope-thead">
+                <tr>
                   {["Date / Month", "Moon Day", "Illumination", "Phase", "Moon Sign"].map((h) => (
-                    <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {lunarRows.map((row: any, i: number) => (
-                  <tr key={i} className="horoscope-tbody-row">
-                    <td className="px-3 py-2 text-xs">{row.date ?? row.month ?? `Month ${i + 1}`}</td>
-                    <td className="px-3 py-2 text-xs">{row.moon_day ?? row.day ?? "—"}</td>
-                    <td className="px-3 py-2 text-xs">{row.moon_illumination != null ? `${Number(row.moon_illumination).toFixed(1)}%` : (row.illumination ?? "—")}</td>
-                    <td className="px-3 py-2 text-xs">{row.moon_phase ?? row.phase ?? "—"}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{row.moon_sign ? <ZodiacSymbol sign={row.moon_sign} /> : (row.sign ? <ZodiacSymbol sign={row.sign} /> : "—")}</td>
+                  <tr key={i}>
+                    <td>{row.date ?? row.month ?? `Month ${i + 1}`}</td>
+                    <td>{row.moon_day ?? row.day ?? "—"}</td>
+                    <td>{row.moon_illumination != null ? `${Number(row.moon_illumination).toFixed(1)}%` : (row.illumination ?? "—")}</td>
+                    <td>{row.moon_phase ?? row.phase ?? "—"}</td>
+                    <td>{row.moon_sign ? <ZodiacSymbol sign={row.moon_sign} /> : (row.sign ? <ZodiacSymbol sign={row.sign} /> : "—")}</td>
                   </tr>
                 ))}
               </tbody>
@@ -2795,7 +2902,6 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       )}
 
       {/* AI interpretation cards */}
-      {/* AI interpretation cards */}
       {!aiData && <SectionSkeleton title={`${label} Interpretation`} />}
       {aiData === "error" && <SectionError title={`${label} Interpretation`} />}
       {Array.isArray(aiData) && aiData.map((item: any, i: number) => {
@@ -2803,28 +2909,21 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
         const interpretation = item.interpretation ?? item.data ?? "";
         if (!interpretation) return null;
 
-        // Visual Heading Parser
         const RelationshipHeading = () => {
-          // Patterns: "TransitPlanet Aspect NatalPlanet" or "Planet Aspect Planet"
-          // We look for known planets and aspects in the string
           const planets = Object.keys(PLANET_IMAGES);
           const aspects = Object.keys(ASPECT_IMAGES);
-
-          // Find matches in the title
           const foundPlanets = planets.filter(p => new RegExp(`\\b${p}\\b`, "i").test(title));
           const foundAspect = aspects.find(a => new RegExp(`\\b${a}\\b`, "i").test(title));
 
           if (foundPlanets.length >= 2 && foundAspect) {
-            // Determine p1 and p2 based on order in string
             const p1 = foundPlanets.find(p => title.toLowerCase().indexOf(p.toLowerCase()) < title.toLowerCase().indexOf(foundAspect.toLowerCase()));
             const p2 = foundPlanets.find(p => title.toLowerCase().indexOf(p.toLowerCase()) > title.toLowerCase().indexOf(foundAspect.toLowerCase()));
-
             if (p1 && p2) {
               return (
                 <div className="flex items-center justify-center gap-3">
                   <PlanetSymbol name={p1} />
                   <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 shadow-sm">
-                    {ASPECT_IMAGES[foundAspect] && <img src={ASPECT_IMAGES[foundAspect]} alt={foundAspect} className="size-4 object-contain" />}
+                    <AspectSymbol type={foundAspect} showText={false} />
                     <span className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">{foundAspect}</span>
                   </div>
                   <PlanetSymbol name={p2} />
@@ -2833,7 +2932,6 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
             }
           }
 
-          // Fallback to simple regex if above failed
           const relMatch = title.match(/(\b[A-Z][a-z]+\b)\s+(\b[A-Z][a-z]+\b)\s+(\b[A-Z][a-z]+\b)/);
           if (relMatch) {
             const [, p1, asp, p2] = relMatch;
@@ -2841,14 +2939,13 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
               <div className="flex items-center justify-center gap-3">
                 <PlanetSymbol name={p1} />
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 shadow-sm">
-                  {ASPECT_IMAGES[asp] && <img src={ASPECT_IMAGES[asp]} alt={asp} className="size-4 object-contain" />}
+                  <AspectSymbol type={asp} showText={false} />
                   <span className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">{asp}</span>
                 </div>
                 <PlanetSymbol name={p2} />
               </div>
             );
           }
-
           return <span className="uppercase tracking-widest font-bold text-amber-500/80">{title || `${label} ${i + 1}`}</span>;
         };
 
@@ -2858,14 +2955,6 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
               <div className="text-sm font-semibold text-center w-full">
                 <RelationshipHeading />
               </div>
-              {(() => {
-                const titleStr = String(title);
-                const match = titleStr.match(/(\b[A-Z][a-z]+\b)\s+in\s+(\b[A-Z][a-z]+\b)/);
-                if (match && checkDacen(match[1], match[1])) {
-                  // ... decan logic ...
-                }
-                return null;
-              })()}
             </div>
             <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
               <p className="leading-relaxed">{interpretation}</p>
@@ -2882,7 +2971,6 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
         );
       })}
 
-      {/* Lunar AI interpretation (monthly only) — from AI Lambda lunar_metrics prompt */}
       {tabSlug !== "tropical_transits_monthly_v3" && !isWeekly && lunarAiData && (() => {
         const items: any[] = Array.isArray(lunarAiData) ? lunarAiData : (typeof lunarAiData === "object" ? [lunarAiData] : []);
         return items.length > 0 ? (
@@ -2937,7 +3025,6 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
         ) : null;
       })()}
 
-      {/* Raw data fallback */}
       {data && transitRows.length === 0 && !Array.isArray(aiData) && (
         <details className="rounded-lg border">
           <summary className="px-4 py-2.5 text-sm font-semibold cursor-pointer bg-muted/20 hover:bg-muted/40">{label} Raw Data</summary>
@@ -2947,6 +3034,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
     </div>
   );
 }
+
 
 // ─── Horary Section ───────────────────────────────────────────────────────────
 
@@ -3488,17 +3576,19 @@ function TabBar({ currentSlug, onSelect }: { currentSlug: string; onSelect: (slu
 
 function BirthBlock({ title, value, onChange, disabled }: { title?: string; value: BirthInput; onChange: (v: BirthInput) => void; disabled?: boolean }) {
   return (
-    <div className="space-y-4">
-      {title && <p className="text-xs font-semibold uppercase tracking-wider text-amber-600">{title}</p>}
-      <div>
-        <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Date of Birth</Label>
-        <DatePicker value={value.dob} onChange={(v) => onChange({ ...value, dob: v })} disabled={disabled} />
+    <div className="space-y-3">
+      {title && <p className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{title}</p>}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Date of Birth</Label>
+          <DatePicker value={value.dob} onChange={(v) => onChange({ ...value, dob: v })} disabled={disabled} />
+        </div>
+        <div>
+          <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Time of Birth</Label>
+          <TimePicker value={value.tob} onChange={(v) => onChange({ ...value, tob: v })} disabled={disabled} />
+        </div>
+        <CityAutocomplete value={value.city} onChange={(c) => onChange({ ...value, city: c })} disabled={disabled} />
       </div>
-      <div>
-        <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Time of Birth</Label>
-        <TimePicker value={value.tob} onChange={(v) => onChange({ ...value, tob: v })} disabled={disabled} />
-      </div>
-      <CityAutocomplete value={value.city} onChange={(c) => onChange({ ...value, city: c })} disabled={disabled} />
     </div>
   );
 }
@@ -4238,7 +4328,7 @@ export default function AdminHoroscopePage() {
                 {currentTab.type === "single" ? (
                   <BirthBlock value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading} />
                 ) : (
-                  <div className="grid md:grid-cols-2 gap-6">
+                  <div className="flex flex-col gap-6">
                     <BirthBlock title="Person 1 (Self)" value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading} />
                     <BirthBlock title="Person 2 (Partner)" value={form.person2} onChange={(v) => setForm((f) => ({ ...f, person2: v }))} disabled={loading} />
                   </div>
@@ -4335,24 +4425,24 @@ export default function AdminHoroscopePage() {
                     )}
 
                     {/* Natal charts — always show first */}
-                        <div id="natal-charts-row" className="space-y-4">
-                          <NatalChartsRow
-                            svgs={[natalSvg, natalSvgTransit]}
-                            labels={[
-                              isTwoPersonAiTab ? "Person 1 (AstrologyAPI)" : "Natal Wheel Chart (AstrologyAPI)",
-                              isTwoPersonAiTab ? "Person 1 (FreeAstrology)" : "Natal Wheel Chart (FreeAstrology)"
-                            ]}
-                            onExpandImg={(src) => setChartModal(src)}
-                          />
-                          <NatalChartsRow
-                            svgs={[natalSvgP2, natalSvgTransitP2]}
-                            labels={[
-                              "Person 2 (AstrologyAPI)",
-                              "Person 2 (FreeAstrology)"
-                            ]}
-                            onExpandImg={(src) => setChartModal(src)}
-                          />
-                        </div>
+                    <div id="natal-charts-row" className="space-y-4">
+                      <NatalChartsRow
+                        svgs={[natalSvg, natalSvgTransit]}
+                        labels={[
+                          isTwoPersonAiTab ? "Person 1 (AstrologyAPI)" : "Natal Wheel Chart (AstrologyAPI)",
+                          isTwoPersonAiTab ? "Person 1 (FreeAstrology)" : "Natal Wheel Chart (FreeAstrology)"
+                        ]}
+                        onExpandImg={(src) => setChartModal(src)}
+                      />
+                      <NatalChartsRow
+                        svgs={[natalSvgP2, natalSvgTransitP2]}
+                        labels={[
+                          "Person 2 (AstrologyAPI)",
+                          "Person 2 (FreeAstrology)"
+                        ]}
+                        onExpandImg={(src) => setChartModal(src)}
+                      />
+                    </div>
 
                     {/* ─── Planet Return Summary ──────────────────── */}
                     {isPlanetReturn && (
@@ -4435,7 +4525,12 @@ export default function AdminHoroscopePage() {
                         {(!isMainTransitTab && currentSlug !== "friendship_report_tropical_v2") && (
                           <>
                             <PlanetsSection
-                              planets={natalData.planets}
+                              planets={[
+                                ...(natalData?.planets || []),
+                                ...(natalData?.node && !(natalData.planets || []).some(p => p.name === "Node") ? [{ name: "Node", ...natalData.node }] : []),
+                                ...(natalData?.chiron && !(natalData.planets || []).some(p => p.name === "Chiron") ? [{ name: "Chiron", ...natalData.chiron }] : []),
+                                ...(natalData?.fortune && !(natalData.planets || []).some(p => p.name === "Part of Fortune") ? [{ name: "Part of Fortune", ...natalData.fortune }] : []),
+                              ]}
                               aiData={ai.western_horoscope_planets}
                               areaOfInquiry={form.areaOfInquiry}
                               checkDacen={checkDacen}
