@@ -725,7 +725,10 @@ function ChartImageModal({ src, open, onClose }: { src: string; open: boolean; o
     <div className="fixed inset-0 z-[999999] bg-black flex flex-col items-center justify-center animate-in fade-in duration-300">
       {/* Persistent High-Visibility Close Icon */}
       <button
-        onClick={onClose}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
         className="absolute top-6 right-6 z-[110] size-12 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:text-white transition-all active:scale-95 shadow-[0_0_30px_rgba(245,158,11,0.3)] group"
         aria-label="Exit Fullscreen"
       >
@@ -1168,7 +1171,7 @@ function DecanImage({ src, alt, onFull }: { src: string; alt: string; onFull: (s
         alt={alt}
         onLoad={() => setLoaded(true)}
         className={cn(
-          "max-h-[320px] w-auto object-contain rounded-lg shadow-2xl transition-all duration-700 ease-in-out hover:scale-[1.02]",
+          "max-h-[600px] w-full object-contain rounded-lg shadow-2xl transition-all duration-700 ease-in-out hover:scale-[1.01]",
           loaded ? "opacity-100 scale-100" : "opacity-0 scale-95"
         )}
       />
@@ -1193,6 +1196,7 @@ function DecanModal({ planet, sign, open, onClose }: {
   const [loadingRows, setLoadingRows] = useState(false);
   const [rowError, setRowError] = useState<string | null>(null);
   const [fullscreenImg, setFullscreenImg] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'image' | 'text'>('image');
 
   // Fetch decan rows from the new decan-info API which returns cached descriptions
   // (and auto-generates + persists via AI if missing on the server side)
@@ -1243,13 +1247,28 @@ function DecanModal({ planet, sign, open, onClose }: {
 
   return (
     <>
-      <ChartImageModal
-        src={fullscreenImg || ""}
-        open={!!fullscreenImg}
-        onClose={() => setFullscreenImg(null)}
-      />
-      <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
+      <Dialog open={open} onOpenChange={(o) => {
+        // Only allow background/escape to close if there's no fullscreen image active
+        if (!fullscreenImg) {
+          !o && onClose();
+        }
+      }}>
+        <DialogContent className="max-w-5xl max-h-[90vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}
+          onInteractOutside={(e) => {
+            if (fullscreenImg) e.preventDefault();
+          }}
+          onEscapeKeyDown={(e) => {
+            if (fullscreenImg) {
+              e.preventDefault();
+              setFullscreenImg(null);
+            }
+          }}
+        >
+          <ChartImageModal
+            src={fullscreenImg || ""}
+            open={!!fullscreenImg}
+            onClose={() => setFullscreenImg(null)}
+          />
           {/* Custom Close Icon - Fixed to top-right */}
           <button
             onClick={onClose}
@@ -1260,7 +1279,7 @@ function DecanModal({ planet, sign, open, onClose }: {
           </button>
 
           {/* Sticky Header Section */}
-          <div className="px-6 py-5 border-b border-white/5 bg-slate-900/40 pr-16 shrink-0">
+          <div className="px-6 py-5 border-b border-white/5 bg-slate-900/40 pr-16 shrink-0 flex items-center justify-between">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3 text-lg font-bold gold-text">
                 {PLANET_IMAGES[planet] && (
@@ -1270,6 +1289,32 @@ function DecanModal({ planet, sign, open, onClose }: {
                 <span>{planet} Decans in {sign}</span>
               </DialogTitle>
             </DialogHeader>
+
+            {/* Toggle Switch */}
+            <div className="flex bg-slate-950/80 p-1 rounded-lg border border-white/10 ml-4">
+              <button
+                onClick={() => setViewMode('image')}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all",
+                  viewMode === 'image'
+                    ? "bg-amber-500 text-white shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                    : "text-muted-foreground hover:text-white"
+                )}
+              >
+                Image
+              </button>
+              <button
+                onClick={() => setViewMode('text')}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all",
+                  viewMode === 'text'
+                    ? "bg-amber-500 text-white shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                    : "text-muted-foreground hover:text-white"
+                )}
+              >
+                Text
+              </button>
+            </div>
           </div>
 
           {/* Scrollable Content Section */}
@@ -1298,52 +1343,63 @@ function DecanModal({ planet, sign, open, onClose }: {
                         <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-400 ml-auto">{planet} in {sign}</Badge>
                       </div>
 
-                      {/* Decan Image if available */}
-                      {row.decan_img && (
-                        <DecanImage
-                          src={row.decan_img}
-                          alt={`${ordinalDecan(row.decan)} Decan Imagery`}
-                          onFull={(src) => setFullscreenImg(src)}
-                        />
+                      {/* Content based on viewMode */}
+                      {viewMode === 'image' ? (
+                        <div className="p-0 animate-in fade-in duration-500">
+                          {row.decan_img ? (
+                            <DecanImage
+                              src={row.decan_img}
+                              alt={`${ordinalDecan(row.decan)} Decan Imagery`}
+                              onFull={(src) => setFullscreenImg(src)}
+                            />
+                          ) : (
+                            <div className="py-20 flex flex-col items-center justify-center text-muted-foreground bg-slate-900/40">
+                              <Eye className="size-8 mb-3 opacity-20" />
+                              <p className="text-sm">No imagery available for this decan.</p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-white/5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                          {/* Static labels row */}
+                          <div className="grid grid-cols-2 gap-px bg-white/5">
+                            <div className="bg-slate-950 px-4 py-3 space-y-1">
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-500/70">Greek Daemon</p>
+                              <p className="text-sm font-medium text-slate-200">{row.greek_daemon || "—"}</p>
+                            </div>
+                            <div className="bg-slate-950 px-4 py-3 space-y-1">
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-500/70">Tarot Card</p>
+                              <p className="text-sm font-medium text-slate-200">{row.tarot_name || "—"}</p>
+                            </div>
+                          </div>
+
+                          {/* Static description if present */}
+                          {row.description && (
+                            <div className="px-4 py-4 bg-slate-900/30">
+                              <p className="text-xs text-slate-400 leading-relaxed italic">{row.description}</p>
+                            </div>
+                          )}
+
+                          {/* AI sections */}
+                          <div className="px-4 py-5 space-y-6 bg-slate-950">
+                            <DecanAiBlock
+                              title={`${planet} in ${ordinalDecan(row.decan)} Decan of ${sign}`}
+                              data={sec?.planetAi ?? null}
+                              loading={sec?.loading ?? true}
+                            />
+                            <DecanAiBlock
+                              title={`Greek Daemon: ${row.greek_daemon}`}
+                              data={sec?.daemonAi ?? null}
+                              loading={sec?.loading ?? true}
+                            />
+                            <DecanAiBlock
+                              title={`Tarot: ${row.tarot_name}`}
+                              data={sec?.tarotAi ?? null}
+                              loading={sec?.loading ?? true}
+                            />
+                          </div>
+                        </div>
                       )}
-
-                      {/* Static labels row */}
-                      <div className="grid grid-cols-2 gap-px bg-border">
-                        <div className="bg-background px-4 py-2.5 space-y-0.5">
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Greek Daemon</p>
-                          <p className="text-sm font-medium text-foreground">{row.greek_daemon || "—"}</p>
-                        </div>
-                        <div className="bg-background px-4 py-2.5 space-y-0.5">
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tarot Card</p>
-                          <p className="text-sm font-medium text-foreground">{row.tarot_name || "—"}</p>
-                        </div>
-                      </div>
-
-                      {/* Static description if present */}
-                      {row.description && (
-                        <div className="px-4 py-3 bg-muted/5 border-t">
-                          <p className="text-xs text-muted-foreground leading-relaxed">{row.description}</p>
-                        </div>
-                      )}
-
-                      {/* AI sections */}
-                      <div className="px-4 py-4 space-y-5 border-t">
-                        <DecanAiBlock
-                          title={`${planet} in ${ordinalDecan(row.decan)} Decan of ${sign}`}
-                          data={sec?.planetAi ?? null}
-                          loading={sec?.loading ?? true}
-                        />
-                        <DecanAiBlock
-                          title={`Greek Daemon: ${row.greek_daemon}`}
-                          data={sec?.daemonAi ?? null}
-                          loading={sec?.loading ?? true}
-                        />
-                        <DecanAiBlock
-                          title={`Tarot: ${row.tarot_name}`}
-                          data={sec?.tarotAi ?? null}
-                          loading={sec?.loading ?? true}
-                        />
-                      </div>
                     </div>
                   );
                 })}
