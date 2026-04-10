@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { MarketingHeader } from "@/components/marketing/header";
@@ -9,7 +9,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
-import { PLANS, PLAN_ORDER, SHARED_FEATURES, type PlanId } from "@/lib/plans";
+
+/* ---------- API-driven plan shape (matches old Plan interface) ---------- */
+interface Plan {
+  id: string;
+  name: string;
+  tagline: string;
+  setupPrice: number;
+  monthlyPrice: number;
+  serviceLabel: string;
+  highlights: string[];
+  isFeatured: boolean;
+  badgeText: string;
+  stripePriceId: string | null;
+}
+
+function parseHighlights(html: string | null): string[] {
+  if (!html) return [];
+  const matches = html.match(/<li>(.*?)<\/li>/gi);
+  if (!matches) return [];
+  return matches.map((m) => m.replace(/<\/?li>/gi, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">"));
+}
+
+function getField(fields: { slug: string; value: string }[], slug: string): string | null {
+  return fields?.find((f) => f.slug === slug)?.value ?? null;
+}
 import {
   Loader2,
   Sparkles,
@@ -79,7 +103,11 @@ export default function GetStartedPage() {
   const supabase = createClient();
   const formRef = useRef<HTMLDivElement>(null);
 
-  const [selectedPlan, setSelectedPlan] = useState<PlanId>("both");
+  const [plans, setPlans] = useState<Record<string, Plan>>({});
+  const [planOrder, setPlanOrder] = useState<string[]>([]);
+  const [pricingLoaded, setPricingLoaded] = useState(false);
+
+  const [selectedPlan, setSelectedPlan] = useState<string>("");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -89,6 +117,46 @@ export default function GetStartedPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  // Fetch pricing from API
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/api/pricing?keys=professional_divination_course");
+        const body = await r.json();
+        if (!r.ok || !body.items?.length) return;
+        const item = body.items[0];
+        const mapped: Record<string, Plan> = {};
+        const order: { id: string; sort: number }[] = [];
+
+        for (const p of item.plans) {
+          const cf = p.custom_fields ?? [];
+          const id = p.plan_id;
+          mapped[id] = {
+            id,
+            name: p.display_name,
+            tagline: p.description ?? "",
+            setupPrice: p.onetime_amount ?? 0,
+            monthlyPrice: p.recurring_amount ?? p.onetime_amount ?? 0,
+            serviceLabel: getField(cf, "service_label") ?? "",
+            highlights: parseHighlights(p.html_description),
+            isFeatured: getField(cf, "is_featured") === "true",
+            badgeText: getField(cf, "badge_text") ?? "Best Value",
+            stripePriceId: p.stripe_price_id ?? null,
+          };
+          order.push({ id, sort: Number(getField(cf, "sort_order") ?? "99") });
+        }
+
+        order.sort((a, b) => a.sort - b.sort);
+        setPlans(mapped);
+        setPlanOrder(order.map((o) => o.id));
+        // Auto-select featured or first
+        const featured = order.find((o) => mapped[o.id]?.isFeatured);
+        setSelectedPlan(featured?.id ?? order[0]?.id ?? "");
+        setPricingLoaded(true);
+      } catch { /* fallback: stays empty, page shows loader */ }
+    })();
+  }, []);
 
   function nameToUsername(fullName: string): string {
     return fullName
@@ -108,7 +176,7 @@ export default function GetStartedPage() {
     }
   }
 
-  function selectPlan(planId: PlanId) {
+  function selectPlan(planId: string) {
     setSelectedPlan(planId);
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -199,7 +267,7 @@ export default function GetStartedPage() {
     }
   }
 
-  const plan = PLANS[selectedPlan];
+  const plan = plans[selectedPlan];
 
   return (
     <div className="flex min-h-screen flex-col bg-[#06080f]">
@@ -309,9 +377,15 @@ export default function GetStartedPage() {
               </p>
             </div>
 
+            {!pricingLoaded ? (
+              <div className="mt-12 flex justify-center py-16">
+                <Loader2 className="size-8 animate-spin text-[#c9a84c]/60" />
+              </div>
+            ) : (
             <div className="mt-12 grid items-start gap-6 md:grid-cols-3">
-              {PLAN_ORDER.map((planId) => {
-                const p = PLANS[planId];
+              {planOrder.map((planId) => {
+                const p = plans[planId];
+                if (!p) return null;
                 const isSelected = selectedPlan === planId;
                 return (
                   <div
@@ -326,7 +400,7 @@ export default function GetStartedPage() {
                     {p.isFeatured && (
                       <div className="bg-gradient-to-r from-[#8b7a3a] via-[#c9a84c] to-[#e2c97e] px-4 py-2 text-center text-xs font-bold uppercase tracking-widest text-black">
                         <Crown className="mr-1 inline size-3" />
-                        Best Value — Save $144/yr
+                        {p.badgeText}
                       </div>
                     )}
 
@@ -359,7 +433,7 @@ export default function GetStartedPage() {
 
                       {/* Highlights */}
                       <ul className="mt-5 space-y-2.5">
-                        {p.highlights.map((h) => (
+                        {p.highlights.map((h: string) => (
                           <li key={h} className="flex items-start gap-2.5">
                             <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[#c9a84c]/10">
                               <Check className="size-3 text-[#c9a84c]" />
@@ -386,6 +460,7 @@ export default function GetStartedPage() {
                 );
               })}
             </div>
+            )}
           </div>
         </section>
 
@@ -531,15 +606,17 @@ export default function GetStartedPage() {
                   Selected Plan
                 </p>
                 <h3 className="mt-1 font-display text-xl font-bold text-[#f5f0e8]">
-                  {plan.name}
+                  {plan?.name ?? "Select a plan"}
                 </h3>
-                <p className="mt-1 text-sm text-[#b8bcd0]/70">
-                  ${plan.setupPrice} setup + ${plan.monthlyPrice}/mo &middot;{" "}
-                  {plan.serviceLabel}
-                </p>
+                {plan && (
+                  <p className="mt-1 text-sm text-[#b8bcd0]/70">
+                    ${plan.setupPrice} setup + ${plan.monthlyPrice}/mo &middot;{" "}
+                    {plan.serviceLabel}
+                  </p>
+                )}
                 {/* Plan switcher */}
                 <div className="mt-3 flex justify-center gap-2">
-                  {PLAN_ORDER.map((pid) => (
+                  {planOrder.map((pid) => (
                     <button
                       key={pid}
                       type="button"
@@ -550,7 +627,7 @@ export default function GetStartedPage() {
                           : "border border-white/10 text-[#b8bcd0]/60 hover:border-[#c9a84c]/30 hover:text-[#c9a84c]"
                       }`}
                     >
-                      {PLANS[pid].name}
+                      {plans[pid]?.name}
                     </button>
                   ))}
                 </div>
@@ -670,7 +747,7 @@ export default function GetStartedPage() {
                       </>
                     ) : (
                       <>
-                        Start Your Practice — ${plan.setupPrice} + ${plan.monthlyPrice}/mo
+                        Start Your Practice — ${plan?.setupPrice ?? 0} + ${plan?.monthlyPrice ?? 0}/mo
                         <ArrowRight className="ml-2 size-4" />
                       </>
                     )}

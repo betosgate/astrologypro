@@ -633,10 +633,15 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
   const { p1, aspectType, p2 } = isAspect ? parseAspectTitle(aspectTitle ?? title) : { p1: "", aspectType: "", p2: "" };
   const [showFullImage, setShowFullImage] = useState(false);
 
+  // Reset fullscreen state when the main modal is closed
+  useEffect(() => {
+    if (!open) setShowFullImage(false);
+  }, [open]);
+
   return (
     <>
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
           {/* Custom Close Icon - Fixed to top-right */}
           <button
             onClick={onClose}
@@ -707,9 +712,9 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
               {/* Pictorial Representation — Below the text */}
               {pictureUrl && (
                 <div className="px-6 pb-6 pt-2 flex flex-col items-center justify-center bg-slate-900/20">
-                  <div className="relative group rounded-xl border border-amber-500/20 overflow-hidden bg-slate-950 shadow-[0_0_50px_rgba(245,158,11,0.08)] transition-all hover:border-amber-500/40 max-w-sm w-full">
+                  <div className="relative group rounded-xl border border-amber-500/20 overflow-hidden bg-slate-950 shadow-[0_0_50px_rgba(245,158,11,0.08)] transition-all hover:border-amber-500/40 w-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={pictureUrl} alt={title} className="w-full h-auto max-h-[280px] object-contain transition-transform duration-1000 group-hover:scale-[1.05]" />
+                    <img src={pictureUrl} alt={title} className="w-full h-auto max-h-[600px] object-contain transition-transform duration-1000 group-hover:scale-[1.05]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
 
                     {/* Maximize Icon */}
@@ -1343,6 +1348,11 @@ function DecanModal({ planet, sign, open, onClose }: {
   const [loadingRows, setLoadingRows] = useState(false);
   const [rowError, setRowError] = useState<string | null>(null);
   const [fullscreenImg, setFullscreenImg] = useState<string | null>(null);
+  
+  // Reset fullscreen state when the main modal is closed
+  useEffect(() => {
+    if (!open) setFullscreenImg(null);
+  }, [open]);
   const [viewMode, setViewMode] = useState<'image' | 'text'>('image');
 
   // Fetch decan rows from the new decan-info API which returns cached descriptions
@@ -1403,7 +1413,7 @@ function DecanModal({ planet, sign, open, onClose }: {
         }}
       />
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="max-w-5xl max-h-[90vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
+        <DialogContent className="sm:max-w-6xl max-h-[90vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
           {/* Custom Close Icon - Fixed to top-right (hide when image is fullscreen) */}
           {!fullscreenImg && (
             <button
