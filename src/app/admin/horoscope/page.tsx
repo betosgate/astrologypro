@@ -211,7 +211,7 @@ const defaultForm = (): FormState => ({
 function parseBirth(b: BirthInput) {
   const [year, month, day] = b.dob.split("-").map(Number);
   const [hour, min] = b.tob.split(":").map(Number);
-  return { day, month, year, hour, min, lat: b.city!.lat, lon: b.city!.lng, tzone: b.city!.timezone.offset_string };
+  return { day, month, year, hour, min, lat: b.city!.lat, lon: b.city!.lng, tzone: parseDecimalTz(b.city!.timezone.offset_string) };
 }
 function parseDecimalTz(offset: string): number {
   const sign = offset[0] === "-" ? -1 : 1;
@@ -3949,15 +3949,22 @@ export default function AdminHoroscopePage() {
         // Synastry
         relTasks.push(
           callCompute("synastry_horoscope", {
-            ...birth1,
-            p_day: birth2.day,
-            p_month: birth2.month,
-            p_year: birth2.year,
-            p_hour: birth2.hour,
-            p_min: birth2.min,
-            p_lat: birth2.lat,
-            p_lon: birth2.lon,
-            p_tzone: birth2.tzone,
+            p_day: birth1.day,
+            p_month: birth1.month,
+            p_year: birth1.year,
+            p_hour: birth1.hour,
+            p_min: birth1.min,
+            p_lat: birth1.lat,
+            p_lon: birth1.lon,
+            p_tzone: birth1.tzone,
+            s_day: birth2.day,
+            s_month: birth2.month,
+            s_year: birth2.year,
+            s_hour: birth2.hour,
+            s_min: birth2.min,
+            s_lat: birth2.lat,
+            s_lon: birth2.lon,
+            s_tzone: birth2.tzone,
           } as unknown as Record<string, unknown>).then((d) => {
             collected.synastry = d;
             setResults((prev) => ({ ...prev, synastry: d }));
@@ -3967,15 +3974,22 @@ export default function AdminHoroscopePage() {
         // Composite
         relTasks.push(
           callCompute("composite_horoscope", {
-            ...birth1,
-            p_day: birth2.day,
-            p_month: birth2.month,
-            p_year: birth2.year,
-            p_hour: birth2.hour,
-            p_min: birth2.min,
-            p_lat: birth2.lat,
-            p_lon: birth2.lon,
-            p_tzone: birth2.tzone,
+            p_day: birth1.day,
+            p_month: birth1.month,
+            p_year: birth1.year,
+            p_hour: birth1.hour,
+            p_min: birth1.min,
+            p_lat: birth1.lat,
+            p_lon: birth1.lon,
+            p_tzone: birth1.tzone,
+            s_day: birth2.day,
+            s_month: birth2.month,
+            s_year: birth2.year,
+            s_hour: birth2.hour,
+            s_min: birth2.min,
+            s_lat: birth2.lat,
+            s_lon: birth2.lon,
+            s_tzone: birth2.tzone,
           } as unknown as Record<string, unknown>)
             .then((d) => {
               collected.composite = d;
