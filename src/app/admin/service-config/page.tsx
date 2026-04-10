@@ -356,7 +356,6 @@ function ServiceDialog({
   const [category, setCategory] = useState("astrology");
   const [divinerId, setDivinerId] = useState("");
   const [duration, setDuration] = useState("60");
-  const [price, setPrice] = useState("0");
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -368,7 +367,6 @@ function ServiceDialog({
       setCategory(editingService.category);
       setDivinerId(editingService.diviner_id);
       setDuration(String(editingService.duration_minutes));
-      setPrice(String(editingService.base_price));
       setIsActive(editingService.is_active);
     } else {
       setName("");
@@ -376,7 +374,6 @@ function ServiceDialog({
       setCategory("astrology");
       setDivinerId(diviners[0]?.id ?? "");
       setDuration("60");
-      setPrice("0");
       setIsActive(true);
     }
   }, [open, editingService, diviners]);
@@ -407,7 +404,7 @@ function ServiceDialog({
           category,
           diviner_id: divinerId,
           duration_minutes: parseInt(duration, 10) || 60,
-          base_price: parseFloat(price) || 0,
+          base_price: 0,
           is_active: isActive,
         }),
       });
@@ -527,20 +524,6 @@ function ServiceDialog({
                 Optional — links this service to an admin-managed price.
               </p>
             </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Base Price ($)</Label>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-            />
-            <p className="text-[10px] text-muted-foreground">
-              Manual price override. If a pricing item is linked, this should match.
-            </p>
           </div>
 
           <div className="flex items-center gap-2">

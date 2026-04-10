@@ -22,12 +22,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Search, User, Bell, UserPlus, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Search, User, Bell, UserPlus, Plus, Link2, CreditCard } from "lucide-react";
 
 interface Client {
   id: string;
   full_name: string;
   email: string;
+}
+
+interface Service {
+  id: string;
+  name: string;
+  base_price: number;
+  duration_minutes: number;
+  category: string;
 }
 
 const TIMEZONE_OPTIONS = [
@@ -64,17 +73,22 @@ export function ManualBookingModal({
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   // Selection state
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [isManualClient, setIsManualClient] = useState(false);
   const [isReminderOnly, setIsReminderOnly] = useState(false);
-  
+
   // Manual client info
   const [manualName, setManualName] = useState("");
   const [manualEmail, setManualEmail] = useState("");
-  
+
+  // Service + payment
+  const [selectedServiceId, setSelectedServiceId] = useState<string>("");
+  const [sendPaymentLink, setSendPaymentLink] = useState(false);
+
   const [scheduledDate, setScheduledDate] = useState<string>("");
   const [scheduledTime, setScheduledTime] = useState<string>("");
   const [scheduledEndTime, setScheduledEndTime] = useState<string>("");
@@ -82,10 +96,22 @@ export function ManualBookingModal({
   const [notes, setNotes] = useState("");
   const [sendEmail, setSendEmail] = useState(false);
 
+  const selectedService = services.find(s => s.id === selectedServiceId) ?? null;
+  const serviceHasPrice = (selectedService?.base_price ?? 0) > 0;
+
+  // Fetch services on open
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/dashboard/services?active=true&limit=50")
+      .then(r => r.json())
+      .then(d => setServices(d.services ?? []))
+      .catch(() => {});
+  }, [open]);
+
   // Search clients with debounce
   useEffect(() => {
     if (!open || isManualClient || isReminderOnly) return;
-    
+
     const delayDebounceFn = setTimeout(() => {
       if (searchQuery.trim()) {
         fetchClients(searchQuery);
@@ -97,10 +123,14 @@ export function ManualBookingModal({
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, open, isManualClient, isReminderOnly]);
 
+  // Reset payment link toggle when service changes
+  useEffect(() => {
+    if (!serviceHasPrice) setSendPaymentLink(false);
+  }, [selectedServiceId, serviceHasPrice]);
+
   // Initialization/Cleanup
   useEffect(() => {
     if (open) {
-      // Initialize timezone
       const rawTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const browserTZ = (rawTZ === "Asia/Calcutta" || rawTZ === "Asia/Kolkata") ? "Asia/Kolkata" : rawTZ;
       setTimezone(browserTZ);
@@ -109,20 +139,16 @@ export function ManualBookingModal({
         const date = new Date(initialTime);
         setScheduledDate(date.toISOString().split("T")[0]);
         setScheduledTime(date.toTimeString().slice(0, 5));
-        
-        // Default end time to 30 mins later
         const endDate = new Date(date.getTime() + 30 * 60000);
         setScheduledEndTime(endDate.toTimeString().slice(0, 5));
       } else {
         const now = new Date();
         setScheduledDate(now.toISOString().split("T")[0]);
         setScheduledTime(now.toTimeString().slice(0, 5));
-        
         const endDate = new Date(now.getTime() + 30 * 60000);
         setScheduledEndTime(endDate.toTimeString().slice(0, 5));
       }
     } else {
-      // Reset form on close
       setSelectedClientId("");
       setIsManualClient(false);
       setIsReminderOnly(false);
@@ -131,6 +157,8 @@ export function ManualBookingModal({
       setSearchQuery("");
       setNotes("");
       setSendEmail(false);
+      setSelectedServiceId("");
+      setSendPaymentLink(false);
       setClients([]);
     }
   }, [open, initialTime]);
@@ -167,12 +195,14 @@ export function ManualBookingModal({
           client_id: isReminderOnly ? null : selectedClientId,
           manual_client: isManualClient ? { name: manualName, email: manualEmail } : null,
           is_reminder: isReminderOnly,
+          service_id: selectedServiceId || null,
           scheduled_date: scheduledDate,
           scheduled_time: scheduledTime,
           scheduled_end_time: scheduledEndTime,
           timezone,
           notes,
           send_email: sendEmail,
+          send_payment_link: sendPaymentLink,
         }),
       });
 
@@ -181,11 +211,21 @@ export function ManualBookingModal({
         throw new Error(data.error || "Failed to create booking");
       }
 
-      toast.success(isReminderOnly ? "Reminder saved" : "Booking created successfully");
+      const data = await res.json();
+
+      if (data.payment_url) {
+        toast.success("Booking created — payment link sent to client", {
+          description: "The client will receive an email with the payment link.",
+          duration: 6000,
+        });
+      } else {
+        toast.success(isReminderOnly ? "Reminder saved" : "Booking created successfully");
+      }
+
       onOpenChange(false);
       router.refresh();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -195,49 +235,50 @@ export function ManualBookingModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[620px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isReminderOnly ? "Add Personal Reminder" : "Create Manual Booking"}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Booking Type / Mode Selection */}
+          {/* Booking Type */}
           <div className="flex flex-wrap gap-4 items-center justify-between p-3 rounded-lg bg-muted/40 border border-border/50">
-             <div className="flex items-center gap-2">
-                <Switch 
-                  id="reminder-mode" 
-                  checked={isReminderOnly} 
+            <div className="flex items-center gap-2">
+              <Switch
+                id="reminder-mode"
+                checked={isReminderOnly}
+                onCheckedChange={(val) => {
+                  setIsReminderOnly(val);
+                  if (val) setIsManualClient(false);
+                }}
+              />
+              <Label htmlFor="reminder-mode" className="text-sm font-medium">Personal Reminder / Only for Me</Label>
+            </div>
+
+            {!isReminderOnly && (
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="manual-mode"
+                  checked={isManualClient}
                   onCheckedChange={(val) => {
-                    setIsReminderOnly(val);
-                    if (val) setIsManualClient(false);
+                    setIsManualClient(val);
+                    if (val) setSelectedClientId("");
                   }}
                 />
-                <Label htmlFor="reminder-mode" className="text-sm font-medium">Personal Reminder / Only for Me</Label>
-             </div>
-             
-             {!isReminderOnly && (
-               <div className="flex items-center gap-2">
-                  <Switch 
-                    id="manual-mode" 
-                    checked={isManualClient} 
-                    onCheckedChange={(val) => {
-                      setIsManualClient(val);
-                      if (val) setSelectedClientId("");
-                    }}
-                  />
-                  <Label htmlFor="manual-mode" className="text-sm font-medium">Add New Client Manually</Label>
-               </div>
-             )}
+                <Label htmlFor="manual-mode" className="text-sm font-medium">Add New Client Manually</Label>
+              </div>
+            )}
           </div>
 
+          {/* Client selection */}
           {!isReminderOnly && (
             <div className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
               {isManualClient ? (
                 <div className="grid grid-cols-2 gap-4 border-l-2 border-amber-500 pl-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="client-name">Client Full Name</Label>
-                    <Input 
-                      id="client-name" 
+                    <Input
+                      id="client-name"
                       placeholder="e.g. John Doe"
                       value={manualName}
                       onChange={(e) => setManualName(e.target.value)}
@@ -245,8 +286,8 @@ export function ManualBookingModal({
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="client-email">Client Email</Label>
-                    <Input 
-                      id="client-email" 
+                    <Input
+                      id="client-email"
                       type="email"
                       placeholder="e.g. john@example.com"
                       value={manualEmail}
@@ -266,7 +307,7 @@ export function ManualBookingModal({
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
-                  
+
                   {(searchQuery || clients.length > 0) && (
                     <div className="mt-2 max-h-[140px] overflow-y-auto rounded-md border border-input bg-background shadow-sm">
                       {searching ? (
@@ -295,11 +336,11 @@ export function ManualBookingModal({
                       ) : (
                         <div className="p-4 text-center text-sm text-muted-foreground">
                           <div className="flex flex-col items-center gap-2">
-                             <span>No clients found matching "{searchQuery}"</span>
-                             <Button variant="link" size="sm" onClick={() => setIsManualClient(true)} className="h-auto p-0">
-                                <UserPlus className="mr-1.5 h-3.5 w-3.5" />
-                                Add as new client?
-                             </Button>
+                            <span>No clients found matching "{searchQuery}"</span>
+                            <Button variant="link" size="sm" onClick={() => setIsManualClient(true)} className="h-auto p-0">
+                              <UserPlus className="mr-1.5 h-3.5 w-3.5" />
+                              Add as new client?
+                            </Button>
                           </div>
                         </div>
                       )}
@@ -310,9 +351,60 @@ export function ManualBookingModal({
             </div>
           )}
 
+          {/* Service selector */}
+          {!isReminderOnly && (
+            <div className="space-y-1.5">
+              <Label>Service <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Select
+                value={selectedServiceId || "__none"}
+                onValueChange={(v) => setSelectedServiceId(v === "__none" ? "" : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a service…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">No service</SelectItem>
+                  {services.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      <span className="flex items-center gap-2">
+                        {s.name}
+                        {s.base_price > 0 && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-400 border-amber-500/40">
+                            ${s.base_price}
+                          </Badge>
+                        )}
+                      </span>
+                    </SelectItem>
+                  ))}
+                  {services.length === 0 && (
+                    <div className="px-3 py-2 text-xs text-muted-foreground">No services assigned</div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Payment link toggle — only shown when service has a price */}
+          {!isReminderOnly && serviceHasPrice && (
+            <div className="flex items-center justify-between p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20 animate-in fade-in duration-200">
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2 font-medium text-sm">
+                  <CreditCard className="h-4 w-4 text-emerald-500" />
+                  Send Payment Link
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Client will receive a Stripe payment link for{" "}
+                  <strong className="text-foreground">${selectedService!.base_price}</strong>.
+                  Booking confirms automatically after payment.
+                </p>
+              </div>
+              <Switch checked={sendPaymentLink} onCheckedChange={setSendPaymentLink} />
+            </div>
+          )}
+
+          {/* Date / Time / Timezone */}
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-4">
-              {/* Timezone */}
               <div className="space-y-2">
                 <Label>Timezone</Label>
                 <Select value={timezone} onValueChange={setTimezone}>
@@ -331,8 +423,7 @@ export function ManualBookingModal({
             </div>
 
             <div className="space-y-4 border-l pl-6 border-border/60">
-               {/* Date */}
-               <div className="space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="date">Session Date</Label>
                 <Input
                   id="date"
@@ -341,8 +432,6 @@ export function ManualBookingModal({
                   onChange={(e) => setScheduledDate(e.target.value)}
                 />
               </div>
-
-              {/* Start Time */}
               <div className="space-y-2">
                 <Label htmlFor="time">Start Time</Label>
                 <Input
@@ -352,8 +441,6 @@ export function ManualBookingModal({
                   onChange={(e) => setScheduledTime(e.target.value)}
                 />
               </div>
-
-              {/* End Time */}
               <div className="space-y-2">
                 <Label htmlFor="end-time">End Time</Label>
                 <Input
@@ -366,7 +453,7 @@ export function ManualBookingModal({
             </div>
           </div>
 
-          {/* Notes (Rich Text Editor) */}
+          {/* Notes */}
           <div className="space-y-2">
             <Label>Notes & Instructions (Internal)</Label>
             <RichTextEditor
@@ -376,8 +463,8 @@ export function ManualBookingModal({
             />
           </div>
 
-          {/* Notifications */}
-          {!isReminderOnly && (
+          {/* Notification toggle (plain email, no payment) */}
+          {!isReminderOnly && !sendPaymentLink && (
             <div className="flex items-center justify-between p-4 rounded-lg bg-amber-500/5 border border-amber-500/10">
               <div className="flex flex-col gap-0.5">
                 <div className="flex items-center gap-2 font-medium text-sm">
@@ -389,23 +476,50 @@ export function ManualBookingModal({
               <Switch checked={sendEmail} onCheckedChange={setSendEmail} />
             </div>
           )}
+
+          {/* Payment link info banner */}
+          {sendPaymentLink && (
+            <div className="flex items-start gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-400 animate-in fade-in duration-200">
+              <Link2 className="mt-0.5 size-4 shrink-0" />
+              <span>
+                A Stripe-hosted payment page will be emailed to the client.
+                The booking status will remain <strong>Pending Payment</strong> until they pay.
+              </span>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="bg-muted/30 -mx-6 -mb-6 p-6 border-t mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleCreateBooking} 
-            className="bg-amber-500 hover:bg-amber-600 text-black font-semibold"
-            disabled={loading || (!isReminderOnly && !selectedClientId && !isManualClient) || !scheduledDate || !scheduledTime || !scheduledEndTime}
+          <Button
+            onClick={handleCreateBooking}
+            className={
+              sendPaymentLink
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                : "bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+            }
+            disabled={
+              loading ||
+              (!isReminderOnly && !selectedClientId && !isManualClient) ||
+              !scheduledDate ||
+              !scheduledTime ||
+              !scheduledEndTime
+            }
           >
             {loading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : sendPaymentLink ? (
+              <CreditCard className="mr-2 h-4 w-4" />
             ) : (
               <Plus className="mr-2 h-4 w-4" />
             )}
-            {isReminderOnly ? "Save Reminder" : "Confirm Booking"}
+            {isReminderOnly
+              ? "Save Reminder"
+              : sendPaymentLink
+              ? "Create & Send Payment Link"
+              : "Confirm Booking"}
           </Button>
         </DialogFooter>
       </DialogContent>

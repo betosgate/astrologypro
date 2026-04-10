@@ -77,7 +77,7 @@ export default async function CalendarPage() {
         "id, scheduled_at, duration_minutes, status, session_notes, metadata, services(name), clients(full_name)"
       )
       .eq("owner_id", ownerId)
-      .in("status", ["pending", "confirmed", "in_progress"])
+      .in("status", ["pending", "pending_payment", "confirmed", "in_progress"])
       .gte("scheduled_at", recentDate.toISOString())
       .order("scheduled_at", { ascending: true }),
   ]);

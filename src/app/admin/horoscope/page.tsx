@@ -4511,7 +4511,6 @@ export default function AdminHoroscopePage() {
                     {isTwoPersonAiTab && (
                       <RelationshipSection
                         aiMap={ai}
-                        results={results}
                         areaOfInquiry={form.areaOfInquiry}
                         tabSlug={currentSlug}
                         checkDacen={checkDacen}

@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/activity-log";
 import { createPaymentIntent } from "@/lib/stripe/connect";
 import { createCalendarEvent } from "@/lib/google-calendar";
+import { buildCalendarDescription, stripHtml } from "@/lib/calendar-utils";
 import { PRICING } from "@/lib/constants";
 import {
   sendBookingConfirmation,
@@ -14,37 +15,6 @@ import {
 
 export const dynamic = "force-dynamic";
 
-/** Strip HTML tags and decode basic entities for use in plain-text calendar descriptions. */
-function stripHtml(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n")
-    .replace(/<\/li>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&quot;/g, '"')
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-/**
- * Build the Google Calendar event description.
- * Body = availability template description (stripped of HTML).
- * Footer = cancel / reschedule deep-link for the client.
- */
-function buildCalendarDescription(
-  templateDescription: string | null,
-  bookingId: string,
-  appUrl: string
-): string {
-  const body = templateDescription ? stripHtml(templateDescription) : "";
-  const portalUrl = `${appUrl}/portal/bookings`;
-  const footer = `To cancel or reschedule, visit:\n${portalUrl}`;
-  return body ? `${body}\n\n---\n${footer}` : footer;
-}
 
 interface BookingPaymentBody {
   divinerId?: string;
@@ -245,43 +215,51 @@ export async function POST(request: NextRequest) {
     let availabilityTemplateTitle: string | null = null;
     let availabilityTemplateDescription: string | null = null;
 
-    const { data: candidateTemplates } = await adminSupabase
+    // Fetch all active templates for this diviner — select("*") avoids any
+    // column-narrowing issues. We rank matches in JS: service_id match first,
+    // then date-range overlap, then any active template.
+    const { data: allTemplates, error: templateFetchError } = await adminSupabase
       .from("availability_templates")
-      .select("id, title, description, service_id")
+      .select("*")
       .or(`owner_id.eq.${resolvedDivinerId},diviner_id.eq.${resolvedDivinerId}`)
-      .eq("is_active", true)
-      .lte("start_date", bookingDateStr)
-      .gte("end_date", bookingDateStr);
+      .eq("is_active", true);
 
-    if (candidateTemplates && candidateTemplates.length > 0) {
-      // Prefer the template whose service_id matches the booked service
-      const best =
-        candidateTemplates.find(
-          (t) => (t as Record<string, unknown>).service_id === serviceId
-        ) ?? candidateTemplates[0];
+    // eslint-disable-next-line no-console
+    console.log("[booking-payment] template lookup", {
+      resolvedDivinerId,
+      bookingDateStr,
+      serviceId,
+      templateFetchError,
+      found: allTemplates?.map((t: Record<string, unknown>) => ({
+        id: t.id,
+        title: t.title,
+        service_id: t.service_id,
+        start_date: t.start_date,
+        end_date: t.end_date,
+      })),
+    });
+
+    if (allTemplates && allTemplates.length > 0) {
+      // 1. Exact service_id match
+      let best: Record<string, unknown> | undefined = (
+        allTemplates as Record<string, unknown>[]
+      ).find((t) => t.service_id === serviceId);
+
+      // 2. Any template whose date range covers the booked date
+      if (!best) {
+        best = (allTemplates as Record<string, unknown>[]).find(
+          (t) =>
+            String(t.start_date ?? "") <= bookingDateStr &&
+            String(t.end_date ?? "") >= bookingDateStr
+        );
+      }
+
+      // 3. First template in the list
+      if (!best) best = allTemplates[0] as Record<string, unknown>;
 
       hasServiceAvailability = true;
-      availabilityTemplateTitle =
-        ((best as Record<string, unknown>).title as string) || null;
-      availabilityTemplateDescription =
-        ((best as Record<string, unknown>).description as string) || null;
-    } else {
-      // Last-resort: any active template for this diviner (no date filter)
-      const { data: anyTemplate } = await adminSupabase
-        .from("availability_templates")
-        .select("id, title, description, service_id")
-        .or(`owner_id.eq.${resolvedDivinerId},diviner_id.eq.${resolvedDivinerId}`)
-        .eq("is_active", true)
-        .limit(1)
-        .maybeSingle();
-
-      if (anyTemplate) {
-        hasServiceAvailability = true;
-        availabilityTemplateTitle =
-          ((anyTemplate as Record<string, unknown>).title as string) || null;
-        availabilityTemplateDescription =
-          ((anyTemplate as Record<string, unknown>).description as string) || null;
-      }
+      availabilityTemplateTitle = (best.title as string) || null;
+      availabilityTemplateDescription = (best.description as string) || null;
     }
 
     // --- Auto-create auth user if they don't exist ---
@@ -630,27 +608,30 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // Send confirmation + access instructions emails immediately
-      const sessionLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/session/${booking.id}`;
-      const calendarLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`${service.name} with ${diviner.display_name}`)}&dates=${startTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}/${endTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}&details=${encodeURIComponent(`Your reading session on AstrologyPro.\n\nJoin: ${sessionLink}`)}`;
+      // Send confirmation emails to the booker
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+      const portalBookingsUrl = `${appUrl}/portal/bookings`;
+      const calendarLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`${availabilityTemplateTitle ?? service.name} with ${diviner.display_name}`)}&dates=${startTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}/${endTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}&details=${encodeURIComponent(availabilityTemplateDescription ? stripHtml(availabilityTemplateDescription) : `Your session with ${diviner.display_name}`)}`;
+
+      const formattedDateTime = startTime.toLocaleString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
 
       const emailParams = {
         clientEmail,
         divinerName: diviner.display_name,
-        serviceName: service.name,
-        dateTime: startTime.toLocaleString("en-US", {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-        }),
-        sessionLink,
+        serviceName: availabilityTemplateTitle ?? service.name,
+        dateTime: formattedDateTime,
+        // Point booker to their portal bookings page (not a raw session link)
+        sessionLink: portalBookingsUrl,
         duration: service.duration_minutes,
       };
 
-      // Fire emails without blocking the response
       const emailPromises: Promise<unknown>[] = [
         sendBookingConfirmation(emailParams),
         sendBookingAccessInstructions({
@@ -659,31 +640,27 @@ export async function POST(request: NextRequest) {
         }),
       ];
 
-      // Send welcome email for new users with portal access instructions
       if (isNewUser) {
-        const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/portal`;
         emailPromises.push(
           sendWelcomeAndBooked({
             clientEmail,
             clientName,
             divinerName: diviner.display_name,
-            serviceName: service.name,
-            dateTime: startTime.toLocaleString("en-US", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-            }),
-            portalUrl,
+            serviceName: availabilityTemplateTitle ?? service.name,
+            dateTime: formattedDateTime,
+            portalUrl: `${appUrl}/portal`,
           })
         );
       }
 
-      Promise.all(emailPromises).catch((err) =>
-        console.error("Failed to send booking emails:", err)
-      );
+      // Await emails so failures are visible in logs, not silently swallowed
+      await Promise.all(emailPromises).catch((err) => {
+        console.error("[booking-payment] Failed to send booking emails:", {
+          bookingId: booking.id,
+          clientEmail,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
 
       // Push event to diviner's connected calendars (non-blocking)
       const { data: calConnections } = await adminSupabase
@@ -692,10 +669,8 @@ export async function POST(request: NextRequest) {
         .eq("owner_id", resolvedDivinerId);
 
       if (calConnections?.some((c) => c.provider === "google")) {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
         const calEventDescription = buildCalendarDescription(
           availabilityTemplateDescription,
-          booking.id,
           appUrl,
         );
         createCalendarEvent(resolvedDivinerId, {

@@ -29,13 +29,25 @@ type QuizQuestionRow = {
 };
 
 function isMissingRemediationColumnError(error: unknown) {
-  return (
-    !!error &&
-    typeof error === "object" &&
+  if (!error || typeof error !== "object") return false;
+
+  // PostgreSQL error code 42703 = undefined_column (most reliable check)
+  const code = (error as { code?: unknown }).code;
+  if (code === "42703") return true;
+
+  // PostgREST sometimes wraps the code differently — check PGRST204 (column not found)
+  if (code === "PGRST204") return true;
+
+  // Fallback: string match on error message for older PostgREST versions
+  if (
     "message" in error &&
     typeof (error as { message?: unknown }).message === "string" &&
-    (error as { message: string }).message.includes("quiz_questions.remediation_")
-  );
+    (error as { message: string }).message.includes("remediation_")
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 function normalizeOptions(options: unknown) {

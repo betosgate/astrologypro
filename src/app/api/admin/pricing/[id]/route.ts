@@ -64,6 +64,9 @@ export async function PATCH(
   if (body.payment_provider_id !== undefined) {
     updates.payment_provider_id = body.payment_provider_id === null ? null : String(body.payment_provider_id).trim() || null;
   }
+  if (body.html_description !== undefined) {
+    updates.html_description = body.html_description === null ? null : String(body.html_description) || null;
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 422 });
