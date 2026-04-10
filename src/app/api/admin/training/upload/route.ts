@@ -92,6 +92,24 @@ export async function POST(req: NextRequest) {
 
   if (uploadError) {
     console.error("[admin/training/upload] storage error:", uploadError.message);
+
+    // Detect Supabase bucket-level size rejection and return a descriptive
+    // 413 instead of a generic 500 so the UI can guide the admin.
+    const isBucketSizeError =
+      uploadError.message?.includes("exceeded the maximum allowed size") ||
+      uploadError.message?.includes("Payload too large");
+
+    if (isBucketSizeError) {
+      return NextResponse.json(
+        {
+          error:
+            `The file (${(file.size / (1024 * 1024)).toFixed(1)} MB) was rejected by the storage bucket's file_size_limit. ` +
+            `Run migration 20260410000001 from Admin → DB Migrations to increase the bucket limit to 500 MB.`,
+        },
+        { status: 413 },
+      );
+    }
+
     return NextResponse.json(
       { error: `Storage upload failed: ${uploadError.message}` },
       { status: 500 },
