@@ -14,6 +14,7 @@ import {
   sendCommunityMembershipWelcome,
 } from "@/lib/email";
 import { createCalendarEvent } from "@/lib/google-calendar";
+import { buildCalendarDescription } from "@/lib/calendar-utils";
 import { createMsCalendarEvent } from "@/lib/microsoft-calendar";
 import {
   getSubscriptionPeriodEndIso,
@@ -291,6 +292,98 @@ async function handlePerennialSignupCheckoutCompleted(
   );
 }
 
+async function handleManualBookingCheckoutCompleted(
+  session: Stripe.Checkout.Session
+) {
+  const bookingId = session.metadata?.bookingId;
+  if (!bookingId) return;
+
+  const supabase = createAdminClient();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+
+  // Confirm the booking
+  await supabase
+    .from("bookings")
+    .update({ status: "confirmed" })
+    .eq("id", bookingId);
+
+  // Fetch full booking for calendar + email
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select(
+      "id, scheduled_at, duration_minutes, metadata, diviner_id, client_id, services(name, duration_minutes), diviners(id, display_name), clients(email, full_name)"
+    )
+    .eq("id", bookingId)
+    .single();
+
+  if (!booking) return;
+
+  const svc = (booking as Record<string, unknown>).services as { name: string; duration_minutes: number } | null;
+  const div = (booking as Record<string, unknown>).diviners as { id: string; display_name: string } | null;
+  const clientRecord = (booking as Record<string, unknown>).clients as { email: string; full_name: string | null } | null;
+  const meta = (booking as Record<string, unknown>).metadata as { availability_title?: string; availability_description?: string } | null;
+
+  if (!svc || !div || !clientRecord) return;
+
+  const startTime = new Date(booking.scheduled_at as string);
+  const durationMins = (booking.duration_minutes as number) ?? svc.duration_minutes;
+  const endTime = new Date(startTime.getTime() + durationMins * 60 * 1000);
+  const sessionLink = `${appUrl}/portal/bookings`;
+
+  const formattedDateTime = startTime.toLocaleString("en-US", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+    hour: "numeric", minute: "2-digit",
+  });
+
+  const eventTitle = meta?.availability_title ?? svc.name;
+  const calendarLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`${eventTitle} with ${div.display_name}`)}&dates=${startTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}/${endTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}`;
+
+  // Send booking confirmation email to client
+  await Promise.all([
+    sendBookingConfirmation({
+      clientEmail: clientRecord.email,
+      divinerName: div.display_name,
+      serviceName: eventTitle,
+      dateTime: formattedDateTime,
+      duration: durationMins,
+      sessionLink,
+    }),
+    sendBookingAccessInstructions({
+      clientEmail: clientRecord.email,
+      divinerName: div.display_name,
+      serviceName: eventTitle,
+      dateTime: formattedDateTime,
+      sessionLink,
+      calendarLink,
+    }),
+  ]).catch((err) =>
+    console.error("[Webhook] Failed to send manual booking confirmation emails:", err)
+  );
+
+  // Push Google Calendar event
+  const { data: calConnections } = await supabase
+    .from("calendar_connections")
+    .select("provider")
+    .eq("owner_id", div.id);
+
+  if (calConnections?.some((c) => c.provider === "google")) {
+    createCalendarEvent(div.id, {
+      title: `${eventTitle} — ${clientRecord.full_name ?? clientRecord.email}`,
+      description: buildCalendarDescription(meta?.availability_description ?? null, appUrl),
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
+      clientEmail: clientRecord.email,
+      clientName: clientRecord.full_name ?? undefined,
+    })
+      .then(({ eventId }) =>
+        supabase.from("bookings").update({ google_calendar_event_id: eventId }).eq("id", bookingId)
+      )
+      .catch((err) =>
+        console.error("[Webhook] Failed to create Google Calendar event for manual booking:", err)
+      );
+  }
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Route gift certificate checkouts to their own handler
   if (session.metadata?.type === "gift_certificate") {
@@ -305,6 +398,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Route Perennial multi-member household signups
   if (session.metadata?.type === "perennial_signup") {
     return handlePerennialSignupCheckoutCompleted(session);
+  }
+
+  // Handle manual booking payment link checkout
+  if (session.metadata?.bookingId) {
+    return handleManualBookingCheckoutCompleted(session);
   }
 
   const supabase = createAdminClient();
@@ -862,7 +960,7 @@ async function handlePaymentIntentSucceeded(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, duration_minutes, diviner_id, client_id, services(name, duration_minutes), diviners(id, display_name), clients(email, full_name, user_id)"
+      "id, scheduled_at, duration_minutes, diviner_id, client_id, metadata, services(name, duration_minutes), diviners(id, display_name), clients(email, full_name, user_id)"
     )
     .eq("id", bookingId)
     .single();
@@ -882,6 +980,11 @@ async function handlePaymentIntentSucceeded(
     full_name: string | null;
     user_id: string | null;
   } | null;
+  const bookingMeta = (booking as Record<string, unknown>).metadata as {
+    availability_title?: string;
+    availability_description?: string;
+  } | null;
+  const eventTitle = bookingMeta?.availability_title ?? svc?.name;
 
   if (!svc || !div) return;
 
@@ -948,8 +1051,11 @@ async function handlePaymentIntentSucceeded(
   // Push event to diviner's Google Calendar if connected
   if (hasGoogleCalendar) {
     createCalendarEvent(div.id, {
-      title: `${svc.name} — ${clientRecord?.full_name ?? clientEmail}`,
-      description: `Client: ${clientEmail}\nSession link: ${sessionLink}`,
+      title: `${eventTitle} — ${clientRecord?.full_name ?? clientEmail}`,
+      description: buildCalendarDescription(
+        bookingMeta?.availability_description ?? null,
+        appUrl,
+      ),
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
       clientEmail: clientRecord?.email ?? clientEmail,

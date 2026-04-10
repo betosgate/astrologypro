@@ -3,6 +3,13 @@ import path from "path";
 
 // build: 2026-04-03T09:30Z
 const nextConfig: NextConfig = {
+  experimental: {
+    // Admin training video uploads use Route Handlers with multipart/form-data.
+    // The default buffered proxy/request-body limit is too small for lesson
+    // videos, which truncates the body before `request.formData()` runs and
+    // surfaces as "Invalid multipart/form-data body.".
+    proxyClientMaxBodySize: "500mb",
+  },
   // Exclude playwright and electron from the server bundle — they are dev-only
   // test dependencies and should never be bundled into the Next.js server.
   serverExternalPackages: ["playwright-core", "playwright", "electron", "chromium-bidi"],

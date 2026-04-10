@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { MarketingHeader } from "@/components/marketing/header";
@@ -9,7 +9,79 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
-import { PLANS, PLAN_ORDER, SHARED_FEATURES, type PlanId } from "@/lib/plans";
+
+/* ---------- API-driven plan shape (matches old Plan interface) ---------- */
+interface Plan {
+  id: string;
+  itemKey: string;
+  itemName: string;
+  name: string;
+  tagline: string;
+  setupPrice: number;
+  monthlyPrice: number;
+  highlights: string[];
+  customFields: { label: string; value: string; slug: string }[];
+  isFeatured: boolean;
+  badgeText: string;
+  stripePriceId: string | null;
+}
+
+interface PricingItem {
+  item_key?: string;
+  item_name: string;
+  description: string | null;
+  plans: {
+    plan_id: string;
+    display_name: string;
+    description: string | null;
+    onetime_amount: number | null;
+    recurring_amount: number | null;
+    html_description: string | null;
+    stripe_price_id: string | null;
+    custom_fields?: { label: string; slug: string; value: string }[];
+  }[];
+}
+
+interface PricingSection {
+  itemKey: string;
+  itemName: string;
+  description: string | null;
+  plans: Record<string, Plan>;
+  planOrder: string[];
+}
+
+function parseHighlights(html: string | null): string[] {
+  if (!html) return [];
+  const liMatches = html.match(/<li\b[^>]*>([\s\S]*?)<\/li>/gi);
+  const pMatches = html.match(/<p\b[^>]*>([\s\S]*?)<\/p>/gi);
+  const matches = liMatches?.length ? liMatches : pMatches ?? [];
+  return matches
+    .map((m) =>
+      m
+        .replace(/<\/?(li|p)\b[^>]*>/gi, "")
+        .replace(/<[^>]+>/g, "")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .trim(),
+    )
+    .filter(Boolean);
+}
+
+function getField(fields: { slug: string; value: string }[], slug: string): string | null {
+  return fields?.find((f) => f.slug === slug)?.value ?? null;
+}
+
+function getRenderableCustomFields(fields: { label: string; value: string; slug: string }[]) {
+  return fields.filter((field) => {
+    if (!field.value?.trim()) return false;
+    return !["is_featured", "badge_text", "sort_order"].includes(field.slug);
+  });
+}
+
+function formatFieldText(field: { label: string; value: string }) {
+  return `${field.label}: ${field.value}`;
+}
 import {
   Loader2,
   Sparkles,
@@ -21,7 +93,6 @@ import {
   Zap,
   Users,
   Video,
-  Phone,
   Globe,
   BarChart3,
   Mail,
@@ -79,7 +150,10 @@ export default function GetStartedPage() {
   const supabase = createClient();
   const formRef = useRef<HTMLDivElement>(null);
 
-  const [selectedPlan, setSelectedPlan] = useState<PlanId>("both");
+  const [pricingSections, setPricingSections] = useState<PricingSection[]>([]);
+  const [pricingLoaded, setPricingLoaded] = useState(false);
+
+  const [selectedPlan, setSelectedPlan] = useState<string>("");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -89,6 +163,60 @@ export default function GetStartedPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  // Fetch pricing from API
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch(
+          "/api/pricing?keys=professional_divination_course,perennial_mandalism_community",
+        );
+        const body = await r.json();
+        if (!r.ok || !body.items?.length) return;
+        const sections = (body.items as PricingItem[]).map((item) => {
+          const mapped: Record<string, Plan> = {};
+          const order: { id: string; sort: number }[] = [];
+
+          for (const p of item.plans) {
+            const cf = p.custom_fields ?? [];
+            const id = p.plan_id;
+            mapped[id] = {
+              id,
+              itemKey: item.item_key ?? "",
+              itemName: item.item_name,
+              name: p.display_name,
+              tagline: p.description ?? "",
+              setupPrice: p.onetime_amount ?? 0,
+              monthlyPrice: p.recurring_amount ?? p.onetime_amount ?? 0,
+              highlights: parseHighlights(p.html_description),
+              customFields: cf,
+              isFeatured: getField(cf, "is_featured") === "true",
+              badgeText: getField(cf, "badge_text") ?? "Best Value",
+              stripePriceId: p.stripe_price_id ?? null,
+            };
+            order.push({ id, sort: Number(getField(cf, "sort_order") ?? "99") });
+          }
+
+          order.sort((a, b) => a.sort - b.sort);
+
+          return {
+            itemKey: item.item_key ?? "",
+            itemName: item.item_name,
+            description: item.description,
+            plans: mapped,
+            planOrder: order.map((o) => o.id),
+          };
+        });
+
+        setPricingSections(sections);
+
+        const primarySection = sections.find((section) => section.itemKey === "professional_divination_course");
+        const featured = primarySection?.planOrder.find((planId) => primarySection.plans[planId]?.isFeatured);
+        setSelectedPlan(featured ?? primarySection?.planOrder[0] ?? "");
+        setPricingLoaded(true);
+      } catch { /* fallback: stays empty, page shows loader */ }
+    })();
+  }, []);
 
   function nameToUsername(fullName: string): string {
     return fullName
@@ -108,7 +236,7 @@ export default function GetStartedPage() {
     }
   }
 
-  function selectPlan(planId: PlanId) {
+  function selectPlan(planId: string) {
     setSelectedPlan(planId);
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -199,7 +327,19 @@ export default function GetStartedPage() {
     }
   }
 
-  const plan = PLANS[selectedPlan];
+  const plan = pricingSections
+    .flatMap((section) => section.planOrder.map((planId) => section.plans[planId]))
+    .find((entry) => entry?.id === selectedPlan);
+
+  const selectedSection = plan
+    ? pricingSections.find((section) => section.itemKey === plan.itemKey)
+    : null;
+
+  const allPlanOptions = pricingSections.flatMap((section) =>
+    section.planOrder
+      .map((planId) => section.plans[planId])
+      .filter(Boolean),
+  );
 
   return (
     <div className="flex min-h-screen flex-col bg-[#06080f]">
@@ -309,83 +449,115 @@ export default function GetStartedPage() {
               </p>
             </div>
 
-            <div className="mt-12 grid items-start gap-6 md:grid-cols-3">
-              {PLAN_ORDER.map((planId) => {
-                const p = PLANS[planId];
-                const isSelected = selectedPlan === planId;
-                return (
-                  <div
-                    key={planId}
-                    className={`relative overflow-hidden rounded-2xl border transition-all duration-300 ${
-                      p.isFeatured
-                        ? "border-[#c9a84c]/40 bg-[#c9a84c]/[0.03] shadow-2xl shadow-[#c9a84c]/10 md:-mt-4 md:mb-0"
-                        : "border-white/[0.08] bg-white/[0.02]"
-                    } ${isSelected ? "ring-2 ring-[#c9a84c]" : ""}`}
-                  >
-                    {/* Best value badge */}
-                    {p.isFeatured && (
-                      <div className="bg-gradient-to-r from-[#8b7a3a] via-[#c9a84c] to-[#e2c97e] px-4 py-2 text-center text-xs font-bold uppercase tracking-widest text-black">
-                        <Crown className="mr-1 inline size-3" />
-                        Best Value — Save $144/yr
-                      </div>
-                    )}
-
-                    <div className="p-6 md:p-8">
-                      {/* Plan name */}
-                      <h3 className="font-display text-xl font-bold text-[#f5f0e8]">
-                        {p.name}
-                      </h3>
-                      <p className="mt-1 text-sm text-[#b8bcd0]/60">{p.tagline}</p>
-
-                      {/* Pricing */}
-                      <div className="mt-5">
-                        <div className="flex items-baseline gap-1">
-                          <span className="font-display text-4xl font-bold text-[#f5f0e8]">
-                            ${p.monthlyPrice}
-                          </span>
-                          <span className="text-[#b8bcd0]/60">/mo</span>
-                        </div>
-                        <p className="mt-1 text-sm text-[#b8bcd0]/50">
-                          + ${p.setupPrice} one-time setup
-                        </p>
+            {!pricingLoaded ? (
+              <div className="mt-12 flex justify-center py-16">
+                <Loader2 className="size-8 animate-spin text-[#c9a84c]/60" />
+              </div>
+            ) : (
+              <div className="mt-12 space-y-16">
+                {pricingSections.map((section) => {
+                  return (
+                    <div key={section.itemKey || section.itemName} className="space-y-8">
+                      <div className="text-center">
+                        <h3 className="font-display text-2xl font-bold text-[#f5f0e8] sm:text-3xl">
+                          {section.itemName}
+                        </h3>
+                        {section.description && (
+                          <p className="mx-auto mt-3 max-w-3xl text-base text-[#b8bcd0]/70">
+                            {section.description}
+                          </p>
+                        )}
                       </div>
 
-                      {/* Service count */}
-                      <div className="mt-5 rounded-lg border border-[#c9a84c]/15 bg-[#c9a84c]/5 px-4 py-3">
-                        <p className="text-sm font-medium text-[#c9a84c]">
-                          {p.serviceLabel}
-                        </p>
-                      </div>
+                      <div className="grid items-start gap-6 md:grid-cols-3">
+                        {section.planOrder.map((planId) => {
+                          const p = section.plans[planId];
+                          if (!p) return null;
+                          const isSelected = selectedPlan === planId;
+                          const displaySummaryFields = getRenderableCustomFields(p.customFields);
+                          return (
+                            <div
+                              key={planId}
+                              className={`relative overflow-hidden rounded-2xl border transition-all duration-300 ${
+                                p.isFeatured
+                                  ? "border-[#c9a84c]/40 bg-[#c9a84c]/[0.03] shadow-2xl shadow-[#c9a84c]/10 md:-mt-4 md:mb-0"
+                                  : "border-white/[0.08] bg-white/[0.02]"
+                              } ${isSelected ? "ring-2 ring-[#c9a84c]" : ""}`}
+                            >
+                              {p.isFeatured && (
+                                <div className="bg-gradient-to-r from-[#8b7a3a] via-[#c9a84c] to-[#e2c97e] px-4 py-2 text-center text-xs font-bold uppercase tracking-widest text-black">
+                                  <Crown className="mr-1 inline size-3" />
+                                  {p.badgeText}
+                                </div>
+                              )}
 
-                      {/* Highlights */}
-                      <ul className="mt-5 space-y-2.5">
-                        {p.highlights.map((h) => (
-                          <li key={h} className="flex items-start gap-2.5">
-                            <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[#c9a84c]/10">
-                              <Check className="size-3 text-[#c9a84c]" />
+                              <div className="p-6 md:p-8">
+                                <h3 className="font-display text-xl font-bold text-[#f5f0e8]">
+                                  {p.name}
+                                </h3>
+                                <p className="mt-1 text-sm text-[#b8bcd0]/60">{p.tagline}</p>
+
+                                <div className="mt-5">
+                                  <div className="flex items-baseline gap-1">
+                                    <span className="font-display text-4xl font-bold text-[#f5f0e8]">
+                                      ${p.monthlyPrice}
+                                    </span>
+                                    <span className="text-[#b8bcd0]/60">/mo</span>
+                                  </div>
+                                  <p className="mt-1 text-sm text-[#b8bcd0]/50">
+                                    + ${p.setupPrice} one-time setup
+                                  </p>
+                                </div>
+
+                                {displaySummaryFields.length > 0 && (
+                                  <div className="mt-5 space-y-3">
+                                    {displaySummaryFields.map((field) => (
+                                      <div
+                                        key={`${p.id}-${field.slug}`}
+                                        className="rounded-lg border border-[#c9a84c]/15 bg-[#c9a84c]/5 px-4 py-3"
+                                      >
+                                        <p className="text-sm font-medium text-[#c9a84c]">
+                                          {formatFieldText(field)}
+                                        </p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {p.highlights.length > 0 && (
+                                  <ul className="mt-5 space-y-2.5">
+                                    {p.highlights.map((h: string) => (
+                                      <li key={h} className="flex items-start gap-2.5">
+                                        <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[#c9a84c]/10">
+                                          <Check className="size-3 text-[#c9a84c]" />
+                                        </div>
+                                        <span className="text-sm text-[#b8bcd0]/80">{h}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => selectPlan(planId)}
+                                  className={`mt-6 w-full rounded-full py-3 text-sm font-semibold transition-all ${
+                                    p.isFeatured
+                                      ? "bg-[#c9a84c] text-black shadow-lg shadow-[#c9a84c]/25 hover:bg-[#e2c97e]"
+                                      : "border border-[#c9a84c]/30 text-[#c9a84c] hover:border-[#c9a84c] hover:bg-[#c9a84c]/10"
+                                  }`}
+                                >
+                                  {isSelected ? "Selected — Scroll to Sign Up" : `Choose ${p.name}`}
+                                </button>
+                              </div>
                             </div>
-                            <span className="text-sm text-[#b8bcd0]/80">{h}</span>
-                          </li>
-                        ))}
-                      </ul>
-
-                      {/* CTA */}
-                      <button
-                        type="button"
-                        onClick={() => selectPlan(planId)}
-                        className={`mt-6 w-full rounded-full py-3 text-sm font-semibold transition-all ${
-                          p.isFeatured
-                            ? "bg-[#c9a84c] text-black shadow-lg shadow-[#c9a84c]/25 hover:bg-[#e2c97e]"
-                            : "border border-[#c9a84c]/30 text-[#c9a84c] hover:border-[#c9a84c] hover:bg-[#c9a84c]/10"
-                        }`}
-                      >
-                        {isSelected ? "Selected — Scroll to Sign Up" : `Choose ${p.name}`}
-                      </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
 
@@ -528,29 +700,47 @@ export default function GetStartedPage() {
               {/* Plan summary header */}
               <div className="border-b border-white/[0.06] bg-[#c9a84c]/5 px-6 py-5 text-center">
                 <p className="text-xs font-medium uppercase tracking-wider text-[#c9a84c]/60">
-                  Selected Plan
+                  Selected Path
                 </p>
                 <h3 className="mt-1 font-display text-xl font-bold text-[#f5f0e8]">
-                  {plan.name}
+                  {plan?.itemName ?? "Select a plan"}
                 </h3>
-                <p className="mt-1 text-sm text-[#b8bcd0]/70">
-                  ${plan.setupPrice} setup + ${plan.monthlyPrice}/mo &middot;{" "}
-                  {plan.serviceLabel}
-                </p>
+                {plan && (
+                  <p className="mt-1 text-sm text-[#b8bcd0]/70">
+                    {plan.name} &middot; ${plan.setupPrice} setup + ${plan.monthlyPrice}/mo
+                  </p>
+                )}
+                {plan && (
+                  <div className="mt-3 flex flex-wrap justify-center gap-2">
+                    {getRenderableCustomFields(plan.customFields).map((field) => (
+                      <span
+                        key={`${plan.id}-${field.slug}`}
+                        className="rounded-full border border-[#c9a84c]/20 bg-[#c9a84c]/5 px-3 py-1 text-[11px] font-medium text-[#c9a84c]"
+                      >
+                        {formatFieldText(field)}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {selectedSection?.description && (
+                  <p className="mx-auto mt-3 max-w-md text-sm text-[#b8bcd0]/60">
+                    {selectedSection.description}
+                  </p>
+                )}
                 {/* Plan switcher */}
-                <div className="mt-3 flex justify-center gap-2">
-                  {PLAN_ORDER.map((pid) => (
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  {allPlanOptions.map((option) => (
                     <button
-                      key={pid}
+                      key={option.id}
                       type="button"
-                      onClick={() => setSelectedPlan(pid)}
+                      onClick={() => setSelectedPlan(option.id)}
                       className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                        selectedPlan === pid
+                        selectedPlan === option.id
                           ? "bg-[#c9a84c] text-black"
                           : "border border-white/10 text-[#b8bcd0]/60 hover:border-[#c9a84c]/30 hover:text-[#c9a84c]"
                       }`}
                     >
-                      {PLANS[pid].name}
+                      {option.itemName}: {option.name}
                     </button>
                   ))}
                 </div>
@@ -670,7 +860,7 @@ export default function GetStartedPage() {
                       </>
                     ) : (
                       <>
-                        Start Your Practice — ${plan.setupPrice} + ${plan.monthlyPrice}/mo
+                        Continue with {plan?.name ?? "your plan"} — ${plan?.setupPrice ?? 0} + ${plan?.monthlyPrice ?? 0}/mo
                         <ArrowRight className="ml-2 size-4" />
                       </>
                     )}

@@ -15,6 +15,7 @@ export async function GET(
   const date = searchParams.get("date");
   const duration = searchParams.get("duration");
   const serviceId = searchParams.get("serviceId");
+  const allSlots = searchParams.get("allSlots") === "1";
   const debugBusy = searchParams.get("debugBusy") === "1";
 
   if (!date || !duration) {
@@ -104,10 +105,12 @@ export async function GET(
 
       const templateServiceId =
         typeof record.service_id === "string" ? record.service_id : null;
-      if (serviceId) {
-        if (templateServiceId !== serviceId) return false;
-      } else if (templateServiceId) {
-        return false;
+      if (!allSlots) {
+        if (serviceId) {
+          if (templateServiceId !== serviceId) return false;
+        } else if (templateServiceId) {
+          return false;
+        }
       }
 
       const startDate = String(record.start_date ?? "");

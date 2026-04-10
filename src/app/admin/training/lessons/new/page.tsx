@@ -11,8 +11,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { uploadTrainingVideo } from "@/lib/training/upload-video";
 
 interface Category {
   id: string;
@@ -49,7 +50,7 @@ export default function NewLessonPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryLessons, setCategoryLessons] = useState<LessonOption[]>([]);
   const [videoMode, setVideoMode] = useState<VideoMode>("youtube");
-  const [uploadProgress, setUploadProgress] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -162,32 +163,19 @@ export default function NewLessonPage() {
       return;
     }
 
-    setUploadProgress(true);
+    setUploadPercent(0);
     try {
-      const supabase = createClient();
-      const ext = file.name.split(".").pop();
-      const path = `lessons/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
-      const { error } = await supabase.storage
-        .from("training-videos")
-        .upload(path, file, { cacheControl: "3600", upsert: false });
-
-      if (error) {
-        toast.error(`Upload failed: ${error.message}`);
-        return;
-      }
-
-      const { data: publicData } = supabase.storage
-        .from("training-videos")
-        .getPublicUrl(path);
-
-      setForm((prev) => ({ ...prev, video_url: publicData.publicUrl }));
+      const { url } = await uploadTrainingVideo({
+        file,
+        onProgress: (percent) => setUploadPercent(percent),
+      });
+      setForm((prev) => ({ ...prev, video_url: url }));
       setUploadedFileName(file.name);
       toast.success("Video uploaded.");
-    } catch {
-      toast.error("Upload failed. Please try again.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed. Please try again.");
     } finally {
-      setUploadProgress(false);
+      setUploadPercent(null);
     }
   }
 
@@ -396,12 +384,17 @@ export default function NewLessonPage() {
                     accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo"
                     onChange={handleVideoFileChange}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1 file:text-xs file:font-medium file:text-primary-foreground"
-                    disabled={uploadProgress}
+                    disabled={uploadPercent !== null}
                   />
-                  {uploadProgress && (
-                    <p className="text-xs text-muted-foreground">Uploading…</p>
+                  {uploadPercent !== null && (
+                    <div className="space-y-1">
+                      <Progress value={uploadPercent} className="h-2" />
+                      <p className="text-xs text-muted-foreground">
+                        Uploading… {uploadPercent}%
+                      </p>
+                    </div>
                   )}
-                  {uploadedFileName && !uploadProgress && (
+                  {uploadedFileName && uploadPercent === null && (
                     <p className="text-xs text-green-600">
                       Uploaded: {uploadedFileName}
                     </p>

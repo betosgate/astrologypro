@@ -23,6 +23,7 @@ interface CalendarBooking {
     is_reminder?: boolean;
     is_manual?: boolean;
     timezone?: string;
+    availability_title?: string;
   } | null;
   services: { name: string } | null;
   clients: { full_name: string | null } | null;
@@ -76,7 +77,7 @@ export default async function CalendarPage() {
         "id, scheduled_at, duration_minutes, status, session_notes, metadata, services(name), clients(full_name)"
       )
       .eq("owner_id", ownerId)
-      .in("status", ["pending", "confirmed", "in_progress"])
+      .in("status", ["pending", "pending_payment", "confirmed", "in_progress"])
       .gte("scheduled_at", recentDate.toISOString())
       .order("scheduled_at", { ascending: true }),
   ]);
@@ -124,6 +125,7 @@ export default async function CalendarPage() {
 
       <CalendarView
         divinerId={ownerId}
+        divinerUsername={diviner?.username ?? ""}
         availabilitySlots={slotsResult.data ?? []}
         overrides={overridesResult.data ?? []}
         bookings={(bookingsResult.data as CalendarBooking[] | null) ?? []}

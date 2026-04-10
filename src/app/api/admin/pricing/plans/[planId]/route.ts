@@ -70,6 +70,32 @@ export async function PATCH(
   if (body.description !== undefined) {
     updates.description = body.description === null ? null : String(body.description).trim() || null;
   }
+  if (body.html_description !== undefined) {
+    updates.html_description = body.html_description === null ? null : String(body.html_description).trim() || null;
+  }
+  if (body.onetime_amount !== undefined) {
+    if (body.onetime_amount === null || body.onetime_amount === "") {
+      updates.onetime_amount = null;
+    } else {
+      const v = typeof body.onetime_amount === "number" ? body.onetime_amount : Number(body.onetime_amount);
+      if (!Number.isFinite(v) || v < 0) return NextResponse.json({ error: "onetime_amount must be non-negative" }, { status: 422 });
+      updates.onetime_amount = v;
+    }
+  }
+  if (body.onetime_currency !== undefined) {
+    if (body.onetime_currency === null) { updates.onetime_currency = null; }
+    else if (body.onetime_currency === "USD" || body.onetime_currency === "INR") { updates.onetime_currency = body.onetime_currency; }
+    else { return NextResponse.json({ error: "onetime_currency must be 'USD' or 'INR'" }, { status: 422 }); }
+  }
+  if (body.recurring_amount !== undefined) {
+    updates.recurring_amount = body.recurring_amount === null ? null : Number(body.recurring_amount);
+  }
+  if (body.recurring_currency !== undefined) {
+    updates.recurring_currency = body.recurring_currency === null ? null : body.recurring_currency;
+  }
+  if (body.recurring_interval !== undefined) {
+    updates.recurring_interval = body.recurring_interval === null ? null : body.recurring_interval;
+  }
   if (body.is_active !== undefined) {
     if (typeof body.is_active !== "boolean") {
       return NextResponse.json({ error: "is_active must be boolean" }, { status: 422 });

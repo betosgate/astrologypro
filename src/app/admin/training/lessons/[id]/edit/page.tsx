@@ -11,8 +11,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import { TrainingNotes } from "@/components/admin/training-notes";
+import { uploadTrainingVideo } from "@/lib/training/upload-video";
 
 // ---- types for sub-resource sections ----
 
@@ -72,6 +74,7 @@ type VideoMode = "youtube" | "url" | "upload";
 function detectVideoMode(url: string | null): VideoMode {
   if (!url) return "youtube";
   if (url.includes("youtube.com") || url.includes("youtu.be")) return "youtube";
+  if (url.includes("storage/v1/object/public/training-videos") || url.includes("supabase.co/storage")) return "upload";
   return "url";
 }
 
@@ -101,7 +104,7 @@ export default function EditLessonPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryLessons, setCategoryLessons] = useState<LessonOption[]>([]);
   const [videoMode, setVideoMode] = useState<VideoMode>("youtube");
-  const [uploadProgress, setUploadProgress] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -562,33 +565,19 @@ export default function EditLessonPage() {
       return;
     }
 
-    setUploadProgress(true);
+    setUploadPercent(0);
     try {
-      // Upload via the admin-mediated route which uses the service-role
-      // client (bypasses storage RLS). The previous direct browser upload
-      // was hitting "new row violates row-level security policy" because
-      // the browser client uses the anon key.
-      const body = new FormData();
-      body.append("file", file);
-
-      const res = await fetch("/api/admin/training/upload", {
-        method: "POST",
-        body,
+      const { url } = await uploadTrainingVideo({
+        file,
+        onProgress: (percent) => setUploadPercent(percent),
       });
-
-      const json = await res.json();
-      if (!res.ok) {
-        toast.error(json.error ?? `Upload failed (HTTP ${res.status}).`);
-        return;
-      }
-
-      setForm((prev) => ({ ...prev, video_url: json.url }));
+      setForm((prev) => ({ ...prev, video_url: url }));
       setUploadedFileName(file.name);
       toast.success("Video uploaded.");
-    } catch {
-      toast.error("Upload failed. Please try again.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed. Please try again.");
     } finally {
-      setUploadProgress(false);
+      setUploadPercent(null);
     }
   }
 
@@ -806,6 +795,7 @@ export default function EditLessonPage() {
               )}
 
               {videoMode === "url" && (
+                <div className="space-y-2">
                 <input
                   type="url"
                   value={form.video_url}
@@ -815,6 +805,21 @@ export default function EditLessonPage() {
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   placeholder="https://example.com/video.mp4"
                 />
+                {/* Video preview for direct URL */}
+                {form.video_url && /\.(mp4|webm|ogg|mov)(\?|$)/i.test(form.video_url) && (
+                  <div className="rounded-lg border overflow-hidden bg-black">
+                    <video
+                      src={form.video_url}
+                      controls
+                      controlsList="nodownload"
+                      className="w-full max-h-[300px]"
+                      preload="metadata"
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                )}
+                </div>
               )}
 
               {videoMode === "upload" && (
@@ -825,12 +830,17 @@ export default function EditLessonPage() {
                     accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo"
                     onChange={handleVideoFileChange}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1 file:text-xs file:font-medium file:text-primary-foreground"
-                    disabled={uploadProgress}
+                    disabled={uploadPercent !== null}
                   />
-                  {uploadProgress && (
-                    <p className="text-xs text-muted-foreground">Uploading…</p>
+                  {uploadPercent !== null && (
+                    <div className="space-y-1">
+                      <Progress value={uploadPercent} className="h-2" />
+                      <p className="text-xs text-muted-foreground">
+                        Uploading… {uploadPercent}%
+                      </p>
+                    </div>
                   )}
-                  {uploadedFileName && !uploadProgress && (
+                  {uploadedFileName && uploadPercent === null && (
                     <p className="text-xs text-green-600">
                       Uploaded: {uploadedFileName}
                     </p>
@@ -839,6 +849,20 @@ export default function EditLessonPage() {
                     <p className="text-xs text-muted-foreground break-all">
                       Current: {form.video_url}
                     </p>
+                  )}
+                  {/* Video preview player for existing uploads */}
+                  {form.video_url && (
+                    <div className="rounded-lg border overflow-hidden bg-black">
+                      <video
+                        src={form.video_url}
+                        controls
+                        controlsList="nodownload"
+                        className="w-full max-h-[300px]"
+                        preload="metadata"
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                    </div>
                   )}
                   <p className="text-xs text-muted-foreground">
                     MP4, WebM, OGG, MOV or AVI · max 500 MB
