@@ -411,28 +411,35 @@ export function CalendarView({
                         </button>
                       ))}
 
-                      {/* Booking blocks (gold/amber) */}
-                      {bookingBlocks.map((block, i) => (
-                        <button
-                          key={`book-${i}`}
-                          type="button"
-                          className="absolute inset-x-0 mx-1 cursor-pointer overflow-hidden rounded bg-amber-500/20 border border-amber-500/30 text-left transition-colors hover:bg-amber-500/30"
-                          style={{
-                            top: block.top,
-                            height: Math.max(block.height, 20),
-                          }}
-                          onClick={() => setSelectedBooking(block.booking)}
-                        >
-                          <div className="p-1">
-                            <p className="truncate text-[10px] font-medium text-amber-300">
-                              {block.booking.metadata?.availability_title ?? block.booking.services?.name ?? "Session"}
-                            </p>
-                            <p className="truncate text-[9px] text-amber-300/70">
-                              {block.booking.clients?.full_name ?? "Client"}
-                            </p>
-                          </div>
-                        </button>
-                      ))}
+                      {/* Booking blocks */}
+                      {bookingBlocks.map((block, i) => {
+                        const isPendingPayment = block.booking.status === "pending_payment";
+                        return (
+                          <button
+                            key={`book-${i}`}
+                            type="button"
+                            className={`absolute inset-x-0 mx-1 cursor-pointer overflow-hidden rounded text-left transition-colors ${
+                              isPendingPayment
+                                ? "bg-blue-500/20 border border-blue-500/30 hover:bg-blue-500/30"
+                                : "bg-amber-500/20 border border-amber-500/30 hover:bg-amber-500/30"
+                            }`}
+                            style={{
+                              top: block.top,
+                              height: Math.max(block.height, 20),
+                            }}
+                            onClick={() => setSelectedBooking(block.booking)}
+                          >
+                            <div className="p-1">
+                              <p className={`truncate text-[10px] font-medium ${isPendingPayment ? "text-blue-300" : "text-amber-300"}`}>
+                                {block.booking.metadata?.availability_title ?? block.booking.services?.name ?? "Session"}
+                              </p>
+                              <p className={`truncate text-[9px] ${isPendingPayment ? "text-blue-300/70" : "text-amber-300/70"}`}>
+                                {isPendingPayment ? "⏳ Awaiting payment" : (block.booking.clients?.full_name ?? "Client")}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   )
                 )}
@@ -490,8 +497,19 @@ export function CalendarView({
               </div>
               <div>
                 <Label className="text-muted-foreground">Status</Label>
-                <Badge variant="outline" className="ml-1 uppercase text-[10px]">
-                  {selectedBooking.status}
+                <Badge
+                  variant="outline"
+                  className={`ml-1 uppercase text-[10px] ${
+                    selectedBooking.status === "pending_payment"
+                      ? "text-blue-400 border-blue-500/40 bg-blue-500/10"
+                      : selectedBooking.status === "confirmed"
+                      ? "text-green-400 border-green-500/40 bg-green-500/10"
+                      : ""
+                  }`}
+                >
+                  {selectedBooking.status === "pending_payment"
+                    ? "⏳ Awaiting Payment"
+                    : selectedBooking.status}
                 </Badge>
               </div>
 

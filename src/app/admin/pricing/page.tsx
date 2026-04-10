@@ -88,6 +88,7 @@ interface PricingPlan {
   onetime_currency: string | null;
   recurring_amount: number | null;
   recurring_currency: string | null;
+  recurring_interval: string | null;
   stripe_price_id: string | null;
   stripe_price_name: string | null;
   description: string | null;
@@ -146,6 +147,7 @@ export default function AdminPricingPage() {
     stripe_price_name: "",
     recurring_amount: "",
     recurring_currency: "USD" as "USD" | "INR",
+    recurring_interval: "month" as "month" | "year",
     description: "",
     html_description: "",
     custom_fields: [] as CustomField[],
@@ -178,8 +180,10 @@ export default function AdminPricingPage() {
     mrp: "",
     onetime_amount: "",
     onetime_currency: "USD" as "USD" | "INR",
+    has_subscription: false,
     recurring_amount: "",
     recurring_currency: "",
+    recurring_interval: "month" as "month" | "year",
     stripe_price_id: "",
     stripe_price_name: "",
     description: "",
@@ -435,6 +439,7 @@ export default function AdminPricingPage() {
           stripePriceName.trim(),
           recurAmt,
           newPlan.recurring_currency,
+          newPlan.recurring_interval,
         );
         stripePriceId = stripePrice.id;
         recurringAmount = stripePrice.unit_amount ? stripePrice.unit_amount / 100 : recurAmt;
@@ -453,6 +458,7 @@ export default function AdminPricingPage() {
           onetime_currency: onetimeAmount !== null ? newPlan.onetime_currency : null,
           recurring_amount: recurringAmount,
           recurring_currency: recurringCurrency,
+          recurring_interval: newPlan.has_subscription ? newPlan.recurring_interval : null,
           mrp,
           stripe_price_id: stripePriceId,
           stripe_price_name: stripePriceName.trim() || null,
@@ -468,7 +474,7 @@ export default function AdminPricingPage() {
       const body = await r.json();
       if (!r.ok) throw new Error(body.error ?? `HTTP ${r.status}`);
       setPlans((prev) => [...prev, body.plan as PricingPlan]);
-      setNewPlan({ display_name: "", amount: "", mrp: "", onetime_amount: "", onetime_currency: "USD", has_subscription: false, stripe_price_id: "", stripe_price_name: "", recurring_amount: "", recurring_currency: "USD", description: "", html_description: "", custom_fields: [] });
+      setNewPlan({ display_name: "", amount: "", mrp: "", onetime_amount: "", onetime_currency: "USD", has_subscription: false, stripe_price_id: "", stripe_price_name: "", recurring_amount: "", recurring_currency: "USD", recurring_interval: "month", description: "", html_description: "", custom_fields: [] });
       setShowPriceDropdown(false);
       setShowAddPlan(false);
       setItemPlansCache((prev) => { const n = { ...prev }; delete n[selected.id]; return n; });
@@ -630,8 +636,10 @@ export default function AdminPricingPage() {
       mrp: plan.mrp !== null ? String(plan.mrp) : "",
       onetime_amount: plan.onetime_amount !== null ? String(plan.onetime_amount) : "",
       onetime_currency: (plan.onetime_currency ?? "USD") as "USD" | "INR",
+      has_subscription: plan.recurring_amount != null || !!plan.stripe_price_id,
       recurring_amount: plan.recurring_amount !== null ? String(plan.recurring_amount) : "",
       recurring_currency: plan.recurring_currency ?? "",
+      recurring_interval: (plan.recurring_interval ?? "month") as "month" | "year",
       stripe_price_id: plan.stripe_price_id ?? "",
       stripe_price_name: plan.stripe_price_name ?? "",
       description: plan.description ?? "",
@@ -659,6 +667,36 @@ export default function AdminPricingPage() {
         setError("MRP must be a non-negative number");
         return;
       }
+      // Handle subscription / Stripe price
+      let stripePriceId = editPlanForm.stripe_price_id.trim() || null;
+      let recurringAmount: number | null = editPlanForm.recurring_amount ? Number(editPlanForm.recurring_amount) : null;
+      let recurringCurrency: string | null = editPlanForm.recurring_currency || null;
+
+      if (editPlanForm.has_subscription && !stripePriceId && editPlanForm.stripe_price_name.trim() && selected?.stripe_product_id) {
+        // Create new Stripe price
+        const recurAmt = Number(editPlanForm.recurring_amount);
+        if (!Number.isFinite(recurAmt) || recurAmt <= 0) {
+          setError("Recurring amount is required for subscription");
+          return;
+        }
+        const stripePrice = await createStripePrice(
+          selected.stripe_product_id,
+          editPlanForm.stripe_price_name.trim(),
+          recurAmt,
+          editPlanForm.recurring_currency || "USD",
+          editPlanForm.recurring_interval,
+        );
+        stripePriceId = stripePrice.id;
+        recurringAmount = stripePrice.unit_amount ? stripePrice.unit_amount / 100 : recurAmt;
+        recurringCurrency = stripePrice.currency.toUpperCase();
+      }
+
+      if (!editPlanForm.has_subscription) {
+        stripePriceId = null;
+        recurringAmount = null;
+        recurringCurrency = null;
+      }
+
       const r = await fetch(`/api/admin/pricing/plans/${plan.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -666,6 +704,11 @@ export default function AdminPricingPage() {
           display_name: editPlanForm.display_name.trim(),
           onetime_amount: onetimeAmount,
           onetime_currency: onetimeAmount !== null ? editPlanForm.onetime_currency : null,
+          recurring_amount: recurringAmount,
+          recurring_currency: recurringCurrency,
+          recurring_interval: editPlanForm.has_subscription ? editPlanForm.recurring_interval : null,
+          stripe_price_id: stripePriceId,
+          stripe_price_name: editPlanForm.stripe_price_name.trim() || null,
           mrp,
           description: editPlanForm.description.trim() || null,
           html_description: editPlanForm.html_description.trim() || null,
@@ -735,11 +778,11 @@ export default function AdminPricingPage() {
   }
 
   /* ---- Create Stripe price during plan creation ---- */
-  async function createStripePrice(productId: string, nickname: string, amount: number, currency: string) {
+  async function createStripePrice(productId: string, nickname: string, amount: number, currency: string, interval?: string) {
     const r = await fetch("/api/admin/stripe/prices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ product_id: productId, nickname, amount, currency }),
+      body: JSON.stringify({ product_id: productId, nickname, amount, currency, ...(interval ? { recurring: { interval } } : {}) }),
     });
     const body = await r.json();
     if (!r.ok) throw new Error(body.error ?? "Failed to create Stripe price");
@@ -841,7 +884,7 @@ export default function AdminPricingPage() {
                       {plan.onetime_amount != null ? `${plan.onetime_currency ?? "USD"} ${Number(plan.onetime_amount).toLocaleString()}` : "\u2014"}
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums whitespace-nowrap">
-                      {plan.recurring_amount != null ? `${plan.recurring_currency ?? "USD"} ${Number(plan.recurring_amount).toLocaleString()}/mo` : "\u2014"}
+                      {plan.recurring_amount != null ? `${plan.recurring_currency ?? "USD"} ${Number(plan.recurring_amount).toLocaleString()}/${plan.recurring_interval === "year" ? "yr" : "mo"}` : "\u2014"}
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground whitespace-nowrap">{plan.mrp != null ? `${plan.onetime_currency ?? plan.currency ?? "USD"} ${Number(plan.mrp).toLocaleString()}` : "\u2014"}</td>
                     <td className="py-2">
@@ -905,31 +948,102 @@ export default function AdminPricingPage() {
                             <p className="text-[11px] text-muted-foreground">Strikethrough price shown to customers. Optional.</p>
                           </div>
                         </div>
-                        {/* Subscription info (read-only if exists) */}
-                        {plan.stripe_price_id && (
-                          <div className="grid gap-3 sm:grid-cols-4 border-t pt-3">
-                            <div className="space-y-1.5">
-                              <Label className="text-xs">Recurring Amount</Label>
-                              <Input value={editPlanForm.recurring_amount} disabled className="opacity-60" />
-                              <p className="text-[11px] text-muted-foreground">From Stripe. To change, create a new plan.</p>
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-xs">Recurring Currency</Label>
-                              <Input value={editPlanForm.recurring_currency} disabled className="opacity-60" />
-                              <p className="text-[11px] text-muted-foreground">Set by Stripe.</p>
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-xs">Stripe Price Name</Label>
-                              <Input value={editPlanForm.stripe_price_name} disabled className="opacity-60" />
-                              <p className="text-[11px] text-muted-foreground">Locked — set when created.</p>
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-xs">Stripe Price ID</Label>
-                              <Input value={editPlanForm.stripe_price_id} disabled className="opacity-60 font-mono text-xs" />
-                              <p className="text-[11px] text-muted-foreground">Auto-generated by Stripe.</p>
+                        {/* Subscription section */}
+                        <div className="border-t pt-3 space-y-3">
+                          <div className="flex items-center gap-3">
+                            <Switch
+                              checked={editPlanForm.has_subscription}
+                              onCheckedChange={(v) => {
+                                setEditPlanForm({ ...editPlanForm, has_subscription: v });
+                                if (!v) {
+                                  setEditPlanForm((prev) => ({ ...prev, has_subscription: false, stripe_price_id: "", stripe_price_name: "", recurring_amount: "", recurring_currency: "" }));
+                                }
+                              }}
+                            />
+                            <div>
+                              <p className="text-xs font-semibold uppercase text-muted-foreground">Has Subscription?</p>
+                              <p className="text-[11px] text-muted-foreground">Enable to add or manage recurring billing via Stripe.</p>
                             </div>
                           </div>
-                        )}
+                          {editPlanForm.has_subscription && (
+                            <div className="pl-1 border-l-2 border-primary/20 ml-2">
+                              <div className="pl-3 space-y-3">
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs">Stripe Price Name</Label>
+                                  <div className="relative">
+                                    <Input
+                                      placeholder={selected?.stripe_product_id ? "Search existing or type new price name..." : "Set Stripe product on item first"}
+                                      disabled={!selected?.stripe_product_id}
+                                      value={editPlanForm.stripe_price_name}
+                                      onChange={(e) => {
+                                        setEditPlanForm({ ...editPlanForm, stripe_price_name: e.target.value, stripe_price_id: "", recurring_amount: "", recurring_currency: "" });
+                                        if (selected?.stripe_product_id && e.target.value.trim()) {
+                                          void loadStripePrices(selected.stripe_product_id);
+                                          setShowPriceDropdown(true);
+                                        } else {
+                                          setShowPriceDropdown(false);
+                                        }
+                                      }}
+                                      onFocus={() => { if (stripePrices.length > 0) setShowPriceDropdown(true); }}
+                                      onBlur={() => setTimeout(() => setShowPriceDropdown(false), 200)}
+                                    />
+                                    {showPriceDropdown && (
+                                      <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
+                                        {stripePricesLoading ? (
+                                          <div className="p-3 text-xs text-muted-foreground flex items-center gap-2"><Loader2 className="size-3 animate-spin" />Loading prices...</div>
+                                        ) : stripePrices.length === 0 ? (
+                                          <div className="p-3 text-xs text-muted-foreground">No existing prices. A new one will be created.</div>
+                                        ) : (
+                                          stripePrices.filter((p) => !editPlanForm.stripe_price_name || (p.nickname ?? "").toLowerCase().includes(editPlanForm.stripe_price_name.toLowerCase())).map((p) => (
+                                            <button key={p.id} type="button" className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors" onMouseDown={() => {
+                                              const amt = p.unit_amount ? p.unit_amount / 100 : 0;
+                                              setEditPlanForm((prev) => ({
+                                                ...prev,
+                                                stripe_price_id: p.id,
+                                                stripe_price_name: p.nickname ?? "",
+                                                recurring_amount: String(amt),
+                                                recurring_currency: p.currency.toUpperCase(),
+                                              }));
+                                              setShowPriceDropdown(false);
+                                            }}>
+                                              <div className="font-medium">{p.nickname || p.id}</div>
+                                              <div className="text-xs text-muted-foreground">{p.currency} {p.unit_amount ? (p.unit_amount / 100).toLocaleString() : 0} &middot; <span className="font-mono">{p.id}</span></div>
+                                            </button>
+                                          ))
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {editPlanForm.stripe_price_id && <p className="text-xs text-muted-foreground">Linked: <span className="font-mono">{editPlanForm.stripe_price_id}</span></p>}
+                                  {!editPlanForm.stripe_price_id && editPlanForm.stripe_price_name.trim() && <p className="text-xs text-muted-foreground">A new Stripe price will be created on save.</p>}
+                                </div>
+                                <div className="grid gap-3 sm:grid-cols-3">
+                                  <div className="space-y-1.5">
+                                    <Label className="text-xs">Recurring Amount {!editPlanForm.stripe_price_id && "*"}</Label>
+                                    <Input type="number" min="0" step="0.01" value={editPlanForm.recurring_amount} disabled={!!editPlanForm.stripe_price_id} className={editPlanForm.stripe_price_id ? "opacity-60" : ""} onChange={(e) => setEditPlanForm({ ...editPlanForm, recurring_amount: e.target.value })} />
+                                    <p className="text-[11px] text-muted-foreground">{editPlanForm.stripe_price_id ? "Auto-filled from Stripe." : "Recurring amount per interval."}</p>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-xs">Currency</Label>
+                                    <Select value={editPlanForm.recurring_currency || "USD"} disabled={!!editPlanForm.stripe_price_id} onValueChange={(v) => setEditPlanForm({ ...editPlanForm, recurring_currency: v })}>
+                                      <SelectTrigger className={editPlanForm.stripe_price_id ? "opacity-60" : ""}><SelectValue /></SelectTrigger>
+                                      <SelectContent><SelectItem value="USD">USD</SelectItem><SelectItem value="INR">INR</SelectItem></SelectContent>
+                                    </Select>
+                                    <p className="text-[11px] text-muted-foreground">{editPlanForm.stripe_price_id ? "Set by Stripe." : "Currency for recurring payment."}</p>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-xs">Billing Interval</Label>
+                                    <Select value={editPlanForm.recurring_interval} disabled={!!editPlanForm.stripe_price_id} onValueChange={(v) => setEditPlanForm({ ...editPlanForm, recurring_interval: v as "month" | "year" })}>
+                                      <SelectTrigger className={editPlanForm.stripe_price_id ? "opacity-60" : ""}><SelectValue /></SelectTrigger>
+                                      <SelectContent><SelectItem value="month">Monthly</SelectItem><SelectItem value="year">Yearly</SelectItem></SelectContent>
+                                    </Select>
+                                    <p className="text-[11px] text-muted-foreground">{editPlanForm.stripe_price_id ? "Set by Stripe." : "How often the customer is charged."}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                         <div className="space-y-1.5">
                           <Label className="text-xs">Description</Label>
                           <Input placeholder="Optional" value={editPlanForm.description} onChange={(e) => setEditPlanForm({ ...editPlanForm, description: e.target.value })} />
@@ -1087,20 +1201,28 @@ export default function AdminPricingPage() {
                     <p className="text-[11px] text-muted-foreground">Search existing prices or type a new name to create one.</p>
                   )}
                 </div>
-                {/* Recurring amount/currency */}
-                <div className="grid gap-3 sm:grid-cols-2">
+                {/* Recurring amount/currency/interval */}
+                <div className="grid gap-3 sm:grid-cols-3">
                   <div className="space-y-1.5">
                     <Label>Recurring Amount {!hasStripePrice && "*"}</Label>
                     <Input type="number" min="0" step="0.01" value={newPlan.recurring_amount} disabled={hasStripePrice} onChange={(e) => setNewPlan({ ...newPlan, recurring_amount: e.target.value })} />
-                    <p className="text-[11px] text-muted-foreground">{hasStripePrice ? "Auto-filled from Stripe." : "Monthly/recurring amount. Will be sent to Stripe."}</p>
+                    <p className="text-[11px] text-muted-foreground">{hasStripePrice ? "Auto-filled from Stripe." : "Recurring amount per interval."}</p>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Recurring Currency</Label>
+                    <Label>Currency</Label>
                     <Select value={newPlan.recurring_currency} disabled={hasStripePrice} onValueChange={(v) => setNewPlan({ ...newPlan, recurring_currency: v as "USD" | "INR" })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent><SelectItem value="USD">USD</SelectItem><SelectItem value="INR">INR</SelectItem></SelectContent>
                     </Select>
                     <p className="text-[11px] text-muted-foreground">{hasStripePrice ? "Set by Stripe." : "Currency for recurring payment."}</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Billing Interval</Label>
+                    <Select value={newPlan.recurring_interval} disabled={hasStripePrice} onValueChange={(v) => setNewPlan({ ...newPlan, recurring_interval: v as "month" | "year" })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="month">Monthly</SelectItem><SelectItem value="year">Yearly</SelectItem></SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-muted-foreground">{hasStripePrice ? "Set by Stripe." : "How often the customer is charged."}</p>
                   </div>
                 </div>
               </div>

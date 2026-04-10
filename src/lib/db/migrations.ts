@@ -18,6 +18,7 @@ import { MIGRATION_SQL as MIG_20260409000122 } from "@/data/migrations/202604090
 import { MIGRATION_SQL as MIG_20260409000123 } from "@/data/migrations/20260409000123_stripe_product_price_fields";
 import { MIGRATION_SQL as MIG_20260410000001 } from "@/data/migrations/20260410000001_increase_training_video_storage_limit";
 import { MIGRATION_SQL as MIG_20260410000124 } from "@/data/migrations/20260410000124_pricing_onetime_recurring_html";
+import { MIGRATION_SQL as MIG_20260410000125 } from "@/data/migrations/20260410000125_pricing_recurring_interval";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -203,6 +204,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds onetime_amount/onetime_currency and recurring_amount/recurring_currency to pricing_plans (replaces single amount/currency). Adds html_description to both global_pricing and pricing_plans. Migrates existing data. Stage 1 — old columns kept until code is updated.",
     sortKey: "20260410000124",
     sql: MIG_20260410000124,
+  },
+  "20260410000125_pricing_recurring_interval": {
+    id: "20260410000125_pricing_recurring_interval",
+    title: "Add recurring_interval to pricing_plans",
+    description:
+      "Adds recurring_interval (month/year) column to pricing_plans for subscription billing interval.",
+    sortKey: "20260410000125",
+    sql: MIG_20260410000125,
   },
 };
 
