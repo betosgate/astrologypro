@@ -62,11 +62,12 @@ export async function GET(req: NextRequest) {
   const admin = createAdminClient();
   try {
     const allRows = await buildQuizRowsForList(admin);
-    const search = params.search.trim().toLowerCase();
+    const search = (params.search ?? "").trim().toLowerCase();
     let rows = allRows.filter((row) => {
-      const matchesSearch = !search || row.title.toLowerCase().includes(search);
+      const matchesSearch =
+        !search || (row.title ?? "").toLowerCase().includes(search);
       const matchesStatus =
-        params.status === "all" ||
+        params.status == null ||
         (params.status === "active" ? row.is_active : !row.is_active);
       return matchesSearch && matchesStatus;
     });
