@@ -58,10 +58,26 @@ export async function POST(
     return NextResponse.json({ error: "display_name is required" }, { status: 422 });
   }
 
-  const amount = typeof body.amount === "number" ? body.amount : Number(body.amount);
-  if (!Number.isFinite(amount) || amount < 0) {
-    return NextResponse.json({ error: "amount must be a non-negative number" }, { status: 422 });
+  // One-time payment fields
+  let onetimeAmount: number | null = null;
+  if (body.onetime_amount !== undefined && body.onetime_amount !== null && body.onetime_amount !== "") {
+    onetimeAmount = typeof body.onetime_amount === "number" ? body.onetime_amount : Number(body.onetime_amount);
+    if (!Number.isFinite(onetimeAmount) || onetimeAmount < 0) {
+      return NextResponse.json({ error: "onetime_amount must be a non-negative number" }, { status: 422 });
+    }
   }
+  const onetimeCurrency = typeof body.onetime_currency === "string" && ["USD", "INR"].includes(body.onetime_currency) ? body.onetime_currency : (onetimeAmount !== null ? "USD" : null);
+
+  // Recurring payment fields (auto-filled from Stripe)
+  let recurringAmount: number | null = null;
+  if (body.recurring_amount !== undefined && body.recurring_amount !== null && body.recurring_amount !== "") {
+    recurringAmount = typeof body.recurring_amount === "number" ? body.recurring_amount : Number(body.recurring_amount);
+  }
+  const recurringCurrency = typeof body.recurring_currency === "string" && ["USD", "INR"].includes(body.recurring_currency) ? body.recurring_currency : null;
+
+  // Legacy amount/currency (keep for backward compat until dropped)
+  const amount = onetimeAmount ?? recurringAmount ?? 0;
+  const currency = onetimeCurrency ?? recurringCurrency ?? "USD";
 
   let mrp: number | null = null;
   if (body.mrp !== undefined && body.mrp !== null && body.mrp !== "") {
@@ -71,9 +87,9 @@ export async function POST(
     }
   }
 
-  const currency = body.currency === "USD" ? "USD" : "INR";
   const stripePriceId = typeof body.stripe_price_id === "string" ? body.stripe_price_id.trim() || null : null;
   const description = typeof body.description === "string" ? body.description.trim() || null : null;
+  const htmlDescription = typeof body.html_description === "string" ? body.html_description.trim() || null : null;
   const sortOrder = typeof body.sort_order === "number" ? body.sort_order : 0;
 
   let customFields: unknown[] = [];
@@ -96,11 +112,16 @@ export async function POST(
       item_id: id,
       display_name: displayName,
       amount,
+      currency,
+      onetime_amount: onetimeAmount,
+      onetime_currency: onetimeCurrency,
+      recurring_amount: recurringAmount,
+      recurring_currency: recurringCurrency,
       mrp,
       stripe_price_id: stripePriceId,
       stripe_price_name: typeof body.stripe_price_name === "string" ? body.stripe_price_name.trim() || null : null,
-      currency,
       description,
+      html_description: htmlDescription,
       sort_order: sortOrder,
       is_active: typeof body.is_active === "boolean" ? body.is_active : true,
       custom_fields: customFields,
