@@ -204,43 +204,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if this service is linked to any availability template.
+    // Find the availability template that covers this booking slot.
+    // Query by date range (covers the booked date) then prefer matching service_id.
+    // Using select("*") avoids TypeScript-inferred column narrowing issues.
+    const bookingDateStr = scheduledAt.substring(0, 10); // YYYY-MM-DD
+
     let hasServiceAvailability = false;
     let availabilityTemplateTitle: string | null = null;
-    let availabilityError: { message?: string } | null = null;
+    let availabilityTemplateDescription: string | null = null;
 
-    try {
-      const availabilityResult = await adminSupabase
+    const { data: candidateTemplates } = await adminSupabase
+      .from("availability_templates")
+      .select("id, title, description, service_id")
+      .or(`owner_id.eq.${resolvedDivinerId},diviner_id.eq.${resolvedDivinerId}`)
+      .eq("is_active", true)
+      .lte("start_date", bookingDateStr)
+      .gte("end_date", bookingDateStr);
+
+    if (candidateTemplates && candidateTemplates.length > 0) {
+      // Prefer the template whose service_id matches the booked service
+      const best =
+        candidateTemplates.find(
+          (t) => (t as Record<string, unknown>).service_id === serviceId
+        ) ?? candidateTemplates[0];
+
+      hasServiceAvailability = true;
+      availabilityTemplateTitle =
+        ((best as Record<string, unknown>).title as string) || null;
+      availabilityTemplateDescription =
+        ((best as Record<string, unknown>).description as string) || null;
+    } else {
+      // Last-resort: any active template for this diviner (no date filter)
+      const { data: anyTemplate } = await adminSupabase
         .from("availability_templates")
-        .select("id, title")
+        .select("id, title, description, service_id")
         .or(`owner_id.eq.${resolvedDivinerId},diviner_id.eq.${resolvedDivinerId}`)
-        .eq("service_id", serviceId)
         .eq("is_active", true)
         .limit(1)
         .maybeSingle();
 
-      if (availabilityResult.data) {
+      if (anyTemplate) {
         hasServiceAvailability = true;
-        availabilityTemplateTitle = availabilityResult.data.title ?? null;
-      } else if (availabilityResult.error) {
-        availabilityError = availabilityResult.error;
+        availabilityTemplateTitle =
+          ((anyTemplate as Record<string, unknown>).title as string) || null;
+        availabilityTemplateDescription =
+          ((anyTemplate as Record<string, unknown>).description as string) || null;
       }
-    } catch (err) {
-      availabilityError = err as { message?: string };
-    }
-
-    if (!hasServiceAvailability && availabilityError) {
-      const fallbackAvailability = await supabase
-        .from("availability_templates")
-        .select("id, title")
-        .or(`owner_id.eq.${resolvedDivinerId},diviner_id.eq.${resolvedDivinerId}`)
-        .eq("service_id", serviceId)
-        .eq("is_active", true)
-        .limit(1)
-        .maybeSingle();
-
-      hasServiceAvailability = Boolean(fallbackAvailability.data);
-      availabilityTemplateTitle = fallbackAvailability.data?.title ?? null;
     }
 
     // --- Auto-create auth user if they don't exist ---
