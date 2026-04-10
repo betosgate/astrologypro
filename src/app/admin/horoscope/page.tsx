@@ -4526,9 +4526,9 @@ export default function AdminHoroscopePage() {
                             <PlanetsSection
                               planets={[
                                 ...(natalData?.planets || []),
-                                ...(natalData?.node && !(natalData.planets || []).some(p => p.name === "Node") ? [{ name: "Node", ...natalData.node }] : []),
-                                ...(natalData?.chiron && !(natalData.planets || []).some(p => p.name === "Chiron") ? [{ name: "Chiron", ...natalData.chiron }] : []),
-                                ...(natalData?.fortune && !(natalData.planets || []).some(p => p.name === "Part of Fortune") ? [{ name: "Part of Fortune", ...natalData.fortune }] : []),
+                                ...(natalData?.node && !(natalData.planets || []).some((p: any) => p.name === "Node") ? [{ name: "Node", ...natalData.node }] : []),
+                                ...(natalData?.chiron && !(natalData.planets || []).some((p: any) => p.name === "Chiron") ? [{ name: "Chiron", ...natalData.chiron }] : []),
+                                ...(natalData?.fortune && !(natalData.planets || []).some((p: any) => p.name === "Part of Fortune") ? [{ name: "Part of Fortune", ...natalData.fortune }] : []),
                               ]}
                               aiData={ai.western_horoscope_planets}
                               areaOfInquiry={form.areaOfInquiry}
