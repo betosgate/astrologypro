@@ -129,9 +129,11 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans;
   }
@@ -181,20 +183,37 @@
 
 /* Star shimmer animation */
 @keyframes shimmer {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 /* Card back shimmer sweep */
 @keyframes card-shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(200%);
+  }
 }
 
 /* Slow zodiac wheel rotation */
 @keyframes zodiac-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .animate-zodiac-spin {
@@ -219,9 +238,11 @@
 .horoscope-toolkit ::-webkit-scrollbar-thumb {
   background: #384355;
 }
+
 .horoscope-toolkit ::-webkit-scrollbar-track {
   background: #0a0c10;
 }
+
 .horoscope-toolkit {
   scrollbar-color: #384355 #0a0c10;
 }
@@ -230,51 +251,62 @@
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #384355;
   border-radius: 10px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
   background: #0a0c10;
 }
 
 /* ─── Planet-specific interpretation gradients ────────────────────── */
 .planet-interp-sun {
-  background: linear-gradient(166deg, rgba(240,160,35,1) 0%, rgba(248,214,71,1) 100%);
+  background: linear-gradient(166deg, rgba(240, 160, 35, 1) 0%, rgba(248, 214, 71, 1) 100%);
   color: #000;
 }
+
 .planet-interp-moon {
   background: linear-gradient(166deg, #8c8c8c 0%, #C0C0C0 100%);
   color: #000;
 }
+
 .planet-interp-mercury {
   background: linear-gradient(166deg, #FFFF00 0%, #FFD700 100%);
   color: #000;
 }
+
 .planet-interp-venus {
   background: linear-gradient(166deg, #00FF00 0%, #32CD32 100%);
   color: #000;
 }
+
 .planet-interp-mars {
   background: linear-gradient(166deg, #FF0000 0%, #B22222 100%);
   color: #fff;
 }
+
 .planet-interp-jupiter {
   background: linear-gradient(166deg, #0000FF 0%, #1E90FF 100%);
   color: #fff;
 }
+
 .planet-interp-saturn {
   background: linear-gradient(166deg, #000000 0%, #4B4B4B 100%);
   color: #fff;
 }
+
 .planet-interp-uranus {
   background: linear-gradient(166deg, #00FFFF 0%, #008B8B 100%);
   color: #000;
 }
+
 .planet-interp-neptune {
   background: linear-gradient(166deg, #00008B 0%, #4169E1 100%);
   color: #fff;
 }
+
 .planet-interp-pluto {
   background: linear-gradient(166deg, #8B0000 0%, #CD5C5C 100%);
   color: #fff;
@@ -305,6 +337,7 @@
   color: #000;
   border-bottom: 1px solid #000;
 }
+
 .horoscope-tbody-row:last-child {
   border-bottom: none;
 }
@@ -332,6 +365,7 @@
   cursor: pointer;
   transition: box-shadow 0.2s ease;
 }
+
 .horoscope-show-more:hover {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
