@@ -862,7 +862,7 @@ async function handlePaymentIntentSucceeded(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, duration_minutes, diviner_id, client_id, services(name, duration_minutes), diviners(id, display_name), clients(email, full_name, user_id)"
+      "id, scheduled_at, duration_minutes, diviner_id, client_id, metadata, services(name, duration_minutes), diviners(id, display_name), clients(email, full_name, user_id)"
     )
     .eq("id", bookingId)
     .single();
@@ -882,6 +882,10 @@ async function handlePaymentIntentSucceeded(
     full_name: string | null;
     user_id: string | null;
   } | null;
+  const bookingMeta = (booking as Record<string, unknown>).metadata as {
+    availability_title?: string;
+  } | null;
+  const eventTitle = bookingMeta?.availability_title ?? svc?.name;
 
   if (!svc || !div) return;
 
@@ -948,8 +952,15 @@ async function handlePaymentIntentSucceeded(
   // Push event to diviner's Google Calendar if connected
   if (hasGoogleCalendar) {
     createCalendarEvent(div.id, {
-      title: `${svc.name} — ${clientRecord?.full_name ?? clientEmail}`,
-      description: `Client: ${clientEmail}\nSession link: ${sessionLink}`,
+      title: `${eventTitle} — ${clientRecord?.full_name ?? clientEmail}`,
+      description: [
+        `Schedule: ${eventTitle}`,
+        `Service: ${svc.name}`,
+        `Client: ${clientRecord?.full_name ?? "Guest"} (${clientRecord?.email ?? clientEmail})`,
+        `Date & Time: ${startTime.toLocaleString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" })}`,
+        `Duration: ${durationMins} minutes`,
+        `Session link: ${sessionLink}`,
+      ].join("\n"),
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
       clientEmail: clientRecord?.email ?? clientEmail,

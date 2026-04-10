@@ -138,6 +138,25 @@ const ASPECT_KEYWORDS: Record<string, string[]> = {
 
 const ASPECT_TYPE_WORDS = ["Conjunction", "Conjunct", "Opposition", "Square", "Trine", "Sextile"];
 
+// ─── Planet-specific interpretation gradient class (matches Angular's createClass) ─
+// Returns the CSS class name for the planet-specific gradient background
+function getPlanetInterpClass(planetName: string): string {
+  const key = planetName?.toLowerCase().trim();
+  const map: Record<string, string> = {
+    sun: "planet-interp-sun",
+    moon: "planet-interp-moon",
+    mercury: "planet-interp-mercury",
+    venus: "planet-interp-venus",
+    mars: "planet-interp-mars",
+    jupiter: "planet-interp-jupiter",
+    saturn: "planet-interp-saturn",
+    uranus: "planet-interp-uranus",
+    neptune: "planet-interp-neptune",
+    pluto: "planet-interp-pluto",
+  };
+  return map[key] ?? "interp-gradient-default";
+}
+
 function parseAspectTitle(title?: string): { p1: string; aspectType: string; p2: string } {
   if (!title) return { p1: "", aspectType: "", p2: "" };
   const parts = title.split(/\s+/);
@@ -883,7 +902,7 @@ function AspectsLegend() {
 function SectionSkeleton({ title }: { title: string }) {
   return (
     <div className="border rounded-lg overflow-hidden animate-pulse">
-      <div className="flex items-center justify-center gap-3 px-4 py-3 bg-muted/40">
+      <div className="flex items-center justify-center gap-3 px-4 py-3 horoscope-section-header">
         <Loader2 className="size-4 animate-spin text-amber-500" />
         <span className="text-sm font-semibold">{title}</span>
       </div>
@@ -1144,7 +1163,7 @@ function DecanAiBlock({ title, data, loading }: { title: string; data: DecanAi |
       {expanded && <p className="text-sm leading-relaxed text-muted-foreground mt-1">{data.long_format}</p>}
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
+        className="horoscope-show-more"
       >
         {expanded ? "Show Less" : "Read More"}
       </button>
@@ -1388,22 +1407,22 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
 
       {/* Table */}
-      <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
-          <h3 className="text-sm font-semibold text-center w-full">Planet Information</h3>
+      <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
+        <div className="horoscope-section-header px-4 py-2.5 text-center">
+          <h3 className="text-[20px] font-semibold text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 600, lineHeight: '26px' }}>Planet Information</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" style={{ fontFamily: "'Roboto', sans-serif" }}>
             <thead>
-              <tr className="border-b bg-muted/20">
+              <tr className="horoscope-thead">
                 {["Planet", "Sign", "Full Degree", "House", "Norm Degree", "Speed", "Retro?"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {ordered.map((p, i) => (
-                <tr key={p.name} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                <tr key={p.name} className="horoscope-tbody-row">
                   <td className="px-3 py-2 font-medium whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <PlanetSymbol name={p.name} />
@@ -1420,7 +1439,8 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
                               <img
                                 src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
                                 alt=""
-                                className="size-4 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
+                                className="size-4 cursor-pointer hover:scale-125 transition-transform"
+                                style={{ filter: 'none' }}
                               />
                             </button>
                           </TooltipTrigger>
@@ -1457,11 +1477,16 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
             const interp = aiMap[p.name];
             if (!interp) return null;
             const hasDecan = checkDacen(p.name, p.sign);
+            const planetImg = ASTRO_HEADER_IMAGES[p.name];
             return (
-              <div key={p.name} className="rounded-lg border overflow-hidden">
-                <div className="flex items-center justify-center gap-2 px-4 py-2.5 bg-muted/40 border-b text-center">
-                  <span className="text-amber-500 text-base">{PLANET_SYMBOLS[p.name] ?? "✦"}</span>
-                  <h4 className="text-sm font-semibold uppercase tracking-wide">{p.name}</h4>
+              <div key={p.name} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
+                {/* Interpretation Header — white bg, dark text, centered icon + name */}
+                <div className="horoscope-interp-header flex items-center justify-center gap-5 px-4 py-2.5" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
+                  {planetImg && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={planetImg} alt={p.name} className="size-[30px] object-contain shrink-0" />
+                  )}
+                  <h4 className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>{p.name}</h4>
                   {hasDecan && (
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -1475,7 +1500,7 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
                           <img
                             src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
                             alt=""
-                            className="size-5 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
+                            className="size-5 cursor-pointer hover:scale-125 transition-transform"
                           />
                         </button>
                       </TooltipTrigger>
@@ -1486,12 +1511,13 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
                   )}
                   <Badge variant="outline" className="ml-auto text-[10px] text-amber-600 border-amber-400">{p.sign} · House {p.house}</Badge>
                 </div>
-                <div className="px-4 py-3">
-                  <p className="text-sm leading-relaxed text-foreground">{interp}</p>
-                  <div className="mt-2 flex justify-center">
+                {/* Interpretation Content — Planet-specific gradient */}
+                <div className={cn("px-4 py-3", getPlanetInterpClass(p.name))}>
+                  <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px' }}>{interp}</p>
+                  <div className="mt-3 flex justify-center">
                     <button
                       onClick={() => trigger(p.name, interp, p, areaOfInquiry, undefined, false, "planet")}
-                      className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
+                      className="horoscope-show-more"
                     >Show More</button>
                   </div>
                 </div>
@@ -1533,22 +1559,22 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
 
       {/* House table */}
-      <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
-          <h3 className="text-sm font-semibold text-center w-full">House Information</h3>
+      <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
+        <div className="horoscope-section-header px-4 py-2.5 text-center">
+          <h3 className="text-[20px] font-semibold text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 600, lineHeight: '26px' }}>House Information</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" style={{ fontFamily: "'Roboto', sans-serif" }}>
             <thead>
-              <tr className="border-b bg-muted/20">
+              <tr className="horoscope-thead">
                 {["House", "Sign", "Degree", "Planets"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>
+                  <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {houses.map((h: any, i: number) => (
-                <tr key={h.house} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                <tr key={h.house} className="horoscope-tbody-row">
                   <td className="px-3 py-2 font-semibold">House {h.house}</td>
                   <td className="px-3 py-2"><ZodiacSymbol sign={h.sign} /></td>
                   <td className="px-3 py-2 font-mono text-xs">{Number(h.degree).toFixed(2)}°</td>
@@ -1720,14 +1746,14 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
             const hRaw = houses.find((h: any) => Number(h.house) === Number(item.house));
             const sign = hRaw?.sign ?? "";
             return (
-              <div key={item.house} className="rounded-lg border overflow-hidden">
-                <div className="px-4 py-2.5 bg-muted/40 border-b flex justify-center">
-                  <h4 className="text-sm font-semibold uppercase tracking-wide text-center w-full">House {item.house}</h4>
+              <div key={item.house} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
+                <div className="horoscope-interp-header px-4 py-2.5 flex justify-center" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
+                  <h4 className="text-sm font-semibold uppercase tracking-wide text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>House {item.house}</h4>
                 </div>
-                <div className="px-4 py-3">
-                  <p className="text-sm leading-relaxed">{item.interpretation}</p>
-                  <div className="mt-2 flex justify-center">
-                    <button onClick={() => trigger(`House ${item.house}`, item.interpretation, { ...item, sign }, areaOfInquiry, undefined, false, "house")} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                <div className="interp-gradient-default px-4 py-3">
+                  <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{item.interpretation}</p>
+                  <div className="mt-3 flex justify-center">
+                    <button onClick={() => trigger(`House ${item.house}`, item.interpretation, { ...item, sign }, areaOfInquiry, undefined, false, "house")} className="horoscope-show-more">Show More</button>
                   </div>
                 </div>
               </div>
@@ -1765,22 +1791,22 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
       <AspectsLegend />
 
-      <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
-          <h3 className="text-sm font-semibold text-center w-full">Aspects</h3>
+      <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
+        <div className="horoscope-section-header px-4 py-2.5 text-center">
+          <h3 className="text-[20px] font-semibold text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 600, lineHeight: '26px' }}>Aspects</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" style={{ fontFamily: "'Roboto', sans-serif" }}>
             <thead>
-              <tr className="border-b bg-muted/20">
+              <tr className="horoscope-thead">
                 {["Aspected Planet", "Aspecting Planet", "Orb", "Type", "Diff", "Aspected °", "Aspecting °"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {enriched.map((a: any, i: number) => (
-                <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                <tr key={i} className="horoscope-tbody-row">
                   <td className="px-3 py-2 whitespace-nowrap"><PlanetSymbol name={a.aspected_planet} /></td>
                   <td className="px-3 py-2 whitespace-nowrap"><PlanetSymbol name={a.aspecting_planet} /></td>
                   <td className="px-3 py-2">
@@ -1818,17 +1844,18 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
           {aiData.map((item: any, i: number) => {
             // Parse planet/aspect names directly from the AI title — no fuzzy rawAspect lookup
             // e.g. "Moon Conjunction Venus" → p1="Moon", aspectType="Conjunction", p2="Venus"
-            const { p1, aspectType, p2 } = parseAspectTitle(item.title);
+            const { p1, aspectType: _at, p2 } = parseAspectTitle(item.title);
             return (
-              <div key={i} className="rounded-lg border overflow-hidden">
-                {/* Header — Angular astroHeaderModifierPipe pattern: WORD [img] WORD [img] WORD [img] */}
-                <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+              <div key={i} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
+                {/* Header — white bg with dark text, Angular astroHeaderModifierPipe icon pattern */}
+                <div className="horoscope-interp-header px-4 py-2.5 text-center" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
                   <AstroHeaderParts title={item.title ?? `Aspect ${i + 1}`} />
                 </div>
-                <div className="px-4 py-3">
-                  <p className="text-sm leading-relaxed">{item.interpretation}</p>
-                  <div className="mt-2 flex justify-center">
-                    <button onClick={() => trigger(item.title ?? `Aspect ${i + 1}`, item.interpretation, item, areaOfInquiry, item.title)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                {/* Golden-orange gradient interpretation */}
+                <div className="interp-gradient-default px-4 py-3">
+                  <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{item.interpretation}</p>
+                  <div className="mt-3 flex justify-center">
+                    <button onClick={() => trigger(item.title ?? `Aspect ${i + 1}`, item.interpretation, item, areaOfInquiry, item.title)} className="horoscope-show-more">Show More</button>
                   </div>
                 </div>
               </div>
@@ -1856,14 +1883,14 @@ function DharmaKarmaSection({ data, rawData, areaOfInquiry }: { data: any; rawDa
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
       {[{ key: "dharma", label: "Dharma", text: dharma }, { key: "karma", label: "Karma", text: karma }].map(({ key, label, text }) => (
         text ? (
-          <div key={key} className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20 flex justify-center">
-              <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-300 text-center w-full">{label}</h4>
+          <div key={key} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
+            <div className="horoscope-interp-header px-4 py-2.5 flex justify-center" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
+              <h4 className="text-sm font-semibold text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>{label}</h4>
             </div>
-            <div className="px-4 py-3">
-              <p className="text-sm leading-relaxed">{text}</p>
-              <div className="mt-2 flex justify-center">
-                <button onClick={() => trigger(label, text, rawData ?? data, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+            <div className="interp-gradient-default px-4 py-3">
+              <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{text}</p>
+              <div className="mt-3 flex justify-center">
+                <button onClick={() => trigger(label, text, rawData ?? data, areaOfInquiry)} className="horoscope-show-more">Show More</button>
               </div>
             </div>
           </div>
@@ -1889,9 +1916,9 @@ function LilithSection({ lilith, aiData, areaOfInquiry, checkDacen, onDecanClick
   return (
     <div className="space-y-4">
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
-      <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
-          <h3 className="text-sm font-semibold flex items-center justify-center gap-2">
+      <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
+        <div className="horoscope-section-header px-4 py-2.5 text-center">
+          <h3 className="text-[20px] font-semibold flex items-center justify-center gap-2" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 600, lineHeight: '26px' }}>
             <span>Lilith</span>
             <span className="text-amber-500">⚸</span>
             {lilith.sign && checkDacen("Lilith", lilith.sign) && (
@@ -1906,7 +1933,7 @@ function LilithSection({ lilith, aiData, areaOfInquiry, checkDacen, onDecanClick
                     <img
                       src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
                       alt=""
-                      className="size-4 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
+                      className="size-4 cursor-pointer hover:scale-125 transition-transform"
                     />
                   </button>
                 </TooltipTrigger>
@@ -1918,16 +1945,16 @@ function LilithSection({ lilith, aiData, areaOfInquiry, checkDacen, onDecanClick
           </h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" style={{ fontFamily: "'Roboto', sans-serif" }}>
             <thead>
-              <tr className="border-b bg-muted/20">
+              <tr className="horoscope-thead">
                 {["Planet", "Sign", "Full Degree", "House", "Norm Degree", "Speed", "Retro?"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              <tr className="bg-background">
+              <tr className="horoscope-tbody-row">
                 <td className="px-3 py-2 font-medium"><PlanetSymbol name={lilith.name ?? "Lilith"} /></td>
                 <td className="px-3 py-2"><ZodiacSymbol sign={lilith.sign} /></td>
                 <td className="px-3 py-2 font-mono text-xs">{Number(lilith.full_degree).toFixed(2)}°</td>
@@ -1940,10 +1967,10 @@ function LilithSection({ lilith, aiData, areaOfInquiry, checkDacen, onDecanClick
           </table>
         </div>
         {interp && (
-          <div className="px-4 py-3 border-t">
-            <p className="text-sm leading-relaxed">{interp}</p>
-            <div className="mt-2 flex justify-center">
-              <button onClick={() => trigger("Lilith", interp, lilith, areaOfInquiry, undefined, false, "planet")} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+          <div className="interp-gradient-default px-4 py-3 border-t">
+            <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{interp}</p>
+            <div className="mt-3 flex justify-center">
+              <button onClick={() => trigger("Lilith", interp, lilith, areaOfInquiry, undefined, false, "planet")} className="horoscope-show-more">Show More</button>
             </div>
           </div>
         )}
@@ -1972,27 +1999,29 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry }: { natal
   if (aiData === "error") return <SectionError title="Ascendant · Midheaven · Vertex" />;
 
   return (
-    <div className="rounded-lg border overflow-hidden">
+    <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
-      <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
-        <h3 className="text-sm font-semibold text-center w-full">Ascendant · Midheaven · Vertex</h3>
+      <div className="horoscope-section-header px-4 py-2.5 text-center">
+        <h3 className="text-[20px] font-semibold text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 600, lineHeight: '26px' }}>Ascendant · Midheaven · Vertex</h3>
       </div>
-      <div className="divide-y">
+      <div>
         {keys.map((key) => {
           const degree = natalData?.[key];
           const interp = aiMap[key];
           return (
-            <div key={key} className="px-4 py-3">
-              <div className="flex items-center gap-2 mb-1.5">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 text-center">{key}</h4>
+            <div key={key}>
+              <div className="horoscope-interp-header px-4 py-2 flex items-center gap-2" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-center" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>{key}</h4>
                 {degree && <Badge variant="outline" className="text-[10px]">{typeof degree === "object" ? `${degree.sign ?? ""} ${Number(degree.degree ?? 0).toFixed(2)}°` : String(degree)}</Badge>}
               </div>
-              <p className="text-sm leading-relaxed">{interp ?? <span className="text-muted-foreground italic">Loading…</span>}</p>
-              {interp && (
-                <div className="mt-1.5 flex justify-center">
-                  <button onClick={() => trigger(key, interp, { [key]: degree }, areaOfInquiry, undefined, false, "planet")} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
-                </div>
-              )}
+              <div className="interp-gradient-default px-4 py-3">
+                <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{interp ?? <span className="italic" style={{ color: '#666' }}>Loading…</span>}</p>
+                {interp && (
+                  <div className="mt-3 flex justify-center">
+                    <button onClick={() => trigger(key, interp, { [key]: degree }, areaOfInquiry, undefined, false, "planet")} className="horoscope-show-more">Show More</button>
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
@@ -2047,20 +2076,20 @@ function PlanetReturnSummaryTable({ tab, birth, returnDate, natalData }: {
 
   return (
     <div className="rounded-lg border overflow-hidden">
-      <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20 text-center">
-        <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-300">{label} Return — Summary</h3>
+      <div className="px-4 py-2.5 horoscope-section-header text-center">
+        <h3 className="text-sm font-semibold text-center w-full">{label} Return — Summary</h3>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-muted/20">
+            <tr className="horoscope-thead">
               {["Date of Birth", "Place of Birth", "Time of Birth", "House System", `${label} at Birth`, `Next ${label} Return`].map((h) => (
-                <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            <tr className="bg-background">
+            <tr className="horoscope-tbody-row">
               <td className="px-3 py-2">{birth.dob ? format(parse(birth.dob, "yyyy-MM-dd", new Date()), "PPP") : "—"}</td>
               <td className="px-3 py-2">{birth.city?.label ?? "—"}</td>
               <td className="px-3 py-2">{birth.tob || "—"}</td>
@@ -2088,23 +2117,23 @@ function PlanetReturnInterpretation({ tab, aiData, areaOfInquiry }: { tab: strin
   return (
     <div className="rounded-lg border overflow-hidden">
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
-      <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+      <div className="px-4 py-2.5 horoscope-section-header text-center">
         <h3 className="text-sm font-semibold text-center w-full">{title}</h3>
       </div>
       <div className="divide-y">
         {interp && typeof interp === "object" ? (
           Object.entries(interp).map(([k, v]) => (
-            <div key={k} className="px-4 py-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1.5 text-center w-full">{k}</h4>
-              <p className="text-sm leading-relaxed">{String(v)}</p>
+            <div key={k} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px' }}>
+              <h4 className="text-xs font-semibold uppercase tracking-wider mb-1.5 text-center w-full" style={{ color: '#000' }}>{k}</h4>
+              <p className="leading-relaxed" style={{ color: '#000' }}>{String(v)}</p>
               <div className="mt-1.5 flex justify-center">
-                <button onClick={() => trigger(k, String(v), interp, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                <button onClick={() => trigger(k, String(v), interp, areaOfInquiry)} className="horoscope-show-more">Show More</button>
               </div>
             </div>
           ))
         ) : interp ? (
-          <div className="px-4 py-3">
-            <p className="text-sm leading-relaxed">{String(interp)}</p>
+          <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+            <p className="leading-relaxed">{String(interp)}</p>
           </div>
         ) : null}
         {aiData && typeof aiData === "object" && aiData.chart_data && (
@@ -2143,17 +2172,17 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       <div className="space-y-2">
         {items.map((item: any, i: number) => (
           <div key={i} className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-2 bg-muted/30 border-b flex items-center justify-center gap-2">
+            <div className="px-4 py-2 horoscope-interp-header flex items-center justify-center gap-2">
               {item.name && PLANET_IMAGES[item.name] && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={PLANET_IMAGES[item.name]} alt={item.name} className="size-5 object-contain" />
               )}
               <h4 className="text-sm font-semibold text-center w-full">{item.title ?? item.name ?? `${title} ${i + 1}`}</h4>
             </div>
-            <div className="px-4 py-3">
-              <p className="text-sm leading-relaxed">{item.interpretation ?? item.data ?? item.forecast}</p>
+            <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+              <p className="leading-relaxed">{item.interpretation ?? item.data ?? item.forecast}</p>
               <div className="mt-2 flex justify-center">
-                <button onClick={() => trigger(item.title ?? item.name ?? title, item.interpretation ?? item.data ?? "", item, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                <button onClick={() => trigger(item.title ?? item.name ?? title, item.interpretation ?? item.data ?? "", item, areaOfInquiry)} className="horoscope-show-more">Show More</button>
               </div>
             </div>
           </div>
@@ -2174,15 +2203,15 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       {/* 1. Solar Return Details */}
       {details && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return Details</h3></div>
+          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return Details</h3></div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="border-b bg-muted/20">
+              <thead><tr className="horoscope-thead">
                 {["Native Birth Date", "Solar Return Date", "Sun Degree", "Solar Return ASC"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
                 ))}
               </tr></thead>
-              <tbody><tr className="bg-background">
+              <tbody><tr className="horoscope-tbody-row">
                 <td className="px-3 py-2">{details.native_birth_date ?? details.date_of_birth ?? "—"}</td>
                 <td className="px-3 py-2 font-semibold text-amber-600">{details.solar_return_date ?? details.return_date ?? "—"}</td>
                 <td className="px-3 py-2 font-mono text-xs">{details.sun_degree ?? "—"}</td>
@@ -2196,17 +2225,17 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       {/* 2. Solar Return Planets table */}
       {planetList.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return Planets</h3></div>
+          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return Planets</h3></div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="border-b bg-muted/20">
+              <thead><tr className="horoscope-thead">
                 {["Planet", "House", "Full Degree", "Sign", "Norm Degree", "Speed", "Retro?"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
                 ))}
               </tr></thead>
               <tbody>
                 {planetList.map((p: any, i: number) => (
-                  <tr key={p.name ?? i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                  <tr key={p.name ?? i} className="horoscope-tbody-row">
                     <td className="px-3 py-2 font-medium whitespace-nowrap"><PlanetSymbol name={p.name} /></td>
                     <td className="px-3 py-2 text-center">{p.house ?? "—"}</td>
                     <td className="px-3 py-2 font-mono text-xs">{Number(p.full_degree ?? 0).toFixed(2)}°</td>
@@ -2235,7 +2264,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
               const forecasts: string[] = Array.isArray(p.forecast) ? p.forecast : (p.forecast ? [String(p.forecast)] : []);
               return (
                 <div key={p.name ?? i} className="rounded-lg border overflow-hidden">
-                  <div className="px-4 py-2 bg-muted/30 border-b flex items-center justify-center gap-2">
+                  <div className="px-4 py-2 horoscope-interp-header flex items-center justify-center gap-2">
                     {p.name && PLANET_IMAGES[p.name] && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={PLANET_IMAGES[p.name]} alt={p.name} className="size-5 object-contain" />
@@ -2264,11 +2293,11 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
                     )}
                     {p.sign && <Badge variant="outline" className="ml-auto text-[10px] text-amber-600 border-amber-400">{p.sign}{p.house ? ` · House ${p.house}` : ""}</Badge>}
                   </div>
-                  <div className="px-4 py-3 space-y-1.5">
+                  <div className="interp-gradient-default px-4 py-3 space-y-1.5" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
                     {forecasts.map((f: string, fi: number) => (
-                      <p key={fi} className="text-sm leading-relaxed text-foreground">{f}</p>
+                      <p key={fi} className="leading-relaxed">{f}</p>
                     ))}
-                    {forecasts.length === 0 && <p className="text-sm text-muted-foreground italic">No forecast available.</p>}
+                    {forecasts.length === 0 && <p className="italic">No forecast available.</p>}
                   </div>
                 </div>
               );
@@ -2279,16 +2308,16 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
 
       {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex || houseList.length > 0) && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return House Cusps</h3></div>
+          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return House Cusps</h3></div>
           {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex) && (
             <div className="overflow-x-auto border-b">
               <table className="w-full text-sm">
-                <thead><tr className="border-b bg-muted/20">
-                  {["Point", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>)}
+                <thead><tr className="horoscope-thead">
+                  {["Point", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>)}
                 </tr></thead>
                 <tbody>
                   {[{ label: "Ascendant", val: cuspObj.ascendant }, { label: "Midheaven", val: cuspObj.midheaven }, { label: "Vertex", val: cuspObj.vertex }].filter((r) => r.val).map((r) => (
-                    <tr key={r.label} className="border-b last:border-0 bg-background">
+                    <tr key={r.label} className="horoscope-tbody-row">
                       <td className="px-3 py-2 font-medium">{r.label}</td>
                       <td className="px-3 py-2"><ZodiacSymbol sign={typeof r.val === "object" ? r.val?.sign : String(r.val)} /></td>
                       <td className="px-3 py-2 font-mono text-xs">{typeof r.val === "object" ? `${Number(r.val?.degree ?? 0).toFixed(2)}°` : "—"}</td>
@@ -2301,12 +2330,12 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
           {houseList.length > 0 && (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead><tr className="border-b bg-muted/20">
-                  {["House", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>)}
+                <thead><tr className="horoscope-thead">
+                  {["House", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>)}
                 </tr></thead>
                 <tbody>
                   {houseList.map((h: any, i: number) => (
-                    <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                    <tr key={i} className="horoscope-tbody-row">
                       <td className="px-3 py-2 font-medium">{h.house}</td>
                       <td className="px-3 py-2"><ZodiacSymbol sign={h.sign} /></td>
                       <td className="px-3 py-2 font-mono text-xs">{Number(h.degree ?? 0).toFixed(2)}°</td>
@@ -2326,17 +2355,17 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       {/* 5. Solar Return Aspects table */}
       {aspectList.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return Planet Aspects</h3></div>
+          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return Planet Aspects</h3></div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="border-b bg-muted/20">
+              <thead><tr className="horoscope-thead">
                 {["SR Planet", "Natal Planet", "Type", "Orb"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
                 ))}
               </tr></thead>
               <tbody>
                 {aspectList.map((a: any, i: number) => (
-                  <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                  <tr key={i} className="horoscope-tbody-row">
                     <td className="px-3 py-2 whitespace-nowrap"><PlanetSymbol name={a.solar_return_planet ?? a.aspecting_planet ?? a.planet1 ?? "—"} /></td>
                     <td className="px-3 py-2 whitespace-nowrap"><PlanetSymbol name={a.natal_planet ?? a.aspected_planet ?? a.planet2 ?? "—"} /></td>
                     <td className="px-3 py-2 whitespace-nowrap">
@@ -2389,18 +2418,18 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
               return (
                 <div key={i} className="rounded-lg border overflow-hidden">
                   {/* Header: Centered with Icons using existing AstroHeaderParts logic */}
-                  <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+                  <div className="px-4 py-2.5 horoscope-section-header text-center">
                     <AstroHeaderParts title={unifiedTitle} />
                   </div>
 
-                  <div className="px-4 py-3">
-                    <p className="text-sm leading-relaxed text-foreground text-center">
+                  <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                    <p className="leading-relaxed text-center">
                       {String(forecast)}
                     </p>
                     <div className="mt-2 flex justify-center">
                       <button
                         onClick={() => trigger(unifiedTitle, String(forecast), a, areaOfInquiry, unifiedTitle)}
-                        className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
+                        className="horoscope-show-more"
                       >
                         Show More
                       </button>
@@ -2470,7 +2499,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {/* Transit Chart Image Section */}
       {transitWheelSvg && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+          <div className="px-4 py-2.5 horoscope-section-header text-center">
             <h3 className="text-sm font-semibold text-center w-full">Transit Chart</h3>
           </div>
           <div className="p-6 bg-slate-950 flex justify-center border-b border-white/5">
@@ -2491,20 +2520,20 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {tabSlug === "tropical_transits_monthly_v3" && lunarMetrics && (
         <div className="space-y-6">
           <div className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+            <div className="px-4 py-2.5 horoscope-section-header text-center">
               <h3 className="text-sm font-semibold text-center w-full">Future Lunar Metrics</h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-muted/20">
+                  <tr className="horoscope-thead">
                     {["Month", "Moon Day", "Moon Illumination", "Moon Phase", "Moon Sign"].map((h) => (
-                      <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                      <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b bg-background">
+                  <tr className="horoscope-tbody-row">
                     <td className="px-3 py-2 text-xs font-medium">
                       {(() => {
                         const mStr = String(lunarMetrics.month || "");
@@ -2542,15 +2571,15 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                 const fullTitle = `${sec.label}${sec.val ? `: ${sec.val}` : ""}`;
                 return (
                   <div key={sec.key} className="rounded-lg border overflow-hidden">
-                    <div className="px-4 py-2.5 bg-muted/40 border-b flex items-center justify-center gap-2">
+                    <div className="px-4 py-2.5 horoscope-section-header flex items-center justify-center gap-2">
                       <h4 className="text-sm font-semibold text-center w-full uppercase tracking-wider">{fullTitle}</h4>
                     </div>
-                    <div className="px-4 py-3">
-                      <p className="text-sm leading-relaxed line-clamp-3 text-muted-foreground">{content}</p>
-                      <div className="mt-2 flex justify-center border-t border-white/5 pt-2">
+                    <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                      <p className="leading-relaxed line-clamp-3">{content}</p>
+                      <div className="mt-2 flex justify-center border-t border-black/10 pt-2">
                         <button
                           onClick={() => trigger(fullTitle, content, null, areaOfInquiry)}
-                          className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
+                          className="horoscope-show-more"
                         >
                           Show More
                         </button>
@@ -2573,15 +2602,15 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {/* Future Tropical Transits Monthly Relation Table — specifically for monthly v3 */}
       {tabSlug === "tropical_transits_monthly_v3" && transitRows.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+          <div className="px-4 py-2.5 horoscope-section-header text-center">
             <h3 className="text-sm font-semibold text-center w-full">Future Tropical Transits Monthly Relation</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-muted/20">
+                <tr className="horoscope-thead">
                   {["Date", "Natal Planet", "Type", "Transit Planet"].map((h) => (
-                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -2592,7 +2621,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                   const aspType = row.type ?? row.aspect ?? "";
                   const dt = row.date ?? row.transit_date ?? "";
                   return (
-                    <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                    <tr key={i} className="horoscope-tbody-row">
                       <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{dt || "—"}</td>
                       <td className="px-3 py-2 whitespace-nowrap">{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
                       <td className="px-3 py-2 whitespace-nowrap">
@@ -2614,7 +2643,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {/* Weekly / Monthly Transit Relation Table */}
       {tabSlug !== "tropical_transits_monthly_v3" && transitRows.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+          <div className="px-4 py-2.5 horoscope-section-header text-center">
             <h3 className="text-sm font-semibold text-center w-full">
               {tabSlug === "tropical_transits_weekly_v2" ? "Tropical Transits Weekly Relation" : `${label} — Transit Aspects`}
             </h3>
@@ -2622,13 +2651,13 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-muted/20">
+                <tr className="horoscope-thead">
                   {(() => {
                     const headers = tabSlug === "tropical_transits_weekly_v2"
                       ? ["Date", "Transit Planet", "Aspect", "Natal Planet"]
                       : ["Transit Planet", "Aspect", "Natal Planet", "Orb", "Date"];
                     return headers.map((h) => (
-                      <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                      <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
                     ));
                   })()}
                 </tr>
@@ -2642,7 +2671,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                   const dt = row.date ?? row.transit_date ?? "";
 
                   return (
-                    <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                    <tr key={i} className="horoscope-tbody-row">
                       {tabSlug === "tropical_transits_weekly_v2" ? (
                         <>
                           <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{dt || "—"}</td>
@@ -2681,21 +2710,21 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {/* Lunar Return Metrics (monthly only) */}
       {tabSlug !== "tropical_transits_monthly_v3" && !isWeekly && lunarRows.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+          <div className="px-4 py-2.5 horoscope-section-header text-center">
             <h3 className="text-sm font-semibold text-center w-full">Lunar Return Metrics</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-muted/20">
+                <tr className="horoscope-thead">
                   {["Date / Month", "Moon Day", "Illumination", "Phase", "Moon Sign"].map((h) => (
-                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {lunarRows.map((row: any, i: number) => (
-                  <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                  <tr key={i} className="horoscope-tbody-row">
                     <td className="px-3 py-2 text-xs">{row.date ?? row.month ?? `Month ${i + 1}`}</td>
                     <td className="px-3 py-2 text-xs">{row.moon_day ?? row.day ?? "—"}</td>
                     <td className="px-3 py-2 text-xs">{row.moon_illumination != null ? `${Number(row.moon_illumination).toFixed(1)}%` : (row.illumination ?? "—")}</td>
@@ -2769,7 +2798,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
 
         return (
           <div key={i} className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-3 bg-muted/40 border-b flex items-center justify-center gap-2">
+            <div className="px-4 py-3 horoscope-section-header flex items-center justify-center gap-2">
               <div className="text-sm font-semibold text-center w-full">
                 <RelationshipHeading />
               </div>
@@ -2782,12 +2811,12 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                 return null;
               })()}
             </div>
-            <div className="px-4 py-3">
-              <p className="text-sm leading-relaxed">{interpretation}</p>
-              <div className="mt-2 flex justify-center pt-2 border-t border-white/5">
+            <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+              <p className="leading-relaxed">{interpretation}</p>
+              <div className="mt-2 flex justify-center pt-2 border-t border-black/10">
                 <button
                   onClick={() => trigger(title || `${label} ${i + 1}`, interpretation, item, areaOfInquiry)}
-                  className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
+                  className="horoscope-show-more"
                 >
                   Show More
                 </button>
@@ -2805,7 +2834,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
             <h3 className="text-sm font-semibold px-1">Lunar Return AI Interpretation</h3>
             {items.map((item: any, i: number) => (
               <div key={i} className="rounded-lg border overflow-hidden">
-                <div className="px-4 py-2.5 bg-muted/40 border-b flex items-center justify-center gap-2">
+                <div className="px-4 py-2.5 horoscope-section-header flex items-center justify-center gap-2">
                   <h4 className="text-sm font-semibold text-center w-full">{item.title ?? `Lunar Return ${i + 1}`}</h4>
                   {(() => {
                     const titleStr = String(item.title ?? "");
@@ -2840,10 +2869,10 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                     return null;
                   })()}
                 </div>
-                <div className="px-4 py-3">
-                  <p className="text-sm leading-relaxed">{item.interpretation ?? item.data ?? JSON.stringify(item)}</p>
+                <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                  <p className="leading-relaxed">{item.interpretation ?? item.data ?? JSON.stringify(item)}</p>
                   <div className="mt-2 flex justify-center">
-                    <button onClick={() => trigger(item.title ?? "Lunar Return", item.interpretation ?? "", item, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                    <button onClick={() => trigger(item.title ?? "Lunar Return", item.interpretation ?? "", item, areaOfInquiry)} className="horoscope-show-more">Show More</button>
                   </div>
                 </div>
               </div>
@@ -2885,7 +2914,7 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
     if (!text) return null;
     return (
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b flex items-center justify-center gap-2">
+        <div className="px-4 py-2.5 horoscope-section-header flex items-center justify-center gap-2">
           <h4 className="text-sm font-semibold text-center w-full">{title}</h4>
           {(() => {
             const match = title.match(/(\b[A-Z][a-z]+\b)\s+in\s+(\b[A-Z][a-z]+\b)/);
@@ -2915,10 +2944,10 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
             return null;
           })()}
         </div>
-        <div className="px-4 py-3">
-          <p className="text-sm leading-relaxed">{text}</p>
+        <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+          <p className="leading-relaxed">{text}</p>
           <div className="mt-2 flex justify-center">
-            <button onClick={() => trigger(title, text, { title, data: text }, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+            <button onClick={() => trigger(title, text, { title, data: text }, areaOfInquiry)} className="horoscope-show-more">Show More</button>
           </div>
         </div>
       </div>
@@ -2931,14 +2960,14 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
     if (!entries.length) return null;
     return (
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">{title}</h3></div>
+        <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">{title}</h3></div>
         <div className="divide-y">
           {entries.map(([k, v]) => (
-            <div key={k} className="px-4 py-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{k.replace(/_/g, " ")}</h4>
-              <p className="text-sm leading-relaxed">{String(v)}</p>
+            <div key={k} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+              <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{k.replace(/_/g, " ")}</h4>
+              <p className="leading-relaxed">{String(v)}</p>
               <div className="mt-1.5 flex justify-center">
-                <button onClick={() => trigger(k, String(v), obj, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                <button onClick={() => trigger(k, String(v), obj, areaOfInquiry)} className="horoscope-show-more">Show More</button>
               </div>
             </div>
           ))}
@@ -2973,14 +3002,14 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
       {/* Summary — timeline entries */}
       {Array.isArray(inner?.summary?.recommendation_on_date_and_timeline) && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Summary</h3></div>
+          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Summary</h3></div>
           <div className="divide-y">
             {inner.summary.recommendation_on_date_and_timeline.map((s: any, i: number) => (
-              <div key={i} className="px-4 py-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{s.timeline_title}</h4>
-                <p className="text-sm leading-relaxed">{s.timeline_data}</p>
+              <div key={i} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{s.timeline_title}</h4>
+                <p className="leading-relaxed">{s.timeline_data}</p>
                 <div className="mt-1.5 flex justify-center">
-                  <button onClick={() => trigger(s.timeline_title, s.timeline_data, s, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                  <button onClick={() => trigger(s.timeline_title, s.timeline_data, s, areaOfInquiry)} className="horoscope-show-more">Show More</button>
                 </div>
               </div>
             ))}
@@ -2991,12 +3020,12 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
       {/* Summary — answer array */}
       {Array.isArray(inner?.summary?.answer) && inner.summary.answer.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20 text-center"><h3 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Answer</h3></div>
+          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Answer</h3></div>
           <div className="divide-y">
             {inner.summary.answer.map((a: any, i: number) => (
-              <div key={i} className="px-4 py-3">
-                {a.title && <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{a.title}</h4>}
-                <p className="text-sm leading-relaxed">{a.data ?? a.text ?? String(a)}</p>
+              <div key={i} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                {a.title && <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{a.title}</h4>}
+                <p className="leading-relaxed">{a.data ?? a.text ?? String(a)}</p>
               </div>
             ))}
           </div>
@@ -3006,12 +3035,12 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
       {/* Summary — recommendation array */}
       {Array.isArray(inner?.summary?.recommendation) && inner.summary.recommendation.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Recommendations</h3></div>
+          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Recommendations</h3></div>
           <div className="divide-y">
             {inner.summary.recommendation.map((r: any, i: number) => (
-              <div key={i} className="px-4 py-3">
-                {r.title && <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{r.title}</h4>}
-                <p className="text-sm leading-relaxed">{r.data ?? r.text ?? String(r)}</p>
+              <div key={i} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                {r.title && <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{r.title}</h4>}
+                <p className="leading-relaxed">{r.data ?? r.text ?? String(r)}</p>
               </div>
             ))}
           </div>
@@ -3021,14 +3050,14 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
       {/* Houses */}
       {Array.isArray(inner?.house) && inner.house.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">House Analysis</h3></div>
+          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">House Analysis</h3></div>
           <div className="divide-y">
             {inner.house.map((h: any, i: number) => (
-              <div key={i} className="px-4 py-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{h.title}</h4>
-                <p className="text-sm leading-relaxed">{h.data}</p>
+              <div key={i} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{h.title}</h4>
+                <p className="leading-relaxed">{h.data}</p>
                 <div className="mt-1.5 flex justify-center">
-                  <button onClick={() => trigger(h.title, h.data, h, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                  <button onClick={() => trigger(h.title, h.data, h, areaOfInquiry)} className="horoscope-show-more">Show More</button>
                 </div>
               </div>
             ))}
@@ -3039,19 +3068,19 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
       {/* Planets (inner.planet array) */}
       {Array.isArray(inner?.planet) && inner.planet.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Planet Analysis</h3></div>
+          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Planet Analysis</h3></div>
           <div className="divide-y">
             {inner.planet.map((p: any, i: number) => {
               const pName = p.title?.split(" ")[0];
               return (
-                <div key={i} className="px-4 py-3">
+                <div key={i} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
                   <div className="flex items-center gap-2 mb-1">
                     {pName && PLANET_IMAGES[pName] && <img src={PLANET_IMAGES[pName]} alt={pName} className="size-5 object-contain" />}
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 text-center w-full">{p.title}</h4>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-center w-full">{p.title}</h4>
                   </div>
-                  <p className="text-sm leading-relaxed">{p.data}</p>
+                  <p className="leading-relaxed">{p.data}</p>
                   <div className="mt-1.5 flex justify-center">
-                    <button onClick={() => trigger(p.title, p.data, p, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                    <button onClick={() => trigger(p.title, p.data, p, areaOfInquiry)} className="horoscope-show-more">Show More</button>
                   </div>
                 </div>
               );
@@ -3063,12 +3092,12 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
       {/* Astrological aspects sub-section */}
       {inner?.astrological_aspect && typeof inner.astrological_aspect === "object" && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Astrological Aspects</h3></div>
+          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Astrological Aspects</h3></div>
           <div className="divide-y">
             {Object.entries(inner.astrological_aspect).map(([k, v]: [string, any]) => (
-              <div key={k} className="px-4 py-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{k.replace(/_/g, " ")}</h4>
-                <p className="text-sm leading-relaxed">{typeof v === "string" ? v : JSON.stringify(v)}</p>
+              <div key={k} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{k.replace(/_/g, " ")}</h4>
+                <p className="leading-relaxed">{typeof v === "string" ? v : JSON.stringify(v)}</p>
               </div>
             ))}
           </div>
@@ -3116,12 +3145,12 @@ function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen, onDeca
     if (!items.length) return null;
     return (
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">{title}</h3></div>
+        <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">{title}</h3></div>
         <div className="divide-y">
           {items.map((item: any, i: number) => (
-            <div key={i} className="px-4 py-3">
+            <div key={i} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
               <div className="flex items-center justify-center gap-2 mb-1">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 text-center">{item.title ?? item.name}</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-center">{item.title ?? item.name}</h4>
                 {(() => {
                   const titleStr = String(item.title ?? item.name ?? "");
                   // Simple parsing for "Planet in Sign" pattern
@@ -3156,9 +3185,9 @@ function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen, onDeca
                   return null;
                 })()}
               </div>
-              <p className="text-sm leading-relaxed">{item.data ?? item.interpretation ?? item.description}</p>
+              <p className="leading-relaxed">{item.data ?? item.interpretation ?? item.description}</p>
               <div className="mt-1.5 flex justify-center">
-                <button onClick={() => trigger(item.title ?? title, item.data ?? item.interpretation ?? "", item, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                <button onClick={() => trigger(item.title ?? title, item.data ?? item.interpretation ?? "", item, areaOfInquiry)} className="horoscope-show-more">Show More</button>
               </div>
             </div>
           ))}
@@ -4124,7 +4153,7 @@ export default function AdminHoroscopePage() {
   const isSolarReturn = currentSlug === "solar_return_v2";
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] lg:h-screen overflow-hidden flex flex-col">
+    <div className="horoscope-toolkit h-[calc(100vh-3.5rem)] lg:h-screen overflow-hidden flex flex-col" style={{ background: '#0a0c10' }}>
       {chartModal && <ChartImageModal src={chartModal} open={!!chartModal} onClose={() => setChartModal(null)} />}
 
       {/* Horizontal tab bar with scroll arrows */}
@@ -4357,7 +4386,7 @@ export default function AdminHoroscopePage() {
                               onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
                             />
                             <div className="rounded-lg border overflow-hidden">
-                              <div className="px-4 py-2.5 bg-muted/40 border-b flex items-center gap-2">
+                              <div className="px-4 py-2.5 horoscope-section-header flex items-center gap-2">
                                 <Home className="size-4 text-amber-600" />
                                 <h2 className="text-sm font-semibold">House Information</h2>
                               </div>
@@ -4366,16 +4395,16 @@ export default function AdminHoroscopePage() {
                               </div>
                             </div>
                             <div className="rounded-lg border overflow-hidden">
-                              <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20 flex items-center gap-2">
-                                <Sparkles className="size-4 text-amber-600" />
-                                <h2 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Dharma & Karma</h2>
+                              <div className="px-4 py-2.5 horoscope-section-header flex items-center gap-2">
+                                <Sparkles className="size-4" style={{ color: '#f1f1f1' }} />
+                                <h2 className="text-sm font-semibold" style={{ color: '#f1f1f1' }}>Dharma & Karma</h2>
                               </div>
                               <div className="p-4">
                                 <DharmaKarmaSection data={ai.dharma_karma} rawData={natalData} areaOfInquiry={form.areaOfInquiry} />
                               </div>
                             </div>
                             <div className="rounded-lg border overflow-hidden">
-                              <div className="px-4 py-2.5 bg-muted/40 border-b flex items-center gap-2">
+                              <div className="px-4 py-2.5 horoscope-section-header flex items-center gap-2">
                                 <Link className="size-4 text-amber-600" />
                                 <h2 className="text-sm font-semibold">Aspects</h2>
                               </div>

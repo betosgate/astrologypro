@@ -41,6 +41,7 @@ interface Booking {
     is_reminder?: boolean;
     is_manual?: boolean;
     timezone?: string;
+    availability_title?: string;
   } | null;
   services: { name: string } | null;
   clients: { full_name: string | null } | null;
@@ -424,7 +425,7 @@ export function CalendarView({
                         >
                           <div className="p-1">
                             <p className="truncate text-[10px] font-medium text-amber-300">
-                              {block.booking.services?.name ?? "Session"}
+                              {block.booking.metadata?.availability_title ?? block.booking.services?.name ?? "Session"}
                             </p>
                             <p className="truncate text-[9px] text-amber-300/70">
                               {block.booking.clients?.full_name ?? "Client"}
@@ -453,9 +454,9 @@ export function CalendarView({
           {selectedBooking && (
             <div className="mt-6 space-y-4">
               <div>
-                <Label className="text-muted-foreground">Service</Label>
+                <Label className="text-muted-foreground">Schedule</Label>
                 <p className="font-medium">
-                  {selectedBooking.services?.name ?? "Session"}
+                  {selectedBooking.metadata?.availability_title ?? selectedBooking.services?.name ?? "Session"}
                 </p>
               </div>
               <div>

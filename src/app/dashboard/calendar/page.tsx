@@ -23,6 +23,7 @@ interface CalendarBooking {
     is_reminder?: boolean;
     is_manual?: boolean;
     timezone?: string;
+    availability_title?: string;
   } | null;
   services: { name: string } | null;
   clients: { full_name: string | null } | null;
