@@ -2,7 +2,10 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CalendarConnections } from "@/components/dashboard/calendar-connections";
+import {
+  CalendarConnections,
+  type CalendarConnectionSummary,
+} from "@/components/dashboard/calendar-connections";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, Clock } from "lucide-react";
@@ -19,12 +22,40 @@ export default async function AdminMySchedulePage() {
   // Look up whether this admin also has a diviner record (needed for availability and calendar sync)
   const { data: diviner } = await admin
     .from("diviners")
-    .select("id, display_name, google_calendar_connected, outlook_calendar_connected")
+    .select("id, display_name")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  const googleConnected = diviner?.google_calendar_connected ?? false;
-  const outlookConnected = diviner?.outlook_calendar_connected ?? false;
+  const { data: connections } = diviner
+    ? await admin
+        .from("calendar_connections")
+        .select("id, provider, email, account_identifier, created_at, updated_at")
+        .eq("owner_id", diviner.id)
+        .order("updated_at", { ascending: false })
+        .order("created_at", { ascending: false })
+    : { data: [] as Array<Record<string, unknown>> };
+
+  const googleConnections: CalendarConnectionSummary[] = (connections ?? [])
+    .filter((connection) => connection.provider === "google")
+    .map((connection) => ({
+      id: String(connection.id),
+      provider: "google",
+      email: typeof connection.email === "string" ? connection.email : null,
+      accountIdentifier: String(connection.account_identifier ?? ""),
+      createdAt: typeof connection.created_at === "string" ? connection.created_at : null,
+      updatedAt: typeof connection.updated_at === "string" ? connection.updated_at : null,
+    }));
+
+  const microsoftConnections: CalendarConnectionSummary[] = (connections ?? [])
+    .filter((connection) => connection.provider === "microsoft")
+    .map((connection) => ({
+      id: String(connection.id),
+      provider: "microsoft",
+      email: typeof connection.email === "string" ? connection.email : null,
+      accountIdentifier: String(connection.account_identifier ?? ""),
+      createdAt: typeof connection.created_at === "string" ? connection.created_at : null,
+      updatedAt: typeof connection.updated_at === "string" ? connection.updated_at : null,
+    }));
 
   return (
     <div className="space-y-8">
@@ -70,8 +101,8 @@ export default async function AdminMySchedulePage() {
 
         {diviner ? (
           <CalendarConnections
-            googleConnected={googleConnected}
-            outlookConnected={outlookConnected}
+            googleConnections={googleConnections}
+            microsoftConnections={microsoftConnections}
           />
         ) : (
           <Card>

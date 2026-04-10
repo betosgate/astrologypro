@@ -192,6 +192,7 @@ const NAV_GROUPS = [
     label: "Plans",
     items: [
       { label: "Diviner Plans", href: "/admin/diviner-plans", icon: Layers },
+      { label: "Service Config", href: "/admin/service-config", icon: Settings2 },
     ],
   },
   {

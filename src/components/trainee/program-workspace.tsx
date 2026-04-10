@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,16 @@ import {
   ChevronRight,
   Circle,
   Clock,
+  ExternalLink,
+  Loader2,
   Lock,
   PlayCircle,
 } from "lucide-react";
-import { LockedLink } from "@/components/trainee/locked-link";
 import { toast } from "sonner";
+import {
+  LessonViewerClient,
+  type LessonViewerProps,
+} from "@/components/trainee/lesson-viewer-client";
 
 // ─── Types (mirror the shape returned by /api/trainee/training/programs) ────
 
@@ -82,6 +87,142 @@ const STATUS_BADGE: Record<ReturnType<typeof lessonStatus>, string> = {
   not_started: "border-muted-foreground/30 text-muted-foreground",
 };
 
+// ─── Inline lesson viewer ─────────────────────────────────────────────────
+// Fetches lesson detail client-side and renders LessonViewerClient inline
+// inside the workspace panel so the learner can consume content without
+// leaving the program workspace. sidebarLessons is passed as [] because
+// the workspace itself provides category + lesson navigation.
+
+function normalizeQuizOptions(options: unknown): { text: string }[] {
+  if (!Array.isArray(options)) return [];
+  return options.flatMap((option) => {
+    if (typeof option === "string") {
+      const text = option.trim();
+      return text ? [{ text }] : [];
+    }
+    if (
+      option &&
+      typeof option === "object" &&
+      "text" in option &&
+      typeof (option as { text: unknown }).text === "string"
+    ) {
+      const text = ((option as { text: string }).text).trim();
+      return text ? [{ text }] : [];
+    }
+    return [];
+  });
+}
+
+interface InlineLessonViewerProps {
+  lessonId: string;
+  programId: string;
+  categoryId: string;
+}
+
+function InlineLessonViewer({
+  lessonId,
+  programId,
+  categoryId,
+}: InlineLessonViewerProps) {
+  const [viewerProps, setViewerProps] = useState<LessonViewerProps | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchLesson = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/trainee/training/lessons/${lessonId}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? body.lock_reason ?? `HTTP ${res.status}`);
+      }
+      const { lesson } = await res.json();
+      if (!lesson) throw new Error("Lesson not found.");
+
+      // Build quiz questions — normalize options the same way the server page does.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const quizQuestions = (lesson.quiz_questions ?? []).map((q: any) => ({
+        id: q.id,
+        question: q.question,
+        options: normalizeQuizOptions(q.options),
+        explanation: q.explanation ?? null,
+        remediation_video_id: q.remediation_video_id ?? null,
+        remediation_video_index: q.remediation_video_index ?? null,
+        remediation_start_seconds: q.remediation_start_seconds ?? null,
+        remediation_replay_until_seconds: q.remediation_replay_until_seconds ?? null,
+        remediation_message: q.remediation_message ?? null,
+      }));
+
+      setViewerProps({
+        lessonId,
+        programId,
+        categoryId,
+        title: lesson.title ?? "",
+        description: lesson.description ?? null,
+        content: lesson.content ?? null,
+        videoUrl: lesson.video_url ?? null,
+        pdfUrl: lesson.pdf_url ?? null,
+        durationMins: lesson.duration_mins ?? null,
+        videos: lesson.videos ?? [],
+        assets: lesson.assets ?? [],
+        quizQuestions,
+        quizPassed: lesson.quiz_passed === true,
+        isCompleted: lesson.completed === true,
+        // No deep-link routing from the inline viewer — the workspace handles
+        // lesson progression via category/lesson selection.
+        nextRoute: null,
+        nextLabel: null,
+        // Empty sidebar — the workspace IS the sidebar.
+        sidebarLessons: [],
+        triggers: lesson.triggers ?? [],
+        lastPositionSeconds: lesson.last_position_seconds ?? 0,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [lessonId, programId, categoryId]);
+
+  useEffect(() => {
+    fetchLesson();
+  }, [fetchLesson]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12 text-sm text-muted-foreground gap-2">
+        <Loader2 className="size-4 animate-spin" />
+        Loading lesson…
+      </div>
+    );
+  }
+
+  if (error || !viewerProps) {
+    return (
+      <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive space-y-2">
+        <p className="font-semibold">Could not load lesson</p>
+        <p className="text-xs">{error ?? "Unknown error."}</p>
+        <Button variant="outline" size="sm" onClick={fetchLesson}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <LessonViewerClient
+      {...viewerProps}
+      // Override the isCompleted callback path: when the quiz onPassed fires
+      // inside the viewer, it sets local isCompleted. The LessonCompleteButton
+      // then calls /api/…/complete. We hook into completion via the viewer's
+      // existing fetch pattern — the parent polls or re-reads the program
+      // hierarchy to reflect the new state.
+      key={lessonId}
+    />
+  );
+}
+
 // ─── Component ─────────────────────────────────────────────────────────────
 
 export function ProgramWorkspace({
@@ -126,7 +267,7 @@ export function ProgramWorkspace({
           training-school/02-learner-experience/
           03-progressively-reveal-large-category-lists-and-make-category
           -rail-sticky.md. */}
-      <aside className="lg:col-span-1 order-2 space-y-2 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
+      <aside className="lg:col-span-1 order-2 space-y-2 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
             Categories
@@ -306,42 +447,44 @@ export function ProgramWorkspace({
                         </button>
 
                         {isExpanded && (
-                          <div className="border-t px-4 py-3 space-y-3">
-                            {lesson.description && (
-                              <p className="text-xs text-muted-foreground leading-relaxed">
-                                {lesson.description}
-                              </p>
-                            )}
-                            <LockedLink
-                              href={`/trainee/training/${programId}/${selectedCategory.id}/${lesson.id}`}
-                              isLocked={isLocked}
-                              lockReason={lesson.lock_reason}
-                              className="inline-flex"
-                            >
-                              <Button
-                                size="sm"
-                                variant={
-                                  status === "completed" ? "outline" : "default"
-                                }
-                                disabled={isLocked}
-                                tabIndex={isLocked ? -1 : undefined}
-                                asChild={!isLocked}
-                              >
-                                {isLocked ? (
-                                  <span>Locked</span>
-                                ) : (
-                                  <Link
-                                    href={`/trainee/training/${programId}/${selectedCategory.id}/${lesson.id}`}
-                                  >
-                                    {status === "completed"
-                                      ? "Review lesson"
-                                      : status === "ongoing"
-                                        ? "Resume lesson"
-                                        : "Start lesson"}
-                                  </Link>
+                          <div className="border-t px-4 py-4 space-y-4">
+                            {isLocked ? (
+                              /* Locked — show description + lock message only */
+                              <>
+                                {lesson.description && (
+                                  <p className="text-xs text-muted-foreground leading-relaxed">
+                                    {lesson.description}
+                                  </p>
                                 )}
-                              </Button>
-                            </LockedLink>
+                                <p className="text-xs text-muted-foreground italic">
+                                  {lesson.lock_reason ?? "Complete the previous lesson first to continue in sequence."}
+                                </p>
+                              </>
+                            ) : (
+                              /* Unlocked — inline lesson viewer replaces the deep-link CTA */
+                              <>
+                                <InlineLessonViewer
+                                  lessonId={lesson.id}
+                                  programId={programId}
+                                  categoryId={selectedCategory.id}
+                                />
+                                <div className="flex justify-end pt-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    asChild
+                                    className="text-xs text-muted-foreground gap-1.5"
+                                  >
+                                    <Link
+                                      href={`/trainee/training/${programId}/${selectedCategory.id}/${lesson.id}`}
+                                    >
+                                      <ExternalLink className="size-3" />
+                                      Open full page
+                                    </Link>
+                                  </Button>
+                                </div>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>

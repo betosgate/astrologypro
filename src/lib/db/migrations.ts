@@ -11,6 +11,11 @@ import { MIGRATION_SQL as MIG_20260408000115 } from "@/data/migrations/202604080
 import { MIGRATION_SQL as MIG_20260408000116 } from "@/data/migrations/20260408000116_training_notes_allow_quiz";
 import { MIGRATION_SQL as MIG_20260409000117 } from "@/data/migrations/20260409000117_availability_template_service_scope";
 import { MIGRATION_SQL as MIG_20260409000118 } from "@/data/migrations/20260409000118_calendar_provider_credentials";
+import { MIGRATION_SQL as MIG_20260409000119 } from "@/data/migrations/20260409000119_pricing_plans";
+import { MIGRATION_SQL as MIG_20260409000120 } from "@/data/migrations/20260409000120_pricing_plan_custom_fields";
+import { MIGRATION_SQL as MIG_20260409000121 } from "@/data/migrations/20260409000121_seed_pricing_plans";
+import { MIGRATION_SQL as MIG_20260409000122 } from "@/data/migrations/20260409000122_drop_item_price_currency";
+import { MIGRATION_SQL as MIG_20260409000123 } from "@/data/migrations/20260409000123_stripe_product_price_fields";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -140,6 +145,46 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Creates google_api_keys and microsoft_api_keys tables — admin-managed key-value storage for per-provider OAuth client credentials (client_id / client_secret / redirect_uri / tenant_id). Service-role only RLS; reads go through the admin Supabase client. Separate from calendar_connections (per-user tokens). Runtime read path in src/lib/calendar/provider-credentials.ts falls back to the existing env vars if no row is set, so deploy-time behavior does not change until an admin populates the tables via /admin/calendar-config.",
     sortKey: "20260409000118",
     sql: MIG_20260409000118,
+  },
+  "20260409000119_pricing_plans": {
+    id: "20260409000119_pricing_plans",
+    title: "Pricing plans (multiple plans per item)",
+    description:
+      "Creates pricing_plans table — multiple purchasable plans per global_pricing item, each with display_name, amount, MRP, stripe_price_id, currency, description, and is_active toggle. Seeds the existing professional_divination_course row as a default plan. Also improves global_pricing index: replaces single-column boolean index with composite (is_active, item_key) matching the public lookup pattern.",
+    sortKey: "20260409000119",
+    sql: MIG_20260409000119,
+  },
+  "20260409000120_pricing_plan_custom_fields": {
+    id: "20260409000120_pricing_plan_custom_fields",
+    title: "Pricing plan custom fields (JSONB metadata array)",
+    description:
+      "Adds custom_fields JSONB column to pricing_plans — array of {label, value, slug} objects for flexible plan metadata displayed on signup pages (e.g. duration, sessions, support level). CHECK constraint ensures the value is always a JSON array.",
+    sortKey: "20260409000120",
+    sql: MIG_20260409000120,
+  },
+  "20260409000121_seed_pricing_plans": {
+    id: "20260409000121_seed_pricing_plans",
+    title: "Seed Perennial Mandalism & Mystery School pricing plans",
+    description:
+      "Seeds global_pricing items (perennial_mandalism_community, mystery_school) and 6 pricing_plans with Stripe Price IDs and custom_fields: PM Individual/Couple/Family, Mystery Enrollment/Monthly/Monthly PM Discount. Idempotent via ON CONFLICT DO NOTHING.",
+    sortKey: "20260409000121",
+    sql: MIG_20260409000121,
+  },
+  "20260409000122_drop_item_price_currency": {
+    id: "20260409000122_drop_item_price_currency",
+    title: "Drop price/currency from global_pricing (moved to plans)",
+    description:
+      "Drops price and currency columns from global_pricing. All pricing now lives exclusively on pricing_plans. Run AFTER 000121 (seed). Destructive — columns are permanently removed.",
+    sortKey: "20260409000122",
+    sql: MIG_20260409000122,
+  },
+  "20260409000123_stripe_product_price_fields": {
+    id: "20260409000123_stripe_product_price_fields",
+    title: "Stripe product/price fields on items and plans",
+    description:
+      "Adds stripe_product_id and stripe_product_name to global_pricing (one Stripe product per item), and stripe_price_name to pricing_plans. Index on stripe_product_id.",
+    sortKey: "20260409000123",
+    sql: MIG_20260409000123,
   },
 };
 

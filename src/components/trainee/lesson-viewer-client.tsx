@@ -703,6 +703,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
   const remediationRequestSeqRef = useRef(0);
 
   const hasQuiz = quizQuestions.length > 0;
+  const hasSidebarRail = sidebarLessons.length > 0;
 
   // All in-video trigger questions must be answered correctly before completing.
   // A trigger counts as requiring a pass if it has a question attached.
@@ -716,7 +717,13 @@ export function LessonViewerClient(props: LessonViewerProps) {
       return passedTriggerIdSet.has(t.id);
     });
 
-  const canComplete = hasTriggers ? allTriggersPassed : (!hasQuiz || quizPassed);
+  // Completion gating: both trigger pass AND quiz pass must be satisfied
+  // when the lesson has both. Previously trigger-only lessons skipped the
+  // quiz check, which let learners complete a lesson without passing the
+  // standard quiz if in-video triggers also existed.
+  const triggersSatisfied = !hasTriggers || allTriggersPassed;
+  const quizSatisfied = !hasQuiz || quizPassed;
+  const canComplete = triggersSatisfied && quizSatisfied;
 
   const handleVideoEnded = () => {
     // Auto-advance to next video if available
@@ -790,7 +797,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
         />
       )}
 
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
+      <div className={cn("flex flex-col gap-6 items-start", hasSidebarRail && "lg:flex-row")}>
         {/* ── Left: Main content ────────────────────────────────────────── */}
         <div className="flex-1 min-w-0 space-y-5">
           {/* Lesson header */}
@@ -954,9 +961,98 @@ export function LessonViewerClient(props: LessonViewerProps) {
               </div>
             </div>
           )}
+          {/* ── Lesson quiz — inline in the main content flow ──────────── */}
+          {/* Rendered after videos + assets so the learner naturally
+              encounters it at the end of the lesson content. Shown
+              regardless of whether in-video triggers exist — triggers
+              and the standard lesson quiz are independent assessment
+              paths. See tasks/09.04.2026/training-module/training-school/
+              02-learner-experience/
+              05-show-lesson-quiz-inline-and-make-quiz-pass-required-for-
+              completion.md. */}
+          {hasQuiz && (
+            <div className="rounded-xl border bg-card overflow-hidden">
+              <div className="px-4 py-3 border-b flex items-center justify-between">
+                <p className="text-sm font-semibold">Lesson Quiz</p>
+                {quizPassed ? (
+                  <Badge className="bg-green-500/15 text-green-600 border-green-500/30 text-xs">
+                    Passed
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-xs">
+                    {quizQuestions.length} question{quizQuestions.length === 1 ? "" : "s"}
+                  </Badge>
+                )}
+              </div>
+              <div className="p-4">
+                <LessonViewerQuiz
+                  lessonId={lessonId}
+                  questions={quizQuestions}
+                  alreadyPassed={quizPassed}
+                  remediationReady={remediationReady}
+                  onWrongAnswer={(remediation) => {
+                    const start = remediation.start_seconds;
+                    const until = remediation.replay_until_seconds;
+                    if (start == null || until == null || until <= start) return;
+
+                    if (
+                      remediation.video_index != null &&
+                      remediation.video_index !== activeVideoIdx &&
+                      remediation.video_index >= 0 &&
+                      remediation.video_index < allVideos.length
+                    ) {
+                      setActiveVideoIdx(remediation.video_index);
+                    }
+
+                    setRemediationReady(false);
+                    remediationRequestSeqRef.current += 1;
+                    setRemediationRequest({
+                      startSeconds: start,
+                      replayUntilSeconds: until,
+                      requestId: remediationRequestSeqRef.current,
+                    });
+                  }}
+                  onPassed={() => setIsCompleted(true)}
+                />
+              </div>
+              {!quizPassed && (
+                <div className="px-4 pb-3 -mt-1">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <AlertCircle className="size-3 shrink-0" />
+                    You must pass this quiz to mark the lesson complete.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Completion CTA lives at the bottom of the lesson flow so the
+              content column keeps its full width and the right rail stays
+              focused on navigation only. The header already shows completed
+              state, so suppress the duplicate green "Lesson Complete" banner
+              inside the content area. */}
+          <LessonCompleteButton
+            lessonId={lessonId}
+            alreadyCompleted={isCompleted}
+            disabled={!canComplete}
+            disabledReason={
+              !canComplete
+                ? !triggersSatisfied && !quizSatisfied
+                  ? "Answer all in-video questions and pass the lesson quiz to complete this lesson."
+                  : !triggersSatisfied
+                    ? "Answer all in-video quiz questions correctly to complete this lesson."
+                    : "Pass the lesson quiz to complete this lesson."
+                : undefined
+            }
+            nextRoute={nextRoute ?? null}
+            nextLabel={nextLabel ?? null}
+            hideCompletedState
+            className="pt-2"
+          />
         </div>
 
         {/* ── Right: Sidebar ────────────────────────────────────────────── */}
+        {hasSidebarRail && (
         <aside className="w-full lg:w-72 shrink-0 space-y-4 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
           {/* Lesson navigation */}
           {sidebarLessons.length > 0 && (
@@ -1025,70 +1121,12 @@ export function LessonViewerClient(props: LessonViewerProps) {
             </div>
           )}
 
-          {/* Quiz section */}
-          {!hasTriggers && hasQuiz && (
-            <div className="rounded-xl border bg-card overflow-hidden">
-              <div className="px-4 py-3 border-b">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Lesson Quiz
-                </p>
-              </div>
-              <div className="p-4">
-                <LessonViewerQuiz
-                  lessonId={lessonId}
-                  questions={quizQuestions}
-                  alreadyPassed={quizPassed}
-                  remediationReady={remediationReady}
-                  onWrongAnswer={(remediation) => {
-                    // Module 05: drive the video player to the remediation
-                    // segment. Bail out if the question doesn't have a usable
-                    // window — quiz falls back to inline retry.
-                    const start = remediation.start_seconds;
-                    const until = remediation.replay_until_seconds;
-                    if (start == null || until == null || until <= start) return;
-
-                    // If the lesson has multiple videos and the remediation
-                    // points at a specific one, switch the active video.
-                    if (
-                      remediation.video_index != null &&
-                      remediation.video_index !== activeVideoIdx &&
-                      remediation.video_index >= 0 &&
-                      remediation.video_index < allVideos.length
-                    ) {
-                      setActiveVideoIdx(remediation.video_index);
-                    }
-
-                    setRemediationReady(false);
-                    remediationRequestSeqRef.current += 1;
-                    setRemediationRequest({
-                      startSeconds: start,
-                      replayUntilSeconds: until,
-                      requestId: remediationRequestSeqRef.current,
-                    });
-                  }}
-                  onPassed={() => setIsCompleted(true)}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Mark complete */}
-          <LessonCompleteButton
-            lessonId={lessonId}
-            alreadyCompleted={isCompleted}
-            disabled={!canComplete}
-            disabledReason={
-              !canComplete
-                ? hasTriggers && !allTriggersPassed
-                  ? "Answer all in-video quiz questions correctly to complete this lesson."
-                  : "Pass the quiz above to complete this lesson."
-                : undefined
-            }
-            nextRoute={nextRoute ?? null}
-            nextLabel={nextLabel ?? null}
-            className="px-0"
-          />
+          {/* Quiz section removed from sidebar — now rendered inline in the
+              main content column (see below the assets section) so the
+              learner sees it as part of the lesson flow rather than a
+              buried sidebar widget. */}
         </aside>
+        )}
       </div>
     </>
   );

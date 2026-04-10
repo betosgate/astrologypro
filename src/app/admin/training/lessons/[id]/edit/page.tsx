@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { TrainingNotes } from "@/components/admin/training-notes";
 
 // ---- types for sub-resource sections ----
@@ -565,24 +564,25 @@ export default function EditLessonPage() {
 
     setUploadProgress(true);
     try {
-      const supabase = createClient();
-      const ext = file.name.split(".").pop();
-      const path = `lessons/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      // Upload via the admin-mediated route which uses the service-role
+      // client (bypasses storage RLS). The previous direct browser upload
+      // was hitting "new row violates row-level security policy" because
+      // the browser client uses the anon key.
+      const body = new FormData();
+      body.append("file", file);
 
-      const { error } = await supabase.storage
-        .from("training-videos")
-        .upload(path, file, { cacheControl: "3600", upsert: false });
+      const res = await fetch("/api/admin/training/upload", {
+        method: "POST",
+        body,
+      });
 
-      if (error) {
-        toast.error(`Upload failed: ${error.message}`);
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error ?? `Upload failed (HTTP ${res.status}).`);
         return;
       }
 
-      const { data: publicData } = supabase.storage
-        .from("training-videos")
-        .getPublicUrl(path);
-
-      setForm((prev) => ({ ...prev, video_url: publicData.publicUrl }));
+      setForm((prev) => ({ ...prev, video_url: json.url }));
       setUploadedFileName(file.name);
       toast.success("Video uploaded.");
     } catch {

@@ -6,8 +6,9 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
- * PATCH  /api/admin/pricing/[id]   — update price / item_name / currency / is_active / description
+ * PATCH  /api/admin/pricing/[id]   — update item_name / is_active / description
  * DELETE /api/admin/pricing/[id]   — hard delete (rare; usually you'd toggle is_active)
+ * Note: price/currency live on pricing_plans, not on the item.
  */
 
 export async function PATCH(
@@ -39,25 +40,6 @@ export async function PATCH(
     }
     updates.item_name = v;
   }
-  if (body.price !== undefined) {
-    const v = typeof body.price === "number" ? body.price : Number(body.price);
-    if (!Number.isFinite(v) || v < 0) {
-      return NextResponse.json(
-        { error: "price must be a non-negative number" },
-        { status: 422 },
-      );
-    }
-    updates.price = v;
-  }
-  if (body.currency !== undefined) {
-    if (body.currency !== "USD" && body.currency !== "INR") {
-      return NextResponse.json(
-        { error: "currency must be 'USD' or 'INR'" },
-        { status: 422 },
-      );
-    }
-    updates.currency = body.currency;
-  }
   if (body.is_active !== undefined) {
     if (typeof body.is_active !== "boolean") {
       return NextResponse.json({ error: "is_active must be boolean" }, { status: 422 });
@@ -69,6 +51,18 @@ export async function PATCH(
       body.description === null
         ? null
         : String(body.description).trim() || null;
+  }
+  if (body.stripe_product_id !== undefined) {
+    updates.stripe_product_id = body.stripe_product_id === null ? null : String(body.stripe_product_id).trim() || null;
+  }
+  if (body.stripe_product_name !== undefined) {
+    updates.stripe_product_name = body.stripe_product_name === null ? null : String(body.stripe_product_name).trim() || null;
+  }
+  if (body.payment_provider !== undefined) {
+    updates.payment_provider = body.payment_provider === null ? null : String(body.payment_provider).trim() || null;
+  }
+  if (body.payment_provider_id !== undefined) {
+    updates.payment_provider_id = body.payment_provider_id === null ? null : String(body.payment_provider_id).trim() || null;
   }
 
   if (Object.keys(updates).length === 0) {

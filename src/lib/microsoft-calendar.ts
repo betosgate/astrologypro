@@ -2,12 +2,247 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   upsertCalendarConnection,
   deleteCalendarConnection,
+  listCalendarConnections,
+  type CalendarConnectionRecord,
 } from "@/lib/calendar/connections";
 import { getMicrosoftCredentials } from "@/lib/calendar/provider-credentials";
 
 // Tenant ID now comes from microsoft_api_keys (falls back to "common" inside
 // getMicrosoftCredentials) — do not hardcode it here anymore.
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
+
+interface MicrosoftAccountMetadata {
+  accountIdentifier: string;
+  email: string | null;
+}
+
+function parseDate(date: string): { year: number; month: number; day: number } {
+  const [year, month, day] = date.split("-").map(Number);
+  return { year, month, day };
+}
+
+function parseTime(time: string): { hour: number; minute: number; second: number } {
+  const [hour = 0, minute = 0, second = 0] = time.split(":").map(Number);
+  return { hour, minute, second };
+}
+
+function getTimeZoneParts(date: Date, timeZone: string) {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+
+  const map = new Map<string, string>();
+  for (const part of formatter.formatToParts(date)) {
+    if (part.type !== "literal") {
+      map.set(part.type, part.value);
+    }
+  }
+
+  return {
+    year: Number(map.get("year") ?? "0"),
+    month: Number(map.get("month") ?? "1"),
+    day: Number(map.get("day") ?? "1"),
+    hour: Number(map.get("hour") ?? "0"),
+    minute: Number(map.get("minute") ?? "0"),
+    second: Number(map.get("second") ?? "0"),
+  };
+}
+
+function getTimeZoneOffsetMs(date: Date, timeZone: string): number {
+  const parts = getTimeZoneParts(date, timeZone);
+  const asUtc = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second
+  );
+  return asUtc - date.getTime();
+}
+
+function zonedDateTimeToUtc(date: string, time: string, timeZone: string): Date {
+  const { year, month, day } = parseDate(date);
+  const { hour, minute, second } = parseTime(time);
+  const utcGuess = Date.UTC(year, month - 1, day, hour, minute, second);
+
+  let offsetMs = getTimeZoneOffsetMs(new Date(utcGuess), timeZone);
+  let actualUtc = utcGuess - offsetMs;
+
+  const refinedOffsetMs = getTimeZoneOffsetMs(new Date(actualUtc), timeZone);
+  if (refinedOffsetMs !== offsetMs) {
+    offsetMs = refinedOffsetMs;
+    actualUtc = utcGuess - offsetMs;
+  }
+
+  return new Date(actualUtc);
+}
+
+function getUtcDayRange(date: string, timeZone: string) {
+  return {
+    startDateTime: zonedDateTimeToUtc(date, "00:00:00", timeZone).toISOString(),
+    endDateTime: zonedDateTimeToUtc(date, "23:59:59", timeZone).toISOString(),
+  };
+}
+
+async function getMicrosoftAccountMetadata(
+  accessToken: string
+): Promise<MicrosoftAccountMetadata> {
+  try {
+    const response = await fetch(`${GRAPH_BASE}/me?$select=id,mail,userPrincipalName`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Microsoft /me lookup failed");
+    }
+
+    const payload = await response.json();
+    const accountIdentifier =
+      typeof payload.id === "string" && payload.id.length > 0
+        ? payload.id
+        : `microsoft:${accessToken.slice(0, 16)}`;
+    const emailCandidate =
+      typeof payload.mail === "string" && payload.mail.length > 0
+        ? payload.mail
+        : typeof payload.userPrincipalName === "string" && payload.userPrincipalName.length > 0
+          ? payload.userPrincipalName
+          : null;
+
+    return {
+      accountIdentifier: accountIdentifier.toLowerCase(),
+      email: emailCandidate ? emailCandidate.toLowerCase() : null,
+    };
+  } catch {
+    return {
+      accountIdentifier: `microsoft:${accessToken.slice(0, 16)}`.toLowerCase(),
+      email: null,
+    };
+  }
+}
+
+async function getMicrosoftConnections(ownerId: string): Promise<CalendarConnectionRecord[]> {
+  const admin = createAdminClient();
+  const connections = await listCalendarConnections(admin, ownerId, "microsoft");
+  if (connections.length > 0) {
+    return connections;
+  }
+
+  const { data: diviner } = await admin
+    .from("diviners")
+    .select("id, user_id, outlook_calendar_token")
+    .eq("id", ownerId)
+    .maybeSingle();
+
+  if (!diviner?.outlook_calendar_token) {
+    return [];
+  }
+
+  const legacyToken = diviner.outlook_calendar_token as {
+    access_token?: string;
+    refresh_token?: string;
+    expires_at?: number;
+  };
+
+  if (typeof legacyToken.refresh_token !== "string" || legacyToken.refresh_token.length === 0) {
+    return [];
+  }
+
+  return [
+    {
+      id: `legacy-microsoft-${ownerId}`,
+      user_id: diviner.user_id ?? "",
+      owner_id: diviner.id,
+      provider: "microsoft",
+      email: null,
+      account_identifier: `legacy-microsoft:${ownerId}`,
+      access_token:
+        typeof legacyToken.access_token === "string" ? legacyToken.access_token : null,
+      refresh_token: legacyToken.refresh_token,
+      expires_at:
+        typeof legacyToken.expires_at === "number"
+          ? new Date(legacyToken.expires_at * 1000).toISOString()
+          : null,
+      created_at: null,
+      updated_at: null,
+    },
+  ];
+}
+
+async function getPreferredMicrosoftConnection(
+  ownerId: string
+): Promise<CalendarConnectionRecord | null> {
+  const connections = await getMicrosoftConnections(ownerId);
+  return connections[0] ?? null;
+}
+
+async function getMsAccessToken(
+  ownerId: string,
+  connection: CalendarConnectionRecord
+): Promise<string | null> {
+  const expiresAtValue = connection.expires_at
+    ? Math.floor(new Date(connection.expires_at).getTime() / 1000)
+    : undefined;
+  if (
+    connection.access_token &&
+    expiresAtValue &&
+    expiresAtValue > Date.now() / 1000 + 300
+  ) {
+    return connection.access_token;
+  }
+
+  const creds = await getMicrosoftCredentials();
+  const body = new URLSearchParams({
+    client_id: creds.clientId,
+    client_secret: creds.clientSecret,
+    refresh_token: connection.refresh_token,
+    grant_type: "refresh_token",
+    scope: "Calendars.ReadWrite offline_access User.Read",
+  });
+
+  const res = await fetch(`https://login.microsoftonline.com/${creds.tenantId}/oauth2/v2.0/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  if (!res.ok) return null;
+  const newTokens = await res.json();
+  const accessToken =
+    typeof newTokens.access_token === "string" && newTokens.access_token.length > 0
+      ? newTokens.access_token
+      : null;
+  if (!accessToken) return null;
+
+  const metadata = await getMicrosoftAccountMetadata(accessToken);
+  await upsertCalendarConnection(createAdminClient(), {
+    divinerId: ownerId,
+    provider: "microsoft",
+    refreshToken:
+      typeof newTokens.refresh_token === "string" && newTokens.refresh_token.length > 0
+        ? newTokens.refresh_token
+        : connection.refresh_token,
+    accessToken,
+    expiresAt:
+      typeof newTokens.expires_in === "number"
+        ? new Date(Date.now() + newTokens.expires_in * 1000)
+        : null,
+    email: metadata.email ?? connection.email,
+    accountIdentifier: metadata.accountIdentifier ?? connection.account_identifier,
+  });
+
+  return accessToken;
+}
 
 /** Build the Microsoft OAuth2 consent URL */
 export async function getMsOAuthUrl(divinerId: string): Promise<string> {
@@ -58,163 +293,164 @@ export async function handleMsOAuthCallback(
 
   if (!res.ok) throw new Error(`MS token exchange failed: ${res.status}`);
   const tokens = await res.json();
+  const accessToken =
+    typeof tokens.access_token === "string" ? tokens.access_token : null;
+  const refreshToken =
+    typeof tokens.refresh_token === "string" ? tokens.refresh_token : null;
+  if (!refreshToken) {
+    throw new Error("Microsoft did not return a refresh token for this account");
+  }
 
   const admin = createAdminClient();
   await admin.from("diviners").update({ outlook_calendar_token: tokens }).eq("id", ownerId);
+  const metadata = accessToken
+    ? await getMicrosoftAccountMetadata(accessToken)
+    : {
+        accountIdentifier: `microsoft:${ownerId}:${Date.now()}`.toLowerCase(),
+        email: null,
+      };
 
   // Dual-write into normalized calendar_connections (cutover from JSONB).
   // Best-effort — never throws.
   await upsertCalendarConnection(admin, {
     divinerId: ownerId,
     provider: "microsoft",
-    refreshToken: tokens.refresh_token,
-    accessToken: tokens.access_token ?? null,
+    refreshToken,
+    accessToken,
     expiresAt:
       typeof tokens.expires_in === "number"
         ? new Date(Date.now() + tokens.expires_in * 1000)
         : null,
+    email: metadata.email,
+    accountIdentifier: metadata.accountIdentifier,
   });
 }
 
 /** For proxy relay: directly persist the token object */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function persistMsTokens(ownerId: string, tokens: any): Promise<void> {
-  const admin = createAdminClient();
-  await admin.from("calendar_connections").upsert({
-    owner_id: ownerId,
+  const accessToken =
+    typeof tokens?.access_token === "string" ? tokens.access_token : null;
+  const refreshToken =
+    typeof tokens?.refresh_token === "string" ? tokens.refresh_token : null;
+  if (!refreshToken) {
+    throw new Error("Microsoft relay did not include a refresh token");
+  }
+
+  const metadata = accessToken
+    ? await getMicrosoftAccountMetadata(accessToken)
+    : {
+        accountIdentifier: `microsoft:${ownerId}:${Date.now()}`.toLowerCase(),
+        email: null,
+      };
+
+  await upsertCalendarConnection(createAdminClient(), {
+    divinerId: ownerId,
     provider: "microsoft",
-    access_token: tokens.access_token,
-    refresh_token: tokens.refresh_token,
-    expires_at: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : null,
-    updated_at: new Date().toISOString()
-  }, {
-    onConflict: "owner_id,provider" // Note: user_id might be missing from proxy relay if not passed
+    refreshToken,
+    accessToken,
+    expiresAt:
+      typeof tokens?.expires_in === "number"
+        ? new Date(Date.now() + tokens.expires_in * 1000)
+        : null,
+    email: metadata.email,
+    accountIdentifier: metadata.accountIdentifier,
   });
 }
 
-/** Get a valid access token, refreshing if needed */
-async function getMsAccessToken(ownerId: string): Promise<string | null> {
-  const admin = createAdminClient();
+/** Get busy time blocks from Outlook Calendar for a given date */
+export async function getMsFreeBusyInRange(
+  ownerId: string,
+  startDateTime: string,
+  endDateTime: string
+): Promise<Array<{ start: string; end: string }>> {
+  const connections = await getMicrosoftConnections(ownerId);
+  if (connections.length === 0) return [];
 
-  // Pull the legacy JSONB and the user_id needed for the new lookup in one query.
-  const { data: diviner } = await admin
-    .from("diviners")
-    .select("user_id, outlook_calendar_token")
-    .eq("id", ownerId)
-    .maybeSingle();
+  const results = await Promise.all(
+    connections.map(async (connection) => {
+      const accessToken = await getMsAccessToken(ownerId, connection);
+      if (!accessToken) return [] as Array<{ start: string; end: string }>;
 
-  if (!diviner) return null;
+      try {
+        const calendarsRes = await fetch(`${GRAPH_BASE}/me/calendars?$select=id`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        });
 
-  let token: {
-    access_token: string;
-    refresh_token: string;
-    expires_at?: number;
-    expires_in?: number;
-  } | null = null;
+        const calendars = calendarsRes.ok
+          ? ((await calendarsRes.json()).value ?? [])
+          : [];
 
-  // 1. Preferred: calendar_connections row for this user + provider
-  if (diviner.user_id) {
-    const { data: conn } = await admin
-      .from("calendar_connections")
-      .select("access_token, refresh_token, expires_at")
-      .eq("user_id", diviner.user_id)
-      .eq("provider", "microsoft")
-      .maybeSingle();
+        const calendarIds =
+          calendars.length > 0
+            ? calendars
+                .map((calendar: { id?: string }) => calendar.id)
+                .filter((id: string | undefined): id is string => Boolean(id))
+            : ["default"];
 
-    if (conn?.refresh_token) {
-      token = {
-        access_token: conn.access_token ?? "",
-        refresh_token: conn.refresh_token,
-        expires_at: conn.expires_at
-          ? Math.floor(new Date(conn.expires_at).getTime() / 1000)
-          : undefined,
-      };
+        const requests = calendarIds.map((calendarId: string) => {
+          const path =
+            calendarId === "default"
+              ? `${GRAPH_BASE}/me/calendarView`
+              : `${GRAPH_BASE}/me/calendars/${encodeURIComponent(calendarId)}/calendarView`;
+
+          const params = new URLSearchParams({
+            startDateTime,
+            endDateTime,
+            $select: "start,end,showAs,isCancelled",
+          });
+
+          return fetch(`${path}?${params.toString()}`, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+          });
+        });
+
+        const responses = await Promise.all(requests);
+        const payloads = await Promise.all(
+          responses.map(async (res) => (res.ok ? res.json() : { value: [] }))
+        );
+
+        return payloads.flatMap((data) =>
+          (data.value ?? [])
+            .filter(
+              (e: { showAs?: string; isCancelled?: boolean }) =>
+                e.showAs !== "free" && e.isCancelled !== true
+            )
+            .map((e: { start: { dateTime: string }; end: { dateTime: string } }) => ({
+              start: e.start.dateTime,
+              end: e.end.dateTime,
+            }))
+        );
+      } catch {
+        return [] as Array<{ start: string; end: string }>;
+      }
+    })
+  );
+
+  const busyByKey = new Map<string, { start: string; end: string }>();
+  for (const result of results) {
+    for (const slot of result) {
+      busyByKey.set(`${slot.start}-${slot.end}`, slot);
     }
   }
 
-  // 2. Fallback: legacy JSONB column on the diviner row
-  if (!token && diviner.outlook_calendar_token) {
-    token = diviner.outlook_calendar_token as {
-      access_token: string;
-      refresh_token: string;
-      expires_at?: number;
-      expires_in?: number;
-    };
-  }
-
-  if (!token || !token.refresh_token) return null;
-
-  // If token is still valid (with 5 min buffer), return it
-  const expiresAtValue = token.expires_at ?? (Date.now() / 1000 + (token.expires_in ?? 3600));
-  if (expiresAtValue > Date.now() / 1000 + 300 && token.access_token) return token.access_token;
-
-  // Refresh
-  const creds = await getMicrosoftCredentials();
-  const body = new URLSearchParams({
-    client_id: creds.clientId,
-    client_secret: creds.clientSecret,
-    refresh_token: token.refresh_token,
-    grant_type: "refresh_token",
-    scope: "Calendars.ReadWrite offline_access User.Read",
-  });
-
-  const res = await fetch(`https://login.microsoftonline.com/${creds.tenantId}/oauth2/v2.0/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-
-  if (!res.ok) return null;
-  const newTokens = await res.json();
-  
-  // Update both legacy and normalized storage
-  await admin.from("diviners").update({ outlook_calendar_token: newTokens }).eq("id", ownerId);
-
-  await upsertCalendarConnection(admin, {
-    divinerId: ownerId,
-    provider: "microsoft",
-    refreshToken: newTokens.refresh_token ?? token.refresh_token,
-    accessToken: newTokens.access_token ?? null,
-    expiresAt: new Date(Date.now() + newTokens.expires_in * 1000),
-  });
-
-  return newTokens.access_token;
+  return Array.from(busyByKey.values());
 }
 
 /** Get busy time blocks from Outlook Calendar for a given date */
 export async function getMsFreeBusy(
   ownerId: string,
-  date: string // YYYY-MM-DD
+  date: string, // YYYY-MM-DD
+  timeZone: string
 ): Promise<Array<{ start: string; end: string }>> {
-  const accessToken = await getMsAccessToken(ownerId);
-  if (!accessToken) return [];
-
-  try {
-    const startDateTime = `${date}T00:00:00Z`;
-    const endDateTime = `${date}T23:59:59Z`;
-
-    const res = await fetch(
-      `${GRAPH_BASE}/me/calendarView?startDateTime=${startDateTime}&endDateTime=${endDateTime}&$select=start,end,showAs`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (!res.ok) return [];
-    const data = await res.json();
-
-    return (data.value ?? [])
-      .filter((e: { showAs?: string }) => e.showAs !== "free")
-      .map((e: { start: { dateTime: string }; end: { dateTime: string } }) => ({
-        start: e.start.dateTime,
-        end: e.end.dateTime,
-      }));
-  } catch {
-    return [];
-  }
+  const { startDateTime, endDateTime } = getUtcDayRange(date, timeZone);
+  return getMsFreeBusyInRange(ownerId, startDateTime, endDateTime);
 }
 
 type BookingForCalendar = {
@@ -233,7 +469,9 @@ export async function createMsCalendarEvent(
   ownerId: string,
   booking: BookingForCalendar
 ): Promise<string | null> {
-  const accessToken = await getMsAccessToken(ownerId);
+  const connection = await getPreferredMicrosoftConnection(ownerId);
+  if (!connection) return null;
+  const accessToken = await getMsAccessToken(ownerId, connection);
   if (!accessToken) return null;
 
   try {
@@ -280,7 +518,9 @@ export async function updateMsCalendarEvent(
   newScheduledAt: string,
   durationMinutes: number
 ): Promise<boolean> {
-  const accessToken = await getMsAccessToken(ownerId);
+  const connection = await getPreferredMicrosoftConnection(ownerId);
+  if (!connection) return false;
+  const accessToken = await getMsAccessToken(ownerId, connection);
   if (!accessToken) return false;
 
   try {
@@ -307,7 +547,9 @@ export async function deleteMsCalendarEvent(
   ownerId: string,
   eventId: string
 ): Promise<boolean> {
-  const accessToken = await getMsAccessToken(ownerId);
+  const connection = await getPreferredMicrosoftConnection(ownerId);
+  if (!connection) return false;
+  const accessToken = await getMsAccessToken(ownerId, connection);
   if (!accessToken) return false;
 
   try {
@@ -322,9 +564,9 @@ export async function deleteMsCalendarEvent(
 }
 
 /** Disconnect Outlook calendar */
-export async function disconnectMsCalendar(ownerId: string): Promise<void> {
-  const admin = createAdminClient();
-  await admin.from("diviners").update({ outlook_calendar_token: null }).eq("id", ownerId);
-  // Mirror the disconnect into the normalized calendar_connections table.
-  await deleteCalendarConnection(admin, ownerId, "microsoft");
+export async function disconnectMsCalendar(
+  ownerId: string,
+  connectionId?: string
+): Promise<void> {
+  await deleteCalendarConnection(createAdminClient(), ownerId, "microsoft", connectionId);
 }

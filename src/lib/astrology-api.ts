@@ -27,9 +27,9 @@ function buildBasicAuthHeader(accessKey: string, secretKey: string): string {
  * Fetch resolved configuration from the centralised fetch-config API.
  */
 async function fetchConfigFromApi<T = any>(keys: string[]): Promise<T | null> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://astrologypro.com";
   const url = `${baseUrl}/api/astro/fetch-config`;
-  
+
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -79,22 +79,25 @@ export async function callAstrologyApi<T = unknown>(
   body: Record<string, unknown>
 ): Promise<T> {
   const url = `${ASTROLOGY_API_BASE}/${endpoint}`;
+  console.log("Body--------->>", body);
+
 
   // Get credentials from the centralised config API
   console.log(`[astrology-api] Requesting credentials for endpoint: ${endpoint}`);
   const auth = await getAstrologyApiAuth();
-  
+
   if (!auth) {
     console.error("[astrology-api] CRITICAL: fetch-config returned null or failed. Cannot proceed with API call.");
     throw new Error("AstrologyAPI credentials not configured (fetch-config failed)");
   }
-  
+
   if (!auth.access_key || !auth.secret_key) {
     console.error("[astrology-api] CRITICAL: fetch-config returned object but keys are missing:", auth);
     throw new Error("AstrologyAPI credentials incomplete in fetch-config response");
   }
 
-  console.log(`[astrology-api] Credentials obtained successfully. AccessKey prefix: ${auth.access_key.slice(0, 3)}...`);
+  console.log(`[astrology-api] Credentials obtained successfully. AccessKey prefix: ${auth.access_key}`);
+  console.log(`[astrology-api] Credentials obtained successfully. SecretKey prefix: ${auth.secret_key}`);
 
   const authHeader = buildBasicAuthHeader(auth.access_key, auth.secret_key);
 
@@ -183,7 +186,7 @@ export async function callAstroAiApi(
   // Angular sends this automatically as a browser app; we must add it explicitly server-side.
   const origin =
     process.env.NEXT_PUBLIC_SITE_URL ||
-    "https://www.backofficeportal.divineinfinitebeing.com";
+    "https://astrologypro.com";
 
   let lastError: unknown;
   const maxRetries = 1;
@@ -271,15 +274,22 @@ export async function getSynastryHoroscope(
   person2: BirthData
 ) {
   return callAstrologyApi("synastry_horoscope", {
-    ...person1,
-    p_day: person2.day,
-    p_month: person2.month,
-    p_year: person2.year,
-    p_hour: person2.hour,
-    p_min: person2.min,
-    p_lat: person2.lat,
-    p_lon: person2.lon,
-    p_tzone: person2.tzone,
+    p_day: person1.day,
+    p_month: person1.month,
+    p_year: person1.year,
+    p_hour: person1.hour,
+    p_min: person1.min,
+    p_lat: person1.lat,
+    p_lon: person1.lon,
+    p_tzone: person1.tzone,
+    s_day: person2.day,
+    s_month: person2.month,
+    s_year: person2.year,
+    s_hour: person2.hour,
+    s_min: person2.min,
+    s_lat: person2.lat,
+    s_lon: person2.lon,
+    s_tzone: person2.tzone,
   });
 }
 

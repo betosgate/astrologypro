@@ -13,6 +13,7 @@ interface LessonCompleteButtonProps {
   disabled?: boolean;
   disabledReason?: string;
   className?: string;
+  hideCompletedState?: boolean;
   /**
    * Route to navigate to after marking the lesson complete.
    * If not provided, stays on the current page.
@@ -32,6 +33,7 @@ export function LessonCompleteButton({
   disabled = false,
   disabledReason,
   className,
+  hideCompletedState = false,
   nextRoute,
   nextLabel,
 }: LessonCompleteButtonProps) {
@@ -43,12 +45,14 @@ export function LessonCompleteButton({
   if (done && nextRoute) {
     return (
       <div className={cn("space-y-2", className)}>
-        <div className="flex items-center gap-2 rounded-xl border border-green-500/30 bg-green-500/5 px-4 py-3">
-          <CheckCircle2 className="size-5 text-green-500 shrink-0" />
-          <span className="text-sm font-medium text-green-600 flex-1">
-            Lesson Complete
-          </span>
-        </div>
+        {!hideCompletedState && (
+          <div className="flex items-center gap-2 rounded-xl border border-green-500/30 bg-green-500/5 px-4 py-3">
+            <CheckCircle2 className="size-5 text-green-500 shrink-0" />
+            <span className="text-sm font-medium text-green-600 flex-1">
+              Lesson Complete
+            </span>
+          </div>
+        )}
         <Button
           className="w-full"
           onClick={() => router.push(nextRoute)}
@@ -61,6 +65,9 @@ export function LessonCompleteButton({
   }
 
   if (done) {
+    if (hideCompletedState) {
+      return null;
+    }
     return (
       <div
         className={cn(
