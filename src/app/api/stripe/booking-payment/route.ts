@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/activity-log";
 import { createPaymentIntent } from "@/lib/stripe/connect";
+import { createCalendarEvent } from "@/lib/google-calendar";
 import { PRICING } from "@/lib/constants";
 import {
   sendBookingConfirmation,
@@ -13,8 +14,41 @@ import {
 
 export const dynamic = "force-dynamic";
 
+/** Strip HTML tags and decode basic entities for use in plain-text calendar descriptions. */
+function stripHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/**
+ * Build the Google Calendar event description.
+ * Body = availability template description (stripped of HTML).
+ * Footer = cancel / reschedule deep-link for the client.
+ */
+function buildCalendarDescription(
+  templateDescription: string | null,
+  bookingId: string,
+  appUrl: string
+): string {
+  const body = templateDescription ? stripHtml(templateDescription) : "";
+  const portalUrl = `${appUrl}/portal/bookings`;
+  const footer = `To cancel or reschedule, visit:\n${portalUrl}`;
+  return body ? `${body}\n\n---\n${footer}` : footer;
+}
+
 interface BookingPaymentBody {
-  divinerId: string;
+  divinerId?: string;
+  divinerUsername?: string;
   serviceId: string;
   scheduledAt: string;
   clientEmail: string;
@@ -34,6 +68,7 @@ export async function POST(request: NextRequest) {
 
     const {
       divinerId,
+      divinerUsername,
       serviceId,
       scheduledAt,
       clientEmail,
@@ -64,55 +99,192 @@ export async function POST(request: NextRequest) {
     const birthTimezone = questionnaire?.birthTimezone as string | undefined;
 
     // Validate required fields
-    if (!divinerId || !serviceId || !scheduledAt || !clientEmail || !clientName) {
+    if (!serviceId || !scheduledAt || !clientEmail || !clientName) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    const supabase = await createClient();
-
-    // Fetch diviner with their Stripe Connect account
-    const { data: diviner } = await supabase
-      .from("diviners")
-      .select("id, stripe_account_id, display_name, slug")
-      .eq("id", divinerId)
-      .eq("is_active", true)
-      .single();
-
-    if (!diviner) {
+    if (!divinerId && !divinerUsername) {
       return NextResponse.json(
-        { error: "Diviner not found" },
-        { status: 404 }
-      );
-    }
-
-    if (!diviner.stripe_account_id) {
-      return NextResponse.json(
-        { error: "Diviner has not set up payments yet" },
+        { error: "Missing diviner identifier" },
         { status: 400 }
       );
     }
 
-    // Fetch the service
-    const { data: service } = await supabase
+    const supabase = await createClient();
+    const adminSupabase = createAdminClient();
+
+    // Fetch the service first (source of truth for diviner_id)
+    let { data: service, error: serviceError } = await adminSupabase
       .from("services")
-      .select("id, name, base_price, duration_minutes")
+      .select("id, name, base_price, duration_minutes, diviner_id")
       .eq("id", serviceId)
-      .eq("diviner_id", divinerId)
       .eq("is_active", true)
       .single();
 
+    if (serviceError || !service) {
+      const fallback = await supabase
+        .from("services")
+        .select("id, name, base_price, duration_minutes, diviner_id")
+        .eq("id", serviceId)
+        .eq("is_active", true)
+        .single();
+      service = fallback.data ?? null;
+      serviceError = serviceError ?? fallback.error;
+    }
+
     if (!service) {
       return NextResponse.json(
-        { error: "Service not found" },
+        { error: "Service not found", details: serviceError?.message ?? null },
         { status: 404 }
       );
     }
 
+    let resolvedDivinerId = service.diviner_id ?? null;
+    let diviner: {
+      id: string;
+      stripe_account_id: string | null;
+      display_name: string;
+    } | null = null;
+    let divinerError: { message?: string } | null = null;
+
+    async function fetchDivinerById(id: string) {
+      let result = await adminSupabase
+        .from("diviners")
+        .select("id, stripe_account_id, display_name")
+        .eq("id", id)
+        .eq("is_active", true)
+        .single();
+
+      if (result.error || !result.data) {
+        result = await supabase
+          .from("diviners")
+          .select("id, stripe_account_id, display_name")
+          .eq("id", id)
+          .eq("is_active", true)
+          .single();
+      }
+
+      return result;
+    }
+
+    async function fetchDivinerByUsername(username: string) {
+      let result = await adminSupabase
+        .from("diviners")
+        .select("id, stripe_account_id, display_name")
+        .eq("username", username)
+        .eq("is_active", true)
+        .single();
+
+      if (result.error || !result.data) {
+        result = await supabase
+          .from("diviners")
+          .select("id, stripe_account_id, display_name")
+          .eq("username", username)
+          .eq("is_active", true)
+          .single();
+      }
+
+      return result;
+    }
+
+    if (divinerUsername) {
+      const result = await fetchDivinerByUsername(divinerUsername);
+      diviner = result.data ?? null;
+      divinerError = result.error ?? null;
+      resolvedDivinerId = diviner?.id ?? resolvedDivinerId;
+    }
+
+    if (!diviner && divinerId) {
+      const result = await fetchDivinerById(divinerId);
+      diviner = result.data ?? null;
+      divinerError = result.error ?? null;
+
+      if (!diviner) {
+        const fallbackByUserId = await supabase
+          .from("diviners")
+          .select("id, stripe_account_id, display_name")
+          .eq("user_id", divinerId)
+          .eq("is_active", true)
+          .single();
+        diviner = fallbackByUserId.data ?? null;
+        divinerError = divinerError ?? fallbackByUserId.error;
+      }
+
+      resolvedDivinerId = diviner?.id ?? resolvedDivinerId;
+    }
+
+    if (!diviner && resolvedDivinerId) {
+      const result = await fetchDivinerById(resolvedDivinerId);
+      diviner = result.data ?? null;
+      divinerError = result.error ?? null;
+    }
+
+    if (diviner && service.diviner_id && diviner.id !== service.diviner_id) {
+      return NextResponse.json(
+        { error: "Service is not assigned to this diviner" },
+        { status: 400 }
+      );
+    }
+
+    if (!diviner) {
+      return NextResponse.json(
+        { error: "Diviner not found", details: divinerError?.message ?? null },
+        { status: 404 }
+      );
+    }
+
+    // Find the availability template that covers this booking slot.
+    // Query by date range (covers the booked date) then prefer matching service_id.
+    // Using select("*") avoids TypeScript-inferred column narrowing issues.
+    const bookingDateStr = scheduledAt.substring(0, 10); // YYYY-MM-DD
+
+    let hasServiceAvailability = false;
+    let availabilityTemplateTitle: string | null = null;
+    let availabilityTemplateDescription: string | null = null;
+
+    const { data: candidateTemplates } = await adminSupabase
+      .from("availability_templates")
+      .select("id, title, description, service_id")
+      .or(`owner_id.eq.${resolvedDivinerId},diviner_id.eq.${resolvedDivinerId}`)
+      .eq("is_active", true)
+      .lte("start_date", bookingDateStr)
+      .gte("end_date", bookingDateStr);
+
+    if (candidateTemplates && candidateTemplates.length > 0) {
+      // Prefer the template whose service_id matches the booked service
+      const best =
+        candidateTemplates.find(
+          (t) => (t as Record<string, unknown>).service_id === serviceId
+        ) ?? candidateTemplates[0];
+
+      hasServiceAvailability = true;
+      availabilityTemplateTitle =
+        ((best as Record<string, unknown>).title as string) || null;
+      availabilityTemplateDescription =
+        ((best as Record<string, unknown>).description as string) || null;
+    } else {
+      // Last-resort: any active template for this diviner (no date filter)
+      const { data: anyTemplate } = await adminSupabase
+        .from("availability_templates")
+        .select("id, title, description, service_id")
+        .or(`owner_id.eq.${resolvedDivinerId},diviner_id.eq.${resolvedDivinerId}`)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+
+      if (anyTemplate) {
+        hasServiceAvailability = true;
+        availabilityTemplateTitle =
+          ((anyTemplate as Record<string, unknown>).title as string) || null;
+        availabilityTemplateDescription =
+          ((anyTemplate as Record<string, unknown>).description as string) || null;
+      }
+    }
+
     // --- Auto-create auth user if they don't exist ---
-    const adminSupabase = createAdminClient();
     let isNewUser = false;
 
     // Try to create the auth user; capture the new user's ID if created.
@@ -128,21 +300,32 @@ export async function POST(request: NextRequest) {
     let clientAuthUserId: string | undefined;
 
     if (createUserError) {
-      // "User already registered" is expected for returning clients
-      if (
-        !createUserError.message
-          ?.toLowerCase()
-          .includes("already registered")
-      ) {
+      const isEmailExists =
+        createUserError.code === "email_exists" ||
+        createUserError.message?.toLowerCase().includes("already registered");
+
+      if (!isEmailExists) {
         console.error("Failed to auto-create auth user:", createUserError);
       }
-      // Look up their existing client record to get user_id
+
+      // Try the clients table first (fast path for returning bookers)
       const { data: existingClientRecord } = await adminSupabase
         .from("clients")
         .select("user_id")
         .eq("email", clientEmail)
         .maybeSingle();
       clientAuthUserId = existingClientRecord?.user_id ?? undefined;
+
+      // Fallback: user exists in auth but has never booked before (no client
+      // record yet). Look them up directly via the auth admin API.
+      if (!clientAuthUserId) {
+        const { data: authList } = await adminSupabase.auth.admin.listUsers({
+          page: 1,
+          perPage: 1000,
+        });
+        const authUser = authList?.users?.find((u) => u.email === clientEmail);
+        clientAuthUserId = authUser?.id;
+      }
     } else {
       isNewUser = true;
       clientAuthUserId = createUserData.user.id;
@@ -195,9 +378,33 @@ export async function POST(request: NextRequest) {
     await adminSupabase
       .from("client_diviners")
       .upsert(
-        { client_id: client.id, diviner_id: divinerId },
+        { client_id: client.id, diviner_id: resolvedDivinerId },
         { onConflict: "client_id,diviner_id" }
       );
+
+    // --- Duplicate / Slot Conflict Check ---
+    // Prevent the same client from booking the same slot twice, and prevent
+    // any two clients from claiming a slot already held by an active booking.
+    const { data: slotConflict } = await adminSupabase
+      .from("bookings")
+      .select("id, client_id")
+      .eq("diviner_id", resolvedDivinerId)
+      .eq("scheduled_at", scheduledAt)
+      .not("status", "in", '("cancelled","no_show")')
+      .maybeSingle();
+
+    if (slotConflict) {
+      if (slotConflict.client_id === client.id) {
+        return NextResponse.json(
+          { error: "You have already booked this time slot" },
+          { status: 409 }
+        );
+      }
+      return NextResponse.json(
+        { error: "This time slot is no longer available" },
+        { status: 409 }
+      );
+    }
 
     // --- Loyalty Discount Check ---
     let finalPrice = service.base_price;
@@ -205,19 +412,19 @@ export async function POST(request: NextRequest) {
     let loyaltyRuleName: string | null = null;
 
     // Check client's session count with this diviner
-    const { data: clientDiviner } = await supabase
+    const { data: clientDiviner } = await adminSupabase
       .from("client_diviners")
       .select("total_sessions")
       .eq("client_id", client.id)
-      .eq("diviner_id", divinerId)
+      .eq("diviner_id", resolvedDivinerId)
       .maybeSingle();
 
     if (clientDiviner && clientDiviner.total_sessions > 0) {
       // Fetch active discount rules for this diviner
-      const { data: discountRules } = await supabase
+      const { data: discountRules } = await adminSupabase
         .from("discount_rules")
         .select("id, name, type, min_sessions, discount_percent")
-        .eq("diviner_id", divinerId)
+        .eq("diviner_id", resolvedDivinerId)
         .eq("is_active", true)
         .eq("type", "session_count")
         .lte("min_sessions", clientDiviner.total_sessions)
@@ -266,7 +473,7 @@ export async function POST(request: NextRequest) {
         .from("gift_certificates")
         .select("id, remaining_amount, diviner_id, expires_at")
         .eq("code", giftCode)
-        .eq("diviner_id", divinerId)
+        .eq("diviner_id", resolvedDivinerId)
         .gt("remaining_amount", 0)
         .maybeSingle();
 
@@ -292,7 +499,7 @@ export async function POST(request: NextRequest) {
     const { data: booking, error: bookingError } = await adminSupabase
       .from("bookings")
       .insert({
-        diviner_id: divinerId,
+        diviner_id: resolvedDivinerId,
         client_id: client.id,
         service_id: serviceId,
         scheduled_at: scheduledAt,
@@ -301,7 +508,11 @@ export async function POST(request: NextRequest) {
         base_price: finalPrice,
         questionnaire_responses: questionnaire,
         booking_notes: booking_notes ?? null,
-        metadata: requestMetadata,
+        metadata: {
+          ...requestMetadata,
+          ...(availabilityTemplateTitle ? { availability_title: availabilityTemplateTitle } : {}),
+          ...(availabilityTemplateDescription ? { availability_description: availabilityTemplateDescription } : {}),
+        },
         ...(policyAcknowledgedAt ? { policy_acknowledged_at: policyAcknowledgedAt } : {}),
       })
       .select("id")
@@ -353,18 +564,26 @@ export async function POST(request: NextRequest) {
       : PRICING.platformFeePercent;
     const platformFee =
       (finalPrice * effectivePlatformFeePercent) / 100;
+    const shouldCharge = hasServiceAvailability && finalPrice > 0;
+
+    if (shouldCharge && !diviner.stripe_account_id) {
+      return NextResponse.json(
+        { error: "Diviner has not set up payments yet" },
+        { status: 400 }
+      );
+    }
 
     let clientSecret: string | null = null;
 
     // Only create a payment intent if there's an amount to charge
-    if (finalPrice > 0) {
+    if (shouldCharge) {
       const paymentIntent = await createPaymentIntent({
         amount: finalPrice,
-        connectedAccountId: diviner.stripe_account_id,
+        connectedAccountId: diviner.stripe_account_id!,
         platformFeeAmount: platformFee,
         metadata: {
           bookingId: booking.id,
-          divinerId,
+          divinerId: resolvedDivinerId,
           serviceId,
           clientEmail,
           ...(giftCode ? { giftCode } : {}),
@@ -393,7 +612,7 @@ export async function POST(request: NextRequest) {
           .eq("id", memberDiscountTokenId);
       }
     } else {
-      // Fully covered by gift certificate — mark booking as confirmed
+      // No payment required — mark booking as confirmed immediately
       await adminSupabase
         .from("bookings")
         .update({ status: "confirmed" })
@@ -405,9 +624,9 @@ export async function POST(request: NextRequest) {
         eventType: 'booking.created',
         metadata: {
           bookingId: booking.id,
-          divinerId,
+          divinerId: resolvedDivinerId,
           serviceName: service.name,
-          giftCovered: true,
+          paymentRequired: false,
         },
       })
 
@@ -432,7 +651,7 @@ export async function POST(request: NextRequest) {
       };
 
       // Fire emails without blocking the response
-      const emailPromises: Promise<any>[] = [
+      const emailPromises: Promise<unknown>[] = [
         sendBookingConfirmation(emailParams),
         sendBookingAccessInstructions({
           ...emailParams,
@@ -465,10 +684,42 @@ export async function POST(request: NextRequest) {
       Promise.all(emailPromises).catch((err) =>
         console.error("Failed to send booking emails:", err)
       );
+
+      // Push event to diviner's connected calendars (non-blocking)
+      const { data: calConnections } = await adminSupabase
+        .from("calendar_connections")
+        .select("provider")
+        .eq("owner_id", resolvedDivinerId);
+
+      if (calConnections?.some((c) => c.provider === "google")) {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+        const calEventDescription = buildCalendarDescription(
+          availabilityTemplateDescription,
+          booking.id,
+          appUrl,
+        );
+        createCalendarEvent(resolvedDivinerId, {
+          title: `${availabilityTemplateTitle ?? service.name} — ${clientName}`,
+          description: calEventDescription,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          clientEmail,
+          clientName,
+        })
+          .then(({ eventId }) =>
+            adminSupabase
+              .from("bookings")
+              .update({ google_calendar_event_id: eventId })
+              .eq("id", booking.id)
+          )
+          .catch((err) =>
+            console.error("[Booking] Failed to create Google Calendar event:", err)
+          );
+      }
     }
 
     // Send welcome email for new users on the paid path (outside the $0 block)
-    if (isNewUser && finalPrice > 0) {
+    if (isNewUser && shouldCharge) {
       const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/portal`;
       sendWelcomeAndBooked({
         clientEmail,

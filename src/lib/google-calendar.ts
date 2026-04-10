@@ -693,14 +693,18 @@ export async function createCalendarEvent(
     ];
   }
 
-  const response = await fetch(`${GOOGLE_CALENDAR_API}/calendars/primary/events`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(event),
-  });
+  // sendUpdates=all tells Google to email the calendar invite to all attendees
+  const response = await fetch(
+    `${GOOGLE_CALENDAR_API}/calendars/primary/events?sendUpdates=all`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(event),
+    }
+  );
 
   if (!response.ok) {
     const errorText = await response.text();

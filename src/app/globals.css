@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -203,6 +204,137 @@
 /* Font display utility */
 .font-display {
   font-family: var(--font-display, "Cormorant Garamond", Georgia, serif);
+}
+
+/* ─── Roboto font for Horoscope Toolkit ────────────────────────────── */
+
+/* ─── Horoscope Toolkit — Custom Classes ──────────────────────────── */
+
+/* Apply Roboto to the entire horoscope page */
+.horoscope-toolkit {
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Horoscope custom scrollbar (dark themed) */
+.horoscope-toolkit ::-webkit-scrollbar-thumb {
+  background: #384355;
+}
+.horoscope-toolkit ::-webkit-scrollbar-track {
+  background: #0a0c10;
+}
+.horoscope-toolkit {
+  scrollbar-color: #384355 #0a0c10;
+}
+
+/* custom-scrollbar (used in ShowMore/Decan modals) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #384355;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #0a0c10;
+}
+
+/* ─── Planet-specific interpretation gradients ────────────────────── */
+.planet-interp-sun {
+  background: linear-gradient(166deg, rgba(240,160,35,1) 0%, rgba(248,214,71,1) 100%);
+  color: #000;
+}
+.planet-interp-moon {
+  background: linear-gradient(166deg, #8c8c8c 0%, #C0C0C0 100%);
+  color: #000;
+}
+.planet-interp-mercury {
+  background: linear-gradient(166deg, #FFFF00 0%, #FFD700 100%);
+  color: #000;
+}
+.planet-interp-venus {
+  background: linear-gradient(166deg, #00FF00 0%, #32CD32 100%);
+  color: #000;
+}
+.planet-interp-mars {
+  background: linear-gradient(166deg, #FF0000 0%, #B22222 100%);
+  color: #fff;
+}
+.planet-interp-jupiter {
+  background: linear-gradient(166deg, #0000FF 0%, #1E90FF 100%);
+  color: #fff;
+}
+.planet-interp-saturn {
+  background: linear-gradient(166deg, #000000 0%, #4B4B4B 100%);
+  color: #fff;
+}
+.planet-interp-uranus {
+  background: linear-gradient(166deg, #00FFFF 0%, #008B8B 100%);
+  color: #000;
+}
+.planet-interp-neptune {
+  background: linear-gradient(166deg, #00008B 0%, #4169E1 100%);
+  color: #fff;
+}
+.planet-interp-pluto {
+  background: linear-gradient(166deg, #8B0000 0%, #CD5C5C 100%);
+  color: #fff;
+}
+
+/* Default golden-orange gradient for interpretations (non-planet sections) */
+.interp-gradient-default {
+  background: linear-gradient(166deg, #f0a023 0%, #f8d647 100%);
+  color: #000;
+}
+
+/* Horoscope section headers — Rich Off-Black */
+.horoscope-section-header {
+  background: #232528;
+  color: #f1f1f1;
+  border: 1px solid rgba(182, 199, 227, 0.17);
+}
+
+/* Horoscope table header */
+.horoscope-thead {
+  background: #1e242f;
+  color: #fff;
+}
+
+/* Horoscope table body — white bg with black borders */
+.horoscope-tbody-row {
+  background: #ffffff;
+  color: #000;
+  border-bottom: 1px solid #000;
+}
+.horoscope-tbody-row:last-child {
+  border-bottom: none;
+}
+
+/* Interpretation block header — white bg, dark text */
+.horoscope-interp-header {
+  background: #ffffff;
+  color: #232c3c;
+}
+
+/* Show More button — Angular spec */
+.horoscope-show-more {
+  background: linear-gradient(to bottom, #5c5c5c, #000000);
+  color: #fff;
+  text-shadow: 1px 1px 1px #874403;
+  border: 1px solid #e6e6e6;
+  border-radius: 5px;
+  padding: 1.2rem 2.5rem;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+}
+.horoscope-show-more:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Bookmark icon accent */
+.horoscope-bookmark {
+  color: #ff9c00;
 }
 
 /* ─── Global Scrollbar Styling ─────────────────────────────────────── */
