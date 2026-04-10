@@ -203,7 +203,7 @@ async function getDivinerStats(divinerId: string) {
 
     for (const template of templates) {
       const weekdays = Array.isArray(template.weekdays)
-        ? template.weekdays.map((value) => Number(value))
+        ? template.weekdays.map((value: unknown) => Number(value))
         : [];
       if (!weekdays.includes(dayOfWeek)) continue;
       if (dayStr < template.start_date || dayStr > template.end_date) continue;

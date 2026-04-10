@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  listQuizQuestionsCompat,
+  normalizeAdminQuizQuestions,
+  replaceQuizQuestionsForLessonCompat,
+} from "@/lib/training/admin-quiz-questions";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +33,39 @@ export async function GET(
     return NextResponse.json({ error: "Quiz not found." }, { status: 404 });
   }
 
-  return NextResponse.json({ quiz: data });
+  try {
+    const { questions, remediationSupported } = await listQuizQuestionsCompat(
+      admin,
+      data.lesson_id,
+    );
+    return NextResponse.json({
+      quiz: {
+        ...data,
+        questions: questions.map((question) => ({
+          question: question.question,
+          options: question.options,
+          correct_answer: question.correct_answer,
+          explanation: question.explanation ?? null,
+          priority: question.priority ?? 0,
+          remediation_video_id: question.remediation_video_id ?? null,
+          remediation_video_index: question.remediation_video_index ?? null,
+          remediation_start_seconds: question.remediation_start_seconds ?? null,
+          remediation_replay_until_seconds:
+            question.remediation_replay_until_seconds ?? null,
+          remediation_message: question.remediation_message ?? null,
+        })),
+      },
+      remediation_supported: remediationSupported,
+    });
+  } catch (syncError) {
+    return NextResponse.json(
+      {
+        error:
+          syncError instanceof Error ? syncError.message : "Failed to load quiz questions.",
+      },
+      { status: 500 },
+    );
+  }
 }
 
 // PUT /api/admin/training/quizzes/[id]
@@ -67,14 +104,22 @@ export async function PUT(
       { status: 400 }
     );
   }
-  if (!Array.isArray(questions)) {
-    return NextResponse.json(
-      { error: "Questions must be an array." },
-      { status: 400 }
-    );
+  const normalized = normalizeAdminQuizQuestions(questions);
+  if (normalized.error) {
+    return NextResponse.json({ error: normalized.error }, { status: 400 });
   }
 
   const admin = createAdminClient();
+  const { data: existingQuiz, error: existingError } = await admin
+    .from("training_quizzes")
+    .select("lesson_id")
+    .eq("id", id)
+    .single();
+
+  if (existingError || !existingQuiz) {
+    return NextResponse.json({ error: "Quiz not found." }, { status: 404 });
+  }
+
   const { data, error } = await admin
     .from("training_quizzes")
     .update({
@@ -82,7 +127,7 @@ export async function PUT(
       lesson_id,
       pass_score: pass_score ?? 70,
       is_active: is_active ?? true,
-      questions,
+      questions: normalized.questions,
     })
     .eq("id", id)
     .select()
@@ -92,7 +137,28 @@ export async function PUT(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ quiz: data });
+  try {
+    if (existingQuiz.lesson_id !== lesson_id) {
+      await replaceQuizQuestionsForLessonCompat(admin, existingQuiz.lesson_id, []);
+    }
+    const sync = await replaceQuizQuestionsForLessonCompat(
+      admin,
+      lesson_id,
+      normalized.questions,
+    );
+    return NextResponse.json({
+      quiz: data,
+      remediation_supported: sync.remediationSupported,
+    });
+  } catch (syncError) {
+    return NextResponse.json(
+      {
+        error:
+          syncError instanceof Error ? syncError.message : "Failed to sync quiz questions.",
+      },
+      { status: 500 },
+    );
+  }
 }
 
 // DELETE /api/admin/training/quizzes/[id]
@@ -108,6 +174,12 @@ export async function DELETE(
   const { id } = await params;
   const admin = createAdminClient();
 
+  const { data: existingQuiz } = await admin
+    .from("training_quizzes")
+    .select("lesson_id")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error } = await admin
     .from("training_quizzes")
     .delete()
@@ -115,6 +187,10 @@ export async function DELETE(
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (existingQuiz?.lesson_id) {
+    await admin.from("quiz_questions").delete().eq("lesson_id", existingQuiz.lesson_id);
   }
 
   return NextResponse.json({ success: true });

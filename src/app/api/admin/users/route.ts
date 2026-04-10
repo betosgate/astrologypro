@@ -22,6 +22,7 @@ interface CreateUserBody {
 }
 
 const VALID_USER_TYPES = [
+  "admin",
   "diviner",
   "client",
   "advocate",
@@ -99,7 +100,15 @@ export async function POST(req: Request) {
 
   // ── Step 2: Create profile record in the appropriate role table ──────────
   try {
-    if (user_type === "diviner") {
+    if (user_type === "admin") {
+      // Admin users are tracked in admin_users — no separate profile table.
+      // The table schema only has user_id, email, granted_by — no name column.
+      await admin.from("admin_users").insert({
+        user_id: userId,
+        email: email.trim().toLowerCase(),
+        granted_by: adminUser.email ?? "admin",
+      });
+    } else if (user_type === "diviner") {
       await admin.from("diviners").insert({
         user_id: userId,
         display_name: fullName,

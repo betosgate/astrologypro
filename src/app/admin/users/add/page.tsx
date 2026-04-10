@@ -22,6 +22,7 @@ import { toast } from "sonner";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const USER_TYPES = [
+  { value: "admin", label: "Admin" },
   { value: "diviner", label: "Diviner" },
   { value: "client", label: "Client" },
   { value: "advocate", label: "Social Advocate" },
