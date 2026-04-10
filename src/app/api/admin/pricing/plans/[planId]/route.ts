@@ -93,6 +93,9 @@ export async function PATCH(
   if (body.recurring_currency !== undefined) {
     updates.recurring_currency = body.recurring_currency === null ? null : body.recurring_currency;
   }
+  if (body.recurring_interval !== undefined) {
+    updates.recurring_interval = body.recurring_interval === null ? null : body.recurring_interval;
+  }
   if (body.is_active !== undefined) {
     if (typeof body.is_active !== "boolean") {
       return NextResponse.json({ error: "is_active must be boolean" }, { status: 422 });

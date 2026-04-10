@@ -117,6 +117,7 @@ export async function POST(
       onetime_currency: onetimeCurrency,
       recurring_amount: recurringAmount,
       recurring_currency: recurringCurrency,
+      recurring_interval: typeof body.recurring_interval === "string" ? body.recurring_interval : null,
       mrp,
       stripe_price_id: stripePriceId,
       stripe_price_name: typeof body.stripe_price_name === "string" ? body.stripe_price_name.trim() || null : null,

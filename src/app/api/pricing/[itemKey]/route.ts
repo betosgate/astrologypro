@@ -44,7 +44,7 @@ export async function GET(
   // Fetch active plans for this item
   const { data: plans, error: plansErr } = await admin
     .from("pricing_plans")
-    .select("plan_id, display_name, amount, mrp, stripe_price_id, currency, description, html_description, custom_fields, sort_order, onetime_amount, onetime_currency, recurring_amount, recurring_currency")
+    .select("plan_id, display_name, amount, mrp, stripe_price_id, currency, description, html_description, custom_fields, sort_order, onetime_amount, onetime_currency, recurring_amount, recurring_currency, recurring_interval")
     .eq("item_id", item.id)
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
