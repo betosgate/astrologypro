@@ -78,9 +78,28 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/dashboard/services
- * Create a new service for the authenticated diviner.
+ * BLOCKED — service creation is now admin-managed via /admin/service-config.
+ * See souradip/admin-module/04-make-diviner-services-read-only-and-assigned-only.md.
  */
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
+  // Service creation is now admin-managed via /admin/service-config.
+  // Original implementation removed. See git history for the prior code.
+  return NextResponse.json(
+    {
+      type: "https://httpstatuses.com/403",
+      title: "Forbidden",
+      status: 403,
+      detail: "Service creation is managed by admin. Contact your administrator.",
+    },
+    { status: 403 },
+  );
+}
+
+// The following is the original POST body, preserved as a non-exported
+// function for git-history reference during the rollback window. It will
+// be cleaned up in a follow-up PR.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function _POST_ORIGINAL(_req: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -110,7 +129,7 @@ export async function POST(req: NextRequest) {
 
   let body: Record<string, unknown>;
   try {
-    body = await req.json();
+    body = await _req.json();
   } catch {
     return NextResponse.json(
       { type: "https://httpstatuses.com/422", title: "Invalid JSON", status: 422, detail: "Request body must be valid JSON" },

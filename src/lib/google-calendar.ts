@@ -359,7 +359,12 @@ async function getGoogleBusyScheduleByRange(
         if (calendarListResponse.ok) {
           const calendarList = await calendarListResponse.json();
           const ids = (calendarList.items ?? [])
-            .filter((calendar: { id?: string; deleted?: boolean; selected?: boolean }) => {
+            .filter((calendar: {
+              id?: string;
+              deleted?: boolean;
+              selected?: boolean;
+              timeZone?: string;
+            }) => {
               if (!calendar.id || calendar.deleted) return false;
               if (typeof calendar.timeZone === "string" && calendar.timeZone.length > 0) {
                 calendarTimezones.set(calendar.id, calendar.timeZone);

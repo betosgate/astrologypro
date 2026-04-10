@@ -2607,15 +2607,22 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {tabSlug !== "tropical_transits_monthly_v3" && transitRows.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
           <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
-            <h3 className="text-sm font-semibold text-center w-full">{label} — Transit Aspects</h3>
+            <h3 className="text-sm font-semibold text-center w-full">
+              {tabSlug === "tropical_transits_weekly_v2" ? "Tropical Transits Weekly Relation" : `${label} — Transit Aspects`}
+            </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/20">
-                  {["Transit Planet", "Aspect", "Natal Planet", "Orb", "Date"].map((h) => (
-                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
-                  ))}
+                  {(() => {
+                    const headers = tabSlug === "tropical_transits_weekly_v2"
+                      ? ["Date", "Transit Planet", "Aspect", "Natal Planet"]
+                      : ["Transit Planet", "Aspect", "Natal Planet", "Orb", "Date"];
+                    return headers.map((h) => (
+                      <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    ));
+                  })()}
                 </tr>
               </thead>
               <tbody>
@@ -2625,18 +2632,35 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                   const aspType = row.type ?? row.aspect_type ?? row.aspect ?? "";
                   const orb = row.orb != null ? `${Number(row.orb).toFixed(2)}°` : "—";
                   const dt = row.date ?? row.transit_date ?? "";
+
                   return (
                     <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
-                      <td className="px-3 py-2 whitespace-nowrap">{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5">
-                          {ASPECT_IMAGES[aspType] && <img src={ASPECT_IMAGES[aspType]} alt={aspType} className="size-4 object-contain" />}
-                          <span>{aspType || "—"}</span>
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
-                      <td className="px-3 py-2 font-mono text-xs">{orb}</td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground">{dt || "—"}</td>
+                      {tabSlug === "tropical_transits_weekly_v2" ? (
+                        <>
+                          <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{dt || "—"}</td>
+                          <td className="px-3 py-2 whitespace-nowrap">{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1.5">
+                              {ASPECT_IMAGES[aspType] && <img src={ASPECT_IMAGES[aspType]} alt={aspType} className="size-4 object-contain" />}
+                              <span>{aspType || "—"}</span>
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap">{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-3 py-2 whitespace-nowrap">{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1.5">
+                              {ASPECT_IMAGES[aspType] && <img src={ASPECT_IMAGES[aspType]} alt={aspType} className="size-4 object-contain" />}
+                              <span>{aspType || "—"}</span>
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap">{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
+                          <td className="px-3 py-2 font-mono text-xs">{orb}</td>
+                          <td className="px-3 py-2 text-xs text-muted-foreground">{dt || "—"}</td>
+                        </>
+                      )}
                     </tr>
                   );
                 })}
@@ -3602,34 +3626,69 @@ export default function AdminHoroscopePage() {
         if (currentTab.slug === "tropical_transits_weekly_v2") {
           tasks.push(
             (async () => {
+              let weekResData: any;
+              let isFuture = false;
+
               if (form.futureWeek) {
                 const wd = await callPlanetReturn({
                   steps: "astrology_report_weekly",
                   birth_details: birth1,
                   week_start_date: form.futureWeek,
                 });
-                const val = wd?.astrology_report_weekly ?? wd;
-                collected.transit_data = val;
-                collected.is_future_transit = true;
+                weekResData = wd?.astrology_report_weekly ?? wd;
+                isFuture = true;
                 collected.future_transit_date = form.futureWeek;
-                setResults((prev) => ({
-                  ...prev,
-                  transit_data: val,
-                  is_future_transit: true,
-                  future_transit_date: form.futureWeek,
-                }));
               } else {
-                const val = await callCompute(
+                weekResData = await callCompute(
                   "tropical_transits/weekly",
                   birth1 as unknown as Record<string, unknown>
                 );
-                collected.transit_data = val;
-                collected.is_future_transit = false;
-                setResults((prev) => ({
-                  ...prev,
-                  transit_data: val,
-                  is_future_transit: false,
-                }));
+              }
+
+              collected.transit_data = weekResData;
+              collected.is_future_transit = isFuture;
+              setResults((prev) => ({
+                ...prev,
+                transit_data: weekResData,
+                is_future_transit: isFuture,
+                future_transit_date: isFuture ? form.futureWeek : undefined,
+              }));
+
+              // Fetch Transit Chart Wheel for Weekly (at start_date or today)
+              try {
+                const stDate = weekResData?.start_date;
+                let wheelDate, wheelMonth, wheelYear;
+
+                if (stDate && typeof stDate === "string") {
+                  const parts = stDate.split("-").map(Number);
+                  if (parts.length === 3) {
+                    [wheelYear, wheelMonth, wheelDate] = parts;
+                  }
+                } else {
+                  const d = new Date();
+                  wheelDate = d.getDate();
+                  wheelMonth = d.getMonth() + 1;
+                  wheelYear = d.getFullYear();
+                }
+
+                if (wheelDate) {
+                  const [bHour, bMin] = form.person1.tob.split(":").map(Number);
+                  const transitWheelPayload = {
+                    hours: bHour,
+                    minutes: bMin,
+                    date: wheelDate,
+                    month: wheelMonth,
+                    year: wheelYear,
+                    latitude: form.person1.city!.lat,
+                    longitude: form.person1.city!.lng,
+                    timezone: parseDecimalTz(form.person1.city!.timezone.offset_string),
+                  };
+                  const wheelRes = await callNatalWheel(transitWheelPayload);
+                  const svg = wheelRes?.results?.output;
+                  if (svg) setTransitChartSvg(svg);
+                }
+              } catch (e) {
+                console.error("Weekly transit wheel error:", e);
               }
             })()
           );
@@ -4141,7 +4200,11 @@ export default function AdminHoroscopePage() {
           {/* Results */}
           {results && (
             <TooltipProvider delayDuration={200}>
-              <div className="space-y-6">
+              {(() => {
+                const isMainTransitTab = currentSlug === "tropical_transits_monthly_v3" || currentSlug === "tropical_transits_weekly_v2";
+
+                return (
+                  <div className="space-y-6">
                 <div className="flex items-center gap-2">
                   <h2 className="text-base font-bold">Results</h2>
                   <Badge variant="outline" className="text-amber-600 border-amber-400 text-xs">{currentTab.label}</Badge>
@@ -4245,7 +4308,7 @@ export default function AdminHoroscopePage() {
                 {/* ─── Natal chart sections (all single tabs + planet return tabs) ─ */}
                 {natalData && (
                   <div className="space-y-6">
-                    {currentSlug !== "tropical_transits_monthly_v3" && (
+                    {!isMainTransitTab && (
                       <>
                         <PlanetsSection
                           planets={natalData.planets}
@@ -4288,7 +4351,9 @@ export default function AdminHoroscopePage() {
                 {isPlanetReturn && (
                   <PlanetReturnInterpretation tab={currentSlug} aiData={ai[currentSlug]} areaOfInquiry={form.areaOfInquiry} />
                 )}
-              </div>
+                  </div>
+                );
+              })()}
             </TooltipProvider>
           )}
         </div>

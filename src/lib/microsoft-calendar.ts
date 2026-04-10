@@ -391,7 +391,7 @@ export async function getMsFreeBusyInRange(
                 .filter((id: string | undefined): id is string => Boolean(id))
             : ["default"];
 
-        const requests = calendarIds.map((calendarId) => {
+        const requests = calendarIds.map((calendarId: string) => {
           const path =
             calendarId === "default"
               ? `${GRAPH_BASE}/me/calendarView`

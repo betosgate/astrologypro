@@ -70,6 +70,7 @@ async function getAllUsers(params: SearchParams, pageSize: number): Promise<{ us
     traineesRes,
     loginLogsRes,
     notesCountRes,
+    deletedUsersRes,
   ] = await Promise.all([
     // ── Diviners ──────────────────────────────────────────────────────────
     // No DB-level text filter — email lives in auth.users not in this table.
@@ -170,6 +171,12 @@ async function getAllUsers(params: SearchParams, pageSize: number): Promise<{ us
 
     // ── Notes count per user ──────────────────────────────────────────────
     admin.from("admin_user_notes").select("user_id"),
+
+    // ── Deleted user IDs ─────────────────────────────────────────────────
+    // Soft-deleted users are archived to `deleted_users` but their original
+    // profile rows may still exist (is_active=false or untouched). Exclude
+    // them from the main list so they only appear in the deleted-users view.
+    admin.from("deleted_users").select("user_id"),
   ]);
 
   // ── Phase 2: targeted auth lookup for exactly the user_ids we have ────────
@@ -219,6 +226,14 @@ async function getAllUsers(params: SearchParams, pageSize: number): Promise<{ us
   for (const n of (notesCountRes.data ?? []) as Array<{ user_id: string }>) {
     notesCountMap[n.user_id] = (notesCountMap[n.user_id] ?? 0) + 1;
   }
+
+  // Soft-deleted user IDs — exclude these from the active list so they only
+  // appear in the dedicated deleted-users view.
+  const deletedUserIds = new Set(
+    ((deletedUsersRes.data ?? []) as Array<{ user_id: string }>).map(
+      (r) => r.user_id,
+    ),
+  );
 
   // ── Assemble raw rows (one per role-table entry) ───────────────────────────
 
@@ -341,10 +356,15 @@ async function getAllUsers(params: SearchParams, pageSize: number): Promise<{ us
     });
   }
 
+  // ── Exclude soft-deleted users ──────────────────────────────────────────
+  // Remove any row whose user_id appears in the deleted_users archive so
+  // deleted users only show in the dedicated deleted-users view.
+  const activeRows = rawRows.filter((r) => !deletedUserIds.has(r.userId));
+
   // ── Consolidate by userId: merge rows with the same userId into one ───────
 
   const userMap = new Map<string, AdminUser>();
-  for (const row of rawRows) {
+  for (const row of activeRows) {
     const existing = userMap.get(row.userId);
     if (existing) {
       // Merge roles (avoid duplicates)
