@@ -72,7 +72,9 @@ export async function GET(req: NextRequest) {
       return matchesSearch && matchesStatus;
     });
 
-    const sortKey = ALLOWED_SORTS[params.sortBy] ?? "created_at";
+    const sortKey =
+      (params.sortBy != null ? ALLOWED_SORTS[params.sortBy] : undefined) ??
+      "created_at";
     rows = [...rows].sort((a, b) => {
       const av = a[sortKey as keyof typeof a];
       const bv = b[sortKey as keyof typeof b];
