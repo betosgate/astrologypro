@@ -802,7 +802,7 @@ function ChartImageModal({ src, open, onClose }: { src: string; open: boolean; o
 
 // ─── Planet Symbol ────────────────────────────────────────────────────────────
 
-function ManualPlanetIcon({ name, size = "size-5" }: { name: string; size?: string }) {
+function ManualPlanetIcon({ name, size = "size-7" }: { name: string; size?: string }) {
   const clean = String(name || "").trim().replace(/[(),]/g, "");
   const titled = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
   const symbol = PLANET_SYMBOLS[titled] ?? PLANET_SYMBOLS[clean] ?? "•";
@@ -824,7 +824,7 @@ function ManualPlanetIcon({ name, size = "size-5" }: { name: string; size?: stri
       colorClass,
       size
     )}>
-      <span className="text-white font-bold leading-none select-none drop-shadow-md text-[13px]">
+      <span className="text-white font-bold leading-none select-none drop-shadow-md text-[18px]">
         {symbol}
       </span>
     </div>
@@ -926,7 +926,7 @@ function AspectSymbol({ type, showText = true }: { type: string; showText?: bool
   );
 }
 
-function ManualZodiacIcon({ sign, size = "size-6" }: { sign: string; size?: string }) {
+function ManualZodiacIcon({ sign, size = "size-8" }: { sign: string; size?: string }) {
   const symbol = ZODIAC_SYMBOLS[sign] || ZODIAC_SYMBOLS[sign.charAt(0).toUpperCase() + sign.slice(1).toLowerCase()] || "";
   if (!symbol) return null;
 
@@ -951,7 +951,7 @@ function ManualZodiacIcon({ sign, size = "size-6" }: { sign: string; size?: stri
       colors[type],
       size
     )}>
-      <span className="text-white font-bold leading-none select-none drop-shadow-md" style={{ fontSize: 'calc(100% + 2px)' }}>
+      <span className="text-white font-bold leading-none select-none drop-shadow-md" style={{ fontSize: '1.25rem' }}>
         {symbol}
       </span>
     </div>
@@ -1665,9 +1665,11 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
               <div key={p.name} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
                 {/* Interpretation Header — white bg, dark text, centered icon + name */}
                 <div className="horoscope-interp-header flex items-center justify-center gap-5 px-4 py-2.5" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
-                  {planetImg && (
+                  {planetImg ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={planetImg} alt={p.name} className="size-[30px] object-contain shrink-0" />
+                  ) : (
+                    <ManualPlanetIcon name={p.name} size="size-11" />
                   )}
                   <h4 className="uppercase tracking-wide" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>{p.name}</h4>
                   {hasDecan && (
@@ -2298,10 +2300,12 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
         {items.map((item: any, i: number) => (
           <div key={i} className="rounded-lg border overflow-hidden">
             <div className="px-4 py-2 horoscope-interp-header flex items-center justify-center gap-2">
-              {item.name && PLANET_IMAGES[item.name] && (
+              {item.name && (PLANET_IMAGES[item.name] ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={PLANET_IMAGES[item.name]} alt={item.name} className="size-5 object-contain" />
-              )}
+              ) : (
+                <ManualPlanetIcon name={item.name} size="size-7" />
+              ))}
               <h4 className="text-center w-full">{item.title ?? item.name ?? `${title} ${i + 1}`}</h4>
             </div>
             <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
@@ -2404,10 +2408,12 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
               return (
                 <div key={p.name ?? i} className="rounded-lg border overflow-hidden">
                   <div className="px-4 py-2 horoscope-interp-header flex items-center justify-center gap-2">
-                    {p.name && PLANET_IMAGES[p.name] && (
+                    {p.name && (PLANET_IMAGES[p.name] ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={PLANET_IMAGES[p.name]} alt={p.name} className="size-5 object-contain" />
-                    )}
+                    ) : (
+                      <ManualPlanetIcon name={p.name} size="size-7" />
+                    ))}
                     <h4 className="text-center w-full">{p.name ?? `Planet ${i + 1}`}</h4>
                     {p.name && p.sign && checkDacen(p.name, p.sign) && (
                       <Tooltip>
