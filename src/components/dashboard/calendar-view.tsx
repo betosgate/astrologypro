@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -59,6 +60,7 @@ interface Booking {
 
 interface CalendarViewProps {
   divinerId: string;
+  divinerUsername: string;
   availabilitySlots: AvailabilitySlot[];
   overrides: AvailabilityOverride[];
   bookings: Booking[];
@@ -89,10 +91,12 @@ function timeToMinutes(time: string): number {
 
 export function CalendarView({
   divinerId,
+  divinerUsername,
   availabilitySlots,
   overrides,
   bookings,
 }: CalendarViewProps) {
+  const router = useRouter();
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showAddOverride, setShowAddOverride] = useState(false);
@@ -177,9 +181,6 @@ export function CalendarView({
     return { date, dateStr, availBlocks, overrideBlocks, bookingBlocks };
   });
 
-  // Reschedule mode — stores the booking being rescheduled; user clicks a slot to confirm
-  const [reschedulingBooking, setReschedulingBooking] = useState<Booking | null>(null);
-
   // Cancel dialog
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
 
@@ -209,34 +210,8 @@ export function CalendarView({
     }
   }
 
-  async function handleRescheduleSlot(newDateStr: string, startLabel: string) {
-    if (!reschedulingBooking) return;
-    const [h, m] = startLabel.split(":").map(Number);
-    const newDate = newDateStr;
-    const newTime = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/dashboard/bookings/${reschedulingBooking.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          new_date: newDate,
-          new_time: newTime,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        }),
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error ?? "Failed to reschedule");
-      }
-      toast.success("Booking rescheduled — client notified");
-      setReschedulingBooking(null);
-      window.location.reload();
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to reschedule");
-    } finally {
-      setSaving(false);
-    }
+  function handleReschedule(booking: Booking) {
+    router.push(`/${divinerUsername}/reschedule/${booking.id}`);
   }
 
   async function handleSaveNotes(bookingId: string) {
@@ -362,30 +337,6 @@ export function CalendarView({
         </div>
       </div>
 
-      {/* Reschedule mode banner */}
-      {reschedulingBooking && (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-          <div className="flex items-center gap-2 text-sm text-amber-300">
-            <CalendarClock className="size-4 shrink-0" />
-            <span>
-              <strong>Rescheduling:</strong>{" "}
-              {reschedulingBooking.metadata?.availability_title ?? reschedulingBooking.services?.name ?? "Session"}
-              {reschedulingBooking.clients?.full_name ? ` — ${reschedulingBooking.clients.full_name}` : ""}
-              {" · Click any available slot to set the new time"}
-            </span>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 shrink-0"
-            onClick={() => setReschedulingBooking(null)}
-          >
-            <X className="mr-1 size-3" />
-            Cancel
-          </Button>
-        </div>
-      )}
-
       {/* Legend */}
       <div className="flex gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
@@ -499,12 +450,6 @@ export function CalendarView({
                           className="absolute inset-x-0 mx-0.5 cursor-pointer rounded bg-green-500/15 border border-green-500/20 hover:bg-green-500/25 transition-colors text-left"
                           style={{ top: block.top, height: block.height }}
                           onClick={() => {
-                            if (reschedulingBooking) {
-                              // Reschedule mode — use this slot as the new time
-                              handleRescheduleSlot(dateStr, block.label.split(" - ")[0]);
-                              return;
-                            }
-                            // Normal mode — open manual booking modal
                             const slotDate = new Date(dateStr + "T00:00:00");
                             const [h, m] = block.label.split(" - ")[0].split(":").map(Number);
                             slotDate.setHours(h, m, 0, 0);
@@ -685,17 +630,11 @@ export function CalendarView({
                     variant="outline"
                     size="sm"
                     className="w-full border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300"
-                    onClick={() => {
-                      setReschedulingBooking(selectedBooking);
-                      setSelectedBooking(null);
-                    }}
+                    onClick={() => handleReschedule(selectedBooking)}
                   >
                     <CalendarClock className="mr-2 h-4 w-4" />
                     Reschedule — Pick New Slot
                   </Button>
-                  <p className="mt-1 text-[10px] text-muted-foreground text-center">
-                    Click an available slot on the calendar to set the new time.
-                  </p>
                 </div>
               )}
 

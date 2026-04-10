@@ -125,6 +125,7 @@ export default async function CalendarPage() {
 
       <CalendarView
         divinerId={ownerId}
+        divinerUsername={diviner?.username ?? ""}
         availabilitySlots={slotsResult.data ?? []}
         overrides={overridesResult.data ?? []}
         bookings={(bookingsResult.data as CalendarBooking[] | null) ?? []}
