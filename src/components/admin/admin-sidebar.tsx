@@ -79,7 +79,7 @@ const NAV_GROUPS = [
   {
     label: "Overview",
     items: [
-      { label: "Walkthrough", href: "/admin/walkthrough", icon: Map },
+      { label: "Walkthrough", href: "/walkthrough", icon: Map },
       { label: "Analytics", href: "/admin", icon: LayoutDashboard, exact: true },
     ],
   },
