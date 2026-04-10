@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -164,6 +164,7 @@ export function TrainingQuizForm({
   const [form, setForm] = useState<TrainingQuizFormValue>(initialValue);
   const [draft, setDraft] = useState<QuestionDraft>(EMPTY_DRAFT);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const editFormRef = useRef<HTMLDivElement>(null);
 
   const lessonOptions = useMemo(() => lessons, [lessons]);
 
@@ -196,6 +197,11 @@ export function TrainingQuizForm({
   function handleEditQuestion(index: number) {
     setEditingIndex(index);
     setDraft(toDraft(form.questions[index]));
+
+    // Scroll the "Edit Question" card into view after state update.
+    requestAnimationFrame(() => {
+      editFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function handleDeleteQuestion(index: number) {
@@ -310,7 +316,7 @@ export function TrainingQuizForm({
               </div>
             </div>
 
-            <Card className="border-dashed">
+            <Card ref={editFormRef} className="border-dashed">
               <CardHeader>
                 <CardTitle className="text-base">
                   {editingIndex === null ? "Add Question" : "Edit Question"}
