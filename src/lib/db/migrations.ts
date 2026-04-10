@@ -16,6 +16,7 @@ import { MIGRATION_SQL as MIG_20260409000120 } from "@/data/migrations/202604090
 import { MIGRATION_SQL as MIG_20260409000121 } from "@/data/migrations/20260409000121_seed_pricing_plans";
 import { MIGRATION_SQL as MIG_20260409000122 } from "@/data/migrations/20260409000122_drop_item_price_currency";
 import { MIGRATION_SQL as MIG_20260409000123 } from "@/data/migrations/20260409000123_stripe_product_price_fields";
+import { MIGRATION_SQL as MIG_20260410000001 } from "@/data/migrations/20260410000001_increase_training_video_storage_limit";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -185,6 +186,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds stripe_product_id and stripe_product_name to global_pricing (one Stripe product per item), and stripe_price_name to pricing_plans. Index on stripe_product_id.",
     sortKey: "20260409000123",
     sql: MIG_20260409000123,
+  },
+  "20260410000001_increase_training_video_storage_limit": {
+    id: "20260410000001_increase_training_video_storage_limit",
+    title: "Increase training-videos bucket to 500 MB",
+    description:
+      "Updates the training-videos storage bucket file_size_limit from the default to 524288000 bytes (500 MB). The UI and server upload route both advertise a 500 MB limit, but the bucket's internal cap was lower, causing ~300 MB uploads to fail with 'exceeded max size'.",
+    sortKey: "20260410000001",
+    sql: MIG_20260410000001,
   },
 };
 
