@@ -72,6 +72,7 @@ type VideoMode = "youtube" | "url" | "upload";
 function detectVideoMode(url: string | null): VideoMode {
   if (!url) return "youtube";
   if (url.includes("youtube.com") || url.includes("youtu.be")) return "youtube";
+  if (url.includes("storage/v1/object/public/training-videos") || url.includes("supabase.co/storage")) return "upload";
   return "url";
 }
 
@@ -806,6 +807,7 @@ export default function EditLessonPage() {
               )}
 
               {videoMode === "url" && (
+                <div className="space-y-2">
                 <input
                   type="url"
                   value={form.video_url}
@@ -815,6 +817,21 @@ export default function EditLessonPage() {
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   placeholder="https://example.com/video.mp4"
                 />
+                {/* Video preview for direct URL */}
+                {form.video_url && /\.(mp4|webm|ogg|mov)(\?|$)/i.test(form.video_url) && (
+                  <div className="rounded-lg border overflow-hidden bg-black">
+                    <video
+                      src={form.video_url}
+                      controls
+                      controlsList="nodownload"
+                      className="w-full max-h-[300px]"
+                      preload="metadata"
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                )}
+                </div>
               )}
 
               {videoMode === "upload" && (
@@ -839,6 +856,20 @@ export default function EditLessonPage() {
                     <p className="text-xs text-muted-foreground break-all">
                       Current: {form.video_url}
                     </p>
+                  )}
+                  {/* Video preview player for existing uploads */}
+                  {form.video_url && (
+                    <div className="rounded-lg border overflow-hidden bg-black">
+                      <video
+                        src={form.video_url}
+                        controls
+                        controlsList="nodownload"
+                        className="w-full max-h-[300px]"
+                        preload="metadata"
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                    </div>
                   )}
                   <p className="text-xs text-muted-foreground">
                     MP4, WebM, OGG, MOV or AVI · max 500 MB

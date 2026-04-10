@@ -14,6 +14,7 @@ import {
   sendCommunityMembershipWelcome,
 } from "@/lib/email";
 import { createCalendarEvent } from "@/lib/google-calendar";
+import { buildCalendarDescription } from "@/lib/calendar-utils";
 import { createMsCalendarEvent } from "@/lib/microsoft-calendar";
 import {
   getSubscriptionPeriodEndIso,
@@ -884,6 +885,7 @@ async function handlePaymentIntentSucceeded(
   } | null;
   const bookingMeta = (booking as Record<string, unknown>).metadata as {
     availability_title?: string;
+    availability_description?: string;
   } | null;
   const eventTitle = bookingMeta?.availability_title ?? svc?.name;
 
@@ -953,14 +955,10 @@ async function handlePaymentIntentSucceeded(
   if (hasGoogleCalendar) {
     createCalendarEvent(div.id, {
       title: `${eventTitle} — ${clientRecord?.full_name ?? clientEmail}`,
-      description: [
-        `Schedule: ${eventTitle}`,
-        `Service: ${svc.name}`,
-        `Client: ${clientRecord?.full_name ?? "Guest"} (${clientRecord?.email ?? clientEmail})`,
-        `Date & Time: ${startTime.toLocaleString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" })}`,
-        `Duration: ${durationMins} minutes`,
-        `Session link: ${sessionLink}`,
-      ].join("\n"),
+      description: buildCalendarDescription(
+        bookingMeta?.availability_description ?? null,
+        appUrl,
+      ),
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
       clientEmail: clientRecord?.email ?? clientEmail,
