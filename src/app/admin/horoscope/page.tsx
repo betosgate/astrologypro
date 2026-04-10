@@ -2451,39 +2451,59 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
         );
       })()}
 
+      {/* 4. Solar Return House Cusps section */}
       {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex || houseList.length > 0) && (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return House Cusps</h3></div>
+        <div className="horoscope-table-container">
+          <div className="horoscope-table-header">
+            <h3>Solar Return House Cusps</h3>
+          </div>
+
+          {/* Critical Points Subset */}
           {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex) && (
-            <div className="overflow-x-auto border-b">
-              <table className="w-full text-sm">
-                <thead><tr className="horoscope-thead">
-                  {["Point", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>)}
-                </tr></thead>
+            <div className="horoscope-table-wrapper border-b border-white/5">
+              <table className="horoscope-table">
+                <thead>
+                  <tr>
+                    {["Ascendant", "Midheaven", "Vertex"].map((h) => (
+                      <th key={h}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
                 <tbody>
-                  {[{ label: "Ascendant", val: cuspObj.ascendant }, { label: "Midheaven", val: cuspObj.midheaven }, { label: "Vertex", val: cuspObj.vertex }].filter((r) => r.val).map((r) => (
-                    <tr key={r.label} className="horoscope-tbody-row">
-                      <td className="px-3 py-2 font-medium">{r.label}</td>
-                      <td className="px-3 py-2"><ZodiacSymbol sign={typeof r.val === "object" ? r.val?.sign : String(r.val)} /></td>
-                      <td className="px-3 py-2 font-mono text-xs">{typeof r.val === "object" ? `${Number(r.val?.degree ?? 0).toFixed(2)}°` : "—"}</td>
-                    </tr>
-                  ))}
+                  <tr>
+                    {[cuspObj.ascendant, cuspObj.midheaven, cuspObj.vertex].map((val, i) => (
+                      <td key={i}>
+                        {val ? (
+                          <div className="flex items-center gap-3">
+                            <ZodiacSymbol sign={typeof val === "object" ? val?.sign : String(val)} />
+                            <span className="td-mono">{typeof val === "object" ? `${Number(val?.degree ?? 0).toFixed(2)}°` : "—"}</span>
+                          </div>
+                        ) : "—"}
+                      </td>
+                    ))}
+                  </tr>
                 </tbody>
               </table>
             </div>
           )}
+
+          {/* Regular Houses Subset */}
           {houseList.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead><tr className="horoscope-thead">
-                  {["House", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>)}
-                </tr></thead>
+            <div className="horoscope-table-wrapper">
+              <table className="horoscope-table">
+                <thead>
+                  <tr>
+                    {["House", "Sign", "Degree"].map((h) => (
+                      <th key={h}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
                 <tbody>
                   {houseList.map((h: any, i: number) => (
-                    <tr key={i} className="horoscope-tbody-row">
-                      <td className="px-3 py-2 font-medium">{h.house}</td>
-                      <td className="px-3 py-2"><ZodiacSymbol sign={h.sign} /></td>
-                      <td className="px-3 py-2 font-mono text-xs">{Number(h.degree ?? 0).toFixed(2)}°</td>
+                    <tr key={`house-${i}`}>
+                      <td className="font-medium">House {h.house}</td>
+                      <td><ZodiacSymbol sign={h.sign} /></td>
+                      <td className="td-mono">{Number(h.degree ?? 0).toFixed(2)}°</td>
                     </tr>
                   ))}
                 </tbody>
@@ -2497,29 +2517,36 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       {detailsAi && <AiCards data={detailsAi} title="Solar Return Interpretation" />}
 
 
-      {/* 5. Solar Return Aspects table */}
+      {/* 5. Solar Return Planet Aspects table */}
       {aspectList.length > 0 && (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return Planet Aspects</h3></div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="horoscope-thead">
-                {["SR Planet", "Natal Planet", "Type", "Orb"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
-                ))}
-              </tr></thead>
+        <div className="horoscope-table-container">
+          <div className="horoscope-table-header">
+            <h3>Solar Return Planet Aspects</h3>
+          </div>
+          <div className="horoscope-table-wrapper">
+            <table className="horoscope-table">
+              <thead>
+                <tr>
+                  {["SR Planet", "Natal Planet", "Type", "Orb"].map((h) => (
+                    <th key={h}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
               <tbody>
                 {aspectList.map((a: any, i: number) => (
-                  <tr key={i} className="horoscope-tbody-row">
-                    <td className="px-3 py-2 whitespace-nowrap"><PlanetSymbol name={a.solar_return_planet ?? a.aspecting_planet ?? a.planet1 ?? "—"} /></td>
-                    <td className="px-3 py-2 whitespace-nowrap"><PlanetSymbol name={a.natal_planet ?? a.aspected_planet ?? a.planet2 ?? "—"} /></td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                  <tr key={i}>
+                    <td className="td-planet"><PlanetSymbol name={a.solar_return_planet ?? a.aspecting_planet ?? a.planet1 ?? "—"} /></td>
+                    <td className="td-planet"><PlanetSymbol name={a.natal_planet ?? a.aspected_planet ?? a.planet2 ?? "—"} /></td>
+                    <td>
                       <span className="inline-flex items-center gap-1.5">
-                        {ASPECT_IMAGES[a.type] && <img src={ASPECT_IMAGES[a.type]} alt={a.type} className="size-4 object-contain" />}
+                        {ASPECT_IMAGES[a.type] && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={ASPECT_IMAGES[a.type]} alt={a.type} className="size-4 object-contain" />
+                        )}
                         {a.type}
                       </span>
                     </td>
-                    <td className="px-3 py-2 font-mono text-xs">{Number(a.orb ?? 0).toFixed(2)}°</td>
+                    <td className="td-mono">{Number(a.orb ?? 0).toFixed(2)}°</td>
                   </tr>
                 ))}
               </tbody>
