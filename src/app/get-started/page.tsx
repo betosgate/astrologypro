@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { MarketingHeader } from "@/components/marketing/header";
@@ -74,8 +75,252 @@ const faqs = [
       "Daily.co powers our HD video sessions with screen sharing and automatic recording. No additional software needed — everything runs in the browser. You can share your charts and cards on screen while you read.",
   },
 ];
+// ─── Perennial Plans ──────────────────────────────────────────────────────────
+//
+// WHY THIS API EXISTS:
+//   GET /api/pricing/[itemKey] is the single public source of truth for pricing.
+//   Admins update prices/plans via /admin/pricing → stored in the DB.
+//   This API reads the DB so the UI always reflects the current admin config
+//   without any code changes or redeploys.
+//
+// STRATEGY: seed the component with known-good fallback data so the 3 blocks
+// render immediately. On mount, fetch the live API and silently replace the
+// plan values with whatever is currently configured in the DB (amount, mrp,
+// display_name, description, custom_fields). If the API call fails the
+// fallback data stays visible — no blank state ever.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface PMPlanDisplay {
+  plan_id:      string;
+  display_name: string;
+  members:      string;
+  amount:       number;
+  mrp:          number;
+  description:  string;
+  features:     string[];   // label values from custom_fields (excluding meta slugs)
+  savings?:     string;
+  isFeatured:   boolean;    // true for the centre/highlighted card
+  routeKey:     "single" | "couple" | "family";
+}
+
+// Fallback seed — matches the DB exactly so the page never flashes empty.
+// The live API value will overwrite this on every page load.
+const PM_SEED: PMPlanDisplay[] = [
+  {
+    plan_id:      "plan_pm_individual",
+    display_name: "Individual Plan",
+    members:      "1 member",
+    amount:       19.95,
+    mrp:          39.99,
+    description:  "Single member access to the Perennial Mandalism community.",
+    features:     ["Live Ceremonies", "Community Forum", "Sacred Teachings"],
+    isFeatured:   false,
+    routeKey:     "single",
+  },
+  {
+    plan_id:      "plan_pm_couple",
+    display_name: "Couple Plan",
+    members:      "2 members",
+    amount:       29.95,
+    mrp:          69.99,
+    description:  "Two members sharing one household — joint access to the community.",
+    features:     ["Live Ceremonies", "Community Forum", "Sacred Teachings"],
+    savings:      "Save 17% vs 2× Individual",
+    isFeatured:   true,
+    routeKey:     "couple",
+  },
+  {
+    plan_id:      "plan_pm_family",
+    display_name: "Family Plan",
+    members:      "Up to 5 members",
+    amount:       39.95,
+    mrp:          99.99,
+    description:  "Up to 5 family members — full household access to the community.",
+    features:     ["Live Ceremonies", "Community Forum", "Sacred Teachings"],
+    savings:      "Save 53% vs 5× Individual",
+    isFeatured:   false,
+    routeKey:     "family",
+  },
+];
+
+// Maps API plan_id → the routeKey used by /perennial-signup?plan=
+const PM_ROUTE_KEY: Record<string, PMPlanDisplay["routeKey"]> = {
+  plan_pm_individual: "single",
+  plan_pm_couple:     "couple",
+  plan_pm_family:     "family",
+};
+
+// Which API plan index is the featured centre card (sort_order 2 = couple)
+const PM_FEATURED_ID = "plan_pm_couple";
+
+// Converts a raw API plan into the display shape used by the cards
+function apiPlanToDisplay(raw: {
+  plan_id: string;
+  display_name: string;
+  amount: number;
+  mrp: number;
+  description: string;
+  custom_fields: { slug: string; label: string; value: string }[];
+}): PMPlanDisplay {
+  const META_SLUGS = ["members", "billing", "savings"];
+  const membersField = raw.custom_fields.find((f) => f.slug === "members");
+  const savingsField  = raw.custom_fields.find((f) => f.slug === "savings");
+  const features      = raw.custom_fields
+    .filter((f) => !META_SLUGS.includes(f.slug))
+    .map((f) => f.label);
+
+  return {
+    plan_id:      raw.plan_id,
+    display_name: raw.display_name,
+    members:      membersField ? `${membersField.value} member${membersField.value === "1" ? "" : "s"}` : "",
+    amount:       raw.amount,
+    mrp:          raw.mrp,
+    description:  raw.description,
+    features,
+    savings:      savingsField?.value,
+    isFeatured:   raw.plan_id === PM_FEATURED_ID,
+    routeKey:     PM_ROUTE_KEY[raw.plan_id] ?? "single",
+  };
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
+function PerennialPlansSection() {
+  const router = useRouter();
+  // Start with seed so cards are immediately visible — API replaces silently
+  const [plans, setPlans] = useState<PMPlanDisplay[]>(PM_SEED);
+  const ACCENT = ["#c9a84c", "#e2c97e", "#a07830"];
+
+  useEffect(() => {
+    fetch("/api/pricing/perennial_mandalism_community")
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data) => {
+        const live: PMPlanDisplay[] = (data.plans ?? [])
+          .filter((p: { is_active: boolean }) => p.is_active)
+          .map(apiPlanToDisplay);
+        if (live.length > 0) setPlans(live);
+      })
+      .catch(() => {
+        // API failed — keep showing the seed data, no blank state
+      });
+  }, []);
+
+  return (
+    <section className="px-4 pb-6 pt-2 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-5xl">
+        {/* Section divider */}
+        <div className="mb-10 flex items-center gap-4">
+          <div className="h-px flex-1 bg-white/[0.06]" />
+          <div className="flex items-center gap-2 rounded-full border border-[#c9a84c]/20 bg-[#c9a84c]/5 px-4 py-1.5 text-sm font-medium text-[#c9a84c]">
+            <Sparkles className="size-3.5" />
+            Perennial Mandalism Community
+          </div>
+          <div className="h-px flex-1 bg-white/[0.06]" />
+        </div>
+
+        <div className="mb-4 text-center">
+          <h2 className="font-display text-2xl font-bold text-[#f5f0e8] sm:text-3xl">
+            Join the <span className="gold-text">Living Circle</span>
+          </h2>
+          <p className="mt-2 text-sm text-[#b8bcd0]/60">
+            Sacred community membership — ceremonies, wisdom circles, and more.
+          </p>
+        </div>
+
+        <div className="mt-8 grid items-start gap-6 md:grid-cols-3">
+          {plans.map((plan, idx) => {
+            const accent = ACCENT[idx] ?? "#c9a84c";
+            return (
+              <div
+                key={plan.plan_id}
+                className={`relative overflow-hidden rounded-2xl border transition-all duration-300 ${
+                  plan.isFeatured
+                    ? "border-[#c9a84c]/40 bg-[#c9a84c]/[0.03] shadow-2xl shadow-[#c9a84c]/10 md:-mt-4"
+                    : "border-white/[0.08] bg-white/[0.02]"
+                }`}
+              >
+                {plan.isFeatured && (
+                  <div className="bg-gradient-to-r from-[#8b7a3a] via-[#c9a84c] to-[#e2c97e] px-4 py-2 text-center text-xs font-bold uppercase tracking-widest text-black">
+                    <Crown className="mr-1 inline size-3" />
+                    Best Value
+                  </div>
+                )}
+
+                <div className="p-6 md:p-8">
+                  {/* Name + meta */}
+                  <h3 className="font-display text-xl font-bold text-[#f5f0e8]">
+                    {plan.display_name}
+                  </h3>
+                  <p className="mt-1 text-xs text-[#b8bcd0]/50">{plan.members} · Monthly</p>
+                  <p className="mt-1 text-sm text-[#b8bcd0]/60">{plan.description}</p>
+
+                  {/* Pricing */}
+                  <div className="mt-5">
+                    <div className="flex items-baseline gap-1">
+                      <span className="font-display text-4xl font-bold text-[#f5f0e8]">
+                        ${plan.amount.toFixed(2)}
+                      </span>
+                      <span className="text-[#b8bcd0]/60">/mo</span>
+                      <span className="ml-1 text-sm text-[#b8bcd0]/35 line-through">
+                        ${Math.floor(plan.mrp)}
+                      </span>
+                    </div>
+                    {plan.savings && (
+                      <p className="mt-1 text-xs font-medium" style={{ color: accent }}>
+                        {plan.savings}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Feature list — driven entirely by API custom_fields */}
+                  <ul className="mt-5 space-y-2.5">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2.5">
+                        <div
+                          className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full"
+                          style={{ background: `${accent}1a` }}
+                        >
+                          <Check className="size-3" style={{ color: accent }} />
+                        </div>
+                        <span className="text-sm text-[#b8bcd0]/80">{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* CTA — passes plan_id key to perennial-signup */}
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/perennial-signup?plan=${plan.routeKey}`)}
+                    className={`mt-6 w-full rounded-full py-3 text-sm font-semibold transition-all ${
+                      plan.isFeatured
+                        ? "bg-[#c9a84c] text-black shadow-lg shadow-[#c9a84c]/25 hover:bg-[#e2c97e]"
+                        : "border border-[#c9a84c]/30 text-[#c9a84c] hover:border-[#c9a84c] hover:bg-[#c9a84c]/10"
+                    }`}
+                  >
+                    Join with {plan.display_name}
+                  </button>
+
+                  <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-[#b8bcd0]/50">
+                    <Shield className="size-3 text-[#22c55e]/60" />
+                    Cancel anytime
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Main Page ──────────────────────────────────────────────────────────────
 
 export default function GetStartedPage() {
+
   const supabase = createClient();
   const formRef = useRef<HTMLDivElement>(null);
 
@@ -388,6 +633,9 @@ export default function GetStartedPage() {
             </div>
           </div>
         </section>
+
+        {/* ===== PERENNIAL MANDALISM PLANS ===== */}
+        <PerennialPlansSection />
 
         {/* ===== EVERYTHING INCLUDED ===== */}
         <section className="border-y border-white/5 bg-white/[0.015] px-4 py-16 sm:px-6 lg:px-8">

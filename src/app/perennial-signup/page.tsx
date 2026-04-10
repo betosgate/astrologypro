@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -225,8 +226,17 @@ function formatCurrency(amount: number): string {
 
 // ─── Page ──────────────────────────────────────────────────────────────────
 
-export default function PerennialSignupPage() {
-  const [planKey, setPlanKey] = useState<PlanKey>("single");
+function PerennialSignupForm() {
+  const searchParams = useSearchParams();
+
+  // Pre-select the plan coming in from the join/community page (?plan=single|couple|family)
+  const initialPlan = ((): PlanKey => {
+    const param = searchParams.get("plan");
+    if (param === "single" || param === "couple" || param === "family") return param;
+    return "single";
+  })();
+
+  const [planKey, setPlanKey] = useState<PlanKey>(initialPlan);
   const plan = PLANS.find((p) => p.key === planKey)!;
 
   const [members, setMembers] = useState<MemberForm[]>([newMember(true)]);
@@ -1100,5 +1110,14 @@ export default function PerennialSignupPage() {
         </form>
       </main>
     </div>
+  );
+}
+
+
+export default function PerennialSignupPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><span className="text-muted-foreground text-sm">Loading…</span></div>}>
+      <PerennialSignupForm />
+    </Suspense>
   );
 }
