@@ -23,7 +23,7 @@ import {
   Loader2, ChevronDown, ChevronRight, ChevronLeft, Star, Sun, Moon,
   Calendar as CalendarIcon, Heart, Users, Briefcase, Eye, Zap,
   Sparkles, CircleDot, Clock, MapPin, Printer, ArrowUp, RotateCcw,
-  X, Maximize2, Search,
+  X, Maximize2, Search, Link, User, Home,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -85,6 +85,19 @@ const ASTRO_HEADER_IMAGES: Record<string, string> = {
   Square: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/squar.png",
   Trine: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/trine.png",
   Sextile: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/sextile.png",
+  // Zodiac signs (zodic_singn/ folder — standard filenames)
+  Aries: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Aries.png",
+  Taurus: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Taurus.png",
+  Gemini: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Gemini.png",
+  Cancer: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Cancer.png",
+  Leo: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Leo.png",
+  Virgo: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Virgo.png",
+  Libra: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Libra.png",
+  Scorpio: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Scorpio.png",
+  Sagittarius: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Sagittarius.png",
+  Capricorn: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Capricorn.png",
+  Aquarius: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Aquarius.png",
+  Pisces: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/zodic_singn/Pisces.png",
 };
 
 // Keep ASPECT_IMAGES alias for table column aspect-type icon (same URLs as above)
@@ -143,16 +156,26 @@ function parseAspectTitle(title?: string): { p1: string; aspectType: string; p2:
 // Renders "PLANET [sign_img] ASPECT [aspect_img] PLANET [sign_img]"
 // — exact visual equivalent of Angular's astroHeaderModifierPipe
 function AstroHeaderParts({ title }: { title?: string }) {
+  if (!title) return null;
   const { p1, aspectType, p2 } = parseAspectTitle(title);
   const terms = [p1, aspectType, p2].filter(Boolean);
+
+  function getImg(term: string) {
+    const clean = term.trim().replace(/[(),]/g, "");
+    if (!clean) return null;
+    // Try exact match, then Title Case
+    if (ASTRO_HEADER_IMAGES[clean]) return ASTRO_HEADER_IMAGES[clean];
+    const titled = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+    return ASTRO_HEADER_IMAGES[titled];
+  }
 
   return (
     <div className="flex items-center justify-center gap-2 flex-wrap w-full">
       {terms.map((term, i) => {
-        const img = ASTRO_HEADER_IMAGES[term];
+        const img = getImg(term);
         return (
-          <span key={i} className="flex items-center gap-1.5">
-            <span className="text-xs font-bold uppercase tracking-widest text-foreground">{term}</span>
+          <span key={i} className="flex items-center gap-1.5 grow-0">
+            <span className="text-xs font-bold uppercase tracking-widest text-foreground whitespace-nowrap">{term}</span>
             {img && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={img} alt={term} className="size-5 object-contain shrink-0" />
@@ -245,42 +268,54 @@ function getAspectOrbColor(orb: number, type: string, ap: string, asp: string): 
   return orb < 0 ? "#fffdba" : "#a6ffad";
 }
 
-// ─── API callers ──────────────────────────────────────────────────────────────
+// ─── API callers with Retry ──────────────────────────────────────────────────
+
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3, delay = 1000) {
+  let lastError: any;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const r = await fetch(url, options);
+      if (r.ok) return r;
+      // If not ok, try to parse error but don't throw yet unless it's the last try
+      try {
+        const d = await r.json();
+        lastError = new Error(d.error || d.message || `HTTP ${r.status}`);
+      } catch {
+        lastError = new Error(`HTTP ${r.status}`);
+      }
+    } catch (err) {
+      lastError = err;
+    }
+    if (i < maxRetries - 1) {
+      await new Promise(res => setTimeout(res, delay));
+    }
+  }
+  throw lastError;
+}
 
 async function callCompute(endpoint: string, payload: Record<string, unknown>) {
-  const r = await fetch("/api/admin/astro/compute", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint, payload }) });
-  if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? r.statusText); }
+  const r = await fetchWithRetry("/api/admin/astro/compute", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint, payload }) });
   return r.json();
 }
 async function callAI(aiPayload: Record<string, unknown>, areaOfInquiry?: string) {
-  const r = await fetch("/api/admin/astro/ai-interpret", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aiPayload, areaOfInquiry }) });
-  if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? r.statusText); }
+  const r = await fetchWithRetry("/api/admin/astro/ai-interpret", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aiPayload, areaOfInquiry }) });
   return r.json();
 }
 async function callPlanetReturn(body: Record<string, unknown>) {
-  const r = await fetch("/api/admin/astro/planet-return", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? r.statusText); }
+  const r = await fetchWithRetry("/api/admin/astro/planet-return", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   return r.json();
 }
 async function callNatalWheel(body: Record<string, unknown>) {
-  const r = await fetch("/api/admin/astro/natal-wheel", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? r.statusText); }
+  const r = await fetchWithRetry("/api/admin/astro/natal-wheel", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   return r.json();
 }
 async function callDecanLookup(signs: string, planet: string) {
-  const r = await fetch("/api/astro-decan/fetch-decan-details", {
+  const r = await fetchWithRetry("/api/astro-decan/fetch-decan-details", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ signs, planet })
   });
-  if (!r.ok) {
-    const d = await r.json();
-    throw new Error(d.message || d.error || r.statusText);
-  }
   const json = await r.json();
-
-  // The new API returns a single object in json.results.
-  // The frontend component expects an array of DecanRow.
   const row = json.results;
   if (row && !Array.isArray(row)) {
     // Parse decan string (e.g. "1st Decan") to number if needed
@@ -944,7 +979,7 @@ function useShowMore() {
     const payload = buildPicturePayload(type, title, promptData);
     if (!payload) return null;
     try {
-      const res = await fetch("/api/admin/astro/astro-picture-content", {
+      const res = await fetchWithRetry("/api/admin/astro/astro-picture-content", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -1968,27 +2003,35 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry }: { natal
 
 // ─── Natal Charts Row ─────────────────────────────────────────────────────────
 
-function NatalChartsRow({ svg1, svg2, label1 = "Natal Wheel Chart", label2 = "Natal Wheel Chart (Alt)", onExpandImg }: {
-  svg1: string | null; svg2: string | null; label1?: string; label2?: string; onExpandImg: (src: string) => void;
+function NatalChartsRow({ svgs, labels, onExpandImg }: {
+  svgs: (string | null)[]; labels: string[]; onExpandImg: (src: string) => void;
 }) {
-  if (!svg1 && !svg2) return null;
+  const activeItems = svgs.map((s, i) => ({ s, l: labels[i] })).filter(item => item.s);
+  if (!activeItems.length) return null;
 
-  const renderImg = (src: string, label: string) => (
-    <div className="flex-1 min-w-[200px] border rounded-lg p-2 bg-background cursor-pointer hover:ring-2 ring-amber-400 transition" onClick={() => onExpandImg(src)}>
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">{label} <Eye className="inline size-3 ml-1 opacity-60" /></p>
-      {src.startsWith("<svg") ? (
-        <div dangerouslySetInnerHTML={{ __html: src }} className="overflow-hidden max-h-80" />
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={label} className="w-full h-auto rounded" />
-      )}
-    </div>
-  );
+  const renderImg = (src: string, label: string) => {
+    const isP2 = label.toLowerCase().includes("person 2") || label.toLowerCase().includes("transit");
+    const Icon = isP2 ? Heart : User;
+    return (
+      <div className="flex-1 min-w-[200px] max-w-[calc(50%-0.5rem)] border rounded-lg p-2 bg-background cursor-pointer hover:ring-2 ring-amber-400 transition" onClick={() => onExpandImg(src)}>
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1 flex items-center gap-1.5">
+          <Icon className="size-3 text-amber-500" />
+          <span className="truncate">{label}</span>
+          <Eye className="size-3 ml-auto opacity-60" />
+        </p>
+        {src.startsWith("<svg") ? (
+          <div dangerouslySetInnerHTML={{ __html: src }} className="overflow-hidden aspect-square flex items-center justify-center grayscale-0" />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt={label} className="w-full h-auto rounded aspect-square object-contain" />
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-wrap gap-4">
-      {svg1 && renderImg(svg1, label1)}
-      {svg2 && renderImg(svg2, label2)}
+      {activeItems.map((item, i) => renderImg(item.s!, item.l))}
     </div>
   );
 }
@@ -2311,41 +2354,6 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
         </div>
       )}
 
-      {/* 6. Solar Return Aspects Report — from AstrologyAPI solar_return_aspects_report
-           Shape: [{solar_return_planet, type, natal_planet, forecast}]
-           Ported from Angular solar-return-v2 getHttpHoroscopePost("solar_return_aspects_report") */}
-      {/* {aspectsReport !== null && aspectsReport !== undefined && (() => {
-        const items: any[] = Array.isArray(aspectsReport) ? aspectsReport : [];
-        if (items.length === 0) return null;
-        return (
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold px-1">Solar Return Planet Aspects Interpretations</h3>
-            {items.map((a: any, i: number) => {
-              const srPlanet = a.solar_return_planet ?? a.aspecting_planet ?? "";
-              const nPlanet = a.natal_planet ?? a.aspected_planet ?? "";
-              const aType = a.type ?? "";
-              const header = [srPlanet, aType, nPlanet].filter(Boolean).join(" ");
-              const forecast = a.forecast ?? a.interpretation ?? "";
-              return (
-                <div key={i} className="rounded-lg border overflow-hidden">
-                  <div className="px-4 py-2 bg-muted/30 border-b flex items-center gap-2 flex-wrap">
-                    {srPlanet && <PlanetSymbol name={srPlanet} showImage />}
-                    {aType && ASPECT_IMAGES[aType] && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={ASPECT_IMAGES[aType]} alt={aType} className="size-4 object-contain" />
-                    )}
-                    {nPlanet && <PlanetSymbol name={nPlanet} showImage />}
-                    <h4 className="text-sm font-semibold ml-1">{header || `Aspect ${i + 1}`}</h4>
-                  </div>
-                  <div className="px-4 py-3">
-                    <p className="text-sm leading-relaxed text-foreground">{String(forecast)}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        );
-      })()} */}
       {/* 6. Solar Return Aspects Report — Unified Grouping */}
       {aspectsReport !== null && aspectsReport !== undefined && (() => {
         const items: any[] = Array.isArray(aspectsReport) ? aspectsReport : [];
@@ -2769,7 +2777,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                 const titleStr = String(title);
                 const match = titleStr.match(/(\b[A-Z][a-z]+\b)\s+in\s+(\b[A-Z][a-z]+\b)/);
                 if (match && checkDacen(match[1], match[1])) {
-                   // ... decan logic ...
+                  // ... decan logic ...
                 }
                 return null;
               })()}
@@ -3240,7 +3248,7 @@ function CityAutocomplete({ value, onChange, label = "Place of Birth", disabled 
   const search = useCallback((q: string) => {
     if (q.length < 2) { setOptions([]); setOpen(false); return; }
     setLoading(true);
-    fetch("/api/admin/astro/city-search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ q }) })
+    fetchWithRetry("/api/admin/astro/city-search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ q }) })
       .then((r) => r.json()).then((d) => { setOptions(d.results ?? []); setOpen((d.results ?? []).length > 0); })
       .catch(() => setOptions([])).finally(() => setLoading(false));
   }, []);
@@ -3437,6 +3445,8 @@ export default function AdminHoroscopePage() {
   const [results, setResults] = useState<Record<string, any> | null>(null);
   const [natalSvg, setNatalSvg] = useState<string | null>(null);
   const [natalSvgTransit, setNatalSvgTransit] = useState<string | null>(null);
+  const [natalSvgP2, setNatalSvgP2] = useState<string | null>(null);
+  const [natalSvgTransitP2, setNatalSvgTransitP2] = useState<string | null>(null);
   const [returnDate, setReturnDate] = useState<string | null>(null);
   const [progress, setProgress] = useState<string[]>([]);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -3460,13 +3470,14 @@ export default function AdminHoroscopePage() {
   // Reset on tab change
   useEffect(() => {
     setResults(null); setNatalSvg(null); setNatalSvgTransit(null);
+    setNatalSvgP2(null); setNatalSvgTransitP2(null);
     setReturnDate(null); setError(null); setProgress([]); setForm(defaultForm());
     setShowScrollTop(false); setShowChartBtn(false); setTransitChartSvg(null);
   }, [currentSlug]);
 
   // Pre-fetch decan possibilities (distinct planet+sign pairs)
   useEffect(() => {
-    fetch("/api/astro-decan/fetch-planet-signs")
+    fetchWithRetry("/api/astro-decan/fetch-planet-signs", { method: "GET" })
       .then((r) => r.json())
       .then((data) => {
         if (data?.results && Array.isArray(data.results)) {
@@ -3543,6 +3554,8 @@ export default function AdminHoroscopePage() {
     setResults({}); // Initialize results so the section shows up immediately
     setNatalSvg(null);
     setNatalSvgTransit(null);
+    setNatalSvgP2(null);
+    setNatalSvgTransitP2(null);
     setReturnDate(null);
     setProgress([]);
 
@@ -3999,24 +4012,27 @@ export default function AdminHoroscopePage() {
         );
 
         // Wheels
+        // Person 1
         relTasks.push(
-          callNatalWheel(
-            freeWheelBody(form.person1) as unknown as Record<string, unknown>
-          ).then((r) => {
-            const svg = r?.results?.output;
-            if (svg) {
-              setNatalSvg(svg);
-              setShowChartBtn(true);
-            }
-          })
+          callCompute("natal_wheel_chart", birth1 as unknown as Record<string, unknown>)
+            .then((w) => { if (w?.chart_url) { setNatalSvg(w.chart_url); setShowChartBtn(true); } })
+            .catch(() => { })
         );
         relTasks.push(
-          callNatalWheel(
-            freeWheelBody(form.person2) as unknown as Record<string, unknown>
-          ).then((r) => {
-            const svg = r?.results?.output;
-            if (svg) setNatalSvgTransit(svg);
-          })
+          callNatalWheel(freeWheelBody(form.person1) as unknown as Record<string, unknown>)
+            .then((r) => { if (r?.results?.output) { setNatalSvgTransit(r.results.output); setShowChartBtn(true); } })
+            .catch(() => { })
+        );
+        // Person 2
+        relTasks.push(
+          callCompute("natal_wheel_chart", birth2 as unknown as Record<string, unknown>)
+            .then((w) => { if (w?.chart_url) { setNatalSvgP2(w.chart_url); } })
+            .catch(() => { })
+        );
+        relTasks.push(
+          callNatalWheel(freeWheelBody(form.person2) as unknown as Record<string, unknown>)
+            .then((r) => { if (r?.results?.output) { setNatalSvgTransitP2(r.results.output); } })
+            .catch(() => { })
         );
 
         await Promise.allSettled(relTasks);
@@ -4077,16 +4093,14 @@ export default function AdminHoroscopePage() {
             freeNatalWheelChart: natalSvg ?? "",
             freeNatalWheelChartForTrasit: natalSvgTransit ?? "",
           };
-          fetch(
+          fetchWithRetry(
             "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(savePayload),
             },
-          ).catch(() => {
-            /* fire-and-forget — save failure does not block the user */
-          });
+          ).catch(() => { });
         } catch {
           /* ignore save errors */
         }
@@ -4219,152 +4233,172 @@ export default function AdminHoroscopePage() {
 
                 return (
                   <div className="space-y-6">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold">Results</h2>
-                  <Badge variant="outline" className="text-amber-600 border-amber-400 text-xs">{currentTab.label}</Badge>
-                  <button onClick={printResult} className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors border rounded px-2 py-1">
-                    <Printer className="size-3" />Print
-                  </button>
-                </div>
+                    <div className="flex items-center gap-2">
+                      <Zap className="size-5 text-amber-500" />
+                      <h2 className="text-base font-bold">Results</h2>
+                      <Badge variant="outline" className="text-amber-600 border-amber-400 text-xs">{currentTab.label}</Badge>
+                      <button onClick={printResult} className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors border rounded px-2 py-1">
+                        <Printer className="size-3" />Print
+                      </button>
+                    </div>
 
-                {/* Return date banner */}
-                {returnDate && (
-                  <div className="rounded-md border border-amber-400/40 bg-amber-500/10 px-4 py-3">
-                    <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">Return Date: <span className="font-bold">{returnDate}</span></p>
-                  </div>
-                )}
-
-                {/* Natal charts — always show first */}
-                <div id="natal-charts-row">
-                  <NatalChartsRow
-                    svg1={natalSvg}
-                    svg2={natalSvgTransit}
-                    label1={isTwoPersonAiTab ? "Person 1 Natal Wheel" : "Natal Wheel Chart (AstrologyAPI)"}
-                    label2={isTwoPersonAiTab ? "Person 2 Natal Wheel" : "Natal Wheel Chart (FreeAstrology)"}
-                    onExpandImg={(src) => setChartModal(src)}
-                  />
-                </div>
-
-                {/* ─── Planet Return Summary ──────────────────── */}
-                {isPlanetReturn && (
-                  <PlanetReturnSummaryTable tab={currentSlug} birth={form.person1} returnDate={returnDate} natalData={natalData} />
-                )}
-
-                {/* ─── Solar Return ───────────────────────────── */}
-                {isSolarReturn && (
-                  <SolarReturnSection
-                    details={results.solar_return_details}
-                    planets={results.solar_return_planets}
-                    cusps={results.solar_return_cusps}
-                    aspects={results.solar_return_aspects}
-                    planetReport={results.solar_return_planet_report}
-                    aspectsReport={results.solar_return_aspects_report}
-                    aiData={ai}
-                    areaOfInquiry={form.areaOfInquiry}
-                    checkDacen={checkDacen}
-                    onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                  />
-                )}
-
-                {/* ─── Saturn Return also shows solar return ──── */}
-                {currentSlug === "saturn_return_v2" && results.solar_return_details && (
-                  <SolarReturnSection
-                    details={results.solar_return_details}
-                    planets={results.solar_return_planets}
-                    cusps={results.solar_return_cusps}
-                    aspects={results.solar_return_aspects}
-                    planetReport={results.solar_return_planet_report}
-                    aspectsReport={results.solar_return_aspects_report}
-                    aiData={null}
-                    areaOfInquiry={form.areaOfInquiry}
-                    checkDacen={checkDacen}
-                    onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                  />
-                )}
-
-                {/* ─── Transits ───────────────────────────────── */}
-                {isTransit && (
-                  <TransitSection
-                    data={results.transit_data}
-                    lunarMetrics={results.lunar_metrics}
-                    aiData={currentSlug === "tropical_transits_weekly_v2" ? ai.tropical_transits_weekly : ai.tropical_transits_monthly}
-                    lunarAiData={currentSlug === "tropical_transits_monthly_v3" ? ai.lunar_metrics : undefined}
-                    tabSlug={currentSlug}
-                    areaOfInquiry={form.areaOfInquiry}
-                    checkDacen={checkDacen}
-                    onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                    transitWheelSvg={transitChartSvg}
-                    setChartModal={setChartModal}
-                  />
-                )}
-
-                {/* ─── Horary ─────────────────────────────────── */}
-                {isHorary && (
-                  <HorarySection
-                    data={ai.horary_chart_question}
-                    areaOfInquiry={form.areaOfInquiry}
-                    checkDacen={checkDacen}
-                    onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                  />
-                )}
-
-                {/* ─── Two-person relationship (all 8 AI sections) ─ */}
-                {isTwoPersonAiTab && (
-                  <RelationshipSection
-                    aiMap={ai}
-                    areaOfInquiry={form.areaOfInquiry}
-                    tabSlug={currentSlug}
-                    checkDacen={checkDacen}
-                    onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                  />
-                )}
-
-                {/* ─── Natal chart sections (all single tabs + planet return tabs) ─ */}
-                {natalData && (
-                  <div className="space-y-6">
-                    {!isMainTransitTab && (
-                      <>
-                        <PlanetsSection
-                          planets={natalData.planets}
-                          aiData={ai.western_horoscope_planets}
-                          areaOfInquiry={form.areaOfInquiry}
-                          checkDacen={checkDacen}
-                          onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                        />
-                        <div className="rounded-lg border overflow-hidden">
-                          <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">House Information</h2></div>
-                          <div className="p-4">
-                            <HousesSection houses={natalData.houses} planets={natalData.planets} aiData={ai.western_horoscope_houses} areaOfInquiry={form.areaOfInquiry} />
-                          </div>
-                        </div>
-                        <div className="rounded-lg border overflow-hidden">
-                          <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20"><h2 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Dharma & Karma</h2></div>
-                          <div className="p-4">
-                            <DharmaKarmaSection data={ai.dharma_karma} rawData={natalData} areaOfInquiry={form.areaOfInquiry} />
-                          </div>
-                        </div>
-                        <div className="rounded-lg border overflow-hidden">
-                          <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">Aspects</h2></div>
-                          <div className="p-4">
-                            <AspectsSection aspects={natalData.aspects} planets={natalData.planets} aiData={ai.western_horoscope_aspects} areaOfInquiry={form.areaOfInquiry} />
-                          </div>
-                        </div>
-                        <AscMidheavenVertexSection natalData={natalData} aiData={ai.western_horoscope_ascendant_midheaven_vertex} areaOfInquiry={form.areaOfInquiry} />
-                        <LilithSection
-                          lilith={natalData.lilith}
-                          aiData={ai.western_horoscope_lilith}
-                          areaOfInquiry={form.areaOfInquiry}
-                          checkDacen={checkDacen}
-                          onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                        />
-                      </>
+                    {/* Return date banner */}
+                    {returnDate && (
+                      <div className="rounded-md border border-amber-400/40 bg-amber-500/10 px-4 py-3">
+                        <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">Return Date: <span className="font-bold">{returnDate}</span></p>
+                      </div>
                     )}
-                  </div>
-                )}
 
-                {isPlanetReturn && (
-                  <PlanetReturnInterpretation tab={currentSlug} aiData={ai[currentSlug]} areaOfInquiry={form.areaOfInquiry} />
-                )}
+                    {/* Natal charts — always show first */}
+                        <div id="natal-charts-row" className="space-y-4">
+                          <NatalChartsRow
+                            svgs={[natalSvg, natalSvgTransit]}
+                            labels={[
+                              isTwoPersonAiTab ? "Person 1 (AstrologyAPI)" : "Natal Wheel Chart (AstrologyAPI)",
+                              isTwoPersonAiTab ? "Person 1 (FreeAstrology)" : "Natal Wheel Chart (FreeAstrology)"
+                            ]}
+                            onExpandImg={(src) => setChartModal(src)}
+                          />
+                          <NatalChartsRow
+                            svgs={[natalSvgP2, natalSvgTransitP2]}
+                            labels={[
+                              "Person 2 (AstrologyAPI)",
+                              "Person 2 (FreeAstrology)"
+                            ]}
+                            onExpandImg={(src) => setChartModal(src)}
+                          />
+                        </div>
+
+                    {/* ─── Planet Return Summary ──────────────────── */}
+                    {isPlanetReturn && (
+                      <PlanetReturnSummaryTable tab={currentSlug} birth={form.person1} returnDate={returnDate} natalData={natalData} />
+                    )}
+
+                    {/* ─── Solar Return ───────────────────────────── */}
+                    {isSolarReturn && (
+                      <SolarReturnSection
+                        details={results.solar_return_details}
+                        planets={results.solar_return_planets}
+                        cusps={results.solar_return_cusps}
+                        aspects={results.solar_return_aspects}
+                        planetReport={results.solar_return_planet_report}
+                        aspectsReport={results.solar_return_aspects_report}
+                        aiData={ai}
+                        areaOfInquiry={form.areaOfInquiry}
+                        checkDacen={checkDacen}
+                        onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                      />
+                    )}
+
+                    {/* ─── Saturn Return also shows solar return ──── */}
+                    {currentSlug === "saturn_return_v2" && results.solar_return_details && (
+                      <SolarReturnSection
+                        details={results.solar_return_details}
+                        planets={results.solar_return_planets}
+                        cusps={results.solar_return_cusps}
+                        aspects={results.solar_return_aspects}
+                        planetReport={results.solar_return_planet_report}
+                        aspectsReport={results.solar_return_aspects_report}
+                        aiData={null}
+                        areaOfInquiry={form.areaOfInquiry}
+                        checkDacen={checkDacen}
+                        onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                      />
+                    )}
+
+                    {/* ─── Transits ───────────────────────────────── */}
+                    {isTransit && (
+                      <TransitSection
+                        data={results.transit_data}
+                        lunarMetrics={results.lunar_metrics}
+                        aiData={currentSlug === "tropical_transits_weekly_v2" ? ai.tropical_transits_weekly : ai.tropical_transits_monthly}
+                        lunarAiData={currentSlug === "tropical_transits_monthly_v3" ? ai.lunar_metrics : undefined}
+                        tabSlug={currentSlug}
+                        areaOfInquiry={form.areaOfInquiry}
+                        checkDacen={checkDacen}
+                        onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                        transitWheelSvg={transitChartSvg}
+                        setChartModal={setChartModal}
+                      />
+                    )}
+
+                    {/* ─── Horary ─────────────────────────────────── */}
+                    {isHorary && (
+                      <HorarySection
+                        data={ai.horary_chart_question}
+                        areaOfInquiry={form.areaOfInquiry}
+                        checkDacen={checkDacen}
+                        onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                      />
+                    )}
+
+                    {/* ─── Two-person relationship (all 8 AI sections) ─ */}
+                    {isTwoPersonAiTab && (
+                      <RelationshipSection
+                        aiMap={ai}
+                        results={results}
+                        areaOfInquiry={form.areaOfInquiry}
+                        tabSlug={currentSlug}
+                        checkDacen={checkDacen}
+                        onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                      />
+                    )}
+
+                    {/* ─── Natal chart sections (all single tabs + planet return tabs) ─ */}
+                    {natalData && (
+                      <div className="space-y-6">
+                        {(!isMainTransitTab && currentSlug !== "friendship_report_tropical_v2") && (
+                          <>
+                            <PlanetsSection
+                              planets={natalData.planets}
+                              aiData={ai.western_horoscope_planets}
+                              areaOfInquiry={form.areaOfInquiry}
+                              checkDacen={checkDacen}
+                              onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                            />
+                            <div className="rounded-lg border overflow-hidden">
+                              <div className="px-4 py-2.5 bg-muted/40 border-b flex items-center gap-2">
+                                <Home className="size-4 text-amber-600" />
+                                <h2 className="text-sm font-semibold">House Information</h2>
+                              </div>
+                              <div className="p-4">
+                                <HousesSection houses={natalData.houses} planets={natalData.planets} aiData={ai.western_horoscope_houses} areaOfInquiry={form.areaOfInquiry} />
+                              </div>
+                            </div>
+                            <div className="rounded-lg border overflow-hidden">
+                              <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20 flex items-center gap-2">
+                                <Sparkles className="size-4 text-amber-600" />
+                                <h2 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Dharma & Karma</h2>
+                              </div>
+                              <div className="p-4">
+                                <DharmaKarmaSection data={ai.dharma_karma} rawData={natalData} areaOfInquiry={form.areaOfInquiry} />
+                              </div>
+                            </div>
+                            <div className="rounded-lg border overflow-hidden">
+                              <div className="px-4 py-2.5 bg-muted/40 border-b flex items-center gap-2">
+                                <Link className="size-4 text-amber-600" />
+                                <h2 className="text-sm font-semibold">Aspects</h2>
+                              </div>
+                              <div className="p-4">
+                                <AspectsSection aspects={natalData.aspects} planets={natalData.planets} aiData={ai.western_horoscope_aspects} areaOfInquiry={form.areaOfInquiry} />
+                              </div>
+                            </div>
+                            <AscMidheavenVertexSection natalData={natalData} aiData={ai.western_horoscope_ascendant_midheaven_vertex} areaOfInquiry={form.areaOfInquiry} />
+                            <LilithSection
+                              lilith={natalData.lilith}
+                              aiData={ai.western_horoscope_lilith}
+                              areaOfInquiry={form.areaOfInquiry}
+                              checkDacen={checkDacen}
+                              onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                            />
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {isPlanetReturn && (
+                      <PlanetReturnInterpretation tab={currentSlug} aiData={ai[currentSlug]} areaOfInquiry={form.areaOfInquiry} />
+                    )}
                   </div>
                 );
               })()}
