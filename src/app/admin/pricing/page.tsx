@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { HtmlEditor } from "@/components/ui/html-editor";
 import {
   DollarSign,
   Loader2,
@@ -49,6 +50,7 @@ interface PricingItem {
   stripe_product_name: string | null;
   payment_provider: string | null;
   payment_provider_id: string | null;
+  html_description: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -81,10 +83,15 @@ interface PricingPlan {
   display_name: string;
   amount: number;
   mrp: number | null;
+  currency: "USD" | "INR";
+  onetime_amount: number | null;
+  onetime_currency: string | null;
+  recurring_amount: number | null;
+  recurring_currency: string | null;
   stripe_price_id: string | null;
   stripe_price_name: string | null;
-  currency: "USD" | "INR";
   description: string | null;
+  html_description: string | null;
   is_active: boolean;
   sort_order: number;
   custom_fields: CustomField[];
@@ -117,6 +124,7 @@ export default function AdminPricingPage() {
   const [formItemKey, setFormItemKey] = useState<string>("");
   const [formItemName, setFormItemName] = useState<string>("");
   const [formDescription, setFormDescription] = useState<string>("");
+  const [formHtmlDescription, setFormHtmlDescription] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -131,10 +139,15 @@ export default function AdminPricingPage() {
     display_name: "",
     amount: "",
     mrp: "",
+    onetime_amount: "",
+    onetime_currency: "USD" as "USD" | "INR",
+    has_subscription: false,
     stripe_price_id: "",
     stripe_price_name: "",
-    currency: "INR" as "USD" | "INR",
+    recurring_amount: "",
+    recurring_currency: "USD" as "USD" | "INR",
     description: "",
+    html_description: "",
     custom_fields: [] as CustomField[],
   });
   const [addingPlan, setAddingPlan] = useState(false);
@@ -162,12 +175,15 @@ export default function AdminPricingPage() {
   const [editPlanId, setEditPlanId] = useState<string | null>(null);
   const [editPlanForm, setEditPlanForm] = useState({
     display_name: "",
-    amount: "",
     mrp: "",
+    onetime_amount: "",
+    onetime_currency: "USD" as "USD" | "INR",
+    recurring_amount: "",
+    recurring_currency: "",
     stripe_price_id: "",
     stripe_price_name: "",
-    currency: "INR" as "USD" | "INR",
     description: "",
+    html_description: "",
   });
   const [savingPlanEdit, setSavingPlanEdit] = useState(false);
 
@@ -292,6 +308,7 @@ export default function AdminPricingPage() {
       setFormItemKey(selected.item_key);
       setFormItemName(selected.item_name);
       setFormDescription(selected.description ?? "");
+      setFormHtmlDescription(selected.html_description ?? "");
       void loadPlans(selected.id);
       setShowAddPlan(false);
     } else {
@@ -311,6 +328,7 @@ export default function AdminPricingPage() {
         body: JSON.stringify({
           item_name: formItemName.trim(),
           description: formDescription.trim() || null,
+          html_description: formHtmlDescription || null,
         }),
       });
       const body = await r.json();
@@ -384,10 +402,14 @@ export default function AdminPricingPage() {
     setAddingPlan(true);
     setError(null);
     try {
-      const amount = Number(newPlan.amount);
-      if (!Number.isFinite(amount) || amount < 0) {
-        setError("Plan amount must be a non-negative number");
-        return;
+      // One-time payment
+      let onetimeAmount: number | null = null;
+      if (newPlan.onetime_amount) {
+        onetimeAmount = Number(newPlan.onetime_amount);
+        if (!Number.isFinite(onetimeAmount) || onetimeAmount < 0) {
+          setError("One-time amount must be a non-negative number");
+          return;
+        }
       }
       const mrp = newPlan.mrp ? Number(newPlan.mrp) : null;
       if (mrp !== null && (!Number.isFinite(mrp) || mrp < 0)) {
@@ -395,22 +417,31 @@ export default function AdminPricingPage() {
         return;
       }
 
+      // Subscription / Stripe price
       let stripePriceId = newPlan.stripe_price_id.trim() || null;
       let stripePriceName = newPlan.stripe_price_name ?? "";
-      let finalAmount = amount;
-      let finalCurrency = newPlan.currency;
+      let recurringAmount: number | null = null;
+      let recurringCurrency: string | null = null;
 
-      // If no existing stripe price selected, create one via Stripe
-      if (!stripePriceId && selected.stripe_product_id && stripePriceName) {
+      if (newPlan.has_subscription && !stripePriceId && selected.stripe_product_id && stripePriceName) {
+        // Create new Stripe price
+        const recurAmt = Number(newPlan.recurring_amount);
+        if (!Number.isFinite(recurAmt) || recurAmt <= 0) {
+          setError("Recurring amount is required for subscription");
+          return;
+        }
         const stripePrice = await createStripePrice(
           selected.stripe_product_id,
           stripePriceName.trim(),
-          amount,
-          newPlan.currency,
+          recurAmt,
+          newPlan.recurring_currency,
         );
         stripePriceId = stripePrice.id;
-        finalAmount = stripePrice.unit_amount ? stripePrice.unit_amount / 100 : amount;
-        finalCurrency = stripePrice.currency as "USD" | "INR";
+        recurringAmount = stripePrice.unit_amount ? stripePrice.unit_amount / 100 : recurAmt;
+        recurringCurrency = stripePrice.currency.toUpperCase();
+      } else if (newPlan.has_subscription && stripePriceId) {
+        recurringAmount = newPlan.recurring_amount ? Number(newPlan.recurring_amount) : null;
+        recurringCurrency = newPlan.recurring_currency;
       }
 
       const r = await fetch(`/api/admin/pricing/${selected.id}/plans`, {
@@ -418,12 +449,15 @@ export default function AdminPricingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           display_name: newPlan.display_name.trim(),
-          amount: finalAmount,
+          onetime_amount: onetimeAmount,
+          onetime_currency: onetimeAmount !== null ? newPlan.onetime_currency : null,
+          recurring_amount: recurringAmount,
+          recurring_currency: recurringCurrency,
           mrp,
           stripe_price_id: stripePriceId,
           stripe_price_name: stripePriceName.trim() || null,
-          currency: finalCurrency,
           description: newPlan.description.trim() || null,
+          html_description: newPlan.html_description.trim() || null,
           custom_fields: newPlan.custom_fields.map((f) => ({
             label: f.label.trim(),
             value: f.value.trim(),
@@ -434,10 +468,9 @@ export default function AdminPricingPage() {
       const body = await r.json();
       if (!r.ok) throw new Error(body.error ?? `HTTP ${r.status}`);
       setPlans((prev) => [...prev, body.plan as PricingPlan]);
-      setNewPlan({ display_name: "", amount: "", mrp: "", stripe_price_id: "", stripe_price_name: "", currency: "INR", description: "", custom_fields: [] });
+      setNewPlan({ display_name: "", amount: "", mrp: "", onetime_amount: "", onetime_currency: "USD", has_subscription: false, stripe_price_id: "", stripe_price_name: "", recurring_amount: "", recurring_currency: "USD", description: "", html_description: "", custom_fields: [] });
       setShowPriceDropdown(false);
       setShowAddPlan(false);
-      // Invalidate cache
       setItemPlansCache((prev) => { const n = { ...prev }; delete n[selected.id]; return n; });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -594,12 +627,15 @@ export default function AdminPricingPage() {
     setEditPlanId(plan.id);
     setEditPlanForm({
       display_name: plan.display_name,
-      amount: String(plan.amount),
       mrp: plan.mrp !== null ? String(plan.mrp) : "",
+      onetime_amount: plan.onetime_amount !== null ? String(plan.onetime_amount) : "",
+      onetime_currency: (plan.onetime_currency ?? "USD") as "USD" | "INR",
+      recurring_amount: plan.recurring_amount !== null ? String(plan.recurring_amount) : "",
+      recurring_currency: plan.recurring_currency ?? "",
       stripe_price_id: plan.stripe_price_id ?? "",
       stripe_price_name: plan.stripe_price_name ?? "",
-      currency: plan.currency,
       description: plan.description ?? "",
+      html_description: plan.html_description ?? "",
     });
     // Also load custom fields into the editor
     setEditPlanId(plan.id);
@@ -610,10 +646,13 @@ export default function AdminPricingPage() {
     setSavingPlanEdit(true);
     setError(null);
     try {
-      const amount = Number(editPlanForm.amount);
-      if (!Number.isFinite(amount) || amount < 0) {
-        setError("Amount must be a non-negative number");
-        return;
+      let onetimeAmount: number | null = null;
+      if (editPlanForm.onetime_amount) {
+        onetimeAmount = Number(editPlanForm.onetime_amount);
+        if (!Number.isFinite(onetimeAmount) || onetimeAmount < 0) {
+          setError("One-time amount must be non-negative");
+          return;
+        }
       }
       const mrp = editPlanForm.mrp ? Number(editPlanForm.mrp) : null;
       if (mrp !== null && (!Number.isFinite(mrp) || mrp < 0)) {
@@ -625,12 +664,11 @@ export default function AdminPricingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           display_name: editPlanForm.display_name.trim(),
-          amount,
+          onetime_amount: onetimeAmount,
+          onetime_currency: onetimeAmount !== null ? editPlanForm.onetime_currency : null,
           mrp,
-          stripe_price_id: editPlanForm.stripe_price_id.trim() || null,
-          stripe_price_name: editPlanForm.stripe_price_name.trim() || null,
-          currency: editPlanForm.currency,
           description: editPlanForm.description.trim() || null,
+          html_description: editPlanForm.html_description.trim() || null,
         }),
       });
       const body = await r.json();
@@ -689,8 +727,8 @@ export default function AdminPricingPage() {
       ...prev,
       stripe_price_id: price.id,
       stripe_price_name: price.nickname ?? "",
-      amount: String(amount),
-      currency: price.currency as "USD" | "INR",
+      recurring_amount: String(amount),
+      recurring_currency: price.currency.toUpperCase() as "USD" | "INR",
       display_name: prev.display_name || price.nickname || "",
     }));
     setShowPriceDropdown(false);
@@ -783,10 +821,9 @@ export default function AdminPricingPage() {
               <thead>
                 <tr className="border-b text-left text-xs uppercase text-muted-foreground">
                   <th className="py-2 pr-3">name</th>
-                  <th className="py-2 pr-3 text-right">amount</th>
+                  <th className="py-2 pr-3 text-right">one-time</th>
+                  <th className="py-2 pr-3 text-right">recurring</th>
                   <th className="py-2 pr-3 text-right">mrp</th>
-                  <th className="py-2 pr-3">currency</th>
-                  <th className="py-2 pr-3">stripe price id</th>
                   <th className="py-2 pr-3">status</th>
                   <th className="py-2 text-center">toggle</th>
                   <th className="py-2 text-center">actions</th>
@@ -800,10 +837,13 @@ export default function AdminPricingPage() {
                       <div className="font-medium">{plan.display_name}</div>
                       {plan.description && <div className="text-xs text-muted-foreground truncate max-w-[220px]" title={plan.description}>{plan.description}</div>}
                     </td>
-                    <td className="py-2 pr-3 text-right tabular-nums whitespace-nowrap">{plan.amount.toLocaleString()}</td>
-                    <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground whitespace-nowrap">{plan.mrp !== null ? plan.mrp.toLocaleString() : "\u2014"}</td>
-                    <td className="py-2 pr-3 text-xs">{plan.currency}</td>
-                    <td className="py-2 pr-3 font-mono text-xs max-w-[180px] truncate" title={plan.stripe_price_id ?? ""}>{plan.stripe_price_id ?? "\u2014"}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums whitespace-nowrap">
+                      {plan.onetime_amount != null ? `${plan.onetime_currency ?? "USD"} ${Number(plan.onetime_amount).toLocaleString()}` : "\u2014"}
+                    </td>
+                    <td className="py-2 pr-3 text-right tabular-nums whitespace-nowrap">
+                      {plan.recurring_amount != null ? `${plan.recurring_currency ?? "USD"} ${Number(plan.recurring_amount).toLocaleString()}/mo` : "\u2014"}
+                    </td>
+                    <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground whitespace-nowrap">{plan.mrp != null ? `${plan.onetime_currency ?? plan.currency ?? "USD"} ${Number(plan.mrp).toLocaleString()}` : "\u2014"}</td>
                     <td className="py-2">
                       <Badge variant="outline" className={plan.is_active ? "border-emerald-500/40 text-emerald-700" : "border-red-500/40 text-red-600"}>
                         {plan.is_active ? "active" : "inactive"}
@@ -844,21 +884,20 @@ export default function AdminPricingPage() {
                             <p className="text-[11px] text-muted-foreground">Locked — set when the Stripe price was created.</p>
                           </div>
                         </div>
-                        <div className="grid gap-3 sm:grid-cols-4">
+                        {/* One-time payment */}
+                        <div className="grid gap-3 sm:grid-cols-3">
                           <div className="space-y-1.5">
-                            <Label className="text-xs">Amount</Label>
-                            <Input type="number" value={editPlanForm.amount} disabled className="opacity-60" />
-                            <p className="text-[11px] text-muted-foreground">From Stripe. To change, create a new plan.</p>
+                            <Label className="text-xs">One-Time Amount</Label>
+                            <Input type="number" min="0" step="0.01" value={editPlanForm.onetime_amount} onChange={(e) => setEditPlanForm({ ...editPlanForm, onetime_amount: e.target.value })} />
+                            <p className="text-[11px] text-muted-foreground">One-time payment amount. Editable.</p>
                           </div>
                           <div className="space-y-1.5">
-                            <Label className="text-xs">Currency</Label>
-                            <Input value={editPlanForm.currency} disabled className="opacity-60" />
-                            <p className="text-[11px] text-muted-foreground">Set by Stripe.</p>
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">Stripe Price ID</Label>
-                            <Input value={editPlanForm.stripe_price_id} disabled className="opacity-60 font-mono text-xs" />
-                            <p className="text-[11px] text-muted-foreground">Auto-generated by Stripe.</p>
+                            <Label className="text-xs">One-Time Currency</Label>
+                            <Select value={editPlanForm.onetime_currency} onValueChange={(v) => setEditPlanForm({ ...editPlanForm, onetime_currency: v as "USD" | "INR" })}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent><SelectItem value="USD">USD</SelectItem><SelectItem value="INR">INR</SelectItem></SelectContent>
+                            </Select>
+                            <p className="text-[11px] text-muted-foreground">Currency for one-time payment.</p>
                           </div>
                           <div className="space-y-1.5">
                             <Label className="text-xs">MRP</Label>
@@ -866,10 +905,40 @@ export default function AdminPricingPage() {
                             <p className="text-[11px] text-muted-foreground">Strikethrough price shown to customers. Optional.</p>
                           </div>
                         </div>
+                        {/* Subscription info (read-only if exists) */}
+                        {plan.stripe_price_id && (
+                          <div className="grid gap-3 sm:grid-cols-4 border-t pt-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Recurring Amount</Label>
+                              <Input value={editPlanForm.recurring_amount} disabled className="opacity-60" />
+                              <p className="text-[11px] text-muted-foreground">From Stripe. To change, create a new plan.</p>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Recurring Currency</Label>
+                              <Input value={editPlanForm.recurring_currency} disabled className="opacity-60" />
+                              <p className="text-[11px] text-muted-foreground">Set by Stripe.</p>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Stripe Price Name</Label>
+                              <Input value={editPlanForm.stripe_price_name} disabled className="opacity-60" />
+                              <p className="text-[11px] text-muted-foreground">Locked — set when created.</p>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Stripe Price ID</Label>
+                              <Input value={editPlanForm.stripe_price_id} disabled className="opacity-60 font-mono text-xs" />
+                              <p className="text-[11px] text-muted-foreground">Auto-generated by Stripe.</p>
+                            </div>
+                          </div>
+                        )}
                         <div className="space-y-1.5">
                           <Label className="text-xs">Description</Label>
                           <Input placeholder="Optional" value={editPlanForm.description} onChange={(e) => setEditPlanForm({ ...editPlanForm, description: e.target.value })} />
-                          <p className="text-[11px] text-muted-foreground">Short description shown under the plan name on signup pages.</p>
+                          <p className="text-[11px] text-muted-foreground">Short plain text description.</p>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">HTML Description</Label>
+                          <HtmlEditor value={editPlanForm.html_description} onChange={(v: string) => setEditPlanForm({ ...editPlanForm, html_description: v })} />
+                          <p className="text-[11px] text-muted-foreground">Rich content shown on signup/pricing pages.</p>
                         </div>
                         {/* Custom fields inline */}
                         <div className="border-t pt-3 space-y-2">
@@ -919,94 +988,144 @@ export default function AdminPricingPage() {
     const hasStripePrice = !!newPlan.stripe_price_id;
     const hasProductId = !!selected?.stripe_product_id;
     return (
-      <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+      <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
         <div>
           <p className="text-sm font-medium">New Plan</p>
-          <p className="text-xs text-muted-foreground mt-1">A plan is a specific pricing option under this item (e.g. &ldquo;Individual $19.95/mo&rdquo;, &ldquo;Family $39.95/mo&rdquo;). Each plan links to a Stripe Price for billing.</p>
+          <p className="text-xs text-muted-foreground mt-1">A plan is a specific pricing option under this item. It can be one-time only, subscription only, or both.</p>
         </div>
+
+        {/* Section 1: Basic Info */}
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Display Name *</Label>
             <Input placeholder="e.g. Monthly Plan" value={newPlan.display_name} onChange={(e) => setNewPlan({ ...newPlan, display_name: e.target.value })} />
-            <p className="text-[11px] text-muted-foreground">Name shown to customers on signup pages. Can differ from the Stripe price name.</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Stripe Price Name *</Label>
-            <div className="relative">
-              <Input
-                placeholder={hasProductId ? "Search existing or type new price name..." : "Set Stripe product on item first"}
-                disabled={!hasProductId}
-                value={newPlan.stripe_price_name}
-                onChange={(e) => {
-                  setNewPlan({ ...newPlan, stripe_price_name: e.target.value, stripe_price_id: "" });
-                  if (selected?.stripe_product_id && e.target.value.trim()) {
-                    void loadStripePrices(selected.stripe_product_id);
-                    setShowPriceDropdown(true);
-                  } else {
-                    setShowPriceDropdown(false);
-                  }
-                }}
-                onFocus={() => { if (stripePrices.length > 0) setShowPriceDropdown(true); }}
-                onBlur={() => setTimeout(() => setShowPriceDropdown(false), 200)}
-              />
-              {showPriceDropdown && (
-                <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
-                  {stripePricesLoading ? (
-                    <div className="p-3 text-xs text-muted-foreground flex items-center gap-2"><Loader2 className="size-3 animate-spin" />Loading prices...</div>
-                  ) : stripePrices.length === 0 ? (
-                    <div className="p-3 text-xs text-muted-foreground">No existing prices. A new one will be created.</div>
-                  ) : (
-                    stripePrices.filter((p) => !newPlan.stripe_price_name || (p.nickname ?? "").toLowerCase().includes(newPlan.stripe_price_name.toLowerCase())).map((p) => (
-                      <button key={p.id} type="button" className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors" onMouseDown={() => {
-                        selectStripePrice(p);
-                        setNewPlan((prev) => ({ ...prev, stripe_price_name: p.nickname ?? "" }));
-                      }}>
-                        <div className="font-medium">{p.nickname || p.id}</div>
-                        <div className="text-xs text-muted-foreground">{p.currency} {p.unit_amount ? (p.unit_amount / 100).toLocaleString() : 0} &middot; <span className="font-mono">{p.id}</span></div>
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-            {hasStripePrice && <p className="text-xs text-muted-foreground">Linked: <span className="font-mono">{newPlan.stripe_price_id}</span></p>}
-            {!hasStripePrice && newPlan.stripe_price_name.trim() && hasProductId && <p className="text-xs text-muted-foreground">A new Stripe price will be created.</p>}
-            {!hasStripePrice && !newPlan.stripe_price_name.trim() && (
-              <p className="text-[11px] text-muted-foreground">Search existing Stripe prices for this product, or type a new name. If creating new, set the amount and currency below — a Stripe Price will be created automatically.</p>
-            )}
-          </div>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="space-y-1.5">
-            <Label>Amount *</Label>
-            <Input type="number" min="0" step="0.01" value={newPlan.amount} disabled={hasStripePrice} onChange={(e) => setNewPlan({ ...newPlan, amount: e.target.value })} />
-            <p className="text-[11px] text-muted-foreground">{hasStripePrice ? "Auto-filled from Stripe. Cannot be changed here." : "The price customers will pay. This will be sent to Stripe."}</p>
+            <p className="text-[11px] text-muted-foreground">Name shown to customers on signup pages.</p>
           </div>
           <div className="space-y-1.5">
             <Label>MRP</Label>
             <Input type="number" min="0" step="0.01" placeholder="Original price" value={newPlan.mrp} onChange={(e) => setNewPlan({ ...newPlan, mrp: e.target.value })} />
-            <p className="text-[11px] text-muted-foreground">Original / strikethrough price shown to customers. Optional — used for &ldquo;was $X, now $Y&rdquo; display.</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Currency</Label>
-            <Select value={newPlan.currency} disabled={hasStripePrice} onValueChange={(v) => setNewPlan({ ...newPlan, currency: v as "USD" | "INR" })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent><SelectItem value="USD">USD</SelectItem><SelectItem value="INR">INR</SelectItem></SelectContent>
-            </Select>
-            <p className="text-[11px] text-muted-foreground">{hasStripePrice ? "Set by Stripe." : "Currency for this plan."}</p>
+            <p className="text-[11px] text-muted-foreground">Strikethrough price. Optional.</p>
           </div>
         </div>
+
+        {/* Section 2: One-Time Payment */}
+        <div className="border-t pt-3 space-y-3">
+          <p className="text-xs font-semibold uppercase text-muted-foreground">One-Time Payment</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>One-Time Amount</Label>
+              <Input type="number" min="0" step="0.01" placeholder="e.g. 97.00" value={newPlan.onetime_amount} onChange={(e) => setNewPlan({ ...newPlan, onetime_amount: e.target.value })} />
+              <p className="text-[11px] text-muted-foreground">Amount for one-time payment. Leave empty if this plan has no one-time fee.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Currency</Label>
+              <Select value={newPlan.onetime_currency} onValueChange={(v) => setNewPlan({ ...newPlan, onetime_currency: v as "USD" | "INR" })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="USD">USD</SelectItem><SelectItem value="INR">INR</SelectItem></SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">Currency for one-time payment.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 3: Subscription Toggle */}
+        <div className="border-t pt-3 space-y-3">
+          <div className="flex items-center gap-3">
+            <Switch checked={newPlan.has_subscription} onCheckedChange={(v) => setNewPlan({ ...newPlan, has_subscription: v })} />
+            <div>
+              <p className="text-xs font-semibold uppercase text-muted-foreground">Has Subscription?</p>
+              <p className="text-[11px] text-muted-foreground">Enable if this plan includes a recurring subscription via Stripe.</p>
+            </div>
+          </div>
+
+          {newPlan.has_subscription && (
+            <div className="space-y-3 pl-1 border-l-2 border-primary/20 ml-2">
+              <div className="pl-3 space-y-3">
+                {/* Stripe Price Name with search */}
+                <div className="space-y-1.5">
+                  <Label>Stripe Price Name</Label>
+                  <div className="relative">
+                    <Input
+                      placeholder={hasProductId ? "Search existing or type new price name..." : "Set Stripe product on item first"}
+                      disabled={!hasProductId}
+                      value={newPlan.stripe_price_name}
+                      onChange={(e) => {
+                        setNewPlan({ ...newPlan, stripe_price_name: e.target.value, stripe_price_id: "", recurring_amount: "", recurring_currency: "USD" });
+                        if (selected?.stripe_product_id && e.target.value.trim()) {
+                          void loadStripePrices(selected.stripe_product_id);
+                          setShowPriceDropdown(true);
+                        } else {
+                          setShowPriceDropdown(false);
+                        }
+                      }}
+                      onFocus={() => { if (stripePrices.length > 0) setShowPriceDropdown(true); }}
+                      onBlur={() => setTimeout(() => setShowPriceDropdown(false), 200)}
+                    />
+                    {showPriceDropdown && (
+                      <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
+                        {stripePricesLoading ? (
+                          <div className="p-3 text-xs text-muted-foreground flex items-center gap-2"><Loader2 className="size-3 animate-spin" />Loading prices...</div>
+                        ) : stripePrices.length === 0 ? (
+                          <div className="p-3 text-xs text-muted-foreground">No existing prices. A new one will be created.</div>
+                        ) : (
+                          stripePrices.filter((p) => !newPlan.stripe_price_name || (p.nickname ?? "").toLowerCase().includes(newPlan.stripe_price_name.toLowerCase())).map((p) => (
+                            <button key={p.id} type="button" className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors" onMouseDown={() => {
+                              selectStripePrice(p);
+                              setNewPlan((prev) => ({ ...prev, stripe_price_name: p.nickname ?? "" }));
+                            }}>
+                              <div className="font-medium">{p.nickname || p.id}</div>
+                              <div className="text-xs text-muted-foreground">{p.currency} {p.unit_amount ? (p.unit_amount / 100).toLocaleString() : 0} &middot; <span className="font-mono">{p.id}</span></div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {hasStripePrice && <p className="text-xs text-muted-foreground">Linked: <span className="font-mono">{newPlan.stripe_price_id}</span></p>}
+                  {!hasStripePrice && newPlan.stripe_price_name.trim() && hasProductId && <p className="text-xs text-muted-foreground">A new Stripe price will be created.</p>}
+                  {!hasStripePrice && !newPlan.stripe_price_name.trim() && (
+                    <p className="text-[11px] text-muted-foreground">Search existing prices or type a new name to create one.</p>
+                  )}
+                </div>
+                {/* Recurring amount/currency */}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label>Recurring Amount {!hasStripePrice && "*"}</Label>
+                    <Input type="number" min="0" step="0.01" value={newPlan.recurring_amount} disabled={hasStripePrice} onChange={(e) => setNewPlan({ ...newPlan, recurring_amount: e.target.value })} />
+                    <p className="text-[11px] text-muted-foreground">{hasStripePrice ? "Auto-filled from Stripe." : "Monthly/recurring amount. Will be sent to Stripe."}</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Recurring Currency</Label>
+                    <Select value={newPlan.recurring_currency} disabled={hasStripePrice} onValueChange={(v) => setNewPlan({ ...newPlan, recurring_currency: v as "USD" | "INR" })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="USD">USD</SelectItem><SelectItem value="INR">INR</SelectItem></SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-muted-foreground">{hasStripePrice ? "Set by Stripe." : "Currency for recurring payment."}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Description */}
         <div className="space-y-1.5">
           <Label>Description</Label>
-          <Input placeholder="Optional plan description" value={newPlan.description} onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })} />
-          <p className="text-[11px] text-muted-foreground">Short description shown to customers under the plan name on signup pages.</p>
+          <Input placeholder="Short plain text description" value={newPlan.description} onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })} />
+          <p className="text-[11px] text-muted-foreground">Short text shown under the plan name.</p>
         </div>
+        <div className="space-y-1.5">
+          <Label>HTML Description</Label>
+          <HtmlEditor value={newPlan.html_description} onChange={(v: string) => setNewPlan({ ...newPlan, html_description: v })} />
+          <p className="text-[11px] text-muted-foreground">Rich content shown on signup/pricing pages.</p>
+        </div>
+
         {/* Custom fields */}
         <div className="border-t pt-3 space-y-2">
           <div className="flex items-center justify-between">
             <div>
               <Label className="text-xs font-medium">Custom Fields</Label>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Extra details shown on signup pages (e.g. &ldquo;Members: 5&rdquo;, &ldquo;Duration: Monthly&rdquo;). Label is displayed, Value is the content, Slug is the machine key.</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Extra details shown on signup pages.</p>
             </div>
             <Button type="button" variant="outline" size="sm" onClick={() => setNewPlan({ ...newPlan, custom_fields: [...newPlan.custom_fields, { label: "", value: "", slug: "" }] })}>
               <Plus className="mr-1 size-3" />Add Field
@@ -1022,6 +1141,7 @@ export default function AdminPricingPage() {
             </div>
           ))}
         </div>
+
         <div className="flex gap-2 pt-1">
           <Button size="sm" onClick={handleAddPlan} disabled={addingPlan || !newPlan.display_name.trim()}>
             {addingPlan && <Loader2 className="mr-2 size-4 animate-spin" />}Create Plan
@@ -1325,6 +1445,11 @@ export default function AdminPricingPage() {
                                 <Input value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
                                 <p className="text-[11px] text-muted-foreground">Internal description for admin reference.</p>
                               </div>
+                              <div className="space-y-1.5">
+                                <Label>HTML Description</Label>
+                                <HtmlEditor value={formHtmlDescription} onChange={(v: string) => setFormHtmlDescription(v)} />
+                                <p className="text-[11px] text-muted-foreground">Rich content shown on signup/landing pages.</p>
+                              </div>
                               {/* Payment & Stripe info (read-only) */}
                               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 border-t pt-3">
                                 <div className="space-y-1.5">
@@ -1375,8 +1500,8 @@ export default function AdminPricingPage() {
                               <td className="py-1.5 font-mono text-xs text-muted-foreground" title={plan.plan_id}>{plan.plan_id}</td>
                               <td className="py-1.5">
                                 <span className="text-xs">{plan.display_name}</span>
-                                <span className="ml-2 text-xs tabular-nums font-medium">{plan.currency} {plan.amount.toLocaleString()}</span>
-                                {plan.mrp !== null && <span className="ml-1 text-xs tabular-nums text-muted-foreground line-through">{plan.mrp.toLocaleString()}</span>}
+                                <span className="ml-2 text-xs tabular-nums font-medium">{plan.onetime_amount != null ? `${plan.onetime_currency ?? "USD"} ${Number(plan.onetime_amount).toLocaleString()}` : plan.recurring_amount != null ? `${plan.recurring_currency ?? "USD"} ${Number(plan.recurring_amount).toLocaleString()}/mo` : `${plan.currency ?? "USD"} ${Number(plan.amount ?? 0).toLocaleString()}`}</span>
+                                {plan.mrp != null && <span className="ml-1 text-xs tabular-nums text-muted-foreground line-through">{Number(plan.mrp).toLocaleString()}</span>}
                               </td>
                               <td className="py-1.5">
                                 <Badge variant="outline" className={`text-[10px] ${plan.is_active ? "border-emerald-500/40 text-emerald-700" : "border-red-500/40 text-red-600"}`}>

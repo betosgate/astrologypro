@@ -16,6 +16,7 @@ import { MIGRATION_SQL as MIG_20260409000120 } from "@/data/migrations/202604090
 import { MIGRATION_SQL as MIG_20260409000121 } from "@/data/migrations/20260409000121_seed_pricing_plans";
 import { MIGRATION_SQL as MIG_20260409000122 } from "@/data/migrations/20260409000122_drop_item_price_currency";
 import { MIGRATION_SQL as MIG_20260409000123 } from "@/data/migrations/20260409000123_stripe_product_price_fields";
+import { MIGRATION_SQL as MIG_20260410000124 } from "@/data/migrations/20260410000124_pricing_onetime_recurring_html";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -185,6 +186,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds stripe_product_id and stripe_product_name to global_pricing (one Stripe product per item), and stripe_price_name to pricing_plans. Index on stripe_product_id.",
     sortKey: "20260409000123",
     sql: MIG_20260409000123,
+  },
+  "20260410000124_pricing_onetime_recurring_html": {
+    id: "20260410000124_pricing_onetime_recurring_html",
+    title: "Split pricing into one-time + recurring, add HTML descriptions",
+    description:
+      "Adds onetime_amount/onetime_currency and recurring_amount/recurring_currency to pricing_plans (replaces single amount/currency). Adds html_description to both global_pricing and pricing_plans. Migrates existing data. Stage 1 — old columns kept until code is updated.",
+    sortKey: "20260410000124",
+    sql: MIG_20260410000124,
   },
 };
 
