@@ -10,22 +10,25 @@
 
 Implement a two-phase Perennial onboarding flow for the `Single` plan:
 
-1. Signup phase collects only basic information + essential birth identity fields.
-2. After successful signup + login, a profile-completion form collects remaining guidance fields.
+1. Signup phase collects only basic information.
+2. After successful signup + login, a profile-completion form collects birth date, birth time, birth place, and remaining guidance fields.
 
 ## User Scenario
 
 1. User lands on AstrologyPro website.
 2. User clicks `GET START`.
-3. User opens `/perennial-signup`.
-4. User selects `Single`.
-5. Signup form shows basic fields plus `date_of_birth`, `birth_time`, `birth_location_label`.
-6. User completes signup + payment.
-7. User logs in to Perennial dashboard.
-8. On first login, user sees a profile-completion form:
-   - prefilled with values already captured at signup
+3. User opens the Perennial signup screen at `/perennial-signup`.
+4. The first view on that screen shows the three Perennial plan choices: `Single`, `Couple`, and `Family`.
+5. User selects `Single`.
+6. The page scrolls to or reveals the shared signup form below the plan cards.
+7. Signup form shows Single-plan basic-information fields only.
+8. User completes signup + payment.
+9. User logs in to Perennial dashboard.
+10. On first login, user sees a profile-completion form:
+   - prefilled with the basic values already captured at signup
+   - includes `date_of_birth`, `birth_time`, and `birth_location_label`
    - remaining guidance fields left empty for user to complete
-9. System marks user as natal/transit ready after required chart fields exist.
+11. System marks user as natal/transit ready after required chart fields exist.
 
 ## Non-Negotiable Product Rules
 
@@ -33,7 +36,9 @@ Implement a two-phase Perennial onboarding flow for the `Single` plan:
 2. Do not ask manual password creation in signup.
 3. Keep generated-password-by-email model.
 4. In signup phase, do not require optional questionnaire block.
-5. `date_of_birth`, `birth_time`, `birth_location_label` are collected at signup (not post-login form).
+5. `date_of_birth`, `birth_time`, `birth_location_label` are collected in the first post-login completion form, not during signup.
+6. The plan-selection step happens before the form on the same Perennial signup screen.
+7. After basic signup, the user reaches home/dashboard and the completion form opens there.
 
 ## Child Tasks
 
@@ -64,24 +69,24 @@ Implement a two-phase Perennial onboarding flow for the `Single` plan:
 8. `city`
 9. `state`
 10. `zip`
-11. `date_of_birth`
-12. `birth_time`
-13. `birth_location_label`
 
 ### Phase B: Post-login completion (guidance fields user should fill)
 
-1. `relationship_status`
-2. `mainConcern`
-3. `longTermGoals`
-4. `personality`
-5. `strengths`
-6. `lifeAreasFulfilling`
-7. `lifeAreasImprovement`
-8. `majorLifeEvents`
-9. `relationship_with_family`
-10. `focus_on_specific_relationships`
-11. `guidance_on_specific_decision`
-12. `concerns_about_romantic_life`
+1. `date_of_birth`
+2. `birth_time`
+3. `birth_location_label`
+4. `relationship_status`
+5. `mainConcern`
+6. `longTermGoals`
+7. `personality`
+8. `strengths`
+9. `lifeAreasFulfilling`
+10. `lifeAreasImprovement`
+11. `majorLifeEvents`
+12. `relationship_with_family`
+13. `focus_on_specific_relationships`
+14. `guidance_on_specific_decision`
+15. `concerns_about_romantic_life`
 
 ## API Requirement
 
@@ -97,9 +102,11 @@ Use city search endpoint for birth location lookup:
 
 ## Done Definition
 
-1. Single signup includes `date_of_birth`, `birth_time`, `birth_location_label`.
-2. First login completion form excludes those 3 already-captured fields.
-3. Completion form pre-fills signup fields.
-4. Birth location selection works via city-search API.
-5. Natal chart can be created after required chart fields exist.
-6. Monthly transits can be generated once natal chart exists.
+1. The public `GET START` journey reaches a Perennial choose-plan screen that includes `Single`, `Couple`, and `Family`.
+2. After selecting `Single`, the user completes the Single signup form below on the same screen.
+3. Single signup excludes birth date, birth time, and birth place.
+4. First login completion form includes `date_of_birth`, `birth_time`, `birth_location_label`.
+5. Completion form pre-fills signup fields.
+6. Birth location selection works via city-search API.
+7. Natal chart can be created after required chart fields exist.
+8. Monthly transits can be generated once natal chart exists.
