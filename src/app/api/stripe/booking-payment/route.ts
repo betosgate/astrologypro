@@ -14,6 +14,38 @@ import {
 
 export const dynamic = "force-dynamic";
 
+/** Strip HTML tags and decode basic entities for use in plain-text calendar descriptions. */
+function stripHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/**
+ * Build the Google Calendar event description.
+ * Body = availability template description (stripped of HTML).
+ * Footer = cancel / reschedule deep-link for the client.
+ */
+function buildCalendarDescription(
+  templateDescription: string | null,
+  bookingId: string,
+  appUrl: string
+): string {
+  const body = templateDescription ? stripHtml(templateDescription) : "";
+  const portalUrl = `${appUrl}/portal/bookings`;
+  const footer = `To cancel or reschedule, visit:\n${portalUrl}`;
+  return body ? `${body}\n\n---\n${footer}` : footer;
+}
+
 interface BookingPaymentBody {
   divinerId?: string;
   divinerUsername?: string;
@@ -479,6 +511,7 @@ export async function POST(request: NextRequest) {
         metadata: {
           ...requestMetadata,
           ...(availabilityTemplateTitle ? { availability_title: availabilityTemplateTitle } : {}),
+          ...(availabilityTemplateDescription ? { availability_description: availabilityTemplateDescription } : {}),
         },
         ...(policyAcknowledgedAt ? { policy_acknowledged_at: policyAcknowledgedAt } : {}),
       })
@@ -659,16 +692,15 @@ export async function POST(request: NextRequest) {
         .eq("owner_id", resolvedDivinerId);
 
       if (calConnections?.some((c) => c.provider === "google")) {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+        const calEventDescription = buildCalendarDescription(
+          availabilityTemplateDescription,
+          booking.id,
+          appUrl,
+        );
         createCalendarEvent(resolvedDivinerId, {
           title: `${availabilityTemplateTitle ?? service.name} — ${clientName}`,
-          description: [
-            `Schedule: ${availabilityTemplateTitle ?? service.name}`,
-            `Service: ${service.name}`,
-            `Client: ${clientName} (${clientEmail})`,
-            `Date & Time: ${startTime.toLocaleString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" })}`,
-            `Duration: ${service.duration_minutes} minutes`,
-            `Session link: ${sessionLink}`,
-          ].join("\n"),
+          description: calEventDescription,
           startTime: startTime.toISOString(),
           endTime: endTime.toISOString(),
           clientEmail,
