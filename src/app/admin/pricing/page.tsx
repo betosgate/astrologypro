@@ -154,7 +154,6 @@ export default function AdminPricingPage() {
   });
   const [addingPlan, setAddingPlan] = useState(false);
   const [editCustomFields, setEditCustomFields] = useState<CustomField[]>([]);
-  const [savingCustomFields, setSavingCustomFields] = useState(false);
 
   // Add item state
   const [showAddItem, setShowAddItem] = useState(false);
@@ -423,7 +422,7 @@ export default function AdminPricingPage() {
 
       // Subscription / Stripe price
       let stripePriceId = newPlan.stripe_price_id.trim() || null;
-      let stripePriceName = newPlan.stripe_price_name ?? "";
+      const stripePriceName = newPlan.stripe_price_name ?? "";
       let recurringAmount: number | null = null;
       let recurringCurrency: string | null = null;
 
@@ -497,38 +496,6 @@ export default function AdminPricingPage() {
     setEditCustomFields((prev) =>
       prev.map((f, i) => (i === idx ? { ...f, [field]: val } : f)),
     );
-  }
-
-  async function handleSaveCustomFields(plan: PricingPlan) {
-    const valid = editCustomFields.every((f) => f.label.trim() && f.value.trim() && f.slug.trim());
-    if (!valid) {
-      setError("Each custom field must have label, value, and slug filled in");
-      return;
-    }
-    setSavingCustomFields(true);
-    setError(null);
-    try {
-      const cleaned = editCustomFields.map((f) => ({
-        label: f.label.trim(),
-        value: f.value.trim(),
-        slug: f.slug.trim().toLowerCase().replace(/\s+/g, "_"),
-      }));
-      const r = await fetch(`/api/admin/pricing/plans/${plan.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ custom_fields: cleaned }),
-      });
-      const body = await r.json();
-      if (!r.ok) throw new Error(body.error ?? `HTTP ${r.status}`);
-      setPlans((prev) =>
-        prev.map((p) => (p.id === plan.id ? (body.plan as PricingPlan) : p)),
-      );
-      setEditPlanId(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSavingCustomFields(false);
-    }
   }
 
   /* ---- Delete plan ---- */
@@ -654,6 +621,20 @@ export default function AdminPricingPage() {
     setSavingPlanEdit(true);
     setError(null);
     try {
+      const validCustomFields = editCustomFields.every(
+        (f) => f.label.trim() && f.value.trim() && f.slug.trim(),
+      );
+      if (!validCustomFields) {
+        setError("Each custom field must have label, value, and slug filled in");
+        return;
+      }
+
+      const cleanedCustomFields = editCustomFields.map((f) => ({
+        label: f.label.trim(),
+        value: f.value.trim(),
+        slug: f.slug.trim().toLowerCase().replace(/\s+/g, "_"),
+      }));
+
       let onetimeAmount: number | null = null;
       if (editPlanForm.onetime_amount) {
         onetimeAmount = Number(editPlanForm.onetime_amount);
@@ -712,6 +693,7 @@ export default function AdminPricingPage() {
           mrp,
           description: editPlanForm.description.trim() || null,
           html_description: editPlanForm.html_description.trim() || null,
+          custom_fields: cleanedCustomFields,
         }),
       });
       const body = await r.json();
@@ -1077,11 +1059,6 @@ export default function AdminPricingPage() {
                           <Button size="sm" onClick={() => handleSavePlanEdit(plan)} disabled={savingPlanEdit || !editPlanForm.display_name.trim()}>
                             {savingPlanEdit && <Loader2 className="mr-2 size-4 animate-spin" />}<Save className="mr-1 size-4" />Save Plan
                           </Button>
-                          {editCustomFields.length > 0 && (
-                            <Button size="sm" variant="outline" onClick={() => handleSaveCustomFields(plan)} disabled={savingCustomFields}>
-                              {savingCustomFields && <Loader2 className="mr-2 size-4 animate-spin" />}<Save className="mr-1 size-4" />Save Fields
-                            </Button>
-                          )}
                           <Button size="sm" variant="ghost" onClick={() => setEditPlanId(null)}>Cancel</Button>
                         </div>
                       </div>
