@@ -267,7 +267,7 @@ export function ProgramWorkspace({
           training-school/02-learner-experience/
           03-progressively-reveal-large-category-lists-and-make-category
           -rail-sticky.md. */}
-      <aside className="lg:col-span-1 order-2 space-y-2 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
+      <aside className="lg:col-span-1 order-2 space-y-2 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
             Categories

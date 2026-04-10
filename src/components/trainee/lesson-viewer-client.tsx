@@ -703,6 +703,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
   const remediationRequestSeqRef = useRef(0);
 
   const hasQuiz = quizQuestions.length > 0;
+  const hasSidebarRail = sidebarLessons.length > 0;
 
   // All in-video trigger questions must be answered correctly before completing.
   // A trigger counts as requiring a pass if it has a question attached.
@@ -796,7 +797,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
         />
       )}
 
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
+      <div className={cn("flex flex-col gap-6 items-start", hasSidebarRail && "lg:flex-row")}>
         {/* ── Left: Main content ────────────────────────────────────────── */}
         <div className="flex-1 min-w-0 space-y-5">
           {/* Lesson header */}
@@ -1024,9 +1025,34 @@ export function LessonViewerClient(props: LessonViewerProps) {
               )}
             </div>
           )}
+
+          {/* Completion CTA lives at the bottom of the lesson flow so the
+              content column keeps its full width and the right rail stays
+              focused on navigation only. The header already shows completed
+              state, so suppress the duplicate green "Lesson Complete" banner
+              inside the content area. */}
+          <LessonCompleteButton
+            lessonId={lessonId}
+            alreadyCompleted={isCompleted}
+            disabled={!canComplete}
+            disabledReason={
+              !canComplete
+                ? !triggersSatisfied && !quizSatisfied
+                  ? "Answer all in-video questions and pass the lesson quiz to complete this lesson."
+                  : !triggersSatisfied
+                    ? "Answer all in-video quiz questions correctly to complete this lesson."
+                    : "Pass the lesson quiz to complete this lesson."
+                : undefined
+            }
+            nextRoute={nextRoute ?? null}
+            nextLabel={nextLabel ?? null}
+            hideCompletedState
+            className="pt-2"
+          />
         </div>
 
         {/* ── Right: Sidebar ────────────────────────────────────────────── */}
+        {hasSidebarRail && (
         <aside className="w-full lg:w-72 shrink-0 space-y-4 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
           {/* Lesson navigation */}
           {sidebarLessons.length > 0 && (
@@ -1099,26 +1125,8 @@ export function LessonViewerClient(props: LessonViewerProps) {
               main content column (see below the assets section) so the
               learner sees it as part of the lesson flow rather than a
               buried sidebar widget. */}
-
-          {/* Mark complete */}
-          <LessonCompleteButton
-            lessonId={lessonId}
-            alreadyCompleted={isCompleted}
-            disabled={!canComplete}
-            disabledReason={
-              !canComplete
-                ? !triggersSatisfied && !quizSatisfied
-                  ? "Answer all in-video questions and pass the lesson quiz to complete this lesson."
-                  : !triggersSatisfied
-                    ? "Answer all in-video quiz questions correctly to complete this lesson."
-                    : "Pass the lesson quiz to complete this lesson."
-                : undefined
-            }
-            nextRoute={nextRoute ?? null}
-            nextLabel={nextLabel ?? null}
-            className="px-0"
-          />
         </aside>
+        )}
       </div>
     </>
   );

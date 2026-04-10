@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { listQuizQuestionsCompat } from "@/lib/training/admin-quiz-questions";
 
 export const dynamic = "force-dynamic";
 
@@ -81,19 +82,10 @@ export async function POST(
 
   const admin = createAdminClient();
 
-  // Lookup the question, scoped to the lesson in the URL (object-level
-  // authorization — a question from a different lesson cannot be graded via
-  // this URL).
-  const { data: question, error } = await admin
-    .from("quiz_questions")
-    .select(
-      "id, lesson_id, options, correct_answer, explanation, remediation_video_id, remediation_video_index, remediation_start_seconds, remediation_replay_until_seconds, remediation_message",
-    )
-    .eq("id", questionId)
-    .eq("lesson_id", lessonId)
-    .maybeSingle();
+  const { questions } = await listQuizQuestionsCompat(admin, lessonId);
+  const question = questions.find((candidate) => candidate.id === questionId);
 
-  if (error || !question) {
+  if (!question) {
     return NextResponse.json(
       { error: "Question not found for this lesson" },
       { status: 404 },

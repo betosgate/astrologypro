@@ -1,22 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
+  TrainingQuizForm,
+  type TrainingQuizFormValue,
+  type TrainingQuizLessonOption,
+} from "@/components/admin/training-quiz-form";
 
-interface Lesson {
-  id: string;
-  title: string;
-}
+type ApiQuestion = {
+  question: string;
+  options: string[];
+  correct_answer: number;
+  explanation?: string | null;
+  priority?: number | null;
+  remediation_video_index?: number | null;
+  remediation_start_seconds?: number | null;
+  remediation_replay_until_seconds?: number | null;
+  remediation_message?: string | null;
+};
 
 export default function EditQuizPage() {
   const router = useRouter();
@@ -25,17 +28,9 @@ export default function EditQuizPage() {
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  const [lessons, setLessons] = useState<Lesson[]>([]);
-
-  const [form, setForm] = useState({
-    title: "",
-    lesson_id: "",
-    pass_score: "70",
-    is_active: true,
-    questions_json: "[]",
-  });
-
-  const [jsonError, setJsonError] = useState<string | null>(null);
+  const [lessons, setLessons] = useState<TrainingQuizLessonOption[]>([]);
+  const [initialValue, setInitialValue] = useState<TrainingQuizFormValue | null>(null);
+  const [remediationSupported, setRemediationSupported] = useState(true);
 
   useEffect(() => {
     async function load() {
@@ -52,20 +47,31 @@ export default function EditQuizPage() {
         }
 
         const quizData = await quizRes.json();
-        const lessonsData = lessonsRes.ok
-          ? await lessonsRes.json()
-          : { lessons: [] };
+        const lessonsData = lessonsRes.ok ? await lessonsRes.json() : { lessons: [] };
+        const q = quizData.quiz;
 
         setLessons(lessonsData.lessons ?? []);
-
-        const q = quizData.quiz;
-        setForm({
+        setInitialValue({
           title: q.title ?? "",
           lesson_id: q.lesson_id ?? "",
-          pass_score: String(q.pass_score ?? 70),
+          pass_score: Number(q.pass_score ?? 70),
           is_active: q.is_active ?? true,
-          questions_json: JSON.stringify(q.questions ?? [], null, 2),
+          questions: Array.isArray(q.questions)
+            ? (q.questions as ApiQuestion[]).map((question, index) => ({
+                question: question.question ?? "",
+                options: Array.isArray(question.options) ? question.options : [],
+                correct_answer: question.correct_answer ?? 0,
+                explanation: question.explanation ?? null,
+                priority: question.priority ?? index,
+                remediation_video_index: question.remediation_video_index ?? null,
+                remediation_start_seconds: question.remediation_start_seconds ?? null,
+                remediation_replay_until_seconds:
+                  question.remediation_replay_until_seconds ?? null,
+                remediation_message: question.remediation_message ?? null,
+              }))
+            : [],
         });
+        setRemediationSupported(quizData.remediation_supported !== false);
       } catch {
         toast.error("Failed to load quiz.");
         router.push("/admin/training");
@@ -73,70 +79,17 @@ export default function EditQuizPage() {
         setFetching(false);
       }
     }
-    load();
+
+    void load();
   }, [id, router]);
 
-  function handleChange(
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) {
-    const { name, value, type } = e.target;
-    if (type === "checkbox") {
-      setForm((prev) => ({
-        ...prev,
-        [name]: (e.target as HTMLInputElement).checked,
-      }));
-    } else {
-      setForm((prev) => ({ ...prev, [name]: value }));
-      if (name === "questions_json") {
-        setJsonError(null);
-      }
-    }
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.title.trim()) {
-      toast.error("Title is required.");
-      return;
-    }
-    if (!form.lesson_id) {
-      toast.error("Lesson is required.");
-      return;
-    }
-
-    let parsedQuestions: unknown;
-    try {
-      parsedQuestions = JSON.parse(form.questions_json);
-      if (!Array.isArray(parsedQuestions)) {
-        setJsonError("Questions must be a JSON array.");
-        return;
-      }
-      setJsonError(null);
-    } catch {
-      setJsonError("Invalid JSON. Please check the questions field.");
-      return;
-    }
-
-    const passScore = parseInt(form.pass_score, 10);
-    if (isNaN(passScore) || passScore < 0 || passScore > 100) {
-      toast.error("Pass score must be between 0 and 100.");
-      return;
-    }
-
+  async function handleSubmit(value: TrainingQuizFormValue) {
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/training/quizzes/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: form.title.trim(),
-          lesson_id: form.lesson_id,
-          pass_score: passScore,
-          is_active: form.is_active,
-          questions: parsedQuestions,
-        }),
+        body: JSON.stringify(value),
       });
 
       const data = await res.json();
@@ -145,6 +98,7 @@ export default function EditQuizPage() {
         return;
       }
 
+      setRemediationSupported(data.remediation_supported !== false);
       toast.success("Quiz updated.");
       router.push("/admin/training");
     } catch {
@@ -154,151 +108,31 @@ export default function EditQuizPage() {
     }
   }
 
-  if (fetching) {
+  if (fetching || !initialValue) {
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/admin/training">← Back</Link>
-          </Button>
           <h1 className="text-xl font-bold tracking-tight">Edit Quiz</h1>
         </div>
-        <Card>
-          <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Loading quiz…
-          </CardContent>
-        </Card>
+        <div className="rounded-lg border px-4 py-12 text-center text-sm text-muted-foreground">
+          Loading quiz…
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div className="flex items-center gap-3">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/admin/training">← Back</Link>
-        </Button>
-        <h1 className="text-xl font-bold tracking-tight">Edit Quiz</h1>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Update Training Quiz</CardTitle>
-          <CardDescription>
-            Edit quiz settings, lesson assignment, and questions.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Title */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium" htmlFor="title">
-                Title <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="title"
-                name="title"
-                type="text"
-                value={form.title}
-                onChange={handleChange}
-                required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="e.g. Birth Chart Basics Quiz"
-              />
-            </div>
-
-            {/* Lesson */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium" htmlFor="lesson_id">
-                Lesson <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="lesson_id"
-                name="lesson_id"
-                value={form.lesson_id}
-                onChange={handleChange}
-                required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {lessons.length === 0 ? (
-                  <option value="">No lessons available</option>
-                ) : (
-                  lessons.map((lesson) => (
-                    <option key={lesson.id} value={lesson.id}>
-                      {lesson.title}
-                    </option>
-                  ))
-                )}
-              </select>
-            </div>
-
-            {/* Pass Score */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium" htmlFor="pass_score">
-                Pass Score (%)
-              </label>
-              <input
-                id="pass_score"
-                name="pass_score"
-                type="number"
-                min="0"
-                max="100"
-                value={form.pass_score}
-                onChange={handleChange}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              />
-              <p className="text-xs text-muted-foreground">
-                Minimum percentage required to pass (0–100).
-              </p>
-            </div>
-
-            {/* Questions JSON */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium" htmlFor="questions_json">
-                Questions (JSON)
-              </label>
-              <textarea
-                id="questions_json"
-                name="questions_json"
-                value={form.questions_json}
-                onChange={handleChange}
-                rows={14}
-                spellCheck={false}
-                className={`w-full rounded-md border bg-background px-3 py-2 font-mono text-xs outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring ${
-                  jsonError ? "border-red-500" : "border-input"
-                }`}
-              />
-              {jsonError && (
-                <p className="text-xs text-red-500">{jsonError}</p>
-              )}
-            </div>
-
-            {/* Active */}
-            <div className="flex items-center gap-3">
-              <input
-                id="is_active"
-                name="is_active"
-                type="checkbox"
-                checked={form.is_active}
-                onChange={handleChange}
-                className="size-4 rounded border-input accent-primary"
-              />
-              <label className="text-sm font-medium" htmlFor="is_active">
-                Active (available to trainees)
-              </label>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <Button type="submit" disabled={loading}>
-                {loading ? "Saving…" : "Save Changes"}
-              </Button>
-              <Button asChild type="button" variant="outline">
-                <Link href="/admin/training">Cancel</Link>
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <TrainingQuizForm
+      key={`${id}:${initialValue.lesson_id}:${initialValue.questions.length}`}
+      heading="Edit Quiz"
+      description="Update quiz settings and manage question-level remediation from the quiz editor."
+      submitLabel="Save Changes"
+      cancelHref="/admin/training"
+      lessons={lessons}
+      remediationSupported={remediationSupported}
+      initialValue={initialValue}
+      loading={loading}
+      onSubmit={handleSubmit}
+    />
   );
 }
