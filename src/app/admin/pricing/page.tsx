@@ -27,7 +27,6 @@ import {
   RefreshCcw,
   Plus,
   Trash2,
-  Settings2,
   X,
   ChevronDown,
   ChevronRight,
@@ -139,7 +138,6 @@ export default function AdminPricingPage() {
     custom_fields: [] as CustomField[],
   });
   const [addingPlan, setAddingPlan] = useState(false);
-  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [editCustomFields, setEditCustomFields] = useState<CustomField[]>([]);
   const [savingCustomFields, setSavingCustomFields] = useState(false);
 
@@ -448,16 +446,6 @@ export default function AdminPricingPage() {
     }
   }
 
-  /* ---- Open custom fields editor ---- */
-  function handleEditCustomFields(plan: PricingPlan) {
-    if (editingPlanId === plan.id) {
-      setEditingPlanId(null);
-      return;
-    }
-    setEditingPlanId(plan.id);
-    setEditCustomFields(plan.custom_fields?.length ? [...plan.custom_fields] : []);
-  }
-
   function handleAddCustomField() {
     setEditCustomFields((prev) => [...prev, { label: "", value: "", slug: "" }]);
   }
@@ -496,7 +484,7 @@ export default function AdminPricingPage() {
       setPlans((prev) =>
         prev.map((p) => (p.id === plan.id ? (body.plan as PricingPlan) : p)),
       );
-      setEditingPlanId(null);
+      setEditPlanId(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -614,7 +602,7 @@ export default function AdminPricingPage() {
       description: plan.description ?? "",
     });
     // Also load custom fields into the editor
-    setEditingPlanId(plan.id);
+    setEditPlanId(plan.id);
     setEditCustomFields(plan.custom_fields?.length ? [...plan.custom_fields] : []);
   }
 
@@ -800,7 +788,6 @@ export default function AdminPricingPage() {
                   <th className="py-2 pr-3">currency</th>
                   <th className="py-2 pr-3">stripe price id</th>
                   <th className="py-2 pr-3">status</th>
-                  <th className="py-2 text-center">fields</th>
                   <th className="py-2 text-center">toggle</th>
                   <th className="py-2 text-center">actions</th>
                 </tr>
@@ -821,12 +808,6 @@ export default function AdminPricingPage() {
                       <Badge variant="outline" className={plan.is_active ? "border-emerald-500/40 text-emerald-700" : "border-red-500/40 text-red-600"}>
                         {plan.is_active ? "active" : "inactive"}
                       </Badge>
-                    </td>
-                    <td className="py-2 text-center">
-                      <Button variant="ghost" size="sm" onClick={() => handleEditCustomFields(plan)} title="Edit custom fields">
-                        <Settings2 className="size-4" />
-                        {plan.custom_fields?.length > 0 && <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">{plan.custom_fields.length}</Badge>}
-                      </Button>
                     </td>
                     <td className="py-2 text-center">
                       <div className="flex items-center justify-center gap-2">
@@ -918,7 +899,7 @@ export default function AdminPricingPage() {
                               {savingCustomFields && <Loader2 className="mr-2 size-4 animate-spin" />}<Save className="mr-1 size-4" />Save Fields
                             </Button>
                           )}
-                          <Button size="sm" variant="ghost" onClick={() => { setEditPlanId(null); setEditingPlanId(null); }}>Cancel</Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditPlanId(null)}>Cancel</Button>
                         </div>
                       </div>
                     </td></tr>
