@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { selectLessonQuestionsForLearnerCompat } from "@/lib/training/admin-quiz-questions";
 
 export const dynamic = "force-dynamic";
 
@@ -60,16 +61,7 @@ export async function GET(
         )
         .eq("lesson_id", id)
         .order("priority", { ascending: true }),
-      admin
-        .from("quiz_questions")
-        // Deliberately exclude correct_answer — it stays server-side. The
-        // remediation_* fields are exposed because the new stepwise quiz
-        // runtime needs them on the client to drive the video seek + replay.
-        .select(
-          "id, question, options, explanation, priority, remediation_video_id, remediation_video_index, remediation_start_seconds, remediation_replay_until_seconds, remediation_message",
-        )
-        .eq("lesson_id", id)
-        .order("priority", { ascending: true }),
+      selectLessonQuestionsForLearnerCompat(admin, id),
     ]);
 
   if (lessonResult.error || !lessonResult.data) {
@@ -236,7 +228,7 @@ export async function GET(
   });
 
   // Normalize quiz question options to { text: string }[] format
-  const normalizedQuestions = (questionsResult.data ?? []).map((q) => ({
+  const normalizedQuestions = (questionsResult ?? []).map((q) => ({
     ...q,
     options: normalizeOptions(q.options),
   }));
