@@ -17,6 +17,7 @@ import { LiveStreamSection, type StreamPlatformConfig } from "@/components/publi
 import { TestimonialsSection } from "@/components/public/testimonials-section";
 import { BlogSubscribeForm } from "@/app/blog/subscribe-form";
 import { CheckInForm } from "@/components/diviner/check-in-form";
+import { isFallbackManualService } from "@/lib/public-booking";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -131,6 +132,13 @@ async function getPolicies() {
 async function getDivinerStats(divinerId: string) {
   const supabase = createAdminClient();
 
+  const formatLocalDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const { count: completedSessions } = await supabase
     .from("bookings")
     .select("*", { count: "exact", head: true })
@@ -162,7 +170,7 @@ async function getDivinerStats(divinerId: string) {
   const [templatesResult, legacySlotsResult] = await Promise.all([
     supabase
       .from("availability_templates")
-      .select("start_date, end_date, weekdays, start_time, end_time, duration_minutes")
+      .select("*")
       .or(`owner_id.eq.${divinerId},diviner_id.eq.${divinerId}`)
       .eq("is_active", true),
     supabase
@@ -177,13 +185,27 @@ async function getDivinerStats(divinerId: string) {
   cursor.setHours(0, 0, 0, 0);
   const templates = templatesResult.data ?? [];
   const legacySlots = legacySlotsResult.data ?? [];
+  const hasAnyAvailability = templates.length > 0 || legacySlots.length > 0;
+  const hasUnscopedAvailability =
+    templates.some((template) => {
+      const serviceId = (template as Record<string, unknown>).service_id;
+      return !serviceId;
+    }) || legacySlots.length > 0;
+  const unscopedDurationMinutes =
+    ((templates.find((template) => {
+      const serviceId = (template as Record<string, unknown>).service_id;
+      return !serviceId;
+    }) as Record<string, unknown> | undefined)?.duration_minutes as number | undefined) ?? null;
 
   while (cursor <= endOfWeek) {
-    const dayStr = cursor.toISOString().slice(0, 10);
+    const dayStr = formatLocalDate(cursor);
     const dayOfWeek = cursor.getDay();
 
     for (const template of templates) {
-      if (!template.weekdays?.includes(dayOfWeek)) continue;
+      const weekdays = Array.isArray(template.weekdays)
+        ? template.weekdays.map((value: unknown) => Number(value))
+        : [];
+      if (!weekdays.includes(dayOfWeek)) continue;
       if (dayStr < template.start_date || dayStr > template.end_date) continue;
 
       const [startHour = 0, startMinute = 0] = (template.start_time ?? "00:00").split(":").map(Number);
@@ -219,6 +241,9 @@ async function getDivinerStats(divinerId: string) {
     averageRating,
     reviewCount,
     openSlotsThisWeek: openSlots,
+    hasAnyAvailability,
+    hasUnscopedAvailability,
+    unscopedDurationMinutes,
   };
 }
 
@@ -271,7 +296,6 @@ export default async function DivinerPage({ params }: PageProps) {
     notFound();
   }
 
-
   const [services, testimonials, stats, policies, mediaItems, livePlatformConfigs, activeGiveaway] = await Promise.all([
     getServices(diviner.id),
     getTestimonials(diviner.id),
@@ -282,14 +306,42 @@ export default async function DivinerPage({ params }: PageProps) {
     getActiveGiveaway(diviner.id),
   ]);
 
-  const astroServices = services.filter((s) => s.category === "astrology");
-  const tarotServices = services.filter((s) => s.category === "tarot");
-  const primaryBookingService =
-    services.find((service) => service.is_featured) ?? services[0] ?? null;
+  const publicServices = services.filter((service) => !isFallbackManualService(service));
+  const astroServices = publicServices.filter((s) => s.category === "astrology");
+  const tarotServices = publicServices.filter((s) => s.category === "tarot");
+  const primaryPublicService =
+    publicServices.find((service) => service.is_featured) ?? publicServices[0] ?? null;
+  const fallbackBookingService =
+    services.find((service) => isFallbackManualService(service)) ?? null;
+  const bookingPreview = primaryPublicService
+    ? {
+        serviceId: primaryPublicService.id,
+        bookPath: `/book/${primaryPublicService.slug}`,
+        durationMinutes: primaryPublicService.duration_minutes,
+        serviceName: primaryPublicService.name,
+      }
+    : stats.hasAnyAvailability
+      ? {
+          serviceId: null,
+          bookPath: "/book",
+          durationMinutes:
+            stats.unscopedDurationMinutes ??
+            fallbackBookingService?.duration_minutes ??
+            60,
+          serviceName: undefined,
+        }
+      : null;
+  const bookHref = bookingPreview ? "#booking" : `/${username}`;
+  const heroOpenSlotsThisWeek =
+    stats.openSlotsThisWeek > 0
+      ? stats.openSlotsThisWeek
+      : stats.hasAnyAvailability
+        ? undefined
+        : 0;
 
   // Build slug → image URL map for all services
   const serviceImages: Record<string, string | null> = {};
-  for (const s of services) {
+  for (const s of publicServices) {
     serviceImages[s.slug] = getServiceImageUrl(s.slug);
   }
 
@@ -311,11 +363,11 @@ export default async function DivinerPage({ params }: PageProps) {
         url: `${APP_URL}/${username}`,
         ...(diviner.avatar_url && { image: diviner.avatar_url }),
         priceRange:
-          services.length > 0
-            ? `$${Math.min(...services.map((s) => Number(s.base_price)))} - $${Math.max(...services.map((s) => Number(s.base_price)))}`
+          publicServices.length > 0
+            ? `$${Math.min(...publicServices.map((s) => Number(s.base_price)))} - $${Math.max(...publicServices.map((s) => Number(s.base_price)))}`
             : undefined,
       },
-      ...services.map((service) => ({
+      ...publicServices.map((service) => ({
         "@type": "Service",
         name: service.name,
         description: service.description,
@@ -343,10 +395,10 @@ export default async function DivinerPage({ params }: PageProps) {
       {/* Sticky navigation */}
       <StickyNav
         displayName={diviner.display_name}
-        username={username}
         hasBio={!!diviner.bio}
-        hasServices={services.length > 0}
+        hasServices={publicServices.length > 0}
         hasTestimonials={testimonials.length > 0}
+        bookHref={bookHref}
       />
 
       {/* ===== 1. HERO ===== */}
@@ -362,7 +414,9 @@ export default async function DivinerPage({ params }: PageProps) {
         completedSessions={stats.completedSessions}
         averageRating={stats.averageRating}
         reviewCount={stats.reviewCount}
-        openSlotsThisWeek={stats.openSlotsThisWeek}
+        openSlotsThisWeek={heroOpenSlotsThisWeek}
+        hasServices={publicServices.length > 0}
+        bookHref={bookHref}
         isVerified={!!(diviner as Record<string, unknown>).verified || !!(diviner as Record<string, unknown>).badge_verified}
         isCertified={!!(diviner as Record<string, unknown>).is_certified}
       />
@@ -389,7 +443,31 @@ export default async function DivinerPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* ===== 3. ABOUT SECTION ===== */}
+      {/* ===== 3. BOOKING PREVIEW ===== */}
+      {bookingPreview && (
+        <section id="booking" className="py-10 md:py-14">
+          <div className="mx-auto max-w-4xl px-4 text-center">
+            <h2 className="mb-2 font-display text-3xl font-semibold text-cream md:text-4xl">
+              Next Available
+            </h2>
+            <p className="mx-auto mb-10 max-w-md text-sm text-silver/60">
+              Reserve your spot for a personal reading
+            </p>
+            <AvailabilityPreview
+              divinerId={diviner.id}
+              username={username}
+              serviceId={bookingPreview.serviceId}
+              bookPath={bookingPreview.bookPath}
+              durationMinutes={bookingPreview.durationMinutes}
+              serviceName={bookingPreview.serviceName}
+            />
+          </div>
+
+          <div className="cosmic-divider mx-auto mt-10 max-w-6xl md:mt-14" />
+        </section>
+      )}
+
+      {/* ===== 4. ABOUT SECTION ===== */}
       {diviner.bio && (
         <section id="about" className="py-10 md:py-14">
           <div className="mx-auto max-w-6xl px-4">
@@ -490,8 +568,8 @@ export default async function DivinerPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* ===== 4. SERVICES SECTION ===== */}
-      {services.length > 0 && (
+      {/* ===== 5. SERVICES SECTION ===== */}
+      {publicServices.length > 0 && (
         <section id="services" className="py-10 md:py-14">
           <div className="mx-auto max-w-6xl px-4">
             <h2 className="mb-2 text-center font-display text-3xl font-semibold text-cream md:text-4xl">
@@ -511,7 +589,7 @@ export default async function DivinerPage({ params }: PageProps) {
               />
             ) : (
               <div className="grid gap-5 sm:grid-cols-2">
-                {services.map((service) => (
+                {publicServices.map((service) => (
                   <ServiceCard
                     key={service.id}
                     service={service}
@@ -528,7 +606,7 @@ export default async function DivinerPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* ===== 5. MEDIA & CONTENT ===== */}
+      {/* ===== 6. MEDIA & CONTENT ===== */}
       {mediaItems.length > 0 && (
         <section id="media" className="py-10 md:py-14">
           <div className="mx-auto max-w-6xl px-4">
@@ -544,50 +622,21 @@ export default async function DivinerPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* ===== 5. TESTIMONIALS ===== */}
+      {/* ===== 7. TESTIMONIALS ===== */}
       <TestimonialSection
         testimonials={testimonials}
         averageRating={stats.averageRating}
         reviewCount={stats.reviewCount}
       />
 
-      {/* ===== 5b. PUBLIC TESTIMONIALS (with submission form) ===== */}
+      {/* ===== 7b. PUBLIC TESTIMONIALS (with submission form) ===== */}
       <TestimonialsSection
         divinerId={diviner.id}
         divinerUsername={username}
         divinerName={diviner.display_name}
       />
 
-      {/* ===== 5. AVAILABILITY PREVIEW ===== */}
-      <section id="booking" className="py-10 md:py-14">
-        <div className="mx-auto max-w-4xl px-4 text-center">
-          <h2 className="mb-2 font-display text-3xl font-semibold text-cream md:text-4xl">
-            Next Available
-          </h2>
-          <p className="mx-auto mb-10 max-w-md text-sm text-silver/60">
-            Reserve your spot for a personal reading
-          </p>
-          {primaryBookingService ? (
-            <AvailabilityPreview
-              divinerId={diviner.id}
-              username={username}
-              serviceId={primaryBookingService.id}
-              serviceSlug={primaryBookingService.slug}
-              durationMinutes={primaryBookingService.duration_minutes}
-              serviceName={primaryBookingService.name}
-            />
-          ) : (
-            <p className="text-sm text-silver/60">
-              Services will appear here once {diviner.display_name} publishes a booking offer.
-            </p>
-          )}
-        </div>
-
-        {/* Cosmic divider */}
-        <div className="cosmic-divider mx-auto mt-10 max-w-6xl md:mt-14" />
-      </section>
-
-      {/* ===== 6. GIFT A READING ===== */}
+      {/* ===== 8. GIFT A READING ===== */}
       <section className="py-10 md:py-14">
         <div className="mx-auto max-w-2xl px-4">
           <div className="glass-card rounded-2xl border-gold/10 p-10 text-center md:p-14">
@@ -612,7 +661,7 @@ export default async function DivinerPage({ params }: PageProps) {
         </div>
       </section>
 
-      {/* ===== 7. POLICIES ===== */}
+      {/* ===== 9. POLICIES ===== */}
       {policies.length > 0 && (
         <section className="py-10 md:py-14">
           <div className="mx-auto max-w-4xl px-4">
@@ -639,7 +688,7 @@ export default async function DivinerPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* ===== 8. NEWSLETTER SUBSCRIBE ===== */}
+      {/* ===== 10. NEWSLETTER SUBSCRIBE ===== */}
       <section className="relative py-10 md:py-14">
         <div className="mx-auto max-w-xl px-4 text-center">
           <h2 className="mb-2 font-display text-2xl font-semibold text-cream">
@@ -652,7 +701,7 @@ export default async function DivinerPage({ params }: PageProps) {
         </div>
       </section>
 
-      {/* ===== 9. FINAL CTA ===== */}
+      {/* ===== 11. FINAL CTA ===== */}
       <section className="relative overflow-hidden py-12 md:py-16">
         {/* Cosmic gradient background */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_50%,rgba(201,168,76,0.06)_0%,transparent_60%)]" />
@@ -671,7 +720,7 @@ export default async function DivinerPage({ params }: PageProps) {
             clarity on the questions that matter most.
           </p>
           <Link
-            href={`/${username}/book`}
+            href={bookHref}
             className="inline-flex h-12 items-center gap-2 rounded-lg bg-gold px-8 text-sm font-semibold text-cosmos-900 shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-gold-light hover:shadow-[0_0_30px_rgba(201,168,76,0.4)]"
           >
             Book a Reading

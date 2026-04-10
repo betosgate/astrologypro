@@ -48,13 +48,29 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ow
     updatePayload.service_id = body.service_id || null;
   }
 
-  const { data, error } = await admin
+  let { data, error } = await admin
     .from("availability_templates")
     .update(updatePayload)
     .eq("id", id)
     .eq("owner_id", divinerId)
     .select()
     .single();
+
+  if (
+    error &&
+    Object.prototype.hasOwnProperty.call(updatePayload, "service_id") &&
+    error.message.toLowerCase().includes("service_id")
+  ) {
+    delete updatePayload.service_id;
+    ({ data, error } = await admin
+      .from("availability_templates")
+      .update(updatePayload)
+      .eq("id", id)
+      .eq("owner_id", divinerId)
+      .select()
+      .single());
+  }
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ template: data });
 }

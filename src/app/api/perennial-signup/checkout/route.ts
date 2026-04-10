@@ -49,6 +49,15 @@ function strOrNull(v: unknown): string | null {
   return t.length > 0 ? t : null;
 }
 
+function numOrNull(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v !== "string") return null;
+  const t = v.trim();
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
+}
+
 function validateMember(m: unknown, idx: number): HouseholdMemberPayload | string {
   if (!m || typeof m !== "object") return `Member ${idx + 1}: not an object`;
   const r = m as Record<string, unknown>;
@@ -67,6 +76,12 @@ function validateMember(m: unknown, idx: number): HouseholdMemberPayload | strin
   const occupation = String(r.occupation ?? "").trim();
   const dob = String(r.date_of_birth ?? "").trim();
   const birthTime = String(r.birth_time ?? "").trim();
+  const birthLocationLabel = String(
+    r.birth_location_label ?? r.birthLocationLabel ?? "",
+  ).trim();
+  const birthLat = numOrNull(r.birth_lat ?? r.birthLat);
+  const birthLng = numOrNull(r.birth_lng ?? r.birthLng);
+  const birthTzone = String(r.birth_tzone ?? r.birthTzone ?? "").trim();
   const isPrimary = Boolean(r.is_primary);
 
   // Required-field gate (mirrors the page-side validator).
@@ -83,6 +98,14 @@ function validateMember(m: unknown, idx: number): HouseholdMemberPayload | strin
   if (!occupation) return `Member ${idx + 1}: occupation is required`;
   if (!dob) return `Member ${idx + 1}: date of birth is required`;
   if (!birthTime) return `Member ${idx + 1}: birth time is required`;
+  if (!birthLocationLabel) return `Member ${idx + 1}: birth location is required`;
+  if (birthLat === null || birthLat < -90 || birthLat > 90) {
+    return `Member ${idx + 1}: valid birth latitude is required`;
+  }
+  if (birthLng === null || birthLng < -180 || birthLng > 180) {
+    return `Member ${idx + 1}: valid birth longitude is required`;
+  }
+  if (!birthTzone) return `Member ${idx + 1}: birth timezone is required`;
 
   if (!isPrimary) {
     if (relationType !== "Couple" && relationType !== "Family") {
@@ -114,6 +137,10 @@ function validateMember(m: unknown, idx: number): HouseholdMemberPayload | strin
     occupation,
     date_of_birth: dob,
     birth_time: birthTime,
+    birth_location_label: birthLocationLabel,
+    birth_lat: birthLat,
+    birth_lng: birthLng,
+    birth_tzone: birthTzone,
     // Optional questionnaire — every field passed through as-is.
     relationship_status: strOrNull(r.relationship_status),
     personality: strOrNull(r.personality),

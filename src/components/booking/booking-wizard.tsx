@@ -24,6 +24,7 @@ import {
 import { formatCurrency } from "@/lib/format";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { formatInTimezone } from "@/lib/timezone-utils";
 import { loadStripe } from "@stripe/stripe-js";
 import {
   Elements,
@@ -72,6 +73,9 @@ interface TimeSlot {
 interface BookingWizardProps {
   diviner: Diviner;
   service: Service;
+  availabilityServiceId?: string | null;
+  bookingLabel?: string;
+  hideServiceName?: boolean;
 }
 
 const STEPS = [
@@ -97,6 +101,23 @@ const INITIAL_INTAKE: IntakeData = {
   secondPersonBirthCity: "",
   extras: {},
 };
+
+function formatSlotDate(iso: string, timezone: string): string {
+  return formatInTimezone(iso, timezone, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatSlotTime(iso: string, timezone: string): string {
+  return formatInTimezone(iso, timezone, {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
 
 // Inner payment form that uses Stripe hooks
 function StripePaymentForm({
@@ -174,7 +195,13 @@ function StripePaymentForm({
   );
 }
 
-export function BookingWizard({ diviner, service }: BookingWizardProps) {
+export function BookingWizard({
+  diviner,
+  service,
+  availabilityServiceId,
+  bookingLabel,
+  hideServiceName = false,
+}: BookingWizardProps) {
   const [step, setStep] = useState(0);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
@@ -197,6 +224,10 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
   const [creatingPaymentIntent, setCreatingPaymentIntent] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
   const [requestedTimeIso, setRequestedTimeIso] = useState<string | null>(null);
+  const [hasAutoAdvancedFromQuery, setHasAutoAdvancedFromQuery] = useState(false);
+  const [clientTimezone, setClientTimezone] = useState(diviner.timezone || "UTC");
+  const resolvedServiceName = hideServiceName ? (bookingLabel ?? "Reading Session") : (bookingLabel ?? service.name);
+  const availabilityQuery = availabilityServiceId ? `&serviceId=${availabilityServiceId}` : "";
 
   // Prefill intake data from stored client profile when ?prefill=true
   useEffect(() => {
@@ -258,10 +289,19 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
     if (time) {
       setRequestedTimeIso(time);
     }
-  }, []);
 
-  // Detect client timezone
-  const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (date && time && !hasAutoAdvancedFromQuery) {
+      setStep(1);
+      setHasAutoAdvancedFromQuery(true);
+    }
+  }, [hasAutoAdvancedFromQuery]);
+
+  useEffect(() => {
+    const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (detectedTimezone) {
+      setClientTimezone(detectedTimezone);
+    }
+  }, []);
 
   // Fetch time slots when a date is selected
   useEffect(() => {
@@ -273,7 +313,7 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
       try {
         const dateStr = format(selectedDate!, "yyyy-MM-dd");
         const res = await fetch(
-          `/api/availability/${diviner.id}?date=${dateStr}&duration=${service.duration_minutes}&serviceId=${service.id}`
+          `/api/availability/${diviner.id}?date=${dateStr}&duration=${service.duration_minutes}${availabilityQuery}`
         );
         if (res.ok) {
           const slots: TimeSlot[] = await res.json();
@@ -298,7 +338,14 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
     }
 
     fetchSlots();
-  }, [requestedTimeIso, selectedDate, diviner.id, service.duration_minutes, service.id]);
+  }, [
+    requestedTimeIso,
+    selectedDate,
+    diviner.id,
+    service.duration_minutes,
+    availabilityQuery,
+    hasAutoAdvancedFromQuery,
+  ]);
 
   function canProceed(): boolean {
     switch (step) {
@@ -306,6 +353,7 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
         return !!selectedSlot;
       case 1:
         return !!(
+          selectedSlot &&
           intakeData.fullName.trim() &&
           intakeData.email.trim() &&
           intakeData.focusQuestion.trim() &&
@@ -432,8 +480,7 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
     ? `/${diviner.username}/session/${bookingId}`
     : null;
 
-  const selectedAvailabilityTz =
-    selectedSlot?.availabilityTimezone || diviner.timezone || clientTimezone;
+  const selectedAvailabilityTz = selectedSlot?.availabilityTimezone || "UTC";
 
   // Confirmation screen
   if (bookingComplete) {
@@ -443,19 +490,20 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
           <CheckCircle className="mx-auto mb-4 size-16 text-green-500" />
           <h2 className="mb-2 text-2xl font-bold">Booking Confirmed!</h2>
           <p className="mb-6 text-muted-foreground">
-            Your {service.name} reading with {diviner.display_name} has been
+            Your {resolvedServiceName} with {diviner.display_name} has been
             booked.
           </p>
 
           {selectedSlot && (
             <div className="mb-6 rounded-lg border p-4 text-left">
-              <p className="font-medium">{service.name}</p>
+              <p className="font-medium">{resolvedServiceName}</p>
               <p className="text-sm text-muted-foreground">
-                {format(new Date(selectedSlot.start), "EEEE, MMMM d, yyyy")}
+                {formatSlotDate(selectedSlot.start, clientTimezone)}
               </p>
               <p className="text-sm text-muted-foreground">
-                {format(new Date(selectedSlot.start), "h:mm a")} -{" "}
-                {format(new Date(selectedSlot.end), "h:mm a")} ({clientTimezone})
+                {formatSlotTime(selectedSlot.start, clientTimezone)} -{" "}
+                {formatSlotTime(selectedSlot.end, clientTimezone)} (
+                {clientTimezone.replace(/_/g, " ")})
               </p>
               {selectedSlot.availabilityTitle && (
                 <p className="mt-2 text-sm text-muted-foreground">
@@ -546,7 +594,7 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
               <div className="flex flex-col items-center gap-6 md:flex-row md:items-start">
                 <CalendarPicker
                   divinerId={diviner.id}
-                  serviceId={service.id}
+                  serviceId={availabilityServiceId}
                   duration={service.duration_minutes}
                   selectedDate={selectedDate}
                   onDateSelect={setSelectedDate}
@@ -609,7 +657,7 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
                               onClick={() => setSelectedSlot(slot)}
                               className="justify-center"
                             >
-                              {format(new Date(slot.start), "h:mm a")}
+                              {formatSlotTime(slot.start, clientTimezone)}
                             </Button>
                           ))}
                         </div>
@@ -677,11 +725,15 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
               <h3 className="text-lg font-semibold">Booking Summary</h3>
 
               <div className="rounded-lg border p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Service</span>
-                  <span className="font-medium">{service.name}</span>
-                </div>
-                <Separator />
+                {!hideServiceName && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Service</span>
+                      <span className="font-medium">{resolvedServiceName}</span>
+                    </div>
+                    <Separator />
+                  </>
+                )}
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Duration</span>
                   <Badge variant="outline">
@@ -695,18 +747,15 @@ export function BookingWizard({ diviner, service }: BookingWizardProps) {
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Date</span>
                       <span className="font-medium">
-                        {format(
-                          new Date(selectedSlot.start),
-                          "EEEE, MMMM d, yyyy"
-                        )}
+                        {formatSlotDate(selectedSlot.start, clientTimezone)}
                       </span>
                     </div>
                     <Separator />
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Time</span>
                       <span className="font-medium">
-                        {format(new Date(selectedSlot.start), "h:mm a")} -{" "}
-                        {format(new Date(selectedSlot.end), "h:mm a")}
+                        {formatSlotTime(selectedSlot.start, clientTimezone)} -{" "}
+                        {formatSlotTime(selectedSlot.end, clientTimezone)}
                       </span>
                     </div>
                     {selectedSlot.availabilityTitle && (
