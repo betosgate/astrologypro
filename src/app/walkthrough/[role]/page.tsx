@@ -1,204 +1,165 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  ArrowLeft,
-  ArrowRight,
-  ExternalLink,
-  type LucideIcon,
-} from "lucide-react";
-import {
-  getSectionBySlug,
-  ROLE_SLUGS,
-  type FeatureCard,
-} from "@/lib/walkthrough-data";
-import type { Metadata } from "next";
+import { WALKTHROUGH_SECTIONS } from "@/lib/walkthrough-data";
+import ScreenshotLightbox from "../_components/screenshot-lightbox";
+import { ChevronRight, LayoutDashboard, Layers, MousePointer2 } from "lucide-react";
 
-export const dynamic = "force-dynamic";
-
-// ─── Dynamic metadata ─────────────────────────────────────────────────────
-
-interface PageProps {
-  params: Promise<{ role: string }>;
+export function generateStaticParams() {
+  return WALKTHROUGH_SECTIONS.map((section) => ({
+    role: section.slug,
+  }));
 }
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ role: string }> }) {
   const { role } = await params;
-  const section = getSectionBySlug(role);
-  if (!section) {
-    return { title: "Not Found — AstrologyPro" };
-  }
+  const section = WALKTHROUGH_SECTIONS.find((s) => s.slug === role);
+  if (!section) return {};
 
   return {
-    title: `${section.role} — Platform Walkthrough — AstrologyPro`,
+    title: `${section.role} Walkthrough — AstrologyPro`,
     description: section.roleDescription,
-    openGraph: {
-      title: `${section.role} — Platform Walkthrough`,
-      description: section.roleDescription,
-    },
   };
 }
 
-// ─── Static params for known slugs ────────────────────────────────────────
-
-export function generateStaticParams() {
-  return Object.keys(ROLE_SLUGS).map((slug) => ({ role: slug }));
-}
-
-// ─── Status badge ──────────────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status?: FeatureCard["status"] }) {
-  if (!status) return null;
-
-  const config = {
-    live: {
-      label: "Live",
-      className:
-        "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-    },
-    beta: {
-      label: "Beta",
-      className: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-    },
-    "coming-soon": {
-      label: "Soon",
-      className: "bg-slate-500/15 text-slate-400 border-slate-500/30",
-    },
-  }[status];
-
-  return (
-    <span
-      className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium leading-none ${config.className}`}
-    >
-      {config.label}
-    </span>
-  );
-}
-
-// ─── Feature card ──────────────────────────────────────────────────────────
-
-function FeatureCardComponent({ card }: { card: FeatureCard }) {
-  const Icon = card.icon;
-  return (
-    <Link href={card.href} className="group block">
-      <Card className="h-full border-border/40 bg-card/60 transition-all duration-200 hover:border-amber-500/40 hover:bg-card/80 hover:shadow-lg hover:shadow-amber-500/5">
-        <CardContent className="flex items-start gap-3 p-4">
-          <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 transition-colors group-hover:bg-amber-500/20">
-            <Icon className="size-4" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-foreground">
-                {card.title}
-              </span>
-              <StatusBadge status={card.status} />
-              <ArrowRight className="ml-auto size-3.5 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
-            </div>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              {card.description}
-            </p>
-            <p className="mt-1.5 flex items-center gap-1 text-[11px] font-mono text-muted-foreground/60">
-              <ExternalLink className="size-2.5" />
-              {card.href}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
-  );
-}
-
-// ─── Page ──────────────────────────────────────────────────────────────────
-
-export default async function RoleWalkthroughPage({ params }: PageProps) {
+export default async function RoleWalkthroughPage({
+  params,
+}: {
+  params: Promise<{ role: string }>;
+}) {
   const { role } = await params;
-  const section = getSectionBySlug(role);
+  const section = WALKTHROUGH_SECTIONS.find((s) => s.slug === role);
 
   if (!section) {
     notFound();
   }
 
-  const Icon = section.icon;
-  const totalCards = section.groups.reduce(
-    (sum, g) => sum + g.cards.length,
-    0,
-  );
+  // Navigation logic
+  const roleIndex = WALKTHROUGH_SECTIONS.findIndex((s) => s.slug === role);
+  const prevSection = roleIndex > 0 ? WALKTHROUGH_SECTIONS[roleIndex - 1] : null;
+  const nextSection = roleIndex < WALKTHROUGH_SECTIONS.length - 1 ? WALKTHROUGH_SECTIONS[roleIndex + 1] : null;
+
+  // Group counts for stats
+  const totalScreens = section.screens.length;
+  const totalGroups = new Set(section.screens.map(s => s.group)).size;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header with gradient */}
-      <div className="relative overflow-hidden border-b border-border/40">
-        <div
-          className={`absolute inset-0 bg-gradient-to-br ${section.gradient}`}
-        />
-        <div className="relative mx-auto max-w-7xl px-6 py-12 lg:px-8 lg:py-16">
-          {/* Back link */}
-          <Link
-            href="/walkthrough"
-            className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="size-3.5" />
-            Back to Walkthrough
-          </Link>
+    <div className="cosmic-bg noise-overlay min-h-screen">
+      <div className="mx-auto max-w-7xl px-6 py-12 relative z-10">
+      {/* Breadcrumbs */}
+      <nav className="mb-10 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        <Link href="/walkthrough" className="hover:text-amber-500 transition-colors">
+          Walkthrough Hub
+        </Link>
+        <ChevronRight className="size-3 opacity-40" />
+        <span className="text-foreground">{section.role}</span>
+      </nav>
 
-          <div className="flex items-center gap-4">
-            <div className="flex size-14 items-center justify-center rounded-2xl bg-background/80 shadow-sm">
-              <Icon className="size-7 text-foreground" />
-            </div>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                  {section.role}
-                </h1>
-                <Badge variant="secondary" className="text-sm">
-                  {totalCards} pages
-                </Badge>
+      {/* Hero Section */}
+      <header className="mb-16">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="flex flex-col items-start gap-3">
+              <div className={`inline-flex items-center gap-2 rounded-lg bg-gradient-to-r ${section.gradient} px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-foreground ring-1 ring-white/10`}>
+              <section.icon className="size-3 text-amber-500" />
+              {section.role} Portal
               </div>
-              <p className="mt-1 text-sm leading-relaxed text-muted-foreground sm:text-base">
-                {section.roleDescription}
-              </p>
+              <span
+                className="inline-flex rounded-md px-4 py-2 text-4xl font-bold tracking-tight text-black sm:text-5xl"
+                style={{
+                  background: "linear-gradient(180deg, #f8d275 0%, #cd912f 100%)",
+                  boxShadow: "0 10px 24px rgba(205,145,47,0.18)",
+                }}
+              >
+                {section.role}
+              </span>
+            </div>
+            <p className="mt-4 text-lg font-medium text-amber-500/80">
+              {section.tagline}
+            </p>
+            <p className="mt-4 text-base leading-relaxed text-muted-foreground font-medium">
+              {section.roleDescription}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3 lg:flex-nowrap">
+            <div className="flex flex-col rounded-xl border border-white/5 bg-card/40 px-5 py-3">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Screens</span>
+              <span className="text-xl font-bold text-foreground">{totalScreens}</span>
+            </div>
+            <div className="flex flex-col rounded-xl border border-white/5 bg-card/40 px-5 py-3">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Modules</span>
+              <span className="text-xl font-bold text-foreground">{totalGroups}</span>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Feature groups */}
-      <div className="mx-auto max-w-7xl space-y-10 px-6 py-10 lg:px-8">
-        {section.groups.map((group, gi) => (
-          <div key={gi} className="space-y-4">
-            {group.groupLabel && (
-              <h2 className="ml-1 border-l-2 border-amber-500/40 pl-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {group.groupLabel}
-              </h2>
-            )}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {group.cards.map((card) => (
-                <FeatureCardComponent
-                  key={card.href + card.title}
-                  card={card}
-                />
-              ))}
+        {/* Capabilities Grid */}
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {section.capabilities.map((cap) => (
+            <div key={cap} className="flex items-start gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
+              <div className="mt-1 size-1.5 shrink-0 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+              <p className="text-xs font-medium text-muted-foreground">{cap}</p>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+      </header>
 
-        {/* Footer */}
-        <div className="rounded-xl border border-border/30 bg-muted/30 p-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            {section.role} has {totalCards} feature pages. Some pages may
-            require authentication or specific role access.
-          </p>
-          <Link
-            href="/walkthrough"
-            className="mt-3 inline-flex items-center gap-1.5 text-sm text-amber-500 hover:text-amber-400 transition-colors"
+      {/* Main Content (Lightbox + Side Nav) */}
+      <main className="relative min-h-[600px]">
+        <div className="mb-8 flex items-center justify-between lg:hidden">
+          <h2 className="text-lg font-bold text-foreground">Feature Gallery</h2>
+          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <MousePointer2 className="size-3" />
+            Click images to expand
+          </span>
+        </div>
+
+        <ScreenshotLightbox 
+          screens={section.screens} 
+          roleSlug={section.slug} 
+          roleTitle={section.role} 
+        />
+      </main>
+
+      {/* Bottom Navigation */}
+      <footer className="mt-24 flex flex-col items-center justify-between gap-8 border-t border-white/10 pt-12 sm:flex-row">
+        {prevSection ? (
+          <Link 
+            href={`/walkthrough/${prevSection.slug}`}
+            className="group flex items-center gap-4 transition-all"
           >
-            <ArrowLeft className="size-3.5" />
-            View all roles
+            <div className="flex size-10 items-center justify-center rounded-full border border-white/10 group-hover:bg-amber-500/10 group-hover:border-amber-500/30">
+              <ChevronRight className="size-5 rotate-180 text-muted-foreground group-hover:text-amber-500" />
+            </div>
+            <div className="text-left">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground group-hover:text-amber-500/60">Previous Role</p>
+              <p className="text-sm font-semibold text-foreground group-hover:text-amber-500">{prevSection.role}</p>
+            </div>
           </Link>
-        </div>
+        ) : <div />}
+
+        <Link 
+          href="/walkthrough"
+          className="rounded-full bg-white/5 px-8 py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground hover:bg-white/10 hover:text-amber-500 transition-all ring-1 ring-white/10"
+        >
+          View All Portals
+        </Link>
+
+        {nextSection ? (
+          <Link 
+            href={`/walkthrough/${nextSection.slug}`}
+            className="group flex flex-row-reverse items-center gap-4 transition-all"
+          >
+            <div className="flex size-10 items-center justify-center rounded-full border border-white/10 group-hover:bg-amber-500/10 group-hover:border-amber-500/30">
+              <ChevronRight className="size-5 text-muted-foreground group-hover:text-amber-500" />
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground group-hover:text-amber-500/60">Next Role</p>
+              <p className="text-sm font-semibold text-foreground group-hover:text-amber-500">{nextSection.role}</p>
+            </div>
+          </Link>
+        ) : <div />}
+      </footer>
       </div>
     </div>
   );
