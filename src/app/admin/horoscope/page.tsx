@@ -1305,7 +1305,7 @@ function DecanAiBlock({ title, data, loading }: { title: string; data: DecanAi |
 function DecanImage({ src, alt, onFull }: { src: string; alt: string; onFull: (src: string) => void }) {
   const [loaded, setLoaded] = useState(false);
   return (
-    <div className="relative group/img bg-slate-950 border-b border-white/5 flex justify-center p-4 min-h-[160px]">
+    <div className="relative group/img bg-slate-950 border-b border-white/5 flex justify-center min-h-[160px]">
       {!loaded && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/40 animate-pulse gap-2">
           <Loader2 className="size-6 animate-spin text-amber-500/40" />
@@ -1318,7 +1318,7 @@ function DecanImage({ src, alt, onFull }: { src: string; alt: string; onFull: (s
         alt={alt}
         onLoad={() => setLoaded(true)}
         className={cn(
-          "max-h-[600px] w-full object-contain rounded-lg shadow-2xl transition-all duration-700 ease-in-out hover:scale-[1.01]",
+          "max-h-[600px] w-full object-contain shadow-2xl transition-all duration-700 ease-in-out hover:scale-[1.01]",
           loaded ? "opacity-100 scale-100" : "opacity-0 scale-95"
         )}
       />
@@ -1455,7 +1455,7 @@ function DecanModal({ planet, sign, open, onClose }: {
           </div>
 
           {/* Scrollable Content Section */}
-          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-1 custom-scrollbar">
 
             {loadingRows && (
               <div className="flex items-center gap-3 py-8 justify-center text-muted-foreground">
@@ -1475,10 +1475,10 @@ function DecanModal({ planet, sign, open, onClose }: {
                   return (
                     <div key={row.decan} className="rounded-lg border overflow-hidden bg-slate-900/20">
                       {/* Decan header */}
-                      <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-500/10 border-b">
+                      {/* <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-500/10 border-b">
                         <span className="text-xs font-bold uppercase tracking-widest text-amber-600">{ordinalDecan(row.decan)} Decan</span>
                         <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-400 ml-auto">{planet} in {sign}</Badge>
-                      </div>
+                      </div> */}
 
                       {/* Content based on viewMode */}
                       {viewMode === 'image' ? (
@@ -4526,9 +4526,9 @@ export default function AdminHoroscopePage() {
                             <PlanetsSection
                               planets={[
                                 ...(natalData?.planets || []),
-                                ...(natalData?.node && !(natalData.planets || []).some(p => p.name === "Node") ? [{ name: "Node", ...natalData.node }] : []),
-                                ...(natalData?.chiron && !(natalData.planets || []).some(p => p.name === "Chiron") ? [{ name: "Chiron", ...natalData.chiron }] : []),
-                                ...(natalData?.fortune && !(natalData.planets || []).some(p => p.name === "Part of Fortune") ? [{ name: "Part of Fortune", ...natalData.fortune }] : []),
+                                ...(natalData?.node && !(natalData.planets || []).some((p: any) => p.name === "Node") ? [{ name: "Node", ...natalData.node }] : []),
+                                ...(natalData?.chiron && !(natalData.planets || []).some((p: any) => p.name === "Chiron") ? [{ name: "Chiron", ...natalData.chiron }] : []),
+                                ...(natalData?.fortune && !(natalData.planets || []).some((p: any) => p.name === "Part of Fortune") ? [{ name: "Part of Fortune", ...natalData.fortune }] : []),
                               ]}
                               aiData={ai.western_horoscope_planets}
                               areaOfInquiry={form.areaOfInquiry}
