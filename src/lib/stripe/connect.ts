@@ -65,6 +65,51 @@ export async function createPaymentIntent({
   });
 }
 
+interface CreateCheckoutSessionParams {
+  amount: number;
+  connectedAccountId: string;
+  platformFeeAmount: number;
+  serviceName: string;
+  customerEmail: string;
+  successUrl: string;
+  cancelUrl: string;
+  metadata: Record<string, string>;
+}
+
+export async function createCheckoutSession({
+  amount,
+  connectedAccountId,
+  platformFeeAmount,
+  serviceName,
+  customerEmail,
+  successUrl,
+  cancelUrl,
+  metadata,
+}: CreateCheckoutSessionParams) {
+  return stripe.checkout.sessions.create({
+    mode: "payment",
+    line_items: [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: { name: serviceName },
+          unit_amount: Math.round(amount * 100),
+        },
+        quantity: 1,
+      },
+    ],
+    customer_email: customerEmail,
+    payment_intent_data: {
+      application_fee_amount: Math.round(platformFeeAmount * 100),
+      transfer_data: { destination: connectedAccountId },
+      metadata,
+    },
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    metadata,
+  });
+}
+
 export async function getConnectAccountStatus(accountId: string) {
   const account = await stripe.accounts.retrieve(accountId);
 

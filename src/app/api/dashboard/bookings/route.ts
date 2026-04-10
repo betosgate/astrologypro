@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createCheckoutSession } from "@/lib/stripe/connect";
+import { sendPaymentLinkEmail } from "@/lib/email";
+import { PRICING } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -129,17 +132,18 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { 
-      client_id, 
-      manual_client, 
-      is_reminder, 
-      service_id, 
-      scheduled_date, 
-      scheduled_time, 
+    const {
+      client_id,
+      manual_client,
+      is_reminder,
+      service_id,
+      scheduled_date,
+      scheduled_time,
       scheduled_end_time,
-      timezone, 
-      notes, 
-      send_email 
+      timezone,
+      notes,
+      send_email,
+      send_payment_link,
     } = body;
 
     if (!is_reminder && !client_id && !manual_client) {
@@ -353,27 +357,77 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. Insert Booking
+    // 4. Determine if we need a payment link
+    const needsPayment =
+      !is_reminder &&
+      send_payment_link &&
+      service_data.base_price > 0;
+
+    // 4a. If payment is needed, fetch diviner's Stripe account
+    let stripeAccountId: string | null = null;
+    let clientEmail: string | null = null;
+    let clientName: string | null = null;
+
+    if (needsPayment) {
+      const { data: divinerRow } = await admin
+        .from("diviners")
+        .select("stripe_account_id, display_name")
+        .eq("id", ownerId)
+        .maybeSingle();
+
+      stripeAccountId = divinerRow?.stripe_account_id ?? null;
+
+      if (!stripeAccountId) {
+        return NextResponse.json(
+          { error: "Payment setup incomplete — connect Stripe in your dashboard first" },
+          { status: 400 }
+        );
+      }
+
+      // Resolve client email for Stripe checkout pre-fill
+      if (manual_client) {
+        clientEmail = manual_client.email;
+        clientName = manual_client.name;
+      } else if (final_client_id) {
+        const { data: clientRow } = await admin
+          .from("clients")
+          .select("email, full_name")
+          .eq("id", final_client_id)
+          .maybeSingle();
+        clientEmail = clientRow?.email ?? null;
+        clientName = clientRow?.full_name ?? null;
+      }
+
+      if (!clientEmail) {
+        return NextResponse.json(
+          { error: "Client email is required to send a payment link" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 5. Insert Booking
+    const bookingStatus = needsPayment ? "pending_payment" : "confirmed";
+
     const { data: booking, error: bookingError } = await admin
       .from("bookings")
       .insert({
         owner_id: ownerId,
-        client_id: final_client_id, 
+        client_id: final_client_id,
         service_id: final_service_id,
         scheduled_at: scheduled_at_utc,
         duration_minutes: calculated_duration,
         base_price: service_data.base_price,
         total_amount: service_data.base_price,
-        status: "confirmed", // Set all manual entries to confirmed status
+        status: bookingStatus,
         session_notes: notes || "",
-        // Metadata to remember this was a manual/timezone-specific booking
         metadata: {
           timezone,
           is_manual: true,
           is_reminder,
           original_scheduled_at: `${scheduled_date} ${scheduled_time}`,
           scheduled_end_time: body.scheduled_end_time,
-        }
+        },
       })
       .select()
       .single();
@@ -383,13 +437,80 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to create booking" }, { status: 500 });
     }
 
-    // 5. TODO: Trigger email notification if send_email is true
-    if (send_email && !is_reminder && final_client_id) {
-       // Placeholder for email service trigger
-       console.log(`[Notification] Would send email to client for booking ${booking.id}`);
+    // 6. Create Stripe Checkout Session and send payment link email
+    let paymentUrl: string | null = null;
+
+    if (needsPayment && stripeAccountId && clientEmail) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+      const platformFee =
+        (service_data.base_price * PRICING.platformFeePercent) / 100;
+
+      const formattedDateTime = new Date(scheduled_at_utc).toLocaleString(
+        "en-US",
+        {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        }
+      );
+
+      try {
+        const session = await createCheckoutSession({
+          amount: service_data.base_price,
+          connectedAccountId: stripeAccountId,
+          platformFeeAmount: platformFee,
+          serviceName: service_data.name,
+          customerEmail: clientEmail,
+          successUrl: `${appUrl}/portal/bookings?payment=success&booking=${booking.id}`,
+          cancelUrl: `${appUrl}/portal/bookings?payment=cancelled&booking=${booking.id}`,
+          metadata: {
+            bookingId: booking.id,
+            divinerId: ownerId,
+            serviceId: final_service_id ?? "",
+            clientEmail,
+          },
+        });
+
+        paymentUrl = session.url;
+
+        // Store checkout session ID on the booking
+        await admin
+          .from("bookings")
+          .update({
+            metadata: {
+              ...(booking.metadata as Record<string, unknown>),
+              stripe_checkout_session_id: session.id,
+            },
+          })
+          .eq("id", booking.id);
+
+        // Send payment link email to client
+        await sendPaymentLinkEmail({
+          clientEmail,
+          clientName: clientName ?? clientEmail,
+          divinerName: user.user_metadata?.full_name ?? "Your Diviner",
+          serviceName: service_data.name,
+          dateTime: formattedDateTime,
+          amount: service_data.base_price,
+          paymentUrl: session.url!,
+        }).catch((err) =>
+          console.error("[dashboard/bookings] payment link email failed:", err)
+        );
+      } catch (stripeErr) {
+        console.error("[dashboard/bookings] Stripe checkout creation failed:", stripeErr);
+        // Don't block — booking is created, just log the failure
+      }
     }
 
-    return NextResponse.json({ booking });
+    // 7. Send plain confirmation email if requested (non-payment path)
+    if (send_email && !is_reminder && !needsPayment && final_client_id) {
+      console.log(`[dashboard/bookings] Confirmation email queued for booking ${booking.id}`);
+    }
+
+    return NextResponse.json({ booking, payment_url: paymentUrl });
   } catch (err) {
     console.error("[api/dashboard/bookings] POST error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

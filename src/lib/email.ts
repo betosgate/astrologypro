@@ -2495,3 +2495,59 @@ export async function sendSolarReturnReminder({
 
   return result;
 }
+
+// ---------------------------------------------------------------------------
+// Payment Link (for manual bookings with a paid service)
+// ---------------------------------------------------------------------------
+
+export async function sendPaymentLinkEmail({
+  clientEmail,
+  clientName,
+  divinerName,
+  serviceName,
+  dateTime,
+  amount,
+  paymentUrl,
+}: {
+  clientEmail: string;
+  clientName: string;
+  divinerName: string;
+  serviceName: string;
+  dateTime: string;
+  amount: number;
+  paymentUrl: string;
+}) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">
+      <strong style="color:#f4f4f5;">${divinerName}</strong> has scheduled a
+      <strong style="color:#f4f4f5;">${serviceName}</strong> session for you
+      on <strong style="color:#f4f4f5;">${dateTime}</strong>.
+    </p>
+    <p style="margin:0 0 20px;color:#d4d4d8;">
+      To confirm your spot, please complete your payment of
+      <strong style="color:#f4f4f5;">$${amount.toFixed(2)}</strong> using the button below.
+      Your booking will be confirmed automatically once payment is received.
+    </p>
+    ${infoCard(`<strong style="color:#e4e4e7;">Booking Summary</strong><br/>
+      Service: ${serviceName}<br/>
+      Diviner: ${divinerName}<br/>
+      Date &amp; Time: ${dateTime}<br/>
+      Amount: $${amount.toFixed(2)}`)}
+    <p style="margin:16px 0 0;color:#71717a;font-size:12px;">
+      This payment link expires in 48 hours. If you have questions, reply to this email.
+    </p>
+  `;
+
+  return sendEmail({
+    to: clientEmail,
+    subject: `Payment required — ${serviceName} with ${divinerName}`,
+    html: buildEmailHtml({
+      title: "Complete Your Payment",
+      preheader: `${serviceName} with ${divinerName} on ${dateTime} — $${amount.toFixed(2)} due`,
+      content,
+      ctaText: "Pay Now →",
+      ctaUrl: paymentUrl,
+      footer: "AstrologyPro &mdash; Secure payment powered by Stripe",
+    }),
+  });
+}

@@ -6,6 +6,15 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
+ * Extend the serverless function timeout to 300 s (5 min).
+ *
+ * Without this the Vercel default (~60 s on Pro, ~10 s on Hobby) causes
+ * uploads of ~200 MB+ to be killed mid-transfer with a 504 Gateway Timeout
+ * before the Supabase Storage PUT completes.
+ */
+export const maxDuration = 300;
+
+/**
  * POST /api/admin/training/upload
  *
  * Server-mediated admin video upload for training lessons. The client
@@ -78,8 +87,8 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient();
 
-  // Convert File to ArrayBuffer for the admin upload. The service-role
-  // client bypasses storage RLS — this is the intended secure admin path.
+  // Convert File → ArrayBuffer → Buffer for the admin upload.
+  // The service-role client bypasses storage RLS.
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const { error: uploadError } = await admin.storage
