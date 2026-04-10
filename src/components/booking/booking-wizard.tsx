@@ -379,6 +379,7 @@ export function BookingWizard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           divinerId: diviner.id,
+          divinerUsername: diviner.username,
           serviceId: service.id,
           scheduledAt: selectedSlot!.start,
           clientEmail: intakeData.email,
@@ -427,6 +428,9 @@ export function BookingWizard({
         if (data.bookingId) {
           setBookingId(data.bookingId);
         }
+      } else if (data.bookingId) {
+        setBookingId(data.bookingId);
+        setBookingComplete(true);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
