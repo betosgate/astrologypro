@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+// Server-mediated upload used instead of direct Supabase client
 
 interface Category {
   id: string;
@@ -164,24 +164,22 @@ export default function NewLessonPage() {
 
     setUploadProgress(true);
     try {
-      const supabase = createClient();
-      const ext = file.name.split(".").pop();
-      const path = `lessons/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const formData = new FormData();
+      formData.append("file", file);
 
-      const { error } = await supabase.storage
-        .from("training-videos")
-        .upload(path, file, { cacheControl: "3600", upsert: false });
+      const res = await fetch("/api/admin/training/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-      if (error) {
-        toast.error(`Upload failed: ${error.message}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Upload failed" }));
+        toast.error(err.error ?? `Upload failed (${res.status})`);
         return;
       }
 
-      const { data: publicData } = supabase.storage
-        .from("training-videos")
-        .getPublicUrl(path);
-
-      setForm((prev) => ({ ...prev, video_url: publicData.publicUrl }));
+      const { url } = await res.json();
+      setForm((prev) => ({ ...prev, video_url: url }));
       setUploadedFileName(file.name);
       toast.success("Video uploaded.");
     } catch {
