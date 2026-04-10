@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/activity-log";
 import { createPaymentIntent } from "@/lib/stripe/connect";
 import { createCalendarEvent } from "@/lib/google-calendar";
-import { buildCalendarDescription } from "@/lib/calendar-utils";
+import { buildCalendarDescription, stripHtml } from "@/lib/calendar-utils";
 import { PRICING } from "@/lib/constants";
 import {
   sendBookingConfirmation,
@@ -608,27 +608,30 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // Send confirmation + access instructions emails immediately
-      const sessionLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/session/${booking.id}`;
-      const calendarLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`${service.name} with ${diviner.display_name}`)}&dates=${startTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}/${endTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}&details=${encodeURIComponent(`Your reading session on AstrologyPro.\n\nJoin: ${sessionLink}`)}`;
+      // Send confirmation emails to the booker
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+      const portalBookingsUrl = `${appUrl}/portal/bookings`;
+      const calendarLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`${availabilityTemplateTitle ?? service.name} with ${diviner.display_name}`)}&dates=${startTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}/${endTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}&details=${encodeURIComponent(availabilityTemplateDescription ? stripHtml(availabilityTemplateDescription) : `Your session with ${diviner.display_name}`)}`;
+
+      const formattedDateTime = startTime.toLocaleString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
 
       const emailParams = {
         clientEmail,
         divinerName: diviner.display_name,
-        serviceName: service.name,
-        dateTime: startTime.toLocaleString("en-US", {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-        }),
-        sessionLink,
+        serviceName: availabilityTemplateTitle ?? service.name,
+        dateTime: formattedDateTime,
+        // Point booker to their portal bookings page (not a raw session link)
+        sessionLink: portalBookingsUrl,
         duration: service.duration_minutes,
       };
 
-      // Fire emails without blocking the response
       const emailPromises: Promise<unknown>[] = [
         sendBookingConfirmation(emailParams),
         sendBookingAccessInstructions({
@@ -637,31 +640,27 @@ export async function POST(request: NextRequest) {
         }),
       ];
 
-      // Send welcome email for new users with portal access instructions
       if (isNewUser) {
-        const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/portal`;
         emailPromises.push(
           sendWelcomeAndBooked({
             clientEmail,
             clientName,
             divinerName: diviner.display_name,
-            serviceName: service.name,
-            dateTime: startTime.toLocaleString("en-US", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-            }),
-            portalUrl,
+            serviceName: availabilityTemplateTitle ?? service.name,
+            dateTime: formattedDateTime,
+            portalUrl: `${appUrl}/portal`,
           })
         );
       }
 
-      Promise.all(emailPromises).catch((err) =>
-        console.error("Failed to send booking emails:", err)
-      );
+      // Await emails so failures are visible in logs, not silently swallowed
+      await Promise.all(emailPromises).catch((err) => {
+        console.error("[booking-payment] Failed to send booking emails:", {
+          bookingId: booking.id,
+          clientEmail,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
 
       // Push event to diviner's connected calendars (non-blocking)
       const { data: calConnections } = await adminSupabase
@@ -670,7 +669,6 @@ export async function POST(request: NextRequest) {
         .eq("owner_id", resolvedDivinerId);
 
       if (calConnections?.some((c) => c.provider === "google")) {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
         const calEventDescription = buildCalendarDescription(
           availabilityTemplateDescription,
           appUrl,
