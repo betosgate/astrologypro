@@ -10,26 +10,25 @@
 
 Implement a two-phase Perennial onboarding flow for the `Family` plan:
 
-1. Signup phase collects only basic information + essential birth identity fields for the primary member and family members.
-2. After successful signup + payment + login, a post-login family profile-completion form collects remaining guidance fields.
+1. Signup phase collects only basic information for the primary member and family members.
+2. After successful signup + payment + login, a post-login family profile-completion form collects birth date, birth time, birth place, and remaining guidance fields.
 
 ## User Scenario
 
 1. User lands on AstrologyPro website.
 2. User clicks `GET START`.
-3. User opens `/perennial-signup`.
-4. User selects `Family`.
-5. Signup form shows the required minimal fields and birth location fields already added in previous tasks:
-   - `birthLocationLabel`
-   - `birthLat`
-   - `birthLng`
-   - `birthTzone`
-6. User completes signup + payment.
-7. User logs in to Perennial dashboard.
-8. On first login, user sees a family profile-completion form:
+3. User opens the Perennial signup screen at `/perennial-signup`.
+4. The first view on that screen shows the three Perennial plan choices: `Single`, `Couple`, and `Family`.
+5. User selects `Family`.
+6. The page scrolls to or reveals the shared signup form below the plan cards.
+7. Signup form shows required minimal basic-information fields only.
+8. User completes signup + payment.
+9. User logs in to Perennial dashboard.
+10. On first login, user sees a family profile-completion form:
    - prefilled with values already captured at signup
+   - includes `date_of_birth`, `birth_time`, `birthLocationLabel`, `birthLat`, `birthLng`, `birthTzone`
    - remaining guidance fields left empty for user to complete
-9. System marks each family member as natal/transit ready after required chart fields exist.
+11. System marks each family member as natal/transit ready after required chart fields exist.
 
 ## Non-Negotiable Product Rules
 
@@ -38,7 +37,9 @@ Implement a two-phase Perennial onboarding flow for the `Family` plan:
 3. Do not ask manual password creation in signup.
 4. Keep generated-password-by-email model.
 5. In signup phase, do not require optional questionnaire block.
-6. `date_of_birth`, `birth_time`, `birthLocationLabel`, `birthLat`, `birthLng`, `birthTzone` are collected at signup, not in post-login form.
+6. `date_of_birth`, `birth_time`, `birthLocationLabel`, `birthLat`, `birthLng`, `birthTzone` are collected in the first post-login completion form, not during signup.
+7. The plan-selection step happens before the form on the same Perennial signup screen.
+8. After basic signup, the user reaches home/dashboard and the completion form opens there.
 
 ## Child Tasks
 
@@ -69,12 +70,6 @@ Implement a two-phase Perennial onboarding flow for the `Family` plan:
 8. `city`
 9. `state`
 10. `zip`
-11. `date_of_birth`
-12. `birth_time`
-13. `birthLocationLabel`
-14. `birthLat`
-15. `birthLng`
-16. `birthTzone`
 
 ### Phase A: Signup (Each additional family member)
 
@@ -90,29 +85,29 @@ Implement a two-phase Perennial onboarding flow for the `Family` plan:
 10. `city`
 11. `state`
 12. `zip`
-13. `date_of_birth`
-14. `birth_time`
-15. `birthLocationLabel`
-16. `birthLat`
-17. `birthLng`
-18. `birthTzone`
 
 ### Phase B: Post-login completion (guidance fields user should fill)
 
 1. `relationType`
 2. `subRelation`
-3. `relationship_status`
-4. `mainConcern`
-5. `longTermGoals`
-6. `personality`
-7. `strengths`
-8. `lifeAreasFulfilling`
-9. `lifeAreasImprovement`
-10. `majorLifeEvents`
-11. `relationship_with_family`
-12. `focus_on_specific_relationships`
-13. `guidance_on_specific_decision`
-14. `concerns_about_romantic_life`
+3. `date_of_birth`
+4. `birth_time`
+5. `birthLocationLabel`
+6. `birthLat`
+7. `birthLng`
+8. `birthTzone`
+9. `relationship_status`
+10. `mainConcern`
+11. `longTermGoals`
+12. `personality`
+13. `strengths`
+14. `lifeAreasFulfilling`
+15. `lifeAreasImprovement`
+16. `majorLifeEvents`
+17. `relationship_with_family`
+18. `focus_on_specific_relationships`
+19. `guidance_on_specific_decision`
+20. `concerns_about_romantic_life`
 
 ## API Requirement
 
@@ -128,10 +123,12 @@ Use city search endpoint for birth location lookup:
 
 ## Done Definition
 
-1. Family choose-plan flow exists in same style as Single and Couple.
-2. Family signup includes `date_of_birth`, `birth_time`, `birthLocationLabel`, `birthLat`, `birthLng`, `birthTzone` for all required members.
-3. First login completion form excludes already-captured birth fields.
-4. Completion form pre-fills signup fields.
-5. Birth location selection works via city-search API.
-6. Natal chart can be created after required chart fields exist.
-7. Monthly transits can be generated once natal chart exists.
+1. The public `GET START` journey reaches a Perennial choose-plan screen that includes `Single`, `Couple`, and `Family`.
+2. After selecting `Family`, the user completes the Family signup form below on the same screen.
+3. Family choose-plan flow exists in same style as Single and Couple.
+4. Family signup excludes birth date, birth time, and birth place fields for all members.
+5. First login completion form includes birth fields for all required members.
+6. Completion form pre-fills signup fields.
+7. Birth location selection works via city-search API.
+8. Natal chart can be created after required chart fields exist.
+9. Monthly transits can be generated once natal chart exists.
