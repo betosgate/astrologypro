@@ -13,7 +13,7 @@ import { getGoogleCredentials } from "@/lib/calendar/provider-credentials";
 // 11-api-keys-config.md for why.
 
 const SCOPES = [
-  "https://www.googleapis.com/auth/calendar",
+  "https://www.googleapis.com/auth/calendar.events.owned",
   "https://www.googleapis.com/auth/userinfo.email",
 ];
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -633,12 +633,31 @@ export async function handleOAuthCallback(
   }
 
   const supabase = createAdminClient();
-  const metadata = accessToken
-    ? await getGoogleAccountMetadata(accessToken)
-    : {
-        accountIdentifier: `google:${userId}:${Date.now()}`.toLowerCase(),
-        email: null,
-      };
+
+  // Try to extract email from id_token JWT (always present, no extra scope needed)
+  let idTokenEmail: string | null = null;
+  if (typeof tokens.id_token === "string") {
+    try {
+      const payload = JSON.parse(Buffer.from(tokens.id_token.split(".")[1], "base64").toString());
+      if (typeof payload.email === "string") {
+        idTokenEmail = payload.email.toLowerCase();
+      }
+    } catch {
+      // JWT decode failed — fall through to metadata lookup
+    }
+  }
+
+  let metadata: { accountIdentifier: string; email: string | null };
+  if (idTokenEmail) {
+    metadata = { accountIdentifier: idTokenEmail, email: idTokenEmail };
+  } else if (accessToken) {
+    metadata = await getGoogleAccountMetadata(accessToken);
+  } else {
+    metadata = {
+      accountIdentifier: `google:${userId}:${Date.now()}`.toLowerCase(),
+      email: null,
+    };
+  }
 
   await upsertCalendarConnection(supabase, {
     divinerId: ownerId,
@@ -704,14 +723,19 @@ export async function createCalendarEvent(
     additionalAttendees?: Array<{ email: string; name?: string }>;
   }
 ): Promise<{ eventId: string; htmlLink: string }> {
+  console.log("[createCalendarEvent] Looking up connection for owner:", ownerId);
   const connection = await getPreferredGoogleConnection(ownerId);
   if (!connection) {
+    console.error("[createCalendarEvent] NO connection found for owner:", ownerId);
     throw new Error("No Google Calendar connection found for this owner");
   }
+  console.log("[createCalendarEvent] Found connection:", { id: connection.id, email: connection.email, hasRefreshToken: !!connection.refresh_token });
   const accessToken = await getAccessToken(ownerId, connection);
   if (!accessToken) {
+    console.error("[createCalendarEvent] Failed to get access token for owner:", ownerId);
     throw new Error("Failed to refresh Google access token");
   }
+  console.log("[createCalendarEvent] Got access token, creating event...");
 
   const event: Record<string, unknown> = {
     summary: booking.title,
@@ -764,8 +788,10 @@ export async function createCalendarEvent(
 
   if (!response.ok) {
     const errorText = await response.text();
+    console.error("[createCalendarEvent] Google API error:", response.status, errorText);
     throw new Error(`Failed to create calendar event: ${errorText}`);
   }
+  console.log("[createCalendarEvent] Event created successfully");
 
   const data = await response.json();
   return { eventId: data.id, htmlLink: data.htmlLink };

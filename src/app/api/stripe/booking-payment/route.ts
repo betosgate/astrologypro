@@ -672,6 +672,7 @@ export async function POST(request: NextRequest) {
         const calEventDescription = buildCalendarDescription(
           availabilityTemplateDescription,
           appUrl,
+          booking.id,
         );
         // Gather additional attendees for calendar event
         const calAttendees: Array<{ email: string; name?: string }> = [];

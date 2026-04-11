@@ -23,9 +23,13 @@ export function stripHtml(html: string): string {
  */
 export function buildCalendarDescription(
   templateDescription: string | null | undefined,
-  appUrl: string
+  appUrl: string,
+  bookingId?: string
 ): string {
   const body = templateDescription ? stripHtml(templateDescription) : "";
-  const footer = `To cancel or reschedule, visit:\n${appUrl}/portal/bookings`;
-  return body ? `${body}\n\n---\n${footer}` : footer;
+  const manageUrl = bookingId
+    ? `${appUrl}/portal/bookings/${bookingId}`
+    : `${appUrl}/portal/bookings`;
+  const footer = `To cancel or reschedule, <a href="${manageUrl}">click here</a>.`;
+  return body ? `${body}\n\n${footer}` : footer;
 }

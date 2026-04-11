@@ -67,6 +67,9 @@ interface TimeSlot {
   availabilityStartTime?: string;
   availabilityEndTime?: string;
   availabilitySlotIntervalMinutes?: number;
+  availabilityServiceId?: string | null;
+  serviceName?: string | null;
+  servicePrice?: number | null;
   source?: "template" | "legacy" | "override";
 }
 
@@ -254,6 +257,12 @@ export function BookingWizard({
   const [clientTimezone, setClientTimezone] = useState(diviner.timezone || "UTC");
   const resolvedServiceName = hideServiceName ? (bookingLabel ?? "Reading Session") : (bookingLabel ?? service.name);
   const availabilityQuery = availabilityServiceId ? `&serviceId=${availabilityServiceId}` : "";
+
+  // Effective price: slot's linked service price takes priority over the service prop's base_price
+  const effectivePrice = selectedSlot?.servicePrice != null
+    ? selectedSlot.servicePrice
+    : Number(service.base_price ?? service.price ?? 0);
+  const isFreeBooking = effectivePrice <= 0;
 
   // Prefill intake data from stored client profile when ?prefill=true
   useEffect(() => {
@@ -659,6 +668,18 @@ export function BookingWizard({
                           {selectedSlot.availabilityDescription && (
                             <DescriptionHtml html={selectedSlot.availabilityDescription} />
                           )}
+                          {selectedSlot.serviceName && (
+                            <div className="mt-2 flex items-center justify-between rounded-md bg-background/50 px-3 py-2 border border-border/30">
+                              <span className="text-xs text-muted-foreground">
+                                Service: <span className="text-foreground font-medium">{selectedSlot.serviceName}</span>
+                              </span>
+                              {selectedSlot.servicePrice != null && selectedSlot.servicePrice > 0 && (
+                                <span className="text-sm font-semibold text-foreground">
+                                  {formatCurrency(selectedSlot.servicePrice)}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -819,7 +840,7 @@ export function BookingWizard({
                 <div className="flex items-center justify-between text-lg">
                   <span className="font-semibold">Total</span>
                   <span className="font-bold">
-                    {formatCurrency(Number(service.base_price ?? service.price ?? 0))}
+                    {formatCurrency(effectivePrice)}
                   </span>
                 </div>
               </div>
@@ -920,6 +941,8 @@ export function BookingWizard({
             onClick={async () => {
               // When advancing from intake form (step 1)
               if (step === 1 && selectedSlot) {
+                setCreatingPaymentIntent(true);
+
                 // Place a hold on the slot
                 try {
                   const res = await fetch("/api/availability/hold", {
@@ -935,6 +958,7 @@ export function BookingWizard({
                   if (!res.ok) {
                     const data = await res.json();
                     toast.error(data.error ?? "This slot is no longer available. Please go back and choose a different time.");
+                    setCreatingPaymentIntent(false);
                     return;
                   }
                 } catch {
@@ -942,19 +966,18 @@ export function BookingWizard({
                 }
 
                 // For free bookings ($0), skip payment step — book directly
-                const isFree = Number(service.base_price ?? service.price ?? 0) <= 0;
+                const isFree = isFreeBooking;
                 if (isFree) {
-                  setCreatingPaymentIntent(true);
                   setPolicyAcknowledged(true);
                   await handleCreatePaymentIntent();
-                  return; // bookingComplete will be set by handleCreatePaymentIntent
+                  return;
                 }
+
+                // Paid booking — advance to payment step
+                setStep((s) => s + 1);
+                return;
               }
 
-              // Start loading immediately when advancing to payment step
-              if (step === 1) {
-                setCreatingPaymentIntent(true);
-              }
               setStep((s) => s + 1);
             }}
             disabled={!canProceed() || creatingPaymentIntent}
@@ -967,7 +990,7 @@ export function BookingWizard({
               </>
             ) : (
               <>
-                {step === 1 && Number(service.base_price ?? service.price ?? 0) <= 0
+                {step === 1 && isFreeBooking
                   ? "Confirm Booking"
                   : "Next"}
                 <ArrowRight className="size-4" />

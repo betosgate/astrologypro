@@ -52,8 +52,14 @@ export async function sendEmail({ to, subject, html }: SendEmailParams) {
     },
   });
 
-  const result = await ses.send(command);
-  return { success: true, id: result.MessageId ?? "" };
+  try {
+    const result = await ses.send(command);
+    console.log(`[sendEmail] SUCCESS — to: ${to}, subject: "${subject}", messageId: ${result.MessageId}`);
+    return { success: true, id: result.MessageId ?? "" };
+  } catch (err) {
+    console.error(`[sendEmail] FAILED — to: ${to}, subject: "${subject}"`, err);
+    throw err;
+  }
 }
 
 

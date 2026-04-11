@@ -1,0 +1,1 @@
+- [Service assignment model](project_service_model.md) — Admin assigns services to diviners, diviners see read-only, price via pricing assignment

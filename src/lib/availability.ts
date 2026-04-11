@@ -41,6 +41,7 @@ export interface AvailableSlot {
   availabilityStartTime?: string;
   availabilityEndTime?: string;
   availabilitySlotIntervalMinutes?: number;
+  availabilityServiceId?: string | null;
   source: "template" | "legacy" | "override";
 }
 
@@ -62,6 +63,7 @@ interface AvailabilityWindow {
   availabilityId?: string;
   availabilityTitle?: string;
   availabilityDescription?: string | null;
+  availabilityServiceId?: string | null;
   timezone: string;
   startTime: string;
   endTime: string;
@@ -193,6 +195,7 @@ function buildWindowsForDate({
       availabilityId: template.id,
       availabilityTitle: template.title,
       availabilityDescription: template.description ?? null,
+      availabilityServiceId: template.serviceId ?? null,
       timezone: template.timezone || timezone,
       startTime: template.startTime,
       endTime: template.endTime,
@@ -261,6 +264,7 @@ export function getAvailableSlots({
         availabilityStartTime: window.startTime,
         availabilityEndTime: window.endTime,
         availabilitySlotIntervalMinutes: stepMinutes,
+        availabilityServiceId: window.availabilityServiceId ?? null,
         source: window.source,
       };
 

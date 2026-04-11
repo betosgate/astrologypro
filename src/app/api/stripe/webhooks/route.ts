@@ -394,7 +394,7 @@ async function handleManualBookingCheckoutCompleted(
   {
     createCalendarEvent(div.id, {
       title: `${eventTitle} — ${clientRecord.full_name ?? clientRecord.email}`,
-      description: buildCalendarDescription(meta?.availability_description ?? null, appUrl),
+      description: buildCalendarDescription(meta?.availability_description ?? null, appUrl, bookingId),
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
       clientEmail: clientRecord.email,
@@ -1113,6 +1113,7 @@ async function handlePaymentIntentSucceeded(
       description: buildCalendarDescription(
         bookingMeta?.availability_description ?? null,
         appUrl,
+        bookingId,
       ),
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
