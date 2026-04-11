@@ -19,9 +19,18 @@ const FROM_ADDRESS =
 function getSESClient() {
   const region = process.env.AWS_SES_REGION ?? process.env.AWS_REGION ?? "us-east-1";
 
-  // Use default credential chain — picks up AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY/
-  // AWS_SESSION_TOKEN env vars, IAM instance role, or OIDC role automatically.
-  // Never hardcode credentials.
+  // Support both AWS_SES_* prefixed vars and standard AWS_* vars
+  const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID ?? process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SES_SECRET_ACCESS_KEY ?? process.env.AWS_SECRET_ACCESS_KEY;
+
+  if (accessKeyId && secretAccessKey) {
+    return new SESClient({
+      region,
+      credentials: { accessKeyId, secretAccessKey },
+    });
+  }
+
+  // Fallback to default credential chain (IAM role, instance profile, etc.)
   return new SESClient({ region });
 }
 

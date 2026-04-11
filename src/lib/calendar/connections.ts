@@ -3,15 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 /**
  * Shared upsert helper for the calendar_connections table.
  *
- * Used by the Google + Microsoft OAuth callback handlers and by their
- * background refresh paths to dual-write into the normalized table during
- * the cutover from diviners.{google,outlook}_calendar_token JSONB.
- *
- * Resolves user_id from diviners.user_id automatically — callers only need
- * the divinerId (which becomes owner_id in calendar_connections).
- *
- * Failures are caught and logged but never thrown — the dual-write must
- * never break the legacy write path during the cutover window.
+ * Handles both the original schema (without account_identifier) and the
+ * multi-account schema (with account_identifier). Automatically detects
+ * which columns exist and falls back gracefully.
  */
 
 export type CalendarProvider = "google" | "microsoft";
@@ -34,13 +28,9 @@ interface UpsertCalendarConnectionInput {
   divinerId: string;
   provider: CalendarProvider;
   refreshToken: string;
-  /** Optional access token. Google flow doesn't keep one; Microsoft does. */
   accessToken?: string | null;
-  /** Optional ISO timestamp or epoch seconds for token expiry. */
   expiresAt?: Date | string | number | null;
-  /** Optional connected-account email, when the OAuth response provides one. */
   email?: string | null;
-  /** Stable provider-side account key for reconnect/update dedupe. */
   accountIdentifier?: string | null;
 }
 
@@ -57,7 +47,6 @@ export async function upsertCalendarConnection(
     const { divinerId, provider, refreshToken, accessToken, expiresAt, email, accountIdentifier } = input;
     if (!divinerId || !refreshToken) return;
 
-    // Resolve auth user_id from the diviner row.
     const { data: diviner } = await admin
       .from("diviners")
       .select("id, user_id")
@@ -65,10 +54,7 @@ export async function upsertCalendarConnection(
       .maybeSingle();
 
     if (!diviner?.user_id) {
-      console.warn(
-        "[calendar/connections] cannot dual-write — diviner missing user_id:",
-        divinerId,
-      );
+      console.warn("[calendar/connections] cannot dual-write — diviner missing user_id:", divinerId);
       return;
     }
 
@@ -85,8 +71,9 @@ export async function upsertCalendarConnection(
     const normalizedAccountIdentifier =
       normalizeConnectionIdentity(accountIdentifier) ??
       normalizedEmail ??
-      `${provider}:${refreshToken}`;
+      `${provider}:${refreshToken.slice(0, 16)}`;
 
+    // Try with account_identifier first (multi-account schema)
     const { error } = await admin
       .from("calendar_connections")
       .upsert(
@@ -104,14 +91,37 @@ export async function upsertCalendarConnection(
       );
 
     if (error) {
-      // 42P01 = relation does not exist (table not migrated yet)
       const code = (error as { code?: string }).code;
+
+      // 42P01 = table missing, 42703 = column missing, PGRST204 = column not in schema cache
       if (code === "42P01") {
-        console.warn(
-          "[calendar/connections] table missing — run migration 20260408000109 first",
-        );
+        console.warn("[calendar/connections] table missing — run migration first");
         return;
       }
+
+      if (code === "42703" || code === "PGRST204") {
+        // account_identifier column doesn't exist — retry without it
+        const { error: fallbackError } = await admin
+          .from("calendar_connections")
+          .upsert(
+            {
+              user_id: diviner.user_id,
+              owner_id: diviner.id,
+              provider,
+              refresh_token: refreshToken,
+              access_token: accessToken ?? null,
+              expires_at: expiresAtIso,
+              email: normalizedEmail,
+            },
+            { onConflict: "user_id,provider" },
+          );
+
+        if (fallbackError) {
+          console.error("[calendar/connections] upsert fallback error:", fallbackError);
+        }
+        return;
+      }
+
       console.error("[calendar/connections] upsert error:", error);
     }
   } catch (err) {
@@ -125,6 +135,7 @@ export async function listCalendarConnections(
   provider?: CalendarProvider,
 ): Promise<CalendarConnectionRecord[]> {
   try {
+    // Try with account_identifier first
     let query = admin
       .from("calendar_connections")
       .select(
@@ -139,7 +150,39 @@ export async function listCalendarConnections(
     }
 
     const { data, error } = await query;
+
     if (error) {
+      const code = (error as { code?: string }).code;
+
+      // Column doesn't exist — retry without account_identifier
+      if (code === "42703" || code === "PGRST204") {
+        let fallbackQuery = admin
+          .from("calendar_connections")
+          .select(
+            "id, user_id, owner_id, provider, email, access_token, refresh_token, expires_at, created_at, updated_at"
+          )
+          .eq("owner_id", divinerId)
+          .order("updated_at", { ascending: false })
+          .order("created_at", { ascending: false });
+
+        if (provider) {
+          fallbackQuery = fallbackQuery.eq("provider", provider);
+        }
+
+        const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+
+        if (fallbackError) {
+          console.error("[calendar/connections] list fallback error:", fallbackError);
+          return [];
+        }
+
+        // Map without account_identifier — use email or provider as fallback
+        return (fallbackData ?? []).map((row: Record<string, unknown>) => ({
+          ...(row as Omit<CalendarConnectionRecord, "account_identifier">),
+          account_identifier: (row.email as string) ?? `${row.provider}:${row.id}`,
+        })) as CalendarConnectionRecord[];
+      }
+
       console.error("[calendar/connections] list error:", error);
       return [];
     }
@@ -151,10 +194,6 @@ export async function listCalendarConnections(
   }
 }
 
-/**
- * Soft-delete: clear the connection row when a user disconnects a provider.
- * Best-effort like upsertCalendarConnection — never throws.
- */
 export async function deleteCalendarConnection(
   admin: SupabaseClient,
   divinerId: string,

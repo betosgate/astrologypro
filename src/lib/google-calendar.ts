@@ -13,7 +13,8 @@ import { getGoogleCredentials } from "@/lib/calendar/provider-credentials";
 // 11-api-keys-config.md for why.
 
 const SCOPES = [
-  "https://www.googleapis.com/auth/calendar.events.owned",
+  "https://www.googleapis.com/auth/calendar",
+  "https://www.googleapis.com/auth/userinfo.email",
 ];
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -235,13 +236,58 @@ async function getPreferredGoogleConnection(
   return connections[0] ?? null;
 }
 
+/**
+ * Resolves the connected Google Calendar account email for a given diviner.
+ * Refreshes the token if needed (which also migrates legacy tokens to calendar_connections).
+ * Returns null if no Google calendar is connected.
+ */
+export async function getGoogleCalendarEmail(
+  ownerId: string
+): Promise<{ email: string | null; accountIdentifier: string } | null> {
+  const connection = await getPreferredGoogleConnection(ownerId);
+  if (!connection) return null;
+
+  // If email is already known, return it
+  if (connection.email) {
+    return { email: connection.email, accountIdentifier: connection.account_identifier };
+  }
+
+  // Try refreshing the token — this fetches metadata (including email) and upserts to calendar_connections
+  const accessToken = await getAccessToken(ownerId, connection);
+  if (!accessToken) {
+    return { email: null, accountIdentifier: connection.account_identifier };
+  }
+
+  // Re-read after refresh (upsert may have written the email)
+  const refreshed = await getPreferredGoogleConnection(ownerId);
+  return {
+    email: refreshed?.email ?? null,
+    accountIdentifier: refreshed?.account_identifier ?? connection.account_identifier,
+  };
+}
+
 async function getGoogleAccountMetadata(accessToken: string): Promise<GoogleAccountMetadata> {
   try {
+    // 1. Try Google UserInfo API — returns the actual account email
+    //    Works when the userinfo.email scope is granted
+    try {
+      const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (userInfoRes.ok) {
+        const userInfo = await userInfoRes.json();
+        const email = typeof userInfo.email === "string" ? userInfo.email.trim().toLowerCase() : null;
+        if (email) {
+          return { accountIdentifier: email, email };
+        }
+      }
+    } catch {
+      // Scope not granted — fall through
+    }
+
+    // 2. Fallback: primary calendar ID (usually the email for personal accounts)
     const response = await fetch(`${GOOGLE_CALENDAR_API}/calendars/primary?fields=id,summary`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
     });
 
     if (!response.ok) {
@@ -254,7 +300,7 @@ async function getGoogleAccountMetadata(accessToken: string): Promise<GoogleAcco
     const emailCandidate = [rawId, rawSummary].find((value) => value.includes("@")) ?? null;
 
     return {
-      accountIdentifier: (rawId || emailCandidate || `google:${accessToken.slice(0, 16)}`).toLowerCase(),
+      accountIdentifier: (emailCandidate || rawId || `google:${accessToken.slice(0, 16)}`).toLowerCase(),
       email: emailCandidate ? emailCandidate.toLowerCase() : null,
     };
   } catch {
@@ -655,6 +701,7 @@ export async function createCalendarEvent(
     endTime: string;
     clientEmail?: string;
     clientName?: string;
+    additionalAttendees?: Array<{ email: string; name?: string }>;
   }
 ): Promise<{ eventId: string; htmlLink: string }> {
   const connection = await getPreferredGoogleConnection(ownerId);
@@ -684,13 +731,22 @@ export async function createCalendarEvent(
     },
   };
 
+  const attendeesList: Array<{ email: string; displayName?: string }> = [];
   if (booking.clientEmail) {
-    event.attendees = [
-      {
-        email: booking.clientEmail,
-        displayName: booking.clientName || undefined,
-      },
-    ];
+    attendeesList.push({
+      email: booking.clientEmail,
+      displayName: booking.clientName || undefined,
+    });
+  }
+  if (booking.additionalAttendees?.length) {
+    for (const a of booking.additionalAttendees) {
+      if (a.email && !attendeesList.some((x) => x.email === a.email)) {
+        attendeesList.push({ email: a.email, displayName: a.name || undefined });
+      }
+    }
+  }
+  if (attendeesList.length > 0) {
+    event.attendees = attendeesList;
   }
 
   // sendUpdates=all tells Google to email the calendar invite to all attendees
@@ -734,7 +790,7 @@ export async function updateGoogleCalendarEvent(
     const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
 
     const res = await fetch(
-      `${GOOGLE_CALENDAR_API}/calendars/primary/events/${eventId}`,
+      `${GOOGLE_CALENDAR_API}/calendars/primary/events/${eventId}?sendUpdates=all`,
       {
         method: "PATCH",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
@@ -764,7 +820,7 @@ export async function deleteGoogleCalendarEvent(
     if (!accessToken) return false;
 
     const res = await fetch(
-      `${GOOGLE_CALENDAR_API}/calendars/primary/events/${eventId}`,
+      `${GOOGLE_CALENDAR_API}/calendars/primary/events/${eventId}?sendUpdates=all`,
       {
         method: "DELETE",
         headers: { Authorization: `Bearer ${accessToken}` },

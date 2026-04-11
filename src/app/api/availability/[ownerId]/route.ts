@@ -258,6 +258,7 @@ export async function GET(
         };
       }),
       serviceId,
+      allTemplates: allSlots,
       weeklySlots: (weeklySlots ?? []).map((s) => ({
         dayOfWeek: s.day_of_week,
         startTime: s.start_time,

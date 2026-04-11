@@ -311,7 +311,7 @@ async function handleManualBookingCheckoutCompleted(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, duration_minutes, metadata, diviner_id, client_id, services(name, duration_minutes), diviners(id, display_name), clients(email, full_name)"
+      "id, scheduled_at, duration_minutes, metadata, questionnaire_responses, diviner_id, client_id, services(name, duration_minutes), diviners(id, display_name), clients(email, full_name)"
     )
     .eq("id", bookingId)
     .single();
@@ -338,8 +338,24 @@ async function handleManualBookingCheckoutCompleted(
   const eventTitle = meta?.availability_title ?? svc.name;
   const calendarLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`${eventTitle} with ${div.display_name}`)}&dates=${startTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}/${endTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}`;
 
-  // Send booking confirmation email to client
-  await Promise.all([
+  // Gather all attendee emails from questionnaire_responses
+  const qr = (booking as Record<string, unknown>).questionnaire_responses as Record<string, unknown> | null;
+  const additionalEmails: Array<{ email: string; name?: string }> = [];
+  const spEmail = qr?.secondPersonEmail as string | undefined;
+  const spName = qr?.secondPersonName as string | undefined;
+  const spAttending = qr?.secondPersonAttending as string | undefined;
+  if (spEmail && (spAttending === "yes" || spAttending === "maybe")) {
+    additionalEmails.push({ email: spEmail, name: spName || undefined });
+  }
+  const storedAttendees = Array.isArray(qr?.attendees) ? (qr.attendees as Array<{ name?: string; email?: string }>) : [];
+  for (const a of storedAttendees) {
+    if (a.email && a.email !== clientRecord.email && !additionalEmails.some((x) => x.email === a.email)) {
+      additionalEmails.push({ email: a.email, name: a.name || undefined });
+    }
+  }
+
+  // Send booking confirmation emails to primary client + all attendees
+  const confirmationPromises = [
     sendBookingConfirmation({
       clientEmail: clientRecord.email,
       divinerName: div.display_name,
@@ -356,17 +372,26 @@ async function handleManualBookingCheckoutCompleted(
       sessionLink,
       calendarLink,
     }),
-  ]).catch((err) =>
+  ];
+  // Send confirmation to additional attendees
+  for (const attendee of additionalEmails) {
+    confirmationPromises.push(
+      sendBookingConfirmation({
+        clientEmail: attendee.email,
+        divinerName: div.display_name,
+        serviceName: eventTitle,
+        dateTime: formattedDateTime,
+        duration: durationMins,
+        sessionLink,
+      })
+    );
+  }
+  await Promise.all(confirmationPromises).catch((err) =>
     console.error("[Webhook] Failed to send manual booking confirmation emails:", err)
   );
 
-  // Push Google Calendar event
-  const { data: calConnections } = await supabase
-    .from("calendar_connections")
-    .select("provider")
-    .eq("owner_id", div.id);
-
-  if (calConnections?.some((c) => c.provider === "google")) {
+  // Push Google Calendar event (createCalendarEvent handles connection lookup internally)
+  {
     createCalendarEvent(div.id, {
       title: `${eventTitle} — ${clientRecord.full_name ?? clientRecord.email}`,
       description: buildCalendarDescription(meta?.availability_description ?? null, appUrl),
@@ -374,6 +399,7 @@ async function handleManualBookingCheckoutCompleted(
       endTime: endTime.toISOString(),
       clientEmail: clientRecord.email,
       clientName: clientRecord.full_name ?? undefined,
+      additionalAttendees: additionalEmails,
     })
       .then(({ eventId }) =>
         supabase.from("bookings").update({ google_calendar_event_id: eventId }).eq("id", bookingId)
@@ -960,7 +986,7 @@ async function handlePaymentIntentSucceeded(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, duration_minutes, diviner_id, client_id, metadata, services(name, duration_minutes), diviners(id, display_name), clients(email, full_name, user_id)"
+      "id, scheduled_at, duration_minutes, diviner_id, client_id, metadata, questionnaire_responses, services(name, duration_minutes), diviners(id, display_name), clients(email, full_name, user_id)"
     )
     .eq("id", bookingId)
     .single();
@@ -988,15 +1014,21 @@ async function handlePaymentIntentSucceeded(
 
   if (!svc || !div) return;
 
-  const { data: connections } = await supabase
+  // Calendar connection checks — createCalendarEvent handles lookup internally,
+  // but we still need flags for Microsoft calendar
+  const hasGoogleCalendar = true; // Always try — createCalendarEvent handles connection lookup
+  const { data: msConnections } = await supabase
     .from("calendar_connections")
     .select("provider")
     .eq("owner_id", div.id);
-
-  const hasGoogleCalendar =
-    connections?.some((connection) => connection.provider === "google") ?? false;
+  const { data: divinerCalPaid } = await supabase
+    .from("diviners")
+    .select("outlook_calendar_token")
+    .eq("id", div.id)
+    .single();
   const hasMicrosoftCalendar =
-    connections?.some((connection) => connection.provider === "microsoft") ?? false;
+    msConnections?.some((connection) => connection.provider === "microsoft") ||
+    !!(divinerCalPaid?.outlook_calendar_token);
 
   if (clientRecord?.user_id) {
     const amount = paymentIntent.amount / 100
@@ -1043,10 +1075,36 @@ async function handlePaymentIntentSucceeded(
     duration: svc.duration_minutes,
   };
 
-  await Promise.all([
+  // Gather additional attendees from questionnaire_responses
+  const paidQR = (booking as Record<string, unknown>).questionnaire_responses as Record<string, unknown> | null;
+  const paidAdditionalAttendees: Array<{ email: string; name?: string }> = [];
+  const paidSpEmail = paidQR?.secondPersonEmail as string | undefined;
+  const paidSpName = paidQR?.secondPersonName as string | undefined;
+  const paidSpAttending = paidQR?.secondPersonAttending as string | undefined;
+  if (paidSpEmail && (paidSpAttending === "yes" || paidSpAttending === "maybe")) {
+    paidAdditionalAttendees.push({ email: paidSpEmail, name: paidSpName || undefined });
+  }
+  const paidStoredAttendees = Array.isArray(paidQR?.attendees) ? (paidQR.attendees as Array<{ name?: string; email?: string }>) : [];
+  for (const a of paidStoredAttendees) {
+    if (a.email && a.email !== clientEmail && !paidAdditionalAttendees.some((x) => x.email === a.email)) {
+      paidAdditionalAttendees.push({ email: a.email, name: a.name || undefined });
+    }
+  }
+
+  // Send confirmation to primary client + all additional attendees
+  const paidConfirmPromises = [
     sendBookingConfirmation(emailParams),
     sendBookingAccessInstructions({ ...emailParams, calendarLink }),
-  ]);
+  ];
+  for (const attendee of paidAdditionalAttendees) {
+    paidConfirmPromises.push(
+      sendBookingConfirmation({
+        ...emailParams,
+        clientEmail: attendee.email,
+      })
+    );
+  }
+  await Promise.all(paidConfirmPromises);
 
   // Push event to diviner's Google Calendar if connected
   if (hasGoogleCalendar) {
@@ -1060,6 +1118,7 @@ async function handlePaymentIntentSucceeded(
       endTime: endTime.toISOString(),
       clientEmail: clientRecord?.email ?? clientEmail,
       clientName: clientRecord?.full_name ?? undefined,
+      additionalAttendees: paidAdditionalAttendees,
     })
       .then(({ eventId }) =>
         supabase

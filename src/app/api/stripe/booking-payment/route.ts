@@ -591,6 +591,7 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // No payment required — mark booking as confirmed immediately
+      console.log("[booking-payment] FREE PATH — confirming booking:", booking.id);
       await adminSupabase
         .from("bookings")
         .update({ status: "confirmed" })
@@ -606,7 +607,7 @@ export async function POST(request: NextRequest) {
           serviceName: service.name,
           paymentRequired: false,
         },
-      })
+      });
 
       // Send confirmation emails to the booker
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
@@ -653,26 +654,34 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Await emails so failures are visible in logs, not silently swallowed
-      await Promise.all(emailPromises).catch((err) => {
-        console.error("[booking-payment] Failed to send booking emails:", {
-          bookingId: booking.id,
-          clientEmail,
-          error: err instanceof Error ? err.message : String(err),
+      // Fire-and-forget — don't block the response
+      console.log("[booking-payment] Sending booking emails to:", clientEmail, "bookingId:", booking.id);
+      Promise.all(emailPromises)
+        .then(() => console.log("[booking-payment] Booking emails sent successfully"))
+        .catch((err) => {
+          console.error("[booking-payment] Failed to send booking emails:", {
+            bookingId: booking.id,
+            clientEmail,
+            error: err instanceof Error ? err.message : String(err),
+          });
         });
-      });
 
-      // Push event to diviner's connected calendars (non-blocking)
-      const { data: calConnections } = await adminSupabase
-        .from("calendar_connections")
-        .select("provider")
-        .eq("owner_id", resolvedDivinerId);
-
-      if (calConnections?.some((c) => c.provider === "google")) {
+      // Push event to diviner's Google Calendar (non-blocking)
+      console.log("[booking-payment] Creating Google Calendar event for diviner:", resolvedDivinerId);
+      try {
         const calEventDescription = buildCalendarDescription(
           availabilityTemplateDescription,
           appUrl,
         );
+        // Gather additional attendees for calendar event
+        const calAttendees: Array<{ email: string; name?: string }> = [];
+        const spEmailCal = questionnaire?.secondPersonEmail as string | undefined;
+        const spNameCal = questionnaire?.secondPersonName as string | undefined;
+        const spAttendingCal = questionnaire?.secondPersonAttending as string | undefined;
+        if (spEmailCal && (spAttendingCal === "yes" || spAttendingCal === "maybe")) {
+          calAttendees.push({ email: spEmailCal, name: spNameCal || undefined });
+        }
+
         createCalendarEvent(resolvedDivinerId, {
           title: `${availabilityTemplateTitle ?? service.name} — ${clientName}`,
           description: calEventDescription,
@@ -680,6 +689,7 @@ export async function POST(request: NextRequest) {
           endTime: endTime.toISOString(),
           clientEmail,
           clientName,
+          additionalAttendees: calAttendees,
         })
           .then(({ eventId }) =>
             adminSupabase
@@ -690,6 +700,8 @@ export async function POST(request: NextRequest) {
           .catch((err) =>
             console.error("[Booking] Failed to create Google Calendar event:", err)
           );
+      } catch (gcalErr) {
+        console.error("[booking-payment] GCal setup error:", gcalErr);
       }
     }
 

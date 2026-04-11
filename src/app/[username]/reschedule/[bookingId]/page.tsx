@@ -27,7 +27,7 @@ export default async function ReschedulePage({ params }: PageProps) {
   const { data: booking } = await admin
     .from("bookings")
     .select(
-      "id, scheduled_at, duration_minutes, metadata, services(id, name), clients(full_name)"
+      "id, scheduled_at, duration_minutes, session_notes, questionnaire_responses, metadata, services(id, name), clients(full_name, email)"
     )
     .eq("id", bookingId)
     .eq("owner_id", diviner.id)
@@ -41,6 +41,7 @@ export default async function ReschedulePage({ params }: PageProps) {
   } | null;
   const client = (booking as Record<string, unknown>).clients as {
     full_name: string | null;
+    email: string | null;
   } | null;
   const meta = (booking as Record<string, unknown>).metadata as {
     availability_title?: string;
@@ -49,6 +50,12 @@ export default async function ReschedulePage({ params }: PageProps) {
   const serviceName = meta?.availability_title ?? svc?.name ?? "Session";
   const serviceId = svc?.id ?? null;
   const clientName = client?.full_name ?? null;
+  const clientEmail = client?.email ?? null;
+  const sessionNotes = (booking as Record<string, unknown>).session_notes as string | null;
+  const qr = (booking as Record<string, unknown>).questionnaire_responses as Record<string, unknown> | null;
+  const existingAttendees = Array.isArray(qr?.attendees)
+    ? (qr.attendees as Array<{ name: string; email: string }>)
+    : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950">
@@ -102,6 +109,9 @@ export default async function ReschedulePage({ params }: PageProps) {
           durationMinutes={booking.duration_minutes}
           serviceId={serviceId}
           clientName={clientName}
+          clientEmail={clientEmail}
+          sessionNotes={sessionNotes}
+          existingAttendees={existingAttendees}
           currentScheduledAt={booking.scheduled_at}
         />
       </div>

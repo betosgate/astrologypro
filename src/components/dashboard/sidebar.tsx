@@ -18,7 +18,6 @@ import {
   BarChart3,
   BarChart2,
   CalendarDays,
-  LayoutGrid,
   Gift,
   Tag,
   Mail,
@@ -66,7 +65,6 @@ const navItems: NavItem[] = [
     icon: CalendarDays,
     children: [
       { label: "Bookings", href: "/dashboard/bookings", icon: Calendar },
-      { label: "Schedule", href: "/dashboard/schedule", icon: LayoutGrid },
       { label: "Availability", href: "/dashboard/availability", icon: CalendarDays },
       { label: "Calendar View", href: "/dashboard/calendar", icon: CalendarDays },
     ],
