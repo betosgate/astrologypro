@@ -19,6 +19,8 @@ interface ProfileData {
   role: string;
   table: string;
   nameCol: string;
+  videoProvider?: string;
+  phoneProvider?: string;
 }
 
 export default function UserEditPage() {
@@ -31,6 +33,8 @@ export default function UserEditPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [videoProvider, setVideoProvider] = useState("daily");
+  const [phoneProvider, setPhoneProvider] = useState("twilio");
 
   useEffect(() => {
     if (!id) return;
@@ -44,6 +48,8 @@ export default function UserEditPage() {
         setName(data.name ?? "");
         setPhone(data.phone ?? "");
         setIsActive(data.isActive ?? true);
+        if (data.videoProvider) setVideoProvider(data.videoProvider);
+        if (data.phoneProvider) setPhoneProvider(data.phoneProvider);
       })
       .catch(() => {
         toast.error("Failed to load user profile");
@@ -67,6 +73,7 @@ export default function UserEditPage() {
           role: profile.role,
           rowId: profile.rowId,
           nameCol: profile.nameCol,
+          ...(profile.role === "diviner" ? { videoProvider, phoneProvider } : {}),
         }),
       });
       if (!res.ok) {
@@ -152,6 +159,41 @@ export default function UserEditPage() {
                 placeholder="+1 (555) 000-0000"
               />
             </div>
+
+            {/* Provider Preferences — diviners only */}
+            {profile.role === "diviner" && (
+              <div className="space-y-3 rounded-lg border p-3">
+                <p className="text-sm font-medium">Provider Preferences</p>
+                <div className="space-y-1.5">
+                  <label htmlFor="videoProvider" className="text-xs font-medium text-muted-foreground">
+                    Video Provider
+                  </label>
+                  <select
+                    id="videoProvider"
+                    value={videoProvider}
+                    onChange={(e) => setVideoProvider(e.target.value)}
+                    className="w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="daily">Daily.co (Default)</option>
+                    <option value="chime">AWS Chime SDK</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="phoneProvider" className="text-xs font-medium text-muted-foreground">
+                    Phone Provider
+                  </label>
+                  <select
+                    id="phoneProvider"
+                    value={phoneProvider}
+                    onChange={(e) => setPhoneProvider(e.target.value)}
+                    className="w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="twilio">Twilio (Default)</option>
+                    <option value="chime">AWS Chime PSTN</option>
+                  </select>
+                </div>
+              </div>
+            )}
 
             {/* Active toggle — only for roles that support it */}
             {supportsActiveToggle && (

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { SessionRoom } from "@/components/session/session-room";
+import { ChimeSessionRoom } from "@/components/session/chime-session-room";
 import { formatDateTime } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,12 +36,22 @@ export default async function SessionPage({ params }: PageProps) {
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, status, duration_minutes, daily_room_url, daily_room_name, diviner_id, client_id, base_price, questionnaire_responses, services(name, duration_minutes), clients(id, full_name, email, birth_date, birth_time, birth_city)"
+      "id, scheduled_at, status, duration_minutes, daily_room_url, daily_room_name, video_provider, chime_meeting_id, chime_external_meeting_id, diviner_id, client_id, base_price, questionnaire_responses, services(name, duration_minutes), clients(id, full_name, email, birth_date, birth_time, birth_city)"
     )
     .eq("id", bookingId)
     .single();
 
-  if (!booking || !booking.daily_room_url) {
+  if (!booking) {
+    notFound();
+  }
+
+  const videoProvider = (booking as any).video_provider ?? "daily";
+
+  // Validate provider-specific requirements
+  if (videoProvider === "daily" && !booking.daily_room_url) {
+    notFound();
+  }
+  if (videoProvider === "chime" && !(booking as any).chime_meeting_id) {
     notFound();
   }
 
@@ -97,25 +108,48 @@ export default async function SessionPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Video Session Room */}
-      <SessionRoom
-        bookingId={booking.id}
-        roomUrl={booking.daily_room_url}
-        role={role}
-        serviceName={serviceName}
-        clientName={clientName}
-        divinerName={diviner?.display_name ?? "Diviner"}
-        scheduledDuration={scheduledDuration}
-        basePrice={Number(booking.base_price)}
-        overageRate={0.50}
-        username={username}
-        questionnaire={booking.questionnaire_responses as { focusQuestion?: string; lifeArea?: string; additionalNotes?: string } | undefined}
-        clientBirthData={client ? {
-          date: client.birth_date ?? undefined,
-          time: client.birth_time ?? undefined,
-          city: client.birth_city ?? undefined,
-        } : undefined}
-      />
+      {/* Video Session Room — provider-routed */}
+      {videoProvider === "chime" ? (
+        <ChimeSessionRoom
+          bookingId={booking.id}
+          meetingId={(booking as any).chime_meeting_id}
+          attendeeId=""
+          joinToken=""
+          role={role}
+          serviceName={serviceName}
+          clientName={clientName}
+          divinerName={diviner?.display_name ?? "Diviner"}
+          scheduledDuration={scheduledDuration}
+          basePrice={Number(booking.base_price)}
+          overageRate={0.50}
+          username={username}
+          questionnaire={booking.questionnaire_responses as { focusQuestion?: string; lifeArea?: string; additionalNotes?: string } | undefined}
+          clientBirthData={client ? {
+            date: client.birth_date ?? undefined,
+            time: client.birth_time ?? undefined,
+            city: client.birth_city ?? undefined,
+          } : undefined}
+        />
+      ) : (
+        <SessionRoom
+          bookingId={booking.id}
+          roomUrl={booking.daily_room_url!}
+          role={role}
+          serviceName={serviceName}
+          clientName={clientName}
+          divinerName={diviner?.display_name ?? "Diviner"}
+          scheduledDuration={scheduledDuration}
+          basePrice={Number(booking.base_price)}
+          overageRate={0.50}
+          username={username}
+          questionnaire={booking.questionnaire_responses as { focusQuestion?: string; lifeArea?: string; additionalNotes?: string } | undefined}
+          clientBirthData={client ? {
+            date: client.birth_date ?? undefined,
+            time: client.birth_time ?? undefined,
+            city: client.birth_city ?? undefined,
+          } : undefined}
+        />
+      )}
     </div>
   );
 }

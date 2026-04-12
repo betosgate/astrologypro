@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     async function fetchDivinerById(id: string) {
       let result = await adminSupabase
         .from("diviners")
-        .select("id, stripe_account_id, display_name")
+        .select("id, stripe_account_id, display_name, video_provider")
         .eq("id", id)
         .eq("is_active", true)
         .single();
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
       if (result.error || !result.data) {
         result = await supabase
           .from("diviners")
-          .select("id, stripe_account_id, display_name")
+          .select("id, stripe_account_id, display_name, video_provider")
           .eq("id", id)
           .eq("is_active", true)
           .single();
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
     async function fetchDivinerByUsername(username: string) {
       let result = await adminSupabase
         .from("diviners")
-        .select("id, stripe_account_id, display_name")
+        .select("id, stripe_account_id, display_name, video_provider")
         .eq("username", username)
         .eq("is_active", true)
         .single();
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
       if (result.error || !result.data) {
         result = await supabase
           .from("diviners")
-          .select("id, stripe_account_id, display_name")
+          .select("id, stripe_account_id, display_name, video_provider")
           .eq("username", username)
           .eq("is_active", true)
           .single();
@@ -484,6 +484,7 @@ export async function POST(request: NextRequest) {
         duration_minutes: service.duration_minutes,
         status: "pending",
         base_price: finalPrice,
+        video_provider: (diviner as any)?.video_provider ?? "daily",
         questionnaire_responses: questionnaire,
         booking_notes: booking_notes ?? null,
         metadata: {
