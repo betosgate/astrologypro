@@ -145,24 +145,24 @@ export function ChimePhoneWidget() {
   // Ringing state
   if (status === "ringing" && pendingCall) {
     return (
-      <div className="fixed bottom-4 right-4 z-50 w-72 rounded-xl border-2 border-amber-500 bg-card p-4 shadow-2xl">
+      <div className="fixed bottom-4 right-4 z-50 w-72 rounded-xl border-2 border-[#c9a84c] bg-[#0d1230] p-4 shadow-2xl">
         <div className="mb-3 flex items-center gap-2">
-          <PhoneIncoming className="h-5 w-5 animate-bounce text-amber-500" />
-          <span className="text-sm font-semibold">Incoming Call</span>
+          <PhoneIncoming className="h-5 w-5 animate-bounce text-[#c9a84c]" />
+          <span className="text-sm font-semibold text-[#f5f0e8]">Incoming Call</span>
           <Badge
             variant="outline"
-            className="ml-auto bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs"
+            className="ml-auto bg-[#c9a84c]/10 text-[#c9a84c] border-[#c9a84c]/20 text-xs"
           >
             Chime
           </Badge>
         </div>
-        <p className="mb-3 text-xs text-muted-foreground">
+        <p className="mb-3 text-xs text-[#b8bcd0]">
           {pendingCall.caller_phone}
         </p>
         <div className="flex gap-2">
           <Button
             size="sm"
-            className="flex-1 bg-green-600 hover:bg-green-700"
+            className="flex-1 bg-[#c9a84c] hover:bg-[#e2c97e] text-[#06080f]"
             onClick={handleAnswer}
           >
             <Phone className="mr-1.5 h-3.5 w-3.5" />
@@ -185,13 +185,13 @@ export function ChimePhoneWidget() {
   // Active call
   if (status === "active") {
     return (
-      <div className="fixed bottom-4 right-4 z-50 w-72 rounded-xl border border-green-500/30 bg-card p-4 shadow-2xl">
+      <div className="fixed bottom-4 right-4 z-50 w-72 rounded-xl border border-[#c9a84c]/30 bg-[#0d1230] p-4 shadow-2xl">
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
-            <span className="text-sm font-semibold">Call Active</span>
+            <span className="h-2 w-2 animate-pulse rounded-full bg-[#c9a84c]" />
+            <span className="text-sm font-semibold text-[#f5f0e8]">Call Active</span>
           </div>
-          <span className="flex items-center gap-1 font-mono text-sm text-green-400">
+          <span className="flex items-center gap-1 font-mono text-sm text-[#c9a84c]">
             <Clock className="h-3.5 w-3.5" />
             {formatTime(elapsedSeconds)}
           </span>
@@ -214,10 +214,10 @@ export function ChimePhoneWidget() {
 
   // Idle state
   return (
-    <div className="fixed bottom-4 right-4 z-50 rounded-full border bg-card px-4 py-2 shadow-lg">
+    <div className="fixed bottom-4 right-4 z-50 rounded-full border border-[#c9a84c]/20 bg-[#0d1230] px-4 py-2 shadow-lg">
       <div className="flex items-center gap-2">
-        <span className="h-2 w-2 rounded-full bg-green-500" />
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="h-2 w-2 rounded-full bg-[#c9a84c]" />
+        <span className="text-xs font-medium text-[#b8bcd0]">
           Chime Phone Ready
         </span>
       </div>
