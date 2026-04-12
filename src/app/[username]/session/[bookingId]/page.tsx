@@ -36,7 +36,7 @@ export default async function SessionPage({ params }: PageProps) {
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, status, duration_minutes, daily_room_url, daily_room_name, video_provider, chime_meeting_id, chime_external_meeting_id, diviner_id, client_id, base_price, questionnaire_responses, services(name, duration_minutes), clients(id, full_name, email, birth_date, birth_time, birth_city)"
+      "id, scheduled_at, status, duration_minutes, daily_room_url, daily_room_name, video_provider, chime_meeting_id, chime_external_meeting_id, diviner_id, client_id, base_price, questionnaire_responses, services(name, duration_minutes, overage_rate), clients(id, full_name, email, birth_date, birth_time, birth_city)"
     )
     .eq("id", bookingId)
     .single();
@@ -79,6 +79,7 @@ export default async function SessionPage({ params }: PageProps) {
   const serviceName = (service as any)?.name ?? "Reading Session";
   const clientName = (client as any)?.full_name ?? (client as any)?.email ?? "Client";
   const scheduledDuration = (service as any)?.duration_minutes ?? booking.duration_minutes ?? 60;
+  const serviceOverageRate = Number((service as any)?.overage_rate ?? 0.50);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -121,7 +122,7 @@ export default async function SessionPage({ params }: PageProps) {
           divinerName={diviner?.display_name ?? "Diviner"}
           scheduledDuration={scheduledDuration}
           basePrice={Number(booking.base_price)}
-          overageRate={0.50}
+          overageRate={serviceOverageRate}
           username={username}
           questionnaire={booking.questionnaire_responses as { focusQuestion?: string; lifeArea?: string; additionalNotes?: string } | undefined}
           clientBirthData={client ? {
@@ -140,7 +141,7 @@ export default async function SessionPage({ params }: PageProps) {
           divinerName={diviner?.display_name ?? "Diviner"}
           scheduledDuration={scheduledDuration}
           basePrice={Number(booking.base_price)}
-          overageRate={0.50}
+          overageRate={serviceOverageRate}
           username={username}
           questionnaire={booking.questionnaire_responses as { focusQuestion?: string; lifeArea?: string; additionalNotes?: string } | undefined}
           clientBirthData={client ? {

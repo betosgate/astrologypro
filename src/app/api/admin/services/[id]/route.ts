@@ -50,6 +50,7 @@ export async function PUT(
   if (typeof body.description === "string") update.description = body.description.trim();
   if (typeof body.duration_minutes === "number") update.duration_minutes = body.duration_minutes;
   if (typeof body.base_price === "number") update.base_price = body.base_price;
+  if (typeof body.overage_rate === "number") update.overage_rate = body.overage_rate;
   if (typeof body.is_active === "boolean") update.is_active = body.is_active;
   if (typeof body.is_featured === "boolean") update.is_featured = body.is_featured;
   if (typeof body.is_primary === "boolean") update.is_primary = body.is_primary;
