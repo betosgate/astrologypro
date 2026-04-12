@@ -6,6 +6,8 @@ import Stripe from "stripe";
 import {
   sendBookingConfirmation,
   sendBookingAccessInstructions,
+  sendBookingInvoice,
+  sendDivinerNewBookingNotification,
   sendGiftCertificateToRecipient,
   sendGiftCertificateConfirmation,
   sendCommunityPaymentFailed,
@@ -986,7 +988,7 @@ async function handlePaymentIntentSucceeded(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, duration_minutes, diviner_id, client_id, metadata, questionnaire_responses, services(name, duration_minutes), diviners(id, display_name), clients(email, full_name, user_id)"
+      "id, scheduled_at, duration_minutes, base_price, diviner_id, client_id, metadata, questionnaire_responses, services(name, duration_minutes), diviners(id, display_name, user_id), clients(email, full_name, user_id)"
     )
     .eq("id", bookingId)
     .single();
@@ -1000,6 +1002,7 @@ async function handlePaymentIntentSucceeded(
   const div = (booking as Record<string, unknown>).diviners as {
     id: string;
     display_name: string;
+    user_id: string;
   } | null;
   const clientRecord = (booking as Record<string, unknown>).clients as {
     email: string;
@@ -1105,6 +1108,59 @@ async function handlePaymentIntentSucceeded(
     );
   }
   await Promise.all(paidConfirmPromises);
+
+  // Send invoice to client (fire-and-forget)
+  const paidAmount = paymentIntent.amount / 100;
+  sendBookingInvoice({
+    clientEmail,
+    clientName: clientRecord?.full_name ?? clientEmail.split("@")[0],
+    divinerName: div.display_name,
+    serviceName: svc.name,
+    dateTime: emailParams.dateTime,
+    duration: durationMins,
+    amount: Number(booking.base_price ?? paidAmount),
+    totalPaid: paidAmount,
+    bookingId,
+    portalUrl: `${appUrl}/portal/bookings`,
+  }).catch((err) =>
+    console.error("[Webhook] Failed to send booking invoice:", err)
+  );
+
+  // Notify diviner about the new booking (fire-and-forget)
+  (async () => {
+    try {
+      // Get diviner's email from auth.users
+      const { data: divinerAuth } = await supabase.auth.admin.getUserById(
+        div.user_id
+      );
+      const divinerEmail = divinerAuth?.user?.email;
+      if (!divinerEmail) return;
+
+      const questionnaire = (booking as Record<string, unknown>)
+        .questionnaire_responses as Record<string, string> | null;
+
+      await sendDivinerNewBookingNotification({
+        divinerEmail,
+        divinerName: div.display_name,
+        clientName: clientRecord?.full_name ?? clientEmail.split("@")[0],
+        clientEmail,
+        serviceName: svc.name,
+        dateTime: emailParams.dateTime,
+        duration: durationMins,
+        amount: paidAmount,
+        bookingId,
+        dashboardUrl: `${appUrl}/dashboard/bookings`,
+        questionnaire: questionnaire
+          ? {
+              focusQuestion: questionnaire.focusQuestion,
+              lifeArea: questionnaire.lifeArea,
+            }
+          : undefined,
+      });
+    } catch (err) {
+      console.error("[Webhook] Failed to send diviner booking notification:", err);
+    }
+  })();
 
   // Push event to diviner's Google Calendar if connected
   if (hasGoogleCalendar) {

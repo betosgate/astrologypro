@@ -2566,3 +2566,167 @@ export async function sendPaymentLinkEmail({
     }),
   });
 }
+
+// ---------------------------------------------------------------------------
+// Booking Invoice — sent to client after successful payment
+// ---------------------------------------------------------------------------
+
+interface BookingInvoiceParams {
+  clientEmail: string;
+  clientName: string;
+  divinerName: string;
+  serviceName: string;
+  dateTime: string;
+  duration: number;
+  amount: number;
+  discount?: number;
+  giftDeduction?: number;
+  totalPaid: number;
+  bookingId: string;
+  portalUrl: string;
+}
+
+export async function sendBookingInvoice({
+  clientEmail,
+  clientName,
+  divinerName,
+  serviceName,
+  dateTime,
+  duration,
+  amount,
+  discount,
+  giftDeduction,
+  totalPaid,
+  bookingId,
+  portalUrl,
+}: BookingInvoiceParams) {
+  const discountRow = discount && discount > 0
+    ? detailRow("Loyalty Discount", `-$${discount.toFixed(2)}`)
+    : "";
+  const giftRow = giftDeduction && giftDeduction > 0
+    ? detailRow("Gift Certificate", `-$${giftDeduction.toFixed(2)}`)
+    : "";
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${clientName}, thank you for your purchase! Here is your invoice.</p>
+
+    ${sectionHeading("Invoice Details")}
+    ${detailRow("Invoice #", bookingId.slice(0, 8).toUpperCase())}
+    ${detailRow("Date", new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }))}
+
+    ${sectionHeading("Session")}
+    ${detailRow("Service", serviceName)}
+    ${detailRow("Diviner", divinerName)}
+    ${detailRow("Scheduled", dateTime)}
+    ${detailRow("Duration", `${duration} minutes`)}
+
+    ${sectionHeading("Payment Summary")}
+    ${detailRow("Session Price", `$${amount.toFixed(2)}`)}
+    ${discountRow}
+    ${giftRow}
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:8px 0 0;">
+      <tr>
+        <td style="padding:12px 16px;border-top:2px solid #3f3f46;font-family:system-ui,-apple-system,sans-serif;font-size:16px;font-weight:700;color:#f4f4f5;">Total Paid</td>
+        <td style="padding:12px 16px;border-top:2px solid #3f3f46;font-family:system-ui,-apple-system,sans-serif;font-size:16px;font-weight:700;color:#22c55e;text-align:right;">$${totalPaid.toFixed(2)}</td>
+      </tr>
+    </table>
+
+    <p style="margin:16px 0 0;color:#71717a;font-size:12px;">Payment processed securely via Stripe. A charge from AstrologyPro will appear on your statement.</p>
+  `;
+
+  return sendEmail({
+    to: clientEmail,
+    subject: `Invoice — ${serviceName} with ${divinerName} — $${totalPaid.toFixed(2)}`,
+    html: buildEmailHtml({
+      title: "Your Invoice",
+      preheader: `Invoice for ${serviceName} with ${divinerName} — $${totalPaid.toFixed(2)}`,
+      content,
+      ctaText: "View My Bookings",
+      ctaUrl: portalUrl,
+      footer: "AstrologyPro &mdash; Secure payment powered by Stripe",
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// New Booking Notification — sent to diviner when a client books
+// ---------------------------------------------------------------------------
+
+interface DivinerNewBookingParams {
+  divinerEmail: string;
+  divinerName: string;
+  clientName: string;
+  clientEmail: string;
+  serviceName: string;
+  dateTime: string;
+  duration: number;
+  amount: number;
+  bookingId: string;
+  dashboardUrl: string;
+  questionnaire?: {
+    focusQuestion?: string;
+    lifeArea?: string;
+  };
+  birthData?: string;
+}
+
+export async function sendDivinerNewBookingNotification({
+  divinerEmail,
+  divinerName,
+  clientName,
+  clientEmail,
+  serviceName,
+  dateTime,
+  duration,
+  amount,
+  bookingId,
+  dashboardUrl,
+  questionnaire,
+  birthData,
+}: DivinerNewBookingParams) {
+  const focusSection = questionnaire?.focusQuestion
+    ? `${sectionHeading("Client's Focus Question")}
+       ${infoCard(questionnaire.focusQuestion)}
+       ${questionnaire.lifeArea ? `<p style="margin:4px 0 0;color:#a1a1aa;font-size:13px;">Life area: <strong style="color:#e4e4e7;">${questionnaire.lifeArea}</strong></p>` : ""}`
+    : "";
+
+  const birthSection = birthData
+    ? `${sectionHeading("Client Birth Data")}
+       ${infoCard(birthData)}`
+    : "";
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Great news, ${divinerName}! You have a new booking.</p>
+
+    ${sectionHeading("Booking Details")}
+    ${detailRow("Service", serviceName)}
+    ${detailRow("Client", `${clientName} (${clientEmail})`)}
+    ${detailRow("Date &amp; Time", dateTime)}
+    ${detailRow("Duration", `${duration} minutes`)}
+    ${detailRow("Amount", `$${amount.toFixed(2)}`)}
+    ${detailRow("Booking ID", bookingId.slice(0, 8).toUpperCase())}
+
+    ${focusSection}
+    ${birthSection}
+
+    ${sectionHeading("Next Steps")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">Review the client's details and prepare for the session</li>
+      <li style="margin-bottom:6px;">The session room will be available at the scheduled time</li>
+      <li>You can view all details from your dashboard</li>
+    </ul>
+  `;
+
+  return sendEmail({
+    to: divinerEmail,
+    subject: `New booking! ${clientName} booked ${serviceName} — ${dateTime}`,
+    html: buildEmailHtml({
+      title: "New Booking Received",
+      preheader: `${clientName} booked ${serviceName} for ${dateTime}`,
+      content,
+      ctaText: "View in Dashboard",
+      ctaUrl: dashboardUrl,
+      footer: "AstrologyPro &mdash; Run Your Divination Business",
+    }),
+  });
+}
