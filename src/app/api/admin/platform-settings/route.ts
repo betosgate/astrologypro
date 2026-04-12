@@ -20,7 +20,7 @@ export async function GET() {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("platform_settings")
-    .select("id, ms_pm_discount_enabled, updated_at")
+    .select("id, ms_pm_discount_enabled, no_show_diviner_refund_percent, no_show_client_refund_percent, no_show_grace_minutes, updated_at")
     .limit(1)
     .single();
 
@@ -60,16 +60,51 @@ export async function PUT(request: NextRequest) {
     );
   }
 
-  const { ms_pm_discount_enabled } = body;
+  const {
+    ms_pm_discount_enabled,
+    no_show_diviner_refund_percent,
+    no_show_client_refund_percent,
+    no_show_grace_minutes,
+  } = body;
 
-  if (typeof ms_pm_discount_enabled !== "boolean") {
+  // Build update object with only provided fields
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+
+  if (typeof ms_pm_discount_enabled === "boolean") {
+    updates.ms_pm_discount_enabled = ms_pm_discount_enabled;
+  }
+  if (typeof no_show_diviner_refund_percent === "number") {
+    if (no_show_diviner_refund_percent < 0 || no_show_diviner_refund_percent > 100) {
+      return NextResponse.json(
+        { type: "about:blank", title: "Unprocessable Entity", status: 422, detail: "no_show_diviner_refund_percent must be 0-100." },
+        { status: 422 }
+      );
+    }
+    updates.no_show_diviner_refund_percent = no_show_diviner_refund_percent;
+  }
+  if (typeof no_show_client_refund_percent === "number") {
+    if (no_show_client_refund_percent < 0 || no_show_client_refund_percent > 100) {
+      return NextResponse.json(
+        { type: "about:blank", title: "Unprocessable Entity", status: 422, detail: "no_show_client_refund_percent must be 0-100." },
+        { status: 422 }
+      );
+    }
+    updates.no_show_client_refund_percent = no_show_client_refund_percent;
+  }
+  if (typeof no_show_grace_minutes === "number") {
+    if (no_show_grace_minutes < 1 || no_show_grace_minutes > 60) {
+      return NextResponse.json(
+        { type: "about:blank", title: "Unprocessable Entity", status: 422, detail: "no_show_grace_minutes must be 1-60." },
+        { status: 422 }
+      );
+    }
+    updates.no_show_grace_minutes = no_show_grace_minutes;
+  }
+
+  if (Object.keys(updates).length <= 1) {
     return NextResponse.json(
-      {
-        type: "about:blank",
-        title: "Unprocessable Entity",
-        status: 422,
-        detail: "ms_pm_discount_enabled must be a boolean.",
-      },
+      { type: "about:blank", title: "Unprocessable Entity", status: 422, detail: "No valid fields to update." },
       { status: 422 }
     );
   }
@@ -92,12 +127,9 @@ export async function PUT(request: NextRequest) {
 
   const { data, error } = await admin
     .from("platform_settings")
-    .update({
-      ms_pm_discount_enabled,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updates)
     .eq("id", existing.id)
-    .select("id, ms_pm_discount_enabled, updated_at")
+    .select("id, ms_pm_discount_enabled, no_show_diviner_refund_percent, no_show_client_refund_percent, no_show_grace_minutes, updated_at")
     .single();
 
   if (error) {
