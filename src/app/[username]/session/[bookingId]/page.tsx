@@ -82,27 +82,27 @@ export default async function SessionPage({ params }: PageProps) {
   const serviceOverageRate = Number((service as any)?.overage_rate ?? 0.50);
 
   return (
-    <div className="flex min-h-screen flex-col" style={{ background: "#06080f" }}>
-      {/* Session Info Header — gold cosmos theme */}
-      <div className="border-b px-4 py-3" style={{ background: "#0a0e27", borderColor: "rgba(201,168,76,0.15)" }}>
+    <div className="flex min-h-screen flex-col bg-background">
+      {/* Session Info Header */}
+      <div className="border-b border-border bg-card/50 px-4 py-3">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-4">
-            <h1 className="text-lg font-semibold" style={{ background: "linear-gradient(135deg, #c9a84c 0%, #e2c97e 50%, #c9a84c 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{serviceName}</h1>
-            <Badge variant="outline" className="bg-[#c9a84c]/10 text-[#c9a84c] border-[#c9a84c]/20">
+            <h1 className="text-lg font-semibold gold-text">{serviceName}</h1>
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
               {role === "diviner" ? "Diviner" : "Client"}
             </Badge>
           </div>
-          <div className="flex items-center gap-4 text-sm" style={{ color: "#b8bcd0" }}>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <User className="size-3.5" style={{ color: "#c9a84c" }} />
+              <User className="size-3.5 text-primary" />
               {clientName}
             </span>
             <span className="flex items-center gap-1.5">
-              <CalendarDays className="size-3.5" style={{ color: "#c9a84c" }} />
+              <CalendarDays className="size-3.5 text-primary" />
               {formatDateTime(booking.scheduled_at)}
             </span>
             <span className="flex items-center gap-1.5">
-              <Clock className="size-3.5" style={{ color: "#c9a84c" }} />
+              <Clock className="size-3.5 text-primary" />
               {scheduledDuration} min
             </span>
           </div>

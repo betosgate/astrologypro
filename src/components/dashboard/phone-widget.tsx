@@ -151,29 +151,29 @@ export default function PhoneWidget() {
   return (
     <div className="fixed bottom-6 right-6 z-50">
       {state === "idle" && (
-        <div className="flex items-center gap-2 rounded-full bg-[#0d1230] border border-[#c9a84c]/20 px-3 py-1.5 shadow-md backdrop-blur">
-          <span className="size-2 rounded-full bg-[#c9a84c]" />
-          <span className="text-xs text-[#b8bcd0]">Phone ready</span>
+        <div className="flex items-center gap-2 rounded-full bg-card border border-primary/20 px-3 py-1.5 shadow-md backdrop-blur">
+          <span className="size-2 rounded-full bg-primary" />
+          <span className="text-xs text-muted-foreground">Phone ready</span>
         </div>
       )}
 
       {state === "ringing" && (
-        <div className="w-72 rounded-xl border-2 border-[#c9a84c] bg-[#0d1230] p-4 shadow-xl backdrop-blur">
+        <div className="w-72 rounded-xl border-2 border-primary bg-card p-4 shadow-xl backdrop-blur">
           <div className="mb-3 flex items-center gap-3">
-            <div className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-[#c9a84c]/10">
+            <div className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
               <PhoneIncoming
-                className="size-5 animate-pulse text-[#c9a84c]"
+                className="size-5 animate-pulse text-primary"
               />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold leading-tight text-[#f5f0e8]">Incoming Call</p>
-              <p className="truncate text-xs text-[#b8bcd0]">{callerNumber}</p>
+              <p className="text-sm font-semibold leading-tight text-foreground">Incoming Call</p>
+              <p className="truncate text-xs text-muted-foreground">{callerNumber}</p>
             </div>
           </div>
           <div className="flex gap-2">
             <Button
               size="sm"
-              className="flex-1 bg-[#c9a84c] hover:bg-[#e2c97e] text-[#06080f]"
+              className="flex-1 bg-primary hover:bg-primary/80 text-primary-foreground"
               onClick={answerCall}
             >
               <Phone className="mr-1.5 size-3.5" />
@@ -193,19 +193,19 @@ export default function PhoneWidget() {
       )}
 
       {state === "active" && (
-        <div className="w-64 rounded-xl border border-[#c9a84c]/30 bg-[#0d1230] p-4 shadow-xl backdrop-blur">
+        <div className="w-64 rounded-xl border border-primary/30 bg-card p-4 shadow-xl backdrop-blur">
           <div className="mb-3 flex items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#c9a84c]/10">
-              <Phone className="size-5 text-[#c9a84c]" />
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <Phone className="size-5 text-primary" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold leading-tight text-[#f5f0e8]">Call in progress</p>
-              <div className="flex items-center gap-1 text-xs text-[#c9a84c]">
+              <p className="text-sm font-semibold leading-tight text-foreground">Call in progress</p>
+              <div className="flex items-center gap-1 text-xs text-primary">
                 <Timer className="size-3" />
                 <span>{timer}</span>
               </div>
             </div>
-            <Badge variant="secondary" className="shrink-0 bg-[#c9a84c]/10 text-[#c9a84c]">
+            <Badge variant="secondary" className="shrink-0 bg-primary/10 text-primary">
               Live
             </Badge>
           </div>

@@ -167,10 +167,10 @@ export function SessionRoom({
   if (!consentGiven) {
     return (
       <div className="flex min-h-[80vh] items-center justify-center p-4">
-        <Card className="max-w-lg bg-[#0d1230] border-[#c9a84c]/20">
+        <Card className="max-w-lg bg-card border-primary/20">
           <CardHeader className="text-center">
-            <Shield className="mx-auto h-12 w-12 text-[#c9a84c]" />
-            <CardTitle className="mt-4 text-xl" style={{ background: 'linear-gradient(135deg, #c9a84c 0%, #e2c97e 50%, #c9a84c 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Session Recording Consent</CardTitle>
+            <Shield className="mx-auto h-12 w-12 text-primary" />
+            <CardTitle className="mt-4 text-xl gold-text">Session Recording Consent</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-center">
             <p className="text-muted-foreground">
@@ -178,8 +178,8 @@ export function SessionRoom({
               be recorded for your benefit. The recording will be available for
               you to rewatch and optionally share.
             </p>
-            <div className="rounded-lg border border-[#c9a84c]/20 bg-[#c9a84c]/5 p-3 text-sm">
-              <p className="font-medium text-[#c9a84c]">Session Details</p>
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+              <p className="font-medium text-primary">Session Details</p>
               <p className="mt-1 text-muted-foreground">
                 {serviceName} &middot; {scheduledDuration} min &middot; ${basePrice.toFixed(2)}
               </p>
@@ -189,7 +189,7 @@ export function SessionRoom({
             </div>
             <Button
               size="lg"
-              className="w-full bg-[#c9a84c] hover:bg-[#e2c97e] text-[#06080f]"
+              className="w-full bg-primary hover:bg-primary/80 text-primary-foreground"
               onClick={() => {
                 setConsentGiven(true);
                 setSessionStarted(true);
@@ -214,13 +214,13 @@ export function SessionRoom({
   if (sessionEnded) {
     return (
       <div className="flex min-h-[80vh] items-center justify-center p-4">
-        <Card className="max-w-lg bg-[#0d1230] border-[#c9a84c]/20">
+        <Card className="max-w-lg bg-card border-primary/20">
           <CardHeader className="text-center">
-            <CheckCircle className="mx-auto h-12 w-12 text-[#c9a84c]" />
-            <CardTitle className="mt-4 text-xl" style={{ background: 'linear-gradient(135deg, #c9a84c 0%, #e2c97e 50%, #c9a84c 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Session Complete</CardTitle>
+            <CheckCircle className="mx-auto h-12 w-12 text-primary" />
+            <CardTitle className="mt-4 text-xl gold-text">Session Complete</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-center">
-            <div className="rounded-lg border border-[#c9a84c]/10 bg-[#0d1230] p-4">
+            <div className="rounded-lg border border-border bg-card p-4">
               <p className="text-sm text-muted-foreground">Duration</p>
               <p className="text-2xl font-bold">{formatTime(elapsedMinutes, elapsedSeconds)}</p>
               {isOvertime && (
@@ -230,7 +230,7 @@ export function SessionRoom({
               )}
               <Separator className="my-3" />
               <p className="text-sm text-muted-foreground">Total</p>
-              <p className="text-xl font-bold text-[#c9a84c]">${totalCost.toFixed(2)}</p>
+              <p className="text-xl font-bold text-primary">${totalCost.toFixed(2)}</p>
             </div>
             <p className="text-sm text-muted-foreground">
               Your session recording will be emailed to you shortly. You can also
@@ -238,16 +238,16 @@ export function SessionRoom({
             </p>
             {role === "client" && (
               <div className="space-y-2">
-                <Button asChild className="w-full bg-[#c9a84c] hover:bg-[#e2c97e] text-[#06080f]">
+                <Button asChild className="w-full bg-primary hover:bg-primary/80 text-primary-foreground">
                   <a href="/portal/bookings">View My Bookings</a>
                 </Button>
-                <Button variant="outline" asChild className="w-full border-[#c9a84c]/30 text-[#c9a84c] hover:bg-[#c9a84c]/10">
+                <Button variant="outline" asChild className="w-full border-primary/30 text-primary hover:bg-primary/10">
                   <a href={`/${username}`}>Book Another Session</a>
                 </Button>
               </div>
             )}
             {role === "diviner" && (
-              <Button asChild className="w-full bg-[#c9a84c] hover:bg-[#e2c97e] text-[#06080f]">
+              <Button asChild className="w-full bg-primary hover:bg-primary/80 text-primary-foreground">
                 <a href="/dashboard/bookings">Back to Dashboard</a>
               </Button>
             )}
@@ -260,9 +260,9 @@ export function SessionRoom({
   // Chat panel content (shared between desktop sidebar and mobile sheet)
   const chatPanel = (
     <div className="flex flex-1 flex-col">
-      <div className="border-b border-[#c9a84c]/10 p-3">
+      <div className="border-b border-border p-3">
         <p className="flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
-          <MessageSquare className="h-3 w-3 text-[#c9a84c]" />
+          <MessageSquare className="h-3 w-3 text-primary" />
           Chat
         </p>
       </div>
@@ -275,21 +275,21 @@ export function SessionRoom({
         {chatMessages.map((msg, i) => (
           <div key={i} className="mb-2">
             <p className="text-xs">
-              <span className="font-medium text-[#c9a84c]">{msg.from}</span>
+              <span className="font-medium text-primary">{msg.from}</span>
               <span className="ml-2 text-muted-foreground">{msg.time}</span>
             </p>
             <p className="text-xs text-foreground">{msg.text}</p>
           </div>
         ))}
       </div>
-      <div className="flex gap-2 border-t border-[#c9a84c]/10 p-3">
+      <div className="flex gap-2 border-t border-border p-3">
         <input
           type="text"
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSendChat()}
           placeholder="Type a message..."
-          className="flex-1 rounded-md border border-[#c9a84c]/20 bg-transparent px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-[#c9a84c]"
+          className="flex-1 rounded-md border border-primary/20 bg-transparent px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary"
         />
         <Button size="icon" variant="ghost" onClick={handleSendChat}>
           <Send className="h-3.5 w-3.5" />
@@ -300,14 +300,14 @@ export function SessionRoom({
 
   // Active session
   return (
-    <div className="flex h-[calc(100vh-2rem)] gap-0 overflow-hidden rounded-xl border border-[#c9a84c]/10 bg-[#06080f]">
+    <div className="flex h-[calc(100vh-2rem)] gap-0 overflow-hidden rounded-xl border border-border bg-background">
       {/* Main video area */}
       <div className="flex flex-1 flex-col">
         {/* Top bar */}
-        <div className="flex items-center justify-between border-b border-[#c9a84c]/10 bg-[#06080f] px-2 py-2 md:px-4">
+        <div className="flex items-center justify-between border-b border-border bg-background px-2 py-2 md:px-4">
           <div className="flex items-center gap-2 md:gap-3">
-            <Badge className="animate-pulse gap-1 bg-[#c9a84c] text-[#06080f] hover:bg-[#c9a84c]">
-              <span className="h-2 w-2 rounded-full bg-[#06080f]" />
+            <Badge className="animate-pulse gap-1 bg-primary text-primary-foreground hover:bg-primary">
+              <span className="h-2 w-2 rounded-full bg-primary-foreground" />
               REC
             </Badge>
             <span className="hidden text-sm font-medium sm:inline">{serviceName}</span>
@@ -320,7 +320,7 @@ export function SessionRoom({
           <div className={`flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-mono font-bold md:gap-2 md:px-3 md:text-sm ${
             isOvertime
               ? "bg-amber-500/20 text-amber-400"
-              : "bg-[#c9a84c]/10 text-[#c9a84c]"
+              : "bg-primary/10 text-primary"
           }`}>
             <Clock className="h-3 w-3 md:h-3.5 md:w-3.5" />
             {formatTime(elapsedMinutes, elapsedSeconds)}
@@ -330,11 +330,11 @@ export function SessionRoom({
           <div className="flex items-center gap-1 md:gap-2">
             {/* View toggle (diviner only, desktop) */}
             {role === "diviner" && !isMobile && (
-              <div className="flex rounded-lg border border-[#c9a84c]/20">
+              <div className="flex rounded-lg border border-primary/20">
                 <Button
                   variant={viewMode === "facecam" ? "default" : "ghost"}
                   size="sm"
-                  className={`rounded-r-none ${viewMode === "facecam" ? "bg-[#c9a84c] text-[#06080f] hover:bg-[#e2c97e]" : ""}`}
+                  className={`rounded-r-none ${viewMode === "facecam" ? "bg-primary text-primary-foreground hover:bg-primary/80" : ""}`}
                   onClick={() => setViewMode("facecam")}
                 >
                   <User className="mr-1 h-3.5 w-3.5" />
@@ -343,7 +343,7 @@ export function SessionRoom({
                 <Button
                   variant={viewMode === "screenshare" ? "default" : "ghost"}
                   size="sm"
-                  className={`rounded-l-none ${viewMode === "screenshare" ? "bg-[#c9a84c] text-[#06080f] hover:bg-[#e2c97e]" : ""}`}
+                  className={`rounded-l-none ${viewMode === "screenshare" ? "bg-primary text-primary-foreground hover:bg-primary/80" : ""}`}
                   onClick={() => setViewMode("screenshare")}
                 >
                   <Monitor className="mr-1 h-3.5 w-3.5" />
@@ -387,7 +387,7 @@ export function SessionRoom({
               <Button
                 variant="secondary"
                 size="icon"
-                className="h-10 w-10 rounded-full shadow-lg bg-[#0d1230] border border-[#c9a84c]/20 text-[#c9a84c] hover:bg-[#131840]"
+                className="h-10 w-10 rounded-full shadow-lg bg-card border border-primary/20 text-primary hover:bg-secondary"
                 onClick={() => setShowSidebar(!showSidebar)}
               >
                 <FileText className="h-4 w-4" />
@@ -395,7 +395,7 @@ export function SessionRoom({
               <Button
                 variant="secondary"
                 size="icon"
-                className="h-10 w-10 rounded-full shadow-lg bg-[#0d1230] border border-[#c9a84c]/20 text-[#c9a84c] hover:bg-[#131840]"
+                className="h-10 w-10 rounded-full shadow-lg bg-card border border-primary/20 text-primary hover:bg-secondary"
                 onClick={() => setMobileChatOpen(true)}
               >
                 <MessageSquare className="h-4 w-4" />
@@ -405,11 +405,11 @@ export function SessionRoom({
         </div>
 
         {/* Bottom controls */}
-        <div className="flex items-center justify-center gap-2 border-t border-[#c9a84c]/10 bg-[#0a0e27] px-3 py-2 md:gap-3 md:px-4 md:py-3">
+        <div className="flex items-center justify-center gap-2 border-t border-border bg-muted px-3 py-2 md:gap-3 md:px-4 md:py-3">
           <Button
             variant={isMuted ? "destructive" : "outline"}
             size="icon"
-            className={isMuted ? "" : "border-[#c9a84c]/30"}
+            className={isMuted ? "" : "border-primary/30"}
             onClick={() => setIsMuted(!isMuted)}
           >
             {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
@@ -417,7 +417,7 @@ export function SessionRoom({
           <Button
             variant={isVideoOff ? "destructive" : "outline"}
             size="icon"
-            className={isVideoOff ? "" : "border-[#c9a84c]/30"}
+            className={isVideoOff ? "" : "border-primary/30"}
             onClick={() => setIsVideoOff(!isVideoOff)}
           >
             {isVideoOff ? <VideoOff className="h-4 w-4" /> : <Video className="h-4 w-4" />}
@@ -427,7 +427,7 @@ export function SessionRoom({
             <Button
               variant="outline"
               size="icon"
-              className="border-[#c9a84c]/30"
+              className="border-primary/30"
               onClick={() => setViewMode(viewMode === "facecam" ? "screenshare" : "facecam")}
             >
               {viewMode === "facecam" ? <Monitor className="h-4 w-4" /> : <User className="h-4 w-4" />}
@@ -437,7 +437,7 @@ export function SessionRoom({
             <Button
               variant="destructive"
               onClick={handleEndSession}
-              className="gap-2 focus:ring-[#c9a84c] focus:ring-offset-1"
+              className="gap-2 focus:ring-primary focus:ring-offset-1"
             >
               <PhoneOff className="h-4 w-4" />
               <span className="hidden sm:inline">End Session</span>
@@ -448,9 +448,9 @@ export function SessionRoom({
 
       {/* Desktop Sidebar */}
       {showSidebar && !isMobile && (
-        <div className="flex w-80 flex-col border-l border-[#c9a84c]/10 bg-[#0a0e27]">
+        <div className="flex w-80 flex-col border-l border-border bg-muted">
           {/* Billing info */}
-          <div className="border-b border-[#c9a84c]/10 p-3">
+          <div className="border-b border-border p-3">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Base</span>
               <span>${basePrice.toFixed(2)} / {scheduledDuration} min</span>
@@ -465,18 +465,18 @@ export function SessionRoom({
             )}
             <div className="mt-1 flex items-center justify-between font-medium">
               <span className="flex items-center gap-1">
-                <DollarSign className="h-3.5 w-3.5 text-[#c9a84c]" />
+                <DollarSign className="h-3.5 w-3.5 text-primary" />
                 Running Total
               </span>
-              <span className="text-[#c9a84c]">${totalCost.toFixed(2)}</span>
+              <span className="text-primary">${totalCost.toFixed(2)}</span>
             </div>
           </div>
 
           {/* Client info (diviner only) */}
           {role === "diviner" && (
-            <div className="border-b border-[#c9a84c]/10 p-3">
+            <div className="border-b border-border p-3">
               <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
-                <Sparkles className="h-3 w-3 text-[#c9a84c]" />
+                <Sparkles className="h-3 w-3 text-primary" />
                 Client Info
               </p>
               <p className="text-sm font-medium">{clientName}</p>
@@ -488,13 +488,13 @@ export function SessionRoom({
                 </p>
               )}
               {questionnaire?.focusQuestion && (
-                <div className="mt-2 rounded bg-[#c9a84c]/5 p-2 text-xs">
-                  <p className="font-medium text-[#c9a84c]">Focus Question:</p>
+                <div className="mt-2 rounded bg-primary/5 p-2 text-xs">
+                  <p className="font-medium text-primary">Focus Question:</p>
                   <p className="mt-0.5 text-muted-foreground">{questionnaire.focusQuestion}</p>
                 </div>
               )}
               {questionnaire?.lifeArea && (
-                <Badge variant="outline" className="mt-1 text-xs border-[#c9a84c]/30 text-[#e2c97e]">
+                <Badge variant="outline" className="mt-1 text-xs border-primary/30 text-primary">
                   {questionnaire.lifeArea}
                 </Badge>
               )}
@@ -503,9 +503,9 @@ export function SessionRoom({
 
           {/* Session notes (diviner only) */}
           {role === "diviner" && (
-            <div className="border-b border-[#c9a84c]/10 p-3">
+            <div className="border-b border-border p-3">
               <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
-                <FileText className="h-3 w-3 text-[#c9a84c]" />
+                <FileText className="h-3 w-3 text-primary" />
                 Session Notes
               </p>
               <Textarea
@@ -525,13 +525,13 @@ export function SessionRoom({
       {/* Mobile sidebar sheet (notes + info) */}
       {isMobile && (
         <Sheet open={showSidebar} onOpenChange={setShowSidebar}>
-          <SheetContent side="right" className="w-[85vw] bg-[#0a0e27] p-0 sm:max-w-sm">
-            <SheetHeader className="border-b border-[#c9a84c]/10 px-4 py-3">
-              <SheetTitle className="text-[#c9a84c]">Session Info</SheetTitle>
+          <SheetContent side="right" className="w-[85vw] bg-muted p-0 sm:max-w-sm">
+            <SheetHeader className="border-b border-border px-4 py-3">
+              <SheetTitle className="text-primary">Session Info</SheetTitle>
             </SheetHeader>
             <div className="flex flex-col overflow-y-auto">
               {/* Billing info */}
-              <div className="border-b border-[#c9a84c]/10 p-3">
+              <div className="border-b border-border p-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Base</span>
                   <span>${basePrice.toFixed(2)} / {scheduledDuration} min</span>
@@ -546,18 +546,18 @@ export function SessionRoom({
                 )}
                 <div className="mt-1 flex items-center justify-between font-medium">
                   <span className="flex items-center gap-1">
-                    <DollarSign className="h-3.5 w-3.5 text-[#c9a84c]" />
+                    <DollarSign className="h-3.5 w-3.5 text-primary" />
                     Running Total
                   </span>
-                  <span className="text-[#c9a84c]">${totalCost.toFixed(2)}</span>
+                  <span className="text-primary">${totalCost.toFixed(2)}</span>
                 </div>
               </div>
 
               {/* Client info (diviner only) */}
               {role === "diviner" && (
-                <div className="border-b border-[#c9a84c]/10 p-3">
+                <div className="border-b border-border p-3">
                   <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
-                    <Sparkles className="h-3 w-3 text-[#c9a84c]" />
+                    <Sparkles className="h-3 w-3 text-primary" />
                     Client Info
                   </p>
                   <p className="text-sm font-medium">{clientName}</p>
@@ -569,13 +569,13 @@ export function SessionRoom({
                     </p>
                   )}
                   {questionnaire?.focusQuestion && (
-                    <div className="mt-2 rounded bg-[#c9a84c]/5 p-2 text-xs">
-                      <p className="font-medium text-[#c9a84c]">Focus Question:</p>
+                    <div className="mt-2 rounded bg-primary/5 p-2 text-xs">
+                      <p className="font-medium text-primary">Focus Question:</p>
                       <p className="mt-0.5 text-muted-foreground">{questionnaire.focusQuestion}</p>
                     </div>
                   )}
                   {questionnaire?.lifeArea && (
-                    <Badge variant="outline" className="mt-1 text-xs border-[#c9a84c]/30 text-[#e2c97e]">
+                    <Badge variant="outline" className="mt-1 text-xs border-primary/30 text-primary">
                       {questionnaire.lifeArea}
                     </Badge>
                   )}
@@ -586,7 +586,7 @@ export function SessionRoom({
               {role === "diviner" && (
                 <div className="p-3">
                   <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
-                    <FileText className="h-3 w-3 text-[#c9a84c]" />
+                    <FileText className="h-3 w-3 text-primary" />
                     Session Notes
                   </p>
                   <Textarea
@@ -605,9 +605,9 @@ export function SessionRoom({
       {/* Mobile chat bottom sheet */}
       {isMobile && (
         <Sheet open={mobileChatOpen} onOpenChange={setMobileChatOpen}>
-          <SheetContent side="bottom" className="h-[60vh] rounded-t-xl bg-[#0a0e27] p-0">
-            <SheetHeader className="border-b border-[#c9a84c]/10 px-4 py-3">
-              <SheetTitle className="text-[#c9a84c]">Chat</SheetTitle>
+          <SheetContent side="bottom" className="h-[60vh] rounded-t-xl bg-muted p-0">
+            <SheetHeader className="border-b border-border px-4 py-3">
+              <SheetTitle className="text-primary">Chat</SheetTitle>
             </SheetHeader>
             {chatPanel}
           </SheetContent>
