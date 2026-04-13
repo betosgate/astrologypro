@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { MAX_MEDIA_IMAGES, normalizeAlbumName } from "@/lib/media-gallery";
+import {
+  isMediaTypeBlocked,
+  normalizePublishPolicy,
+  publishBlockMessage,
+} from "@/lib/diviner-publishing";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +30,7 @@ async function getAuthenticatedDiviner() {
   const admin = createAdminClient();
   const { data: diviner } = await admin
     .from("diviners")
-    .select("id")
+    .select("id, public_publish_blocked, blocked_public_sections, blocked_media_types, publish_block_reason")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -106,6 +111,17 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createAdminClient();
+  const publishPolicy = normalizePublishPolicy(diviner as Record<string, unknown>);
+  if (isMediaTypeBlocked(publishPolicy, media_type as string)) {
+    return problemDetail(
+      403,
+      "Publishing blocked",
+      publishBlockMessage(
+        publishPolicy,
+        `Publishing ${String(media_type)} media has been blocked by an administrator.`
+      )
+    );
+  }
 
   if (media_type === "image") {
     const { count, error: countError } = await admin

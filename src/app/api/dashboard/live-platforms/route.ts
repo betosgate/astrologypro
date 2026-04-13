@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  isPublicSectionBlocked,
+  normalizePublishPolicy,
+  publishBlockMessage,
+} from "@/lib/diviner-publishing";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +18,7 @@ async function getAuthenticatedDiviner() {
   const admin = createAdminClient();
   const { data } = await admin
     .from("diviners")
-    .select("id")
+    .select("id, public_publish_blocked, blocked_public_sections, blocked_media_types, publish_block_reason")
     .eq("user_id", user.id)
     .single();
   return data;
@@ -59,6 +64,18 @@ export async function POST(req: NextRequest) {
   const diviner = await getAuthenticatedDiviner();
   if (!diviner) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const publishPolicy = normalizePublishPolicy(diviner as Record<string, unknown>);
+  if (isPublicSectionBlocked(publishPolicy, "live")) {
+    return NextResponse.json(
+      {
+        error: publishBlockMessage(
+          publishPolicy,
+          "Live stream publishing has been blocked by an administrator."
+        ),
+      },
+      { status: 403 }
+    );
   }
 
   let body: Record<string, unknown>;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isPublicSectionBlocked, normalizePublishPolicy } from "@/lib/diviner-publishing";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export async function GET(
   // Resolve diviner by username
   const { data: diviner, error: divinerError } = await admin
     .from("diviners")
-    .select("id, username, display_name, avatar_url")
+    .select("id, username, display_name, avatar_url, public_publish_blocked, blocked_public_sections, blocked_media_types, publish_block_reason")
     .eq("username", username)
     .eq("is_active", true)
     .single();
@@ -46,6 +47,26 @@ export async function GET(
         status: 404,
       },
       { status: 404 }
+    );
+  }
+  const publishPolicy = normalizePublishPolicy(diviner as Record<string, unknown>);
+  if (isPublicSectionBlocked(publishPolicy, "media")) {
+    return NextResponse.json(
+      {
+        items: [],
+        diviner: {
+          id: diviner.id,
+          username: diviner.username,
+          display_name: diviner.display_name,
+          avatar_url: diviner.avatar_url,
+        },
+      },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "public, s-maxage=300",
+        },
+      }
     );
   }
 
@@ -81,7 +102,7 @@ export async function GET(
 
   return NextResponse.json(
     {
-      items: items ?? [],
+      items: (items ?? []).filter((item) => !publishPolicy.blockedMediaTypes.includes(item.type)),
       diviner: {
         id: diviner.id,
         username: diviner.username,

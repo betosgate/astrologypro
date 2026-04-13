@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ensureWeeklySubscriptionStripeProduct } from "@/lib/weekly-subscriptions";
+import {
+  isPublicSectionBlocked,
+  normalizePublishPolicy,
+  publishBlockMessage,
+} from "@/lib/diviner-publishing";
 
 export const dynamic = "force-dynamic";
 
@@ -30,13 +35,25 @@ export async function POST(request: NextRequest) {
 
     const { data: diviner } = await admin
       .from("diviners")
-      .select("id, username, display_name")
+      .select("id, username, display_name, public_publish_blocked, blocked_public_sections, blocked_media_types, publish_block_reason")
       .eq("username", divinerUsername)
       .eq("is_active", true)
       .maybeSingle();
 
     if (!diviner) {
       return NextResponse.json({ error: "Diviner not found" }, { status: 404 });
+    }
+    const publishPolicy = normalizePublishPolicy(diviner as Record<string, unknown>);
+    if (isPublicSectionBlocked(publishPolicy, "weekly_subscription")) {
+      return NextResponse.json(
+        {
+          error: publishBlockMessage(
+            publishPolicy,
+            "Weekly subscription publishing has been blocked for this diviner."
+          ),
+        },
+        { status: 403 }
+      );
     }
 
     const { data: product } = await admin
