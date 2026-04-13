@@ -9,6 +9,7 @@ import { buildCalendarDescription, stripHtml } from "@/lib/calendar-utils";
 import { PRICING } from "@/lib/constants";
 import { ensureOrderForBooking, getOrderStatusForService } from "@/lib/orders";
 import { getServicePurchaseConfig } from "@/lib/service-purchase";
+import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
 import {
   sendBookingConfirmation,
   sendBookingAccessInstructions,
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
     // Fetch the service first (source of truth for diviner_id)
     let { data: service, error: serviceError } = await adminSupabase
       .from("services")
-      .select("id, name, slug, category, base_price, duration_minutes, diviner_id, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields")
+      .select("id, name, slug, category, base_price, pricing_item_key, duration_minutes, diviner_id, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields")
       .eq("id", serviceId)
       .eq("is_active", true)
       .single();
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
     if (serviceError || !service) {
       const fallback = await supabase
         .from("services")
-        .select("id, name, slug, category, base_price, duration_minutes, diviner_id, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields")
+        .select("id, name, slug, category, base_price, pricing_item_key, duration_minutes, diviner_id, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields")
         .eq("id", serviceId)
         .eq("is_active", true)
         .single();
@@ -118,6 +119,7 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+    [service] = await applyRuntimePricesToServices(adminSupabase, [service]);
     const purchaseConfig = getServicePurchaseConfig(service);
 
     let resolvedDivinerId = service.diviner_id ?? null;

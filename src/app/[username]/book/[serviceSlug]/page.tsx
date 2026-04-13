@@ -6,6 +6,7 @@ import { APP_URL } from "@/lib/constants";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
 
 interface PageProps {
   params: Promise<{ username: string; serviceSlug: string }>;
@@ -25,13 +26,18 @@ async function getDivinerAndService(username: string, serviceSlug: string) {
 
   const { data: service } = await supabase
     .from("services")
-    .select("id, name, slug, description, duration_minutes, base_price, category, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields")
+    .select("id, name, slug, description, duration_minutes, base_price, pricing_item_key, category, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields")
     .eq("diviner_id", diviner.id)
     .eq("slug", serviceSlug)
     .eq("is_active", true)
     .single();
 
-  return { diviner, service };
+  const [resolvedService] = await applyRuntimePricesToServices(
+    supabase,
+    service ? [service] : []
+  );
+
+  return { diviner, service: resolvedService ?? service };
 }
 
 export async function generateMetadata({

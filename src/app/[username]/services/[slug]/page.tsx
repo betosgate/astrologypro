@@ -24,6 +24,7 @@ import { PageTracker } from "@/components/landing/page-tracker";
 import { RefLinkPreserver } from "./ref-link-preserver";
 import { filterVisiblePublicServices, getServiceCategoryLabel } from "@/lib/public-services";
 import { buildServiceDetailSchemaGraph } from "@/lib/seo/schema-builders";
+import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
 
 interface PageProps {
   params: Promise<{ username: string; slug: string }>;
@@ -54,7 +55,12 @@ async function getService(divinerId: string, slug: string) {
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle();
-  return data && filterVisiblePublicServices([data]).length > 0 ? data : null;
+  if (!data || filterVisiblePublicServices([data]).length === 0) {
+    return null;
+  }
+
+  const [service] = await applyRuntimePricesToServices(supabase, [data]);
+  return service ?? null;
 }
 
 async function getTestimonials(divinerId: string, limit = 3) {

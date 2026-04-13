@@ -7,6 +7,7 @@ import { BookingWizard } from "@/components/booking/booking-wizard";
 import { APP_URL } from "@/lib/constants";
 import { isFallbackManualService } from "@/lib/public-booking";
 import { createClient } from "@/lib/supabase/server";
+import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -28,13 +29,13 @@ async function getDivinerAndBookingContext(username: string) {
 
   const { data: services } = await supabase
     .from("services")
-    .select("id, name, slug, description, duration_minutes, base_price, category, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields, is_featured, sort_order")
+    .select("id, name, slug, description, duration_minutes, base_price, pricing_item_key, category, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields, is_featured, sort_order")
     .eq("diviner_id", diviner.id)
     .eq("is_active", true)
     .order("is_featured", { ascending: false })
     .order("sort_order", { ascending: true });
 
-  const activeServices = services ?? [];
+  const activeServices = await applyRuntimePricesToServices(supabase, services ?? []);
   const publicServices = activeServices.filter((service) => !isFallbackManualService(service));
   const fallbackService =
     activeServices.find((service) => isFallbackManualService(service)) ?? null;

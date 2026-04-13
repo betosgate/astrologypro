@@ -20,6 +20,7 @@ import {
   filterVisiblePublicServices,
   getServiceCategoryLabel,
 } from "@/lib/public-services";
+import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -50,7 +51,7 @@ async function getServices(divinerId: string) {
     .eq("is_active", true)
     .order("is_featured", { ascending: false })
     .order("sort_order", { ascending: true });
-  return data ?? [];
+  return applyRuntimePricesToServices(supabase, data ?? []);
 }
 
 /* ------------------------------------------------------------------ */

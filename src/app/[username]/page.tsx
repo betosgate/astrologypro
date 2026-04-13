@@ -34,6 +34,7 @@ import {
   getServiceCategoryLabel,
   isTimeBasedPublicService,
 } from "@/lib/public-services";
+import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -64,7 +65,7 @@ async function getServices(divinerId: string) {
     .order("is_featured", { ascending: false })
     .order("sort_order", { ascending: true });
 
-  return services ?? [];
+  return applyRuntimePricesToServices(supabase, services ?? []);
 }
 
 async function getTestimonials(divinerId: string) {

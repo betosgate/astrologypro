@@ -148,7 +148,7 @@ This ordering matters because:
 
 | # | File | Objective | Depends on | Status |
 |---|---|---|---|---|
-| 01 | `01-unify-service-and-pricing-source-of-truth.md` | Define how `services` and `pricing_plans` cooperate so display and charge price cannot drift | — | Open |
+| 01 | `01-unify-service-and-pricing-source-of-truth.md` | Define how `services` and `pricing_plans` cooperate so display and charge price cannot drift | — | Done |
 | 02 | `02-standardize-public-service-and-purchase-entry-routes.md` | Make every public purchase CTA route deterministically into the correct calendar-first flow | 01 | Open |
 | 03 | `03-enforce-service-scoped-calendar-first-booking.md` | Ensure selected product/service controls the calendar scope, slot selection, and booking context | 01, 02 | Open |
 | 04 | `04-enforce-diviner-stripe-connect-payout-readiness.md` | Prevent paid public selling when the diviner cannot actually receive payouts | 01, 03 | Open |
@@ -176,4 +176,3 @@ After this pack is implemented:
 - the selected service will remain authoritative through slot selection and payment
 - Stripe Connect payouts will route correctly to the diviner when the booking is paid
 - broken payout configuration will block selling instead of failing late
-
