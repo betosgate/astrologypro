@@ -38,7 +38,7 @@ import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
 
 interface PageProps {
   params: Promise<{ username: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; ref?: string }>;
 }
 
 async function getDiviner(username: string) {
@@ -325,7 +325,8 @@ export async function generateMetadata({
 
 export default async function DivinerPage({ params, searchParams }: PageProps) {
   const { username } = await params;
-  const { tab } = await searchParams;
+  const { tab, ref } = await searchParams;
+  const refParam = ref ? `?ref=${encodeURIComponent(ref)}` : "";
   const diviner = await getDiviner(username);
 
   if (!diviner) {
@@ -604,7 +605,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                         </p>
                       </div>
                       <Link
-                        href={`/${username}/book/${highlightedService.slug}`}
+                        href={`/${username}/book/${highlightedService.slug}${refParam}`}
                         className="inline-flex h-11 items-center justify-center rounded-full bg-gold px-6 text-sm font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
                       >
                         Book {highlightedService.name}
@@ -625,6 +626,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                           service={service}
                           username={username}
                           imageUrl={serviceImages[service.slug]}
+                          refParam={refParam}
                         />
                       ))}
                     </div>
@@ -643,6 +645,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                           service={service}
                           username={username}
                           imageUrl={serviceImages[service.slug]}
+                          refParam={refParam}
                         />
                       ))}
                     </div>
@@ -655,6 +658,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                     tarotServices={tarotServices}
                     username={username}
                     serviceImages={serviceImages}
+                    refParam={refParam}
                   />
                 )}
               </div>

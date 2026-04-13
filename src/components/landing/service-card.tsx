@@ -23,9 +23,15 @@ interface ServiceCardProps {
   service: Service;
   username: string;
   imageUrl?: string | null;
+  refParam?: string;
 }
 
-export function ServiceCard({ service, username, imageUrl }: ServiceCardProps) {
+export function ServiceCard({
+  service,
+  username,
+  imageUrl,
+  refParam = "",
+}: ServiceCardProps) {
   const [expanded, setExpanded] = useState(false);
   const bullets = getWhatToExpect(service.category, service.slug);
 
@@ -80,14 +86,14 @@ export function ServiceCard({ service, username, imageUrl }: ServiceCardProps) {
           {/* Action links */}
           <div className="mt-3 flex items-center gap-4">
             <Link
-              href={`/${username}/book/${service.slug}`}
+              href={`/${username}/book/${service.slug}${refParam}`}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-gold/80 transition-colors hover:text-gold"
             >
               Book This Reading
               <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
             </Link>
             <Link
-              href={`/${username}/services/${service.slug}`}
+              href={`/${username}/services/${service.slug}${refParam}`}
               className="text-xs text-silver/50 transition-colors hover:text-silver/80"
             >
               Learn More
