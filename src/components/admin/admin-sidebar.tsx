@@ -182,6 +182,7 @@ const NAV_GROUPS = [
     items: [
       { label: "PM Plan Tiers", href: "/admin/pm-plan-tiers", icon: Layers },
       { label: "Broadcasts", href: "/admin/broadcasting", icon: Radio },
+      { label: "Dashboard Feed", href: "/admin/dashboard-content", icon: Megaphone },
       { label: "Calendar", href: "/admin/calendar", icon: CalendarDays },
       { label: "Holy Books", href: "/admin/holy-books", icon: BookOpen },
       { label: "Doctrine Links", href: "/admin/doctrine-links", icon: Star },

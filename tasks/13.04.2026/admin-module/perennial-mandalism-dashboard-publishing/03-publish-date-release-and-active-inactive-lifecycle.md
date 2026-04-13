@@ -103,3 +103,7 @@ This avoids nondeterministic feeds while preserving editorial control.
 - publish eligibility rules
 - expiration rules
 - final ordering policy for the dashboard feed
+
+## Status
+
+Done

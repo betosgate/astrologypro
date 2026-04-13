@@ -43,7 +43,8 @@ import { MembershipCard, type MembershipSubscription } from "@/components/commun
 import { ManageSubscriptionButton } from "@/components/mystery-school/manage-subscription-button";
 import { ProfileCompletionCard, type ProfileCompletionData } from "@/components/community/profile-completion-card";
 import { ProgressRing } from "@/components/community/progress-ring";
-import { MandalismContentPreview, type MandalismContent } from "@/components/community/mandalism-content-preview";
+import { DashboardFeedPreview } from "@/components/community/dashboard-feed-preview";
+import { getCommunityDashboardFeed } from "@/lib/dashboard-content";
 
 export const metadata = { title: "Community - AstrologyPro" };
 export const dynamic = "force-dynamic";
@@ -194,7 +195,6 @@ export default async function CommunityDashboardPage() {
     recentWisdomResult,
     recentBlogResult,
     ritualsResult,
-    mandalismItemsResult,
     profileCompletionFamilyResult,
     profileCompletionRelChartResult,
     pmTierResult,
@@ -249,18 +249,6 @@ export default async function CommunityDashboardPage() {
       .order("created_at", { ascending: false })
       .limit(5),
 
-    // Mandalism content preview — latest 8 published items
-    supabase
-      .from("mandalism_content")
-      .select(
-        "id, title, content_type, access_control, url, pdf_url, content_thumbnail_url, duration_label, description, start_at, end_at, priority"
-      )
-      .eq("is_published", true)
-      .or(`access_control.eq.free,access_control.eq.members`)
-      .order("priority", { ascending: true, nullsFirst: false })
-      .order("created_at", { ascending: false })
-      .limit(8),
-
     // Profile completion: family members with natal_chart data
     supabase
       .from("community_family_members")
@@ -306,7 +294,6 @@ export default async function CommunityDashboardPage() {
   const recentWisdom = recentWisdomResult.data ?? [];
   const recentBlog = recentBlogResult.data ?? [];
   const rituals = ritualsResult.data ?? [];
-  const mandalismItems = (mandalismItemsResult.data ?? []) as MandalismContent[];
   const pcFamilyMembers = profileCompletionFamilyResult.data ?? [];
   const pcRelCharts = profileCompletionRelChartResult.data ?? [];
   const pmTier = pmTierResult.data ?? null;
@@ -551,6 +538,9 @@ export default async function CommunityDashboardPage() {
   };
 
   const profileIsComplete = profileCompletionData.overall_pct >= 100;
+  const dashboardFeedItems = await getCommunityDashboardFeed(
+    isMysterySchool ? "mystery_school" : "perennial_mandalism"
+  );
 
   // ── Feature quick links ────────────────────────────────────────────────────
   const features = isMysterySchool
@@ -1434,7 +1424,7 @@ export default async function CommunityDashboardPage() {
               <Link href="/community/library">View All →</Link>
             </Button>
           </div>
-          <MandalismContentPreview initialItems={mandalismItems} />
+          <DashboardFeedPreview items={dashboardFeedItems} />
         </div>
 
         {/* Recent Spiritual Wisdom */}

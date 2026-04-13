@@ -128,3 +128,13 @@ This feature set is complete only when:
 - dashboard cards can either store native content or point to canonical source records
 - ordering rules are deterministic and explainable
 - the launch includes a realistic seed set for testing and rollout
+
+## Status
+
+- `01-unify-dashboard-content-domain-model.md` — Done
+- `02-category-taxonomy-and-source-linkage.md` — Done
+- `03-publish-date-release-and-active-inactive-lifecycle.md` — Done
+- `04-admin-dashboard-content-management-surface.md` — Done
+- `05-user-dashboard-feed-assembly-and-ordering.md` — Done
+- `06-db-api-permissions-and-query-strategy.md` — Done
+- `07-seed-plan-and-launch-fixtures.md` — Done
