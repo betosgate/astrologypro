@@ -9,6 +9,11 @@ Define the product architecture for Perennial Mandalism users so they automatica
 - full family dynamic chart coverage
 - monthly transit generation
 
+Base-user creation rule:
+
+- when the base Perennial Mandalism user is created, only natal and monthly transit provisioning should happen automatically
+- relationship charts and family-dynamic coverage should happen later, after additional family-member context exists
+
 This must reuse the existing astrology module wherever possible.
 
 The system also needs operational rules:
@@ -17,6 +22,9 @@ The system also needs operational rules:
 - natal and relationship generation should normally happen once
 - members may regenerate up to `3` times if they entered information incorrectly
 - after the retry limit, they must open a job or support ticket for review
+- when natal or monthly transit artifacts are created, the user must be notified
+- when an existing user adds another household user, that added user must get an email to complete signup
+- the primary user must be able to see other household users' charts, and household users under the same primary account must be able to see each other's charts
 
 This pack is architecture and task writing only. It does not implement the feature.
 
@@ -92,14 +100,22 @@ The correct architecture is:
 5. `05-user-controls-regeneration-limits-and-audit.md`
 6. `06-support-ticket-escalation-for-chart-issues.md`
 7. `07-seed-fixtures-rollout-and-ops-monitoring.md`
+8. `08-base-user-auto-provisioning-natal-and-monthly-only.md`
+9. `09-chart-creation-notifications-and-delivery-audit.md`
+10. `10-added-household-user-signup-invite-and-delivery-tracking.md`
+11. `11-household-chart-visibility-and-shared-access-rules.md`
 
 ## Acceptance Standard
 
 This feature set is complete only when:
 
 - Perennial Mandalism members automatically receive natal chart coverage for eligible profiles
+- base-user creation auto-provisions only natal and monthly transit eligibility
 - relationship charts are available across the family set using existing synastry logic
 - monthly transits generate exactly once per member profile per month
+- users are notified when natal charts and monthly transit artifacts are created
+- added household users receive an email prompting them to complete signup
+- household chart visibility rules allow the main user and same-household users to view each other's charts according to shared access policy
 - chart regeneration is capped at `3` correction attempts
 - support escalation uses the existing ticket system
 - admin has visibility into chart status, failures, retries, and unresolved issues
