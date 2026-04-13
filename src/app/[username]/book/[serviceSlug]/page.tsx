@@ -25,7 +25,7 @@ async function getDivinerAndService(username: string, serviceSlug: string) {
 
   const { data: service } = await supabase
     .from("services")
-    .select("id, name, slug, description, duration_minutes, base_price, category, requires_birth_data")
+    .select("id, name, slug, description, duration_minutes, base_price, category, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields")
     .eq("diviner_id", diviner.id)
     .eq("slug", serviceSlug)
     .eq("is_active", true)

@@ -122,15 +122,20 @@ export default async function CategoryLessonsPage({
     ...(legacyProgressResult.data ?? []).map((r) => r.lesson_id),
   ]);
 
-  // The immediate-next lesson according to the progress cache
-  const nextLessonId = catProgressResult.data?.next_lesson_id ?? null;
-
   // Global sequential lock — if false, no sequential enforcement at all
   const globalLock = globalLockResult.data?.global_sequential_lock ?? false;
 
   const total = lessonList.length;
   const completed = lessonList.filter((l) => completedSet.has(l.id)).length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+  // The immediate-next lesson according to the progress cache. If the cache is
+  // missing or stale for a fresh category, derive it from the active hierarchy
+  // so sequential lock UI still matches the lesson-detail API.
+  const nextLessonId =
+    catProgressResult.data?.next_lesson_id ??
+    lessonList.find((lesson) => !completedSet.has(lesson.id))?.id ??
+    null;
 
   // Priority-based sequential lock:
   // A lesson is locked when global lock is ON, the category is sequential,
@@ -140,7 +145,7 @@ export default async function CategoryLessonsPage({
     if (!globalLock) return false;
     if (completedSet.has(lesson.id)) return false;
     if (!category?.is_sequential) return false;
-    if (lesson.id === (nextLessonId ?? lesson.id)) return false;
+    if (lesson.id === nextLessonId) return false;
     return lessonList.some(
       (prev) => prev.priority < lesson.priority && !completedSet.has(prev.id)
     );

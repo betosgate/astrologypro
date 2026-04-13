@@ -5,9 +5,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { CalendarPicker } from "./calendar-picker";
-import { IntakeForm, type IntakeData } from "./intake-form";
 import {
   ArrowLeft,
   ArrowRight,
@@ -23,6 +24,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { format } from "date-fns";
+import { getServicePurchaseConfig } from "@/lib/service-purchase";
 import { cn } from "@/lib/utils";
 import { formatInTimezone } from "@/lib/timezone-utils";
 import { loadStripe } from "@stripe/stripe-js";
@@ -47,6 +49,14 @@ interface Service {
   price?: number;
   category: string;
   requires_birth_data: boolean;
+  intake_template_id?: string | null;
+  product_kind?: string | null;
+  is_subscription?: boolean | null;
+  requires_birth_time?: boolean | null;
+  requires_birth_city?: boolean | null;
+  requires_partner_data?: boolean | null;
+  pre_checkout_fields?: unknown;
+  post_checkout_fields?: unknown;
 }
 
 interface Diviner {
@@ -83,26 +93,20 @@ interface BookingWizardProps {
 
 const STEPS = [
   { label: "Date & Time", icon: Calendar },
-  { label: "Your Details", icon: CreditCard },
+  { label: "Contact", icon: CreditCard },
   { label: "Confirm & Pay", icon: CheckCircle },
 ];
 
-const INITIAL_INTAKE: IntakeData = {
+interface BookingDetails {
+  fullName: string;
+  email: string;
+  phone: string;
+}
+
+const INITIAL_DETAILS: BookingDetails = {
   fullName: "",
   email: "",
   phone: "",
-  birthDate: "",
-  birthTime: "",
-  birthCity: "",
-  focusQuestion: "",
-  lifeArea: "",
-  secondPersonName: "",
-  secondPersonAttending: "",
-  secondPersonEmail: "",
-  secondPersonBirthDate: "",
-  secondPersonBirthTime: "",
-  secondPersonBirthCity: "",
-  extras: {},
 };
 
 function formatSlotDate(iso: string, timezone: string): string {
@@ -236,8 +240,7 @@ export function BookingWizard({
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
-  const [intakeData, setIntakeData] = useState<IntakeData>(INITIAL_INTAKE);
-  const [bookingNotes, setBookingNotes] = useState("");
+  const [bookingDetails, setBookingDetails] = useState<BookingDetails>(INITIAL_DETAILS);
   const [policyAcknowledged, setPolicyAcknowledged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // Stable session token for slot holds (persists for the lifetime of this wizard)
@@ -248,7 +251,11 @@ export function BookingWizard({
   );
   const [bookingComplete, setBookingComplete] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [requiresPostPaymentIntake, setRequiresPostPaymentIntake] = useState(
+    getServicePurchaseConfig(service).requiresPostPaymentIntake
+  );
   const [error, setError] = useState<string | null>(null);
   const [creatingPaymentIntent, setCreatingPaymentIntent] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
@@ -257,6 +264,7 @@ export function BookingWizard({
   const [clientTimezone, setClientTimezone] = useState(diviner.timezone || "UTC");
   const resolvedServiceName = hideServiceName ? (bookingLabel ?? "Reading Session") : (bookingLabel ?? service.name);
   const availabilityQuery = availabilityServiceId ? `&serviceId=${availabilityServiceId}` : "";
+  const purchaseConfig = getServicePurchaseConfig(service);
 
   // Effective price: slot's linked service price takes priority over the service prop's base_price
   const effectivePrice = selectedSlot?.servicePrice != null
@@ -290,14 +298,11 @@ export function BookingWizard({
 
         if (!client) return;
 
-        setIntakeData((prev) => ({
+        setBookingDetails((prev) => ({
           ...prev,
           fullName: client.full_name || prev.fullName,
           email: client.email || user.email || prev.email,
           phone: client.phone || prev.phone,
-          birthDate: client.birth_date || prev.birthDate,
-          birthTime: client.birth_time || prev.birthTime,
-          birthCity: client.birth_city || prev.birthCity,
         }));
         setPrefilled(true);
       } catch {
@@ -391,10 +396,8 @@ export function BookingWizard({
       case 1:
         return !!(
           selectedSlot &&
-          intakeData.fullName.trim() &&
-          intakeData.email.trim() &&
-          intakeData.focusQuestion.trim() &&
-          intakeData.lifeArea
+          bookingDetails.fullName.trim() &&
+          bookingDetails.email.trim()
         );
       case 2:
         return true;
@@ -423,31 +426,11 @@ export function BookingWizard({
           divinerUsername: diviner.username,
           serviceId: service.id,
           scheduledAt: selectedSlot!.start,
-          clientEmail: intakeData.email,
-          clientName: intakeData.fullName,
-          clientPhone: intakeData.phone || undefined,
-          questionnaire: {
-            focusQuestion: intakeData.focusQuestion,
-            lifeArea: intakeData.lifeArea,
-            birthDate: intakeData.birthDate || undefined,
-            birthTime: intakeData.birthTime || undefined,
-            birthCity: intakeData.birthCity || undefined,
-            birthLat: intakeData.birthLat,
-            birthLng: intakeData.birthLng,
-            birthTimezone: intakeData.birthTimezone,
-            secondPersonName: intakeData.secondPersonName || undefined,
-            secondPersonAttending: intakeData.secondPersonAttending || undefined,
-            secondPersonEmail: intakeData.secondPersonEmail || undefined,
-            secondPersonBirthDate: intakeData.secondPersonBirthDate || undefined,
-            secondPersonBirthTime: intakeData.secondPersonBirthTime || undefined,
-            secondPersonBirthCity: intakeData.secondPersonBirthCity || undefined,
-            secondPersonBirthLat: intakeData.secondPersonBirthLat,
-            secondPersonBirthLng: intakeData.secondPersonBirthLng,
-            secondPersonBirthTimezone: intakeData.secondPersonBirthTimezone,
-            ...intakeData.extras,
-          },
+          clientEmail: bookingDetails.email,
+          clientName: bookingDetails.fullName,
+          clientPhone: bookingDetails.phone || undefined,
+          questionnaire: {},
           affiliateCode,
-          booking_notes: bookingNotes.trim() || undefined,
           policyAcknowledgedAt: policyAcknowledged ? new Date().toISOString() : undefined,
         }),
       });
@@ -470,8 +453,16 @@ export function BookingWizard({
         if (data.bookingId) {
           setBookingId(data.bookingId);
         }
+        if (data.orderId) {
+          setOrderId(data.orderId);
+        }
+        setRequiresPostPaymentIntake(Boolean(data.requiresPostPaymentIntake));
       } else if (data.bookingId) {
         setBookingId(data.bookingId);
+        if (data.orderId) {
+          setOrderId(data.orderId);
+        }
+        setRequiresPostPaymentIntake(Boolean(data.requiresPostPaymentIntake));
         setBookingComplete(true);
       }
     } catch (err) {
@@ -530,6 +521,10 @@ export function BookingWizard({
   const sessionJoinUrl = bookingId
     ? `/${diviner.username}/session/${bookingId}`
     : null;
+  const portalOrderUrl = orderId ? `/portal/orders/${orderId}` : null;
+  const portalSignInUrl = portalOrderUrl
+    ? `/login?redirect=${encodeURIComponent(portalOrderUrl)}`
+    : null;
 
   const selectedAvailabilityTz = selectedSlot?.availabilityTimezone || "UTC";
 
@@ -564,12 +559,32 @@ export function BookingWizard({
             </div>
           )}
 
-          {/* Session Join Link */}
-          {sessionJoinUrl && (
+          {requiresPostPaymentIntake && portalSignInUrl && (
             <Button
               asChild
               className="mb-4 w-full gap-2 bg-amber-600 text-white hover:bg-amber-700"
               size="lg"
+            >
+              <a href={portalSignInUrl}>
+                <ExternalLink className="size-4" />
+                Complete Your Intake
+              </a>
+            </Button>
+          )}
+
+          {requiresPostPaymentIntake && (
+            <p className="mb-4 text-sm text-muted-foreground">
+              We’ll collect your birth details and product-specific questions after payment so checkout stays fast.
+            </p>
+          )}
+
+          {/* Session Join Link */}
+          {sessionJoinUrl && (
+            <Button
+              asChild
+              className="mb-4 w-full gap-2"
+              size="lg"
+              variant={requiresPostPaymentIntake ? "outline" : "default"}
             >
               <a href={sessionJoinUrl}>
                 <ExternalLink className="size-4" />
@@ -738,46 +753,74 @@ export function BookingWizard({
 
           {/* Step 2: Intake Questionnaire */}
           {step === 1 && (
-            <>
+            <div className="space-y-6">
               {prefilled && (
                 <div className="mb-4 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-400">
                   Welcome back! Your details are pre-filled from your last
                   session. Feel free to update anything before continuing.
                 </div>
               )}
-              <IntakeForm
-                requiresBirthData={service.requires_birth_data}
-                serviceSlug={service.slug}
-                serviceCategory={service.category}
-                data={intakeData}
-                onChange={setIntakeData}
-              />
-
-              {/* Notes & Special Requests */}
-              <div className="mt-5 space-y-2">
-                <label
-                  htmlFor="bookingNotes"
-                  className="block text-sm font-medium"
-                >
-                  Notes for your practitioner{" "}
-                  <span className="font-normal text-muted-foreground">
-                    (optional)
-                  </span>
-                </label>
-                <textarea
-                  id="bookingNotes"
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-                  rows={4}
-                  maxLength={1000}
-                  placeholder="Share anything that would help prepare for your session..."
-                  value={bookingNotes}
-                  onChange={(e) => setBookingNotes(e.target.value)}
-                />
-                <p className="text-right text-xs text-muted-foreground">
-                  {bookingNotes.length}/1000
-                </p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="booking-full-name">Full Name</Label>
+                  <Input
+                    id="booking-full-name"
+                    value={bookingDetails.fullName}
+                    onChange={(e) =>
+                      setBookingDetails((prev) => ({
+                        ...prev,
+                        fullName: e.target.value,
+                      }))
+                    }
+                    placeholder="Your full name"
+                    autoComplete="name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="booking-email">Email</Label>
+                  <Input
+                    id="booking-email"
+                    type="email"
+                    value={bookingDetails.email}
+                    onChange={(e) =>
+                      setBookingDetails((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
+                    }
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="booking-phone">
+                    Phone <span className="text-muted-foreground">(optional)</span>
+                  </Label>
+                  <Input
+                    id="booking-phone"
+                    type="tel"
+                    value={bookingDetails.phone}
+                    onChange={(e) =>
+                      setBookingDetails((prev) => ({
+                        ...prev,
+                        phone: e.target.value,
+                      }))
+                    }
+                    placeholder="+1 555 123 4567"
+                    autoComplete="tel"
+                  />
+                </div>
               </div>
-            </>
+
+              {purchaseConfig.requiresPostPaymentIntake && (
+                <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-muted-foreground">
+                  After payment, we&apos;ll ask only for the details needed for{" "}
+                  <span className="font-medium text-foreground">{resolvedServiceName}</span>.
+                  {purchaseConfig.postCheckoutFields.includes("birth_details") &&
+                    " Birth data will be collected in the secure post-purchase intake."}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Step 3: Payment & Confirmation */}
@@ -847,7 +890,7 @@ export function BookingWizard({
                   )}
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Client</span>
-                    <span className="font-medium">{intakeData.fullName}</span>
+                    <span className="font-medium">{bookingDetails.fullName}</span>
                   </div>
                   <Separator />
                   <div className="flex items-center justify-between text-lg">
@@ -968,10 +1011,8 @@ export function BookingWizard({
               if (step === 1 && !canProceed()) {
                 const missing: string[] = [];
                 let firstMissingId = "";
-                if (!intakeData.fullName.trim()) { missing.push("Full Name"); if (!firstMissingId) firstMissingId = "fullName"; }
-                if (!intakeData.email.trim()) { missing.push("Email"); if (!firstMissingId) firstMissingId = "email"; }
-                if (!intakeData.lifeArea) { missing.push("Life Area"); if (!firstMissingId) firstMissingId = "lifeArea"; }
-                if (!intakeData.focusQuestion.trim()) { missing.push("Focus Question"); if (!firstMissingId) firstMissingId = "focusQuestion"; }
+                if (!bookingDetails.fullName.trim()) { missing.push("Full Name"); if (!firstMissingId) firstMissingId = "fullName"; }
+                if (!bookingDetails.email.trim()) { missing.push("Email"); if (!firstMissingId) firstMissingId = "email"; }
                 toast.error(`Please fill in: ${missing.join(", ")}`);
                 // Scroll to and focus the first missing field
                 if (firstMissingId) {

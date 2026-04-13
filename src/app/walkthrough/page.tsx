@@ -17,15 +17,15 @@ export const metadata: Metadata = {
 
 const accessRows = [
   { module: "Dashboard", access: [1, 1, 1, 1, 1, 1, 1, 1] },
-  { module: "Natal Charts", access: [0, 0, 1, 1, 1, 1, 0, 0] },
-  { module: "Synastry Engine", access: [0, 0, 0, 1, 1, 1, 0, 0] },
-  { module: "Live Sunday Service", access: [0, 0, 0, 1, 1, 1, 0, 0] },
-  { module: "Mystery Curriculum", access: [1, 0, 0, 0, 1, 1, 0, 1] },
-  { module: "Decan Mastery Grid", access: [1, 0, 0, 0, 1, 1, 0, 0] },
-  { module: "Diviner Scheduler", access: [1, 0, 0, 0, 0, 1, 0, 1] },
-  { module: "Service CRM", access: [1, 0, 0, 0, 0, 1, 0, 1] },
-  { module: "Broadcast Studio", access: [1, 0, 0, 0, 0, 1, 0, 0] },
-  { module: "Affiliate Portal", access: [1, 0, 0, 0, 0, 1, 1, 0] },
+  { module: "Natal Charts", access: [0, 1, 1, 1, 0, 0, 1, 0] },
+  { module: "Synastry Engine", access: [0, 1, 1, 1, 0, 0, 0, 0] },
+  { module: "Live Sunday Service", access: [0, 1, 1, 1, 0, 0, 0, 0] },
+  { module: "Mystery Curriculum", access: [1, 1, 0, 1, 0, 1, 0, 0] },
+  { module: "Decan Mastery Grid", access: [1, 1, 0, 1, 0, 0, 0, 0] },
+  { module: "Diviner Scheduler", access: [1, 1, 0, 0, 0, 1, 0, 0] },
+  { module: "Service CRM", access: [1, 1, 0, 0, 0, 1, 0, 0] },
+  { module: "Broadcast Studio", access: [1, 1, 0, 0, 0, 0, 0, 0] },
+  { module: "Affiliate Portal", access: [1, 1, 0, 0, 1, 0, 0, 0] },
   { module: "Mundane Engines", access: [1, 0, 0, 0, 0, 0, 0, 0] },
   { module: "Global Analytics", access: [1, 0, 0, 0, 0, 0, 0, 0] },
   { module: "System Config", access: [1, 0, 0, 0, 0, 0, 0, 0] },
@@ -60,90 +60,59 @@ function RolePanel({
 }: {
   role: (typeof WALKTHROUGH_SECTIONS)[number];
 }) {
+  const featureCount = role.capabilities.length;
+  const screenshotCount = role.screens.length;
+  const categoryCount = role.featureAreas.length;
+
   return (
-    <article className="border-t border-white/8 pt-6 first:border-t-0 first:pt-0">
-      <div className="rounded-[2px] border border-white/12 bg-[radial-gradient(circle_at_20%_0%,rgba(72,52,135,0.14),transparent_35%),linear-gradient(180deg,rgba(11,13,30,0.94),rgba(9,11,24,0.98))] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:px-6 sm:py-6 lg:px-7 lg:py-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="max-w-4xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#f0f3ff]">
-              <role.icon className="size-3.5 text-[#f5f0e8]" strokeWidth={1.8} />
-              {role.tagline.toUpperCase()}
-            </div>
-
-            <div className="mt-5 block w-fit rounded-[14px] bg-[linear-gradient(180deg,#f7d36d_0%,#d39a34_100%)] px-4 py-2 text-[1.05rem] font-semibold leading-none text-[#121212] shadow-[0_10px_22px_rgba(211,154,52,0.22)] sm:text-[1.85rem]">
-              {role.role}
-            </div>
-
-            <p className="mt-8 max-w-4xl text-base leading-8 text-white">
-              {role.roleDescription}
-            </p>
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              {role.featureAreas.map((area) => (
-                <span
-                  key={area}
-                  className="rounded-full border border-white/12 bg-white/[0.03] px-4 py-2 text-sm font-semibold text-[#f4f6ff]"
-                >
-                  {area}
-                </span>
-              ))}
-            </div>
+    <article className="h-full">
+      <div className="h-full rounded-3xl border border-white/12 bg-[radial-gradient(circle_at_20%_0%,rgba(72,52,135,0.12),transparent_40%),linear-gradient(180deg,rgba(11,13,30,0.94),rgba(9,11,24,0.98))] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+        <div className="min-w-0">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/14 bg-[#0e1736]/85 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#f4f7ff]">
+            <role.icon className="size-3.5 text-[#f5f0e8]" strokeWidth={1.9} />
+            {role.tagline}
           </div>
 
-          <div className="shrink-0 rounded-full border border-white/12 bg-white/[0.02] px-4 py-2 text-sm font-semibold text-white">
-            {role.screens.length} screens
+          <div className="mt-4 inline-flex max-w-full rounded-2xl bg-[linear-gradient(180deg,#f9d86d_0%,#d79d31_100%)] px-3.5 py-2 shadow-[0_10px_22px_rgba(211,154,52,0.24)]">
+            <p className="truncate text-xl font-semibold leading-none text-[#101114] sm:text-2xl">
+              {role.role}
+            </p>
+          </div>
+
+          <p className="mt-4 line-clamp-3 text-base leading-7 text-[#b8bcd0]/82">
+            {role.roleDescription}
+          </p>
+        </div>
+
+        <div className="mt-6 grid grid-cols-3 gap-3">
+          <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-center">
+            <p className="text-2xl font-semibold text-[#f5f0e8]">{featureCount}</p>
+            <p className="mt-1 text-[9px] font-semibold uppercase leading-tight text-[#9ea5c0]">
+              Features
+            </p>
+          </div>
+          <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-center">
+            <p className="text-2xl font-semibold text-[#f5f0e8]">{screenshotCount}</p>
+            <p className="mt-1 text-[9px] font-semibold uppercase leading-tight text-[#9ea5c0]">
+              Screenshots
+            </p>
+          </div>
+          <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-center">
+            <p className="text-2xl font-semibold text-[#f5f0e8]">{categoryCount}</p>
+            <p className="mt-1 text-[9px] font-semibold uppercase leading-tight text-[#9ea5c0]">
+              Categories
+            </p>
           </div>
         </div>
 
-        <div className="mt-8 grid items-stretch gap-5 md:grid-cols-2">
-          <div className="flex min-h-[252px] flex-col rounded-[22px] border border-white/12 bg-[linear-gradient(180deg,rgba(12,14,29,0.56),rgba(10,12,24,0.3))] px-5 py-5">
-            <p className="text-[11px] font-bold uppercase tracking-[0.01em] text-white/95">
-              Key capabilities
-            </p>
-            <ul className="mt-5 flex-1 space-y-4">
-              {role.capabilities.map((capability) => (
-                <li
-                  key={capability}
-                  className="pl-2 text-[15px] leading-8 text-[#f4f6ff]"
-                >
-                  {capability}
-                </li>
-              ))}
-            </ul>
-
-            <Link
-              href={`/walkthrough/${role.slug}`}
-              className="mt-7 inline-flex items-center gap-2 text-[15px] font-semibold text-white transition hover:text-[#f5d382]"
-            >
-              Explore full role walkthrough
-              <ArrowRight className="size-4" />
-            </Link>
-          </div>
-
-          <div className="flex min-h-[252px] flex-col rounded-[22px] border border-white/12 bg-[linear-gradient(180deg,rgba(12,14,29,0.56),rgba(10,12,24,0.3))] px-5 py-5">
-            <p className="text-[11px] font-bold uppercase tracking-[0.01em] text-white/95">
-              Signature modules
-            </p>
-            <div className="mt-5 flex flex-wrap gap-3">
-              {role.keyPages.map((page) => (
-                <span
-                  key={page}
-                  className="rounded-full border border-white/12 bg-white/[0.02] px-4 py-2 text-[14px] font-semibold text-[#e1c25f]"
-                >
-                  {page}
-                </span>
-              ))}
-            </div>
-
-            <div className="mt-6 rounded-[18px] border border-white/12 px-4 py-4">
-              <p className="text-[11px] font-bold uppercase tracking-[0.01em] text-white/95">
-                Screens included
-              </p>
-              <p className="mt-4 text-[15px] leading-8 text-[#f4f6ff]">
-                {role.screens.map((screen) => screen.label).join(" · ")}
-              </p>
-            </div>
-          </div>
+        <div className="mt-6 flex justify-end">
+          <Link
+            href={`/walkthrough/${role.slug}`}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#20c997] transition hover:text-[#4ee3bf]"
+          >
+            View walkthrough
+            <ArrowRight className="size-4" />
+          </Link>
         </div>
       </div>
     </article>
@@ -218,7 +187,7 @@ export default function WalkthroughIndex() {
               description="A complete index of the platform by persona. Each section mirrors the screenshot-first review style from your reference, with capability summaries on the left and module chips on the right."
             />
 
-            <div className="mt-12">
+            <div className="mt-12 grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
               {roles.map((role) => (
                 <RolePanel key={role.slug} role={role} />
               ))}
@@ -238,19 +207,17 @@ export default function WalkthroughIndex() {
                   key={group.slug}
                   className="rounded-[26px] border border-white/10 bg-white/[0.03] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.18)]"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="font-display text-2xl font-semibold text-[#f5f0e8]">
-                        {group.title}
-                      </h3>
-                      <p className="mt-2 text-sm leading-7 text-[#b8bcd0]/72">
-                        {group.description}
-                      </p>
-                    </div>
-                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d7dbee]/75">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="font-display text-2xl font-semibold text-[#f5f0e8]">
+                      {group.title}
+                    </h3>
+                    <span className="inline-flex whitespace-nowrap items-center justify-center rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[9px] font-semibold uppercase leading-none tracking-[0.12em] text-[#d7dbee]/75">
                       {group.screenCount} screens
                     </span>
                   </div>
+                  <p className="mt-2 text-sm leading-7 text-[#b8bcd0]/72">
+                    {group.description}
+                  </p>
 
                   <div className="mt-6 flex flex-wrap gap-2">
                     {group.pages.map((page) => (
@@ -347,3 +314,4 @@ export default function WalkthroughIndex() {
     </div>
   );
 }
+
