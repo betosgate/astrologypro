@@ -28,10 +28,16 @@ interface MonthlyRevenue {
 
 interface RevenueSummary {
   totalRevenue: number;
-  totalBookings: number;
-  avgBookingValue: number;
+  totalEvents: number;
+  avgEventValue: number;
   platformFees: number;
+  platformNetRevenue: number;
+  affiliateCommissions: number;
+  divinerGrossPayouts: number;
   divinerPayouts: number;
+  platformShareRatio: number;
+  divinerShareRatio: number;
+  affiliateShareRatio: number;
 }
 
 export interface RevenueResponse {
@@ -90,7 +96,7 @@ export async function GET(req: NextRequest) {
   let query = admin
     .from("revenue_ledger_entries")
     .select(
-      `id, source_type, gross_amount_cents, platform_fee_cents, diviner_net_amount_cents, recognized_at, diviner_id,
+      `id, source_type, gross_amount_cents, platform_fee_cents, platform_net_amount_cents, affiliate_commission_cents, diviner_gross_amount_cents, diviner_net_amount_cents, recognized_at, diviner_id,
        diviners(id, display_name)`,
     );
 
@@ -122,10 +128,22 @@ export async function GET(req: NextRequest) {
     (sum, row) => sum + (Number(row.gross_amount_cents) || 0) / 100,
     0,
   );
-  const totalBookings = rows.length;
-  const avgBookingValue = totalBookings > 0 ? totalRevenue / totalBookings : 0;
+  const totalEvents = rows.length;
+  const avgEventValue = totalEvents > 0 ? totalRevenue / totalEvents : 0;
   const platformFees = rows.reduce(
     (sum, row) => sum + (Number(row.platform_fee_cents) || 0) / 100,
+    0,
+  );
+  const platformNetRevenue = rows.reduce(
+    (sum, row) => sum + (Number(row.platform_net_amount_cents) || 0) / 100,
+    0,
+  );
+  const affiliateCommissions = rows.reduce(
+    (sum, row) => sum + (Number(row.affiliate_commission_cents) || 0) / 100,
+    0,
+  );
+  const divinerGrossPayouts = rows.reduce(
+    (sum, row) => sum + (Number(row.diviner_gross_amount_cents) || 0) / 100,
     0,
   );
   const divinerPayouts = rows.reduce(
@@ -135,10 +153,16 @@ export async function GET(req: NextRequest) {
 
   const summary: RevenueSummary = {
     totalRevenue: Math.round(totalRevenue * 100) / 100,
-    totalBookings,
-    avgBookingValue: Math.round(avgBookingValue * 100) / 100,
+    totalEvents,
+    avgEventValue: Math.round(avgEventValue * 100) / 100,
     platformFees: Math.round(platformFees * 100) / 100,
+    platformNetRevenue: Math.round(platformNetRevenue * 100) / 100,
+    affiliateCommissions: Math.round(affiliateCommissions * 100) / 100,
+    divinerGrossPayouts: Math.round(divinerGrossPayouts * 100) / 100,
     divinerPayouts: Math.round(divinerPayouts * 100) / 100,
+    platformShareRatio: totalRevenue > 0 ? platformNetRevenue / totalRevenue : 0,
+    divinerShareRatio: totalRevenue > 0 ? divinerPayouts / totalRevenue : 0,
+    affiliateShareRatio: totalRevenue > 0 ? affiliateCommissions / totalRevenue : 0,
   };
 
   // ── By Diviner ────────────────────────────────────────────────────────────
