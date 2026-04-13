@@ -32,6 +32,7 @@ import { normalizePublishPolicy } from "@/lib/diviner-publishing";
 import { getDivinerAvatarUrl } from "@/lib/diviner-images";
 import { buildGovernedLivePlatforms } from "@/lib/live-platform-governance";
 import { LivePlatformOverrides } from "./live-platform-overrides";
+import { DivinerSeoSettings } from "./diviner-seo-settings";
 import {
   getRoleServicePackages,
   resolveRoleServicePackage,
@@ -275,6 +276,37 @@ export default async function AdminDivinerDetailPage({
       <LivePlatformOverrides
         divinerId={diviner.id}
         initialPlatforms={governedLivePlatforms}
+      />
+      <DivinerSeoSettings
+        divinerId={diviner.id}
+        initialSeo={{
+          id: diviner.id,
+          seo_city: diviner.seo_city ?? null,
+          seo_region: diviner.seo_region ?? null,
+          seo_country: diviner.seo_country ?? null,
+          seo_country_code: diviner.seo_country_code ?? null,
+          seo_service_area_mode: diviner.seo_service_area_mode ?? null,
+          seo_service_areas: diviner.seo_service_areas ?? [],
+          seo_is_remote_global: diviner.seo_is_remote_global === true,
+          seo_languages: diviner.seo_languages ?? [],
+          seo_credentials: diviner.seo_credentials ?? [],
+          seo_awards: diviner.seo_awards ?? [],
+          seo_years_experience:
+            typeof diviner.seo_years_experience === "number"
+              ? diviner.seo_years_experience
+              : null,
+          seo_same_as_urls: diviner.seo_same_as_urls ?? [],
+          seo_press_mentions: diviner.seo_press_mentions ?? [],
+          seo_title_override: diviner.seo_title_override ?? null,
+          seo_description_override: diviner.seo_description_override ?? null,
+          seo_h1_override: diviner.seo_h1_override ?? null,
+          seo_primary_keyword: diviner.seo_primary_keyword ?? null,
+          seo_secondary_keywords: diviner.seo_secondary_keywords ?? [],
+          seo_og_image_url: diviner.seo_og_image_url ?? null,
+          seo_show_aggregate_rating: diviner.seo_show_aggregate_rating !== false,
+          seo_show_testimonials_in_schema:
+            diviner.seo_show_testimonials_in_schema !== false,
+        }}
       />
 
       {/* ── Stats Cards ───────────────────────────────────────────────── */}

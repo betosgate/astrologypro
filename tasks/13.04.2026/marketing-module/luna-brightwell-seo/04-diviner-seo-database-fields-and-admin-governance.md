@@ -1,7 +1,7 @@
 # Task 04: Diviner SEO Database Fields and Admin Governance
 
-- **Status: PARTIAL — 2026-04-13**
-- DB migration done. Admin UI not yet implemented.
+- **Status: DONE — 2026-04-13**
+- DB migration and admin UI implemented.
 
 ### What was implemented
 - Created `supabase/migrations/20260413000180_diviner_seo_fields.sql` — adds to `diviners` table:
@@ -11,9 +11,18 @@
   - Review controls: `seo_show_aggregate_rating`, `seo_show_testimonials_in_schema`
   - Validation constraints: city requires country; local mode requires city
 - TS mirror: `src/data/migrations/20260413000180_diviner_seo_fields.ts`
-
-### Still TODO
-- [ ] Admin UI section for managing SEO fields (dedicated SEO tab in diviner admin page)
+- Added admin SEO management UI:
+  - `src/app/admin/diviners/[id]/diviner-seo-settings.tsx`
+  - wired into `src/app/admin/diviners/[id]/page.tsx`
+- Added admin SEO save API:
+  - `src/app/api/admin/diviners/[id]/seo/route.ts`
+- Admin can now manage:
+  - geography and service area
+  - remote-global posture
+  - languages, credentials, awards, experience
+  - sameAs and press URLs
+  - metadata overrides and OG image
+  - review/schema visibility flags
 
 ---
 
