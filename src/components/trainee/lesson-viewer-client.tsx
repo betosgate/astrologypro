@@ -121,6 +121,9 @@ export type LessonViewerProps = {
   nextRoute: string | null;
   nextLabel: string | null;
 
+  // Optional callback when lesson is marked complete
+  onComplete?: () => void;
+
   // Sidebar nav
   sidebarLessons: SidebarLesson[];
 };
@@ -676,6 +679,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
     nextLabel,
     sidebarLessons,
     triggers = [],
+    onComplete,
   } = props;
 
   // Combine legacy single video + lesson_videos table entries
@@ -696,6 +700,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
 
   const [activeVideoIdx, setActiveVideoIdx] = useState(0);
   const [isCompleted, setIsCompleted] = useState(initialCompleted);
+  const [isQuizPassed, setIsQuizPassed] = useState(quizPassed);
   const [passedTriggerIds, setPassedTriggerIds] = useState<string[]>(
     triggers
       .filter((trigger) => trigger.user_progress?.passed)
@@ -741,7 +746,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
   // quiz check, which let learners complete a lesson without passing the
   // standard quiz if in-video triggers also existed.
   const triggersSatisfied = !hasTriggers || allTriggersPassed;
-  const quizSatisfied = !hasQuiz || quizPassed;
+  const quizSatisfied = !hasQuiz || isQuizPassed;
   const canComplete = triggersSatisfied && quizSatisfied;
 
   const handleVideoEnded = () => {
@@ -885,7 +890,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
                 onPositionUpdate={handlePositionUpdate}
                 onEnded={handleVideoEnded}
                 onPassedIdsChange={setPassedTriggerIds}
-                onLessonCompleted={() => setIsCompleted(true)}
+                onLessonCompleted={() => { /* completion is manual via button */ }}
                 remediationRequest={remediationRequest}
                 onRemediationComplete={() => {
                   setRemediationReady(true);
@@ -1011,7 +1016,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
             >
               <div className="px-4 py-3 border-b flex items-center justify-between">
                 <p className="text-sm font-semibold">Lesson Quiz</p>
-                {quizPassed ? (
+                {isQuizPassed ? (
                   <Badge className="bg-green-500/15 text-green-600 border-green-500/30 text-xs">
                     Passed
                   </Badge>
@@ -1025,7 +1030,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
                 <LessonViewerQuiz
                   lessonId={lessonId}
                   questions={quizQuestions}
-                  alreadyPassed={quizPassed}
+                  alreadyPassed={isQuizPassed}
                   initialProgress={quizProgress}
                   remediationReady={remediationReady}
                   onWrongAnswer={(remediation) => {
@@ -1052,10 +1057,12 @@ export function LessonViewerClient(props: LessonViewerProps) {
                       requestId: remediationRequestSeqRef.current,
                     });
                   }}
-                  onPassed={() => setIsCompleted(true)}
+                   onPassed={() => {
+                    setIsQuizPassed(true);
+                  }}
                 />
               </div>
-              {!quizPassed && (
+              {!isQuizPassed && (
                 <div className="px-4 pb-3 -mt-1">
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                     <AlertCircle className="size-3 shrink-0" />
@@ -1086,6 +1093,10 @@ export function LessonViewerClient(props: LessonViewerProps) {
             }
             nextRoute={nextRoute ?? null}
             nextLabel={nextLabel ?? null}
+            onComplete={() => {
+              setIsCompleted(true);
+              onComplete?.();
+            }}
             hideCompletedState
             className="pt-2"
           />
