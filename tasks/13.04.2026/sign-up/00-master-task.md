@@ -65,7 +65,7 @@ All prices and Stripe price IDs come exclusively from the `pricing_plans` DB tab
 
 | # | File | What is broken / missing | Depends on | Status |
 |---|---|---|---|---|
-| 06 | `06-fix-plan-pricing-db-only.md` | All pricing reads env vars / legacy PLANS map — must use `pricing_plans` DB only; retire `billing.ts` and `plans.ts`; fix settings page plan display and upgrade flow | — | Open |
+| 06 | `06-fix-plan-pricing-db-only.md` | All pricing reads env vars / legacy PLANS map — must use `pricing_plans` DB only; retire `billing.ts` and `plans.ts`; fix settings page plan display and upgrade flow | — | Done |
 | 01 | `01-fix-trainee-program-webhook-provisioning.md` | Webhook creates `diviners` record for `trainee_program` — must create `trainees`; wrong `role` set at signup | 06 | Open |
 | 02 | `02-fix-perennial-community-webhook-provisioning.md` | Webhook creates `diviners` record for `perennial_mandalism_community` — must create `community_members`; wrong `role` set at signup | 06 | Open |
 | 03 | `03-build-trainee-post-login-onboarding-gate.md` | No post-login onboarding gate for `trainee` role — lands directly on `/trainee` with no required data collected | 01 | Open |
