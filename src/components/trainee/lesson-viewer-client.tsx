@@ -819,13 +819,16 @@ export function LessonViewerClient(props: LessonViewerProps) {
     setRemediationReady(false);
     activeRemediationChoiceRef.current = choice;
     remediationPlaybackActiveRef.current = true;
-    scrollAndFocusSection(videoSectionRef.current);
-    remediationRequestSeqRef.current += 1;
-    setRemediationRequest({
-      startSeconds,
-      replayUntilSeconds,
-      requestId: remediationRequestSeqRef.current,
-    });
+    const requestId = remediationRequestSeqRef.current + 1;
+    remediationRequestSeqRef.current = requestId;
+    window.setTimeout(() => {
+      scrollAndFocusSection(videoSectionRef.current);
+      setRemediationRequest({
+        startSeconds,
+        replayUntilSeconds,
+        requestId,
+      });
+    }, 100);
   }
 
   function reattemptQuizWithoutReplay() {
@@ -915,7 +918,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
             <Button variant="outline" onClick={reattemptQuizWithoutReplay}>
               Reattempt quiz
             </Button>
-            <Button onClick={startRemediationReplay}>
+            <Button onClick={() => startRemediationReplay()}>
               Replay lesson segment
             </Button>
           </DialogFooter>
