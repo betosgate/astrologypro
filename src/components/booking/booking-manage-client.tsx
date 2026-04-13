@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { getDivinerAvatarUrl } from "@/lib/diviner-images";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -26,7 +27,6 @@ import {
   XCircle,
   Loader2,
   CheckCircle2,
-  UserCircle,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -143,6 +143,7 @@ export function BookingManageClient({ booking, bookingToken }: BookingManageClie
   const service = booking.services;
   const isCanceled = canceled || booking.status === "canceled";
   const isCompleted = booking.status === "completed";
+  const divinerAvatarUrl = getDivinerAvatarUrl(diviner?.avatar_url);
 
   // Detect local time on client only (avoids hydration mismatch)
   useEffect(() => {
@@ -214,19 +215,13 @@ export function BookingManageClient({ booking, bookingToken }: BookingManageClie
         {/* Header — Diviner */}
         <div className="px-8 pt-8 pb-6 border-b border-white/10 flex items-center gap-4">
           <div className="shrink-0">
-            {diviner?.avatar_url ? (
-              <Image
-                src={diviner.avatar_url}
-                alt={diviner.display_name ?? "Diviner"}
-                width={64}
-                height={64}
-                className="rounded-full object-cover ring-2 ring-purple-500/40"
-              />
-            ) : (
-              <div className="size-16 rounded-full bg-purple-900/60 border border-purple-500/30 flex items-center justify-center">
-                <UserCircle className="size-9 text-purple-400" />
-              </div>
-            )}
+            <Image
+              src={divinerAvatarUrl}
+              alt={diviner?.display_name ?? "Diviner"}
+              width={64}
+              height={64}
+              className="rounded-full object-cover ring-2 ring-purple-500/40"
+            />
           </div>
           <div className="min-w-0">
             <p className="text-white/50 text-xs uppercase tracking-widest mb-0.5">Your Session</p>
