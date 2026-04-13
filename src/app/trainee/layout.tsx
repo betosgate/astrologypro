@@ -23,7 +23,7 @@ export default async function TraineeLayout({ children }: { children: React.Reac
     .single();
 
   if (!trainee) redirect("/join/trainee");
-  if (!trainee.onboarding_completed) redirect("/join/trainee?step=profile");
+  if (!trainee.onboarding_completed) redirect("/join/trainee/profile");
 
   const portals = await getUserPortals(supabase, user.id);
 
