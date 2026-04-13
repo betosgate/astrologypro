@@ -87,6 +87,35 @@ const STATUS_BADGE: Record<ReturnType<typeof lessonStatus>, string> = {
   not_started: "border-muted-foreground/30 text-muted-foreground",
 };
 
+function firstOpenableLessonId(
+  category: CategorySummary | null,
+  preferredLessonId: string | null = null,
+) {
+  if (!category) return null;
+
+  const preferredLesson = category.lessons.find(
+    (lesson) => lesson.id === preferredLessonId,
+  );
+  if (preferredLesson && !preferredLesson.is_locked) {
+    return preferredLesson.id;
+  }
+
+  const nextLesson = category.lessons.find(
+    (lesson) => lesson.id === category.next_lesson_id,
+  );
+  if (nextLesson && !nextLesson.is_locked) {
+    return nextLesson.id;
+  }
+
+  return (
+    category.lessons.find(
+      (lesson) => !lesson.is_locked && !lesson.completed,
+    )?.id ??
+    category.lessons.find((lesson) => !lesson.is_locked)?.id ??
+    null
+  );
+}
+
 // ─── Inline lesson viewer ─────────────────────────────────────────────────
 // Fetches lesson detail client-side and renders LessonViewerClient inline
 // inside the workspace panel so the learner can consume content without
@@ -242,11 +271,13 @@ export function ProgramWorkspace({
   initialCategoryId,
   initialLessonId,
 }: ProgramWorkspaceProps) {
+  const initialCategory =
+    categories.find((c) => c.id === initialCategoryId) ?? null;
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     initialCategoryId,
   );
   const [expandedLessonId, setExpandedLessonId] = useState<string | null>(
-    initialLessonId,
+    firstOpenableLessonId(initialCategory, initialLessonId),
   );
   const [showAllCategories, setShowAllCategories] = useState(false);
 
@@ -303,8 +334,8 @@ export function ProgramWorkspace({
                 return;
               }
               setSelectedCategoryId(cat.id);
-              // Reset to the next lesson in the new category
-              setExpandedLessonId(cat.next_lesson_id);
+              // Reset to the first lesson this learner can actually open.
+              setExpandedLessonId(firstOpenableLessonId(cat));
             };
 
             return (

@@ -305,12 +305,20 @@ export async function GET() {
     const progCategories = categoriesByProgram.get(prog.id) ?? [];
     const progCache = programCacheMap.get(prog.id) ?? null;
     const nextCategoryId = progCache?.next_category_id ?? null;
+    const effectiveNextCategoryId =
+      nextCategoryId ??
+      progCategories.find((cat) => !completedCategories.has(cat.id))?.id ??
+      null;
 
     const enrichedCategories = progCategories.map((cat) => {
       const catLessons = lessonsByCategory.get(cat.id) ?? [];
       const catCache = categoryCacheMap.get(cat.id) ?? null;
       const catCompleted = completedCategories.has(cat.id);
       const nextLessonId = catCache?.next_lesson_id ?? null;
+      const effectiveNextLessonId =
+        nextLessonId ??
+        catLessons.find((lesson) => !completedLessons.has(lesson.id))?.id ??
+        null;
 
       // ── Category sequential lock ─────────────────────────────────────────
       // A category is locked when:
@@ -323,7 +331,7 @@ export async function GET() {
         globalLock &&
         !!(prog as { is_sequential?: boolean }).is_sequential &&
         !catCompleted &&
-        cat.id !== (nextCategoryId ?? cat.id) &&
+        cat.id !== (effectiveNextCategoryId ?? cat.id) &&
         progCategories.some(
           (c) =>
             c.training_id === prog.id &&
@@ -346,7 +354,7 @@ export async function GET() {
           globalLock &&
           !lessonCompleted &&
           !!(cat as { is_sequential?: boolean }).is_sequential &&
-          l.id !== (nextLessonId ?? l.id) &&
+          l.id !== (effectiveNextLessonId ?? l.id) &&
           catLessons.some(
             (prev) =>
               prev.priority < l.priority &&
@@ -392,8 +400,12 @@ export async function GET() {
         started_at: catCache?.started_at ?? null,
         last_activity_at: catCache?.last_activity_at ?? null,
         completed_at: catCache?.completed_at ?? null,
-        next_lesson_id: catCache?.next_lesson_id ?? null,
-        next_lesson_title: catCache?.next_lesson_title ?? null,
+        next_lesson_id: effectiveNextLessonId,
+        next_lesson_title:
+          catCache?.next_lesson_title ??
+          catLessons.find((lesson) => lesson.id === effectiveNextLessonId)
+            ?.title ??
+          null,
         lessons: enrichedLessons,
       };
     });
