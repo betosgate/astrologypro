@@ -74,6 +74,7 @@ import {
   DollarSign,
   Megaphone,
   AlertTriangle,
+  Rocket,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
