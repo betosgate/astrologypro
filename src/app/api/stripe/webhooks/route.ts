@@ -326,7 +326,7 @@ async function handleManualBookingCheckoutCompleted(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, duration_minutes, metadata, questionnaire_responses, diviner_id, client_id, services(name, duration_minutes), diviners(id, display_name), clients(email, full_name)"
+      "id, booking_token, scheduled_at, duration_minutes, metadata, questionnaire_responses, diviner_id, client_id, services(name, duration_minutes), diviners(id, display_name), clients(email, full_name)"
     )
     .eq("id", bookingId)
     .single();
@@ -409,7 +409,7 @@ async function handleManualBookingCheckoutCompleted(
   {
     createCalendarEvent(div.id, {
       title: `${eventTitle} — ${clientRecord.full_name ?? clientRecord.email}`,
-      description: buildCalendarDescription(meta?.availability_description ?? null, appUrl, bookingId),
+      description: buildCalendarDescription(meta?.availability_description ?? null, appUrl, booking.booking_token as string | undefined),
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
       clientEmail: clientRecord.email,
@@ -1240,7 +1240,7 @@ async function handlePaymentIntentSucceeded(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, duration_minutes, base_price, diviner_id, client_id, metadata, questionnaire_responses, services(name, duration_minutes), diviners(id, display_name, user_id), clients(email, full_name, user_id)"
+      "id, booking_token, scheduled_at, duration_minutes, base_price, diviner_id, client_id, metadata, questionnaire_responses, services(name, duration_minutes), diviners(id, display_name, user_id), clients(email, full_name, user_id)"
     )
     .eq("id", bookingId)
     .single();
@@ -1421,7 +1421,7 @@ async function handlePaymentIntentSucceeded(
       description: buildCalendarDescription(
         bookingMeta?.availability_description ?? null,
         appUrl,
-        bookingId,
+        booking.booking_token as string | undefined,
       ),
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),

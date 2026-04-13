@@ -19,6 +19,8 @@ import { MIGRATION_SQL as MIG_20260409000123 } from "@/data/migrations/202604090
 import { MIGRATION_SQL as MIG_20260410000001 } from "@/data/migrations/20260410000001_increase_training_video_storage_limit";
 import { MIGRATION_SQL as MIG_20260410000124 } from "@/data/migrations/20260410000124_pricing_onetime_recurring_html";
 import { MIGRATION_SQL as MIG_20260410000125 } from "@/data/migrations/20260410000125_pricing_recurring_interval";
+import { MIGRATION_SQL as MIG_20260413000006 } from "@/data/migrations/20260413000006_services_pricing_item_key";
+import { MIGRATION_SQL as MIG_20260413000126 } from "@/data/migrations/20260413000126_training_quiz_question_progress";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -212,6 +214,22 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds recurring_interval (month/year) column to pricing_plans for subscription billing interval.",
     sortKey: "20260410000125",
     sql: MIG_20260410000125,
+  },
+  "20260413000006_services_pricing_item_key": {
+    id: "20260413000006_services_pricing_item_key",
+    title: "Add pricing_item_key to services",
+    description:
+      "Stores the global_pricing item_key selected when creating/editing a service so the admin UI can re-populate the Pricing Item dropdown on edit. Nullable TEXT column — additive only.",
+    sortKey: "20260413000006",
+    sql: MIG_20260413000006,
+  },
+  "20260413000126_training_quiz_question_progress": {
+    id: "20260413000126_training_quiz_question_progress",
+    title: "Training quiz question progress",
+    description:
+      "Creates quiz_question_progress to persist per-question correct answers for in-progress lesson quizzes. Lets learners leave after Q1/Q2 and resume at the first unanswered question instead of re-answering already-correct questions. Additive and RLS-protected.",
+    sortKey: "20260413000126",
+    sql: MIG_20260413000126,
   },
 };
 

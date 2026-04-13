@@ -38,10 +38,17 @@ export type QuizQuestionClient = {
   remediation_message?: string | null;
 };
 
+export type QuizQuestionProgressClient = {
+  question_id: string;
+  selected_answer: number;
+  answered_correctly: boolean;
+};
+
 interface LessonViewerQuizProps {
   lessonId: string;
   questions: QuizQuestionClient[];
   alreadyPassed: boolean;
+  initialProgress?: QuizQuestionProgressClient[];
   /**
    * Called when the learner answers a question wrong AND that question has
    * remediation metadata. Parent should pause the video, seek to
@@ -94,24 +101,61 @@ function questionRemediation(q: QuizQuestionClient): QuestionRemediation | null 
   };
 }
 
+function buildInitialConfirmedAnswers(
+  questions: QuizQuestionClient[],
+  initialProgress: QuizQuestionProgressClient[] | undefined,
+) {
+  const progressByQuestion = new Map(
+    (initialProgress ?? [])
+      .filter((progress) => progress.answered_correctly)
+      .map((progress) => [progress.question_id, progress.selected_answer]),
+  );
+
+  return questions.reduce<Record<number, number>>((acc, question, idx) => {
+    const selectedAnswer = progressByQuestion.get(question.id);
+    if (selectedAnswer != null && Number.isInteger(selectedAnswer)) {
+      acc[idx] = selectedAnswer;
+    }
+    return acc;
+  }, {});
+}
+
+function firstUnansweredIndex(
+  questions: QuizQuestionClient[],
+  confirmedAnswers: Record<number, number>,
+) {
+  const idx = questions.findIndex((_, questionIdx) => confirmedAnswers[questionIdx] == null);
+  return idx >= 0 ? idx : Math.max(0, questions.length - 1);
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function LessonViewerQuiz({
   lessonId,
   questions,
   alreadyPassed,
+  initialProgress,
   onWrongAnswer,
   remediationReady,
   onPassed,
 }: LessonViewerQuizProps) {
-  const [currentIdx, setCurrentIdx] = useState(0);
+  const initialConfirmedAnswers = buildInitialConfirmedAnswers(
+    questions,
+    initialProgress,
+  );
+  const [currentIdx, setCurrentIdx] = useState(() =>
+    firstUnansweredIndex(questions, initialConfirmedAnswers),
+  );
   // Per-question stored answers — used at the end to call the legacy batch
   // /quiz endpoint which records the attempt + completes the lesson.
-  const [confirmedAnswers, setConfirmedAnswers] = useState<Record<number, number>>({});
+  const [confirmedAnswers, setConfirmedAnswers] =
+    useState<Record<number, number>>(initialConfirmedAnswers);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isWrong, setIsWrong] = useState(false);
   const [waitingForReplay, setWaitingForReplay] = useState(false);
+  const [waitingForRemediationStart, setWaitingForRemediationStart] =
+    useState(false);
   const [showWrongMessage, setShowWrongMessage] = useState<string | null>(null);
   const [allDone, setAllDone] = useState(false);
 
@@ -174,9 +218,18 @@ export function LessonViewerQuiz({
   const totalCount = questions.length;
   const answeredCount = Object.keys(confirmedAnswers).length;
   const progressPct = Math.round((answeredCount / totalCount) * 100);
+  const currentAlreadyAnswered = confirmedAnswers[currentIdx] != null;
+  const allQuestionsAnswered = answeredCount >= totalCount;
 
   async function handleSubmit() {
-    if (selectedOption == null || waitingForReplay || submitting) return;
+    if (
+      selectedOption == null ||
+      waitingForReplay ||
+      waitingForRemediationStart ||
+      submitting
+    ) {
+      return;
+    }
 
     setSubmitting(true);
     setIsWrong(false);
@@ -229,27 +282,25 @@ export function LessonViewerQuiz({
         // Hand control to the parent — it will pause/seek/play the video
         // and signal back via remediationReady when playback has finished
         // the required replay window.
-        const message =
-          remediation.message ??
-          "Let's review the relevant part of the video, then try again.";
-        setShowWrongMessage(message);
-        setWaitingForReplay(true);
+        setShowWrongMessage(
+          "That answer is not correct. Replaying the relevant video segment, then you can try again.",
+        );
+        setWaitingForRemediationStart(true);
 
-        // Auto-hide the inline message after ~6s — the parent's video
-        // playback continues independently.
+        // Let the learner read the message before shifting focus to video.
+        // Remediation playback starts after this message disappears.
         if (wrongMessageTimerRef.current) clearTimeout(wrongMessageTimerRef.current);
         wrongMessageTimerRef.current = setTimeout(() => {
           setShowWrongMessage(null);
+          setWaitingForRemediationStart(false);
+          setWaitingForReplay(true);
+          onWrongAnswer(remediation, currentIdx);
         }, 6000);
-
-        onWrongAnswer(remediation, currentIdx);
       } else {
         // Inline retry fallback when there is no remediation metadata.
-        const message =
-          (body.explanation as string | null) ??
-          currentQuestion.explanation ??
-          "That's not quite right. Try again.";
-        toast.warning("Incorrect", { description: message });
+        toast.warning("Incorrect", {
+          description: "That answer is not correct. Please try again.",
+        });
       }
     } catch (err) {
       toast.error("Network error", {
@@ -313,8 +364,14 @@ export function LessonViewerQuiz({
         <div className="space-y-2">
           {currentQuestion.options.map((opt, oIdx) => {
             const label = getOptionLabel(opt, `Option ${oIdx + 1}`);
-            const isSelected = selectedOption === oIdx;
-            const disabled = waitingForReplay || submitting;
+            const confirmedOption = confirmedAnswers[currentIdx];
+            const isSelected =
+              selectedOption === oIdx || confirmedOption === oIdx;
+            const disabled =
+              waitingForReplay ||
+              waitingForRemediationStart ||
+              submitting ||
+              currentAlreadyAnswered;
             return (
               <button
                 key={oIdx}
@@ -340,6 +397,16 @@ export function LessonViewerQuiz({
           })}
         </div>
 
+        {currentAlreadyAnswered && (
+          <div className="flex items-start gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700">
+            <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
+            <p className="leading-snug">
+              This question was already answered correctly. Continue to the
+              next unanswered question.
+            </p>
+          </div>
+        )}
+
         {/* Wrong-answer remediation banner */}
         {isWrong && showWrongMessage && (
           <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700">
@@ -348,7 +415,7 @@ export function LessonViewerQuiz({
           </div>
         )}
 
-        {waitingForReplay && (
+        {waitingForReplay && !showWrongMessage && (
           <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-primary">
             <Video className="size-4 shrink-0 animate-pulse" />
             <p className="leading-snug">
@@ -375,13 +442,32 @@ export function LessonViewerQuiz({
           </div>
           <Button
             size="sm"
-            onClick={handleSubmit}
+            onClick={() => {
+              if (currentAlreadyAnswered) {
+                if (allQuestionsAnswered) {
+                  finalize(confirmedAnswers);
+                } else {
+                  setCurrentIdx((idx) =>
+                    Math.min(totalCount - 1, idx + 1),
+                  );
+                }
+                return;
+              }
+              handleSubmit();
+            }}
             disabled={
-              selectedOption == null || waitingForReplay || submitting
+              (!currentAlreadyAnswered && selectedOption == null) ||
+              waitingForReplay ||
+              waitingForRemediationStart ||
+              submitting
             }
           >
             {submitting && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
-            {isWrong && !waitingForReplay
+            {currentAlreadyAnswered
+              ? allQuestionsAnswered
+                ? "Finish quiz"
+                : "Continue"
+              : isWrong && !waitingForReplay
               ? "Try again"
               : currentIdx + 1 === totalCount
                 ? "Submit final answer"
