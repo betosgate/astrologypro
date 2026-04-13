@@ -121,6 +121,8 @@ export async function POST(req: NextRequest) {
       specificQuestions,
       goalsOutcomes,
       practicalSpiritualPref,
+      birth_city,
+      birth_country,
       mainConcern,
       additionalInfo,
     } = body;
@@ -287,6 +289,8 @@ export async function POST(req: NextRequest) {
       city: trimStr(city),
       state: trimStr(state),
       zip: zipVal,
+      birth_city: trimStr(birth_city),
+      birth_country: trimStr(birth_country),
       relationship_status: trimStr(relationship_status),
       intake_data: intakeData,
       plan_type: householdLimit > 0 ? "family" : "individual",
@@ -378,7 +382,8 @@ export async function POST(req: NextRequest) {
         phone: String(phone).trim() || undefined,
         birth_date: trimStr(date_of_birth) ?? undefined,
         birth_time: trimStr(birth_time) ?? undefined,
-        birth_city: trimStr(city) ?? undefined,
+        birth_city: trimStr(birth_city) ?? undefined,
+        birth_country: trimStr(birth_country) ?? undefined,
       },
       "community_members"
     ).catch(console.error);

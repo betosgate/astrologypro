@@ -90,9 +90,6 @@ function FooterColumn({
 export function MarketingFooter() {
   return (
     <footer className="bg-[#040610]">
-      {/* Gold cosmic divider */}
-      <div className="cosmic-divider" />
-
       {/* Main Footer Grid */}
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-6">
