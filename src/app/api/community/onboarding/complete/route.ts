@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { syncProfileAcrossRoles } from "@/lib/profile-sync";
 
 export const dynamic = "force-dynamic";
 
@@ -229,6 +230,19 @@ export async function POST(req: NextRequest) {
       console.error("[onboarding/complete] update error:", updateError);
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
+
+    // Fire-and-forget: sync shared fields to other role tables
+    syncProfileAcrossRoles(
+      user.id,
+      {
+        display_name: fullName,
+        phone: String(phone).trim() || undefined,
+        birth_date: trimStr(date_of_birth) ?? undefined,
+        birth_time: trimStr(birth_time) ?? undefined,
+        birth_city: trimStr(city) ?? undefined,
+      },
+      "community_members"
+    ).catch(console.error);
 
     return NextResponse.json({ success: true });
   } catch (err) {

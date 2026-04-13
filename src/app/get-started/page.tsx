@@ -280,6 +280,8 @@ export default function GetStartedPage() {
     setLoading(true);
 
     try {
+      const isCombo = plan?.itemKey === "trainee_diviner_bundle";
+
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -289,6 +291,7 @@ export default function GetStartedPage() {
             username,
             role: "diviner",
             plan: selectedPlan,
+            isCombo,
           },
         },
       });

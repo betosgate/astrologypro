@@ -2730,3 +2730,55 @@ export async function sendDivinerNewBookingNotification({
     }),
   });
 }
+
+// ── Combo Bundle Welcome Email ──────────────────────────────────────────────
+
+interface ComboBundleWelcomeParams {
+  to: string;
+  name: string;
+  planName: string;
+  onboardingUrl: string;
+}
+
+export async function sendComboBundleWelcome({
+  to,
+  name,
+  planName,
+  onboardingUrl,
+}: ComboBundleWelcomeParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Welcome to AstrologyPro, ${name}!</p>
+
+    <p style="margin:0 0 16px;color:#d4d4d8;">
+      You&rsquo;ve signed up for the <strong style="color:#e4e4e7;">${planName}</strong> bundle &mdash;
+      which means you get <em>both</em> a professional diviner practice <em>and</em>
+      full access to our training program.
+    </p>
+
+    ${sectionHeading("What's Included")}
+    <ul style="margin:0 0 16px;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;"><strong style="color:#e4e4e7;">Diviner Practice</strong> &mdash; your branded page, booking calendar, video sessions, CRM, and payment processing</li>
+      <li style="margin-bottom:6px;"><strong style="color:#e4e4e7;">Training Program</strong> &mdash; structured coursework, mentorship, quizzes, and certification upon completion</li>
+    </ul>
+
+    ${sectionHeading("Next Steps")}
+    <ol style="margin:0 0 16px;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">Complete your diviner profile setup (bio, specialties, availability)</li>
+      <li style="margin-bottom:6px;">Connect your Stripe account to receive payments</li>
+      <li style="margin-bottom:6px;">Explore the training center at your own pace</li>
+    </ol>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Welcome to AstrologyPro — Your ${planName} bundle is active!`,
+    html: buildEmailHtml({
+      title: "Welcome to Your Diviner + Training Bundle",
+      preheader: `Your ${planName} bundle is active — let's set up your practice`,
+      content,
+      ctaText: "Start Onboarding",
+      ctaUrl: onboardingUrl,
+      footer: "AstrologyPro &mdash; Run Your Divination Business",
+    }),
+  });
+}

@@ -14,6 +14,7 @@ import {
   sendCommunitySubscriptionCancelled,
   sendMysterySchoolEnrollmentConfirmation,
   sendCommunityMembershipWelcome,
+  sendComboBundleWelcome,
 } from "@/lib/email";
 import { createCalendarEvent } from "@/lib/google-calendar";
 import { buildCalendarDescription } from "@/lib/calendar-utils";
@@ -412,6 +413,121 @@ async function handleManualBookingCheckoutCompleted(
   }
 }
 
+async function handleComboBundleCheckoutCompleted(
+  session: Stripe.Checkout.Session
+) {
+  const supabase = createAdminClient();
+  const meta = session.metadata ?? {};
+  const userId = meta.userId;
+  const planId = meta.planId;
+  const planName = meta.planName ?? "Combo Bundle";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+
+  if (!userId) {
+    console.error("[Webhook] Combo bundle checkout missing userId", meta);
+    return;
+  }
+
+  const subscriptionId =
+    typeof session.subscription === "string"
+      ? session.subscription
+      : session.subscription?.id;
+
+  // Fetch user metadata (name + username set at signup)
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.admin.getUserById(userId);
+  const email = authUser?.email ?? "";
+  const username = (authUser?.user_metadata?.username as string) ?? "";
+  const displayName =
+    (authUser?.user_metadata?.name as string) ??
+    email.split("@")[0] ??
+    "Diviner";
+
+  if (!username) {
+    console.error(
+      "[Webhook] Combo bundle checkout missing username in user metadata for userId:",
+      userId
+    );
+    return;
+  }
+
+  // ── 1. Upsert diviner record ──────────────────────────────────────────────
+  const { error: divinerError } = await supabase.from("diviners").upsert(
+    {
+      user_id: userId,
+      username,
+      display_name: displayName,
+      stripe_subscription_id: subscriptionId ?? null,
+      subscription_status: "active",
+      onboarding_completed: false,
+      onboarding_step: 1,
+      ...(planId ? { plan_id: planId } : {}),
+    },
+    { onConflict: "user_id" }
+  );
+
+  if (divinerError) {
+    console.error(
+      "[Webhook] Combo bundle: failed to upsert diviner record:",
+      divinerError
+    );
+  }
+
+  // ── 2. Upsert trainee record ──────────────────────────────────────────────
+  const { error: traineeError } = await supabase.from("trainees").upsert(
+    {
+      user_id: userId,
+      name: displayName,
+      email,
+      username,
+      training_status: "active",
+      onboarding_completed: false,
+    },
+    { onConflict: "user_id" }
+  );
+
+  if (traineeError) {
+    console.error(
+      "[Webhook] Combo bundle: failed to upsert trainee record:",
+      traineeError
+    );
+  }
+
+  // ── 3. Log activity ───────────────────────────────────────────────────────
+  logActivity({
+    userId,
+    eventCategory: "subscription",
+    eventType: "subscription.created",
+    metadata: {
+      planName,
+      planId,
+      itemKey: "trainee_diviner_bundle",
+      isCombo: true,
+      status: "active",
+    },
+  });
+
+  // ── 4. Send combo welcome email ───────────────────────────────────────────
+  if (email) {
+    sendComboBundleWelcome({
+      to: email,
+      name: displayName,
+      planName,
+      onboardingUrl: `${appUrl}/onboarding`,
+    }).catch((err) =>
+      console.error(
+        "[Webhook] Failed to send combo bundle welcome email:",
+        err
+      )
+    );
+  }
+
+  console.log(
+    `[Webhook] Combo bundle provisioned: userId=${userId} username=${username} plan=${planName}`
+  );
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Route gift certificate checkouts to their own handler
   if (session.metadata?.type === "gift_certificate") {
@@ -426,6 +542,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Route Perennial multi-member household signups
   if (session.metadata?.type === "perennial_signup") {
     return handlePerennialSignupCheckoutCompleted(session);
+  }
+
+  // Route combo bundle (trainee + diviner) checkouts
+  if (session.metadata?.itemKey === "trainee_diviner_bundle") {
+    return handleComboBundleCheckoutCompleted(session);
   }
 
   // Handle manual booking payment link checkout

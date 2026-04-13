@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { syncProfileAcrossRoles } from "@/lib/profile-sync";
 
 export const dynamic = "force-dynamic";
 
@@ -145,6 +146,20 @@ export async function POST(req: NextRequest) {
         console.error("[trainee/profile/complete] Client upsert failed:", clientError);
       }
     }
+
+    // Fire-and-forget: sync shared fields to other role tables
+    syncProfileAcrossRoles(
+      user.id,
+      {
+        display_name: display_name.trim(),
+        bio: bio?.trim() || undefined,
+        avatar_url: avatar_url?.trim() || undefined,
+        specialties: validSpecialties.length > 0 ? validSpecialties : undefined,
+        phone: phone?.trim() || undefined,
+        timezone: timezone || undefined,
+      },
+      "trainees"
+    ).catch(console.error);
 
     return NextResponse.json({ success: true });
   } catch (err) {
