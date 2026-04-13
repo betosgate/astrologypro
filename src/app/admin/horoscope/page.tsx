@@ -2633,7 +2633,7 @@ export default function AdminHoroscopePage() {
           ...collected,
           returnDate: collected.returnDate ?? returnDate ?? "calculated",
         };
-        const prompts = buildAiPrompts(combinedData, currentTab.slug);
+        const prompts = buildAiPrompts(combinedData, currentTab.slug, form.areaOfInquiry || undefined);
 
         const aiPromises = prompts.map(async (p) => {
           try {
@@ -2700,6 +2700,17 @@ export default function AdminHoroscopePage() {
           ).then((d) => {
             collected.natal_chart_data = d;
             setResults((prev) => ({ ...prev, natal_chart_data: d }));
+          })
+        );
+
+        // Natal data for Person 2
+        relTasks.push(
+          callCompute(
+            "western_horoscope",
+            birth2 as unknown as Record<string, unknown>
+          ).then((d) => {
+            collected.natal_chart_data_p2 = d;
+            setResults((prev) => ({ ...prev, natal_chart_data_p2: d }));
           })
         );
 
@@ -2784,7 +2795,7 @@ export default function AdminHoroscopePage() {
         // AI Interpretations
         addProgress("Running relationship AI…");
         const combinedData = { ...(collected.synastry ?? {}), ...collected };
-        const prompts = buildAiPrompts(combinedData, currentTab.slug);
+        const prompts = buildAiPrompts(combinedData, currentTab.slug, form.areaOfInquiry || undefined);
         const aiPromises = prompts.map(async (p) => {
           try {
             const aiPayload = {

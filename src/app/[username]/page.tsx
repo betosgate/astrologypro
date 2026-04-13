@@ -92,6 +92,7 @@ async function getMediaItems(divinerId: string): Promise<MediaItem[]> {
     )
     .eq("diviner_id", divinerId)
     .eq("is_active", true)
+    .eq("moderation_status", "approved")
     .order("is_featured", { ascending: false })
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });

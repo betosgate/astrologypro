@@ -42,7 +42,7 @@ export async function GET() {
   const { data, error } = await admin
     .from("media_items")
     .select(
-      "id, type, url, title, description, thumbnail_url, category, album_name, platform, duration_seconds, sort_order, is_active, is_featured, view_count, created_at, updated_at"
+      "id, type, url, title, description, thumbnail_url, category, album_name, platform, duration_seconds, sort_order, is_active, is_featured, moderation_status, submitted_for_review_at, reviewed_at, admin_review_notes, view_count, created_at, updated_at"
     )
     .eq("diviner_id", diviner.id)
     .order("sort_order", { ascending: true })
@@ -143,6 +143,8 @@ export async function POST(req: NextRequest) {
       album_name: media_type === "image" ? normalizeAlbumName(album_name) : null,
       is_featured: featured === true,
       is_active: is_active !== false,
+      moderation_status: "pending",
+      submitted_for_review_at: new Date().toISOString(),
       sort_order: typeof sort_order === "number" ? sort_order : 0,
     })
     .select()
