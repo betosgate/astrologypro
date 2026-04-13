@@ -1,6 +1,6 @@
 # Task 05 - Harden Live Module Source of Truth at DB Level
 
-- Status: Open
+- Status: Done
 - Priority: P0
 - Owner: Database / Backend
 
@@ -69,3 +69,8 @@ That is workable only if the DB contract is explicit and supported by backend ru
 - [ ] Confirm a new check-in can be attributed to the active session.
 - [ ] Confirm ended and cancelled sessions remain queryable for history without appearing as active.
 
+## Completion Notes
+
+- Added `20260413000191_live_session_source_of_truth.sql` to enforce one active live session per diviner and align `live_sessions.platform` with current platform support.
+- Added `src/lib/live-sessions.ts` so the app derives current and next session state from `live_sessions` and mirrors diviner flags from that result.
+- The denormalized diviner fields are now treated as a mirror of live-session state rather than an independent write source.

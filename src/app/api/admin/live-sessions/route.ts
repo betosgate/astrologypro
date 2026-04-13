@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { syncDivinerLiveMirror } from "@/lib/live-sessions";
+import { isValidLivePlatformKey } from "@/lib/live-platform-governance";
 
 export const dynamic = "force-dynamic";
 
@@ -176,10 +178,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const VALID_PLATFORMS = ["facebook", "youtube", "instagram", "tiktok", "zoom", "other"] as const;
-  if (!platform || typeof platform !== "string" || !VALID_PLATFORMS.includes(platform as typeof VALID_PLATFORMS[number])) {
+  if (!isValidLivePlatformKey(platform)) {
     return NextResponse.json(
-      { type: "about:blank", title: "Validation Error", status: 422, detail: `platform must be one of: ${VALID_PLATFORMS.join(", ")}.` },
+      { type: "about:blank", title: "Validation Error", status: 422, detail: "platform must be a supported live platform." },
       { status: 422, headers: { "Content-Type": "application/problem+json" } }
     );
   }
@@ -207,6 +208,12 @@ export async function POST(req: NextRequest) {
       { type: "about:blank", title: "Internal Server Error", status: 500, detail: "Failed to create live session." },
       { status: 500, headers: { "Content-Type": "application/problem+json" } }
     );
+  }
+
+  try {
+    await syncDivinerLiveMirror(diviner_id);
+  } catch (syncError) {
+    console.error("[admin/live-sessions] mirror sync error", syncError);
   }
 
   return NextResponse.json(data, { status: 201 });

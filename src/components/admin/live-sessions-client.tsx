@@ -73,7 +73,7 @@ interface ApiListResponse {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const PLATFORMS = ["facebook", "youtube", "instagram", "tiktok", "zoom", "other"] as const;
+const PLATFORMS = ["facebook", "youtube", "twitch", "instagram", "tiktok", "zoom", "other"] as const;
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";

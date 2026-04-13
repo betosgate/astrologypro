@@ -5,6 +5,7 @@ import {
   buildGovernedLivePlatforms,
   resolveLivePlatformsForStatus,
 } from "@/lib/live-platform-governance";
+import { getCurrentLiveSession, getNextScheduledLiveSession } from "@/lib/live-sessions";
 
 export const dynamic = "force-dynamic";
 
@@ -41,18 +42,21 @@ export async function GET() {
       .eq("diviner_id", data.id),
   ]);
   const governedPlatforms = buildGovernedLivePlatforms(registryRows ?? [], overrideRows ?? []);
-  const livePlatforms = Array.isArray(data.live_platforms)
-    ? resolveLivePlatformsForStatus(
-        governedPlatforms,
-        data.live_platforms.filter((value): value is string => typeof value === "string")
-      )
+  const [currentSession, nextScheduledSession] = await Promise.all([
+    getCurrentLiveSession(data.id),
+    getNextScheduledLiveSession(data.id),
+  ]);
+  const livePlatforms = currentSession
+    ? resolveLivePlatformsForStatus(governedPlatforms, [currentSession.platform])
     : [];
 
   return NextResponse.json({
     diviner: {
       id: data.id,
-      is_live: data.is_live === true,
+      is_live: !!currentSession,
       live_platforms: livePlatforms,
     },
+    currentSession,
+    nextScheduledSession,
   });
 }

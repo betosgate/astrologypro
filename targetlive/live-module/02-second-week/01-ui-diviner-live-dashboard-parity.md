@@ -1,6 +1,6 @@
 # Task 01 - Fix Diviner Live Dashboard State Parity
 
-- Status: Open
+- Status: Done
 - Priority: P1
 - Owner: Frontend
 
@@ -64,3 +64,8 @@ That makes the UI behavior fragile and hides the real contract from the user.
 - [ ] Toggle live state and confirm the refreshed state matches the backend response with no hidden fallback behavior.
 - [ ] Compare dashboard state against the corresponding admin session record after lifecycle alignment work.
 
+## Completion Notes
+
+- `/dashboard/live` now hydrates from supported API routes only.
+- The dashboard surfaces current live session and next scheduled session context.
+- Going live now operates against `live_sessions` and then refreshes the mirrored diviner flags from that session state.

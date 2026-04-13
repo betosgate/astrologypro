@@ -45,6 +45,7 @@ import {
   mergeGovernedPlatformConfigs,
   resolveLivePlatformsForStatus,
 } from "@/lib/live-platform-governance";
+import { getCurrentLiveSession, getNextScheduledLiveSession } from "@/lib/live-sessions";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -391,7 +392,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
   const weeklySubscriptionBlocked = isPublicSectionBlocked(publishPolicy, "weekly_subscription");
   const showSessionCountsBlock = resolvePublicSessionCountsVisibility(publishPolicy);
 
-  const [services, testimonials, stats, policies, mediaItems, livePlatformConfigs, activeGiveaway, weeklySubscriptionProduct] = await Promise.all([
+  const [services, testimonials, stats, policies, mediaItems, livePlatformConfigs, activeGiveaway, weeklySubscriptionProduct, currentLiveSession, nextScheduledLiveSession] = await Promise.all([
     servicesBlocked ? Promise.resolve([]) : getServices(diviner.id),
     testimonialsBlocked ? Promise.resolve([]) : getTestimonials(diviner.id),
     getDivinerStats(diviner.id),
@@ -400,6 +401,8 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
     liveBlocked ? Promise.resolve([]) : getLivePlatforms(diviner.id),
     getActiveGiveaway(diviner.id),
     weeklySubscriptionBlocked ? Promise.resolve(null) : getWeeklySubscriptionProduct(diviner.id),
+    liveBlocked ? Promise.resolve(null) : getCurrentLiveSession(diviner.id),
+    liveBlocked ? Promise.resolve(null) : getNextScheduledLiveSession(diviner.id),
   ]);
 
   const filteredMediaItems = mediaItems.filter(
@@ -425,7 +428,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
       is_publicly_renderable: true,
       reason: null,
     })),
-    (((diviner as Record<string, unknown>).live_platforms as string[]) ?? [])
+    currentLiveSession ? [currentLiveSession.platform] : []
   );
   const publicServices = filterVisiblePublicServices(services).map((service) => ({
     ...service,
@@ -582,18 +585,22 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
         <>
           {!liveBlocked && (
             <LiveStreamSection
-              isLive={(diviner as Record<string, unknown>).is_live === true}
+              isLive={!!currentLiveSession}
               livePlatforms={effectiveLivePlatforms}
               platformConfigs={livePlatformConfigs}
               fallbackContent={((diviner as Record<string, unknown>).fallback_content as string) ?? null}
-              nextLiveAt={((diviner as Record<string, unknown>).next_live_at as string) ?? null}
+              nextLiveAt={
+                currentLiveSession?.scheduled_at ??
+                nextScheduledLiveSession?.scheduled_at ??
+                (((diviner as Record<string, unknown>).next_live_at as string) ?? null)
+              }
               divinerId={diviner.id}
               divinerName={diviner.display_name}
               fallbackImageUrl={getDivinerCoverImageUrl(diviner.cover_image_url ?? getDivinerAvatarUrl(diviner.avatar_url))}
             />
           )}
 
-          {!liveBlocked && (diviner as Record<string, unknown>).is_live === true && (
+          {!liveBlocked && !!currentLiveSession && currentLiveSession.check_in_enabled && (
             <section className="py-6">
               <div className="mx-auto max-w-xl px-4">
                 <CheckInForm

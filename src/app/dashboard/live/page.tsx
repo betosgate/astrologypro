@@ -45,12 +45,25 @@ interface DivinerLiveState {
   live_platforms: string[];
 }
 
+interface LiveSessionSummary {
+  id: string;
+  platform: string;
+  title: string | null;
+  status: "scheduled" | "live" | "ended" | "cancelled";
+  scheduled_at: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  check_in_enabled: boolean;
+}
+
 export default function LiveStreamPage() {
   const [loading, setLoading] = useState(true);
   const [liveState, setLiveState] = useState<DivinerLiveState>({ is_live: false, live_platforms: [] });
   const [togglingLive, setTogglingLive] = useState(false);
   const [platforms, setPlatforms] = useState<StreamPlatformConfig[]>([]);
   const [availablePlatforms, setAvailablePlatforms] = useState<GovernedLivePlatform[]>([]);
+  const [currentSession, setCurrentSession] = useState<LiveSessionSummary | null>(null);
+  const [nextScheduledSession, setNextScheduledSession] = useState<LiveSessionSummary | null>(null);
   const [savingPlatform, setSavingPlatform] = useState<string | null>(null);
   const [deletingPlatform, setDeletingPlatform] = useState<string | null>(null);
   // Local edits to platform configs before saving
@@ -87,6 +100,8 @@ export default function LiveStreamPage() {
           is_live: liveRes.diviner.is_live ?? false,
           live_platforms: liveRes.diviner.live_platforms ?? [],
         });
+        setCurrentSession((liveRes.currentSession ?? null) as LiveSessionSummary | null);
+        setNextScheduledSession((liveRes.nextScheduledSession ?? null) as LiveSessionSummary | null);
       }
     } catch {
       toast.error("Failed to load live stream settings");
@@ -115,11 +130,17 @@ export default function LiveStreamPage() {
         toast.error(err.error ?? "Failed to update live status");
         return;
       }
-      const result = await res.json() as { diviner: { is_live: boolean; live_platforms: string[] } };
+      const result = await res.json() as {
+        diviner: { is_live: boolean; live_platforms: string[] };
+        currentSession?: LiveSessionSummary | null;
+        nextScheduledSession?: LiveSessionSummary | null;
+      };
       setLiveState({
         is_live: result.diviner.is_live,
         live_platforms: result.diviner.live_platforms ?? [],
       });
+      setCurrentSession(result.currentSession ?? null);
+      setNextScheduledSession(result.nextScheduledSession ?? null);
       toast.success(newIsLive ? "You are now LIVE!" : "Live stream ended");
     } catch {
       toast.error("Network error updating live status");
@@ -144,11 +165,17 @@ export default function LiveStreamPage() {
         toast.error(err.error ?? "Failed to update live platforms");
         return;
       }
-      const result = await res.json() as { diviner: { is_live: boolean; live_platforms: string[] } };
+      const result = await res.json() as {
+        diviner: { is_live: boolean; live_platforms: string[] };
+        currentSession?: LiveSessionSummary | null;
+        nextScheduledSession?: LiveSessionSummary | null;
+      };
       setLiveState({
         is_live: result.diviner.is_live,
         live_platforms: result.diviner.live_platforms ?? [],
       });
+      setCurrentSession(result.currentSession ?? null);
+      setNextScheduledSession(result.nextScheduledSession ?? null);
     } catch {
       toast.error("Network error updating live platforms");
     }
@@ -317,6 +344,40 @@ export default function LiveStreamPage() {
               {liveState.is_live ? "End Live" : "Go Live"}
             </Button>
           </div>
+
+          {(currentSession || nextScheduledSession) && (
+            <div className="grid gap-3 md:grid-cols-2">
+              {currentSession && (
+                <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-green-400">
+                    Current session
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {currentSession.title ?? "Live now"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Platform: {currentSession.platform} · Check-in{" "}
+                    {currentSession.check_in_enabled ? "enabled" : "disabled"}
+                  </p>
+                </div>
+              )}
+              {nextScheduledSession && !currentSession && (
+                <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-blue-400">
+                    Next scheduled session
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {nextScheduledSession.title ?? "Scheduled live session"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {nextScheduledSession.scheduled_at
+                      ? new Date(nextScheduledSession.scheduled_at).toLocaleString()
+                      : "No scheduled time set"}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Platform checkboxes when live */}
           {liveState.is_live && activePlatformIds.length > 0 && (
