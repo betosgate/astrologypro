@@ -8,6 +8,10 @@ import {
   normalizePublishPolicy,
   publishBlockMessage,
 } from "@/lib/diviner-publishing";
+import {
+  getRoleServicePackages,
+  resolveRoleServicePackage,
+} from "@/lib/role-service-packages";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +20,7 @@ const ALLOWED_SPECIALTIES = new Set<string>(SPECIALTIES);
 
 // ── Columns returned by GET ─────────────────────────────────────────────
 const PROFILE_SELECT =
-  "id, display_name, username, bio, tagline, specialties, avatar_url, credentials, phone, timezone, show_public_session_counts, public_session_counts_override, public_session_counts_override_reason";
+  "id, display_name, username, bio, tagline, specialties, avatar_url, credentials, phone, timezone, show_public_session_counts, public_session_counts_override, public_session_counts_override_reason, service_package_code";
 
 // ── GET /api/dashboard/profile ──────────────────────────────────────────
 export async function GET() {
@@ -28,6 +32,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createAdminClient();
+  const packages = await getRoleServicePackages();
   const { data, error } = await admin
     .from("diviners")
     .select(PROFILE_SELECT)
@@ -41,7 +46,12 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json({ profile: data });
+  return NextResponse.json({
+    profile: {
+      ...data,
+      service_package: resolveRoleServicePackage(packages, data.service_package_code),
+    },
+  });
 }
 
 // ── PATCH /api/dashboard/profile ────────────────────────────────────────
@@ -226,5 +236,13 @@ export async function PATCH(req: NextRequest) {
     .eq("user_id", user.id)
     .single();
 
-  return NextResponse.json({ profile: updated });
+  return NextResponse.json({
+    profile: {
+      ...updated,
+      service_package: resolveRoleServicePackage(
+        await getRoleServicePackages(),
+        updated.service_package_code,
+      ),
+    },
+  });
 }

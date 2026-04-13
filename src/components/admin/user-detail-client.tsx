@@ -82,6 +82,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ServicePackageAssignmentCard } from "@/components/admin/service-package-assignment-card";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -199,6 +200,12 @@ export interface UserDetailData {
   // Referrals (affiliate/diviner)
   referrals?: ReferralEntry[];
   totalReferrals?: number;
+  servicePackageCode?: string | null;
+  servicePackages?: Array<{
+    package_code: string;
+    display_name: string;
+    is_active: boolean;
+  }>;
 }
 
 interface AdminNote {
@@ -1118,6 +1125,16 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
                 </div>
                 <StatusBadge status={displayStatus} />
               </div>
+
+              {(user.role === "diviner" || user.role === "trainee") &&
+                user.servicePackages && (
+                  <ServicePackageAssignmentCard
+                    userId={user.userId}
+                    role={user.role}
+                    currentPackageCode={user.servicePackageCode ?? null}
+                    packages={user.servicePackages}
+                  />
+                )}
 
               <div className="rounded-lg border p-4 space-y-2">
                 <p className="text-sm font-medium">Block / Unblock Access</p>

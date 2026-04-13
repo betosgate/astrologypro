@@ -36,6 +36,10 @@ interface DivinerProfile {
   show_public_session_counts: boolean;
   public_session_counts_override: "force_show" | "force_hide" | null;
   public_session_counts_override_reason: string | null;
+  service_package?: {
+    displayName: string;
+    allowedCategories: string[];
+  };
 }
 
 export default function ProfilePage() {
@@ -278,6 +282,16 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              {profile.service_package && (
+                <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+                  Current package:{" "}
+                  <span className="font-medium text-foreground">
+                    {profile.service_package.displayName}
+                  </span>
+                  . Allowed categories:{" "}
+                  {profile.service_package.allowedCategories.join(", ")}.
+                </div>
+              )}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="display_name">Display Name</Label>

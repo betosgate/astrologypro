@@ -19,3 +19,7 @@ This applies to:
 - profile-surface visibility rules
 - service-management constraints
 - public preview alignment rules
+
+## Status
+
+Done.

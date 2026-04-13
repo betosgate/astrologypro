@@ -26,3 +26,7 @@ This should support admin overrides later if needed.
 - role-to-package assignment rules
 - defaulting logic at signup
 - override and audit rules
+
+## Status
+
+Done.

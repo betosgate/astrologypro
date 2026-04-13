@@ -75,6 +75,7 @@ import {
   Megaphone,
   AlertTriangle,
   Rocket,
+  Layers3,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -98,6 +99,7 @@ const NAV_GROUPS = [
       { label: "Invitations", href: "/admin/invitations", icon: Mail },
       { label: "Social Advocacy", href: "/admin/social-advocacy", icon: Share2 },
       { label: "Deleted Users", href: "/admin/users/deleted", icon: UserX },
+      { label: "Service Packages", href: "/admin/role-service-packages", icon: Layers3 },
     ],
   },
   {

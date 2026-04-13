@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  getDefaultRoleServicePackageCode,
+  getRoleServicePackages,
+  resolveRoleServicePackage,
+} from "@/lib/role-service-packages";
 
 export const dynamic = "force-dynamic";
 
@@ -21,12 +26,13 @@ export async function GET() {
     }
 
     const admin = createAdminClient();
+    const roleServicePackages = await getRoleServicePackages();
 
     // Try to find existing diviner record
     let { data: diviner } = await admin
       .from("diviners")
       .select(
-        "id, username, onboarding_step, display_name, bio, tagline, avatar_url, cover_image_url, stripe_account_id, timezone, specialties, phone, youtube_channel_id, facebook_live_url"
+        "id, username, onboarding_step, display_name, bio, tagline, avatar_url, cover_image_url, stripe_account_id, timezone, specialties, phone, youtube_channel_id, facebook_live_url, service_package_code"
       )
       .eq("user_id", user.id)
       .maybeSingle();
@@ -46,9 +52,13 @@ export async function GET() {
           display_name: user.user_metadata?.name ?? username,
           is_active: true,
           onboarding_step: 1,
+          service_package_code: getDefaultRoleServicePackageCode(
+            roleServicePackages,
+            "diviner",
+          ),
         })
         .select(
-          "id, username, onboarding_step, display_name, bio, tagline, avatar_url, cover_image_url, stripe_account_id, timezone, specialties, phone, youtube_channel_id, facebook_live_url"
+          "id, username, onboarding_step, display_name, bio, tagline, avatar_url, cover_image_url, stripe_account_id, timezone, specialties, phone, youtube_channel_id, facebook_live_url, service_package_code"
         )
         .single();
 
@@ -62,7 +72,12 @@ export async function GET() {
       diviner = created;
     }
 
-    return NextResponse.json({ diviner });
+    const resolvedPackage = resolveRoleServicePackage(
+      roleServicePackages,
+      diviner.service_package_code,
+    );
+
+    return NextResponse.json({ diviner, servicePackage: resolvedPackage });
   } catch (err) {
     console.error("[onboarding/profile] error:", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });

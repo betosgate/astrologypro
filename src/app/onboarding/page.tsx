@@ -51,6 +51,10 @@ import {
   Search,
 } from "lucide-react";
 import { DAYS_OF_WEEK } from "@/lib/constants";
+import {
+  type ResolvedRoleServicePackage,
+  filterCategoriesByPackage,
+} from "@/lib/role-service-packages";
 
 // ─── Timezone data ────────────────────────────────────────────────────────────
 const TIMEZONES: { zone: string; label: string }[] = [
@@ -488,6 +492,8 @@ function OnboardingContent() {
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>(
     []
   );
+  const [servicePackage, setServicePackage] =
+    useState<ResolvedRoleServicePackage | null>(null);
 
   // Step 3: Stripe Connect
   const [connectComplete, setConnectComplete] = useState(false);
@@ -523,6 +529,9 @@ function OnboardingContent() {
       const profileRes = await fetch("/api/onboarding/profile");
       const profileData = profileRes.ok ? await profileRes.json() : null;
       const diviner = profileData?.diviner ?? null;
+      const resolvedServicePackage =
+        (profileData?.servicePackage as ResolvedRoleServicePackage | null) ?? null;
+      setServicePackage(resolvedServicePackage);
 
       if (diviner) {
         setDivinerId(diviner.id);
@@ -555,7 +564,11 @@ function OnboardingContent() {
         .order("name");
 
       if (templates) {
-        setServiceTemplates(templates);
+        setServiceTemplates(
+          resolvedServicePackage
+            ? filterCategoriesByPackage(templates, resolvedServicePackage)
+            : templates,
+        );
       }
 
       // Load existing selected services — use diviner.id, not user.id
@@ -592,6 +605,16 @@ function OnboardingContent() {
 
     init();
   }, [router, supabase]);
+
+  useEffect(() => {
+    if (
+      servicePackage &&
+      bioSpecialty !== "both" &&
+      !servicePackage.allowedCategories.includes(bioSpecialty as "astrology" | "tarot")
+    ) {
+      setBioSpecialty(servicePackage.allowedCategories[0] ?? "astrology");
+    }
+  }, [bioSpecialty, servicePackage]);
 
   // Check for connect_complete in URL params
   useEffect(() => {
@@ -1219,9 +1242,18 @@ function OnboardingContent() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="astrology">Astrology</SelectItem>
-                                <SelectItem value="tarot">Tarot Reading</SelectItem>
-                                <SelectItem value="both">Both Astrology &amp; Tarot</SelectItem>
+                                {(!servicePackage ||
+                                  servicePackage.allowedCategories.includes("astrology")) && (
+                                  <SelectItem value="astrology">Astrology</SelectItem>
+                                )}
+                                {(!servicePackage ||
+                                  servicePackage.allowedCategories.includes("tarot")) && (
+                                  <SelectItem value="tarot">Tarot Reading</SelectItem>
+                                )}
+                                {(!servicePackage ||
+                                  servicePackage.allowedCategories.length === 2) && (
+                                  <SelectItem value="both">Both Astrology &amp; Tarot</SelectItem>
+                                )}
                               </SelectContent>
                             </Select>
                           </div>
@@ -1363,6 +1395,16 @@ function OnboardingContent() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {servicePackage && (
+                  <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+                    Package:{" "}
+                    <span className="font-medium text-foreground">
+                      {servicePackage.displayName}
+                    </span>
+                    . You can currently configure{" "}
+                    {servicePackage.allowedCategories.join(" and ")} services only.
+                  </div>
+                )}
                 {serviceTemplates.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     Loading service templates...

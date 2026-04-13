@@ -32,6 +32,10 @@ import { normalizePublishPolicy } from "@/lib/diviner-publishing";
 import { getDivinerAvatarUrl } from "@/lib/diviner-images";
 import { buildGovernedLivePlatforms } from "@/lib/live-platform-governance";
 import { LivePlatformOverrides } from "./live-platform-overrides";
+import {
+  getRoleServicePackages,
+  resolveRoleServicePackage,
+} from "@/lib/role-service-packages";
 
 export const metadata = { title: "Diviner Detail — Admin" };
 
@@ -168,6 +172,10 @@ async function getDivinerDetail(divinerId: string) {
       totalServices: services.length,
       totalClients: uniqueClients.size,
     },
+    servicePackage: resolveRoleServicePackage(
+      await getRoleServicePackages(),
+      diviner.service_package_code,
+    ),
   };
 }
 
@@ -182,7 +190,7 @@ export default async function AdminDivinerDetailPage({
   const result = await getDivinerDetail(id);
   if (!result) notFound();
 
-  const { diviner, email, services, bookings, affiliateCount, governedLivePlatforms, stats } = result;
+  const { diviner, email, services, bookings, affiliateCount, governedLivePlatforms, stats, servicePackage } = result;
   const publishingPolicy = normalizePublishPolicy(diviner as Record<string, unknown>);
   const divinerAvatarUrl = getDivinerAvatarUrl(diviner.avatar_url as string | null | undefined);
 
@@ -218,6 +226,9 @@ export default async function AdminDivinerDetailPage({
             {diviner.phone && (
               <p className="text-xs text-muted-foreground">{diviner.phone}</p>
             )}
+            <p className="text-xs text-muted-foreground">
+              Service package: {servicePackage.displayName}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">

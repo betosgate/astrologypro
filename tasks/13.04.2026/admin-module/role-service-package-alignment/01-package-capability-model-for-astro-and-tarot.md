@@ -33,3 +33,7 @@ That should not be inferred ad hoc from UI labels.
 - package capability matrix
 - DB and config ownership rules
 - naming and admin-governance standard
+
+## Status
+
+Done.

@@ -27,6 +27,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Loader2, User, Sparkles, Star } from "lucide-react";
 import { toast } from "sonner";
+import {
+  getAllowedSpecialtiesForPackage,
+  resolveRoleServicePackage,
+  type RoleServicePackageRow,
+} from "@/lib/role-service-packages";
 
 const SPECIALTIES = [
   "Astrology",
@@ -73,6 +78,9 @@ function TraineeProfileContent() {
 
   // Step 2
   const [specialties, setSpecialties] = useState<string[]>([]);
+  const [allowedSpecialties, setAllowedSpecialties] =
+    useState<string[]>([...SPECIALTIES]);
+  const [packageLabel, setPackageLabel] = useState<string>("Astrology + Tarot");
   const [goals, setGoals] = useState("");
 
   // Step 3
@@ -90,11 +98,57 @@ function TraineeProfileContent() {
       }
       supabase
         .from("trainees")
-        .select("name")
+        .select("name, service_package_code")
         .eq("user_id", data.user.id)
         .single()
         .then(({ data: trainee }) => {
           if (trainee?.name) setDisplayName(trainee.name);
+          const pkgCode =
+            typeof trainee?.service_package_code === "string"
+              ? trainee.service_package_code
+              : "both";
+          const resolvedPackage = resolveRoleServicePackage(
+            [
+              {
+                package_code: "both",
+                display_name: "Astrology + Tarot",
+                description: null,
+                allows_astrology: true,
+                allows_tarot: true,
+                applies_to_roles: ["diviner", "trainee"],
+                default_for_roles: ["diviner", "trainee"],
+                is_active: true,
+                sort_order: 10,
+              },
+              {
+                package_code: "astrology_only",
+                display_name: "Astrology Only",
+                description: null,
+                allows_astrology: true,
+                allows_tarot: false,
+                applies_to_roles: ["diviner", "trainee"],
+                default_for_roles: [],
+                is_active: true,
+                sort_order: 20,
+              },
+              {
+                package_code: "tarot_only",
+                display_name: "Tarot Only",
+                description: null,
+                allows_astrology: false,
+                allows_tarot: true,
+                applies_to_roles: ["diviner", "trainee"],
+                default_for_roles: [],
+                is_active: true,
+                sort_order: 30,
+              },
+            ] as RoleServicePackageRow[],
+            pkgCode,
+          );
+          setPackageLabel(resolvedPackage.displayName);
+          setAllowedSpecialties(
+            getAllowedSpecialtiesForPackage(SPECIALTIES, resolvedPackage),
+          );
           setInitialLoading(false);
         });
     });
@@ -298,10 +352,14 @@ function TraineeProfileContent() {
               {/* ─── Step 2: Specialties & Interests ─── */}
               {step === 2 && (
                 <div className="space-y-6">
+                  <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+                    Current package:{" "}
+                    <span className="font-medium text-foreground">{packageLabel}</span>
+                  </div>
                   <div className="space-y-3">
                     <Label>Specialties / Areas of Interest</Label>
                     <div className="flex flex-wrap gap-2">
-                      {SPECIALTIES.map((s) => {
+                      {allowedSpecialties.map((s) => {
                         const selected = specialties.includes(s);
                         return (
                           <label key={s} className="cursor-pointer">
