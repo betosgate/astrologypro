@@ -7,6 +7,7 @@ interface CreateCheckoutSessionParams {
   planId: PlanId;
   successUrl: string;
   cancelUrl: string;
+  affiliateCode?: string;
 }
 
 export async function createCheckoutSession({
@@ -15,6 +16,7 @@ export async function createCheckoutSession({
   planId,
   successUrl,
   cancelUrl,
+  affiliateCode,
 }: CreateCheckoutSessionParams) {
   const plan = PLANS[planId];
   if (!plan) {
@@ -44,6 +46,7 @@ export async function createCheckoutSession({
     metadata: {
       userId,
       planId,
+      ...(affiliateCode ? { affiliateCode } : {}),
     },
     success_url: successUrl,
     cancel_url: cancelUrl,

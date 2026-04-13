@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AstrologyPro - Chime SMA Lambda Handler for PSTN phone sessions
+
+Parameters:
+  AppUrl:
+    Type: String
+    Default: https://astrologypro.com
+    Description: AstrologyPro base URL for API callbacks
+  CronSecret:
+    Type: String
+    NoEcho: true
+    Description: Shared secret for authenticating callbacks
+  HoldMusicBucket:
+    Type: String
+    Default: astropro-assets
+    Description: S3 bucket containing hold music
+
+Resources:
+  ChimeSmaHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: astropro-chime-sma-handler
+      Handler: index.handler
+      Runtime: nodejs20.x
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          APP_URL: !Ref AppUrl
+          CRON_SECRET: !Ref CronSecret
+          HOLD_MUSIC_BUCKET: !Ref HoldMusicBucket
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref HoldMusicBucket
+
+Outputs:
+  ChimeSmaHandlerArn:
+    Description: ARN of the SMA Lambda function (use when creating the SIP Media Application)
+    Value: !GetAtt ChimeSmaHandler.Arn

@@ -40,26 +40,22 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function loadProfile() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data } = await supabase
-        .from("diviners")
-        .select(
-          "id, display_name, username, bio, tagline, specialties, avatar_url, credentials"
-        )
-        .eq("user_id", user.id)
-        .single();
-
-      if (data) {
-        setProfile({
-          ...data,
-          specialties: data.specialties ?? [],
-          credentials: data.credentials ?? null,
-        });
+      try {
+        const res = await fetch("/api/dashboard/profile");
+        if (!res.ok) {
+          setLoading(false);
+          return;
+        }
+        const { profile: data } = await res.json();
+        if (data) {
+          setProfile({
+            ...data,
+            specialties: data.specialties ?? [],
+            credentials: data.credentials ?? null,
+          });
+        }
+      } catch {
+        // network error — leave profile null
       }
       setLoading(false);
     }
@@ -94,12 +90,14 @@ export default function ProfilePage() {
       data: { publicUrl },
     } = supabase.storage.from("avatars").getPublicUrl(path);
 
-    const { error: updateError } = await supabase
-      .from("diviners")
-      .update({ avatar_url: publicUrl })
-      .eq("id", profile.id);
+    // Update avatar_url via API route so profile sync runs
+    const res = await fetch("/api/dashboard/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ avatar_url: publicUrl }),
+    });
 
-    if (updateError) {
+    if (!res.ok) {
       toast.error("Failed to update avatar");
     } else {
       setProfile({ ...profile, avatar_url: publicUrl });
@@ -112,27 +110,35 @@ export default function ProfilePage() {
     if (!profile) return;
     setSaving(true);
 
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("diviners")
-      .update({
-        display_name: profile.display_name,
-        bio: profile.bio || null,
-        tagline: profile.tagline || null,
-        specialties: profile.specialties,
-        credentials: profile.credentials || null,
-      })
-      .eq("id", profile.id);
+    try {
+      const res = await fetch("/api/dashboard/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          display_name: profile.display_name,
+          bio: profile.bio || null,
+          tagline: profile.tagline || null,
+          specialties: profile.specialties,
+          credentials: profile.credentials || null,
+        }),
+      });
 
-    setSaving(false);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const msg =
+          data.errors?.join(", ") || data.error || "Failed to save profile";
+        toast.error(msg);
+        setSaving(false);
+        return;
+      }
 
-    if (error) {
+      toast.success("Profile saved");
+      router.refresh();
+    } catch {
       toast.error("Failed to save profile");
-      return;
     }
 
-    toast.success("Profile saved");
-    router.refresh();
+    setSaving(false);
   }
 
   function toggleSpecialty(specialty: string) {

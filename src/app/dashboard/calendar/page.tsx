@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { CalendarView } from "@/components/dashboard/calendar-view";
 import { BookingLinkBanner } from "@/components/dashboard/booking-link-banner";
-import { Info } from "lucide-react";
+import { Info, LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const metadata = {
@@ -93,11 +93,19 @@ export default async function CalendarPage() {
             Set your weekly schedule, block days off, and add special hours.
           </p>
         </div>
-        <Link href="/dashboard/availability">
-          <Button variant="outline" size="sm">
-            Manage Weekly Schedule
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/dashboard/calendar-connections">
+            <Button variant="outline" size="sm">
+              <LinkIcon className="mr-1 size-3" />
+              Calendar Connections
+            </Button>
+          </Link>
+          <Link href="/dashboard/availability">
+            <Button variant="outline" size="sm">
+              Manage Weekly Schedule
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* No-calendar info banner — shown when neither Google nor Outlook is connected */}

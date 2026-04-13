@@ -4,6 +4,23 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Clock, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
+function decodeHtmlEntities(html: string): string {
+  let decoded = html;
+  const entityPattern = /&(?:lt|gt|amp|quot|#39|#x27|nbsp);/i;
+  let i = 0;
+  while (entityPattern.test(decoded) && i < 3) {
+    decoded = decoded
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&amp;/gi, "&")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;|&#x27;/gi, "'")
+      .replace(/&nbsp;/gi, " ");
+    i++;
+  }
+  return decoded;
+}
+
 interface AvailabilityPreviewProps {
   divinerId: string;
   username: string;
@@ -283,9 +300,10 @@ export function AvailabilityPreview({
                     {timeSlots[0].availabilityTimezone ? ` • ${timeSlots[0].availabilityTimezone.replace(/_/g, " ")}` : ""}
                   </p>
                   {timeSlots[0].availabilityDescription && (
-                    <p className="mt-1 text-xs text-[#b8bcd0]/60">
-                      {timeSlots[0].availabilityDescription}
-                    </p>
+                    <div
+                      className="mt-1 text-xs text-[#b8bcd0]/60 prose prose-sm prose-invert max-w-none [&_a]:text-amber-400 [&_a]:underline [&_a]:break-all [&_p]:my-1"
+                      dangerouslySetInnerHTML={{ __html: decodeHtmlEntities(timeSlots[0].availabilityDescription) }}
+                    />
                   )}
                 </div>
               )}

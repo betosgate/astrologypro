@@ -25,9 +25,7 @@ import {
   Copy,
   Check,
   Clock,
-  Video,
   Calendar,
-  FileText,
   ClipboardList,
   Sparkles,
 } from "lucide-react";
@@ -488,13 +486,42 @@ function PrepContent({ booking }: SessionPrepProps) {
         </div>
       </div>
 
-      {/* Join session button */}
-      <Button className="w-full" asChild>
-        <Link href={`/${booking.username}/session/${booking.id}`}>
-          <Video className="mr-2 size-4" />
-          Join Session
-        </Link>
-      </Button>
+      {/* Additional attendees */}
+      {(() => {
+        const attendees = questionnaire?.attendees;
+        if (!Array.isArray(attendees) || attendees.length === 0) return null;
+        return (
+          <>
+            <Separator />
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Additional Attendees
+              </p>
+              {(attendees as Array<{ name?: string; email?: string }>).map((a, i) => (
+                <div key={i} className="rounded-md bg-muted p-2.5 text-sm">
+                  {a.name && <p className="font-medium">{a.name}</p>}
+                  {a.email && <p className="text-xs text-muted-foreground">{a.email}</p>}
+                </div>
+              ))}
+            </div>
+          </>
+        );
+      })()}
+
+      {/* Booking notes (from intake form) */}
+      {questionnaire?.additionalNotes && (
+        <>
+          <Separator />
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Client Notes
+            </p>
+            <div className="rounded-md bg-muted p-2.5">
+              <p className="text-sm">{questionnaire.additionalNotes}</p>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -505,12 +532,12 @@ export function SessionPrepSheet({ booking }: SessionPrepProps) {
       <SheetTrigger asChild>
         <Button variant="outline" size="sm">
           <ClipboardList className="mr-1.5 size-3.5" />
-          Prepare
+          Details
         </Button>
       </SheetTrigger>
       <SheetContent className="overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Session Preparation</SheetTitle>
+          <SheetTitle>Booking Details</SheetTitle>
         </SheetHeader>
         <PrepContent booking={booking} />
       </SheetContent>

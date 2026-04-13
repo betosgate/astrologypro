@@ -37,12 +37,12 @@ export async function GET(request: NextRequest) {
     await handleOAuthCallback(code, state, user.id);
     console.log("[Google OAuth] Success for owner:", state);
     return NextResponse.redirect(
-      new URL("/dashboard/settings?calendar=connected", baseUrl)
+      new URL("/dashboard/calendar-connections?calendar=connected", baseUrl)
     );
   } catch (err: any) {
     console.error("[Google OAuth] Callback failed:", err);
     return NextResponse.redirect(
-      new URL(`/dashboard/settings?calendar=error&reason=${encodeURIComponent(err.message)}`, baseUrl)
+      new URL(`/dashboard/calendar-connections?calendar=error&reason=${encodeURIComponent(err.message)}`, baseUrl)
     );
   }
 }
