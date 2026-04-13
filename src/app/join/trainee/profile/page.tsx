@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
@@ -58,6 +58,8 @@ const STEP_LABELS = ["About You", "Specialties & Interests", "Birth Data"] as co
 
 export default function TraineeProfilePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isInvited = searchParams.get("invited") === "true";
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -171,6 +173,11 @@ export default function TraineeProfilePage() {
             <h1 className="mb-2 text-center text-2xl font-bold tracking-tight">
               Complete Your Profile
             </h1>
+            {isInvited ? (
+              <p className="mb-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2 text-center text-sm text-muted-foreground">
+                Your account was invited by admin. Complete the standard trainee setup before trainee portal access is unlocked.
+              </p>
+            ) : null}
             <p className="mb-6 text-center text-sm text-muted-foreground">
               Step {step} of 3 &mdash; {STEP_LABELS[step - 1]}
             </p>

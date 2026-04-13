@@ -19,3 +19,9 @@ Examples:
 - minimal provisioning rules by role
 - first-login state requirements
 - onboarding-completed lifecycle expectations
+
+## Status
+
+Done.
+
+`src/lib/invite-provisioning.ts` now provisions minimum role rows for admin-invited users at auth callback time, and `src/app/auth/callback/route.ts` applies it before redirect. The provisioned rows are intentionally incomplete, with onboarding left unresolved until the standard frontend flow marks completion.

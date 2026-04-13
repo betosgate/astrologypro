@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -444,6 +444,8 @@ type WeeklySchedule = Record<number, number[]>;
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isInvited = searchParams.get("invited") === "true";
   const supabase = createClient();
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -1020,6 +1022,12 @@ export default function OnboardingPage() {
           {error && (
             <div className="mb-6 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {error}
+            </div>
+          )}
+
+          {isInvited && (
+            <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+              Your account was created by an admin. Complete the standard diviner onboarding flow here before dashboard access is unlocked.
             </div>
           )}
 

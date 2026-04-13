@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getRoleDestination } from "@/types/user";
 import { getUserPortals } from "@/lib/user-roles";
 import { provisionNatalReadiness } from "@/lib/community/provision-natal-readiness";
+import { getInvitedRoleDestination } from "@/lib/invite-destinations";
+import { ensureInvitedRoleProvisioning } from "@/lib/invite-provisioning";
 
 function getClientIp(req: NextRequest): string {
   return (
@@ -29,16 +31,6 @@ async function logLogin(userId: string, req: NextRequest, method = "magic_link")
     // non-blocking
   }
 }
-
-// Destination for admin-invited users who need to complete their profile
-const INVITE_DESTINATIONS: Record<string, string> = {
-  social_advo: "/join/advocate?invited=true",
-  trainee: "/join/trainee?invited=true",
-  diviner: "/onboarding",
-  client: "/portal",
-  perennial_mandalism: "/community",
-  mystery_school: "/mystery-school",
-};
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -120,7 +112,11 @@ export async function GET(request: NextRequest) {
       // ── Admin invite: route to profile-completion page ────────────────────
       if (isInvite && metadata.invited_by_admin) {
         const role = metadata.role as string | undefined;
-        const dest = role ? (INVITE_DESTINATIONS[role] ?? getRoleDestination(role)) : "/switch";
+        if (user) {
+          const admin = createAdminClient();
+          await ensureInvitedRoleProvisioning(admin, user, role);
+        }
+        const dest = role ? getInvitedRoleDestination(role) : "/switch";
         return NextResponse.redirect(new URL(dest, origin));
       }
 

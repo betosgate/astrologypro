@@ -25,3 +25,9 @@ This is the right enforcement layer.
 - parity rules between invited and self-signup users
 - onboarding gate requirements by role
 - no-bypass principle
+
+## Status
+
+Done.
+
+`src/app/api/auth/post-login-redirect/route.ts` now keeps invite-origin users behind the same incomplete-onboarding gates as self-signup users for `diviner`, `trainee`, `perennial_mandalism`, and `social_advo`, while preserving invited destinations instead of bypassing straight into dashboards.

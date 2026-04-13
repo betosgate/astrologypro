@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/admin-auth";
 import { getRoleDestination } from "@/types/user";
+import { getInvitedRoleDestination } from "@/lib/invite-destinations";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,7 @@ export async function GET(req: NextRequest) {
   const isAdmin = !!adminUser;
   const admin = createAdminClient();
   const role = user.user_metadata?.role as string | undefined;
+  const isInvited = user.user_metadata?.invited_by_admin === true;
 
   if (role === "diviner" || isAdmin) {
     const { data: diviner } = await admin
@@ -99,7 +101,9 @@ export async function GET(req: NextRequest) {
 
     // Diviner: gate on onboarding completion
     if (!diviner || !diviner.onboarding_completed) {
-      return NextResponse.json({ destination: "/onboarding" });
+      return NextResponse.json({
+        destination: isInvited ? getInvitedRoleDestination("diviner") : "/onboarding",
+      });
     }
 
     return NextResponse.json({ destination: "/dashboard" });
@@ -113,10 +117,28 @@ export async function GET(req: NextRequest) {
       .maybeSingle();
 
     if (!trainee || !trainee.onboarding_completed) {
-      return NextResponse.json({ destination: "/join/trainee/profile" });
+      return NextResponse.json({
+        destination: isInvited ? getInvitedRoleDestination("trainee") : "/join/trainee/profile",
+      });
     }
 
     return NextResponse.json({ destination: "/trainee" });
+  }
+
+  if (role === "social_advo") {
+    const { data: advocate } = await admin
+      .from("social_advocates")
+      .select("id, onboarding_completed")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!advocate || !advocate.onboarding_completed) {
+      return NextResponse.json({
+        destination: isInvited ? getInvitedRoleDestination("social_advo") : "/join/advocate",
+      });
+    }
+
+    return NextResponse.json({ destination: "/advocate" });
   }
 
   if (role === "perennial_mandalism") {
@@ -127,10 +149,49 @@ export async function GET(req: NextRequest) {
       .maybeSingle();
 
     if (!member || !member.onboarding_completed) {
-      return NextResponse.json({ destination: "/community/onboarding" });
+      return NextResponse.json({
+        destination: isInvited
+          ? getInvitedRoleDestination("perennial_mandalism")
+          : "/community/onboarding",
+      });
     }
 
     return NextResponse.json({ destination: "/community" });
+  }
+
+  if (role === "mystery_school") {
+    const { data: student } = await admin
+      .from("mystery_school_students")
+      .select("id, status, access_expires_at, stripe_subscription_id, one_time_fee_paid, one_time_fee_amount")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const hasBilling = Boolean(
+      student?.stripe_subscription_id &&
+      student?.one_time_fee_paid === true &&
+      typeof student?.one_time_fee_amount === "number"
+    );
+
+    const hasActiveAccess = Boolean(
+      student &&
+      hasBilling &&
+      (
+        student.status === "active" ||
+        (
+          student.status === "cancelled" &&
+          student.access_expires_at &&
+          new Date(student.access_expires_at) > new Date()
+        )
+      )
+    );
+
+    if (hasActiveAccess) {
+      return NextResponse.json({ destination: "/mystery-school" });
+    }
+
+    return NextResponse.json({
+      destination: getInvitedRoleDestination("mystery_school"),
+    });
   }
 
   // All other roles — use metadata role
