@@ -72,6 +72,7 @@ import {
   Map,
   Key,
   DollarSign,
+  Megaphone,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -90,6 +91,7 @@ const NAV_GROUPS = [
       { label: "Users", href: "/admin/users", icon: Users },
       { label: "Diviners", href: "/admin/diviners", icon: Star },
       { label: "Affiliates", href: "/admin/affiliates", icon: Users },
+      { label: "Campaigns", href: "/admin/campaigns", icon: Megaphone },
       { label: "Roles", href: "/admin/roles", icon: Shield },
       { label: "Invitations", href: "/admin/invitations", icon: Mail },
       { label: "Social Advocacy", href: "/admin/social-advocacy", icon: Share2 },
@@ -245,6 +247,8 @@ const NAV_GROUPS = [
       { label: "Payouts", href: "/admin/reports/payouts", icon: CreditCard },
       { label: "Funnel", href: "/admin/reports/funnel", icon: BarChart3 },
       { label: "Readings", href: "/admin/reports/readings", icon: BarChart2 },
+      { label: "Affiliates", href: "/admin/reports/affiliates", icon: Users },
+      { label: "Campaigns", href: "/admin/campaigns/reports", icon: Megaphone },
     ],
   },
   {

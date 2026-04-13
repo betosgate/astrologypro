@@ -30,6 +30,8 @@ export default async function AdvocateLayout({ children }: { children: React.Rea
     { label: "Referrals", href: "/advocate/referrals" },
     { label: "Earnings", href: "/advocate/earnings" },
     { label: "Analytics", href: "/advocate/analytics" },
+    { label: "Reports", href: "/advocate/reports" },
+    { label: "Campaigns", href: "/advocate/campaigns" },
     { label: "Content", href: "/advocate/content" },
     { label: "Profile", href: "/advocate/profile" },
   ];

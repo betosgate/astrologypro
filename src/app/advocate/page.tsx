@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DollarSign, Users, Share2, TrendingUp, Copy, ExternalLink } from "lucide-react";
 import { APP_URL } from "@/lib/constants";
+import { ensureDefaultCampaign } from "@/lib/campaign-defaults";
 
 export const metadata = { title: "Advocate Dashboard - AstrologyPro" };
 
@@ -21,6 +22,14 @@ export default async function AdvocateDashboardPage() {
     .single();
 
   if (!advocate) redirect("/join/advocate");
+
+  // Ensure default campaign exists on first visit (fire-and-forget)
+  ensureDefaultCampaign({
+    affiliateId: advocate.id,
+    affiliateType: "social_advocate",
+    affiliateName: advocate.name,
+    commissionPercent: advocate.commission_percent,
+  }).catch((err) => console.error("[advocate] Default campaign error:", err));
 
   const { data: recentReferrals } = await supabase
     .from("affiliate_referrals")
