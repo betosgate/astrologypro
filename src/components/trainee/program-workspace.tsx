@@ -587,7 +587,7 @@ export function ProgramWorkspace({
                                 categoryId={selectedCategory.id}
                                 onComplete={handleLessonComplete}
                               />
-                              <div className="flex justify-end pt-1">
+                              {/* <div className="flex justify-end pt-1">
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -601,7 +601,7 @@ export function ProgramWorkspace({
                                     Open full page
                                   </Link>
                                 </Button>
-                              </div>
+                              </div> */}
                             </>
                           </div>
                         )}
