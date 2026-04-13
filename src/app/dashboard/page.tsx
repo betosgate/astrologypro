@@ -26,6 +26,7 @@ import {
 import { ProfileStrength } from "@/components/dashboard/profile-strength";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { RoiBanner } from "@/components/dashboard/roi-banner";
+import { RoleUpgradeBanners } from "@/components/dashboard/role-upgrade-banners";
 import { TodaysSessions } from "@/components/dashboard/todays-sessions";
 
 export const metadata = {
@@ -63,6 +64,20 @@ export default async function DashboardPage() {
     .maybeSingle();
 
   if (!diviner) redirect("/admin");
+
+  // Check complementary roles for cross-sell banners
+  const [traineeCheck, pmCheck] = await Promise.all([
+    admin.from("trainees").select("id").eq("user_id", user.id).maybeSingle(),
+    admin
+      .from("community_members")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("membership_type", "perennial_mandalism")
+      .eq("membership_status", "active")
+      .maybeSingle(),
+  ]);
+  const isTrainee = !!traineeCheck.data;
+  const isPerennialMandalism = !!pmCheck.data;
 
   // Current month range
   const thisMonth = getMonthRange(0);
@@ -311,6 +326,13 @@ export default async function DashboardPage() {
           </Link>
         </div>
       )}
+
+      {/* Cross-sell banners — show upgrade paths for missing roles */}
+      <RoleUpgradeBanners
+        isDiviner={true}
+        isTrainee={isTrainee}
+        isPerennialMandalism={isPerennialMandalism}
+      />
 
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>

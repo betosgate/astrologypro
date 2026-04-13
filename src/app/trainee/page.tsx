@@ -24,6 +24,7 @@ import {
   Clock,
 } from "lucide-react";
 import Link from "next/link";
+import { RoleUpgradeBanners } from "@/components/dashboard/role-upgrade-banners";
 
 const TABBY_USERNAME = process.env.NEXT_PUBLIC_TABBY_USERNAME ?? "tabby";
 
@@ -118,6 +119,20 @@ export default async function TraineeDashboardPage() {
   if (!trainee) redirect("/join/trainee");
 
   const admin = createAdminClient();
+
+  // Check complementary roles for cross-sell banners
+  const [divinerCheck, pmCheck] = await Promise.all([
+    admin.from("diviners").select("id").eq("user_id", user.id).maybeSingle(),
+    admin
+      .from("community_members")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("membership_type", "perennial_mandalism")
+      .eq("membership_status", "active")
+      .maybeSingle(),
+  ]);
+  const isDiviner = !!divinerCheck.data;
+  const isPerennialMandalism = !!pmCheck.data;
 
   // ── All data fetched in parallel ──────────────────────────────────────────
   const [
@@ -298,6 +313,13 @@ export default async function TraineeDashboardPage() {
           {trainee.training_status}
         </Badge>
       </div>
+
+      {/* ── Cross-sell banners ────────────────────────────────────────────── */}
+      <RoleUpgradeBanners
+        isDiviner={isDiviner}
+        isTrainee={true}
+        isPerennialMandalism={isPerennialMandalism}
+      />
 
       {/* ── Graduation CTA ──────────────────────────────────────────────────── */}
       {trainee.training_status === "graduated" && (

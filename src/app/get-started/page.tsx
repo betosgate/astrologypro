@@ -657,7 +657,22 @@ export default function GetStartedPage() {
                 </div>
                 <div className="text-right">
                   <p className="font-display text-2xl font-bold text-[#c9a84c]">
-                    From $97/mo
+                    {(() => {
+                      const allPlans = pricingSections.flatMap((s) =>
+                        s.planOrder.map((id) => s.plans[id]).filter(Boolean)
+                      );
+                      const monthlyPlans = allPlans.filter((p) => p.monthlyPrice > 0);
+                      const lowestMonthly = monthlyPlans.length
+                        ? Math.min(...monthlyPlans.map((p) => p.monthlyPrice))
+                        : null;
+                      const onetimeOnly = allPlans.filter((p) => p.monthlyPrice === 0 && p.setupPrice > 0);
+                      const lowestOnetime = onetimeOnly.length
+                        ? Math.min(...onetimeOnly.map((p) => p.setupPrice))
+                        : null;
+                      if (lowestMonthly) return `From $${lowestMonthly}/mo`;
+                      if (lowestOnetime) return `From $${lowestOnetime}`;
+                      return "See plans above";
+                    })()}
                   </p>
                 </div>
               </div>
