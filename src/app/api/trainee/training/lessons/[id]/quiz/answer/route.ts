@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listQuizQuestionsCompat } from "@/lib/training/admin-quiz-questions";
+import { upsertCorrectQuizQuestionProgress } from "@/lib/training/quiz-question-progress";
 
 export const dynamic = "force-dynamic";
 
@@ -103,7 +104,16 @@ export async function POST(
   const isCorrect = answerIndex === question.correct_answer;
 
   if (isCorrect) {
-    return NextResponse.json({ correct: true });
+    const progress = await upsertCorrectQuizQuestionProgress(admin, {
+      userId: user.id,
+      lessonId,
+      questionId,
+      selectedAnswer: answerIndex,
+    });
+    return NextResponse.json({
+      correct: true,
+      quiz_progress_supported: progress.supported,
+    });
   }
 
   // Wrong answer — surface remediation metadata so the client can drive the

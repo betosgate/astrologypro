@@ -167,6 +167,17 @@ function InlineLessonViewer({
         videos: lesson.videos ?? [],
         assets: lesson.assets ?? [],
         quizQuestions,
+        quizProgress: (lesson.quiz_progress ?? []).map(
+          (progress: {
+            question_id: string;
+            selected_answer: number;
+            answered_correctly: boolean;
+          }) => ({
+            question_id: progress.question_id,
+            selected_answer: progress.selected_answer,
+            answered_correctly: progress.answered_correctly,
+          }),
+        ),
         quizPassed: lesson.quiz_passed === true,
         isCompleted: lesson.completed === true,
         // No deep-link routing from the inline viewer — the workspace handles
