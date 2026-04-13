@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -442,7 +442,7 @@ interface SelectedService {
 
 type WeeklySchedule = Record<number, number[]>;
 
-export default function OnboardingPage() {
+function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isInvited = searchParams.get("invited") === "true";
@@ -1755,5 +1755,20 @@ export default function OnboardingPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen flex-col items-center justify-center bg-[#070b14]">
+          <Loader2 className="size-8 animate-spin text-primary" />
+          <p className="mt-4 text-sm text-zinc-400">Loading onboarding portal...</p>
+        </div>
+      }
+    >
+      <OnboardingContent />
+    </Suspense>
   );
 }
