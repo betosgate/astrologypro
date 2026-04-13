@@ -18,7 +18,6 @@ type ApiQuestion = {
   remediation_video_index?: number | null;
   remediation_start_seconds?: number | null;
   remediation_replay_until_seconds?: number | null;
-  remediation_message?: string | null;
 };
 
 export default function EditQuizPage() {
@@ -67,7 +66,6 @@ export default function EditQuizPage() {
                 remediation_start_seconds: question.remediation_start_seconds ?? null,
                 remediation_replay_until_seconds:
                   question.remediation_replay_until_seconds ?? null,
-                remediation_message: question.remediation_message ?? null,
               }))
             : [],
         });

@@ -154,6 +154,8 @@ export function LessonViewerQuiz({
   const [submitting, setSubmitting] = useState(false);
   const [isWrong, setIsWrong] = useState(false);
   const [waitingForReplay, setWaitingForReplay] = useState(false);
+  const [waitingForRemediationStart, setWaitingForRemediationStart] =
+    useState(false);
   const [showWrongMessage, setShowWrongMessage] = useState<string | null>(null);
   const [allDone, setAllDone] = useState(false);
 
@@ -220,7 +222,14 @@ export function LessonViewerQuiz({
   const allQuestionsAnswered = answeredCount >= totalCount;
 
   async function handleSubmit() {
-    if (selectedOption == null || waitingForReplay || submitting) return;
+    if (
+      selectedOption == null ||
+      waitingForReplay ||
+      waitingForRemediationStart ||
+      submitting
+    ) {
+      return;
+    }
 
     setSubmitting(true);
     setIsWrong(false);
@@ -276,16 +285,17 @@ export function LessonViewerQuiz({
         setShowWrongMessage(
           "That answer is not correct. Replaying the relevant video segment, then you can try again.",
         );
-        setWaitingForReplay(true);
+        setWaitingForRemediationStart(true);
 
-        // Auto-hide the inline message after ~6s — the parent's video
-        // playback continues independently.
+        // Let the learner read the message before shifting focus to video.
+        // Remediation playback starts after this message disappears.
         if (wrongMessageTimerRef.current) clearTimeout(wrongMessageTimerRef.current);
         wrongMessageTimerRef.current = setTimeout(() => {
           setShowWrongMessage(null);
+          setWaitingForRemediationStart(false);
+          setWaitingForReplay(true);
+          onWrongAnswer(remediation, currentIdx);
         }, 6000);
-
-        onWrongAnswer(remediation, currentIdx);
       } else {
         // Inline retry fallback when there is no remediation metadata.
         toast.warning("Incorrect", {
@@ -358,7 +368,10 @@ export function LessonViewerQuiz({
             const isSelected =
               selectedOption === oIdx || confirmedOption === oIdx;
             const disabled =
-              waitingForReplay || submitting || currentAlreadyAnswered;
+              waitingForReplay ||
+              waitingForRemediationStart ||
+              submitting ||
+              currentAlreadyAnswered;
             return (
               <button
                 key={oIdx}
@@ -402,7 +415,7 @@ export function LessonViewerQuiz({
           </div>
         )}
 
-        {waitingForReplay && (
+        {waitingForReplay && !showWrongMessage && (
           <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-primary">
             <Video className="size-4 shrink-0 animate-pulse" />
             <p className="leading-snug">
@@ -445,6 +458,7 @@ export function LessonViewerQuiz({
             disabled={
               (!currentAlreadyAnswered && selectedOption == null) ||
               waitingForReplay ||
+              waitingForRemediationStart ||
               submitting
             }
           >
