@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ShieldCheck, Star, Calendar, Sparkles, Zap, BadgeCheck } from "lucide-react";
+import { getDivinerAvatarUrl, getDivinerCoverImageUrl } from "@/lib/diviner-images";
 
 interface DivinerHeroProps {
   username: string;
@@ -39,14 +40,9 @@ export function DivinerHero({
   isVerified = true,
   isCertified = false,
 }: DivinerHeroProps) {
-  const initials = displayName
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
   const hasLiveStream = !!youtubeChannelId || !!facebookLiveUrl;
+  const resolvedAvatarUrl = getDivinerAvatarUrl(avatarUrl);
+  const resolvedCoverImageUrl = getDivinerCoverImageUrl(coverImageUrl);
 
   // Urgency: low slot warning when fewer than 5 slots remain
   const lowSlots =
@@ -97,7 +93,7 @@ export function DivinerHero({
         {/* Cover image — positioned absolute, fills right half on desktop */}
         <div className="absolute inset-y-0 right-0 w-full md:w-[55%] lg:w-[50%]">
           <Image
-            src={coverImageUrl || "/images/banners/diviner-banner.png"}
+            src={resolvedCoverImageUrl}
             alt={displayName}
             fill
             className="object-cover"
@@ -124,20 +120,14 @@ export function DivinerHero({
               </div>
               {/* Avatar circle */}
               <div className="relative size-24 overflow-hidden rounded-full border-[3px] border-[#c9a84c]/30 shadow-[0_0_30px_rgba(201,168,76,0.12)] sm:size-28 md:size-32 lg:size-36">
-                {avatarUrl ? (
-                  <Image
-                    src={avatarUrl}
-                    alt={displayName}
-                    fill
-                    className="object-cover"
-                    sizes="144px"
-                    priority
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-[#1a1f5c] font-display text-2xl text-[#c9a84c] md:text-3xl">
-                    {initials}
-                  </div>
-                )}
+                <Image
+                  src={resolvedAvatarUrl}
+                  alt={displayName}
+                  fill
+                  className="object-cover"
+                  sizes="144px"
+                  priority
+                />
               </div>
             </div>
           </div>

@@ -3,6 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SPECIALTIES } from "@/lib/constants";
 import { syncProfileAcrossRoles } from "@/lib/profile-sync";
+import {
+  isPublicSectionBlocked,
+  normalizePublishPolicy,
+  publishBlockMessage,
+} from "@/lib/diviner-publishing";
 
 export const dynamic = "force-dynamic";
 
@@ -147,8 +152,38 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
-  // 4. Write with admin client
+  // 4. Publishing restrictions for public profile fields
   const admin = createAdminClient();
+  const { data: divinerPolicyRow } = await admin
+    .from("diviners")
+    .select("id, public_publish_blocked, blocked_public_sections, blocked_media_types, publish_block_reason")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const publishPolicy = normalizePublishPolicy(divinerPolicyRow as Record<string, unknown> | null);
+  const touchesHeroFields =
+    body.display_name !== undefined ||
+    body.tagline !== undefined ||
+    body.specialties !== undefined ||
+    body.avatar_url !== undefined ||
+    body.credentials !== undefined;
+  const touchesBioFields = body.bio !== undefined;
+
+  if (
+    (touchesHeroFields && isPublicSectionBlocked(publishPolicy, "hero")) ||
+    (touchesBioFields && isPublicSectionBlocked(publishPolicy, "bio"))
+  ) {
+    return NextResponse.json(
+      {
+        error: publishBlockMessage(
+          publishPolicy,
+          "Public profile publishing for this section has been blocked by an administrator."
+        ),
+      },
+      { status: 403 }
+    );
+  }
+
+  // 5. Write with admin client
   const { error } = await admin
     .from("diviners")
     .update(updates)
@@ -162,7 +197,7 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
-  // 5. Fire-and-forget sync to other role tables
+  // 6. Fire-and-forget sync to other role tables
   syncProfileAcrossRoles(
     user.id,
     {
@@ -178,7 +213,7 @@ export async function PATCH(req: NextRequest) {
     console.error("[diviner-profile] Sync error:", err)
   );
 
-  // 6. Return updated profile
+  // 7. Return updated profile
   const { data: updated } = await admin
     .from("diviners")
     .select(PROFILE_SELECT)
