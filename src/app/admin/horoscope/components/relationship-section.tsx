@@ -38,20 +38,14 @@ export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen,
           return (
             <div key={i} className="rounded-lg border overflow-hidden">
               {itemTitle && (
-                <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center border-b border-black/10">
+                <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center border-b border-black/10 gap-5">
                   <SmartHeading title={itemTitle} textSize="text-[22px]" iconSize="size-7" className="text-black" />
-                </div>
-              )}
-              
-              <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  {!itemTitle && <h4 className="text-xs font-semibold uppercase tracking-wider text-center">{title}</h4>}
                   {(() => {
-                    const titleStr = String(itemTitle ?? title ?? "");
-                    const match = titleStr.match(/(\b[A-Z][a-z]+\b)\s+in\s+(\b[A-Z][a-z]+\b)/);
+                    const titleStr = String(itemTitle ?? title);
+                    const match = titleStr.match(/(\b[A-Za-z\s]+\b)\s+in\s+(\b[A-Z][a-z]+\b)/);
                     if (match) {
-                      const p = match[1];
-                      const s = match[2];
+                      const p = match[1].trim();
+                      const s = match[2].trim();
                       if (checkDacen(p, s)) {
                         return (
                           <Tooltip>
@@ -59,18 +53,18 @@ export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen,
                               <button
                                 type="button"
                                 onClick={() => onDecanClick(p, s)}
-                                className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
+                                className="size-10 flex items-center justify-center rounded-full bg-amber-500/15 border-2 border-amber-500/50 hover:bg-amber-500/25 hover:border-amber-500 transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] active:scale-90 group shrink-0"
                               >
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                   src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
                                   alt=""
-                                  className="size-5 cursor-pointer hover:scale-125 transition-all hover:brightness-150 hover:drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]"
+                                  className="size-7 cursor-pointer transition-transform group-hover:scale-110 brightness-110 contrast-125"
                                 />
                               </button>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
-                              Decan Information
+                              Decan Insights
                             </TooltipContent>
                           </Tooltip>
                         );
@@ -78,6 +72,12 @@ export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen,
                     }
                     return null;
                   })()}
+                </div>
+              )}
+              
+              <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  {!itemTitle && <h4 className="text-xs font-semibold uppercase tracking-wider text-center">{title}</h4>}
                 </div>
                 <p className="leading-relaxed">{item.data ?? item.interpretation ?? item.description}</p>
                 <div className="mt-1.5 flex justify-center border-t border-black/10 pt-2">

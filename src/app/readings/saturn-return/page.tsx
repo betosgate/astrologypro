@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getDivinerAvatarUrl } from "@/lib/diviner-images";
 import { BadgeCheck, ArrowRight } from "lucide-react";
 
 export const revalidate = 3600;
@@ -167,6 +169,7 @@ async function getSaturnReturnDiviners(): Promise<DivinerLandingCard[]> {
 // ─────────────────────────────────────────────
 
 function DivinerCard({ diviner }: { diviner: DivinerLandingCard }) {
+  const avatarUrl = getDivinerAvatarUrl(diviner.avatarUrl);
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-white/5 bg-[#0d1117]/60 transition-all hover:border-[#c9a84c]/30 hover:shadow-[0_0_30px_rgba(201,168,76,0.05)]">
       {/* Cover gradient */}
@@ -182,22 +185,13 @@ function DivinerCard({ diviner }: { diviner: DivinerLandingCard }) {
       {/* Avatar overlapping cover */}
       <div className="relative -mt-7 flex flex-col px-5">
         <div className="flex items-end justify-between">
-          {diviner.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={diviner.avatarUrl}
-              alt={diviner.displayName}
-              className="size-14 rounded-full border-2 border-[#0d1117] object-cover ring-1 ring-[#c9a84c]/20"
-            />
-          ) : (
-            <div className="flex size-14 items-center justify-center rounded-full border-2 border-[#0d1117] bg-[#c9a84c]/10 text-base font-semibold text-[#c9a84c] ring-1 ring-[#c9a84c]/20">
-              {diviner.displayName
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .slice(0, 2)}
-            </div>
-          )}
+          <Image
+            src={avatarUrl}
+            alt={diviner.displayName}
+            width={56}
+            height={56}
+            className="size-14 rounded-full border-2 border-[#0d1117] object-cover ring-1 ring-[#c9a84c]/20"
+          />
         </div>
 
         <div className="mt-3">

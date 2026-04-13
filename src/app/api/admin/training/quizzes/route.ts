@@ -20,7 +20,11 @@ const ALLOWED_SORTS: Record<string, string> = {
 };
 
 async function buildQuizRowsForList(admin: ReturnType<typeof createAdminClient>) {
-  const [{ data: quizzes, error: quizError }, { data: questionCounts, error: countError }] =
+  const [
+    { data: quizzes, error: quizError },
+    { data: questionCounts, error: countError },
+    { data: lessons, error: lessonError },
+  ] =
     await Promise.all([
       admin
         .from("training_quizzes")
@@ -30,20 +34,63 @@ async function buildQuizRowsForList(admin: ReturnType<typeof createAdminClient>)
         .from("quiz_questions")
         .select("lesson_id")
         .order("lesson_id", { ascending: true }),
+      admin
+        .from("training_lessons")
+        .select("id, title, is_active, created_at"),
     ]);
 
   if (quizError) throw quizError;
   if (countError) throw countError;
+  if (lessonError) throw lessonError;
 
   const countsByLesson: Record<string, number> = {};
   for (const row of questionCounts ?? []) {
+    if (typeof row.lesson_id !== "string" || !row.lesson_id) continue;
     countsByLesson[row.lesson_id] = (countsByLesson[row.lesson_id] ?? 0) + 1;
   }
 
-  return (quizzes ?? []).map((quiz) => ({
-    ...quiz,
-    questions: Array.from({ length: countsByLesson[quiz.lesson_id] ?? 0 }, (_, idx) => idx),
-  }));
+  const lessonById = new Map(
+    (lessons ?? []).map((lesson) => [lesson.id, lesson]),
+  );
+  const quizLessonIds = new Set<string>();
+
+  const explicitRows = (quizzes ?? []).map((quiz) => {
+    if (typeof quiz.lesson_id === "string" && quiz.lesson_id) {
+      quizLessonIds.add(quiz.lesson_id);
+    }
+    const lessonTitle = lessonById.get(quiz.lesson_id)?.title ?? null;
+    const questionCount =
+      countsByLesson[quiz.lesson_id] ??
+      (Array.isArray(quiz.questions) ? quiz.questions.length : 0);
+    return {
+      ...quiz,
+      title: quiz.title ?? (lessonTitle ? `${lessonTitle} Quiz` : "Lesson Quiz"),
+      lesson_title: lessonTitle,
+      questions: Array.from({ length: questionCount }, (_, idx) => idx),
+    };
+  });
+
+  const legacyLessonRows = Object.entries(countsByLesson).flatMap(
+    ([lessonId, count]) => {
+      if (quizLessonIds.has(lessonId)) return [];
+      const lesson = lessonById.get(lessonId);
+      return [
+        {
+          id: lessonId,
+          lesson_id: lessonId,
+          title: lesson?.title ? `${lesson.title} Quiz` : "Lesson Quiz",
+          lesson_title: lesson?.title ?? null,
+          questions: Array.from({ length: count }, (_, idx) => idx),
+          pass_score: 70,
+          is_active: lesson?.is_active ?? true,
+          created_at: lesson?.created_at ?? new Date(0).toISOString(),
+          is_legacy_lesson_quiz: true,
+        },
+      ];
+    },
+  );
+
+  return [...explicitRows, ...legacyLessonRows];
 }
 
 /**
@@ -65,7 +112,9 @@ export async function GET(req: NextRequest) {
     const search = (params.search ?? "").trim().toLowerCase();
     let rows = allRows.filter((row) => {
       const matchesSearch =
-        !search || (row.title ?? "").toLowerCase().includes(search);
+        !search ||
+        (row.title ?? "").toLowerCase().includes(search) ||
+        (row.lesson_title ?? "").toLowerCase().includes(search);
       const matchesStatus =
         params.status == null ||
         (params.status === "active" ? row.is_active : !row.is_active);
