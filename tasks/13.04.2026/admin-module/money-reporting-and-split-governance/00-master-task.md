@@ -139,7 +139,7 @@ This finance program is complete only when:
 ## Status
 
 - `01-unify-money-source-of-truth-and-ledgers.md` — Pending
-- `02-platform-diviner-affiliate-split-rule-engine.md` — Pending
+- `02-platform-diviner-affiliate-split-rule-engine.md` — Done
 - `03-admin-gold-standard-payin-payout-refund-reporting.md` — Done
 - `04-diviner-self-service-finance-reporting-scope.md` — Done
 - `05-refund-governance-and-ledger-reconciliation.md` — Pending
