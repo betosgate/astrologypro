@@ -1,5 +1,16 @@
 # Task 03: Service and Booking Indexation Strategy
 
+- **Status: DONE — 2026-04-13**
+- Implemented in: `src/app/[username]/services/page.tsx`, `src/app/[username]/services/[slug]/page.tsx`, `src/app/[username]/book/[serviceSlug]/page.tsx`
+
+### What was implemented
+- Services hub (`/{username}/services`): added `alternates.canonical` + `robots: index:true`
+- Service detail (`/{username}/services/{slug}`): added `alternates.canonical` + `robots: index:true`; canonical URL strips `ref` param
+- Booking page (`/{username}/book/{slug}`): added `robots: { index: false, follow: true }` — keeps it out of search index; canonical points to the service detail page so link equity flows correctly
+- Booking pages intentionally excluded from sitemap
+
+---
+
 ## Goal
 
 Promote the right service pages for ranking and prevent booking utility pages from competing with or diluting them.
