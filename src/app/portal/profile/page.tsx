@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, Save } from "lucide-react";
+import { ProfileCompletionBar } from "@/components/ui/profile-completion-bar";
+import { calculateProfileCompletion } from "@/lib/profile-completion";
 
 function generateTimeOptions(): { value: string; label: string }[] {
   const options: { value: string; label: string }[] = [];
@@ -129,6 +131,22 @@ export default function PortalProfilePage() {
     );
   }
 
+  const completion = calculateProfileCompletion([
+    { key: "display-name", label: "Full name", value: displayName },
+    { key: "email", label: "Email", value: email },
+    { key: "phone", label: "Phone", value: phone },
+    { key: "birth-date", label: "Birth date", value: birthDate },
+    { key: "birth-time", label: "Birth time", value: birthTime },
+    { key: "birth-city", label: "Birth city", value: birthCity },
+  ]);
+
+  function focusField(fieldKey: string) {
+    document.getElementById(fieldKey)?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -137,6 +155,14 @@ export default function PortalProfilePage() {
           Manage your personal information and birth data.
         </p>
       </div>
+
+      <ProfileCompletionBar
+        percentage={completion.percentage}
+        missingFields={completion.missingFields}
+        completedCount={completion.completedCount}
+        totalCount={completion.totalCount}
+        onMissingFieldClick={focusField}
+      />
 
       <form onSubmit={handleSave}>
         <Card>

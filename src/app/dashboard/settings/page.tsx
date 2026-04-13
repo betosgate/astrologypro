@@ -81,14 +81,32 @@ interface DiscountRule {
   is_active: boolean;
 }
 
-function UpgradeToBothButton() {
+interface PricingPlanSummary {
+  plan_id: string;
+  display_name: string;
+  recurring_amount: number | null;
+  custom_fields?: { slug?: string; value?: string }[];
+}
+
+interface PricingItemSummary {
+  item_key?: string;
+  plans: PricingPlanSummary[];
+}
+
+function UpgradePlanButton({
+  newPlanId,
+  label,
+}: {
+  newPlanId: string;
+  label: string;
+}) {
   const router = useRouter();
   const [upgrading, setUpgrading] = useState(false);
 
   async function handleUpgrade() {
     if (
       !confirm(
-        "Upgrade to The Oracle plan? Your monthly rate will change from $97 to $147 with proration. This gives you all 20 services + phone readings."
+        `Upgrade to ${label}? Your subscription will be updated with proration.`
       )
     )
       return;
@@ -98,14 +116,14 @@ function UpgradeToBothButton() {
       const res = await fetch("/api/stripe/upgrade", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newPlanId: "both" }),
+        body: JSON.stringify({ newPlanId }),
       });
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error ?? "Upgrade failed");
         return;
       }
-      toast.success("Upgraded to The Oracle plan!");
+      toast.success(`Upgraded to ${label}!`);
       router.refresh();
     } catch {
       toast.error("Upgrade failed. Please try again.");
@@ -122,7 +140,7 @@ function UpgradeToBothButton() {
           Upgrading…
         </>
       ) : (
-        "Upgrade to Oracle"
+        `Upgrade to ${label}`
       )}
     </Button>
   );
@@ -134,9 +152,23 @@ function SettingsContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<DivinerSettings | null>(null);
+  const [currentPlanName, setCurrentPlanName] = useState<string | null>(null);
+  const [upgradeTargetPlanId, setUpgradeTargetPlanId] = useState<string | null>(null);
+  const [upgradeTargetLabel, setUpgradeTargetLabel] = useState<string | null>(null);
   const [calendarConnections, setCalendarConnections] = useState<
     CalendarConnectionSummary[]
   >([]);
+
+  // Stripe Connect live status
+  const [stripeStatus, setStripeStatus] = useState<{
+    connected: boolean;
+    chargesEnabled?: boolean;
+    payoutsEnabled?: boolean;
+    detailsSubmitted?: boolean;
+    balance?: { available: number; pending: number };
+    recentPayouts?: { id: string; amount: number; currency: string; status: string; arrivalDate: string }[];
+  } | null>(null);
+  const [stripeStatusLoading, setStripeStatusLoading] = useState(false);
 
   // Phone state
   const [phoneProvisioning, setPhoneProvisioning] = useState(false);
@@ -295,6 +327,84 @@ function SettingsContent() {
     }
     load();
   }, []);
+
+  // Fetch live Stripe Connect status whenever stripe_account_id is known
+  useEffect(() => {
+    if (!settings?.stripe_account_id) return;
+    setStripeStatusLoading(true);
+    fetch("/api/stripe/connect/status")
+      .then((r) => r.json())
+      .then((data) => {
+        setStripeStatus(data);
+        // Sync enabled flags into local settings state
+        if (data.connected) {
+          setSettings((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  charges_enabled: data.chargesEnabled ?? prev.charges_enabled,
+                  payouts_enabled: data.payoutsEnabled ?? prev.payouts_enabled,
+                }
+              : prev
+          );
+        }
+      })
+      .catch(() => {})
+      .finally(() => setStripeStatusLoading(false));
+  }, [settings?.stripe_account_id]);
+
+  useEffect(() => {
+    async function loadPricingMetadata() {
+      if (!settings?.plan_id) return;
+
+      try {
+        const response = await fetch(
+          "/api/pricing?keys=professional_divination_course"
+        );
+        if (!response.ok) return;
+
+        const body = (await response.json()) as { items?: PricingItemSummary[] };
+        const item = body.items?.[0];
+        if (!item?.plans?.length) return;
+
+        const currentPlan = item.plans.find((plan) => plan.plan_id === settings.plan_id);
+        const fallbackLegacyNames: Record<string, string> = {
+          both: "The Oracle",
+          tarot: "The Tarot Reader",
+          astrology: "The Astrologer",
+        };
+
+        setCurrentPlanName(
+          currentPlan?.display_name ??
+            fallbackLegacyNames[settings.plan_id] ??
+            settings.plan_id
+        );
+
+        const explicitFullPlan = item.plans.find(
+          (plan) =>
+            plan.custom_fields?.find((field) => field.slug === "is_full_plan")?.value ===
+            "true"
+        );
+        const derivedFullPlan =
+          explicitFullPlan ??
+          [...item.plans].sort(
+            (a, b) => (b.recurring_amount ?? 0) - (a.recurring_amount ?? 0)
+          )[0];
+
+        if (derivedFullPlan && derivedFullPlan.plan_id !== settings.plan_id) {
+          setUpgradeTargetPlanId(derivedFullPlan.plan_id);
+          setUpgradeTargetLabel(derivedFullPlan.display_name);
+        } else {
+          setUpgradeTargetPlanId(null);
+          setUpgradeTargetLabel(null);
+        }
+      } catch {
+        // Non-blocking fallback — keep current settings UI usable.
+      }
+    }
+
+    loadPricingMetadata();
+  }, [settings?.plan_id]);
 
   async function handleSaveNotifications() {
     if (!settings) return;
@@ -510,16 +620,16 @@ function SettingsContent() {
                     <div>
                       <p className="text-sm font-medium">Current Plan</p>
                       <p className="text-xs text-muted-foreground capitalize">
-                        {settings.plan_id === "both"
-                          ? "The Oracle (both)"
-                          : settings.plan_id === "tarot"
-                          ? "The Tarot Reader"
-                          : "The Astrologer"}
+                        {currentPlanName ?? settings.plan_id}
                       </p>
                     </div>
-                    {settings.plan_id !== "both" &&
+                    {upgradeTargetPlanId &&
+                      upgradeTargetLabel &&
                       settings.subscription_status === "active" && (
-                        <UpgradeToBothButton />
+                        <UpgradePlanButton
+                          newPlanId={upgradeTargetPlanId}
+                          label={upgradeTargetLabel}
+                        />
                       )}
                   </div>
                 </>
@@ -587,16 +697,60 @@ function SettingsContent() {
                     : "Connect Stripe Account"}
                 </Button>
               )}
-              {settings.stripe_account_id && (
-                <p className="text-xs text-muted-foreground">
-                  Account ID: {settings.stripe_account_id}
-                </p>
+              {stripeStatusLoading && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="size-3 animate-spin" />
+                  Syncing Stripe status...
+                </div>
+              )}
+
+              {/* Live Stripe account details */}
+              {stripeStatus?.connected && !stripeStatusLoading && (
+                <div className="rounded-lg border p-4 space-y-3">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Account Details</p>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-md bg-muted/40 p-3">
+                      <p className="text-xs text-muted-foreground">Available Balance</p>
+                      <p className="text-lg font-bold text-green-500">
+                        ${stripeStatus.balance?.available.toFixed(2) ?? "0.00"}
+                      </p>
+                    </div>
+                    <div className="rounded-md bg-muted/40 p-3">
+                      <p className="text-xs text-muted-foreground">Pending</p>
+                      <p className="text-lg font-bold text-amber-500">
+                        ${stripeStatus.balance?.pending.toFixed(2) ?? "0.00"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {stripeStatus.recentPayouts && stripeStatus.recentPayouts.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium mb-2">Recent Payouts</p>
+                      <div className="space-y-1.5">
+                        {stripeStatus.recentPayouts.map((p) => (
+                          <div key={p.id} className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">{p.arrivalDate}</span>
+                            <span className="font-medium">${p.amount.toFixed(2)}</span>
+                            <span className={p.status === "paid" ? "text-green-500" : "text-amber-500"}>
+                              {p.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-muted-foreground">
+                    Account ID: {settings.stripe_account_id}
+                  </p>
+                </div>
               )}
             </CardContent>
           </Card>
 
-          {/* PayPal Connect */}
-          <Card className="mt-4">
+          {/* PayPal Connect — temporarily disabled */}
+          {/* <Card className="mt-4">
             <CardHeader>
               <CardTitle>PayPal</CardTitle>
               <CardDescription>
@@ -656,7 +810,7 @@ function SettingsContent() {
                 Connect your PayPal business account to accept PayPal payments from clients.
               </p>
             </CardContent>
-          </Card>
+          </Card> */}
         </TabsContent>
 
         {/* Calendar Tab */}

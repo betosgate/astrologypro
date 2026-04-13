@@ -25,6 +25,12 @@ const patchSchema = z.object({
   bio: z.string().max(500).optional(),
   specialties: z.array(z.enum(ALLOWED_SPECIALTIES)).optional(),
   avatar_url: z.string().url().optional(),
+  phone: z.string().max(50).optional(),
+  timezone: z.string().max(100).optional(),
+  goals: z.string().max(2000).optional(),
+  birth_date: z.string().optional(),
+  birth_time: z.string().optional(),
+  birth_city: z.string().max(100).optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -43,13 +49,24 @@ export async function GET() {
 
   const admin = createAdminClient();
 
-  const { data: trainee, error } = await admin
-    .from("trainees")
-    .select(
-      "id, name, email, username, bio, specialties, avatar_url, training_status, mentor_diviner_id, graduated_at, created_at"
-    )
-    .eq("user_id", user.id)
-    .single();
+  const [traineeResult, clientResult] = await Promise.all([
+    admin
+      .from("trainees")
+      .select(
+        "id, name, email, username, bio, specialties, avatar_url, phone, timezone, goals, training_status, mentor_diviner_id, graduated_at, created_at"
+      )
+      .eq("user_id", user.id)
+      .single(),
+    admin
+      .from("clients")
+      .select("birth_date, birth_time, birth_city")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+  ]);
+
+  const trainee = traineeResult.data;
+  const error = traineeResult.error;
+  const client = clientResult.data;
 
   if (error || !trainee) {
     return NextResponse.json({ error: "Trainee not found." }, { status: 404 });
@@ -89,6 +106,12 @@ export async function GET() {
       bio: trainee.bio ?? null,
       specialties: trainee.specialties ?? [],
       avatar_url: (trainee as { avatar_url?: string | null }).avatar_url ?? null,
+      phone: (trainee as { phone?: string | null }).phone ?? null,
+      timezone: (trainee as { timezone?: string | null }).timezone ?? null,
+      goals: (trainee as { goals?: string | null }).goals ?? null,
+      birth_date: client?.birth_date ?? null,
+      birth_time: client?.birth_time ?? null,
+      birth_city: client?.birth_city ?? null,
       training_status: trainee.training_status,
       mentor_name: mentorName,
       graduated_at: trainee.graduated_at ?? null,
@@ -160,6 +183,9 @@ export async function PATCH(req: NextRequest) {
   if (parsed.data.bio !== undefined) updates.bio = parsed.data.bio;
   if (parsed.data.specialties !== undefined) updates.specialties = parsed.data.specialties;
   if (parsed.data.avatar_url !== undefined) updates.avatar_url = parsed.data.avatar_url;
+  if (parsed.data.phone !== undefined) updates.phone = parsed.data.phone || null;
+  if (parsed.data.timezone !== undefined) updates.timezone = parsed.data.timezone || null;
+  if (parsed.data.goals !== undefined) updates.goals = parsed.data.goals || null;
 
   const { error: updateError } = await admin
     .from("trainees")
@@ -173,6 +199,37 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
+  if (
+    parsed.data.birth_date !== undefined ||
+    parsed.data.birth_time !== undefined ||
+    parsed.data.birth_city !== undefined ||
+    parsed.data.name !== undefined
+  ) {
+    const clientPayload: Record<string, unknown> = {
+      user_id: user.id,
+      email: user.email,
+      full_name: parsed.data.name,
+    };
+
+    if (parsed.data.birth_date !== undefined) {
+      clientPayload.birth_date = parsed.data.birth_date || null;
+    }
+    if (parsed.data.birth_time !== undefined) {
+      clientPayload.birth_time = parsed.data.birth_time || null;
+    }
+    if (parsed.data.birth_city !== undefined) {
+      clientPayload.birth_city = parsed.data.birth_city || null;
+    }
+
+    const { error: clientError } = await admin
+      .from("clients")
+      .upsert(clientPayload, { onConflict: "user_id" });
+
+    if (clientError) {
+      console.error("[trainee/profile] Failed to update client profile:", clientError);
+    }
+  }
+
   // Fire-and-forget: sync shared fields to other role tables
   syncProfileAcrossRoles(
     user.id,
@@ -181,6 +238,8 @@ export async function PATCH(req: NextRequest) {
       bio: parsed.data.bio,
       avatar_url: parsed.data.avatar_url,
       specialties: parsed.data.specialties,
+      phone: parsed.data.phone,
+      timezone: parsed.data.timezone,
     },
     "trainees"
   ).catch(console.error);

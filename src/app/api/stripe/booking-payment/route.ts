@@ -481,11 +481,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate platform fee on the final price.
-    // Member discount token: platform fee drops from 20% → 15% (diviner payout unchanged).
-    // Floor at 10% to prevent stacking below the minimum viable platform margin.
+    // Use service-level fee if configured, otherwise fall back to global default (20%).
+    // Member discount token: platform fee drops by 5% (floor at 10%).
+    const basePlatformFeePercent =
+      typeof (service as Record<string, unknown>).platform_fee_percent === "number"
+        ? Number((service as Record<string, unknown>).platform_fee_percent)
+        : PRICING.platformFeePercent;
     const effectivePlatformFeePercent = memberDiscountApplied
-      ? Math.max(PRICING.platformFeePercent - 5, 10)
-      : PRICING.platformFeePercent;
+      ? Math.max(basePlatformFeePercent - 5, 10)
+      : basePlatformFeePercent;
     const platformFee =
       (finalPrice * effectivePlatformFeePercent) / 100;
     const shouldCharge = hasServiceAvailability && finalPrice > 0;
@@ -602,6 +606,44 @@ export async function POST(request: NextRequest) {
         status: "pending_payment",
         notes: booking_notes ?? null,
       });
+
+      // Push Google Calendar event immediately for paid bookings so it works
+      // without needing the Stripe webhook (webhook will update if needed).
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+      try {
+        const calEventDescription = buildCalendarDescription(
+          availabilityTemplateDescription,
+          appUrl,
+          booking.booking_token,
+        );
+        const calAttendeesPaid: Array<{ email: string; name?: string }> = [];
+        const spEmailPaid = questionnaireData.secondPersonEmail as string | undefined;
+        const spNamePaid = questionnaireData.secondPersonName as string | undefined;
+        const spAttendingPaid = questionnaireData.secondPersonAttending as string | undefined;
+        if (spEmailPaid && (spAttendingPaid === "yes" || spAttendingPaid === "maybe")) {
+          calAttendeesPaid.push({ email: spEmailPaid, name: spNamePaid || undefined });
+        }
+        createCalendarEvent(resolvedDivinerId, {
+          title: `${availabilityTemplateTitle ?? service.name} — ${clientName}`,
+          description: calEventDescription,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          clientEmail,
+          clientName,
+          additionalAttendees: calAttendeesPaid,
+        })
+          .then(({ eventId }) =>
+            adminSupabase
+              .from("bookings")
+              .update({ google_calendar_event_id: eventId })
+              .eq("id", booking.id)
+          )
+          .catch((err) =>
+            console.error("[booking-payment] Failed to create Google Calendar event (paid):", err)
+          );
+      } catch (gcalErr) {
+        console.error("[booking-payment] GCal setup error (paid):", gcalErr);
+      }
 
       // Consume the member discount token now that the payment intent is created
       if (memberDiscountTokenId) {

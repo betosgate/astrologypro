@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +30,7 @@ type Subscriber = {
   status: string;
   subscribed_at: string;
   cancelled_at: string | null;
+  email_opt_out?: boolean | null;
 };
 
 type Delivery = {
@@ -39,6 +39,8 @@ type Delivery = {
   scheduled_for: string;
   sent_at: string | null;
   recipient_count: number;
+  failed_recipient_count?: number | null;
+  last_error?: string | null;
   status: string;
 };
 
@@ -232,6 +234,7 @@ export function SubscribersTab({ subscribers }: { subscribers: Subscriber[] }) {
         <TableRow>
           <TableHead>Name / Email</TableHead>
           <TableHead>Status</TableHead>
+          <TableHead>Email</TableHead>
           <TableHead>Joined</TableHead>
           <TableHead>Cancelled</TableHead>
         </TableRow>
@@ -247,6 +250,9 @@ export function SubscribersTab({ subscribers }: { subscribers: Subscriber[] }) {
             </TableCell>
             <TableCell>
               <StatusBadge status={sub.status} />
+            </TableCell>
+            <TableCell className="text-sm text-muted-foreground">
+              {sub.email_opt_out ? "Opted out" : "Receiving"}
             </TableCell>
             <TableCell className="text-sm">
               {new Date(sub.subscribed_at).toLocaleDateString()}
@@ -401,6 +407,7 @@ export function DeliveriesTab({ deliveries }: { deliveries: Delivery[] }) {
               <TableHead>Status</TableHead>
               <TableHead>Sent / Scheduled</TableHead>
               <TableHead>Recipients</TableHead>
+              <TableHead>Notes</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -416,7 +423,14 @@ export function DeliveriesTab({ deliveries }: { deliveries: Delivery[] }) {
                     : new Date(d.scheduled_for).toLocaleDateString()}
                 </TableCell>
                 <TableCell className="text-sm">
-                  {d.status === "sent" ? d.recipient_count : "—"}
+                  {d.status === "sent"
+                    ? `${d.recipient_count} sent${d.failed_recipient_count ? ` / ${d.failed_recipient_count} failed` : ""}`
+                    : d.status === "failed"
+                      ? `${d.failed_recipient_count ?? 0} failed`
+                      : "—"}
+                </TableCell>
+                <TableCell className="max-w-xs text-xs text-muted-foreground">
+                  {d.last_error ?? "—"}
                 </TableCell>
               </TableRow>
             ))}
@@ -434,14 +448,20 @@ export function SubscriptionsHub({
   subscribers,
   deliveries,
   activeSubscribers,
+  optedOutSubscribers,
+  paymentIssueSubscribers,
   deliveriesSent,
+  failedDeliveries,
   lastDeliveryAt,
 }: {
   product: Product | null;
   subscribers: Subscriber[];
   deliveries: Delivery[];
   activeSubscribers: number;
+  optedOutSubscribers: number;
+  paymentIssueSubscribers: number;
   deliveriesSent: number;
+  failedDeliveries: number;
   lastDeliveryAt: string | null;
 }) {
   const router = useRouter();
@@ -469,7 +489,7 @@ export function SubscriptionsHub({
       <ProductSetupCard product={product} onSaved={() => router.refresh()} />
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-5">
         <Card className="py-4">
           <CardContent className="flex flex-col items-center gap-1 px-4">
             <span className="text-2xl font-bold">{activeSubscribers}</span>
@@ -480,6 +500,24 @@ export function SubscriptionsHub({
           <CardContent className="flex flex-col items-center gap-1 px-4">
             <span className="text-2xl font-bold">{deliveriesSent}</span>
             <span className="text-xs text-muted-foreground">Deliveries Sent</span>
+          </CardContent>
+        </Card>
+        <Card className="py-4">
+          <CardContent className="flex flex-col items-center gap-1 px-4">
+            <span className="text-2xl font-bold">{optedOutSubscribers}</span>
+            <span className="text-xs text-muted-foreground">Email Opt-outs</span>
+          </CardContent>
+        </Card>
+        <Card className="py-4">
+          <CardContent className="flex flex-col items-center gap-1 px-4">
+            <span className="text-2xl font-bold">{paymentIssueSubscribers}</span>
+            <span className="text-xs text-muted-foreground">Payment Issues</span>
+          </CardContent>
+        </Card>
+        <Card className="py-4">
+          <CardContent className="flex flex-col items-center gap-1 px-4">
+            <span className="text-2xl font-bold">{failedDeliveries}</span>
+            <span className="text-xs text-muted-foreground">Failed Deliveries</span>
           </CardContent>
         </Card>
         <Card className="py-4">

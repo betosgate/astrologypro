@@ -168,8 +168,25 @@ export function MediaGalleryClient({
       ? activeTab
       : ALL_TAB;
 
-  const filteredItems =
-    validTab === ALL_TAB ? items : items.filter((i) => i.type === validTab);
+  const imageAlbums = Array.from(
+    new Set(
+      items
+        .filter((item) => item.type === "image")
+        .map((item) => item.album_name?.trim() || "Unsorted")
+    )
+  );
+  const activeAlbum =
+    validTab === "image" ? searchParams.get("album") ?? "all" : "all";
+  const validAlbum =
+    activeAlbum === "all" || imageAlbums.includes(activeAlbum) ? activeAlbum : "all";
+
+  const filteredItems = (
+    validTab === ALL_TAB ? items : items.filter((i) => i.type === validTab)
+  ).filter((item) =>
+    validTab === "image" && validAlbum !== "all"
+      ? (item.album_name?.trim() || "Unsorted") === validAlbum
+      : true
+  );
 
   const featuredItems = filteredItems.filter((i) => i.is_featured);
   const regularItems = filteredItems.filter((i) => !i.is_featured);
@@ -177,6 +194,7 @@ export function MediaGalleryClient({
   // Build tab href helper — preserves all other search params
   function tabHref(tab: TabValue): string {
     const sp = new URLSearchParams(searchParams.toString());
+    sp.delete("album");
     if (tab === ALL_TAB) {
       sp.delete("media_type");
     } else {
@@ -190,6 +208,25 @@ export function MediaGalleryClient({
     { value: ALL_TAB, label: "All" },
     ...presentTypes.map((t) => ({ value: t as TabValue, label: TYPE_LABELS[t] })),
   ];
+
+  function albumHref(album: string): string {
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.set("media_type", "image");
+    if (album === "all") {
+      sp.delete("album");
+    } else {
+      sp.set("album", album);
+    }
+    const qs = sp.toString();
+    return qs ? `${pathname}?${qs}` : pathname;
+  }
+
+  const groupedImages = imageAlbums.map((album) => ({
+    album,
+    items: filteredItems.filter(
+      (item) => item.type === "image" && (item.album_name?.trim() || "Unsorted") === album
+    ),
+  }));
 
   return (
     <div className="space-y-6">
@@ -220,8 +257,38 @@ export function MediaGalleryClient({
         })}
       </nav>
 
+      {validTab === "image" && imageAlbums.length > 0 && (
+        <nav className="flex flex-wrap gap-2" aria-label="Filter images by album">
+          <Link
+            href={albumHref("all")}
+            scroll={false}
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs transition-all ${
+              validAlbum === "all"
+                ? "bg-[#c9a84c]/20 text-[#c9a84c] border border-[#c9a84c]/40"
+                : "bg-white/[0.04] text-white/50 border border-white/[0.08] hover:text-white/80"
+            }`}
+          >
+            All Albums
+          </Link>
+          {imageAlbums.map((album) => (
+            <Link
+              key={album}
+              href={albumHref(album)}
+              scroll={false}
+              className={`inline-flex items-center rounded-full px-3 py-1 text-xs transition-all ${
+                validAlbum === album
+                  ? "bg-[#c9a84c]/20 text-[#c9a84c] border border-[#c9a84c]/40"
+                  : "bg-white/[0.04] text-white/50 border border-white/[0.08] hover:text-white/80"
+              }`}
+            >
+              {album}
+            </Link>
+          ))}
+        </nav>
+      )}
+
       {/* Featured items (larger cards) */}
-      {featuredItems.length > 0 && (
+      {validTab !== "image" && featuredItems.length > 0 && (
         <section aria-label="Featured media">
           <div className="grid gap-5 grid-cols-1 sm:grid-cols-2">
             {featuredItems.map((item) => (
@@ -237,7 +304,7 @@ export function MediaGalleryClient({
       )}
 
       {/* Regular grid */}
-      {regularItems.length > 0 && (
+      {validTab !== "image" && regularItems.length > 0 && (
         <section aria-label="Media items">
           <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {regularItems.map((item) => (
@@ -248,6 +315,36 @@ export function MediaGalleryClient({
               />
             ))}
           </div>
+        </section>
+      )}
+
+      {validTab === "image" && filteredItems.length > 0 && (
+        <section aria-label="Image albums" className="space-y-8">
+          {groupedImages
+            .filter((group) => group.items.length > 0)
+            .map((group) => (
+              <div key={group.album} className="space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-[#f5f0e8]">
+                      {group.album}
+                    </h3>
+                    <p className="text-xs text-white/45">
+                      {group.items.length} image{group.items.length === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                </div>
+                <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                  {group.items.map((item) => (
+                    <MediaCard
+                      key={item.id}
+                      item={item}
+                      platformLabels={platformLabels}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
         </section>
       )}
 
