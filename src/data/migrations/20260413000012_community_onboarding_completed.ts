@@ -10,7 +10,7 @@ UPDATE community_members
 SET onboarding_completed = TRUE
 WHERE onboarding_completed = FALSE
   AND (
-    (first_name IS NOT NULL AND btrim(first_name) <> "")
+    (first_name IS NOT NULL AND btrim(first_name) <> '')
     OR (intake_data IS NOT NULL AND intake_data <> '{}'::jsonb)
   );
 `;
