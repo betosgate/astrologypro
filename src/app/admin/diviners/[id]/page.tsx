@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +27,9 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
+import { PublishingControls } from "./publishing-controls";
+import { normalizePublishPolicy } from "@/lib/diviner-publishing";
+import { getDivinerAvatarUrl } from "@/lib/diviner-images";
 
 export const metadata = { title: "Diviner Detail — Admin" };
 
@@ -164,6 +168,8 @@ export default async function AdminDivinerDetailPage({
   if (!result) notFound();
 
   const { diviner, email, services, bookings, affiliateCount, stats } = result;
+  const publishingPolicy = normalizePublishPolicy(diviner as Record<string, unknown>);
+  const divinerAvatarUrl = getDivinerAvatarUrl(diviner.avatar_url as string | null | undefined);
 
   return (
     <div className="space-y-6">
@@ -179,18 +185,13 @@ export default async function AdminDivinerDetailPage({
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-4">
-          {diviner.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={diviner.avatar_url}
-              alt={diviner.display_name ?? ""}
-              className="size-16 rounded-full object-cover border"
-            />
-          ) : (
-            <div className="size-16 rounded-full bg-muted flex items-center justify-center">
-              <Star className="size-6 text-muted-foreground" />
-            </div>
-          )}
+          <Image
+            src={divinerAvatarUrl}
+            alt={diviner.display_name ?? "Diviner"}
+            width={64}
+            height={64}
+            className="size-16 rounded-full object-cover border"
+          />
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
               {diviner.display_name ?? "—"}
@@ -243,6 +244,8 @@ export default async function AdminDivinerDetailPage({
           </CardContent>
         </Card>
       )}
+
+      <PublishingControls divinerId={diviner.id} initialPolicy={publishingPolicy} />
 
       {/* ── Stats Cards ───────────────────────────────────────────────── */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

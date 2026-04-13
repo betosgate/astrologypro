@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getDivinerAvatarUrl } from "@/lib/diviner-images";
 import { BadgeCheck, ArrowRight } from "lucide-react";
 
 export const revalidate = 3600;
@@ -161,6 +163,7 @@ async function getJupiterReturnDiviners(): Promise<DivinerLandingCard[]> {
 // ─────────────────────────────────────────────
 
 function DivinerCard({ diviner }: { diviner: DivinerLandingCard }) {
+  const avatarUrl = getDivinerAvatarUrl(diviner.avatarUrl);
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-white/5 bg-[#0d1117]/60 transition-all hover:border-[#c9a84c]/30 hover:shadow-[0_0_30px_rgba(201,168,76,0.05)]">
       <div className="relative h-20 overflow-hidden bg-gradient-to-br from-[#c9a84c]/10 to-[#4c9c4c]/10">
@@ -174,22 +177,13 @@ function DivinerCard({ diviner }: { diviner: DivinerLandingCard }) {
 
       <div className="relative -mt-7 flex flex-col px-5">
         <div className="flex items-end justify-between">
-          {diviner.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={diviner.avatarUrl}
-              alt={diviner.displayName}
-              className="size-14 rounded-full border-2 border-[#0d1117] object-cover ring-1 ring-[#c9a84c]/20"
-            />
-          ) : (
-            <div className="flex size-14 items-center justify-center rounded-full border-2 border-[#0d1117] bg-[#c9a84c]/10 text-base font-semibold text-[#c9a84c] ring-1 ring-[#c9a84c]/20">
-              {diviner.displayName
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .slice(0, 2)}
-            </div>
-          )}
+          <Image
+            src={avatarUrl}
+            alt={diviner.displayName}
+            width={56}
+            height={56}
+            className="size-14 rounded-full border-2 border-[#0d1117] object-cover ring-1 ring-[#c9a84c]/20"
+          />
         </div>
 
         <div className="mt-3">
@@ -315,14 +309,14 @@ export default async function JupiterReturnPage() {
                       a Jupiter Return — a personal renewal of your potential.
                     </p>
                     <p>
-                      Unlike Saturn's demanding energy, Jupiter brings gifts: expanded
+                      Unlike Saturn&apos;s demanding energy, Jupiter brings gifts: expanded
                       opportunities, renewed optimism, and a broader sense of what is possible.
                       Each return opens a new 12-year chapter of your story.
                     </p>
                     <p>
                       The key is alignment. Those who are conscious of this window and take
                       deliberate action tend to experience the most profound breakthroughs.
-                      A skilled astrologer can help you identify exactly where Jupiter's
+                      A skilled astrologer can help you identify exactly where Jupiter&apos;s
                       abundance is directed in your chart.
                     </p>
                   </div>
@@ -493,7 +487,7 @@ export default async function JupiterReturnPage() {
                 Ready to harness your Jupiter Return?
               </h2>
               <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-[#b8bcd0]/65">
-                Work with a certified astrologer to understand exactly where Jupiter's abundance
+                Work with a certified astrologer to understand exactly where Jupiter&apos;s abundance
                 is flowing in your chart — and how to align your actions with this cosmic window.
               </p>
               <div className="mt-8">

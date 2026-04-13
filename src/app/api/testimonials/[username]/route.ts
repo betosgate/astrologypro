@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { calculateSpamScore } from "@/lib/spam-check";
+import {
+  isPublicSectionBlocked,
+  normalizePublishPolicy,
+  publishBlockMessage,
+} from "@/lib/diviner-publishing";
 
 export const dynamic = "force-dynamic";
 
@@ -111,13 +116,24 @@ export async function POST(
   // Look up diviner by username
   const { data: diviner, error: divinerErr } = await admin
     .from("diviners")
-    .select("id")
+    .select("id, public_publish_blocked, blocked_public_sections, blocked_media_types, publish_block_reason")
     .eq("username", username)
     .eq("is_active", true)
     .maybeSingle();
 
   if (divinerErr || !diviner) {
     return problemDetail(404, "Not Found", "Diviner not found.");
+  }
+  const publishPolicy = normalizePublishPolicy(diviner as Record<string, unknown>);
+  if (isPublicSectionBlocked(publishPolicy, "testimonials")) {
+    return problemDetail(
+      403,
+      "Publishing blocked",
+      publishBlockMessage(
+        publishPolicy,
+        "Testimonial publishing has been blocked for this diviner."
+      )
+    );
   }
 
   // Rate limit: same email + diviner within 24 hours

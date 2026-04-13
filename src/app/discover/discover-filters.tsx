@@ -1,13 +1,15 @@
 "use client";
 
-import { useMemo, useCallback, useState, useEffect } from "react";
+import { useMemo, useCallback, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Star, ArrowRight, Search, BadgeCheck, X } from "lucide-react";
 import type { DivinerCard, DivinerSubType } from "./page";
+import { getDivinerAvatarUrl, getDivinerCoverImageUrl } from "@/lib/diviner-images";
 
 type SortOption = "certified" | "rating" | "sessions" | "price";
 type TypeFilter = "all" | DivinerSubType;
@@ -70,18 +72,23 @@ function GradientPlaceholder({ name }: { name: string }) {
 }
 
 function DivinerCardGrid({ diviner }: { diviner: DivinerCard }) {
+  const resolvedCoverImageUrl = getDivinerCoverImageUrl(diviner.coverImageUrl);
+  const resolvedAvatarUrl = getDivinerAvatarUrl(diviner.avatarUrl);
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-white/5 bg-[#0d1117]/60 transition-all hover:border-[#c9a84c]/30 hover:shadow-[0_0_30px_rgba(201,168,76,0.05)]">
       {/* Cover image / gradient */}
       <div className="relative h-24 overflow-hidden bg-[#0d1117]">
-        {diviner.coverImageUrl ? (
-          <img
-            src={diviner.coverImageUrl}
-            alt=""
-            className="h-full w-full object-cover opacity-60"
-          />
-        ) : (
-          <GradientPlaceholder name={diviner.displayName} />
+        <Image
+          src={resolvedCoverImageUrl}
+          alt=""
+          fill
+          className="object-cover opacity-60"
+          sizes="(max-width: 768px) 100vw, 384px"
+        />
+        {!diviner.coverImageUrl && (
+          <div className="absolute inset-0">
+            <GradientPlaceholder name={diviner.displayName} />
+          </div>
         )}
 
         {/* Certified badge — top-right of cover */}
@@ -99,21 +106,15 @@ function DivinerCardGrid({ diviner }: { diviner: DivinerCard }) {
       {/* Avatar — overlaps cover */}
       <div className="relative -mt-7 flex flex-col px-5">
         <div className="flex items-end justify-between">
-          {diviner.avatarUrl ? (
-            <img
-              src={diviner.avatarUrl}
+          <div className="relative size-14 overflow-hidden rounded-full border-2 border-[#0d1117] ring-1 ring-[#c9a84c]/20">
+            <Image
+              src={resolvedAvatarUrl}
               alt={diviner.displayName}
-              className="size-14 rounded-full border-2 border-[#0d1117] object-cover ring-1 ring-[#c9a84c]/20"
+              fill
+              className="object-cover"
+              sizes="56px"
             />
-          ) : (
-            <div className="flex size-14 items-center justify-center rounded-full border-2 border-[#0d1117] bg-[#c9a84c]/10 text-base font-semibold text-[#c9a84c] ring-1 ring-[#c9a84c]/20">
-              {diviner.displayName
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .slice(0, 2)}
-            </div>
-          )}
+          </div>
 
           {/* Sub-type pill */}
           <span
@@ -200,18 +201,14 @@ function DivinerCardGrid({ diviner }: { diviner: DivinerCard }) {
 const SESSION_DISMISSED_KEY = "preferred_diviner_dismissed";
 
 function PreferredDivinerBanner({ diviner }: { diviner: DivinerCard }) {
-  const [dismissed, setDismissed] = useState(false);
-
-  // Restore dismissed state from sessionStorage on mount
-  useEffect(() => {
+  const [dismissed, setDismissed] = useState(() => {
+    if (typeof window === "undefined") return false;
     try {
-      if (sessionStorage.getItem(SESSION_DISMISSED_KEY) === "true") {
-        setDismissed(true);
-      }
+      return sessionStorage.getItem(SESSION_DISMISSED_KEY) === "true";
     } catch {
-      // sessionStorage unavailable (SSR guard — should not happen in client component but defensive)
+      return false;
     }
-  }, []);
+  });
 
   const handleDismiss = useCallback(() => {
     setDismissed(true);

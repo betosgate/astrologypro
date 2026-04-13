@@ -1,0 +1,38 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="48" fill="#06080F"/>
+  <rect x="24" y="24" width="464" height="464" rx="40" fill="url(#bg)"/>
+  <circle cx="256" cy="190" r="88" fill="url(#orb)" fill-opacity="0.9"/>
+  <path d="M140 392C140 327.383 192.383 275 257 275H257C321.617 275 374 327.383 374 392V401H140V392Z" fill="#0D1324"/>
+  <path d="M168 401C174.233 344.285 209.507 306 257 306C304.493 306 339.767 344.285 346 401H168Z" fill="url(#robe)"/>
+  <circle cx="256" cy="190" r="63" fill="#D9B45A"/>
+  <path d="M194 183C194 145.997 223.997 116 261 116H262C299.003 116 329 145.997 329 183V206C329 243.003 299.003 273 262 273H261C223.997 273 194 243.003 194 206V183Z" fill="#F2E6C9"/>
+  <path d="M190 183C190 133.294 230.294 93 280 93H283C332.706 93 373 133.294 373 183V197H338V183C338 152.624 313.376 128 283 128H280C249.624 128 225 152.624 225 183V197H190V183Z" fill="#11182C"/>
+  <circle cx="219" cy="204" r="7" fill="#11182C"/>
+  <circle cx="302" cy="204" r="7" fill="#11182C"/>
+  <path d="M228 236C246.667 248 274.133 248 292.8 236" stroke="#9A6A4B" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="194" stroke="url(#ring)" stroke-width="2" stroke-dasharray="2 10"/>
+  <circle cx="256" cy="256" r="226" stroke="#C9A84C" stroke-opacity="0.22" stroke-width="2"/>
+  <path d="M255.999 52L262.342 69.6577L280 76L262.342 82.3423L255.999 100L249.657 82.3423L232 76L249.657 69.6577L255.999 52Z" fill="#C9A84C"/>
+  <path d="M432 140L436.041 151.959L448 156L436.041 160.041L432 172L427.959 160.041L416 156L427.959 151.959L432 140Z" fill="#C9A84C" fill-opacity="0.9"/>
+  <path d="M103 344L108.388 359.612L124 365L108.388 370.388L103 386L97.6118 370.388L82 365L97.6118 359.612L103 344Z" fill="#C9A84C" fill-opacity="0.85"/>
+  <defs>
+    <linearGradient id="bg" x1="68" y1="56" x2="438" y2="462" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0D1324"/>
+      <stop offset="0.55" stop-color="#121B32"/>
+      <stop offset="1" stop-color="#251B0F"/>
+    </linearGradient>
+    <linearGradient id="orb" x1="197" y1="118" x2="320" y2="267" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D7B45B"/>
+      <stop offset="1" stop-color="#8C6C25"/>
+    </linearGradient>
+    <linearGradient id="robe" x1="183" y1="312" x2="344" y2="401" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#202C56"/>
+      <stop offset="1" stop-color="#3A2557"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="79" y1="98" x2="433" y2="414" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C9A84C" stop-opacity="0.1"/>
+      <stop offset="0.5" stop-color="#F0D58B"/>
+      <stop offset="1" stop-color="#C9A84C" stop-opacity="0.12"/>
+    </linearGradient>
+  </defs>
+</svg>

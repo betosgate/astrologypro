@@ -18,8 +18,8 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCurrency } from "@/lib/format";
 import { getServiceImageUrl } from "@/lib/service-images";
-import { getWhatToExpect } from "@/lib/what-to-expect";
 import { APP_URL } from "@/lib/constants";
+import { getDivinerAvatarUrl, getDivinerCoverImageUrl } from "@/lib/diviner-images";
 import { PageTracker } from "@/components/landing/page-tracker";
 import { RefLinkPreserver } from "./ref-link-preserver";
 
@@ -98,7 +98,7 @@ export async function generateMetadata({
     service.description ??
     `Book a ${service.name} session with ${diviner.display_name}. ${service.duration_minutes}-minute ${service.category} reading.`;
 
-  const ogImage = diviner.cover_image_url || diviner.avatar_url;
+  const ogImage = getDivinerCoverImageUrl(diviner.cover_image_url || diviner.avatar_url);
 
   return {
     title,
@@ -177,15 +177,9 @@ export default async function ServiceDetailPage({
   const bookUrl = `/${username}/book/${service.slug}${refParam}`;
   const profileUrl = `/${username}${refParam}`;
   const serviceImageUrl = getServiceImageUrl(service.slug);
-  const bullets = getWhatToExpect(service.category, service.slug);
   const requiresBirthData = service.category === "astrology" || !!(service as Record<string, unknown>).requires_birth_data;
 
-  const initials = diviner.display_name
-    .split(" ")
-    .map((n: string) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const divinerAvatarUrl = getDivinerAvatarUrl(diviner.avatar_url);
 
   // Category-specific included bullets
   const includedBullets =
@@ -317,19 +311,13 @@ export default async function ServiceDetailPage({
                 className="mt-6 inline-flex items-center gap-3 rounded-full border border-white/[0.06] bg-white/[0.02] px-4 py-2 transition-colors hover:border-gold/20 hover:bg-gold/5"
               >
                 <div className="relative size-9 overflow-hidden rounded-full border border-gold/20">
-                  {diviner.avatar_url ? (
-                    <Image
-                      src={diviner.avatar_url}
-                      alt={diviner.display_name}
-                      fill
-                      className="object-cover"
-                      sizes="36px"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-cosmos-700 text-xs text-gold">
-                      {initials}
-                    </div>
-                  )}
+                  <Image
+                    src={divinerAvatarUrl}
+                    alt={diviner.display_name}
+                    fill
+                    className="object-cover"
+                    sizes="36px"
+                  />
                 </div>
                 <span className="text-sm text-cream/80">
                   with <span className="font-semibold text-cream">{diviner.display_name}</span>
@@ -491,19 +479,13 @@ export default async function ServiceDetailPage({
             <div className="flex flex-col items-center gap-6 p-8 sm:flex-row sm:items-start">
               {/* Avatar */}
               <div className="relative size-24 shrink-0 overflow-hidden rounded-full border-2 border-gold/20 sm:size-28">
-                {diviner.avatar_url ? (
-                  <Image
-                    src={diviner.avatar_url}
-                    alt={diviner.display_name}
-                    fill
-                    className="object-cover"
-                    sizes="112px"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-cosmos-700 font-display text-2xl text-gold">
-                    {initials}
-                  </div>
-                )}
+                <Image
+                  src={divinerAvatarUrl}
+                  alt={diviner.display_name}
+                  fill
+                  className="object-cover"
+                  sizes="112px"
+                />
               </div>
 
               {/* Text */}
