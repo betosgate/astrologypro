@@ -78,6 +78,7 @@ const navItems: NavItem[] = [
   { label: "Affiliates", href: "/dashboard/affiliates", icon: Users2 },
   { label: "Live", href: "/dashboard/live", icon: Radio },
   { label: "Video Sessions", href: "/dashboard/video", icon: Video },
+  { label: "Session Library", href: "/dashboard/library", icon: Play },
   { label: "Marketing", href: "/dashboard/marketing", icon: Megaphone },
   { label: "Reading Reports", href: "/dashboard/reports/readings", icon: BarChart2 },
   { label: "Mundane Astrology", href: "/dashboard/mundane", icon: Globe },
