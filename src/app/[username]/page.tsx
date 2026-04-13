@@ -19,6 +19,8 @@ import { BlogSubscribeForm } from "@/app/blog/subscribe-form";
 import { CheckInForm } from "@/components/diviner/check-in-form";
 import { WeeklySubscriptionSignup } from "@/components/public/weekly-subscription-signup";
 import { isFallbackManualService } from "@/lib/public-booking";
+import { isPublicSectionBlocked, normalizePublishPolicy } from "@/lib/diviner-publishing";
+import { getDivinerAvatarUrl, getDivinerCoverImageUrl } from "@/lib/diviner-images";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -287,13 +289,22 @@ export async function generateMetadata({
   if (!diviner) {
     return { title: "Not Found" };
   }
+  const publishPolicy = normalizePublishPolicy(diviner as Record<string, unknown>);
+  if (publishPolicy.publicPublishBlocked) {
+    return { title: "Not Found" };
+  }
+  const heroBlocked = isPublicSectionBlocked(publishPolicy, "hero");
+  const bioBlocked = isPublicSectionBlocked(publishPolicy, "bio");
 
   const title = `${diviner.display_name} - Book a Reading`;
   const description =
-    diviner.tagline ??
-    `Book an astrology or tarot reading with ${diviner.display_name}`;
+    !heroBlocked && diviner.tagline
+      ? diviner.tagline
+      : !bioBlocked && diviner.bio
+        ? diviner.bio
+        : `Book an astrology or tarot reading with ${diviner.display_name}`;
 
-  const ogImage = diviner.cover_image_url || diviner.avatar_url;
+  const ogImage = heroBlocked ? null : getDivinerCoverImageUrl(diviner.cover_image_url) || getDivinerAvatarUrl(diviner.avatar_url);
   return {
     title,
     description,
@@ -305,8 +316,8 @@ export async function generateMetadata({
       ...(ogImage && {
         images: [
           diviner.cover_image_url
-            ? { url: diviner.cover_image_url, width: 1200, height: 400 }
-            : { url: diviner.avatar_url!, width: 400, height: 400 },
+            ? { url: getDivinerCoverImageUrl(diviner.cover_image_url), width: 1200, height: 400 }
+            : { url: getDivinerAvatarUrl(diviner.avatar_url), width: 400, height: 400 },
         ],
       }),
     },
@@ -327,22 +338,36 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
   if (!diviner) {
     notFound();
   }
+  const publishPolicy = normalizePublishPolicy(diviner as Record<string, unknown>);
+  if (publishPolicy.publicPublishBlocked) {
+    notFound();
+  }
+  const heroBlocked = isPublicSectionBlocked(publishPolicy, "hero");
+  const bioBlocked = isPublicSectionBlocked(publishPolicy, "bio");
+  const servicesBlocked = isPublicSectionBlocked(publishPolicy, "services");
+  const liveBlocked = isPublicSectionBlocked(publishPolicy, "live");
+  const mediaBlocked = isPublicSectionBlocked(publishPolicy, "media");
+  const testimonialsBlocked = isPublicSectionBlocked(publishPolicy, "testimonials");
+  const weeklySubscriptionBlocked = isPublicSectionBlocked(publishPolicy, "weekly_subscription");
 
   const [services, testimonials, stats, policies, mediaItems, livePlatformConfigs, activeGiveaway, weeklySubscriptionProduct] = await Promise.all([
-    getServices(diviner.id),
-    getTestimonials(diviner.id),
+    servicesBlocked ? Promise.resolve([]) : getServices(diviner.id),
+    testimonialsBlocked ? Promise.resolve([]) : getTestimonials(diviner.id),
     getDivinerStats(diviner.id),
     getPolicies(),
-    getMediaItems(diviner.id),
-    getLivePlatforms(diviner.id),
+    mediaBlocked ? Promise.resolve([]) : getMediaItems(diviner.id),
+    liveBlocked ? Promise.resolve([]) : getLivePlatforms(diviner.id),
     getActiveGiveaway(diviner.id),
-    getWeeklySubscriptionProduct(diviner.id),
+    weeklySubscriptionBlocked ? Promise.resolve(null) : getWeeklySubscriptionProduct(diviner.id),
   ]);
 
+  const filteredMediaItems = mediaItems.filter(
+    (item) => !publishPolicy.blockedMediaTypes.includes(item.type)
+  );
   const publicServices = services.filter((service) => !isFallbackManualService(service));
   const astroServices = publicServices.filter((s) => s.category === "astrology");
   const tarotServices = publicServices.filter((s) => s.category === "tarot");
-  const activeTab = tab === "bio" ? "bio" : "home";
+  const activeTab = !bioBlocked && tab === "bio" ? "bio" : "home";
   const birthChartService =
     publicServices.find((service) => service.slug === "natal-chart") ??
     publicServices.find((service) =>
@@ -361,24 +386,26 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
     publicServices.find((service) => service.is_featured) ?? publicServices[0] ?? null;
   const fallbackBookingService =
     services.find((service) => isFallbackManualService(service)) ?? null;
-  const bookingPreview = primaryPublicService
-    ? {
-        serviceId: primaryPublicService.id,
-        bookPath: `/book/${primaryPublicService.slug}`,
-        durationMinutes: primaryPublicService.duration_minutes,
-        serviceName: primaryPublicService.name,
-      }
-    : stats.hasAnyAvailability
+  const bookingPreview = servicesBlocked
+    ? null
+    : primaryPublicService
       ? {
-          serviceId: null,
-          bookPath: "/book",
-          durationMinutes:
-            stats.unscopedDurationMinutes ??
-            fallbackBookingService?.duration_minutes ??
-            60,
-          serviceName: undefined,
+          serviceId: primaryPublicService.id,
+          bookPath: `/book/${primaryPublicService.slug}`,
+          durationMinutes: primaryPublicService.duration_minutes,
+          serviceName: primaryPublicService.name,
         }
-      : null;
+      : stats.hasAnyAvailability
+        ? {
+            serviceId: null,
+            bookPath: "/book",
+            durationMinutes:
+              stats.unscopedDurationMinutes ??
+              fallbackBookingService?.duration_minutes ??
+              60,
+            serviceName: undefined,
+          }
+        : null;
   const bookHref = bookingPreview ? "#booking" : `/${username}`;
   const heroOpenSlotsThisWeek =
     stats.openSlotsThisWeek > 0
@@ -395,7 +422,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
 
   // Extract a pull-quote from the bio (first sentence or first 120 chars)
   let pullQuote: string | null = null;
-  if (diviner.bio) {
+  if (!bioBlocked && diviner.bio) {
     const firstSentence = diviner.bio.match(/^[^.!?]+[.!?]/)?.[0];
     pullQuote = firstSentence ?? diviner.bio.slice(0, 120);
   }
@@ -407,9 +434,9 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
       {
         "@type": "LocalBusiness",
         name: diviner.display_name,
-        description: diviner.tagline ?? diviner.bio ?? undefined,
+        description: heroBlocked ? undefined : diviner.tagline ?? (!bioBlocked ? diviner.bio : undefined) ?? undefined,
         url: `${APP_URL}/${username}`,
-        ...(diviner.avatar_url && { image: diviner.avatar_url }),
+        ...(!heroBlocked && { image: getDivinerAvatarUrl(diviner.avatar_url) }),
         priceRange:
           publicServices.length > 0
             ? `$${Math.min(...publicServices.map((s) => Number(s.base_price)))} - $${Math.max(...publicServices.map((s) => Number(s.base_price)))}`
@@ -443,9 +470,9 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
       {/* Sticky navigation */}
       <StickyNav
         displayName={diviner.display_name}
-        hasBio={!!diviner.bio}
+        hasBio={!bioBlocked && !!diviner.bio}
         hasServices={publicServices.length > 0}
-        hasTestimonials={testimonials.length > 0}
+        hasTestimonials={!testimonialsBlocked && testimonials.length > 0}
         bookHref={bookHref}
       />
 
@@ -462,16 +489,18 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
             >
               Home
             </Link>
-            <Link
-              href={`/${username}?tab=bio`}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                activeTab === "bio"
-                  ? "bg-gold text-cosmos-900"
-                  : "text-silver/70 hover:text-cream"
-              }`}
-            >
-              Bio
-            </Link>
+            {!bioBlocked && (
+              <Link
+                href={`/${username}?tab=bio`}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                  activeTab === "bio"
+                    ? "bg-gold text-cosmos-900"
+                    : "text-silver/70 hover:text-cream"
+                }`}
+              >
+                Bio
+              </Link>
+            )}
           </div>
 
           <Link
@@ -487,12 +516,12 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
       <DivinerHero
         username={username}
         displayName={diviner.display_name}
-        tagline={diviner.tagline}
-        avatarUrl={diviner.avatar_url}
-        coverImageUrl={diviner.cover_image_url ?? null}
-        specialties={diviner.specialties ?? []}
-        youtubeChannelId={diviner.youtube_channel_id ?? null}
-        facebookLiveUrl={diviner.facebook_live_url ?? null}
+        tagline={heroBlocked ? null : diviner.tagline}
+        avatarUrl={heroBlocked ? null : getDivinerAvatarUrl(diviner.avatar_url)}
+        coverImageUrl={heroBlocked ? null : getDivinerCoverImageUrl(diviner.cover_image_url)}
+        specialties={heroBlocked ? [] : diviner.specialties ?? []}
+        youtubeChannelId={heroBlocked ? null : diviner.youtube_channel_id ?? null}
+        facebookLiveUrl={heroBlocked ? null : diviner.facebook_live_url ?? null}
         completedSessions={stats.completedSessions}
         averageRating={stats.averageRating}
         reviewCount={stats.reviewCount}
@@ -505,18 +534,20 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
 
       {activeTab === "home" ? (
         <>
-          <LiveStreamSection
-            isLive={(diviner as Record<string, unknown>).is_live === true}
-            livePlatforms={((diviner as Record<string, unknown>).live_platforms as string[]) ?? []}
-            platformConfigs={livePlatformConfigs}
-            fallbackContent={((diviner as Record<string, unknown>).fallback_content as string) ?? null}
-            nextLiveAt={((diviner as Record<string, unknown>).next_live_at as string) ?? null}
-            divinerId={diviner.id}
-            divinerName={diviner.display_name}
-            fallbackImageUrl={diviner.cover_image_url ?? diviner.avatar_url ?? null}
-          />
+          {!liveBlocked && (
+            <LiveStreamSection
+              isLive={(diviner as Record<string, unknown>).is_live === true}
+              livePlatforms={((diviner as Record<string, unknown>).live_platforms as string[]) ?? []}
+              platformConfigs={livePlatformConfigs}
+              fallbackContent={((diviner as Record<string, unknown>).fallback_content as string) ?? null}
+              nextLiveAt={((diviner as Record<string, unknown>).next_live_at as string) ?? null}
+              divinerId={diviner.id}
+              divinerName={diviner.display_name}
+              fallbackImageUrl={getDivinerCoverImageUrl(diviner.cover_image_url ?? getDivinerAvatarUrl(diviner.avatar_url))}
+            />
+          )}
 
-          {(diviner as Record<string, unknown>).is_live === true && (
+          {!liveBlocked && (diviner as Record<string, unknown>).is_live === true && (
             <section className="py-6">
               <div className="mx-auto max-w-xl px-4">
                 <CheckInForm
@@ -550,7 +581,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
             </section>
           )}
 
-          {weeklySubscriptionProduct && (
+          {weeklySubscriptionProduct && !weeklySubscriptionBlocked && (
             <section className="py-10 md:py-14">
               <div className="mx-auto grid max-w-6xl gap-8 px-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
                 <div className="space-y-4">
@@ -672,7 +703,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
 
           <PublicContentTabs
             media={
-              mediaItems.length > 0 ? (
+              !mediaBlocked && filteredMediaItems.length > 0 ? (
                 <div>
                   <h2 className="mb-2 text-center font-display text-3xl font-semibold text-cream md:text-4xl">
                     My Media
@@ -680,7 +711,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                   <p className="mx-auto mb-8 max-w-md text-center text-sm text-silver/60">
                     Past lives, clips, articles, and linked content from {diviner.display_name}
                   </p>
-                  <MediaGallery items={mediaItems} divinerId={diviner.id} />
+                  <MediaGallery items={filteredMediaItems} divinerId={diviner.id} />
                 </div>
               ) : (
                 <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-10 text-center">
@@ -688,17 +719,34 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                     My Media
                   </h2>
                   <p className="mt-3 text-sm text-silver/60">
-                    Media highlights will appear here as soon as {diviner.display_name} adds past lives, videos, or articles.
+                    {mediaBlocked
+                      ? "This media section is currently unavailable."
+                      : `Media highlights will appear here as soon as ${diviner.display_name} adds past lives, videos, or articles.`}
                   </p>
                 </div>
               )
             }
             testimonials={
-              <TestimonialsSection
-                divinerId={diviner.id}
-                divinerUsername={username}
-                divinerName={diviner.display_name}
-              />
+              testimonialsBlocked ? (
+                <section id="testimonials" className="py-10 md:py-14">
+                  <div className="mx-auto max-w-6xl px-4">
+                    <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-10 text-center">
+                      <h2 className="font-display text-2xl font-semibold text-cream">
+                        Testimonials
+                      </h2>
+                      <p className="mt-3 text-sm text-silver/60">
+                        Testimonials are currently unavailable on this profile.
+                      </p>
+                    </div>
+                  </div>
+                </section>
+              ) : (
+                <TestimonialsSection
+                  divinerId={diviner.id}
+                  divinerUsername={username}
+                  divinerName={diviner.display_name}
+                />
+              )
             }
           />
 
@@ -739,12 +787,14 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                 )}
 
                 <div className="whitespace-pre-wrap text-[15px] leading-[1.8] text-silver/70">
-                  {diviner.bio ?? `${diviner.display_name} is building their public bio.`}
+                  {bioBlocked
+                    ? "This bio is currently unavailable."
+                    : diviner.bio ?? `${diviner.display_name} is building their public bio.`}
                 </div>
               </div>
 
               <div className="space-y-6 md:col-span-2">
-                {(diviner.specialties ?? []).length > 0 && (
+                {!heroBlocked && (diviner.specialties ?? []).length > 0 && (
                   <div className="glass-card rounded-xl p-5">
                     <h3 className="mb-3 text-sm font-medium uppercase tracking-wider text-silver/50">
                       Specialties
