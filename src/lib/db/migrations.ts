@@ -21,6 +21,7 @@ import { MIGRATION_SQL as MIG_20260410000124 } from "@/data/migrations/202604100
 import { MIGRATION_SQL as MIG_20260410000125 } from "@/data/migrations/20260410000125_pricing_recurring_interval";
 import { MIGRATION_SQL as MIG_20260413000012 } from "@/data/migrations/20260413000012_community_onboarding_completed";
 import { MIGRATION_SQL as MIG_20260413000006 } from "@/data/migrations/20260413000006_services_pricing_item_key";
+import { MIGRATION_SQL as MIG_20260413000008 } from "@/data/migrations/20260413000008_services_platform_fee_percent";
 import { MIGRATION_SQL as MIG_20260413000140 } from "@/data/migrations/20260413000140_media_albums";
 import { MIGRATION_SQL as MIG_20260413000126 } from "@/data/migrations/20260413000126_training_quiz_question_progress";
 
@@ -232,6 +233,13 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Stores the global_pricing item_key selected when creating/editing a service so the admin UI can re-populate the Pricing Item dropdown on edit. Nullable TEXT column — additive only.",
     sortKey: "20260413000006",
     sql: MIG_20260413000006,
+  },
+  "20260413000008_services_platform_fee_percent": {
+    id: "20260413000008_services_platform_fee_percent",
+    title: "Add platform_fee_percent to services",
+    description: "Stores a per-service platform fee override (%). NULL means use the global 20% default.",
+    sortKey: "20260413000008",
+    sql: MIG_20260413000008,
   },
   "20260413000126_training_quiz_question_progress": {
     id: "20260413000126_training_quiz_question_progress",

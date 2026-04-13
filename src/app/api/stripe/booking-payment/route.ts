@@ -481,11 +481,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate platform fee on the final price.
-    // Member discount token: platform fee drops from 20% → 15% (diviner payout unchanged).
-    // Floor at 10% to prevent stacking below the minimum viable platform margin.
+    // Use service-level fee if configured, otherwise fall back to global default (20%).
+    // Member discount token: platform fee drops by 5% (floor at 10%).
+    const basePlatformFeePercent =
+      typeof (service as Record<string, unknown>).platform_fee_percent === "number"
+        ? Number((service as Record<string, unknown>).platform_fee_percent)
+        : PRICING.platformFeePercent;
     const effectivePlatformFeePercent = memberDiscountApplied
-      ? Math.max(PRICING.platformFeePercent - 5, 10)
-      : PRICING.platformFeePercent;
+      ? Math.max(basePlatformFeePercent - 5, 10)
+      : basePlatformFeePercent;
     const platformFee =
       (finalPrice * effectivePlatformFeePercent) / 100;
     const shouldCharge = hasServiceAvailability && finalPrice > 0;
