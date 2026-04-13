@@ -57,6 +57,7 @@ ALTER TABLE campaign_affiliates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE campaign_conversions ENABLE ROW LEVEL SECURITY;
 
 -- Diviners can read their own campaigns
+DROP POLICY IF EXISTS "diviners_read_own_campaigns" ON affiliate_campaigns;
 CREATE POLICY "diviners_read_own_campaigns" ON affiliate_campaigns
   FOR SELECT USING (
     diviner_id IN (
@@ -66,6 +67,7 @@ CREATE POLICY "diviners_read_own_campaigns" ON affiliate_campaigns
   );
 
 -- Diviners can insert their own campaigns
+DROP POLICY IF EXISTS "diviners_insert_own_campaigns" ON affiliate_campaigns;
 CREATE POLICY "diviners_insert_own_campaigns" ON affiliate_campaigns
   FOR INSERT WITH CHECK (
     diviner_id IN (
@@ -74,6 +76,7 @@ CREATE POLICY "diviners_insert_own_campaigns" ON affiliate_campaigns
   );
 
 -- Diviners can update their own campaigns
+DROP POLICY IF EXISTS "diviners_update_own_campaigns" ON affiliate_campaigns;
 CREATE POLICY "diviners_update_own_campaigns" ON affiliate_campaigns
   FOR UPDATE USING (
     diviner_id IN (
@@ -82,6 +85,7 @@ CREATE POLICY "diviners_update_own_campaigns" ON affiliate_campaigns
   );
 
 -- Diviners can delete their own draft campaigns
+DROP POLICY IF EXISTS "diviners_delete_own_draft_campaigns" ON affiliate_campaigns;
 CREATE POLICY "diviners_delete_own_draft_campaigns" ON affiliate_campaigns
   FOR DELETE USING (
     status = 'draft' AND
@@ -91,6 +95,7 @@ CREATE POLICY "diviners_delete_own_draft_campaigns" ON affiliate_campaigns
   );
 
 -- campaign_affiliates: read if user owns the campaign
+DROP POLICY IF EXISTS "read_campaign_affiliates" ON campaign_affiliates;
 CREATE POLICY "read_campaign_affiliates" ON campaign_affiliates
   FOR SELECT USING (
     campaign_id IN (
@@ -100,6 +105,7 @@ CREATE POLICY "read_campaign_affiliates" ON campaign_affiliates
     )
   );
 
+DROP POLICY IF EXISTS "manage_campaign_affiliates" ON campaign_affiliates;
 CREATE POLICY "manage_campaign_affiliates" ON campaign_affiliates
   FOR ALL USING (
     campaign_id IN (
@@ -109,6 +115,7 @@ CREATE POLICY "manage_campaign_affiliates" ON campaign_affiliates
   );
 
 -- campaign_conversions: read-only for diviner
+DROP POLICY IF EXISTS "read_campaign_conversions" ON campaign_conversions;
 CREATE POLICY "read_campaign_conversions" ON campaign_conversions
   FOR SELECT USING (
     campaign_id IN (

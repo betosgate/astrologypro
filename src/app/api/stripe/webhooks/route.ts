@@ -27,6 +27,12 @@ import {
 } from "@/lib/mystery-school/subscription-lifecycle";
 import { finalizeMysterySchoolCheckoutSession } from "@/lib/mystery-school/finalize-checkout";
 import { mapStripeSubscriptionStatus } from "@/lib/weekly-subscriptions";
+import {
+  recordRevenueLedgerEntry,
+  getAffiliateCommissionTotalForOrderRef,
+  WEEKLY_SUBSCRIPTION_PLATFORM_SHARE_PERCENT,
+} from "@/lib/revenue-ledger";
+import { PRICING } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +82,26 @@ async function handleGiftCheckoutCompleted(
       return;
     }
   }
+
+  const amountCents = session.amount_total ?? Math.round(amount * 100);
+  const platformFeeCents = Math.round(
+    amountCents * (PRICING.platformFeePercent / 100)
+  );
+
+  await recordRevenueLedgerEntry({
+    sourceType: "gift_certificate",
+    sourceReference: session.id,
+    divinerId: meta.diviner_id ?? null,
+    grossAmountCents: amountCents,
+    platformFeeCents,
+    currency: session.currency ?? "usd",
+    metadata: {
+      code,
+      purchaserEmail: meta.purchaser_email ?? null,
+      recipientEmail: meta.recipient_email ?? null,
+      divinerUsername: meta.diviner_username ?? null,
+    },
+  });
 
   // Send emails (idempotent — SES deduplication window is 24h)
   const redeemUrl = `${appUrl}/gift/${code}`;
@@ -584,6 +610,114 @@ async function handleComboBundleCheckoutCompleted(
   );
 }
 
+async function handleTraineeSignupCheckoutCompleted(
+  session: Stripe.Checkout.Session
+) {
+  const supabase = createAdminClient();
+  const userId = session.metadata?.userId;
+
+  if (!userId) {
+    console.error("[Webhook] trainee_signup: missing userId", session.metadata);
+    return;
+  }
+
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.admin.getUserById(userId);
+
+  const email = authUser?.email ?? "";
+  const username = (authUser?.user_metadata?.username as string) ?? "";
+  const displayName =
+    (authUser?.user_metadata?.name as string) ?? email.split("@")[0] ?? "Trainee";
+
+  if (!username) {
+    console.error("[Webhook] trainee_signup: missing username", session.metadata);
+    return;
+  }
+
+  const { error } = await supabase.from("trainees").upsert(
+    {
+      user_id: userId,
+      name: displayName,
+      email,
+      username,
+      training_status: "active",
+      onboarding_completed: false,
+    },
+    { onConflict: "user_id" }
+  );
+
+  if (error) {
+    console.error(
+      "[Webhook] trainee_signup: failed to upsert trainees record:",
+      error
+    );
+  }
+}
+
+async function handlePerennialCommunitySignupCheckoutCompleted(
+  session: Stripe.Checkout.Session
+) {
+  const supabase = createAdminClient();
+  const userId = session.metadata?.userId;
+  const planId = session.metadata?.planId ?? null;
+  const subscriptionId =
+    typeof session.subscription === "string"
+      ? session.subscription
+      : session.subscription?.id;
+
+  if (!userId) {
+    console.error(
+      "[Webhook] perennial_community_signup: missing userId",
+      session.metadata
+    );
+    return;
+  }
+
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.admin.getUserById(userId);
+  const email = authUser?.email ?? "";
+  const fullName =
+    (authUser?.user_metadata?.name as string) ??
+    (authUser?.user_metadata?.full_name as string) ??
+    null;
+
+  const { error } = await supabase.from("community_members").upsert(
+    {
+      user_id: userId,
+      email,
+      full_name: fullName,
+      membership_type: "perennial_mandalism",
+      membership_status: "active",
+      plan_type: "individual",
+      stripe_subscription_id: subscriptionId ?? null,
+      joined_at: new Date().toISOString(),
+      onboarding_completed: false,
+      intake_data: planId ? { selected_plan_id: planId } : {},
+    },
+    { onConflict: "user_id" }
+  );
+
+  if (error) {
+    console.error(
+      "[Webhook] perennial_community_signup: failed to upsert community_members:",
+      error
+    );
+  }
+
+  const affiliateCode = session.metadata?.affiliateCode;
+  if (affiliateCode) {
+    const amountTotal = (session.amount_total ?? 0) / 100;
+    recordSignupAffiliateCommission(
+      affiliateCode,
+      amountTotal,
+      `perennial-community-signup:${session.id}`,
+      "subscription"
+    );
+  }
+}
+
 /**
  * Fire-and-forget: record an affiliate commission for a signup/subscription checkout.
  * Supports both the old `affiliates` (social_advocates) table and the new
@@ -806,9 +940,17 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return handlePerennialSignupCheckoutCompleted(session);
   }
 
+  if (session.metadata?.type === "perennial_community_signup") {
+    return handlePerennialCommunitySignupCheckoutCompleted(session);
+  }
+
   // Route combo bundle (trainee + diviner) checkouts
   if (session.metadata?.itemKey === "trainee_diviner_bundle") {
     return handleComboBundleCheckoutCompleted(session);
+  }
+
+  if (session.metadata?.type === "trainee_signup") {
+    return handleTraineeSignupCheckoutCompleted(session);
   }
 
   // Handle manual booking payment link checkout
@@ -978,6 +1120,51 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
   await syncWeeklySubscriptionStatus(supabase, subscription, "active");
+
+  const { data: weeklySubscription } = await supabase
+    .from("client_subscriptions")
+    .select("id, client_id, diviner_id, product_id")
+    .eq("stripe_subscription_id", subscriptionId)
+    .eq("subscription_type", "weekly_updates")
+    .maybeSingle();
+
+  if (weeklySubscription && invoice.amount_paid > 0) {
+    const affiliateCode = subscription.metadata?.affiliateCode;
+    const orderRef = `weekly-subscription-invoice:${invoice.id}`;
+
+    if (affiliateCode) {
+      await recordAffiliateCommission({
+        affiliateCode,
+        amountCents: invoice.amount_paid,
+        orderRef,
+        productType: "weekly_subscription",
+        divinerId: weeklySubscription.diviner_id,
+      });
+    }
+
+    const affiliateCommissionCents =
+      await getAffiliateCommissionTotalForOrderRef(orderRef);
+
+    await recordRevenueLedgerEntry({
+      sourceType: "weekly_subscription_invoice",
+      sourceReference: invoice.id,
+      sourceId: weeklySubscription.id,
+      divinerId: weeklySubscription.diviner_id,
+      clientId: weeklySubscription.client_id,
+      productId: weeklySubscription.product_id,
+      grossAmountCents: invoice.amount_paid,
+      platformFeeCents: Math.round(
+        invoice.amount_paid *
+          (WEEKLY_SUBSCRIPTION_PLATFORM_SHARE_PERCENT / 100),
+      ),
+      affiliateCommissionCents,
+      currency: invoice.currency,
+      metadata: {
+        stripeInvoiceId: invoice.id,
+        stripeSubscriptionId: subscriptionId,
+      },
+    });
+  }
 }
 
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
@@ -1414,6 +1601,40 @@ async function handlePaymentIntentSucceeded(
     return;
   }
 
+  const phoneSessionId =
+    paymentIntent.metadata?.phone_session_id ??
+    paymentIntent.metadata?.phoneSessionId;
+  if (phoneSessionId) {
+    const supabase = createAdminClient();
+    const { data: phoneSession } = await supabase
+      .from("phone_sessions")
+      .select("id, diviner_id, client_id, booking_id, amount_charged")
+      .eq("id", phoneSessionId)
+      .maybeSingle();
+
+    if (phoneSession) {
+      await recordRevenueLedgerEntry({
+        sourceType: "telephony",
+        sourceReference: `phone-session:${phoneSession.id}`,
+        sourceId: phoneSession.id,
+        divinerId: phoneSession.diviner_id,
+        clientId: phoneSession.client_id,
+        grossAmountCents:
+          Math.round(Number(phoneSession.amount_charged ?? 0) * 100) ||
+          paymentIntent.amount,
+        platformFeeCents:
+          Number(paymentIntent.application_fee_amount ?? 0) ||
+          Math.round(paymentIntent.amount * (PRICING.platformFeePercent / 100)),
+        currency: paymentIntent.currency,
+        metadata: {
+          stripePaymentIntentId: paymentIntent.id,
+          bookingId: phoneSession.booking_id ?? null,
+        },
+      });
+    }
+    return;
+  }
+
   const bookingId = paymentIntent.metadata?.bookingId;
   const clientEmail = paymentIntent.metadata?.clientEmail;
   const affiliateCode = paymentIntent.metadata?.affiliateCode;
@@ -1497,6 +1718,32 @@ async function handlePaymentIntentSucceeded(
       divinerId: div.id,
     });
   }
+
+  const orderReference = `booking:${bookingId}`;
+  const affiliateCommissionCents =
+    await getAffiliateCommissionTotalForOrderRef(orderReference);
+
+  await recordRevenueLedgerEntry({
+    sourceType: "booking",
+    sourceReference: orderReference,
+    sourceId: orderId,
+    divinerId: div.id,
+    clientId: clientRecord?.id ?? ((booking as Record<string, unknown>).client_id as string),
+    productId: svc.id,
+    grossAmountCents:
+      Number(paymentIntent.metadata?.grossAmountCents ?? paymentIntent.amount) ||
+      paymentIntent.amount,
+    platformFeeCents:
+      Number(paymentIntent.metadata?.platformFeeCents ?? paymentIntent.application_fee_amount ?? 0) ||
+      0,
+    affiliateCommissionCents,
+    currency: paymentIntent.currency,
+    metadata: {
+      stripePaymentIntentId: paymentIntent.id,
+      bookingId,
+      orderId,
+    },
+  });
 
   // Calendar connection checks — createCalendarEvent handles lookup internally,
   // but we still need flags for Microsoft calendar

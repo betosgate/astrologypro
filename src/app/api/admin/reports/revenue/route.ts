@@ -86,22 +86,20 @@ export async function GET(req: NextRequest) {
   const admin = createAdminClient();
   const dateAfter = periodToDate(period);
 
-  // ── Fetch completed bookings with joined diviner + service ────────────────
+  // ── Fetch monetized revenue ledger entries ────────────────────────────────
   let query = admin
-    .from("bookings")
+    .from("revenue_ledger_entries")
     .select(
-      `id, total_amount, scheduled_at, diviner_id,
-       diviners!inner(id, display_name),
-       services!inner(id, category)`,
-    )
-    .eq("status", "completed");
+      `id, source_type, gross_amount_cents, platform_fee_cents, diviner_net_amount_cents, recognized_at, diviner_id,
+       diviners(id, display_name)`,
+    );
 
   if (dateAfter) {
-    query = query.gte("scheduled_at", dateAfter);
+    query = query.gte("recognized_at", dateAfter);
   }
 
-  const { data: bookings, error } = await query
-    .order("scheduled_at", { ascending: false })
+  const { data: ledgerEntries, error } = await query
+    .order("recognized_at", { ascending: false })
     .order("id", { ascending: false });
 
   if (error) {
@@ -117,17 +115,23 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const rows = bookings ?? [];
+  const rows = ledgerEntries ?? [];
 
   // ── Summary ───────────────────────────────────────────────────────────────
   const totalRevenue = rows.reduce(
-    (sum, b) => sum + (Number(b.total_amount) || 0),
+    (sum, row) => sum + (Number(row.gross_amount_cents) || 0) / 100,
     0,
   );
   const totalBookings = rows.length;
   const avgBookingValue = totalBookings > 0 ? totalRevenue / totalBookings : 0;
-  const platformFees = totalRevenue * 0.2;
-  const divinerPayouts = totalRevenue - platformFees;
+  const platformFees = rows.reduce(
+    (sum, row) => sum + (Number(row.platform_fee_cents) || 0) / 100,
+    0,
+  );
+  const divinerPayouts = rows.reduce(
+    (sum, row) => sum + (Number(row.diviner_net_amount_cents) || 0) / 100,
+    0,
+  );
 
   const summary: RevenueSummary = {
     totalRevenue: Math.round(totalRevenue * 100) / 100,
@@ -146,10 +150,11 @@ export async function GET(req: NextRequest) {
     const diviner = b.diviners as unknown as {
       id: string;
       display_name: string;
-    };
+    } | null;
+    if (!diviner?.id) continue;
     const key = diviner.id;
     const existing = divinerMap.get(key);
-    const amount = Number(b.total_amount) || 0;
+    const amount = (Number(b.gross_amount_cents) || 0) / 100;
     if (existing) {
       existing.revenue += amount;
       existing.bookings += 1;
@@ -174,10 +179,12 @@ export async function GET(req: NextRequest) {
   // ── By Service Category ───────────────────────────────────────────────────
   const serviceMap = new Map<string, { revenue: number; bookings: number }>();
   for (const b of rows) {
-    const service = b.services as unknown as { id: string; category: string };
-    const cat = service.category ?? "unknown";
+    const cat =
+      b.source_type === "weekly_subscription_invoice"
+        ? "weekly_subscription"
+        : (b.source_type as string) ?? "unknown";
     const existing = serviceMap.get(cat);
-    const amount = Number(b.total_amount) || 0;
+    const amount = (Number(b.gross_amount_cents) || 0) / 100;
     if (existing) {
       existing.revenue += amount;
       existing.bookings += 1;
@@ -196,10 +203,10 @@ export async function GET(req: NextRequest) {
   // ── Monthly ───────────────────────────────────────────────────────────────
   const monthMap = new Map<string, { revenue: number; bookings: number }>();
   for (const b of rows) {
-    const date = new Date(b.scheduled_at as string);
+    const date = new Date(b.recognized_at as string);
     const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     const existing = monthMap.get(month);
-    const amount = Number(b.total_amount) || 0;
+    const amount = (Number(b.gross_amount_cents) || 0) / 100;
     if (existing) {
       existing.revenue += amount;
       existing.bookings += 1;
