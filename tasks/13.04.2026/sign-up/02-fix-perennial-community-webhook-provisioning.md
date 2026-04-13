@@ -1,6 +1,6 @@
 # Fix Perennial Community Webhook Provisioning — 2026-04-13
 
-- Status: Open
+- Status: Done
 - Priority: P0
 - Owner: Backend
 - Depends on: **Task 06 must be completed first** — task 06 rewrites `src/app/api/stripe/checkout/route.ts` and sets `metadata.type = "perennial_community_signup"` based on `itemKey`. Do not touch `checkout/route.ts` in this task.
@@ -15,6 +15,14 @@ When a user selects a `perennial_mandalism_community` plan on `/get-started` and
 1. Store `role: "perennial_mandalism"` in Supabase auth user metadata at signup
 2. Provision a minimal `community_members` DB record — not a `diviners` record — via the Stripe webhook
 3. All additional data (household members, birth data, 25-field questionnaire) is collected in the post-login onboarding gate (task 04)
+
+## Completion Notes
+
+- `src/app/get-started/page.tsx` already derives `isPerennial` from `plan?.itemKey === "perennial_mandalism_community"` and submits `role: "perennial_mandalism"` for perennial signups.
+- `src/app/api/get-started/signup/route.ts` already accepts `role: "perennial_mandalism"` and persists it in Supabase auth user metadata during account creation.
+- `src/app/api/stripe/webhooks/route.ts` already contains `handlePerennialCommunitySignupCheckoutCompleted()` plus a `session.metadata?.type === "perennial_community_signup"` route guard, so the new get-started flow provisions `community_members` instead of falling through to diviner provisioning.
+- The required `community_members.onboarding_completed` support is already present in the repo migration set at `supabase/migrations/20260413000012_community_onboarding_completed.sql`.
+- The old `/perennial-signup` flow remains separate and unchanged, which matches the task requirement.
 
 ---
 
