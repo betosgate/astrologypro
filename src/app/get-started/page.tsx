@@ -837,7 +837,7 @@ export default function GetStartedPage() {
                 </h3>
                 {plan && (
                   <p className="mt-1 text-sm text-[#b8bcd0]/70">
-                    {plan.name} &middot; ${plan.setupPrice} setup + ${plan.monthlyPrice}/mo
+                    {plan.name} &middot; {plan.monthlyPrice > 0 ? `$${plan.setupPrice} setup + $${plan.monthlyPrice}/mo` : `$${plan.setupPrice} one-time`}
                   </p>
                 )}
                 {plan && (
@@ -990,7 +990,7 @@ export default function GetStartedPage() {
                       </>
                     ) : (
                       <>
-                        Continue with {plan?.name ?? "your plan"} — ${plan?.setupPrice ?? 0} + ${plan?.monthlyPrice ?? 0}/mo
+                        Continue with {plan?.name ?? "your plan"} — {plan?.monthlyPrice ? `$${plan.setupPrice} + $${plan.monthlyPrice}/mo` : `$${plan?.setupPrice ?? 0}`}
                         <ArrowRight className="ml-2 size-4" />
                       </>
                     )}
