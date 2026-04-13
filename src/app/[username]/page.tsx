@@ -499,6 +499,41 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
     pullQuote = firstSentence ?? diviner.bio.slice(0, 120);
   }
 
+  const serviceDeliveryLabel = diviner.seo_is_remote_global
+    ? "Available worldwide for remote readings"
+    : diviner.seo_city && diviner.seo_country
+      ? `Serving clients from ${diviner.seo_city}, ${diviner.seo_country}`
+      : diviner.seo_region && diviner.seo_country
+        ? `Serving clients from ${diviner.seo_region}, ${diviner.seo_country}`
+        : "Available for online readings";
+  const authorityBullets = [
+    diviner.seo_years_experience
+      ? `${diviner.seo_years_experience}+ years of experience`
+      : null,
+    Array.isArray(diviner.seo_languages) && diviner.seo_languages.length > 0
+      ? `Sessions available in ${diviner.seo_languages.slice(0, 3).join(", ")}`
+      : null,
+    Array.isArray(diviner.seo_credentials) && diviner.seo_credentials.length > 0
+      ? diviner.seo_credentials[0]
+      : null,
+    stats.reviewCount > 0 && stats.averageRating
+      ? `${stats.averageRating.toFixed(1)} average rating across ${stats.reviewCount} approved reviews`
+      : null,
+    showSessionCountsBlock && stats.completedSessions > 0
+      ? `${stats.completedSessions} completed sessions on AstrologyPro`
+      : null,
+  ].filter(Boolean) as string[];
+  const fitBullets = [
+    highlightedService ? `Best entry point: ${highlightedService.name}` : null,
+    diviner.tagline ? diviner.tagline : null,
+    Array.isArray(diviner.specialties) && diviner.specialties.length > 0
+      ? `Focus areas: ${diviner.specialties.slice(0, 4).join(", ")}`
+      : null,
+    diviner.seo_is_remote_global
+      ? "Built for remote clients across time zones"
+      : "Private sessions delivered online through the platform"
+  ].filter(Boolean) as string[];
+
   // Schema.org structured data — rich entity graph
   const structuredData = buildProfileSchemaGraph(
     diviner,
@@ -583,6 +618,52 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
 
       {activeTab === "home" ? (
         <>
+          <section className="py-10 md:py-14">
+            <div className="mx-auto grid max-w-6xl gap-6 px-4 lg:grid-cols-[1.15fr,0.85fr]">
+              <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 md:p-8">
+                <p className="text-xs uppercase tracking-[0.24em] text-gold/70">
+                  Why Clients Book
+                </p>
+                <h2 className="mt-3 font-display text-3xl font-semibold text-cream">
+                  {serviceDeliveryLabel}
+                </h2>
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-silver/70">
+                  {pullQuote ??
+                    buildPublicServicesIntro(
+                      diviner.display_name,
+                      sellablePublicServices,
+                    )}
+                </p>
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  {fitBullets.map((bullet) => (
+                    <div
+                      key={bullet}
+                      className="rounded-2xl border border-white/8 bg-cosmos-950/40 px-4 py-3 text-sm text-cream/85"
+                    >
+                      {bullet}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-gold/15 bg-gold/[0.04] p-6 md:p-8">
+                <p className="text-xs uppercase tracking-[0.24em] text-gold/70">
+                  Trust Signals
+                </p>
+                <div className="mt-4 space-y-3">
+                  {authorityBullets.map((bullet) => (
+                    <div
+                      key={bullet}
+                      className="rounded-2xl border border-gold/10 bg-cosmos-950/45 px-4 py-3 text-sm text-cream/85"
+                    >
+                      {bullet}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+
           {!liveBlocked && (
             <LiveStreamSection
               isLive={!!currentLiveSession}

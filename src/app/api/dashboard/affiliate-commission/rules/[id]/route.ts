@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertAffiliateShareWithinCap } from "@/lib/affiliate-share-cap";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,18 @@ export async function PATCH(
   }
   if (typeof patch.is_active === "boolean") {
     updates.is_active = patch.is_active;
+  }
+
+  try {
+    await assertAffiliateShareWithinCap({
+      commissionType: existing.rule_type,
+      commissionValue: typeof patch.rate === "number" ? patch.rate : existing.rate,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Affiliate share exceeds allowed cap." },
+      { status: 422 }
+    );
   }
 
   const { data, error } = await admin

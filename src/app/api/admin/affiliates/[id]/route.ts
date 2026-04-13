@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertAffiliateShareWithinCap } from "@/lib/affiliate-share-cap";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,18 @@ export async function PATCH(
   if (default_commission_type !== undefined && !allowedCommissionTypes.includes(default_commission_type as string)) {
     return NextResponse.json(
       { type: "https://httpstatuses.io/422", title: "Invalid commission type" },
+      { status: 422 }
+    );
+  }
+
+  try {
+    await assertAffiliateShareWithinCap({
+      commissionType: default_commission_type,
+      commissionValue: default_commission_value,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { type: "https://httpstatuses.io/422", title: "Validation error", detail: error instanceof Error ? error.message : "Affiliate share exceeds allowed cap." },
       { status: 422 }
     );
   }

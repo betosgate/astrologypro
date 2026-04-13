@@ -71,3 +71,22 @@ This is a concrete risk area and should be validated before relying on those rou
 - finance actions are auditable
 - access boundaries are explicit and testable
 - the money system supports real operations work, not just passive dashboards
+
+## Status
+
+Done.
+
+## Completion Notes
+
+- finance-sensitive admin actions now log to `admin_activity_log`, including:
+  - refund issuance
+  - affiliate rule creation and updates
+  - commission refunds and adjustments
+  - finance-related platform settings changes
+  - ledger status changes
+- admin now has a dedicated finance ops screen at `/admin/reports/finance-ops` for:
+  - payout review states
+  - hold or dispute status changes
+  - operational note capture
+  - recent ledger-level refund impact review
+- diviner visibility remains scoped to own finance data through `/api/dashboard/finance`.

@@ -194,6 +194,43 @@ export default async function ServiceDetailPage({
   const bookingEnabled = canPubliclySellService(service, diviner);
 
   const divinerAvatarUrl = getDivinerAvatarUrl(diviner.avatar_url);
+  const locationLine = diviner.seo_is_remote_global
+    ? "Available for remote readings worldwide"
+    : diviner.seo_city && diviner.seo_country
+      ? `Based in ${diviner.seo_city}, ${diviner.seo_country}`
+      : diviner.seo_region && diviner.seo_country
+        ? `Serving ${diviner.seo_region}, ${diviner.seo_country}`
+        : "Delivered online through AstrologyPro";
+  const serviceForBullets =
+    service.category === "astrology"
+      ? [
+          "Clients who want clarity around timing, patterns, and big life transitions",
+          "People preparing for a major decision, relationship shift, or career pivot",
+          "Returning astrology clients who want a guided chart walkthrough instead of a generic report",
+        ]
+      : service.category === "tarot"
+        ? [
+            "Clients who need direct guidance on a specific question or crossroads",
+            "People looking for intuitive reflection with clear next-step advice",
+            "Returning clients who want a focused reading rather than a general session",
+          ]
+        : [
+            "Clients who want tailored spiritual guidance in a live session",
+            "People who value direct interpretation over self-serve content",
+            "Anyone wanting a guided conversation with clear next steps",
+          ];
+  const proofBullets = [
+    locationLine,
+    bookingCount > 0
+      ? `${bookingCount} booked session${bookingCount === 1 ? "" : "s"} for this service`
+      : null,
+    Array.isArray(diviner.seo_languages) && diviner.seo_languages.length > 0
+      ? `Sessions available in ${diviner.seo_languages.slice(0, 3).join(", ")}`
+      : null,
+    diviner.seo_years_experience
+      ? `${diviner.seo_years_experience}+ years of experience`
+      : null,
+  ].filter(Boolean) as string[];
 
   // Category-specific included bullets
   const includedBullets =
@@ -486,6 +523,47 @@ export default async function ServiceDetailPage({
                 </p>
               </div>
             )}
+          </div>
+        </div>
+
+        <div className="cosmic-divider mx-auto mt-12 max-w-6xl md:mt-16" />
+      </section>
+
+      <section className="py-12 md:py-16">
+        <div className="mx-auto grid max-w-5xl gap-6 px-4 lg:grid-cols-[1.05fr,0.95fr]">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 md:p-8">
+            <p className="text-xs uppercase tracking-[0.24em] text-gold/70">
+              Who This Reading Is For
+            </p>
+            <h2 className="mt-3 font-display text-3xl font-semibold text-cream">
+              A clearer fit for the right client
+            </h2>
+            <div className="mt-5 space-y-3">
+              {serviceForBullets.map((bullet) => (
+                <div
+                  key={bullet}
+                  className="rounded-2xl border border-white/8 bg-cosmos-950/40 px-4 py-3 text-sm text-cream/85"
+                >
+                  {bullet}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-gold/15 bg-gold/[0.04] p-6 md:p-8">
+            <p className="text-xs uppercase tracking-[0.24em] text-gold/70">
+              Why Book Here
+            </p>
+            <div className="mt-5 space-y-3">
+              {proofBullets.map((bullet) => (
+                <div
+                  key={bullet}
+                  className="rounded-2xl border border-gold/10 bg-cosmos-950/45 px-4 py-3 text-sm text-cream/85"
+                >
+                  {bullet}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

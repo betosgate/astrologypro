@@ -65,3 +65,17 @@ Refund reports should clearly show:
 - refund handling reconciles across booking/order state and finance ledger state
 - refund effects are visible to admin and to the affected diviner
 - affiliate consequences are explicit and auditable
+
+## Status
+
+Done.
+
+## Completion Notes
+
+- admin and diviner refund routes now record `refund_events` and immediately reconcile the linked revenue ledger row.
+- refund reconciliation now updates:
+  - gross recognized revenue reversal
+  - platform fee reversal
+  - affiliate commission reversal
+  - diviner net reversal
+- refund reporting now exposes remaining recognized amount and finance note context in admin and diviner finance views.

@@ -64,3 +64,14 @@ No override path should silently bypass it unless product deliberately introduce
 - the affiliate-share cap is stored in configuration
 - all rule creation/update flows enforce it
 - the cap applies consistently regardless of which commission-rule surface is used
+
+## Status
+
+Done.
+
+Implemented with:
+- `supabase/migrations/20260413000198_affiliate_share_cap.sql`
+- `src/lib/affiliate-share-cap.ts`
+- `src/app/api/admin/platform-settings/route.ts`
+- `src/app/admin/platform-settings/page.tsx`
+- cap enforcement in main admin and diviner affiliate-rule routes
