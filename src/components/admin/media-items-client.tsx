@@ -47,7 +47,7 @@ import {
   Headphones,
   FileText,
   Link as LinkIcon,
-  Image,
+  Image as ImageIcon,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -82,6 +82,8 @@ interface MediaItem {
   sort_order: number;
   is_active: boolean;
   is_featured: boolean;
+  moderation_status: "pending" | "approved" | "rejected" | "blocked";
+  admin_review_notes: string | null;
   view_count: number;
   created_at: string;
   updated_at: string;
@@ -126,7 +128,7 @@ function TypeIcon({ type }: { type: MediaType }) {
     case "audio": return <Headphones className={cls} />;
     case "article": return <FileText className={cls} />;
     case "link": return <LinkIcon className={cls} />;
-    case "image": return <Image className={cls} />;
+    case "image": return <ImageIcon className={cls} />;
   }
 }
 
@@ -159,6 +161,8 @@ interface MediaFormData {
   duration: string; // MM:SS format
   sort_order: number;
   is_featured: boolean;
+  moderation_status: "pending" | "approved" | "rejected" | "blocked" | "";
+  admin_review_notes: string;
 }
 
 const EMPTY_FORM: MediaFormData = {
@@ -173,6 +177,8 @@ const EMPTY_FORM: MediaFormData = {
   duration: "",
   sort_order: 0,
   is_featured: false,
+  moderation_status: "",
+  admin_review_notes: "",
 };
 
 interface MediaFormProps {
@@ -204,6 +210,8 @@ function MediaForm({ open, onClose, onSaved, diviners, editItem }: MediaFormProp
         duration: secondsToMmss(editItem.duration_seconds),
         sort_order: editItem.sort_order,
         is_featured: editItem.is_featured,
+        moderation_status: editItem.moderation_status,
+        admin_review_notes: editItem.admin_review_notes ?? "",
       });
     } else {
       setForm(EMPTY_FORM);
@@ -237,6 +245,8 @@ function MediaForm({ open, onClose, onSaved, diviners, editItem }: MediaFormProp
       duration_seconds,
       sort_order: form.sort_order,
       is_featured: form.is_featured,
+      moderation_status: form.moderation_status || undefined,
+      admin_review_notes: form.admin_review_notes.trim() || null,
     };
     if (!isEdit) {
       payload.diviner_id = form.diviner_id;
@@ -426,6 +436,35 @@ function MediaForm({ open, onClose, onSaved, diviners, editItem }: MediaFormProp
             <Label htmlFor="mi-featured" className="cursor-pointer">Featured</Label>
           </div>
 
+          <div className="space-y-1.5">
+            <Label htmlFor="mi-moderation">Moderation Status</Label>
+            <Select
+              value={form.moderation_status || "pending"}
+              onValueChange={(v) => set("moderation_status", v as MediaFormData["moderation_status"])}
+            >
+              <SelectTrigger id="mi-moderation">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending review</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="blocked">Blocked permanently</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="mi-review-notes">Admin Review Notes</Label>
+            <Textarea
+              id="mi-review-notes"
+              placeholder="Optional review notes for the diviner"
+              value={form.admin_review_notes}
+              onChange={(e) => set("admin_review_notes", e.target.value)}
+              rows={3}
+            />
+          </div>
+
           {error && (
             <p className="text-sm text-red-400" role="alert">{error}</p>
           )}
@@ -517,6 +556,7 @@ function ToggleCell({
 }) {
   const [saving, setSaving] = useState(false);
   const checked = item[field];
+  const disabled = item.moderation_status === "blocked";
 
   async function toggle() {
     setSaving(true);
@@ -536,7 +576,7 @@ function ToggleCell({
     <Switch
       checked={checked}
       onCheckedChange={toggle}
-      disabled={saving}
+      disabled={saving || disabled}
       aria-label={label}
     />
   );
@@ -560,6 +600,7 @@ export function MediaItemsClient({ diviners }: MediaItemsClientProps) {
   const [loading, setLoading] = useState(true);
   const [typeTab, setTypeTab] = useState<TabValue>("all");
   const [divinerFilter, setDivinerFilter] = useState("all");
+  const [moderationFilter, setModerationFilter] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<MediaItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MediaItem | null>(null);
@@ -571,6 +612,7 @@ export function MediaItemsClient({ diviners }: MediaItemsClientProps) {
       const sp = new URLSearchParams({ limit: "100" });
       if (divinerFilter !== "all") sp.set("diviner_id", divinerFilter);
       if (typeTab !== "all") sp.set("type", typeTab);
+      if (moderationFilter !== "all") sp.set("moderation_status", moderationFilter);
       const res = await fetch(`/api/admin/media-items?${sp.toString()}`);
       if (res.ok) {
         const data = await res.json();
@@ -579,7 +621,7 @@ export function MediaItemsClient({ diviners }: MediaItemsClientProps) {
     } finally {
       setLoading(false);
     }
-  }, [divinerFilter, typeTab]);
+  }, [divinerFilter, moderationFilter, typeTab]);
 
   useEffect(() => {
     void fetchItems();
@@ -650,6 +692,19 @@ export function MediaItemsClient({ diviners }: MediaItemsClientProps) {
           </SelectContent>
         </Select>
 
+        <Select value={moderationFilter} onValueChange={setModerationFilter}>
+          <SelectTrigger className="w-44" aria-label="Filter by moderation status">
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectItem value="blocked">Blocked</SelectItem>
+          </SelectContent>
+        </Select>
+
         {/* Type tabs */}
         <div
           className="flex flex-wrap gap-1"
@@ -688,6 +743,7 @@ export function MediaItemsClient({ diviners }: MediaItemsClientProps) {
               <TableHead className="w-28">Type</TableHead>
               <TableHead className="w-32">Platform</TableHead>
               <TableHead className="w-36">Diviner</TableHead>
+              <TableHead className="w-32">Review</TableHead>
               <TableHead className="w-20 text-center">Featured</TableHead>
               <TableHead className="w-20 text-center">Active</TableHead>
               <TableHead className="w-24">Sort</TableHead>
@@ -697,14 +753,14 @@ export function MediaItemsClient({ diviners }: MediaItemsClientProps) {
           <TableBody>
             {loading && (
               <TableRow>
-                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
                   Loading…
                 </TableCell>
               </TableRow>
             )}
             {!loading && items.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
                   No media items found.
                 </TableCell>
               </TableRow>
@@ -782,6 +838,19 @@ export function MediaItemsClient({ diviners }: MediaItemsClientProps) {
                   ) : (
                     <span className="text-xs text-muted-foreground">—</span>
                   )}
+                </TableCell>
+
+                <TableCell>
+                  <div className="space-y-1">
+                    <Badge variant="outline" className="capitalize">
+                      {item.moderation_status}
+                    </Badge>
+                    {item.admin_review_notes && (
+                      <p className="line-clamp-2 text-[11px] text-muted-foreground">
+                        {item.admin_review_notes}
+                      </p>
+                    )}
+                  </div>
                 </TableCell>
 
                 {/* Featured toggle */}

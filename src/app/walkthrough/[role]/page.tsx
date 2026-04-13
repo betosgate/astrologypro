@@ -64,10 +64,10 @@ export default async function RoleWalkthroughPage({
               {section.role} Portal
               </div>
               <span
-                className="inline-flex rounded-md px-4 py-2 text-4xl font-bold tracking-tight text-black sm:text-5xl"
+                className="inline-flex rounded-xl px-4 py-2 text-xl font-bold tracking-tight text-black sm:text-2xl"
                 style={{
                   background: "linear-gradient(180deg, #f8d275 0%, #cd912f 100%)",
-                  boxShadow: "0 10px 24px rgba(205,145,47,0.18)",
+                  boxShadow: "0 8px 20px rgba(205,145,47,0.15)",
                 }}
               >
                 {section.role}

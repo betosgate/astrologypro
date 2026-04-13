@@ -105,6 +105,34 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ destination: "/dashboard" });
   }
 
+  if (role === "trainee") {
+    const { data: trainee } = await admin
+      .from("trainees")
+      .select("id, onboarding_completed")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!trainee || !trainee.onboarding_completed) {
+      return NextResponse.json({ destination: "/join/trainee/profile" });
+    }
+
+    return NextResponse.json({ destination: "/trainee" });
+  }
+
+  if (role === "perennial_mandalism") {
+    const { data: member } = await admin
+      .from("community_members")
+      .select("id, onboarding_completed")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!member || !member.onboarding_completed) {
+      return NextResponse.json({ destination: "/community/onboarding" });
+    }
+
+    return NextResponse.json({ destination: "/community" });
+  }
+
   // All other roles — use metadata role
   return NextResponse.json({ destination: getRoleDestination(role) });
 }

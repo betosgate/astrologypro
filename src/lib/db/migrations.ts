@@ -19,7 +19,9 @@ import { MIGRATION_SQL as MIG_20260409000123 } from "@/data/migrations/202604090
 import { MIGRATION_SQL as MIG_20260410000001 } from "@/data/migrations/20260410000001_increase_training_video_storage_limit";
 import { MIGRATION_SQL as MIG_20260410000124 } from "@/data/migrations/20260410000124_pricing_onetime_recurring_html";
 import { MIGRATION_SQL as MIG_20260410000125 } from "@/data/migrations/20260410000125_pricing_recurring_interval";
+import { MIGRATION_SQL as MIG_20260413000012 } from "@/data/migrations/20260413000012_community_onboarding_completed";
 import { MIGRATION_SQL as MIG_20260413000006 } from "@/data/migrations/20260413000006_services_pricing_item_key";
+import { MIGRATION_SQL as MIG_20260413000140 } from "@/data/migrations/20260413000140_media_albums";
 import { MIGRATION_SQL as MIG_20260413000126 } from "@/data/migrations/20260413000126_training_quiz_question_progress";
 
 /**
@@ -215,6 +217,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
     sortKey: "20260410000125",
     sql: MIG_20260410000125,
   },
+  "20260413000012_community_onboarding_completed": {
+    id: "20260413000012_community_onboarding_completed",
+    title: "Community onboarding completion flag",
+    description:
+      "Adds community_members.onboarding_completed with a safe back-fill for existing members who already completed profile intake data. Supports explicit onboarding gating instead of inferring completion from first_name.",
+    sortKey: "20260413000012",
+    sql: MIG_20260413000012,
+  },
   "20260413000006_services_pricing_item_key": {
     id: "20260413000006_services_pricing_item_key",
     title: "Add pricing_item_key to services",
@@ -230,6 +240,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Creates quiz_question_progress to persist per-question correct answers for in-progress lesson quizzes. Lets learners leave after Q1/Q2 and resume at the first unanswered question instead of re-answering already-correct questions. Additive and RLS-protected.",
     sortKey: "20260413000126",
     sql: MIG_20260413000126,
+  },
+  "20260413000140_media_albums": {
+    id: "20260413000140_media_albums",
+    title: "Media image albums",
+    description:
+      "Adds album_name to media_items plus an index for image album grouping. Supports grouped image galleries and dashboard album management without affecting existing non-image media items.",
+    sortKey: "20260413000140",
+    sql: MIG_20260413000140,
   },
 };
 

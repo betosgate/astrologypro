@@ -23,6 +23,7 @@ import {
   MediaEditButton,
   MediaReorderButtons,
 } from "@/components/dashboard/media-controls";
+import { MAX_MEDIA_IMAGES } from "@/lib/media-gallery";
 
 export const metadata = { title: "Media Gallery" };
 
@@ -57,7 +58,7 @@ export default async function MediaGalleryPage() {
   const { data: items } = await admin
     .from("media_items")
     .select(
-      "id, type, url, title, description, thumbnail_url, sort_order, is_active, is_featured, view_count, created_at"
+      "id, type, url, title, description, thumbnail_url, album_name, sort_order, is_active, is_featured, moderation_status, submitted_for_review_at, reviewed_at, admin_review_notes, view_count, created_at"
     )
     .eq("diviner_id", diviner.id)
     .order("sort_order", { ascending: true })
@@ -67,6 +68,17 @@ export default async function MediaGalleryPage() {
   const totalCount = allItems.length;
   const featuredCount = allItems.filter((i) => i.is_featured).length;
   const activeCount = allItems.filter((i) => i.is_active).length;
+  const pendingReviewCount = allItems.filter((i) => i.moderation_status === "pending").length;
+  const blockedCount = allItems.filter((i) => i.moderation_status === "blocked").length;
+  const imageItems = allItems.filter((i) => i.type === "image");
+  const imageCount = imageItems.length;
+  const albums = Array.from(
+    new Set(
+      imageItems
+        .map((item) => item.album_name?.trim())
+        .filter((album): album is string => !!album)
+    )
+  );
 
   // Shape for reorder buttons
   const reorderItems = allItems.map((i) => ({ id: i.id, sort_order: i.sort_order }));
@@ -93,7 +105,7 @@ export default async function MediaGalleryPage() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card className="py-4">
           <CardContent className="flex flex-col items-center gap-1 px-4">
             <span className="text-2xl font-bold">{totalCount}</span>
@@ -112,7 +124,47 @@ export default async function MediaGalleryPage() {
             <span className="text-xs text-muted-foreground">Active</span>
           </CardContent>
         </Card>
+        <Card className="py-4">
+          <CardContent className="flex flex-col items-center gap-1 px-4">
+            <span className="text-2xl font-bold">{pendingReviewCount}</span>
+            <span className="text-xs text-muted-foreground">Pending Review</span>
+          </CardContent>
+        </Card>
+        <Card className="py-4">
+          <CardContent className="flex flex-col items-center gap-1 px-4">
+            <span className="text-2xl font-bold">{blockedCount}</span>
+            <span className="text-xs text-muted-foreground">Blocked</span>
+          </CardContent>
+        </Card>
       </div>
+
+      <Card>
+        <CardContent className="flex flex-col gap-3 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium">Image albums</p>
+              <p className="text-xs text-muted-foreground">
+                {imageCount}/{MAX_MEDIA_IMAGES} images used across {albums.length} album{albums.length === 1 ? "" : "s"}
+              </p>
+            </div>
+            <Badge variant={imageCount >= MAX_MEDIA_IMAGES ? "destructive" : "secondary"}>
+              {MAX_MEDIA_IMAGES - imageCount} slots left
+            </Badge>
+          </div>
+          {albums.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {albums.map((album) => {
+                const count = imageItems.filter((item) => item.album_name === album).length;
+                return (
+                  <Badge key={album} variant="outline" className="font-normal">
+                    {album} · {count}
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Items grid or empty state */}
       <Card>
@@ -143,7 +195,7 @@ export default async function MediaGalleryPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {allItems.map((item, idx) => {
+              {allItems.map((item) => {
                 const meta = TYPE_META[item.type] ?? TYPE_META.link;
                 const Icon = meta.icon;
                 return (
@@ -171,6 +223,11 @@ export default async function MediaGalleryPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-medium text-sm">{item.title}</p>
+                        {item.type === "image" && item.album_name && (
+                          <p className="mt-1 truncate text-xs text-muted-foreground">
+                            Album: {item.album_name}
+                          </p>
+                        )}
                       </div>
                       <Badge variant="secondary" className={`shrink-0 text-xs ${meta.color}`}>
                         {meta.label}
@@ -191,21 +248,39 @@ export default async function MediaGalleryPage() {
                         {/* Featured */}
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Star className="size-3" />
-                          <MediaFeaturedToggle itemId={item.id} featured={item.is_featured} />
+                          <MediaFeaturedToggle itemId={item.id} featured={item.is_featured} blocked={item.moderation_status === "blocked"} />
                         </div>
                         {/* Active */}
-                        <MediaActiveToggle itemId={item.id} active={item.is_active} />
+                        <MediaActiveToggle itemId={item.id} active={item.is_active} blocked={item.moderation_status === "blocked"} />
                       </div>
 
                       <div className="flex items-center gap-1">
                         <MediaReorderButtons
                           itemId={item.id}
-                          sortOrder={item.sort_order}
                           allItems={reorderItems}
                         />
                         <MediaEditButton itemId={item.id} />
                         <MediaDeleteButton itemId={item.id} />
                       </div>
+                    </div>
+                    <div className="space-y-1 rounded-md border border-dashed border-muted px-3 py-2 text-xs">
+                      <p className="font-medium text-foreground">
+                        Review status:{" "}
+                        <span className="capitalize">{String(item.moderation_status).replace("_", " ")}</span>
+                      </p>
+                      {item.moderation_status === "pending" && (
+                        <p className="text-muted-foreground">
+                          Awaiting admin review before this item can appear publicly.
+                        </p>
+                      )}
+                      {item.moderation_status === "blocked" && (
+                        <p className="text-destructive">
+                          Permanently blocked by admin. This item cannot be republished from your dashboard.
+                        </p>
+                      )}
+                      {item.admin_review_notes && (
+                        <p className="text-muted-foreground">Admin note: {item.admin_review_notes}</p>
+                      )}
                     </div>
                   </div>
                 );

@@ -24,7 +24,7 @@ export async function GET() {
     const { data: member, error: memberErr } = await supabase
       .from("community_members")
       .select(
-        "id, email, full_name, first_name, last_name, phone, gender, date_of_birth, birth_time, birth_city, state, city, zip, address, relationship_status, relation_type, intake_data, occupation, membership_status, membership_type"
+        "id, email, full_name, first_name, last_name, phone, gender, date_of_birth, birth_time, birth_city, state, city, zip, address, relationship_status, relation_type, intake_data, occupation, membership_status, membership_type, plan_type, onboarding_completed"
       )
       .eq("user_id", user.id)
       .maybeSingle();
@@ -44,7 +44,23 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json({ member });
+    const { data: familyMembers, error: familyError } = await supabase
+      .from("community_family_members")
+      .select(
+        "id, full_name, date_of_birth, birth_time, birth_city, birth_country, relationship, notes, invite_email, user_id"
+      )
+      .eq("member_id", member.id)
+      .order("created_at", { ascending: true });
+
+    if (familyError) {
+      console.error("[onboarding/prefill] family lookup error:", familyError);
+      return NextResponse.json(
+        { error: "Failed to load household members." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ member, family_members: familyMembers ?? [] });
   } catch (err) {
     console.error("[onboarding/prefill] error:", err);
     return NextResponse.json(

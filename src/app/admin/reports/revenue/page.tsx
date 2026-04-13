@@ -10,6 +10,8 @@ import {
   CalendarDays,
   Percent,
   Wallet,
+  Receipt,
+  Landmark,
 } from "lucide-react";
 import type { RevenueResponse } from "@/app/api/admin/reports/revenue/route";
 
@@ -106,7 +108,7 @@ export default function RevenueReportPage() {
             Revenue Dashboard
           </h1>
           <p className="text-sm text-muted-foreground">
-            Financial overview of completed bookings
+            Financial overview of recognized monetized events
           </p>
         </div>
         <div className="flex gap-2">
@@ -133,7 +135,7 @@ export default function RevenueReportPage() {
       )}
 
       {/* ── Summary Cards ──────────────────────────────────────────────────── */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
@@ -149,16 +151,16 @@ export default function RevenueReportPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">
-              Total Bookings
+              Monetized Events
             </CardTitle>
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold tabular-nums">
-              {fmtNumber(summary.totalBookings)}
+              {fmtNumber(summary.totalEvents)}
             </p>
             <p className="text-xs text-muted-foreground">
-              Avg {fmtCurrency(summary.avgBookingValue)} per booking
+              Avg {fmtCurrency(summary.avgEventValue)} per event
             </p>
           </CardContent>
         </Card>
@@ -174,14 +176,67 @@ export default function RevenueReportPage() {
             <p className="text-2xl font-bold tabular-nums">
               {fmtCurrency(summary.platformFees)}
             </p>
-            <p className="text-xs text-muted-foreground">20% of revenue</p>
+            <p className="text-xs text-muted-foreground">
+              Gross fee take, {fmtPercent(summary.platformFees / Math.max(summary.totalRevenue, 1))}
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">
-              Diviner Payouts
+              Platform Net
+            </CardTitle>
+            <Landmark className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold tabular-nums">
+              {fmtCurrency(summary.platformNetRevenue)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Actual kept share, {fmtPercent(summary.platformShareRatio)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">
+              Affiliate Commissions
+            </CardTitle>
+            <Receipt className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold tabular-nums">
+              {fmtCurrency(summary.affiliateCommissions)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {fmtPercent(summary.affiliateShareRatio)} of gross revenue
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">
+              Diviner Gross
+            </CardTitle>
+            <Percent className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold tabular-nums">
+              {fmtCurrency(summary.divinerGrossPayouts)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Before affiliate deductions
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">
+              Diviner Net
             </CardTitle>
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -189,7 +244,9 @@ export default function RevenueReportPage() {
             <p className="text-2xl font-bold tabular-nums">
               {fmtCurrency(summary.divinerPayouts)}
             </p>
-            <p className="text-xs text-muted-foreground">80% of revenue</p>
+            <p className="text-xs text-muted-foreground">
+              Actual paid share, {fmtPercent(summary.divinerShareRatio)}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -202,7 +259,7 @@ export default function RevenueReportPage() {
         <CardContent>
           {monthly.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              No completed bookings in this period
+              No recognized revenue in this period
             </p>
           ) : (
             <div className="flex items-end gap-2 overflow-x-auto pb-2">
@@ -223,13 +280,13 @@ export default function RevenueReportPage() {
                         maxHeight: "200px",
                         minHeight: "4px",
                       }}
-                      title={`${m.month}: ${fmtCurrency(m.revenue)} (${m.bookings} bookings)`}
+                      title={`${m.month}: ${fmtCurrency(m.revenue)} (${m.bookings} events)`}
                     />
                     <span className="text-xs text-muted-foreground">
                       {m.month}
                     </span>
                     <span className="text-xs text-muted-foreground tabular-nums">
-                      {m.bookings}b
+                      {m.bookings}e
                     </span>
                   </div>
                 );
@@ -259,7 +316,7 @@ export default function RevenueReportPage() {
                       Revenue
                     </th>
                     <th className="pb-2 pr-4 text-right font-medium">
-                      Bookings
+                      Events
                     </th>
                     <th className="pb-2 text-right font-medium">Avg Price</th>
                   </tr>
@@ -288,10 +345,10 @@ export default function RevenueReportPage() {
         </CardContent>
       </Card>
 
-      {/* ── Revenue by Service Type ────────────────────────────────────────── */}
+      {/* ── Revenue by Source Type ─────────────────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle>Revenue by Service Type</CardTitle>
+          <CardTitle>Revenue by Source Type</CardTitle>
         </CardHeader>
         <CardContent>
           {byService.length === 0 ? (
@@ -308,7 +365,7 @@ export default function RevenueReportPage() {
                       Revenue
                     </th>
                     <th className="pb-2 pr-4 text-right font-medium">
-                      Bookings
+                      Events
                     </th>
                     <th className="pb-2 text-right font-medium">Share</th>
                   </tr>

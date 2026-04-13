@@ -70,9 +70,12 @@ const INITIAL_CATEGORY_VISIBLE = 5;
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-function lessonStatus(lesson: LessonSummary): "completed" | "ongoing" | "not_started" {
+function lessonStatus(
+  lesson: LessonSummary,
+  isExpanded?: boolean,
+): "completed" | "ongoing" | "not_started" {
   if (lesson.completed) return "completed";
-  if (lesson.in_progress) return "ongoing";
+  if (lesson.in_progress || isExpanded) return "ongoing";
   return "not_started";
 }
 
@@ -286,7 +289,7 @@ export function ProgramWorkspace({
 
   // Auto-progression state
   const [pendingAdvanceLessonId, setPendingAdvanceLessonId] = useState<string | null>(null);
-  const [isAdvancing, setIsAdvancing] = useState(false);
+  const [waitingToAutoAdvance, setWaitingToAutoAdvance] = useState(false);
 
   const selectedCategory = useMemo(
     () => categories.find((c) => c.id === selectedCategoryId) ?? null,
@@ -301,42 +304,52 @@ export function ProgramWorkspace({
     // 1. Mark as pending and trigger refresh
     if (expandedLessonId) {
       setPendingAdvanceLessonId(expandedLessonId);
-      setIsAdvancing(true);
+      setWaitingToAutoAdvance(true);
     }
     router.refresh();
   }, [router, expandedLessonId]);
 
   // Effect to handle auto-progression after categories prop updates
   useEffect(() => {
-    if (!isAdvancing || !pendingAdvanceLessonId) return;
+    if (!waitingToAutoAdvance || !pendingAdvanceLessonId) return;
 
     // We look through all categories and lessons to find the one after pendingAdvanceLessonId
-    let foundNext = false;
+    let foundCurrent = false;
+    let autoAdvanced = false;
+    let hasNextPhysicalItem = false;
     
     for (let cIdx = 0; cIdx < categories.length; cIdx++) {
       const category = categories[cIdx];
       const lessonIdx = category.lessons.findIndex(l => l.id === pendingAdvanceLessonId);
       
       if (lessonIdx !== -1) {
-        // We found the category of the completed lesson
-        if (lessonIdx < category.lessons.length - 1) {
-          // Next lesson in SAME category
-          const nextLesson = category.lessons[lessonIdx + 1];
-          // After router.refresh(), the lock status should be updated
-          if (!nextLesson.is_locked) {
-            setExpandedLessonId(nextLesson.id);
-            setSelectedCategoryId(category.id);
-            foundNext = true;
-          }
-        } else if (cIdx < categories.length - 1) {
-          // It was the last lesson of the category -> look in NEXT category
-          const nextCategory = categories[cIdx + 1];
-          if (!nextCategory.is_locked) {
-            const nextLId = firstOpenableLessonId(nextCategory);
-            if (nextLId) {
-              setSelectedCategoryId(nextCategory.id);
-              setExpandedLessonId(nextLId);
-              foundNext = true;
+        foundCurrent = true;
+        
+        // 1. Try to find the first incomplete/unlocked lesson in the CURRENT category
+        const nextInCurrent = firstOpenableLessonId(category);
+        if (nextInCurrent && nextInCurrent !== pendingAdvanceLessonId) {
+          setExpandedLessonId(nextInCurrent);
+          setSelectedCategoryId(category.id);
+          autoAdvanced = true;
+          hasNextPhysicalItem = true; // Still items to do in this category
+        } 
+        // 2. If current category is done, try the next categories
+        else {
+          for (let nIdx = cIdx + 1; nIdx < categories.length; nIdx++) {
+            const nextCategory = categories[nIdx];
+            if (!nextCategory.is_locked) {
+              const nextLId = firstOpenableLessonId(nextCategory);
+              if (nextLId) {
+                setSelectedCategoryId(nextCategory.id);
+                setExpandedLessonId(nextLId);
+                autoAdvanced = true;
+                hasNextPhysicalItem = true;
+                break;
+              }
+            } else {
+              // If we hit a locked category, we stop searching
+              hasNextPhysicalItem = true; // Technically there is more, it's just locked
+              break;
             }
           }
         }
@@ -344,14 +357,18 @@ export function ProgramWorkspace({
       }
     }
 
-    if (foundNext) {
+    if (autoAdvanced) {
       toast.success("Moving to next lesson...", { duration: 2000 });
+      setWaitingToAutoAdvance(false);
+      setPendingAdvanceLessonId(null);
+    } else if (!hasNextPhysicalItem || (!foundCurrent && categories.length > 0)) {
+      // Clear flag if there's nowhere to go or we somehow lost track of the lesson
+      setWaitingToAutoAdvance(false);
+      setPendingAdvanceLessonId(null);
     }
-    
-    // Always clear the flag so we don't keep trying to advance on every render
-    setIsAdvancing(false);
-    setPendingAdvanceLessonId(null);
-  }, [categories, isAdvancing, pendingAdvanceLessonId]);
+    // Note: if hasNextPhysicalItem is true but autoAdvanced is false, 
+    // it means the item is STILL LOCKED. We keep waiting for the next props update.
+  }, [categories, waitingToAutoAdvance, pendingAdvanceLessonId]);
 
   const hiddenCount = Math.max(0, categories.length - INITIAL_CATEGORY_VISIBLE);
 
@@ -490,8 +507,8 @@ export function ProgramWorkspace({
             ) : (
               <ul className="space-y-2">
                 {selectedCategory.lessons.map((lesson, lIdx) => {
-                  const status = lessonStatus(lesson);
                   const isExpanded = lesson.id === expandedLessonId;
+                  const status = lessonStatus(lesson, isExpanded);
                   const isLocked = lesson.is_locked;
 
                   const handleLessonToggle = () => {
@@ -570,7 +587,7 @@ export function ProgramWorkspace({
                                 categoryId={selectedCategory.id}
                                 onComplete={handleLessonComplete}
                               />
-                              <div className="flex justify-end pt-1">
+                              {/* <div className="flex justify-end pt-1">
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -584,7 +601,7 @@ export function ProgramWorkspace({
                                     Open full page
                                   </Link>
                                 </Button>
-                              </div>
+                              </div> */}
                             </>
                           </div>
                         )}

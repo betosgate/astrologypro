@@ -52,10 +52,11 @@ export async function GET(
   let query = admin
     .from("media_items")
     .select(
-      "id, type, url, title, description, thumbnail_url, category, platform, duration_seconds, sort_order, is_featured, view_count, created_at"
+      "id, type, url, title, description, thumbnail_url, category, album_name, platform, duration_seconds, sort_order, is_featured, view_count, created_at"
     )
     .eq("diviner_id", diviner.id)
     .eq("is_active", true)
+    .eq("moderation_status", "approved")
     .order("is_featured", { ascending: false })
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });

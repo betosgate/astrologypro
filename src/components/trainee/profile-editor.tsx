@@ -20,6 +20,8 @@ import {
 import { Pencil, Loader2, Camera, Check } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { ProfileCompletionBar } from "@/components/ui/profile-completion-bar";
+import { calculateProfileCompletion } from "@/lib/profile-completion";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -32,6 +34,12 @@ interface ProfileEditorProps {
   avatarUrl: string | null;
   username: string;
   allowedSpecialties: readonly string[];
+  phone: string | null;
+  timezone: string | null;
+  goals: string | null;
+  birthDate: string | null;
+  birthTime: string | null;
+  birthCity: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -45,11 +53,23 @@ export function ProfileEditor({
   avatarUrl: initialAvatarUrl,
   username,
   allowedSpecialties,
+  phone: initialPhone,
+  timezone: initialTimezone,
+  goals: initialGoals,
+  birthDate: initialBirthDate,
+  birthTime: initialBirthTime,
+  birthCity: initialBirthCity,
 }: ProfileEditorProps) {
   const [name, setName] = useState(initialName);
   const [bio, setBio] = useState(initialBio ?? "");
   const [specialties, setSpecialties] = useState<string[]>(initialSpecialties);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl);
+  const [phone, setPhone] = useState(initialPhone ?? "");
+  const [timezone, setTimezone] = useState(initialTimezone ?? "");
+  const [goals, setGoals] = useState(initialGoals ?? "");
+  const [birthDate, setBirthDate] = useState(initialBirthDate ?? "");
+  const [birthTime, setBirthTime] = useState(initialBirthTime ?? "");
+  const [birthCity, setBirthCity] = useState(initialBirthCity ?? "");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [specialtiesOpen, setSpecialtiesOpen] = useState(false);
@@ -125,6 +145,12 @@ export function ProfileEditor({
           name: name.trim(),
           bio: bio.trim() || undefined,
           specialties,
+          phone: phone.trim() || undefined,
+          timezone: timezone.trim() || undefined,
+          goals: goals.trim() || undefined,
+          birth_date: birthDate || undefined,
+          birth_time: birthTime || undefined,
+          birth_city: birthCity.trim() || undefined,
         }),
       });
 
@@ -155,8 +181,33 @@ export function ProfileEditor({
     .join("")
     .toUpperCase();
 
+  const completion = calculateProfileCompletion([
+    { key: "trainee-name", label: "Display name", value: name },
+    { key: "trainee-bio", label: "Bio", value: bio },
+    { key: "trainee-avatar", label: "Profile photo", value: avatarUrl },
+    { key: "trainee-phone", label: "Phone", value: phone },
+    { key: "trainee-timezone", label: "Timezone", value: timezone },
+    { key: "trainee-specialties", label: "Specialties", value: specialties },
+    { key: "trainee-birth-date", label: "Birth date", value: birthDate },
+  ]);
+
+  function focusField(fieldKey: string) {
+    document.getElementById(fieldKey)?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }
+
   return (
     <div className="space-y-6">
+      <ProfileCompletionBar
+        percentage={completion.percentage}
+        missingFields={completion.missingFields}
+        completedCount={completion.completedCount}
+        totalCount={completion.totalCount}
+        onMissingFieldClick={focusField}
+      />
+
       {/* ── Avatar ── */}
       <div className="flex items-center gap-4">
         <div className="relative">
@@ -197,9 +248,9 @@ export function ProfileEditor({
 
       {/* ── Name ── */}
       <div className="space-y-1.5">
-        <Label htmlFor="profile-name">Display name</Label>
+        <Label htmlFor="trainee-name">Display name</Label>
         <Input
-          id="profile-name"
+          id="trainee-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           maxLength={100}
@@ -210,14 +261,14 @@ export function ProfileEditor({
 
       {/* ── Bio ── */}
       <div className="space-y-1.5">
-        <Label htmlFor="profile-bio">
+        <Label htmlFor="trainee-bio">
           Bio{" "}
           <span className="text-xs font-normal text-muted-foreground">
             ({bio.length}/500)
           </span>
         </Label>
         <Textarea
-          id="profile-bio"
+          id="trainee-bio"
           value={bio}
           onChange={(e) => setBio(e.target.value.slice(0, 500))}
           rows={4}
@@ -229,7 +280,7 @@ export function ProfileEditor({
       {/* ── Specialties ── */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label>Specialties</Label>
+          <Label htmlFor="trainee-specialties">Specialties</Label>
           <Dialog open={specialtiesOpen} onOpenChange={setSpecialtiesOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
@@ -275,6 +326,7 @@ export function ProfileEditor({
           </Dialog>
         </div>
         <div className="flex flex-wrap gap-2">
+          <div id="trainee-specialties" />
           {specialties.length === 0 ? (
             <p className="text-sm text-muted-foreground">No specialties selected yet.</p>
           ) : (
@@ -284,6 +336,68 @@ export function ProfileEditor({
               </Badge>
             ))
           )}
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="trainee-phone">Phone</Label>
+          <Input
+            id="trainee-phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+1 (555) 123-4567"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="trainee-timezone">Timezone</Label>
+          <Input
+            id="trainee-timezone"
+            value={timezone}
+            onChange={(e) => setTimezone(e.target.value)}
+            placeholder="America/New_York"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="trainee-goals">Training goals</Label>
+        <Textarea
+          id="trainee-goals"
+          value={goals}
+          onChange={(e) => setGoals(e.target.value)}
+          rows={3}
+          placeholder="What are you working toward in your training?"
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="trainee-birth-date">Birth date</Label>
+          <Input
+            id="trainee-birth-date"
+            type="date"
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="trainee-birth-time">Birth time</Label>
+          <Input
+            id="trainee-birth-time"
+            type="time"
+            value={birthTime}
+            onChange={(e) => setBirthTime(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="trainee-birth-city">Birth city</Label>
+          <Input
+            id="trainee-birth-city"
+            value={birthCity}
+            onChange={(e) => setBirthCity(e.target.value)}
+            placeholder="e.g. New York, NY"
+          />
         </div>
       </div>
 
