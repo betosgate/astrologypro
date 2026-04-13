@@ -23,6 +23,8 @@ interface Props {
   fallbackContent?: string | null;
   nextLiveAt?: string | null;
   divinerId: string;
+  divinerName?: string;
+  fallbackImageUrl?: string | null;
 }
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -165,6 +167,8 @@ export function LiveStreamSection({
   platformConfigs,
   fallbackContent,
   nextLiveAt,
+  divinerName,
+  fallbackImageUrl,
 }: Props) {
   // Only configs for currently-active live platforms
   const activeLiveConfigs = platformConfigs.filter(
@@ -177,25 +181,44 @@ export function LiveStreamSection({
 
   // Not live state
   if (!isLive) {
-    if (!fallbackContent && !nextLiveAt) return null;
-
     return (
       <section id="live" className="py-8">
         <div className="mx-auto max-w-3xl px-4">
-          <div className="glass-card rounded-2xl p-8 text-center">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-white/[0.04]">
-              <span className="text-2xl">🔮</span>
-            </div>
-            {fallbackContent ? (
-              <p className="text-sm leading-relaxed text-silver/70">{fallbackContent}</p>
-            ) : (
-              <p className="text-sm text-silver/50">Not currently live</p>
-            )}
+          <div className="glass-card overflow-hidden rounded-2xl">
+            {fallbackImageUrl ? (
+              <div className="relative h-56 w-full overflow-hidden border-b border-white/[0.06]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={fallbackImageUrl}
+                  alt={divinerName ? `${divinerName} profile` : "Diviner profile"}
+                  className="h-full w-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-cosmos-900 via-cosmos-900/20 to-transparent" />
+                <div className="absolute bottom-4 left-4 rounded-full border border-white/10 bg-cosmos-900/75 px-3 py-1 text-xs font-medium tracking-[0.2em] text-silver/80 uppercase">
+                  Offline now
+                </div>
+              </div>
+            ) : null}
+
+            <div className="p-8 text-center">
+              <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-white/[0.04]">
+                <span className="text-2xl">🔮</span>
+              </div>
+              {fallbackContent ? (
+                <p className="text-sm leading-relaxed text-silver/70">{fallbackContent}</p>
+              ) : (
+                <p className="text-sm text-silver/60">
+                  {divinerName
+                    ? `${divinerName} is not live right now. Browse media, testimonials, or book a private session below.`
+                    : "Not currently live."}
+                </p>
+              )}
             {nextLiveAt && (
               <p className="mt-4 text-sm font-medium text-gold">
                 Next live: {formatNextLive(nextLiveAt)}
               </p>
             )}
+            </div>
           </div>
         </div>
       </section>

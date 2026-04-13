@@ -90,13 +90,13 @@ export interface WalkthroughSection {
 
 export const ROLE_SLUGS: Record<string, string> = {
   admin: "Admin Back Office",
-  public: "Public / Visitor",
-  customer: "Customer Portal",
+  diviner: "Diviner Dashboard",
   community: "Community Member",
   "mystery-school": "Mystery School",
-  diviner: "Diviner Dashboard",
   social_advo: "Social Advocate",
   trainee: "Trainee",
+  customer: "Customer Portal",
+  public: "Public / Visitor",
 };
 
 // ─── Section definitions ────────────────────────────────────────────────────
@@ -147,68 +147,35 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ],
   },
   {
-    role: "Public / Visitor",
-    slug: "public",
-    tagline: "First impressions and platform discovery",
+    role: "Diviner Dashboard",
+    slug: "diviner",
+    tagline: "Clinical espiritual and business operations",
     roleDescription:
-      "Unauthenticated pages designed to convert visitors into community members or clients through discovery and education.",
-    icon: Globe,
-    gradient: "from-sky-500/20 to-blue-600/10",
-    featureAreas: ["Discovery", "Marketing", "Knowledge", "Onboarding"],
+      "Manage every aspect of your spiritual business — from clients to marketing and streams.",
+    icon: Star,
+    gradient: "from-amber-500/20 to-yellow-600/10",
+    featureAreas: ["Scheduling", "CRM", "Business Operations", "Engagement"],
     capabilities: [
-      "Browse and filter professional diviners",
-      "Read spiritual articles and transit reports",
-      "Interactive booking and service selection",
-      "Self-serve registration and hub joining",
+      "Manage bookings and availability",
+      "Track client history and readings",
+      "Host live broadcast sessions",
+      "Oversee affiliate commissions",
     ],
-    keyPages: ["Homepage", "Discover", "Practitioner Profile", "Blog", "Join Hub"],
+    keyPages: ["CRM Overview", "Bookings", "Client Spirit Twin", "Broadcast Hub", "Billing"],
     groups: [
       {
-        groupLabel: "Marketing",
+        groupLabel: "Schedule",
         cards: [
-          { title: "Homepage", description: "Main landing page", href: "/", icon: Home, status: "live" },
-          { title: "Blog", description: "Spiritual insights", href: "/blog", icon: FileText, status: "live" },
+          { title: "Overview", description: "Daily workload summary", href: "/dashboard", icon: LayoutDashboard, status: "live" },
         ],
       },
     ],
     screens: [
-      { name: "home", label: "Homepage", description: "Main entry point with premium astrology branding.", group: "Marketing" },
-      { name: "discover", label: "Diviner Discovery", description: "Search interface for finding practitioners.", group: "Discovery" },
-      { name: "profile", label: "Practitioner Profile", description: "Public page for a diviner.", group: "Discovery" },
-      { name: "checkout", label: "Booking Checkout", description: "Payment and scheduling flow.", group: "Discovery" },
-      { name: "blog", label: "Blog Index", description: "Grid of latest articles.", group: "Marketing" },
-      { name: "join", label: "Registration Hub", description: "Membership tier selection.", group: "Onboarding" },
-    ],
-  },
-  {
-    role: "Customer Portal",
-    slug: "customer",
-    tagline: "Personal spiritual management and history",
-    roleDescription:
-      "A dedicated area for clients to manage their spiritual journey, track reading history, and interact with practitioners.",
-    icon: User,
-    gradient: "from-emerald-500/20 to-green-600/10",
-    featureAreas: ["Dashboard", "Orders", "Bookings", "Account"],
-    capabilities: [
-      "Track upcoming and past readings",
-      "Manage service subscriptions and billing",
-      "Access recorded sessions and transcripts",
-      "Update personal spiritual profile",
-    ],
-    keyPages: ["Dashboard", "My Bookings", "Order History", "Spiritual Profile"],
-    groups: [
-      {
-        groupLabel: "Dashboard",
-        cards: [
-          { title: "Dashboard", description: "Customer overview", href: "/portal", icon: LayoutDashboard, status: "live" },
-        ],
-      },
-    ],
-    screens: [
-      { name: "dashboard", label: "Customer Dashboard", description: "At-a-glance view of appointments.", group: "Dashboard" },
-      { name: "bookings", label: "My Bookings", description: "Management of upcoming sessions.", group: "Services" },
-      { name: "orders", label: "Order History", description: "Detailed list of all platform purchases.", group: "Services" },
-      { name: "profile", label: "User Profile", description: "Account settings.", group: "Dashboard" },
+      { name: "overview", label: "Practitioner CRM", description: "Overview of today's operations.", group: "Schedule" },
+      { name: "calendar", label: "Session Calendar", description: "Map of upcoming readings.", group: "Schedule" },
+      { name: "client-detail", label: "Client Spiritual Twin", description: "Comprehensive client history.", group: "Business" },
+      { name: "broadcast", label: "Live Hub", description: "Streaming and chat interface.", group: "Engagement" },
+      { name: "payouts", label: "Billing & Payouts", description: "Financial transparency.", group: "Business" },
     ],
   },
   {
@@ -275,38 +242,6 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ],
   },
   {
-    role: "Diviner Dashboard",
-    slug: "diviner",
-    tagline: "Clinical espiritual and business operations",
-    roleDescription:
-      "Manage every aspect of your spiritual business — from clients to marketing and streams.",
-    icon: Star,
-    gradient: "from-amber-500/20 to-yellow-600/10",
-    featureAreas: ["Scheduling", "CRM", "Business Operations", "Engagement"],
-    capabilities: [
-      "Manage bookings and availability",
-      "Track client history and readings",
-      "Host live broadcast sessions",
-      "Oversee affiliate commissions",
-    ],
-    keyPages: ["CRM Overview", "Bookings", "Client Spirit Twin", "Broadcast Hub", "Billing"],
-    groups: [
-      {
-        groupLabel: "Schedule",
-        cards: [
-          { title: "Overview", description: "Daily workload summary", href: "/dashboard", icon: LayoutDashboard, status: "live" },
-        ],
-      },
-    ],
-    screens: [
-      { name: "overview", label: "Practitioner CRM", description: "Overview of today's operations.", group: "Schedule" },
-      { name: "calendar", label: "Session Calendar", description: "Map of upcoming readings.", group: "Schedule" },
-      { name: "client-detail", label: "Client Spiritual Twin", description: "Comprehensive client history.", group: "Business" },
-      { name: "broadcast", label: "Live Hub", description: "Streaming and chat interface.", group: "Engagement" },
-      { name: "payouts", label: "Billing & Payouts", description: "Financial transparency.", group: "Business" },
-    ],
-  },
-  {
     role: "Social Advocate",
     slug: "social_advo",
     tagline: "Affiliate growth and referral rewards",
@@ -362,7 +297,73 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       { name: "curriculum", label: "Learning Path", description: "Chronological map of lessons.", group: "Training" },
     ],
   },
+  {
+    role: "Customer Portal",
+    slug: "customer",
+    tagline: "Personal spiritual management and history",
+    roleDescription:
+      "A dedicated area for clients to manage their spiritual journey, track reading history, and interact with practitioners.",
+    icon: User,
+    gradient: "from-emerald-500/20 to-green-600/10",
+    featureAreas: ["Dashboard", "Orders", "Bookings", "Account"],
+    capabilities: [
+      "Track upcoming and past readings",
+      "Manage service subscriptions and billing",
+      "Access recorded sessions and transcripts",
+      "Update personal spiritual profile",
+    ],
+    keyPages: ["Dashboard", "My Bookings", "Order History", "Spiritual Profile"],
+    groups: [
+      {
+        groupLabel: "Dashboard",
+        cards: [
+          { title: "Dashboard", description: "Customer overview", href: "/portal", icon: LayoutDashboard, status: "live" },
+        ],
+      },
+    ],
+    screens: [
+      { name: "dashboard", label: "Customer Dashboard", description: "At-a-glance view of appointments.", group: "Dashboard" },
+      { name: "bookings", label: "My Bookings", description: "Management of upcoming sessions.", group: "Services" },
+      { name: "orders", label: "Order History", description: "Detailed list of all platform purchases.", group: "Services" },
+      { name: "profile", label: "User Profile", description: "Account settings.", group: "Dashboard" },
+    ],
+  },
+  {
+    role: "Public / Visitor",
+    slug: "public",
+    tagline: "First impressions and platform discovery",
+    roleDescription:
+      "Unauthenticated pages designed to convert visitors into community members or clients through discovery and education.",
+    icon: Globe,
+    gradient: "from-sky-500/20 to-blue-600/10",
+    featureAreas: ["Discovery", "Marketing", "Knowledge", "Onboarding"],
+    capabilities: [
+      "Browse and filter professional diviners",
+      "Read spiritual articles and transit reports",
+      "Interactive booking and service selection",
+      "Self-serve registration and hub joining",
+    ],
+    keyPages: ["Homepage", "Discover", "Practitioner Profile", "Blog", "Join Hub"],
+    groups: [
+      {
+        groupLabel: "Marketing",
+        cards: [
+          { title: "Homepage", description: "Main landing page", href: "/", icon: Home, status: "live" },
+          { title: "Blog", description: "Spiritual insights", href: "/blog", icon: FileText, status: "live" },
+        ],
+      },
+    ],
+    screens: [
+      { name: "home", label: "Homepage", description: "Main entry point with premium astrology branding.", group: "Marketing" },
+      { name: "discover", label: "Diviner Discovery", description: "Search interface for finding practitioners.", group: "Discovery" },
+      { name: "profile", label: "Practitioner Profile", description: "Public page for a diviner.", group: "Discovery" },
+      { name: "checkout", label: "Booking Checkout", description: "Payment and scheduling flow.", group: "Discovery" },
+      { name: "blog", label: "Blog Index", description: "Grid of latest articles.", group: "Marketing" },
+      { name: "join", label: "Registration Hub", description: "Membership tier selection.", group: "Onboarding" },
+    ],
+  },
 ];
+
 
 
 export const ADDITIONAL_PAGES = [
