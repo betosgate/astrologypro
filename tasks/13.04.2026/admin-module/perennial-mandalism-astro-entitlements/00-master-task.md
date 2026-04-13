@@ -24,6 +24,7 @@ The system also needs operational rules:
 - after the retry limit, they must open a job or support ticket for review
 - when natal or monthly transit artifacts are created, the user must be notified
 - when an existing user adds another household user, that added user must get an email to complete signup
+- the primary user must be able to see other household users' charts, and household users under the same primary account must be able to see each other's charts
 
 This pack is architecture and task writing only. It does not implement the feature.
 
@@ -102,6 +103,7 @@ The correct architecture is:
 8. `08-base-user-auto-provisioning-natal-and-monthly-only.md`
 9. `09-chart-creation-notifications-and-delivery-audit.md`
 10. `10-added-household-user-signup-invite-and-delivery-tracking.md`
+11. `11-household-chart-visibility-and-shared-access-rules.md`
 
 ## Acceptance Standard
 
@@ -113,6 +115,7 @@ This feature set is complete only when:
 - monthly transits generate exactly once per member profile per month
 - users are notified when natal charts and monthly transit artifacts are created
 - added household users receive an email prompting them to complete signup
+- household chart visibility rules allow the main user and same-household users to view each other's charts according to shared access policy
 - chart regeneration is capped at `3` correction attempts
 - support escalation uses the existing ticket system
 - admin has visibility into chart status, failures, retries, and unresolved issues
