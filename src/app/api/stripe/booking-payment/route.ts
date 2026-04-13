@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/activity-log";
+import { trackDivinerActivityEvent } from "@/lib/diviner-analytics";
 import { createPaymentIntent } from "@/lib/stripe/connect";
 import { createCalendarEvent } from "@/lib/google-calendar";
 import { buildCalendarDescription, stripHtml } from "@/lib/calendar-utils";
@@ -535,6 +536,22 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    await trackDivinerActivityEvent({
+      divinerId: diviner.id,
+      activityType: "booking_checkout_started",
+      path: divinerUsername
+        ? `/${divinerUsername}/book/${service.slug ?? service.id}`
+        : null,
+      referrer: request.headers.get("referer"),
+      request,
+      metadata: {
+        bookingId: booking.id,
+        serviceId: service.id,
+        serviceName: service.name,
+        affiliateCode: affiliateCode ?? null,
+      },
+    });
 
     const initialOrderStatus = shouldCharge
       ? "pending_payment"

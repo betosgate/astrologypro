@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { trackDivinerActivityEvent } from "@/lib/diviner-analytics";
 import { calculateSpamScore } from "@/lib/spam-check";
 import {
   isPublicSectionBlocked,
@@ -204,6 +205,19 @@ export async function POST(
       "Failed to save testimonial. Please try again."
     );
   }
+
+  await trackDivinerActivityEvent({
+    divinerId: diviner.id,
+    activityType: "testimonial_submitted",
+    path: `/${username}`,
+    referrer: req.headers.get("referer"),
+    request: req,
+    metadata: {
+      testimonialId: inserted.id,
+      rating: cleanRating,
+      serviceName: cleanServiceName,
+    },
+  });
 
   return NextResponse.json(
     {
