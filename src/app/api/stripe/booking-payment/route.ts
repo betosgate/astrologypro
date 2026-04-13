@@ -601,6 +601,44 @@ export async function POST(request: NextRequest) {
         notes: booking_notes ?? null,
       });
 
+      // Push Google Calendar event immediately for paid bookings so it works
+      // without needing the Stripe webhook (webhook will update if needed).
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+      try {
+        const calEventDescription = buildCalendarDescription(
+          availabilityTemplateDescription,
+          appUrl,
+          booking.booking_token,
+        );
+        const calAttendeesPaid: Array<{ email: string; name?: string }> = [];
+        const spEmailPaid = questionnaireData.secondPersonEmail as string | undefined;
+        const spNamePaid = questionnaireData.secondPersonName as string | undefined;
+        const spAttendingPaid = questionnaireData.secondPersonAttending as string | undefined;
+        if (spEmailPaid && (spAttendingPaid === "yes" || spAttendingPaid === "maybe")) {
+          calAttendeesPaid.push({ email: spEmailPaid, name: spNamePaid || undefined });
+        }
+        createCalendarEvent(resolvedDivinerId, {
+          title: `${availabilityTemplateTitle ?? service.name} — ${clientName}`,
+          description: calEventDescription,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          clientEmail,
+          clientName,
+          additionalAttendees: calAttendeesPaid,
+        })
+          .then(({ eventId }) =>
+            adminSupabase
+              .from("bookings")
+              .update({ google_calendar_event_id: eventId })
+              .eq("id", booking.id)
+          )
+          .catch((err) =>
+            console.error("[booking-payment] Failed to create Google Calendar event (paid):", err)
+          );
+      } catch (gcalErr) {
+        console.error("[booking-payment] GCal setup error (paid):", gcalErr);
+      }
+
       // Consume the member discount token now that the payment intent is created
       if (memberDiscountTokenId) {
         await adminSupabase
