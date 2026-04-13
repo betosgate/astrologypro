@@ -1,7 +1,7 @@
 # Luna Brightwell QA Service Commerce — Architect Task Pack
 
 - Date: 2026-04-13
-- Status: Open
+- Status: Done
 - Priority: P0
 - Owner: Architecture / Full-stack
 
