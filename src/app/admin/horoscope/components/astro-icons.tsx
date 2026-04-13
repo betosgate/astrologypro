@@ -206,6 +206,7 @@ export function SmartHeading({ title, className, iconSize = "size-5", textSize =
         const planetImg = PLANET_IMAGES[titled];
         const isPlanet = PLANET_SYMBOLS[titled];
         const isZodiac = ZODIAC_SYMBOLS[titled];
+        const aspectImg = ASPECT_IMAGES[titled] || (titled === "Conjunct" ? ASPECT_IMAGES["Conjunction"] : null);
 
         return (
           <span key={i} className="flex items-center gap-2">
@@ -213,6 +214,9 @@ export function SmartHeading({ title, className, iconSize = "size-5", textSize =
             {planetImg ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={planetImg} alt="" className={cn(iconSize, "object-contain shrink-0")} />
+            ) : aspectImg ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={aspectImg} alt="" className={cn(iconSize, "object-contain shrink-0")} />
             ) : isPlanet ? (
               <ManualPlanetIcon name={titled} size={iconSize} />
             ) : isZodiac ? (
