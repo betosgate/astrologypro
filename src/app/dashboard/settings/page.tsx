@@ -179,6 +179,15 @@ function SettingsContent() {
       toast.error(`Failed to connect PayPal${reason ? `: ${reason}` : ""}`);
       router.replace("/dashboard/settings", { scroll: false });
     }
+
+    const stripeStatus = searchParams.get("stripe");
+    if (stripeStatus === "complete") {
+      toast.success("Stripe account connected! Your payments will be enabled shortly.");
+      router.replace("/dashboard/settings?tab=payments", { scroll: false });
+    } else if (stripeStatus === "refresh") {
+      toast.info("Stripe setup was not completed. Please try again.");
+      router.replace("/dashboard/settings?tab=payments", { scroll: false });
+    }
   }, [searchParams, router]);
 
   useEffect(() => {
