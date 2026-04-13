@@ -422,6 +422,10 @@ function TriggerVideoPlayer({
       try {
         vid!.pause();
         vid!.currentTime = startSeconds;
+        // Initial lesson autoplay must be muted for browser policy compliance,
+        // but remediation starts from a learner click, so replay the required
+        // segment with normal audio for better review context.
+        vid!.muted = false;
         vid!.play().catch(() => undefined);
       } catch {
         // ignore
