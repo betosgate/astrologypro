@@ -219,6 +219,41 @@ function AstroHeaderParts({ title }: { title?: string }) {
   );
 }
 
+// Renders any title string and automatically inserts icons after recognized planets/zodiac signs
+function SmartHeading({ title, className, iconSize = "size-5", textSize = "text-sm" }: { title?: string; className?: string; iconSize?: string; textSize?: string }) {
+  if (!title) return null;
+  const words = title.split(/\s+/);
+  return (
+    <div className={cn("flex items-center justify-center gap-x-2 gap-y-1 flex-wrap", className)}>
+      {words.map((word, i) => {
+        const clean = word.replace(/[(),.:]/g, "").trim();
+        const titled = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+
+        // Planet lookup
+        const planetImg = PLANET_IMAGES[titled];
+        const isPlanet = PLANET_SYMBOLS[titled];
+
+        // Zodiac lookup
+        const isZodiac = ZODIAC_SYMBOLS[titled];
+
+        return (
+          <span key={i} className="flex items-center gap-2">
+            <span className={cn("font-bold uppercase tracking-wider whitespace-nowrap", textSize)}>{word}</span>
+            {planetImg ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={planetImg} alt="" className={cn(iconSize, "object-contain shrink-0")} />
+            ) : isPlanet ? (
+              <ManualPlanetIcon name={titled} size={iconSize} />
+            ) : isZodiac ? (
+              <ManualZodiacIcon sign={titled} size={iconSize} />
+            ) : null}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Tab definitions ─────────────────────────────────────────────────────────
 
 type TabType = "single" | "two-person";
@@ -2299,14 +2334,8 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       <div className="space-y-2">
         {items.map((item: any, i: number) => (
           <div key={i} className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-2 horoscope-interp-header flex items-center justify-center gap-2">
-              {item.name && (PLANET_IMAGES[item.name] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={PLANET_IMAGES[item.name]} alt={item.name} className="size-5 object-contain" />
-              ) : (
-                <ManualPlanetIcon name={item.name} size="size-7" />
-              ))}
-              <h4 className="text-center w-full">{item.title ?? item.name ?? `${title} ${i + 1}`}</h4>
+            <div className="px-4 py-3 horoscope-interp-header">
+              <SmartHeading title={item.title ?? item.name ?? `${title} ${i + 1}`} />
             </div>
             <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
               <p className="leading-relaxed">{item.interpretation ?? item.data ?? item.forecast}</p>
@@ -2339,7 +2368,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
             <table className="horoscope-table">
               <thead>
                 <tr>
-                  {["Native Birth Date", "Solar Return Date", "Sun Degree", "Solar Return ASC"].map((h) => (
+                  {["Native Birth Date", "Solar Return Date"].map((h) => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
@@ -2348,8 +2377,6 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
                 <tr>
                   <td>{details.native_birth_date ?? details.date_of_birth ?? "—"}</td>
                   <td className="font-semibold text-amber-500">{details.solar_return_date ?? details.return_date ?? "—"}</td>
-                  <td className="td-mono">{details.sun_degree ?? "—"}</td>
-                  <td>{details.solar_return_asc ?? details.ascendant ?? "—"}</td>
                 </tr>
               </tbody>
             </table>
@@ -2407,36 +2434,38 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
               const forecasts: string[] = Array.isArray(p.forecast) ? p.forecast : (p.forecast ? [String(p.forecast)] : []);
               return (
                 <div key={p.name ?? i} className="rounded-lg border overflow-hidden">
-                  <div className="px-4 py-2 horoscope-interp-header flex items-center justify-center gap-2">
-                    {p.name && (PLANET_IMAGES[p.name] ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={PLANET_IMAGES[p.name]} alt={p.name} className="size-5 object-contain" />
-                    ) : (
-                      <ManualPlanetIcon name={p.name} size="size-7" />
-                    ))}
-                    <h4 className="text-center w-full">{p.name ?? `Planet ${i + 1}`}</h4>
-                    {p.name && p.sign && checkDacen(p.name, p.sign) && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            onClick={() => onDecanClick(p.name, p.sign)}
-                            className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
-                              alt=""
-                              className="size-5 cursor-pointer hover:scale-125 transition-all hover:brightness-150 hover:drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]"
-                            />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
-                          Decan Information
-                        </TooltipContent>
-                      </Tooltip>
+                  <div className="px-4 py-4 horoscope-interp-header relative flex items-center justify-center min-h-[64px]">
+                    <div className="flex items-center gap-4">
+                      <SmartHeading title={p.name ?? `Planet ${i + 1}`} textSize="text-2xl" iconSize="size-10" />
+                      {p.name && p.sign && checkDacen(p.name, p.sign) && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => onDecanClick(p.name, p.sign)}
+                              className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
+                                alt=""
+                                className="size-8 cursor-pointer hover:scale-125 transition-all hover:brightness-150 hover:drop-shadow-[0_0_12px_rgba(245,158,11,0.9)]"
+                              />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
+                            Decan Information
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                    {p.sign && (
+                      <div className="absolute right-4 flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs text-amber-600 border-amber-400 font-bold uppercase tracking-widest px-3 py-1">
+                          {p.sign}{p.house ? ` · House ${p.house}` : ""}
+                        </Badge>
+                      </div>
                     )}
-                    {p.sign && <Badge variant="outline" className="ml-auto text-[10px] text-amber-600 border-amber-400">{p.sign}{p.house ? ` · House ${p.house}` : ""}</Badge>}
                   </div>
                   <div className="interp-gradient-default px-4 py-3 space-y-1.5" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
                     {forecasts.map((f: string, fi: number) => (
@@ -2474,10 +2503,14 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
                     {[cuspObj.ascendant, cuspObj.midheaven, cuspObj.vertex].map((val, i) => (
                       <td key={i}>
                         {val ? (
-                          <div className="flex items-center gap-3">
-                            <ZodiacSymbol sign={typeof val === "object" ? val?.sign : String(val)} />
-                            <span className="td-mono">{typeof val === "object" ? `${Number(val?.degree ?? 0).toFixed(2)}°` : "—"}</span>
-                          </div>
+                          typeof val === "object" ? (
+                            <div className="flex items-center gap-3">
+                              <ZodiacSymbol sign={val?.sign} />
+                              <span className="td-mono">{Number(val?.degree ?? 0).toFixed(2)}°</span>
+                            </div>
+                          ) : (
+                            <span className="td-mono">{Number(val).toFixed(2)}°</span>
+                          )
                         ) : "—"}
                       </td>
                     ))}
@@ -2589,8 +2622,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
 
               return (
                 <div key={i} className="rounded-lg border overflow-hidden">
-                  {/* Header: Centered with Icons using existing AstroHeaderParts logic */}
-                  <div className="px-4 py-2.5 horoscope-section-header text-center">
+                  <div className="px-4 py-3 horoscope-interp-header text-center">
                     <AstroHeaderParts title={unifiedTitle} />
                   </div>
 
