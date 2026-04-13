@@ -314,7 +314,6 @@ export function Sidebar({ diviner }: SidebarProps) {
                     isActive={isItemActive(item)}
                     isExpanded={expandedMenus.has(item.label)}
                     onToggle={() => toggleMenu(item.label)}
-                    pathname={pathname}
                     isActiveCheck={isActive}
                   />
                 </div>
@@ -379,7 +378,6 @@ export function Sidebar({ diviner }: SidebarProps) {
               isActive={isItemActive(item)}
               isExpanded={expandedMenus.has(item.label)}
               onToggle={() => toggleMenu(item.label)}
-              pathname={pathname}
               isActiveCheck={isActive}
             />
           ))}

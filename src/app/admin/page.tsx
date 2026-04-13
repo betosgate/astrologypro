@@ -850,7 +850,7 @@ export default async function AdminPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(recentBookings.data as RecentBookingRow[]).map((b) => (
+                {(recentBookings.data as unknown as RecentBookingRow[]).map((b) => (
                   <TableRow key={b.id}>
                     <TableCell className="font-medium">
                       {b.clients?.full_name ?? "—"}
