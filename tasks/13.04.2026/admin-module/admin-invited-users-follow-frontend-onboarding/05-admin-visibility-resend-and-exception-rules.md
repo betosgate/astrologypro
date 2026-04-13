@@ -21,3 +21,9 @@ Define what admin can do operationally without breaking the standard frontend fl
 - admin visibility requirements
 - resend rules
 - controlled exception policy
+
+## Status
+
+Done.
+
+The existing admin invitation backoffice already covers this operational surface through `src/app/admin/invitations/page.tsx`, `src/components/admin/invitations-client.tsx`, `src/app/api/admin/invitations/route.ts`, and related detail or resend endpoints. Admin can inspect invite status and resend invites without bypassing frontend onboarding completion.

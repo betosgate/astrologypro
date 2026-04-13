@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -229,6 +229,8 @@ type PrefillResponse = {
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isInvited = searchParams.get("invited") === "true";
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -543,6 +545,11 @@ export default function OnboardingPage() {
         <h1 className="text-2xl font-bold tracking-tight">
           Welcome to Perennial Mandalism
         </h1>
+        {isInvited ? (
+          <p className="mt-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+            Your membership was invited by admin. Complete the same community onboarding flow here before dashboard access opens.
+          </p>
+        ) : null}
         <p className="mt-1 text-muted-foreground">
           Finish your profile so your community access is fully wired.
         </p>
