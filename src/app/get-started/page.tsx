@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
@@ -9,7 +10,79 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
-import { PLANS, PLAN_ORDER, SHARED_FEATURES, type PlanId } from "@/lib/plans";
+
+/* ---------- API-driven plan shape (matches old Plan interface) ---------- */
+interface Plan {
+  id: string;
+  itemKey: string;
+  itemName: string;
+  name: string;
+  tagline: string;
+  setupPrice: number;
+  monthlyPrice: number;
+  highlights: string[];
+  customFields: { label: string; value: string; slug: string }[];
+  isFeatured: boolean;
+  badgeText: string;
+  stripePriceId: string | null;
+}
+
+interface PricingItem {
+  item_key?: string;
+  item_name: string;
+  description: string | null;
+  plans: {
+    plan_id: string;
+    display_name: string;
+    description: string | null;
+    onetime_amount: number | null;
+    recurring_amount: number | null;
+    html_description: string | null;
+    stripe_price_id: string | null;
+    custom_fields?: { label: string; slug: string; value: string }[];
+  }[];
+}
+
+interface PricingSection {
+  itemKey: string;
+  itemName: string;
+  description: string | null;
+  plans: Record<string, Plan>;
+  planOrder: string[];
+}
+
+function parseHighlights(html: string | null): string[] {
+  if (!html) return [];
+  const liMatches = html.match(/<li\b[^>]*>([\s\S]*?)<\/li>/gi);
+  const pMatches = html.match(/<p\b[^>]*>([\s\S]*?)<\/p>/gi);
+  const matches = liMatches?.length ? liMatches : pMatches ?? [];
+  return matches
+    .map((m) =>
+      m
+        .replace(/<\/?(li|p)\b[^>]*>/gi, "")
+        .replace(/<[^>]+>/g, "")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .trim(),
+    )
+    .filter(Boolean);
+}
+
+function getField(fields: { slug: string; value: string }[], slug: string): string | null {
+  return fields?.find((f) => f.slug === slug)?.value ?? null;
+}
+
+function getRenderableCustomFields(fields: { label: string; value: string; slug: string }[]) {
+  return fields.filter((field) => {
+    if (!field.value?.trim()) return false;
+    return !["is_featured", "badge_text", "sort_order"].includes(field.slug);
+  });
+}
+
+function formatFieldText(field: { label: string; value: string }) {
+  return `${field.label}: ${field.value}`;
+}
 import {
   Loader2,
   Sparkles,
@@ -21,7 +94,6 @@ import {
   Zap,
   Users,
   Video,
-  Phone,
   Globe,
   BarChart3,
   Mail,
@@ -30,6 +102,7 @@ import {
   Heart,
   Share2,
   Crown,
+  GraduationCap,
 } from "lucide-react";
 
 const faqs = [
@@ -75,11 +148,24 @@ const faqs = [
   },
 ];
 
-export default function GetStartedPage() {
+export default function GetStartedPageWrapper() {
+  return (
+    <Suspense>
+      <GetStartedPage />
+    </Suspense>
+  );
+}
+
+function GetStartedPage() {
   const supabase = createClient();
   const formRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
+  const affiliateCode = searchParams.get("ref") ?? searchParams.get("affiliate") ?? "";
 
-  const [selectedPlan, setSelectedPlan] = useState<PlanId>("both");
+  const [pricingSections, setPricingSections] = useState<PricingSection[]>([]);
+  const [pricingLoaded, setPricingLoaded] = useState(false);
+
+  const [selectedPlan, setSelectedPlan] = useState<string>("");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -89,6 +175,60 @@ export default function GetStartedPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  // Fetch pricing from API
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch(
+          "/api/pricing?keys=professional_divination_course,trainee_program,trainee_diviner_bundle,perennial_mandalism_community",
+        );
+        const body = await r.json();
+        if (!r.ok || !body.items?.length) return;
+        const sections = (body.items as PricingItem[]).map((item) => {
+          const mapped: Record<string, Plan> = {};
+          const order: { id: string; sort: number }[] = [];
+
+          for (const p of item.plans) {
+            const cf = p.custom_fields ?? [];
+            const id = p.plan_id;
+            mapped[id] = {
+              id,
+              itemKey: item.item_key ?? "",
+              itemName: item.item_name,
+              name: p.display_name,
+              tagline: p.description ?? "",
+              setupPrice: p.onetime_amount ?? 0,
+              monthlyPrice: p.recurring_amount ?? 0,
+              highlights: parseHighlights(p.html_description),
+              customFields: cf,
+              isFeatured: getField(cf, "is_featured") === "true",
+              badgeText: getField(cf, "badge_text") ?? "Best Value",
+              stripePriceId: p.stripe_price_id ?? null,
+            };
+            order.push({ id, sort: Number(getField(cf, "sort_order") ?? "99") });
+          }
+
+          order.sort((a, b) => a.sort - b.sort);
+
+          return {
+            itemKey: item.item_key ?? "",
+            itemName: item.item_name,
+            description: item.description,
+            plans: mapped,
+            planOrder: order.map((o) => o.id),
+          };
+        });
+
+        setPricingSections(sections);
+
+        const primarySection = sections.find((section) => section.itemKey === "professional_divination_course");
+        const featured = primarySection?.planOrder.find((planId) => primarySection.plans[planId]?.isFeatured);
+        setSelectedPlan(featured ?? primarySection?.planOrder[0] ?? "");
+        setPricingLoaded(true);
+      } catch { /* fallback: stays empty, page shows loader */ }
+    })();
+  }, []);
 
   function nameToUsername(fullName: string): string {
     return fullName
@@ -108,7 +248,7 @@ export default function GetStartedPage() {
     }
   }
 
-  function selectPlan(planId: PlanId) {
+  function selectPlan(planId: string) {
     setSelectedPlan(planId);
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -151,6 +291,8 @@ export default function GetStartedPage() {
     setLoading(true);
 
     try {
+      const isCombo = plan?.itemKey === "trainee_diviner_bundle";
+
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -160,6 +302,7 @@ export default function GetStartedPage() {
             username,
             role: "diviner",
             plan: selectedPlan,
+            isCombo,
           },
         },
       });
@@ -181,6 +324,7 @@ export default function GetStartedPage() {
           email,
           userId: data.user.id,
           planId: selectedPlan,
+          ...(affiliateCode ? { affiliateCode } : {}),
         }),
       });
 
@@ -199,7 +343,19 @@ export default function GetStartedPage() {
     }
   }
 
-  const plan = PLANS[selectedPlan];
+  const plan = pricingSections
+    .flatMap((section) => section.planOrder.map((planId) => section.plans[planId]))
+    .find((entry) => entry?.id === selectedPlan);
+
+  const selectedSection = plan
+    ? pricingSections.find((section) => section.itemKey === plan.itemKey)
+    : null;
+
+  const allPlanOptions = pricingSections.flatMap((section) =>
+    section.planOrder
+      .map((planId) => section.plans[planId])
+      .filter(Boolean),
+  );
 
   return (
     <div className="flex min-h-screen flex-col bg-[#06080f]">
@@ -309,83 +465,128 @@ export default function GetStartedPage() {
               </p>
             </div>
 
-            <div className="mt-12 grid items-start gap-6 md:grid-cols-3">
-              {PLAN_ORDER.map((planId) => {
-                const p = PLANS[planId];
-                const isSelected = selectedPlan === planId;
-                return (
-                  <div
-                    key={planId}
-                    className={`relative overflow-hidden rounded-2xl border transition-all duration-300 ${
-                      p.isFeatured
-                        ? "border-[#c9a84c]/40 bg-[#c9a84c]/[0.03] shadow-2xl shadow-[#c9a84c]/10 md:-mt-4 md:mb-0"
-                        : "border-white/[0.08] bg-white/[0.02]"
-                    } ${isSelected ? "ring-2 ring-[#c9a84c]" : ""}`}
-                  >
-                    {/* Best value badge */}
-                    {p.isFeatured && (
-                      <div className="bg-gradient-to-r from-[#8b7a3a] via-[#c9a84c] to-[#e2c97e] px-4 py-2 text-center text-xs font-bold uppercase tracking-widest text-black">
-                        <Crown className="mr-1 inline size-3" />
-                        Best Value — Save $144/yr
-                      </div>
-                    )}
-
-                    <div className="p-6 md:p-8">
-                      {/* Plan name */}
-                      <h3 className="font-display text-xl font-bold text-[#f5f0e8]">
-                        {p.name}
-                      </h3>
-                      <p className="mt-1 text-sm text-[#b8bcd0]/60">{p.tagline}</p>
-
-                      {/* Pricing */}
-                      <div className="mt-5">
-                        <div className="flex items-baseline gap-1">
-                          <span className="font-display text-4xl font-bold text-[#f5f0e8]">
-                            ${p.monthlyPrice}
-                          </span>
-                          <span className="text-[#b8bcd0]/60">/mo</span>
-                        </div>
-                        <p className="mt-1 text-sm text-[#b8bcd0]/50">
-                          + ${p.setupPrice} one-time setup
-                        </p>
+            {!pricingLoaded ? (
+              <div className="mt-12 flex justify-center py-16">
+                <Loader2 className="size-8 animate-spin text-[#c9a84c]/60" />
+              </div>
+            ) : (
+              <div className="mt-12 space-y-16">
+                {pricingSections.map((section) => {
+                  return (
+                    <div key={section.itemKey || section.itemName} className="space-y-8">
+                      <div className="text-center">
+                        <h3 className="font-display text-2xl font-bold text-[#f5f0e8] sm:text-3xl">
+                          {section.itemName}
+                        </h3>
+                        {section.description && (
+                          <p className="mx-auto mt-3 max-w-3xl text-base text-[#b8bcd0]/70">
+                            {section.description}
+                          </p>
+                        )}
                       </div>
 
-                      {/* Service count */}
-                      <div className="mt-5 rounded-lg border border-[#c9a84c]/15 bg-[#c9a84c]/5 px-4 py-3">
-                        <p className="text-sm font-medium text-[#c9a84c]">
-                          {p.serviceLabel}
-                        </p>
-                      </div>
+                      <div className={`grid items-start gap-6 ${section.planOrder.length === 1 ? "mx-auto max-w-md" : section.planOrder.length === 2 ? "md:grid-cols-2 max-w-3xl mx-auto" : "md:grid-cols-3"}`}>
+                        {section.planOrder.map((planId) => {
+                          const p = section.plans[planId];
+                          if (!p) return null;
+                          const isSelected = selectedPlan === planId;
+                          const displaySummaryFields = getRenderableCustomFields(p.customFields);
+                          return (
+                            <div
+                              key={planId}
+                              className={`relative overflow-hidden rounded-2xl border transition-all duration-300 ${
+                                p.isFeatured
+                                  ? "border-[#c9a84c]/40 bg-[#c9a84c]/[0.03] shadow-2xl shadow-[#c9a84c]/10 md:-mt-4 md:mb-0"
+                                  : "border-white/[0.08] bg-white/[0.02]"
+                              } ${isSelected ? "ring-2 ring-[#c9a84c]" : ""}`}
+                            >
+                              {p.isFeatured && (
+                                <div className="bg-gradient-to-r from-[#8b7a3a] via-[#c9a84c] to-[#e2c97e] px-4 py-2 text-center text-xs font-bold uppercase tracking-widest text-black">
+                                  <Crown className="mr-1 inline size-3" />
+                                  {p.badgeText}
+                                </div>
+                              )}
 
-                      {/* Highlights */}
-                      <ul className="mt-5 space-y-2.5">
-                        {p.highlights.map((h) => (
-                          <li key={h} className="flex items-start gap-2.5">
-                            <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[#c9a84c]/10">
-                              <Check className="size-3 text-[#c9a84c]" />
+                              <div className="p-6 md:p-8">
+                                <h3 className="font-display text-xl font-bold text-[#f5f0e8]">
+                                  {p.name}
+                                </h3>
+                                <p className="mt-1 text-sm text-[#b8bcd0]/60">{p.tagline}</p>
+
+                                <div className="mt-5">
+                                  {p.monthlyPrice > 0 ? (
+                                    <>
+                                      <div className="flex items-baseline gap-1">
+                                        <span className="font-display text-4xl font-bold text-[#f5f0e8]">
+                                          ${p.monthlyPrice}
+                                        </span>
+                                        <span className="text-[#b8bcd0]/60">/mo</span>
+                                      </div>
+                                      {p.setupPrice > 0 && (
+                                        <p className="mt-1 text-sm text-[#b8bcd0]/50">
+                                          + ${p.setupPrice} one-time setup
+                                        </p>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <div className="flex items-baseline gap-1">
+                                      <span className="font-display text-4xl font-bold text-[#f5f0e8]">
+                                        ${p.setupPrice}
+                                      </span>
+                                      <span className="text-[#b8bcd0]/60">one-time</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {displaySummaryFields.length > 0 && (
+                                  <div className="mt-5 space-y-3">
+                                    {displaySummaryFields.map((field) => (
+                                      <div
+                                        key={`${p.id}-${field.slug}`}
+                                        className="rounded-lg border border-[#c9a84c]/15 bg-[#c9a84c]/5 px-4 py-3"
+                                      >
+                                        <p className="text-sm font-medium text-[#c9a84c]">
+                                          {formatFieldText(field)}
+                                        </p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {p.highlights.length > 0 && (
+                                  <ul className="mt-5 space-y-2.5">
+                                    {p.highlights.map((h: string) => (
+                                      <li key={h} className="flex items-start gap-2.5">
+                                        <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[#c9a84c]/10">
+                                          <Check className="size-3 text-[#c9a84c]" />
+                                        </div>
+                                        <span className="text-sm text-[#b8bcd0]/80">{h}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => selectPlan(planId)}
+                                  className={`mt-6 w-full rounded-full py-3 text-sm font-semibold transition-all ${
+                                    p.isFeatured
+                                      ? "bg-[#c9a84c] text-black shadow-lg shadow-[#c9a84c]/25 hover:bg-[#e2c97e]"
+                                      : "border border-[#c9a84c]/30 text-[#c9a84c] hover:border-[#c9a84c] hover:bg-[#c9a84c]/10"
+                                  }`}
+                                >
+                                  {isSelected ? "Selected — Scroll to Sign Up" : `Choose ${p.name}`}
+                                </button>
+                              </div>
                             </div>
-                            <span className="text-sm text-[#b8bcd0]/80">{h}</span>
-                          </li>
-                        ))}
-                      </ul>
-
-                      {/* CTA */}
-                      <button
-                        type="button"
-                        onClick={() => selectPlan(planId)}
-                        className={`mt-6 w-full rounded-full py-3 text-sm font-semibold transition-all ${
-                          p.isFeatured
-                            ? "bg-[#c9a84c] text-black shadow-lg shadow-[#c9a84c]/25 hover:bg-[#e2c97e]"
-                            : "border border-[#c9a84c]/30 text-[#c9a84c] hover:border-[#c9a84c] hover:bg-[#c9a84c]/10"
-                        }`}
-                      >
-                        {isSelected ? "Selected — Scroll to Sign Up" : `Choose ${p.name}`}
-                      </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
 
@@ -431,52 +632,168 @@ export default function GetStartedPage() {
         </section>
 
         {/* ===== COST COMPARISON ===== */}
-        <section className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-3xl">
+        <section className="px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-4xl">
             <h2 className="mb-3 text-center font-display text-3xl font-bold text-[#f5f0e8] sm:text-4xl">
               What You&apos;re <span className="gold-text">Replacing</span>
             </h2>
-            <p className="mb-10 text-center text-[#b8bcd0]/60">
-              Most practitioners spend $120&ndash;250/mo piecing together separate tools
+            <p className="mb-4 text-center text-[#b8bcd0]/60">
+              Most practitioners spend <strong className="text-[#f5f0e8]">$300&ndash;600+/mo</strong> piecing together separate tools for their practice
+            </p>
+            <p className="mb-12 text-center text-xs text-[#b8bcd0]/40">
+              Here&apos;s the real cost of running a divination business without AstrologyPro
             </p>
 
-            <div className="space-y-2">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Category: Client-Facing */}
               {[
-                { tool: "Website builder", cost: "$16–40/mo" },
-                { tool: "Video conferencing", cost: "$13–20/mo" },
-                { tool: "Booking/scheduling", cost: "$12–16/mo" },
-                { tool: "Session recording", cost: "$10–25/mo" },
-                { tool: "Client CRM", cost: "$15–30/mo" },
-                { tool: "Email marketing", cost: "$10–20/mo" },
-                { tool: "Social media tools", cost: "$15–50/mo" },
-                { tool: "Affiliate system", cost: "$30–50/mo" },
-              ].map(({ tool, cost }) => (
-                <div
-                  key={tool}
-                  className="flex items-center justify-between rounded-lg border border-white/[0.06] px-4 py-3"
-                >
-                  <span className="text-sm text-[#b8bcd0]/70">{tool}</span>
-                  <span className="text-sm font-medium text-red-400/80">{cost}</span>
-                </div>
-              ))}
+                {
+                  category: "Client-Facing Platform",
+                  icon: Globe,
+                  items: [
+                    { tool: "Website builder (Squarespace, Wix)", cost: "$16–40/mo", mid: 28 },
+                    { tool: "Booking & scheduling (Calendly, Acuity)", cost: "$12–20/mo", mid: 16 },
+                    { tool: "Payment processing setup (Stripe Atlas)", cost: "$15–30/mo", mid: 22 },
+                    { tool: "Gift certificate system", cost: "$10–20/mo", mid: 15 },
+                  ],
+                },
+                {
+                  category: "Session Delivery",
+                  icon: Video,
+                  items: [
+                    { tool: "HD video conferencing (Zoom Pro)", cost: "$13–22/mo", mid: 17 },
+                    { tool: "Session recording & storage", cost: "$10–25/mo", mid: 17 },
+                    { tool: "Phone reading line (Twilio/RingCentral)", cost: "$20–50/mo", mid: 35 },
+                    { tool: "Screen sharing for chart display", cost: "Included in Zoom", mid: 0 },
+                  ],
+                },
+                {
+                  category: "Client Management",
+                  icon: Users,
+                  items: [
+                    { tool: "CRM & client database (HubSpot, Dubsado)", cost: "$15–45/mo", mid: 30 },
+                    { tool: "Intake forms & questionnaires", cost: "$10–20/mo", mid: 15 },
+                    { tool: "Follow-up email automation", cost: "$10–30/mo", mid: 20 },
+                    { tool: "Client testimonial collection", cost: "$10–25/mo", mid: 17 },
+                  ],
+                },
+                {
+                  category: "Marketing & Growth",
+                  icon: BarChart3,
+                  items: [
+                    { tool: "Email marketing (Mailchimp, ConvertKit)", cost: "$10–30/mo", mid: 20 },
+                    { tool: "Social media auto-posting", cost: "$15–50/mo", mid: 32 },
+                    { tool: "Affiliate/referral system", cost: "$30–60/mo", mid: 45 },
+                    { tool: "Analytics dashboard", cost: "$10–30/mo", mid: 20 },
+                  ],
+                },
+                {
+                  category: "Professional Tools",
+                  icon: Star,
+                  items: [
+                    { tool: "Astrology chart software", cost: "$15–50/mo", mid: 32 },
+                    { tool: "Tarot spread builder", cost: "$5–15/mo", mid: 10 },
+                    { tool: "Birth data lookup API", cost: "$10–30/mo", mid: 20 },
+                    { tool: "Event calendar & reminders", cost: "$8–15/mo", mid: 11 },
+                  ],
+                },
+                {
+                  category: "Training & Certification",
+                  icon: GraduationCap,
+                  items: [
+                    { tool: "Online course platform (Teachable, Kajabi)", cost: "$39–149/mo", mid: 94 },
+                    { tool: "Quiz & assessment tools", cost: "$10–30/mo", mid: 20 },
+                    { tool: "Video hosting for lessons", cost: "$10–25/mo", mid: 17 },
+                    { tool: "Certificate generation", cost: "$5–15/mo", mid: 10 },
+                  ],
+                },
+              ].map(({ category, icon: Icon, items }) => {
+                const subtotal = items.reduce((sum, i) => sum + i.mid, 0);
+                return (
+                  <div key={category} className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-5">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex size-8 items-center justify-center rounded-lg bg-[#c9a84c]/10">
+                          <Icon className="size-4 text-[#c9a84c]" />
+                        </div>
+                        <h3 className="text-sm font-semibold text-[#f5f0e8]">{category}</h3>
+                      </div>
+                      <span className="rounded-full bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-400">
+                        ~${subtotal}/mo
+                      </span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {items.map(({ tool, cost }) => (
+                        <div key={tool} className="flex items-center justify-between py-1">
+                          <span className="text-xs text-[#b8bcd0]/60">{tool}</span>
+                          <span className="ml-2 shrink-0 text-xs font-medium text-red-400/70">{cost}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
-              {/* Total */}
-              <div className="mt-4 flex items-center justify-between rounded-xl border border-[#c9a84c]/20 bg-[#c9a84c]/5 px-5 py-4">
+            {/* Grand total vs AstrologyPro */}
+            <div className="mt-8 space-y-3">
+              {/* Them */}
+              <div className="flex items-center justify-between rounded-xl border border-red-500/20 bg-red-500/5 px-6 py-4">
                 <div>
                   <p className="text-sm font-semibold text-[#f5f0e8]">
-                    AstrologyPro replaces all of this
+                    Doing it yourself with 15+ separate tools
                   </p>
                   <p className="mt-0.5 text-xs text-[#b8bcd0]/50">
-                    Plus astrology/tarot tools no generic platform offers
+                    Plus the time to manage, integrate, and troubleshoot them all
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-display text-2xl font-bold text-[#c9a84c]">
-                    From $97/mo
+                  <p className="font-display text-2xl font-bold text-red-400 line-through decoration-red-500/50">
+                    $450+/mo
+                  </p>
+                  <p className="text-xs text-red-400/60">+ hours of setup</p>
+                </div>
+              </div>
+
+              {/* Us */}
+              <div className="flex items-center justify-between rounded-xl border-2 border-[#c9a84c]/30 bg-gradient-to-r from-[#c9a84c]/[0.04] to-[#c9a84c]/[0.08] px-6 py-5">
+                <div>
+                  <p className="text-base font-bold text-[#f5f0e8]">
+                    AstrologyPro — everything above, built for diviners
+                  </p>
+                  <p className="mt-1 text-xs text-[#b8bcd0]/60">
+                    One platform. One login. One bill. Plus astrology &amp; tarot tools no generic platform offers.
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-display text-3xl font-bold text-[#c9a84c]">
+                    {(() => {
+                      const allPlans = pricingSections.flatMap((s) =>
+                        s.planOrder.map((id) => s.plans[id]).filter(Boolean)
+                      );
+                      const monthlyPlans = allPlans.filter((p) => p.monthlyPrice > 0);
+                      const lowestMonthly = monthlyPlans.length
+                        ? Math.min(...monthlyPlans.map((p) => p.monthlyPrice))
+                        : null;
+                      const onetimeOnly = allPlans.filter((p) => p.monthlyPrice === 0 && p.setupPrice > 0);
+                      const lowestOnetime = onetimeOnly.length
+                        ? Math.min(...onetimeOnly.map((p) => p.setupPrice))
+                        : null;
+                      if (lowestMonthly) return `From $${lowestMonthly}/mo`;
+                      if (lowestOnetime) return `From $${lowestOnetime}`;
+                      return "See plans above";
+                    })()}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[#c9a84c]/60">
+                    Save $350+/mo vs doing it yourself
                   </p>
                 </div>
               </div>
             </div>
+
+            <p className="mt-6 text-center text-xs text-[#b8bcd0]/30">
+              Prices based on publicly available pricing of comparable tools as of 2026. Actual costs vary by provider and plan.
+            </p>
           </div>
         </section>
 
@@ -528,29 +845,47 @@ export default function GetStartedPage() {
               {/* Plan summary header */}
               <div className="border-b border-white/[0.06] bg-[#c9a84c]/5 px-6 py-5 text-center">
                 <p className="text-xs font-medium uppercase tracking-wider text-[#c9a84c]/60">
-                  Selected Plan
+                  Selected Path
                 </p>
                 <h3 className="mt-1 font-display text-xl font-bold text-[#f5f0e8]">
-                  {plan.name}
+                  {plan?.itemName ?? "Select a plan"}
                 </h3>
-                <p className="mt-1 text-sm text-[#b8bcd0]/70">
-                  ${plan.setupPrice} setup + ${plan.monthlyPrice}/mo &middot;{" "}
-                  {plan.serviceLabel}
-                </p>
+                {plan && (
+                  <p className="mt-1 text-sm text-[#b8bcd0]/70">
+                    {plan.name} &middot; {plan.monthlyPrice > 0 ? `$${plan.setupPrice} setup + $${plan.monthlyPrice}/mo` : `$${plan.setupPrice} one-time`}
+                  </p>
+                )}
+                {plan && (
+                  <div className="mt-3 flex flex-wrap justify-center gap-2">
+                    {getRenderableCustomFields(plan.customFields).map((field) => (
+                      <span
+                        key={`${plan.id}-${field.slug}`}
+                        className="rounded-full border border-[#c9a84c]/20 bg-[#c9a84c]/5 px-3 py-1 text-[11px] font-medium text-[#c9a84c]"
+                      >
+                        {formatFieldText(field)}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {selectedSection?.description && (
+                  <p className="mx-auto mt-3 max-w-md text-sm text-[#b8bcd0]/60">
+                    {selectedSection.description}
+                  </p>
+                )}
                 {/* Plan switcher */}
-                <div className="mt-3 flex justify-center gap-2">
-                  {PLAN_ORDER.map((pid) => (
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  {allPlanOptions.map((option) => (
                     <button
-                      key={pid}
+                      key={option.id}
                       type="button"
-                      onClick={() => setSelectedPlan(pid)}
+                      onClick={() => setSelectedPlan(option.id)}
                       className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                        selectedPlan === pid
+                        selectedPlan === option.id
                           ? "bg-[#c9a84c] text-black"
                           : "border border-white/10 text-[#b8bcd0]/60 hover:border-[#c9a84c]/30 hover:text-[#c9a84c]"
                       }`}
                     >
-                      {PLANS[pid].name}
+                      {option.itemName}: {option.name}
                     </button>
                   ))}
                 </div>
@@ -670,7 +1005,7 @@ export default function GetStartedPage() {
                       </>
                     ) : (
                       <>
-                        Start Your Practice — ${plan.setupPrice} + ${plan.monthlyPrice}/mo
+                        Continue with {plan?.name ?? "your plan"} — {plan?.monthlyPrice ? `$${plan.setupPrice} + $${plan.monthlyPrice}/mo` : `$${plan?.setupPrice ?? 0}`}
                         <ArrowRight className="ml-2 size-4" />
                       </>
                     )}

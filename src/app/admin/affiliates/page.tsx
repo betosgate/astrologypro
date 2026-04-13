@@ -85,6 +85,7 @@ export default function AdminAffiliatesPage() {
   const [formPhone, setFormPhone] = useState("");
   const [formCommType, setFormCommType] = useState("percentage");
   const [formCommValue, setFormCommValue] = useState("10");
+  const [formProductType, setFormProductType] = useState("");
 
   const loadAffiliates = useCallback(async (cursor?: string | null) => {
     setLoading(true);
@@ -124,6 +125,7 @@ export default function AdminAffiliatesPage() {
     setFormPhone("");
     setFormCommType("percentage");
     setFormCommValue("10");
+    setFormProductType("");
   }
 
   async function handleCreate() {
@@ -145,7 +147,23 @@ export default function AdminAffiliatesPage() {
       }),
     });
     if (res.ok) {
+      const created = await res.json();
       toast.success("Affiliate created");
+
+      // Create a commission rule with the product_type scope if specified
+      if (formProductType && created.data?.id) {
+        await fetch(`/api/admin/affiliates/${created.data.id}/commission-rules`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            commission_type: formCommType,
+            commission_value: parseFloat(formCommValue) || 0,
+            product_type: formProductType,
+            notes: `Applies to ${formProductType === "session" ? "sales/sessions" : "signups/subscriptions"} only`,
+          }),
+        }).catch(() => {});
+      }
+
       setSheetOpen(false);
       resetForm();
       await loadAffiliates();
@@ -244,6 +262,21 @@ export default function AdminAffiliatesPage() {
                   value={formCommValue}
                   onChange={(e) => setFormCommValue(e.target.value)}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>Commission applies to</Label>
+                <select
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                  value={formProductType}
+                  onChange={(e) => setFormProductType(e.target.value)}
+                >
+                  <option value="">All (signups + sales)</option>
+                  <option value="session">Sales / Sessions only</option>
+                  <option value="subscription">Signups / Subscriptions only</option>
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Controls which transactions generate commissions for this affiliate.
+                </p>
               </div>
               <Button onClick={handleCreate} disabled={saving} className="w-full">
                 {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Saving…</> : "Create Affiliate"}

@@ -22,6 +22,7 @@ export async function GET(
   const month = searchParams.get("month");
   const duration = searchParams.get("duration");
   const serviceId = searchParams.get("serviceId");
+  const allSlots = searchParams.get("allSlots") === "1";
 
   if (!month || !duration) {
     return NextResponse.json(
@@ -103,6 +104,7 @@ export async function GET(
         const templateServiceId =
           typeof record.service_id === "string" ? record.service_id : null;
 
+        if (allSlots) return true;
         if (serviceId) return templateServiceId === serviceId;
         return !templateServiceId;
       })
@@ -198,6 +200,7 @@ export async function GET(
           };
         }),
         serviceId,
+        allTemplates: allSlots,
         weeklySlots: (weeklySlots ?? []).map((slot) => ({
           dayOfWeek: slot.day_of_week,
           startTime: slot.start_time,

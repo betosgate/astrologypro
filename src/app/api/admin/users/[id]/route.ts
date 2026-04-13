@@ -49,6 +49,19 @@ export async function GET(
         .eq("user_id", id)
         .maybeSingle();
 
+      // For diviners, also fetch provider preferences
+      let videoProvider: string | undefined;
+      let phoneProvider: string | undefined;
+      if (role === "diviner") {
+        const { data: providerRow } = await admin
+          .from("diviners")
+          .select("video_provider, phone_provider")
+          .eq("id", data.id)
+          .maybeSingle();
+        videoProvider = (providerRow as any)?.video_provider ?? "daily";
+        phoneProvider = (providerRow as any)?.phone_provider ?? "twilio";
+      }
+
       return NextResponse.json({
         userId: id,
         rowId: data.id,
@@ -59,6 +72,7 @@ export async function GET(
         role,
         table,
         nameCol,
+        ...(role === "diviner" ? { videoProvider, phoneProvider } : {}),
       });
     }
   }
@@ -78,13 +92,15 @@ export async function PUT(
 
   const { id } = await params;
   const body = await req.json();
-  const { name, phone, isActive, role, rowId, nameCol } = body as {
+  const { name, phone, isActive, role, rowId, nameCol, videoProvider, phoneProvider } = body as {
     name?: string;
     phone?: string;
     isActive?: boolean;
     role?: string;
     rowId?: string;
     nameCol?: string;
+    videoProvider?: string;
+    phoneProvider?: string;
   };
 
   if (!rowId || !role || !nameCol) {
@@ -111,6 +127,15 @@ export async function PUT(
   // is_active not present on clients or community_members — only update if supported
   if (isActive !== undefined && !["client", "community"].includes(role)) {
     updates.is_active = isActive;
+  }
+  // Provider preferences — diviners only
+  if (role === "diviner") {
+    if (videoProvider && ["daily", "chime"].includes(videoProvider)) {
+      updates.video_provider = videoProvider;
+    }
+    if (phoneProvider && ["twilio", "chime"].includes(phoneProvider)) {
+      updates.phone_provider = phoneProvider;
+    }
   }
 
   if (Object.keys(updates).length === 0) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { syncProfileAcrossRoles } from "@/lib/profile-sync";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -171,6 +172,18 @@ export async function PATCH(req: NextRequest) {
       { status: 500 }
     );
   }
+
+  // Fire-and-forget: sync shared fields to other role tables
+  syncProfileAcrossRoles(
+    user.id,
+    {
+      display_name: parsed.data.name,
+      bio: parsed.data.bio,
+      avatar_url: parsed.data.avatar_url,
+      specialties: parsed.data.specialties,
+    },
+    "trainees"
+  ).catch(console.error);
 
   return NextResponse.json({ success: true });
 }

@@ -18,7 +18,6 @@ import {
   BarChart3,
   BarChart2,
   CalendarDays,
-  LayoutGrid,
   Gift,
   Tag,
   Mail,
@@ -66,7 +65,6 @@ const navItems: NavItem[] = [
     icon: CalendarDays,
     children: [
       { label: "Bookings", href: "/dashboard/bookings", icon: Calendar },
-      { label: "Schedule", href: "/dashboard/schedule", icon: LayoutGrid },
       { label: "Availability", href: "/dashboard/availability", icon: CalendarDays },
       { label: "Calendar View", href: "/dashboard/calendar", icon: CalendarDays },
     ],
@@ -80,6 +78,7 @@ const navItems: NavItem[] = [
   { label: "Affiliates", href: "/dashboard/affiliates", icon: Users2 },
   { label: "Live", href: "/dashboard/live", icon: Radio },
   { label: "Video Sessions", href: "/dashboard/video", icon: Video },
+  { label: "Session Library", href: "/dashboard/library", icon: Play },
   { label: "Marketing", href: "/dashboard/marketing", icon: Megaphone },
   { label: "Reading Reports", href: "/dashboard/reports/readings", icon: BarChart2 },
   { label: "Mundane Astrology", href: "/dashboard/mundane", icon: Globe },

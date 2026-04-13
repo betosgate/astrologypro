@@ -28,9 +28,20 @@ export async function GET(request: NextRequest) {
 
   const admin = createAdminClient();
 
-  // Find confirmed bookings whose session end time is at least 10 minutes ago
+  // Fetch configurable no-show policy from platform_settings
+  const { data: policyRow } = await admin
+    .from("platform_settings")
+    .select("no_show_diviner_refund_percent, no_show_client_refund_percent, no_show_grace_minutes")
+    .limit(1)
+    .single();
+
+  const divinerRefundPct = policyRow?.no_show_diviner_refund_percent ?? 100;
+  const clientRefundPct = policyRow?.no_show_client_refund_percent ?? 50;
+  const graceMinutes = policyRow?.no_show_grace_minutes ?? 10;
+
+  // Find confirmed bookings whose session end time is at least graceMinutes ago
   // and have not been processed for no-show yet.
-  const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const cutoff = new Date(Date.now() - graceMinutes * 60 * 1000).toISOString();
 
   const { data: bookings, error } = await admin
     .from("bookings")
@@ -80,8 +91,8 @@ export async function GET(request: NextRequest) {
         (booking.duration_minutes ?? 60) * 60 * 1000
     );
 
-    // Skip if session hasn't ended yet (duration-aware cutoff)
-    if (sessionEndTime.getTime() > Date.now() - 10 * 60 * 1000) {
+    // Skip if session hasn't ended yet (duration-aware cutoff with configurable grace)
+    if (sessionEndTime.getTime() > Date.now() - graceMinutes * 60 * 1000) {
       continue;
     }
 
@@ -130,15 +141,19 @@ export async function GET(request: NextRequest) {
     let refundReason = "";
 
     if (!divinerJoined) {
-      // Diviner no-show → 100% refund
+      // Diviner no-show → configurable refund (default 100%)
       noShowType = "diviner";
-      refundPercent = 100;
-      refundReason = "Your diviner did not attend the scheduled session. Full refund issued automatically.";
+      refundPercent = divinerRefundPct;
+      refundReason = refundPercent === 100
+        ? "Your diviner did not attend the scheduled session. Full refund issued automatically."
+        : `Your diviner did not attend the scheduled session. A ${refundPercent}% refund has been issued per our No-Show Policy.`;
     } else if (!clientJoined) {
-      // Client no-show → 50% refund
+      // Client no-show → configurable refund (default 50%)
       noShowType = "client";
-      refundPercent = 50;
-      refundReason = "You did not attend your scheduled session. A 50% refund has been issued per our No-Show Policy.";
+      refundPercent = clientRefundPct;
+      refundReason = refundPercent === 0
+        ? "You did not attend your scheduled session. No refund issued per our No-Show Policy."
+        : `You did not attend your scheduled session. A ${refundPercent}% refund has been issued per our No-Show Policy.`;
     }
 
     if (noShowType === null) {

@@ -10,6 +10,8 @@ interface CalendarPickerProps {
   duration: number;
   onDateSelect: (date: Date) => void;
   selectedDate: Date | undefined;
+  /** When true, fetch slots from all availability templates regardless of service */
+  allSlots?: boolean;
 }
 
 export function CalendarPicker({
@@ -18,12 +20,14 @@ export function CalendarPicker({
   duration,
   onDateSelect,
   selectedDate,
+  allSlots,
 }: CalendarPickerProps) {
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
   const [loadedMonth, setLoadedMonth] = useState(false);
   const serviceQuery = serviceId ? `&serviceId=${serviceId}` : "";
+  const allSlotsQuery = allSlots ? "&allSlots=1" : "";
 
   useEffect(() => {
     async function fetchMonthAvailability() {
@@ -32,7 +36,7 @@ export function CalendarPicker({
       try {
         const monthKey = format(currentMonth, "yyyy-MM");
         const res = await fetch(
-          `/api/availability/${divinerId}/month?month=${monthKey}&duration=${duration}${serviceQuery}`
+          `/api/availability/${divinerId}/month?month=${monthKey}&duration=${duration}${serviceQuery}${allSlotsQuery}`
         );
         const data = res.ok ? await res.json() : null;
         setAvailableDates(
@@ -48,16 +52,20 @@ export function CalendarPicker({
     }
 
     fetchMonthAvailability();
-  }, [currentMonth, divinerId, duration, serviceQuery]);
+  }, [currentMonth, divinerId, duration, serviceQuery, allSlotsQuery]);
 
   const today = startOfDay(new Date());
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="relative flex flex-col items-center">
+      {/* Loading overlay */}
       {loading && (
-        <p className="mb-2 text-sm text-muted-foreground animate-pulse">
-          Loading availability...
-        </p>
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-background/70 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-2">
+            <div className="size-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <p className="text-xs text-muted-foreground">Loading availability...</p>
+          </div>
+        </div>
       )}
       <Calendar
         mode="single"
@@ -67,6 +75,7 @@ export function CalendarPicker({
         }}
         onMonthChange={setCurrentMonth}
         disabled={(date) => {
+          if (loading) return true;
           if (isBefore(date, today)) return true;
           const dateStr = format(date, "yyyy-MM-dd");
           if (loadedMonth && !availableDates.has(dateStr)) {
