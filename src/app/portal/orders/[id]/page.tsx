@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { DynamicIntakeForm } from "@/components/portal/dynamic-intake-form";
 import { formatDateTime } from "@/lib/format";
 import { buildFallbackIntakeTemplate } from "@/lib/service-purchase";
-import { ArrowLeft, CheckCircle2, Circle, User, FileText, BookOpen } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Circle, FileText, BookOpen } from "lucide-react";
 import type { IntakeTemplate } from "@/lib/intake-fields";
+import { getDivinerAvatarUrl } from "@/lib/diviner-images";
 
 export const metadata = {
   title: "Order Details",
@@ -226,6 +227,7 @@ export default async function PortalOrderDetailPage({ params }: RouteParams) {
   const hasDeliverableContent =
     !!order.notes || astroReadings.length > 0 || tarotReadings.length > 0;
   const showDeliverable = isDelivered && hasDeliverableContent;
+  const divinerAvatarUrl = getDivinerAvatarUrl(diviner?.avatar_url);
 
   return (
     <div className="space-y-6">
@@ -243,17 +245,13 @@ export default async function PortalOrderDetailPage({ params }: RouteParams) {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
             <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/[0.06]">
-              {diviner?.avatar_url ? (
-                <Image
-                  src={diviner.avatar_url}
-                  alt={diviner.display_name}
-                  width={44}
-                  height={44}
-                  className="size-11 object-cover"
-                />
-              ) : (
-                <User className="size-5 text-muted-foreground" />
-              )}
+              <Image
+                src={divinerAvatarUrl}
+                alt={diviner?.display_name ?? "Diviner"}
+                width={44}
+                height={44}
+                className="size-11 object-cover"
+              />
             </div>
             <div className="space-y-0.5">
               <h1 className="text-lg font-bold leading-tight">
