@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
   const divinerId = sp.get("diviner_id");
   const typeParam = sp.get("type");
   const isActiveParam = sp.get("is_active");
+  const moderationParam = sp.get("moderation_status");
   const cursor = sp.get("cursor"); // created_at
   const cursorId = sp.get("cursor_id"); // id tie-breaker
   const limit = Math.min(parseInt(sp.get("limit") ?? "50", 10), 100);
@@ -34,7 +35,7 @@ export async function GET(req: NextRequest) {
     .select(
       `id, diviner_id, type, url, title, description, thumbnail_url,
        category, platform, duration_seconds, sort_order, is_active,
-       is_featured, view_count, created_at, updated_at,
+       is_featured, moderation_status, submitted_for_review_at, reviewed_at, reviewed_by, admin_review_notes, blocked_at, view_count, created_at, updated_at,
        diviner:diviners(id, username, display_name, avatar_url)`
     )
     .order("created_at", { ascending: false })
@@ -49,6 +50,9 @@ export async function GET(req: NextRequest) {
   }
   if (isActiveParam !== null && isActiveParam !== "") {
     query = query.eq("is_active", isActiveParam === "true");
+  }
+  if (moderationParam) {
+    query = query.eq("moderation_status", moderationParam);
   }
   if (cursor && cursorId) {
     query = query.or(
@@ -171,6 +175,9 @@ export async function POST(req: NextRequest) {
       duration_seconds: duration_seconds ?? null,
       sort_order,
       is_featured,
+      moderation_status: "approved",
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: user.id,
     })
     .select()
     .single();

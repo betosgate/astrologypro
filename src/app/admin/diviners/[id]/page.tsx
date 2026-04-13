@@ -26,6 +26,8 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
+import { PublishingControls } from "./publishing-controls";
+import { normalizePublishPolicy } from "@/lib/diviner-publishing";
 
 export const metadata = { title: "Diviner Detail — Admin" };
 
@@ -164,6 +166,7 @@ export default async function AdminDivinerDetailPage({
   if (!result) notFound();
 
   const { diviner, email, services, bookings, affiliateCount, stats } = result;
+  const publishingPolicy = normalizePublishPolicy(diviner as Record<string, unknown>);
 
   return (
     <div className="space-y-6">
@@ -243,6 +246,8 @@ export default async function AdminDivinerDetailPage({
           </CardContent>
         </Card>
       )}
+
+      <PublishingControls divinerId={diviner.id} initialPolicy={publishingPolicy} />
 
       {/* ── Stats Cards ───────────────────────────────────────────────── */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

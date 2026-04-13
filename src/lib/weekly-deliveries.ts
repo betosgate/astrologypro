@@ -26,6 +26,13 @@ interface DivinerRow {
   username: string | null;
 }
 
+interface DeliverySendResult {
+  sentCount: number;
+  failedCount: number;
+  skippedCount: number;
+  lastError: string | null;
+}
+
 function buildWeeklyDeliveryHtml(params: {
   divinerName: string;
   subject: string;
@@ -63,9 +70,15 @@ async function sendDeliveryToSubscribers(params: {
   const { delivery, diviner, subscribers } = params;
   const divinerName = diviner.display_name ?? "Your Diviner";
   let sentCount = 0;
+  let failedCount = 0;
+  let skippedCount = 0;
+  let lastError: string | null = null;
 
   for (const subscriber of subscribers) {
-    if (subscriber.email_opt_out) continue;
+    if (subscriber.email_opt_out) {
+      skippedCount += 1;
+      continue;
+    }
 
     const token = createWeeklySubscriptionManageToken({
       subscriberId: subscriber.id,
@@ -86,6 +99,9 @@ async function sendDeliveryToSubscribers(params: {
       });
       sentCount += 1;
     } catch (error) {
+      failedCount += 1;
+      lastError =
+        error instanceof Error ? error.message : "Unknown email send error";
       console.error(
         `[weekly-deliveries] failed to send delivery ${delivery.id} to ${subscriber.email}`,
         error
@@ -93,7 +109,12 @@ async function sendDeliveryToSubscribers(params: {
     }
   }
 
-  return sentCount;
+  return {
+    sentCount,
+    failedCount,
+    skippedCount,
+    lastError,
+  } satisfies DeliverySendResult;
 }
 
 export async function sendImmediateWeeklyDelivery(params: {
@@ -118,7 +139,12 @@ export async function sendImmediateWeeklyDelivery(params: {
 
   const subscribers = (subscribersResult.data ?? []) as SubscriberRow[];
   if (!divinerResult.data || subscribers.length === 0) {
-    return 0;
+    return {
+      sentCount: 0,
+      failedCount: 0,
+      skippedCount: 0,
+      lastError: divinerResult.data ? null : "Diviner not found.",
+    } satisfies DeliverySendResult;
   }
 
   return sendDeliveryToSubscribers({
@@ -152,6 +178,7 @@ export async function processScheduledWeeklyDeliveries(limit = 20) {
 
   let processed = 0;
   let sent = 0;
+  let failed = 0;
 
   for (const delivery of (deliveries ?? []) as DeliveryRow[]) {
     const [divinerResult, subscribersResult] = await Promise.all([
@@ -171,24 +198,44 @@ export async function processScheduledWeeklyDeliveries(limit = 20) {
     const subscribers = (subscribersResult.data ?? []) as SubscriberRow[];
 
     if (!diviner) {
+      const failureMessage = "Delivery skipped because the diviner profile could not be found.";
       console.error(
         `[weekly-deliveries] delivery ${delivery.id} skipped because diviner was not found`
       );
+      await admin
+        .from("weekly_subscription_deliveries")
+        .update({
+          status: "failed",
+          attempted_at: now,
+          failed_at: now,
+          last_error: failureMessage,
+          updated_at: now,
+        })
+        .eq("id", delivery.id)
+        .eq("status", "scheduled");
+      failed += 1;
       continue;
     }
 
-    const sentCount = await sendDeliveryToSubscribers({
+    const result = await sendDeliveryToSubscribers({
       delivery,
       diviner,
       subscribers,
     });
 
+    const nextStatus =
+      result.sentCount > 0 || subscribers.length === 0 ? "sent" : "failed";
+
     const { error: updateError } = await admin
       .from("weekly_subscription_deliveries")
       .update({
-        status: "sent",
-        sent_at: now,
-        recipient_count: sentCount,
+        status: nextStatus,
+        sent_at: nextStatus === "sent" ? now : null,
+        attempted_at: now,
+        failed_at: nextStatus === "failed" ? now : null,
+        recipient_count: result.sentCount,
+        failed_recipient_count: result.failedCount,
+        last_error: result.lastError,
         updated_at: now,
       })
       .eq("id", delivery.id)
@@ -203,11 +250,15 @@ export async function processScheduledWeeklyDeliveries(limit = 20) {
     }
 
     processed += 1;
-    sent += sentCount;
+    sent += result.sentCount;
+    if (nextStatus === "failed") {
+      failed += 1;
+    }
   }
 
   return {
     processed,
     sent,
+    failed,
   };
 }

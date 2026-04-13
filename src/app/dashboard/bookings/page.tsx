@@ -27,7 +27,7 @@ export default async function BookingsPage() {
   const { data: bookings } = await admin
     .from("bookings")
     .select(
-      "id, scheduled_at, status, duration_minutes, base_price, session_notes, metadata, questionnaire_responses, client_id, refund_amount, refunded_at, refund_reason, services(name), clients(full_name, email, birth_date, birth_time, birth_city)"
+      "id, scheduled_at, status, duration_minutes, base_price, payment_intent_id, session_notes, metadata, questionnaire_responses, client_id, refund_amount, refunded_at, refund_reason, services(name), clients(full_name, email, birth_date, birth_time, birth_city)"
     )
     .eq("owner_id", ownerId)
     .order("scheduled_at", { ascending: false });

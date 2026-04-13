@@ -58,7 +58,7 @@ export default async function MediaGalleryPage() {
   const { data: items } = await admin
     .from("media_items")
     .select(
-      "id, type, url, title, description, thumbnail_url, album_name, sort_order, is_active, is_featured, view_count, created_at"
+      "id, type, url, title, description, thumbnail_url, album_name, sort_order, is_active, is_featured, moderation_status, submitted_for_review_at, reviewed_at, admin_review_notes, view_count, created_at"
     )
     .eq("diviner_id", diviner.id)
     .order("sort_order", { ascending: true })
@@ -68,6 +68,8 @@ export default async function MediaGalleryPage() {
   const totalCount = allItems.length;
   const featuredCount = allItems.filter((i) => i.is_featured).length;
   const activeCount = allItems.filter((i) => i.is_active).length;
+  const pendingReviewCount = allItems.filter((i) => i.moderation_status === "pending").length;
+  const blockedCount = allItems.filter((i) => i.moderation_status === "blocked").length;
   const imageItems = allItems.filter((i) => i.type === "image");
   const imageCount = imageItems.length;
   const albums = Array.from(
@@ -103,7 +105,7 @@ export default async function MediaGalleryPage() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card className="py-4">
           <CardContent className="flex flex-col items-center gap-1 px-4">
             <span className="text-2xl font-bold">{totalCount}</span>
@@ -120,6 +122,18 @@ export default async function MediaGalleryPage() {
           <CardContent className="flex flex-col items-center gap-1 px-4">
             <span className="text-2xl font-bold">{activeCount}</span>
             <span className="text-xs text-muted-foreground">Active</span>
+          </CardContent>
+        </Card>
+        <Card className="py-4">
+          <CardContent className="flex flex-col items-center gap-1 px-4">
+            <span className="text-2xl font-bold">{pendingReviewCount}</span>
+            <span className="text-xs text-muted-foreground">Pending Review</span>
+          </CardContent>
+        </Card>
+        <Card className="py-4">
+          <CardContent className="flex flex-col items-center gap-1 px-4">
+            <span className="text-2xl font-bold">{blockedCount}</span>
+            <span className="text-xs text-muted-foreground">Blocked</span>
           </CardContent>
         </Card>
       </div>
@@ -234,21 +248,39 @@ export default async function MediaGalleryPage() {
                         {/* Featured */}
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Star className="size-3" />
-                          <MediaFeaturedToggle itemId={item.id} featured={item.is_featured} />
+                          <MediaFeaturedToggle itemId={item.id} featured={item.is_featured} blocked={item.moderation_status === "blocked"} />
                         </div>
                         {/* Active */}
-                        <MediaActiveToggle itemId={item.id} active={item.is_active} />
+                        <MediaActiveToggle itemId={item.id} active={item.is_active} blocked={item.moderation_status === "blocked"} />
                       </div>
 
                       <div className="flex items-center gap-1">
                         <MediaReorderButtons
                           itemId={item.id}
-                          sortOrder={item.sort_order}
                           allItems={reorderItems}
                         />
                         <MediaEditButton itemId={item.id} />
                         <MediaDeleteButton itemId={item.id} />
                       </div>
+                    </div>
+                    <div className="space-y-1 rounded-md border border-dashed border-muted px-3 py-2 text-xs">
+                      <p className="font-medium text-foreground">
+                        Review status:{" "}
+                        <span className="capitalize">{String(item.moderation_status).replace("_", " ")}</span>
+                      </p>
+                      {item.moderation_status === "pending" && (
+                        <p className="text-muted-foreground">
+                          Awaiting admin review before this item can appear publicly.
+                        </p>
+                      )}
+                      {item.moderation_status === "blocked" && (
+                        <p className="text-destructive">
+                          Permanently blocked by admin. This item cannot be republished from your dashboard.
+                        </p>
+                      )}
+                      {item.admin_review_notes && (
+                        <p className="text-muted-foreground">Admin note: {item.admin_review_notes}</p>
+                      )}
                     </div>
                   </div>
                 );

@@ -2633,7 +2633,7 @@ export default function AdminHoroscopePage() {
           ...collected,
           returnDate: collected.returnDate ?? returnDate ?? "calculated",
         };
-        const prompts = buildAiPrompts(combinedData, currentTab.slug);
+        const prompts = buildAiPrompts(combinedData, currentTab.slug, form.areaOfInquiry || undefined);
 
         const aiPromises = prompts.map(async (p) => {
           try {
@@ -2700,6 +2700,17 @@ export default function AdminHoroscopePage() {
           ).then((d) => {
             collected.natal_chart_data = d;
             setResults((prev) => ({ ...prev, natal_chart_data: d }));
+          })
+        );
+
+        // Natal data for Person 2
+        relTasks.push(
+          callCompute(
+            "western_horoscope",
+            birth2 as unknown as Record<string, unknown>
+          ).then((d) => {
+            collected.natal_chart_data_p2 = d;
+            setResults((prev) => ({ ...prev, natal_chart_data_p2: d }));
           })
         );
 
@@ -2784,7 +2795,7 @@ export default function AdminHoroscopePage() {
         // AI Interpretations
         addProgress("Running relationship AI…");
         const combinedData = { ...(collected.synastry ?? {}), ...collected };
-        const prompts = buildAiPrompts(combinedData, currentTab.slug);
+        const prompts = buildAiPrompts(combinedData, currentTab.slug, form.areaOfInquiry || undefined);
         const aiPromises = prompts.map(async (p) => {
           try {
             const aiPayload = {
@@ -2836,6 +2847,43 @@ export default function AdminHoroscopePage() {
             astro_api_data: collected.natal_chart_data ?? {},
             freeNatalWheelChart: natalSvg ?? "",
             freeNatalWheelChartForTrasit: natalSvgTransit ?? "",
+          };
+          fetchWithRetry(
+            "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(savePayload),
+            },
+          ).catch(() => { });
+        } catch {
+          /* ignore save errors */
+        }
+      }
+
+      // ── Save romantic forecast report (fire-and-forget) ──────────────
+      if (currentTab.slug === "romantic_forecast_report_tropical_v2") {
+        try {
+          const birth2 = parseBirth(form.person2);
+          const savePayload = {
+            toolname: "romantic_forecast_report_tropical_v2",
+            ai_response: collected.ai_interpretations ?? {},
+            natal_chart: {
+              self: collected.natal_chart_data ?? {},
+              partner: collected.natal_chart_data_p2 ?? {},
+            },
+            formData: {
+              self: birth1,
+              partner: birth2,
+            },
+            astro_api_data: {
+              synastry: collected.synastry ?? {},
+              composite: collected.composite ?? {},
+            },
+            freeNatalWheelChart: natalSvg ?? "",
+            freeNatalWheelChartForTrasit: natalSvgTransit ?? "",
+            freeNatalWheelChartP2: natalSvgP2 ?? "",
+            freeNatalWheelChartForTrasitP2: natalSvgTransitP2 ?? "",
           };
           fetchWithRetry(
             "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
@@ -3087,10 +3135,10 @@ export default function AdminHoroscopePage() {
                       />
                     )}
 
-                    {/* ─── Natal chart sections (all single tabs + planet return tabs) ─ */}
+                    {/* ─── Natal chart sections (single-person tabs only — not two-person relationship tabs) ─ */}
                     {natalData && (
                       <div className="space-y-6">
-                        {(!isMainTransitTab && currentSlug !== "friendship_report_tropical_v2") && (
+                        {(!isMainTransitTab && !isTwoPersonAiTab) && (
                           <>
                             <PlanetsSection
                               planets={[

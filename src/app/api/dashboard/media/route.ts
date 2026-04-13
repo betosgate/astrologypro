@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { MAX_MEDIA_IMAGES, normalizeAlbumName } from "@/lib/media-gallery";
+import {
+  isMediaTypeBlocked,
+  normalizePublishPolicy,
+  publishBlockMessage,
+} from "@/lib/diviner-publishing";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +30,7 @@ async function getAuthenticatedDiviner() {
   const admin = createAdminClient();
   const { data: diviner } = await admin
     .from("diviners")
-    .select("id")
+    .select("id, public_publish_blocked, blocked_public_sections, blocked_media_types, publish_block_reason")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -42,7 +47,7 @@ export async function GET() {
   const { data, error } = await admin
     .from("media_items")
     .select(
-      "id, type, url, title, description, thumbnail_url, category, album_name, platform, duration_seconds, sort_order, is_active, is_featured, view_count, created_at, updated_at"
+      "id, type, url, title, description, thumbnail_url, category, album_name, platform, duration_seconds, sort_order, is_active, is_featured, moderation_status, submitted_for_review_at, reviewed_at, admin_review_notes, view_count, created_at, updated_at"
     )
     .eq("diviner_id", diviner.id)
     .order("sort_order", { ascending: true })
@@ -106,6 +111,17 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createAdminClient();
+  const publishPolicy = normalizePublishPolicy(diviner as Record<string, unknown>);
+  if (isMediaTypeBlocked(publishPolicy, media_type as string)) {
+    return problemDetail(
+      403,
+      "Publishing blocked",
+      publishBlockMessage(
+        publishPolicy,
+        `Publishing ${String(media_type)} media has been blocked by an administrator.`
+      )
+    );
+  }
 
   if (media_type === "image") {
     const { count, error: countError } = await admin
@@ -143,6 +159,8 @@ export async function POST(req: NextRequest) {
       album_name: media_type === "image" ? normalizeAlbumName(album_name) : null,
       is_featured: featured === true,
       is_active: is_active !== false,
+      moderation_status: "pending",
+      submitted_for_review_at: new Date().toISOString(),
       sort_order: typeof sort_order === "number" ? sort_order : 0,
     })
     .select()
