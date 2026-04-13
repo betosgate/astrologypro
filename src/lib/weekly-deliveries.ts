@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildEmailHtml, infoCard } from "@/lib/email-base";
 import { sendEmail } from "@/lib/email";
+import { createWeeklySubscriptionManageToken } from "@/lib/weekly-subscription-manage-token";
 
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
@@ -17,6 +18,7 @@ interface SubscriberRow {
   id: string;
   email: string;
   name: string | null;
+  email_opt_out?: boolean | null;
 }
 
 interface DivinerRow {
@@ -60,11 +62,17 @@ async function sendDeliveryToSubscribers(params: {
 }) {
   const { delivery, diviner, subscribers } = params;
   const divinerName = diviner.display_name ?? "Your Diviner";
-  const manageUrl = `${APP_URL}/portal/subscriptions`;
-
   let sentCount = 0;
 
   for (const subscriber of subscribers) {
+    if (subscriber.email_opt_out) continue;
+
+    const token = createWeeklySubscriptionManageToken({
+      subscriberId: subscriber.id,
+      email: subscriber.email,
+    });
+    const manageUrl = `${APP_URL}/subscriptions/manage?token=${encodeURIComponent(token)}`;
+
     try {
       await sendEmail({
         to: subscriber.email,
@@ -103,7 +111,7 @@ export async function sendImmediateWeeklyDelivery(params: {
       .single(),
     admin
       .from("weekly_subscription_subscribers")
-      .select("id, email, name")
+      .select("id, email, name, email_opt_out")
       .eq("diviner_id", params.divinerId)
       .eq("status", "active"),
   ]);
@@ -154,7 +162,7 @@ export async function processScheduledWeeklyDeliveries(limit = 20) {
         .single(),
       admin
         .from("weekly_subscription_subscribers")
-        .select("id, email, name")
+        .select("id, email, name, email_opt_out")
         .eq("diviner_id", delivery.diviner_id)
         .eq("status", "active"),
     ]);

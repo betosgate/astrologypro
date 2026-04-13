@@ -50,19 +50,19 @@ BEGIN
     email_confirmed_at, created_at, updated_at, confirmation_token, raw_app_meta_data, raw_user_meta_data)
   VALUES
     (v_user1_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-     'seedclient1@test.com', crypt('SeedPass1!', gen_salt('bf')),
+     'seedclient1@test.com', extensions.crypt('SeedPass1!', extensions.gen_salt('bf')),
      NOW(), NOW(), NOW(), '', '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb),
     (v_user2_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-     'seedclient2@test.com', crypt('SeedPass2!', gen_salt('bf')),
+     'seedclient2@test.com', extensions.crypt('SeedPass2!', extensions.gen_salt('bf')),
      NOW(), NOW(), NOW(), '', '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb),
     (v_user3_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-     'seedclient3@test.com', crypt('SeedPass3!', gen_salt('bf')),
+     'seedclient3@test.com', extensions.crypt('SeedPass3!', extensions.gen_salt('bf')),
      NOW(), NOW(), NOW(), '', '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb),
     (v_user4_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-     'seedclient4@test.com', crypt('SeedPass4!', gen_salt('bf')),
+     'seedclient4@test.com', extensions.crypt('SeedPass4!', extensions.gen_salt('bf')),
      NOW(), NOW(), NOW(), '', '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb),
     (v_user5_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-     'seedclient5@test.com', crypt('SeedPass5!', gen_salt('bf')),
+     'seedclient5@test.com', extensions.crypt('SeedPass5!', extensions.gen_salt('bf')),
      NOW(), NOW(), NOW(), '', '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb)
   ON CONFLICT (id) DO NOTHING;
 

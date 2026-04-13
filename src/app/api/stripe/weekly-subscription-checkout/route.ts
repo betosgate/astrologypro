@@ -107,6 +107,17 @@ export async function POST(request: NextRequest) {
         name,
         ...(affiliateCode ? { affiliateCode } : {}),
       },
+      subscription_data: {
+        metadata: {
+          type: "weekly_subscription",
+          divinerId: diviner.id,
+          divinerUsername: diviner.username,
+          weeklySubscriptionProductId: product.id,
+          email,
+          name,
+          ...(affiliateCode ? { affiliateCode } : {}),
+        },
+      },
       success_url: successUrl,
       cancel_url: cancelUrl,
     });
