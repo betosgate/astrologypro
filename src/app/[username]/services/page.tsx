@@ -12,10 +12,14 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCurrency } from "@/lib/format";
 import { getServiceImageUrl } from "@/lib/service-images";
-import { isFallbackManualService } from "@/lib/public-booking";
 import { APP_URL } from "@/lib/constants";
 import { getDivinerAvatarUrl } from "@/lib/diviner-images";
 import { PageTracker } from "@/components/landing/page-tracker";
+import {
+  buildPublicServicesIntro,
+  filterVisiblePublicServices,
+  getServiceCategoryLabel,
+} from "@/lib/public-services";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -130,7 +134,7 @@ function ServiceIndexCard({
           <div className="absolute bottom-3 left-4">
             <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-cosmos-900/70 px-2.5 py-0.5 text-[10px] font-medium text-gold backdrop-blur-sm">
               <Sparkles className="size-2.5" />
-              {service.category === "astrology" ? "Astrology" : service.category === "tarot" ? "Tarot" : service.category}
+              {getServiceCategoryLabel(service.category)}
             </span>
           </div>
         </div>
@@ -141,7 +145,7 @@ function ServiceIndexCard({
         {!imageUrl && (
           <span className="mb-2 inline-flex items-center gap-1 rounded-full border border-gold/20 bg-gold/5 px-2 py-0.5 text-[10px] font-medium text-gold/80">
             <Sparkles className="size-2.5" />
-            {service.category === "astrology" ? "Astrology" : service.category === "tarot" ? "Tarot" : service.category}
+            {getServiceCategoryLabel(service.category)}
           </span>
         )}
 
@@ -202,7 +206,7 @@ export default async function ServicesIndexPage({
   if (!diviner) notFound();
 
   const allServices = await getServices(diviner.id);
-  const publicServices = allServices.filter((s) => !isFallbackManualService(s));
+  const publicServices = filterVisiblePublicServices(allServices);
 
   if (publicServices.length === 0) {
     notFound();
@@ -263,7 +267,7 @@ export default async function ServicesIndexPage({
             {diviner.display_name}&apos;s Services
           </h1>
           <p className="mx-auto mt-3 max-w-md text-sm text-silver/60">
-            Choose from a range of readings tailored to your questions
+            {buildPublicServicesIntro(publicServices)}
           </p>
         </div>
       </section>
@@ -276,7 +280,7 @@ export default async function ServicesIndexPage({
             <div className="mb-12">
               <h2 className="mb-6 flex items-center gap-2 font-display text-2xl font-semibold text-cream">
                 <Star className="size-5 text-gold" />
-                Astrology Readings
+                {getServiceCategoryLabel("astrology")} Readings
               </h2>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {astroServices.map((service) => (
@@ -296,7 +300,7 @@ export default async function ServicesIndexPage({
             <div className="mb-12">
               <h2 className="mb-6 flex items-center gap-2 font-display text-2xl font-semibold text-cream">
                 <Sparkles className="size-5 text-gold" />
-                Tarot Readings
+                {getServiceCategoryLabel("tarot")} Readings
               </h2>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {tarotServices.map((service) => (

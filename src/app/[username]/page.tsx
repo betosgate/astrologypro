@@ -18,29 +18,19 @@ import { PublicContentTabs } from "@/components/public/public-content-tabs";
 import { BlogSubscribeForm } from "@/app/blog/subscribe-form";
 import { CheckInForm } from "@/components/diviner/check-in-form";
 import { WeeklySubscriptionSignup } from "@/components/public/weekly-subscription-signup";
-import { isFallbackManualService } from "@/lib/public-booking";
 import { isPublicSectionBlocked, normalizePublishPolicy } from "@/lib/diviner-publishing";
 import { getDivinerAvatarUrl, getDivinerCoverImageUrl } from "@/lib/diviner-images";
+import {
+  buildPublicServicesIntro,
+  filterVisiblePublicServices,
+  getHighlightedPublicService,
+  getServiceCategoryLabel,
+  isTimeBasedPublicService,
+} from "@/lib/public-services";
 
 interface PageProps {
   params: Promise<{ username: string }>;
   searchParams: Promise<{ tab?: string }>;
-}
-
-function isTimeBasedService(service: Record<string, unknown>) {
-  const triggerEvent = String(service.trigger_event ?? "").trim();
-  const slug = String(service.slug ?? "").toLowerCase();
-  const name = String(service.name ?? "").toLowerCase();
-
-  return Boolean(
-    triggerEvent ||
-      slug.includes("return") ||
-      slug.includes("transit") ||
-      slug.includes("forecast") ||
-      name.includes("return") ||
-      name.includes("transit") ||
-      name.includes("forecast"),
-  );
 }
 
 async function getDiviner(username: string) {
@@ -364,28 +354,23 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
   const filteredMediaItems = mediaItems.filter(
     (item) => !publishPolicy.blockedMediaTypes.includes(item.type)
   );
-  const publicServices = services.filter((service) => !isFallbackManualService(service));
+  const publicServices = filterVisiblePublicServices(services);
   const astroServices = publicServices.filter((s) => s.category === "astrology");
   const tarotServices = publicServices.filter((s) => s.category === "tarot");
   const activeTab = !bioBlocked && tab === "bio" ? "bio" : "home";
-  const birthChartService =
-    publicServices.find((service) => service.slug === "natal-chart") ??
-    publicServices.find((service) =>
-      String(service.name ?? "").toLowerCase().includes("natal chart"),
-    ) ??
-    null;
-  const timeBasedServices = publicServices.filter(
-    (service) =>
-      service.id !== birthChartService?.id && isTimeBasedService(service),
+  const highlightedService = getHighlightedPublicService(publicServices);
+  const remainingPublicServices =
+    highlightedService && publicServices.length > 1
+      ? publicServices.filter((service) => service.id !== highlightedService.id)
+      : publicServices;
+  const timeBasedServices = remainingPublicServices.filter((service) =>
+    isTimeBasedPublicService(service),
   );
-  const evergreenServices = publicServices.filter(
-    (service) =>
-      service.id !== birthChartService?.id && !isTimeBasedService(service),
+  const evergreenServices = remainingPublicServices.filter((service) =>
+    !isTimeBasedPublicService(service),
   );
   const primaryPublicService =
     publicServices.find((service) => service.is_featured) ?? publicServices[0] ?? null;
-  const fallbackBookingService =
-    services.find((service) => isFallbackManualService(service)) ?? null;
   const bookingPreview = servicesBlocked
     ? null
     : primaryPublicService
@@ -401,7 +386,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
             bookPath: "/book",
             durationMinutes:
               stats.unscopedDurationMinutes ??
-              fallbackBookingService?.duration_minutes ??
+              primaryPublicService?.duration_minutes ??
               60,
             serviceName: undefined,
           }
@@ -623,29 +608,29 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                   Services &amp; Offerings
                 </h2>
                 <p className="mx-auto mb-6 max-w-2xl text-center text-sm text-silver/60">
-                  Time-based readings for major cycles, non-time-based readings for deeper guidance, and a featured birth-chart path for first-time clients.
+                  {buildPublicServicesIntro(publicServices)}
                 </p>
 
-                {birthChartService ? (
+                {highlightedService ? (
                   <div className="mb-8 rounded-3xl border border-gold/25 bg-[linear-gradient(135deg,rgba(201,168,76,0.12),rgba(8,10,18,0.7))] p-6 md:p-8">
                     <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
                       <div className="max-w-2xl">
                         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.25em] text-gold/80">
-                          Featured Nativity Offering
+                          {highlightedService.is_featured ? "Featured Offering" : "Current Offering"}
                         </p>
                         <h3 className="font-display text-2xl font-semibold text-cream md:text-3xl">
-                          {birthChartService.name}
+                          {highlightedService.name}
                         </h3>
                         <p className="mt-3 text-sm leading-relaxed text-silver/70">
-                          {birthChartService.description ??
-                            "The birth chart is the foundation of this practice and the best place for many clients to begin."}
+                          {highlightedService.description ??
+                            `${diviner.display_name} is currently offering this ${getServiceCategoryLabel(highlightedService.category).toLowerCase()} session on AstrologyPro.`}
                         </p>
                       </div>
                       <Link
-                        href={`/${username}/book/${birthChartService.slug}`}
+                        href={`/${username}/book/${highlightedService.slug}`}
                         className="inline-flex h-11 items-center justify-center rounded-full bg-gold px-6 text-sm font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
                       >
-                        Book {birthChartService.name}
+                        Book {highlightedService.name}
                       </Link>
                     </div>
                   </div>
@@ -687,7 +672,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                   </div>
                 )}
 
-                {!birthChartService && astroServices.length > 0 && tarotServices.length > 0 && (
+                {!highlightedService && astroServices.length > 0 && tarotServices.length > 0 && (
                   <ServiceTabs
                     astroServices={astroServices}
                     tarotServices={tarotServices}
