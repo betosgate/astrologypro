@@ -23,7 +23,7 @@ export async function GET() {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("global_pricing")
-    .select("id, item_key, item_name, description, html_description, is_active, stripe_product_id, stripe_product_name, payment_provider, payment_provider_id, created_at, updated_at")
+    .select("id, item_key, item_name, description, html_description, is_active, stripe_product_id, stripe_product_name, payment_provider, payment_provider_id, created_at, updated_at, pricing_plans(id, display_name, amount, onetime_amount, currency, is_active, sort_order)")
     .order("item_key", { ascending: true });
 
   if (error) {
