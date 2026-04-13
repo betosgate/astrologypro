@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CircularProgress } from "@/components/ui/circular-progress";
+import { ProfileCompletionBar } from "@/components/ui/profile-completion-bar";
+import { calculateProfileCompletion } from "@/lib/profile-completion";
 import { ProfileEditor } from "@/components/trainee/profile-editor";
 import {
   GraduationCap,
@@ -124,6 +126,18 @@ export default async function TraineeProfilePage() {
     year: "numeric",
   });
 
+  const completion = calculateProfileCompletion([
+    { key: "name", label: "Name", value: trainee.name },
+    { key: "email", label: "Email", value: trainee.email },
+    { key: "phone", label: "Phone", value: trainee.phone },
+    { key: "timezone", label: "Timezone", value: trainee.timezone },
+    { key: "bio", label: "Bio", value: trainee.bio },
+    { key: "avatar_url", label: "Profile Photo", value: avatarUrl },
+    { key: "birth_date", label: "Date of Birth", value: clientProfile?.birth_date },
+    { key: "birth_time", label: "Birth Time", value: clientProfile?.birth_time },
+    { key: "birth_city", label: "Birth City", value: clientProfile?.birth_city },
+  ]);
+
   return (
     <div className="space-y-8">
       {/* ── Header ── */}
@@ -133,6 +147,13 @@ export default async function TraineeProfilePage() {
           Manage your trainee profile and track your training status.
         </p>
       </div>
+
+      <ProfileCompletionBar
+        percentage={completion.percentage}
+        missingFields={completion.missingFields}
+        completedCount={completion.completedCount}
+        totalCount={completion.totalCount}
+      />
 
       {/* ── Profile Editor (client component) ── */}
       <Card>

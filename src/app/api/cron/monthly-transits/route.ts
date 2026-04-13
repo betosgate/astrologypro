@@ -12,8 +12,19 @@ export const maxDuration = 60;
 
 /**
  * GET /api/cron/monthly-transits
- * Runs on the 1st of each month. Generates transit reports for all active
- * community family members that have natal charts.
+ *
+ * Runs on the 1st of each month. Generates monthly transit reports for all
+ * active Perennial Mandalism family members that have generated natal charts.
+ *
+ * Lifecycle states written:
+ *   pending   → generation starts
+ *   generated → transit data computed successfully
+ *   notified  → email delivered
+ *   failed    → generation or email failed (surfaced to admin ops)
+ *
+ * Generation and notification are tracked independently:
+ *   - A transit can be 'generated' even if notification fails.
+ *   - Failed notifications remain visible to admin for resend.
  */
 export async function GET(request: NextRequest) {
   const authError = verifyCronAuth(request);
@@ -26,13 +37,14 @@ export async function GET(request: NextRequest) {
 
   const admin = createAdminClient();
 
-  // Fetch all family members with natal charts whose community membership is active
+  // Fetch all family members with generated natal charts whose membership is active
   const { data: familyMembers, error } = await admin
     .from("community_family_members")
     .select(
-      `id, full_name, natal_chart,
-       community_members!inner(membership_status)`
+      `id, full_name, natal_chart, member_id,
+       community_members!inner(id, membership_status, email, full_name)`
     )
+    .eq("natal_status", "generated")
     .not("natal_chart", "is", null);
 
   if (error) {
@@ -42,81 +54,140 @@ export async function GET(request: NextRequest) {
 
   let generated = 0;
   let skipped = 0;
+  let failed = 0;
+  let notified = 0;
 
   for (const fm of familyMembers ?? []) {
-    const memberData = (fm.community_members as unknown) as { membership_status: string } | null;
+    const memberData = (fm.community_members as unknown) as {
+      id: string;
+      membership_status: string;
+      email: string | null;
+      full_name: string | null;
+    } | null;
+
     if (memberData?.membership_status !== "active") { skipped++; continue; }
     if (!fm.natal_chart) { skipped++; continue; }
 
-    // Skip if already generated this month
-    const { count } = await admin
+    // Skip if a non-failed transit already exists for this month
+    const { data: existing } = await admin
       .from("monthly_transits")
-      .select("id", { count: "exact", head: true })
+      .select("id, generation_status")
       .eq("family_member_id", fm.id)
-      .eq("month", monthStr);
+      .eq("month", monthStr)
+      .maybeSingle();
 
-    if ((count ?? 0) > 0) { skipped++; continue; }
+    if (existing && existing.generation_status !== "failed") {
+      skipped++;
+      continue;
+    }
 
-    const transitData = calculateMonthlyTransits(
-      fm.natal_chart as NatalChartData,
-      year,
-      month
-    );
+    const attemptedAt = new Date().toISOString();
 
-    const { data: newTransit } = await admin
+    // If a failed record exists, update it in place; otherwise insert
+    let transitId: string | null = existing?.id ?? null;
+
+    if (!transitId) {
+      // Reserve the row as 'pending' before computation
+      const { data: pendingRow, error: insertErr } = await admin
+        .from("monthly_transits")
+        .insert({
+          family_member_id: fm.id,
+          month: monthStr,
+          transit_data: {},
+          generation_status: "pending",
+          notification_sent: false,
+          last_attempted_at: attemptedAt,
+        })
+        .select("id")
+        .single();
+
+      if (insertErr || !pendingRow) {
+        console.error("[monthly-transits] failed to reserve pending row for", fm.id, insertErr);
+        failed++;
+        continue;
+      }
+      transitId = pendingRow.id;
+    }
+
+    // Compute transit data
+    let transitData;
+    try {
+      transitData = calculateMonthlyTransits(
+        fm.natal_chart as NatalChartData,
+        year,
+        month
+      );
+    } catch (calcErr) {
+      console.error("[monthly-transits] calculation failed for", fm.id, calcErr);
+      await admin
+        .from("monthly_transits")
+        .update({
+          generation_status: "failed",
+          failure_reason: calcErr instanceof Error ? calcErr.message : "calculation_error",
+          retry_count: (existing?.generation_status === "failed" ? 1 : 0) + 1,
+          last_attempted_at: attemptedAt,
+        })
+        .eq("id", transitId);
+      failed++;
+      continue;
+    }
+
+    // Persist generated transit data
+    const { error: updateErr } = await admin
       .from("monthly_transits")
-      .insert({
-        family_member_id: fm.id,
-        month: monthStr,
+      .update({
         transit_data: transitData,
-        notification_sent: false,
+        generation_status: "generated",
+        generated_at: attemptedAt,
+        failure_reason: null,
+        last_attempted_at: attemptedAt,
       })
-      .select("id")
-      .single();
+      .eq("id", transitId);
+
+    if (updateErr) {
+      console.error("[monthly-transits] failed to save transit for", fm.id, updateErr);
+      failed++;
+      continue;
+    }
 
     generated++;
 
-    // Send transit-ready email to the member who owns this family member
-    // Only send if insert succeeded and notification not yet sent
-    if (newTransit?.id) {
+    // ── Send notification — tracked independently from generation ────────────
+    if (memberData?.email && memberData.membership_status === "active") {
       try {
-        // Fetch the owning community_member's email
-        const { data: familyRow } = await admin
-          .from("community_family_members")
-          .select("full_name, member_id")
-          .eq("id", fm.id)
-          .single();
+        await sendMonthlyTransitReady({
+          to: memberData.email,
+          name: memberData.full_name ?? "Member",
+          month: monthStr,
+          familyMemberName: fm.full_name ?? "your family member",
+        });
 
-        if (familyRow?.member_id) {
-          const { data: ownerMember } = await admin
-            .from("community_members")
-            .select("email, full_name, membership_status")
-            .eq("id", familyRow.member_id)
-            .single();
+        await admin
+          .from("monthly_transits")
+          .update({
+            generation_status: "notified",
+            notification_sent: true,
+            notified_at: new Date().toISOString(),
+          })
+          .eq("id", transitId);
 
-          if (
-            ownerMember?.email &&
-            ownerMember.membership_status === "active"
-          ) {
-            await sendMonthlyTransitReady({
-              to: ownerMember.email,
-              name: ownerMember.full_name ?? "Member",
-              month: monthStr,
-              familyMemberName: familyRow.full_name ?? fm.full_name ?? "your family member",
-            });
-
-            await admin
-              .from("monthly_transits")
-              .update({ notification_sent: true })
-              .eq("id", newTransit.id);
-          }
-        }
+        notified++;
       } catch (emailErr) {
-        console.error("[monthly-transits] Failed to send transit-ready email for", fm.id, emailErr);
+        // Generation succeeded but email failed — stay in 'generated' state.
+        // Admin can see notification_sent=false and resend.
+        console.error("[monthly-transits] email failed for", fm.id, emailErr);
+        await admin
+          .from("monthly_transits")
+          .update({
+            failure_reason: "notification_email_failed",
+          })
+          .eq("id", transitId);
       }
     }
   }
 
-  console.log(`[monthly-transits] generated=${generated} skipped=${skipped} month=${monthStr}`);
-  return NextResponse.json({ generated, skipped, month: monthStr });
+  console.log(
+    `[monthly-transits] month=${monthStr} generated=${generated} notified=${notified} skipped=${skipped} failed=${failed}`
+  );
+  return NextResponse.json({ generated, notified, skipped, failed, month: monthStr });
 }

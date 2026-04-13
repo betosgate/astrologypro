@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/activity-log";
+import { trackDivinerActivityEvent } from "@/lib/diviner-analytics";
 import { createPaymentIntent } from "@/lib/stripe/connect";
 import { createCalendarEvent } from "@/lib/google-calendar";
 import { buildCalendarDescription, stripHtml } from "@/lib/calendar-utils";
 import { PRICING } from "@/lib/constants";
 import { ensureOrderForBooking, getOrderStatusForService } from "@/lib/orders";
 import { getServicePurchaseConfig } from "@/lib/service-purchase";
+import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
+import { isDivinerPayoutReadyForPaidServices } from "@/lib/payout-readiness";
 import {
   sendBookingConfirmation,
   sendBookingAccessInstructions,
@@ -93,7 +96,7 @@ export async function POST(request: NextRequest) {
     // Fetch the service first (source of truth for diviner_id)
     let { data: service, error: serviceError } = await adminSupabase
       .from("services")
-      .select("id, name, slug, category, base_price, duration_minutes, diviner_id, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields")
+      .select("id, name, slug, category, base_price, pricing_item_key, duration_minutes, diviner_id, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields")
       .eq("id", serviceId)
       .eq("is_active", true)
       .single();
@@ -101,7 +104,7 @@ export async function POST(request: NextRequest) {
     if (serviceError || !service) {
       const fallback = await supabase
         .from("services")
-        .select("id, name, slug, category, base_price, duration_minutes, diviner_id, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields")
+        .select("id, name, slug, category, base_price, pricing_item_key, duration_minutes, diviner_id, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields")
         .eq("id", serviceId)
         .eq("is_active", true)
         .single();
@@ -117,6 +120,7 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+    [service] = await applyRuntimePricesToServices(adminSupabase, [service]);
     const purchaseConfig = getServicePurchaseConfig(service);
 
     let resolvedDivinerId = service.diviner_id ?? null;
@@ -124,6 +128,8 @@ export async function POST(request: NextRequest) {
       id: string;
       user_id?: string;
       stripe_account_id: string | null;
+      charges_enabled?: boolean | null;
+      payouts_enabled?: boolean | null;
       display_name: string;
       video_provider?: string;
     } | null = null;
@@ -132,7 +138,7 @@ export async function POST(request: NextRequest) {
     async function fetchDivinerById(id: string) {
       let result = await adminSupabase
         .from("diviners")
-        .select("id, user_id, stripe_account_id, display_name, video_provider")
+        .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider")
         .eq("id", id)
         .eq("is_active", true)
         .single();
@@ -140,7 +146,7 @@ export async function POST(request: NextRequest) {
       if (result.error || !result.data) {
         result = await supabase
           .from("diviners")
-          .select("id, user_id, stripe_account_id, display_name, video_provider")
+          .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider")
           .eq("id", id)
           .eq("is_active", true)
           .single();
@@ -152,7 +158,7 @@ export async function POST(request: NextRequest) {
     async function fetchDivinerByUsername(username: string) {
       let result = await adminSupabase
         .from("diviners")
-        .select("id, user_id, stripe_account_id, display_name, video_provider")
+        .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider")
         .eq("username", username)
         .eq("is_active", true)
         .single();
@@ -160,7 +166,7 @@ export async function POST(request: NextRequest) {
       if (result.error || !result.data) {
         result = await supabase
           .from("diviners")
-          .select("id, user_id, stripe_account_id, display_name, video_provider")
+          .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider")
           .eq("username", username)
           .eq("is_active", true)
           .single();
@@ -184,7 +190,7 @@ export async function POST(request: NextRequest) {
       if (!diviner) {
         const fallbackByUserId = await supabase
           .from("diviners")
-          .select("id, stripe_account_id, display_name")
+          .select("id, stripe_account_id, charges_enabled, payouts_enabled, display_name")
           .eq("user_id", divinerId)
           .eq("is_active", true)
           .single();
@@ -494,6 +500,16 @@ export async function POST(request: NextRequest) {
       (finalPrice * effectivePlatformFeePercent) / 100;
     const shouldCharge = hasServiceAvailability && finalPrice > 0;
 
+    if (shouldCharge && !isDivinerPayoutReadyForPaidServices(diviner)) {
+      return NextResponse.json(
+        {
+          error:
+            "This diviner is still completing payment setup. Paid booking is temporarily unavailable.",
+        },
+        { status: 409 }
+      );
+    }
+
     // Calculate end time
     const startTime = new Date(scheduledAt);
     const endTime = new Date(
@@ -536,6 +552,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    await trackDivinerActivityEvent({
+      divinerId: diviner.id,
+      activityType: "booking_checkout_started",
+      path: divinerUsername
+        ? `/${divinerUsername}/book/${service.slug ?? service.id}`
+        : null,
+      referrer: request.headers.get("referer"),
+      request,
+      metadata: {
+        bookingId: booking.id,
+        serviceId: service.id,
+        serviceName: service.name,
+        affiliateCode: affiliateCode ?? null,
+      },
+    });
+
     const initialOrderStatus = shouldCharge
       ? "pending_payment"
       : getOrderStatusForService(service, true);
@@ -552,13 +584,6 @@ export async function POST(request: NextRequest) {
       paidAt: shouldCharge ? null : new Date().toISOString(),
       notes: booking_notes ?? null,
     });
-
-    if (shouldCharge && !diviner.stripe_account_id) {
-      return NextResponse.json(
-        { error: "Diviner has not set up payments yet" },
-        { status: 400 }
-      );
-    }
 
     let clientSecret: string | null = null;
 

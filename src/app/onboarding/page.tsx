@@ -516,19 +516,17 @@ export default function OnboardingPage() {
       setUserId(user.id);
       setUsername(user.user_metadata?.username ?? "");
 
-      // Load existing onboarding progress — query by user_id, not id
-      const { data: diviner } = await supabase
-        .from("diviners")
-        .select("id, onboarding_step, display_name, bio, tagline, avatar_url, cover_image_url, stripe_account_id, timezone, specialties, phone, youtube_channel_id, facebook_live_url")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      // Load diviner record via server API (admin client, bypasses RLS).
+      // Creates the diviner record if it doesn't exist yet.
+      const profileRes = await fetch("/api/onboarding/profile");
+      const profileData = profileRes.ok ? await profileRes.json() : null;
+      const diviner = profileData?.diviner ?? null;
 
       if (diviner) {
         setDivinerId(diviner.id);
         if (diviner.onboarding_step) {
           setCurrentStep(diviner.onboarding_step);
         }
-        // Pre-populate display_name from signup name if not yet set in DB
         if (diviner.display_name) {
           setDisplayName(diviner.display_name);
         } else if (user.user_metadata?.name) {
@@ -617,13 +615,13 @@ export default function OnboardingPage() {
 
   const saveStep = useCallback(
     async (step: number) => {
-      if (!divinerId) return;
-      await supabase
-        .from("diviners")
-        .update({ onboarding_step: step })
-        .eq("id", divinerId);
+      await fetch("/api/onboarding/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ onboarding_step: step }),
+      });
     },
-    [divinerId, supabase]
+    []
   );
 
   async function handleGenerateBio() {
@@ -679,50 +677,43 @@ export default function OnboardingPage() {
       let avatarUrl = avatarPreview;
 
       if (avatarFile) {
-        const fileExt = avatarFile.name.split(".").pop();
-        const filePath = `avatars/${userId}.${fileExt}`;
+        const formData = new FormData();
+        formData.append("file", avatarFile);
+        formData.append("folder", "avatars");
 
-        const { error: uploadError } = await supabase.storage
-          .from("avatars")
-          .upload(filePath, avatarFile, { upsert: true });
+        const res = await fetch("/api/upload/avatar", { method: "POST", body: formData });
+        const data = await res.json();
 
-        if (uploadError) {
-          setError("Failed to upload avatar: " + uploadError.message);
+        if (!res.ok) {
+          setError("Failed to upload avatar: " + (data.error ?? "Unknown error"));
           return;
         }
 
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("avatars").getPublicUrl(filePath);
-
-        avatarUrl = publicUrl;
+        avatarUrl = data.publicUrl;
       }
 
       let coverUrl = coverImagePreview;
 
       if (coverImageFile) {
-        const fileExt = coverImageFile.name.split(".").pop();
-        const filePath = `covers/${userId}.${fileExt}`;
+        const formData = new FormData();
+        formData.append("file", coverImageFile);
+        formData.append("folder", "covers");
 
-        const { error: uploadError } = await supabase.storage
-          .from("avatars")
-          .upload(filePath, coverImageFile, { upsert: true });
+        const res = await fetch("/api/upload/avatar", { method: "POST", body: formData });
+        const data = await res.json();
 
-        if (uploadError) {
-          setError("Failed to upload cover image: " + uploadError.message);
+        if (!res.ok) {
+          setError("Failed to upload cover image: " + (data.error ?? "Unknown error"));
           return;
         }
 
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("avatars").getPublicUrl(filePath);
-
-        coverUrl = publicUrl;
+        coverUrl = data.publicUrl;
       }
 
-      const { error: updateError } = await supabase
-        .from("diviners")
-        .update({
+      const updateRes = await fetch("/api/onboarding/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           display_name: displayName,
           bio,
           tagline,
@@ -733,15 +724,18 @@ export default function OnboardingPage() {
           phone: phone || null,
           youtube_channel_id: youtubeChannelId || null,
           facebook_live_url: facebookLiveUrl || null,
-        })
-        .eq("id", divinerId);
+          onboarding_step: 2,
+        }),
+      });
 
-      if (updateError) {
-        setError(updateError.message);
+      if (!updateRes.ok) {
+        const errData = await updateRes.json();
+        setError(errData.error ?? "Failed to save profile");
         return;
       }
 
-      await saveStep(2);
+      const { divinerId: returnedId } = await updateRes.json();
+      if (returnedId && !divinerId) setDivinerId(returnedId);
       setCurrentStep(2);
     } catch {
       setError("Failed to save profile. Please try again.");

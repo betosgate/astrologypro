@@ -12,6 +12,7 @@ interface Service {
   base_price: number;
   category: string;
   is_featured: boolean;
+  booking_enabled?: boolean;
   [key: string]: unknown;
 }
 
@@ -20,6 +21,7 @@ interface ServiceTabsProps {
   tarotServices: Service[];
   username: string;
   serviceImages: Record<string, string | null>;
+  refParam?: string;
 }
 
 export function ServiceTabs({
@@ -27,6 +29,7 @@ export function ServiceTabs({
   tarotServices,
   username,
   serviceImages,
+  refParam = "",
 }: ServiceTabsProps) {
   return (
     <Tabs defaultValue="astrology" className="w-full">
@@ -61,6 +64,8 @@ export function ServiceTabs({
               service={service}
               username={username}
               imageUrl={serviceImages[service.slug]}
+              refParam={refParam}
+              bookingEnabled={service.booking_enabled !== false}
             />
           ))}
         </div>
@@ -74,6 +79,8 @@ export function ServiceTabs({
               service={service}
               username={username}
               imageUrl={serviceImages[service.slug]}
+              refParam={refParam}
+              bookingEnabled={service.booking_enabled !== false}
             />
           ))}
         </div>

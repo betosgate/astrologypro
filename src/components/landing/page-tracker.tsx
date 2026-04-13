@@ -14,6 +14,7 @@ export function PageTracker({ divinerId, path, username }: PageTrackerProps) {
       divinerId,
       path,
       referrer: document.referrer || null,
+      search: window.location.search || "",
     });
 
     if (typeof navigator.sendBeacon === "function") {

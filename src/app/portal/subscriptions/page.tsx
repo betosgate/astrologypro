@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { CancelSubscriptionButton } from "@/components/portal/cancel-subscription-button";
-import { Rss, User } from "lucide-react";
+import { Rss } from "lucide-react";
+import { getDivinerAvatarUrl } from "@/lib/diviner-images";
 
 export const metadata = {
   title: "My Subscriptions",
@@ -96,7 +98,7 @@ export default async function PortalSubscriptionsPage() {
             <Rss className="mx-auto mb-4 size-10 text-muted-foreground/40" />
             <p className="font-medium">No active subscriptions.</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Subscribe to a diviner's weekly updates to see them here.
+              Subscribe to a diviner&apos;s weekly updates to see them here.
             </p>
           </div>
         ) : (
@@ -149,20 +151,19 @@ function SubscriptionCard({
   const cancelledLabel = sub.cancelled_at
     ? `Cancelled ${new Date(sub.cancelled_at).toLocaleDateString("en-US", { dateStyle: "medium" })}`
     : null;
+  const divinerAvatarUrl = getDivinerAvatarUrl(diviner?.avatar_url);
 
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-white/[0.07] bg-white/[0.03] p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-3">
         <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/[0.06]">
-          {diviner?.avatar_url ? (
-            <img
-              src={diviner.avatar_url}
-              alt={diviner.display_name}
-              className="size-10 object-cover"
-            />
-          ) : (
-            <User className="size-5 text-muted-foreground" />
-          )}
+          <Image
+            src={divinerAvatarUrl}
+            alt={diviner?.display_name ?? "Diviner"}
+            width={40}
+            height={40}
+            className="size-10 object-cover"
+          />
         </div>
 
         <div className="min-w-0 space-y-0.5">

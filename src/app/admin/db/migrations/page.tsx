@@ -208,7 +208,7 @@ PY`}
               <pre className="overflow-x-auto rounded-md bg-muted p-3 text-[11px] font-mono leading-snug">
 {`import { MIGRATION_SQL as MIG_<id> } from "@/data/migrations/<id>";
 
-export const MIGRATIONS: Record<string, MigrationDescriptor> = {
+const MIGRATIONS: Record<string, MigrationDescriptor> = {
   // … existing entries …
   "<id>": {
     id: "<id>",

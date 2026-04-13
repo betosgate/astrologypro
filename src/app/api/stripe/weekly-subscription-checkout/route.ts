@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { trackDivinerActivityEvent } from "@/lib/diviner-analytics";
 import { ensureWeeklySubscriptionStripeProduct } from "@/lib/weekly-subscriptions";
 import {
   isPublicSectionBlocked,
@@ -137,6 +138,19 @@ export async function POST(request: NextRequest) {
       },
       success_url: successUrl,
       cancel_url: cancelUrl,
+    });
+
+    await trackDivinerActivityEvent({
+      divinerId: diviner.id,
+      activityType: "weekly_subscription_checkout_started",
+      path: `/${diviner.username}`,
+      referrer: request.headers.get("referer"),
+      request,
+      metadata: {
+        productId: product.id,
+        productTitle: product.title,
+        affiliateCode: affiliateCode ?? null,
+      },
     });
 
     return NextResponse.json({ url: session.url });
