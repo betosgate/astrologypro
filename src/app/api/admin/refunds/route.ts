@@ -3,6 +3,7 @@ import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import { sendRefundProcessed } from "@/lib/email";
+import { recordRefundEvent } from "@/lib/refund-events";
 
 export const runtime = "nodejs";
 
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
   let query = admin
     .from("bookings")
     .select(
-      "id, scheduled_at, base_price, refund_amount, refunded_at, refund_reason, status, no_show_type, stripe_payment_intent_id, clients(full_name, email), diviners(display_name)"
+      "id, scheduled_at, base_price, refund_amount, refunded_at, refund_reason, status, no_show_type, stripe_payment_intent_id, clients(full_name, email), diviners(id, display_name)"
     )
     .not("stripe_payment_intent_id", "is", null)
     .order("scheduled_at", { ascending: false })
@@ -43,7 +44,54 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ rows: rows ?? [] });
+  const bookings = rows ?? [];
+  if (bookings.length === 0) {
+    return NextResponse.json({ rows: [] });
+  }
+
+  const orderRefs = bookings.map((row) => `booking:${row.id}`);
+
+  const [{ data: ledgerRows }, { data: affiliateRows }] = await Promise.all([
+    admin
+      .from("revenue_ledger_entries")
+      .select(
+        "source_reference, gross_amount_cents, platform_fee_cents, affiliate_commission_cents, diviner_net_amount_cents"
+      )
+      .eq("source_type", "booking")
+      .in("source_reference", orderRefs),
+    admin
+      .from("affiliate_commissions")
+      .select("order_reference, commission_amount_cents, refund_amount_cents")
+      .in("order_reference", orderRefs),
+  ]);
+
+  const ledgerMap = new Map(
+    (ledgerRows ?? []).map((row) => [row.source_reference, row]),
+  );
+  const affiliateMap = new Map<string, { total: number; refunded: number }>();
+  for (const row of affiliateRows ?? []) {
+    const key = row.order_reference as string;
+    const existing = affiliateMap.get(key) ?? { total: 0, refunded: 0 };
+    existing.total += Number(row.commission_amount_cents ?? 0) / 100;
+    existing.refunded += Number(row.refund_amount_cents ?? 0) / 100;
+    affiliateMap.set(key, existing);
+  }
+
+  return NextResponse.json({
+    rows: bookings.map((row) => {
+      const ref = `booking:${row.id}`;
+      const ledger = ledgerMap.get(ref);
+      const affiliate = affiliateMap.get(ref);
+      return {
+        ...row,
+        ledger_gross_amount: Number(ledger?.gross_amount_cents ?? 0) / 100,
+        ledger_platform_fee: Number(ledger?.platform_fee_cents ?? 0) / 100,
+        ledger_affiliate_commission: Number(ledger?.affiliate_commission_cents ?? 0) / 100,
+        ledger_diviner_net: Number(ledger?.diviner_net_amount_cents ?? 0) / 100,
+        affiliate_refund_amount: affiliate?.refunded ?? 0,
+      };
+    }),
+  });
 }
 
 /**
@@ -64,7 +112,7 @@ export async function POST(request: NextRequest) {
   const { data: booking, error: bookingError } = await admin
     .from("bookings")
     .select(
-      "id, base_price, stripe_payment_intent_id, refunded_at, clients(email, full_name), diviners(display_name)"
+      "id, diviner_id, base_price, stripe_payment_intent_id, refunded_at, clients(email, full_name), diviners(display_name)"
     )
     .eq("id", bookingId)
     .single();
@@ -110,6 +158,22 @@ export async function POST(request: NextRequest) {
       status: "refunded",
     })
     .eq("id", bookingId);
+
+  await recordRefundEvent({
+    bookingId,
+    divinerId: booking.diviner_id ?? null,
+    orderReference: `booking:${bookingId}`,
+    paymentIntentId: booking.stripe_payment_intent_id,
+    providerRefundId: refund.id,
+    initiatedByUserId: user.id,
+    initiatedByRole: "admin",
+    amountCents,
+    reason: reason ?? "Admin-issued refund",
+    providerResponse: {
+      refundStatus: refund.status,
+      refundObject: refund.object,
+    },
+  });
 
   const clientData = booking.clients as { email?: string; full_name?: string } | null;
   const divinerData = booking.diviners as { display_name?: string } | null;

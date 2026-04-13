@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -25,8 +25,13 @@ type RefundRow = {
   status: string;
   no_show_type: "diviner" | "client" | null;
   stripe_payment_intent_id: string | null;
+  ledger_gross_amount: number;
+  ledger_platform_fee: number;
+  ledger_affiliate_commission: number;
+  ledger_diviner_net: number;
+  affiliate_refund_amount: number;
   clients: { full_name: string | null; email: string } | null;
-  diviners: { display_name: string | null } | null;
+  diviners: { id?: string | null; display_name: string | null } | null;
 };
 
 export default function AdminRefundsPage() {
@@ -39,7 +44,7 @@ export default function AdminRefundsPage() {
   const [refunding, setRefunding] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function load(overrides?: { createdFrom?: string; createdTo?: string }) {
+  const load = useCallback(async (overrides?: { createdFrom?: string; createdTo?: string }) => {
     setLoading(true);
     const params = new URLSearchParams();
     const cf = overrides?.createdFrom ?? createdFrom;
@@ -52,9 +57,13 @@ export default function AdminRefundsPage() {
       setRows(data.rows ?? []);
     }
     setLoading(false);
-  }
+  }, [createdFrom, createdTo]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    queueMicrotask(() => {
+      void load();
+    });
+  }, [load]);
 
   async function issueRefund(bookingId: string, amount: number) {
     const reason = window.prompt(
@@ -172,6 +181,9 @@ export default function AdminRefundsPage() {
                     <th className="pb-2 text-left font-medium">Client</th>
                     <th className="pb-2 text-left font-medium">Diviner</th>
                     <th className="pb-2 text-right font-medium">Amount</th>
+                    <th className="pb-2 text-right font-medium">Platform</th>
+                    <th className="pb-2 text-right font-medium">Affiliate</th>
+                    <th className="pb-2 text-right font-medium">Diviner Net</th>
                     <th className="pb-2 text-right font-medium">Refund</th>
                     <th className="pb-2 text-left font-medium">Reason</th>
                     <th className="pb-2 text-center font-medium">No-Show</th>
@@ -204,6 +216,15 @@ export default function AdminRefundsPage() {
                         </td>
                         <td className="py-2 text-right font-medium">
                           {formatCurrency(r.base_price ?? 0)}
+                        </td>
+                        <td className="py-2 text-right">
+                          {formatCurrency(r.ledger_platform_fee ?? 0)}
+                        </td>
+                        <td className="py-2 text-right">
+                          {formatCurrency(r.ledger_affiliate_commission ?? 0)}
+                        </td>
+                        <td className="py-2 text-right">
+                          {formatCurrency(r.ledger_diviner_net ?? 0)}
                         </td>
                         <td className="py-2 text-right">
                           {r.refund_amount != null

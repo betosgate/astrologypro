@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import { sendRefundProcessed } from "@/lib/email";
+import { recordRefundEvent } from "@/lib/refund-events";
 
 export const dynamic = "force-dynamic";
 
@@ -110,6 +111,22 @@ export async function POST(request: NextRequest) {
         refund_reason: reason ?? "Diviner-issued refund",
       })
       .eq("id", bookingId);
+
+    await recordRefundEvent({
+      bookingId,
+      divinerId: diviner.id,
+      orderReference: `booking:${bookingId}`,
+      paymentIntentId: booking.stripe_payment_intent_id,
+      providerRefundId: refund.id,
+      initiatedByUserId: user.id,
+      initiatedByRole: "diviner",
+      amountCents: refundAmountCents,
+      reason: reason ?? "Diviner-issued refund",
+      providerResponse: {
+        refundStatus: refund.status,
+        refundObject: refund.object,
+      },
+    });
 
     // Send refund email to client
     const clientData = booking.clients as any;
