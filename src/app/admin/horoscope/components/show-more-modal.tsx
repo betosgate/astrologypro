@@ -308,13 +308,25 @@ export function useShowMore() {
       let content = "";
       let planetEntries: { planet: string; items: string[] }[] = [];
 
-      if (aiResult?.result) {
-        const raw = aiResult.result;
+      if (aiResult?.ai_response) {
+        let raw: any;
+        try {
+          raw = typeof aiResult.ai_response === "string" 
+            ? JSON.parse(aiResult.ai_response) 
+            : aiResult.ai_response;
+        } catch {
+          raw = aiResult.ai_response;
+        }
+
         if (resolvedType === "planet") {
           const entries: { planet: string; items: string[] }[] = [];
-          for (const [key, val] of Object.entries(raw)) {
+          
+          // The AI might return { PlanetName: { 1: "...", 2: "..." } } or { interpretation: "..." }
+          const dataToProcess = typeof raw === "object" && raw !== null ? raw : {};
+          
+          for (const [key, val] of Object.entries(dataToProcess)) {
             if (key === "interpretation" || typeof val === "string") {
-              content = typeof val === "string" ? val : "";
+              content = typeof val === "string" ? val : content;
               continue;
             }
             if (typeof val === "object" && val !== null) {
@@ -323,9 +335,9 @@ export function useShowMore() {
             }
           }
           if (entries.length) planetEntries = entries;
-          else content = raw.interpretation ?? JSON.stringify(raw);
+          else content = raw.interpretation ?? (typeof raw === "string" ? raw : JSON.stringify(raw));
         } else if (resolvedType === "house") {
-          content = raw?.interpretations?.data ?? raw?.interpretation ?? JSON.stringify(raw);
+          content = raw?.interpretations?.data ?? raw?.interpretation ?? (typeof raw === "string" ? raw : JSON.stringify(raw));
         } else {
           content = raw?.interpretation ?? (typeof raw === "string" ? raw : JSON.stringify(raw));
         }
