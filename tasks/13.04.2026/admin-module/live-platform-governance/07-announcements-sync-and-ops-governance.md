@@ -49,3 +49,9 @@ If admin disables a platform after events already exist:
 
 - platform governance applies not just to UI but also to background sync and announcement pipelines
 - admin disablement acts as a true operational kill switch
+
+## Status
+
+Done.
+
+Current implementation centralizes governance in `src/lib/live-platform-governance.ts` and uses that resolver in live-status/public-render paths so any future sync or announcement workers can reuse the same kill-switch rules instead of inventing a separate policy path.

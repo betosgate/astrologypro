@@ -40,6 +40,11 @@ import {
 } from "@/lib/public-services";
 import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
 import { canPubliclySellService } from "@/lib/payout-readiness";
+import {
+  buildGovernedLivePlatforms,
+  mergeGovernedPlatformConfigs,
+  resolveLivePlatformsForStatus,
+} from "@/lib/live-platform-governance";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -106,14 +111,29 @@ async function getMediaItems(divinerId: string): Promise<MediaItem[]> {
 
 async function getLivePlatforms(divinerId: string): Promise<StreamPlatformConfig[]> {
   const admin = createAdminClient();
-  const { data } = await admin
-    .from("stream_platform_configs")
-    .select("*")
-    .eq("diviner_id", divinerId)
-    .eq("is_enabled", true)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
-  return (data ?? []) as StreamPlatformConfig[];
+  const [{ data: configs }, { data: registryRows }, { data: overrideRows }] = await Promise.all([
+    admin
+      .from("stream_platform_configs")
+      .select("*")
+      .eq("diviner_id", divinerId)
+      .eq("is_enabled", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
+    admin
+      .from("live_platform_registry")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("platform_key", { ascending: true }),
+    admin
+      .from("diviner_live_platform_overrides")
+      .select("*")
+      .eq("diviner_id", divinerId),
+  ]);
+  const governedPlatforms = buildGovernedLivePlatforms(registryRows ?? [], overrideRows ?? []);
+
+  return mergeGovernedPlatformConfigs(configs ?? [], governedPlatforms, {
+    publicOnly: true,
+  }) as StreamPlatformConfig[];
 }
 
 async function getActiveGiveaway(divinerId: string): Promise<{ id: string } | null> {
@@ -385,6 +405,28 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
   const filteredMediaItems = mediaItems.filter(
     (item) => !publishPolicy.blockedMediaTypes.includes(item.type)
   );
+  const effectiveLivePlatforms = resolveLivePlatformsForStatus(
+    livePlatformConfigs.map((config) => ({
+      platform_key: config.platform,
+      display_name: config.platform_display_name,
+      is_globally_enabled: true,
+      is_selectable_by_diviners: true,
+      integration_tier: config.integration_tier,
+      playback_mode: config.playback_mode,
+      supports_embed: config.supports_embed,
+      supports_chat_embed: config.supports_chat_embed,
+      supports_oauth_connection: config.supports_oauth_connection,
+      supports_event_sync: config.supports_event_sync,
+      supports_auto_live_detection: config.supports_auto_live_detection,
+      sort_order: config.sort_order,
+      admin_notes: null,
+      availability_mode: "inherit",
+      is_available_for_diviner: true,
+      is_publicly_renderable: true,
+      reason: null,
+    })),
+    (((diviner as Record<string, unknown>).live_platforms as string[]) ?? [])
+  );
   const publicServices = filterVisiblePublicServices(services).map((service) => ({
     ...service,
     booking_enabled: canPubliclySellService(service, diviner),
@@ -541,7 +583,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
           {!liveBlocked && (
             <LiveStreamSection
               isLive={(diviner as Record<string, unknown>).is_live === true}
-              livePlatforms={((diviner as Record<string, unknown>).live_platforms as string[]) ?? []}
+              livePlatforms={effectiveLivePlatforms}
               platformConfigs={livePlatformConfigs}
               fallbackContent={((diviner as Record<string, unknown>).fallback_content as string) ?? null}
               nextLiveAt={((diviner as Record<string, unknown>).next_live_at as string) ?? null}

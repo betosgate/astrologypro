@@ -30,6 +30,8 @@ import {
 import { PublishingControls } from "./publishing-controls";
 import { normalizePublishPolicy } from "@/lib/diviner-publishing";
 import { getDivinerAvatarUrl } from "@/lib/diviner-images";
+import { buildGovernedLivePlatforms } from "@/lib/live-platform-governance";
+import { LivePlatformOverrides } from "./live-platform-overrides";
 
 export const metadata = { title: "Diviner Detail — Admin" };
 
@@ -86,7 +88,7 @@ async function getDivinerDetail(divinerId: string) {
   if (error || !diviner) return null;
 
   // Fetch related data in parallel
-  const [servicesRes, bookingsRes, affiliateCountRes, orderStatsRes, emailRes] =
+  const [servicesRes, bookingsRes, affiliateCountRes, orderStatsRes, emailRes, registryRes, overrideRes] =
     await Promise.all([
       admin
         .from("services")
@@ -118,6 +120,15 @@ async function getDivinerDetail(divinerId: string) {
             user_ids: [diviner.user_id],
           })
         : Promise.resolve({ data: [] }),
+      admin
+        .from("live_platform_registry")
+        .select("*")
+        .order("sort_order", { ascending: true })
+        .order("platform_key", { ascending: true }),
+      admin
+        .from("diviner_live_platform_overrides")
+        .select("*")
+        .eq("diviner_id", divinerId),
     ]);
 
   const services = (servicesRes.data ?? []) as Array<Record<string, unknown>>;
@@ -147,6 +158,10 @@ async function getDivinerDetail(divinerId: string) {
     services,
     bookings,
     affiliateCount,
+    governedLivePlatforms: buildGovernedLivePlatforms(
+      registryRes.data ?? [],
+      overrideRes.data ?? []
+    ),
     stats: {
       totalOrders,
       totalRevenue,
@@ -167,7 +182,7 @@ export default async function AdminDivinerDetailPage({
   const result = await getDivinerDetail(id);
   if (!result) notFound();
 
-  const { diviner, email, services, bookings, affiliateCount, stats } = result;
+  const { diviner, email, services, bookings, affiliateCount, governedLivePlatforms, stats } = result;
   const publishingPolicy = normalizePublishPolicy(diviner as Record<string, unknown>);
   const divinerAvatarUrl = getDivinerAvatarUrl(diviner.avatar_url as string | null | undefined);
 
@@ -246,6 +261,10 @@ export default async function AdminDivinerDetailPage({
       )}
 
       <PublishingControls divinerId={diviner.id} initialPolicy={publishingPolicy} />
+      <LivePlatformOverrides
+        divinerId={diviner.id}
+        initialPlatforms={governedLivePlatforms}
+      />
 
       {/* ── Stats Cards ───────────────────────────────────────────────── */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

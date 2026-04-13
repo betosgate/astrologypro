@@ -163,6 +163,7 @@ const NAV_GROUPS = [
     label: "Live",
     items: [
       { label: "Live Sessions", href: "/admin/live-sessions", icon: Radio },
+      { label: "Live Platforms", href: "/admin/live-platforms", icon: Settings2 },
       { label: "Check-ins", href: "/admin/check-ins", icon: ClipboardList },
     ],
   },
