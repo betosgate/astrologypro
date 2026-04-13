@@ -12,6 +12,7 @@ interface Service {
   base_price: number;
   category: string;
   is_featured: boolean;
+  booking_enabled?: boolean;
   [key: string]: unknown;
 }
 
@@ -64,6 +65,7 @@ export function ServiceTabs({
               username={username}
               imageUrl={serviceImages[service.slug]}
               refParam={refParam}
+              bookingEnabled={service.booking_enabled !== false}
             />
           ))}
         </div>
@@ -78,6 +80,7 @@ export function ServiceTabs({
               username={username}
               imageUrl={serviceImages[service.slug]}
               refParam={refParam}
+              bookingEnabled={service.booking_enabled !== false}
             />
           ))}
         </div>

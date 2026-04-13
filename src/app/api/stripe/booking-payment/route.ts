@@ -10,6 +10,7 @@ import { PRICING } from "@/lib/constants";
 import { ensureOrderForBooking, getOrderStatusForService } from "@/lib/orders";
 import { getServicePurchaseConfig } from "@/lib/service-purchase";
 import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
+import { isDivinerPayoutReadyForPaidServices } from "@/lib/payout-readiness";
 import {
   sendBookingConfirmation,
   sendBookingAccessInstructions,
@@ -127,6 +128,8 @@ export async function POST(request: NextRequest) {
       id: string;
       user_id?: string;
       stripe_account_id: string | null;
+      charges_enabled?: boolean | null;
+      payouts_enabled?: boolean | null;
       display_name: string;
       video_provider?: string;
     } | null = null;
@@ -135,7 +138,7 @@ export async function POST(request: NextRequest) {
     async function fetchDivinerById(id: string) {
       let result = await adminSupabase
         .from("diviners")
-        .select("id, user_id, stripe_account_id, display_name, video_provider")
+        .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider")
         .eq("id", id)
         .eq("is_active", true)
         .single();
@@ -143,7 +146,7 @@ export async function POST(request: NextRequest) {
       if (result.error || !result.data) {
         result = await supabase
           .from("diviners")
-          .select("id, user_id, stripe_account_id, display_name, video_provider")
+          .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider")
           .eq("id", id)
           .eq("is_active", true)
           .single();
@@ -155,7 +158,7 @@ export async function POST(request: NextRequest) {
     async function fetchDivinerByUsername(username: string) {
       let result = await adminSupabase
         .from("diviners")
-        .select("id, user_id, stripe_account_id, display_name, video_provider")
+        .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider")
         .eq("username", username)
         .eq("is_active", true)
         .single();
@@ -163,7 +166,7 @@ export async function POST(request: NextRequest) {
       if (result.error || !result.data) {
         result = await supabase
           .from("diviners")
-          .select("id, user_id, stripe_account_id, display_name, video_provider")
+          .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider")
           .eq("username", username)
           .eq("is_active", true)
           .single();
@@ -187,7 +190,7 @@ export async function POST(request: NextRequest) {
       if (!diviner) {
         const fallbackByUserId = await supabase
           .from("diviners")
-          .select("id, stripe_account_id, display_name")
+          .select("id, stripe_account_id, charges_enabled, payouts_enabled, display_name")
           .eq("user_id", divinerId)
           .eq("is_active", true)
           .single();
@@ -497,6 +500,16 @@ export async function POST(request: NextRequest) {
       (finalPrice * effectivePlatformFeePercent) / 100;
     const shouldCharge = hasServiceAvailability && finalPrice > 0;
 
+    if (shouldCharge && !isDivinerPayoutReadyForPaidServices(diviner)) {
+      return NextResponse.json(
+        {
+          error:
+            "This diviner is still completing payment setup. Paid booking is temporarily unavailable.",
+        },
+        { status: 409 }
+      );
+    }
+
     // Calculate end time
     const startTime = new Date(scheduledAt);
     const endTime = new Date(
@@ -571,13 +584,6 @@ export async function POST(request: NextRequest) {
       paidAt: shouldCharge ? null : new Date().toISOString(),
       notes: booking_notes ?? null,
     });
-
-    if (shouldCharge && !diviner.stripe_account_id) {
-      return NextResponse.json(
-        { error: "Diviner has not set up payments yet" },
-        { status: 400 }
-      );
-    }
 
     let clientSecret: string | null = null;
 

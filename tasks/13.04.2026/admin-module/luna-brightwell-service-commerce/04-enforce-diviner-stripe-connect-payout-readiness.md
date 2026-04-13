@@ -1,6 +1,6 @@
 # Task 04 - Enforce Diviner Stripe Connect Payout Readiness
 
-- Status: Open
+- Status: Done
 - Priority: P0
 - Owner: Payments / Backend
 
@@ -82,7 +82,33 @@ Free services may remain bookable if business rules permit.
 
 ## Verification Test Plan
 
-- [ ] Attempt to purchase a paid service for a diviner with no connected account and confirm the catalog/purchase path blocks safely.
-- [ ] Attempt for a diviner with a connected and ready account and confirm purchase continues normally.
-- [ ] Confirm free services still behave according to explicit business rules.
+- [x] Attempt to purchase a paid service for a diviner with no connected account and confirm the catalog/purchase path blocks safely.
+- [x] Attempt for a diviner with a connected and ready account and confirm purchase continues normally.
+- [x] Confirm free services still behave according to explicit business rules.
 
+## Completion Notes
+
+Implemented in the current repo:
+
+- `src/lib/payout-readiness.ts`
+  - added shared payout-readiness policy helpers for public selling
+- `src/app/[username]/page.tsx`
+  - public profile now distinguishes visible services from sellable services
+  - paid services are blocked from booking CTAs when Stripe Connect readiness is incomplete
+  - booking preview now only uses sellable services
+- `src/app/[username]/services/page.tsx`
+  - service index now shows a controlled unavailable state for blocked paid services
+- `src/app/[username]/services/[slug]/page.tsx`
+  - service detail page now disables paid booking CTAs when payout readiness is incomplete
+- `src/app/[username]/book/page.tsx`
+  - generic booking route now resolves only sellable services and shows a controlled unavailable state when paid booking is blocked
+- `src/app/[username]/book/[serviceSlug]/page.tsx`
+  - service-specific booking route blocks the wizard for unsellable paid services
+- `src/app/api/stripe/booking-payment/route.ts`
+  - backend now enforces payout readiness before paid intent creation using `stripe_account_id`, `charges_enabled`, and `payouts_enabled`
+
+Result:
+
+- paid services are no longer silently sellable when Stripe Connect is not operationally ready
+- the block happens before checkout submission, not only at the last Stripe step
+- free services remain allowed because payout-readiness checks only apply when the booking still has a positive payable amount

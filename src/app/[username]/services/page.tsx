@@ -21,6 +21,7 @@ import {
   getServiceCategoryLabel,
 } from "@/lib/public-services";
 import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
+import { canPubliclySellService } from "@/lib/payout-readiness";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -101,6 +102,7 @@ function ServiceIndexCard({
     base_price: number;
     category: string;
     is_featured: boolean;
+    booking_enabled?: boolean;
   };
   username: string;
   refParam: string;
@@ -183,12 +185,18 @@ function ServiceIndexCard({
             View Details
             <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
           </Link>
-          <Link
-            href={`/${username}/book/${service.slug}${refParam}`}
-            className="ml-auto rounded-lg bg-gold/10 px-3.5 py-1.5 text-xs font-semibold text-gold transition-colors hover:bg-gold/20"
-          >
-            Book Now
-          </Link>
+          {service.booking_enabled !== false ? (
+            <Link
+              href={`/${username}/book/${service.slug}${refParam}`}
+              className="ml-auto rounded-lg bg-gold/10 px-3.5 py-1.5 text-xs font-semibold text-gold transition-colors hover:bg-gold/20"
+            >
+              Book Now
+            </Link>
+          ) : (
+            <span className="ml-auto rounded-lg border border-white/10 px-3.5 py-1.5 text-xs font-semibold text-silver/45">
+              Unavailable
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -210,7 +218,13 @@ export default async function ServicesIndexPage({
   if (!diviner) notFound();
 
   const allServices = await getServices(diviner.id);
-  const publicServices = filterVisiblePublicServices(allServices);
+  const publicServices = filterVisiblePublicServices(allServices).map((service) => ({
+    ...service,
+    booking_enabled: canPubliclySellService(service, diviner),
+  }));
+  const hasUnavailablePaidServices = publicServices.some(
+    (service) => service.booking_enabled === false
+  );
 
   if (publicServices.length === 0) {
     notFound();
@@ -273,6 +287,11 @@ export default async function ServicesIndexPage({
           <p className="mx-auto mt-3 max-w-md text-sm text-silver/60">
             {buildPublicServicesIntro(publicServices)}
           </p>
+          {hasUnavailablePaidServices && (
+            <div className="mx-auto mt-4 max-w-2xl rounded-2xl border border-amber-500/20 bg-amber-500/8 px-5 py-4 text-sm text-amber-100/85">
+              Some paid services are temporarily unavailable while payment setup is being completed.
+            </div>
+          )}
         </div>
       </section>
 
