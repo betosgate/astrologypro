@@ -595,10 +595,12 @@ export async function POST(request: NextRequest) {
         platformFeeAmount: platformFee,
         metadata: {
           bookingId: booking.id,
+          bookingToken: booking.booking_token,
           orderId,
           divinerId: resolvedDivinerId,
           serviceId,
           clientEmail,
+          connectedAccountId: diviner.stripe_account_id ?? "",
           grossAmountCents: String(Math.round(finalPrice * 100)),
           platformFeeCents: String(Math.round(platformFee * 100)),
           ...(affiliateCode ? { affiliateCode } : {}),

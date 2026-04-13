@@ -152,7 +152,7 @@ This ordering matters because:
 | 02 | `02-standardize-public-service-and-purchase-entry-routes.md` | Make every public purchase CTA route deterministically into the correct calendar-first flow | 01 | Done |
 | 03 | `03-enforce-service-scoped-calendar-first-booking.md` | Ensure selected product/service controls the calendar scope, slot selection, and booking context | 01, 02 | Done |
 | 04 | `04-enforce-diviner-stripe-connect-payout-readiness.md` | Prevent paid public selling when the diviner cannot actually receive payouts | 01, 03 | Done |
-| 05 | `05-harden-booking-payment-and-order-linkage.md` | Ensure charge creation, booking creation, order creation, and Stripe payout metadata are coherent end to end | 03, 04 | Open |
+| 05 | `05-harden-booking-payment-and-order-linkage.md` | Ensure charge creation, booking creation, order creation, and Stripe payout metadata are coherent end to end | 03, 04 | Done |
 | 06 | `06-admin-governance-for-service-commerce-config.md` | Define the admin controls and validation rules needed so misconfigured services never leak publicly | 01, 02, 04, 05 | Open |
 
 ---

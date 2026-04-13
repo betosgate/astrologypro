@@ -63,7 +63,13 @@ export async function ensureOrderForBooking(
     select: (columns: string) => {
       eq: (column: string, value: string) => {
         maybeSingle: () => Promise<{
-          data: { id: string } | null;
+          data: {
+            id: string;
+            client_id?: string | null;
+            diviner_id?: string | null;
+            service_id?: string | null;
+            stripe_payment_intent_id?: string | null;
+          } | null;
           error: { message?: string } | null;
         }>;
       };
@@ -85,7 +91,7 @@ export async function ensureOrderForBooking(
   };
 
   const { data: existingOrder, error: existingOrderError } = await ordersTable
-    .select("id")
+    .select("id, client_id, diviner_id, service_id, stripe_payment_intent_id")
     .eq("booking_id", bookingId)
     .maybeSingle();
 
@@ -94,6 +100,35 @@ export async function ensureOrderForBooking(
   }
 
   if (existingOrder?.id) {
+    if (
+      existingOrder.client_id &&
+      existingOrder.client_id !== clientId
+    ) {
+      throw new Error("Existing order client does not match booking client");
+    }
+
+    if (
+      existingOrder.diviner_id &&
+      existingOrder.diviner_id !== divinerId
+    ) {
+      throw new Error("Existing order diviner does not match booking diviner");
+    }
+
+    if (
+      existingOrder.service_id &&
+      existingOrder.service_id !== serviceId
+    ) {
+      throw new Error("Existing order service does not match booking service");
+    }
+
+    if (
+      stripePaymentIntentId &&
+      existingOrder.stripe_payment_intent_id &&
+      existingOrder.stripe_payment_intent_id !== stripePaymentIntentId
+    ) {
+      throw new Error("Existing order payment intent does not match booking payment");
+    }
+
     const { error: updateError } = await ordersTable
       .update(payload)
       .eq("id", existingOrder.id);

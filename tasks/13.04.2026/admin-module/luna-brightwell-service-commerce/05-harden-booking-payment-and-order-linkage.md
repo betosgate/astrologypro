@@ -1,6 +1,6 @@
 # Task 05 - Harden Booking Payment and Order Linkage
 
-- Status: Open
+- Status: Done
 - Priority: P0
 - Owner: Payments / Full-stack
 
@@ -63,8 +63,35 @@ For paid service bookings:
 
 ## Verification Test Plan
 
-- [ ] Create a paid booking and confirm the payment intent includes destination payout data.
-- [ ] Confirm the saved booking references the correct service and diviner.
-- [ ] Confirm the related order record matches the booking context.
-- [ ] Confirm service/diviner mismatch requests are rejected.
+- [x] Create a paid booking and confirm the payment intent includes destination payout data.
+- [x] Confirm the saved booking references the correct service and diviner.
+- [x] Confirm the related order record matches the booking context.
+- [x] Confirm service/diviner mismatch requests are rejected.
 
+## Completion Notes
+
+This flow is now hardened across the existing booking and webhook pipeline:
+
+- `src/app/api/stripe/booking-payment/route.ts`
+  - authoritative service lookup remains first
+  - authoritative diviner lookup remains first
+  - service/diviner mismatch already hard-fails
+  - paid intents already use destination-charge style `transfer_data.destination`
+  - Stripe metadata now includes:
+    - `bookingId`
+    - `bookingToken`
+    - `orderId`
+    - `divinerId`
+    - `serviceId`
+    - `clientEmail`
+    - `connectedAccountId`
+- `src/lib/orders.ts`
+  - existing orders linked to the same booking now hard-fail if client, diviner, service, or payment-intent linkage drifts from the booking context
+- `src/app/api/stripe/webhooks/route.ts`
+  - already reconciles successful payment events back into the same booking and order chain via `ensureOrderForBooking`
+
+Result:
+
+- booking, order, and Stripe payment metadata now represent the same commercial event more explicitly
+- destination payout routing remains tied to the intended connected account
+- reconciliation failures now fail loudly instead of silently mutating a mismatched order record
