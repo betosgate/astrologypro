@@ -83,6 +83,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ServicePackageAssignmentCard } from "@/components/admin/service-package-assignment-card";
+import { SignedAgreementsClient } from "@/components/legal/signed-agreements-client";
+import type { SignedAgreementArtifact } from "@/lib/signed-agreements";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -206,6 +208,7 @@ export interface UserDetailData {
     display_name: string;
     is_active: boolean;
   }>;
+  signedAgreements?: SignedAgreementArtifact[];
 }
 
 interface AdminNote {
@@ -1135,6 +1138,13 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
                     packages={user.servicePackages}
                   />
                 )}
+
+              <SignedAgreementsClient
+                agreements={user.signedAgreements ?? []}
+                mode="admin"
+                emptyTitle="No signed agreements"
+                emptyDescription="This user has not accepted any tracked legal agreements yet."
+              />
 
               <div className="rounded-lg border p-4 space-y-2">
                 <p className="text-sm font-medium">Block / Unblock Access</p>

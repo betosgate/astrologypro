@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ensureSignedAgreementArtifactForAcceptance } from "@/lib/signed-agreements";
 
 export const dynamic = "force-dynamic";
 
@@ -81,7 +82,7 @@ export async function POST(req: NextRequest) {
   const userAgent = req.headers.get("user-agent") ?? null;
 
   // Upsert acceptance (idempotent — update accepted_at if already accepted a different version)
-  const { error: insertError } = await admin
+  const { data: acceptance, error: insertError } = await admin
     .from("legal_acceptances")
     .upsert(
       {
@@ -94,13 +95,25 @@ export async function POST(req: NextRequest) {
         user_agent: userAgent,
       },
       { onConflict: "user_id,document_id" }
-    );
+    )
+    .select("id");
 
   if (insertError) {
     return NextResponse.json(
       { type: "about:blank", title: "Internal Error", status: 500, detail: insertError.message },
       { status: 500 }
     );
+  }
+
+  try {
+    const acceptanceId = Array.isArray(acceptance)
+      ? acceptance[0]?.id
+      : (acceptance as { id?: string } | null)?.id;
+    if (acceptanceId) {
+      await ensureSignedAgreementArtifactForAcceptance(acceptanceId);
+    }
+  } catch {
+    // Acceptance is the source of truth; artifact creation can be retried later.
   }
 
   return NextResponse.json({ accepted: true, document_version: activeDoc.version });

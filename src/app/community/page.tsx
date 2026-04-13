@@ -779,6 +779,12 @@ export default async function CommunityDashboardPage() {
               Sacred Library
             </Link>
           </Button>
+          <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
+            <Link href="/account/legal">
+              <Scroll className="mr-1.5 size-3.5" />
+              Agreements
+            </Link>
+          </Button>
         </div>
       </div>
 

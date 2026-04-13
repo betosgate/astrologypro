@@ -11,6 +11,7 @@ import {
   type ReferralEntry,
 } from "@/components/admin/user-detail-client";
 import { getRoleServicePackages } from "@/lib/role-service-packages";
+import { listSignedAgreementsForUser } from "@/lib/signed-agreements";
 
 export const metadata = { title: "User Detail — Admin" };
 
@@ -284,6 +285,7 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
     role === "diviner" || role === "trainee"
       ? await getRoleServicePackages()
       : [];
+  const signedAgreements = await listSignedAgreementsForUser(userId);
 
   // ── Referrals (affiliate/diviner) ─────────────────────────────────────────
   let referrals: ReferralEntry[] = [];
@@ -468,6 +470,7 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
     referrals,
     totalReferrals,
     servicePackageCode,
+    signedAgreements,
     servicePackages: servicePackages.map((pkg) => ({
       package_code: pkg.package_code,
       display_name: pkg.display_name,

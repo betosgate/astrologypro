@@ -44,3 +44,7 @@ Admin resend actions should allow an internal note or reason where appropriate.
 - agreement access is permission-safe
 - email resend activity is auditable
 - support and compliance teams can trace what was sent and when
+
+## Status
+
+Done
