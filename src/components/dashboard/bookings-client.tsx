@@ -30,8 +30,10 @@ import {
   TrendingUp,
   ChevronLeft,
   ChevronRight,
+  DollarSign,
 } from "lucide-react";
 import Link from "next/link";
+import { formatCurrency } from "@/lib/format";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -94,6 +96,7 @@ export function BookingsClient({
     let hoursThisWeek = 0;
     let upcomingCount = 0;
     let totalClients = new Set<string>();
+    let totalRevenue = 0;
 
     for (const b of bookings) {
       const scheduledAt = new Date(b.scheduled_at as string);
@@ -118,6 +121,10 @@ export function BookingsClient({
       }
 
       if (clientId) totalClients.add(clientId);
+
+      if (["confirmed", "completed"].includes(status) && (b.base_price as number) > 0) {
+        totalRevenue += b.base_price as number;
+      }
     }
 
     return {
@@ -125,6 +132,7 @@ export function BookingsClient({
       hoursThisWeek: Math.round(hoursThisWeek * 10) / 10,
       upcomingCount,
       totalClients: totalClients.size,
+      totalRevenue,
     };
   }, [bookings, now]);
 
@@ -218,7 +226,7 @@ export function BookingsClient({
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
             <div className="flex size-10 items-center justify-center rounded-lg bg-amber-500/10">
@@ -260,6 +268,17 @@ export function BookingsClient({
             <div>
               <p className="text-2xl font-bold">{kpis.totalClients}</p>
               <p className="text-xs text-muted-foreground">Total clients</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 pt-6">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-emerald-500/10">
+              <DollarSign className="size-5 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{formatCurrency(kpis.totalRevenue)}</p>
+              <p className="text-xs text-muted-foreground">Total revenue</p>
             </div>
           </CardContent>
         </Card>
@@ -374,6 +393,7 @@ export function BookingsClient({
                   <TableHead>Client</TableHead>
                   <TableHead>Service</TableHead>
                   <TableHead>Duration</TableHead>
+                  <TableHead>Payment</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[120px]">Actions</TableHead>
                 </TableRow>
@@ -396,6 +416,16 @@ export function BookingsClient({
                     ? clientPrevSessions[booking.client_id as string]
                     : null;
                   const status = booking.status as string;
+
+                  const basePrice = (booking.base_price as number) ?? 0;
+                  const paymentIntentId = booking.payment_intent_id as string | null;
+                  const refundedAt = booking.refunded_at as string | null;
+                  const paymentBadge = (() => {
+                    if (refundedAt) return { label: "Refunded", cls: "bg-red-500/10 text-red-500 border-red-500/20" };
+                    if (basePrice === 0) return { label: "Free", cls: "bg-muted text-muted-foreground border-border" };
+                    if (["confirmed", "completed", "in_progress"].includes(status)) return { label: "Paid", cls: "bg-green-500/10 text-green-500 border-green-500/20" };
+                    return { label: "Unpaid", cls: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" };
+                  })();
 
                   return (
                     <TableRow key={booking.id as string}>
@@ -441,6 +471,16 @@ export function BookingsClient({
                         {booking.duration_minutes as number} min
                       </TableCell>
                       <TableCell>
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">
+                            {basePrice > 0 ? formatCurrency(basePrice) : "Free"}
+                          </p>
+                          <Badge className={paymentBadge.cls} variant="outline">
+                            {paymentBadge.label}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <Badge
                           className={STATUS_COLORS[status] ?? ""}
                           variant="outline"
@@ -458,7 +498,8 @@ export function BookingsClient({
                               scheduled_at: booking.scheduled_at as string,
                               status,
                               duration: booking.duration_minutes as number,
-                              amount: (booking.base_price as number) ?? 0,
+                              amount: basePrice,
+                              payment_intent_id: paymentIntentId,
                               notes: booking.session_notes as string | null,
                               session_notes:
                                 (booking.session_notes as string) ?? null,
@@ -467,8 +508,7 @@ export function BookingsClient({
                               service_name: service?.name ?? "Unknown",
                               refund_amount:
                                 (booking.refund_amount as number) ?? null,
-                              refunded_at:
-                                (booking.refunded_at as string) ?? null,
+                              refunded_at: refundedAt,
                               refund_reason:
                                 (booking.refund_reason as string) ?? null,
                             }}
