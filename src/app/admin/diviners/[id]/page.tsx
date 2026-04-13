@@ -34,6 +34,11 @@ import { buildGovernedLivePlatforms } from "@/lib/live-platform-governance";
 import { LivePlatformOverrides } from "./live-platform-overrides";
 import { DivinerSeoSettings } from "./diviner-seo-settings";
 import {
+  calcSeoCompletenessScore,
+  getSeoReadinessChecks,
+  MIN_INDEXABLE_SCORE,
+} from "@/lib/seo/diviner-profile";
+import {
   getRoleServicePackages,
   resolveRoleServicePackage,
 } from "@/lib/role-service-packages";
@@ -194,6 +199,9 @@ export default async function AdminDivinerDetailPage({
   const { diviner, email, services, bookings, affiliateCount, governedLivePlatforms, stats, servicePackage } = result;
   const publishingPolicy = normalizePublishPolicy(diviner as Record<string, unknown>);
   const divinerAvatarUrl = getDivinerAvatarUrl(diviner.avatar_url as string | null | undefined);
+  const seoScore = calcSeoCompletenessScore(diviner);
+  const seoChecks = getSeoReadinessChecks(diviner);
+  const failedSeoChecks = seoChecks.filter((check) => !check.passed);
 
   return (
     <div className="space-y-6">
@@ -277,6 +285,57 @@ export default async function AdminDivinerDetailPage({
         divinerId={diviner.id}
         initialPlatforms={governedLivePlatforms}
       />
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">SEO Readiness</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Index readiness score</span>
+              <span className="font-semibold">{seoScore}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-muted">
+              <div
+                className={`h-full rounded-full ${
+                  seoScore >= MIN_INDEXABLE_SCORE ? "bg-green-600" : "bg-amber-500"
+                }`}
+                style={{ width: `${seoScore}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Profiles under {MIN_INDEXABLE_SCORE}% stay `noindex` until the minimum SEO surface is complete.
+            </p>
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-2">
+            {seoChecks.map((check) => (
+              <div
+                key={check.key}
+                className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+              >
+                {check.passed ? (
+                  <CheckCircle2 className="size-4 text-green-600" />
+                ) : (
+                  <XCircle className="size-4 text-amber-500" />
+                )}
+                <span>{check.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {failedSeoChecks.length > 0 && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+              <p className="text-sm font-medium">Blocking gaps</p>
+              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                {failedSeoChecks.map((check) => (
+                  <li key={check.key}>- {check.label}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </CardContent>
+      </Card>
       <DivinerSeoSettings
         divinerId={diviner.id}
         initialSeo={{

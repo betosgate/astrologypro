@@ -1,5 +1,18 @@
 # Task 06: Content Authority Strategy for Local and Global Search
 
+- **Status: DONE — 2026-04-13**
+- Implemented in:
+  - `src/app/[username]/page.tsx`
+  - `src/app/[username]/services/[slug]/page.tsx`
+
+### What was implemented
+- Added profile-level authority modules using real SEO geography, specialties, language, experience, ratings, and session-volume signals.
+- Added service-detail content blocks covering:
+  - who the service is for
+  - why to book with the specific diviner
+  - local versus remote delivery posture
+- Replaced generic-only conversion framing with intent-oriented content that is stronger for both local and global remote search.
+
 ## Goal
 
 Turn the profile and service pages into strong landing pages for both geo-qualified and globally remote reading intent.
