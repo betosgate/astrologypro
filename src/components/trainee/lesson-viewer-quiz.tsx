@@ -273,10 +273,9 @@ export function LessonViewerQuiz({
         // Hand control to the parent — it will pause/seek/play the video
         // and signal back via remediationReady when playback has finished
         // the required replay window.
-        const message =
-          remediation.message ??
-          "Let's review the relevant part of the video, then try again.";
-        setShowWrongMessage(message);
+        setShowWrongMessage(
+          "That answer is not correct. Replaying the relevant video segment, then you can try again.",
+        );
         setWaitingForReplay(true);
 
         // Auto-hide the inline message after ~6s — the parent's video
@@ -289,11 +288,9 @@ export function LessonViewerQuiz({
         onWrongAnswer(remediation, currentIdx);
       } else {
         // Inline retry fallback when there is no remediation metadata.
-        const message =
-          (body.explanation as string | null) ??
-          currentQuestion.explanation ??
-          "That's not quite right. Try again.";
-        toast.warning("Incorrect", { description: message });
+        toast.warning("Incorrect", {
+          description: "That answer is not correct. Please try again.",
+        });
       }
     } catch (err) {
       toast.error("Network error", {

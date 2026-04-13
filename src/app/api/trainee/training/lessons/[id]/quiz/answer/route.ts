@@ -24,13 +24,12 @@ export const dynamic = "force-dynamic";
  * Response (incorrect):
  *   {
  *     correct: false,
- *     explanation: string | null,
  *     remediation: {
  *       video_id: string | null,
  *       video_index: number | null,
  *       start_seconds: number | null,
  *       replay_until_seconds: number | null,
- *       message: string | null,
+ *       message: null,
  *     } | null   // null when this question has no remediation metadata
  *   }
  *
@@ -116,24 +115,22 @@ export async function POST(
     });
   }
 
-  // Wrong answer — surface remediation metadata so the client can drive the
-  // video seek + replay flow. When the question has no remediation set, return
-  // remediation: null so the client can fall back to inline retry.
+  // Wrong answer — surface only remediation timing metadata so the client can
+  // drive the video seek + replay flow. Do not return explanations or hints on
+  // wrong answers; those can reveal the answer before the learner succeeds.
   const hasRemediation =
     question.remediation_start_seconds != null ||
-    question.remediation_replay_until_seconds != null ||
-    question.remediation_message != null;
+    question.remediation_replay_until_seconds != null;
 
   return NextResponse.json({
     correct: false,
-    explanation: question.explanation ?? null,
     remediation: hasRemediation
       ? {
           video_id: question.remediation_video_id ?? null,
           video_index: question.remediation_video_index ?? null,
           start_seconds: question.remediation_start_seconds ?? null,
           replay_until_seconds: question.remediation_replay_until_seconds ?? null,
-          message: question.remediation_message ?? null,
+          message: null,
         }
       : null,
   });
