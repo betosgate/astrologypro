@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { MarketingHeader } from "@/components/marketing/header";
@@ -56,7 +56,7 @@ const TIMEZONES = [
 const STEP_ICONS = [User, Sparkles, Star] as const;
 const STEP_LABELS = ["About You", "Specialties & Interests", "Birth Data"] as const;
 
-export default function TraineeProfilePage() {
+function TraineeProfileContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isInvited = searchParams.get("invited") === "true";
@@ -433,5 +433,23 @@ export default function TraineeProfilePage() {
       </main>
       <MarketingFooter />
     </div>
+  );
+}
+
+export default function TraineeProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen flex-col bg-[#070b14]">
+          <MarketingHeader />
+          <main className="flex flex-1 items-center justify-center">
+            <Loader2 className="size-8 animate-spin text-primary" />
+          </main>
+          <MarketingFooter />
+        </div>
+      }
+    >
+      <TraineeProfileContent />
+    </Suspense>
   );
 }
