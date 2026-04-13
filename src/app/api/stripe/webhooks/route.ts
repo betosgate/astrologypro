@@ -20,11 +20,13 @@ import { createCalendarEvent } from "@/lib/google-calendar";
 import { buildCalendarDescription } from "@/lib/calendar-utils";
 import { createMsCalendarEvent } from "@/lib/microsoft-calendar";
 import { ensureOrderForBooking, getOrderStatusForService } from "@/lib/orders";
+import { recordAffiliateCommission } from "@/lib/affiliate-commissions";
 import {
   getSubscriptionPeriodEndIso,
   mapMysterySchoolLifecycleUpdate,
 } from "@/lib/mystery-school/subscription-lifecycle";
 import { finalizeMysterySchoolCheckoutSession } from "@/lib/mystery-school/finalize-checkout";
+import { mapStripeSubscriptionStatus } from "@/lib/weekly-subscriptions";
 
 export const dynamic = "force-dynamic";
 
@@ -594,86 +596,193 @@ async function recordSignupAffiliateCommission(
   productType: "signup" | "subscription"
 ) {
   try {
-    const admin = createAdminClient();
-
-    // 1. Try old system: `affiliates` (social_advocates) table
-    const { data: advocate } = await admin
-      .from("affiliates")
-      .select("id, commission_percent, total_referrals, total_earned")
-      .eq("referral_code", affiliateCode)
-      .eq("is_active", true)
-      .maybeSingle();
-
-    if (advocate) {
-      const commissionAmount =
-        Math.round(amountDollars * (advocate.commission_percent / 100) * 100) / 100;
-
-      await admin.from("affiliate_referrals").insert({
-        affiliate_id: advocate.id,
-        commission_amount: commissionAmount,
-        status: "pending",
-        metadata: { order_reference: orderRef, product_type: productType },
-      });
-
-      await admin
-        .from("affiliates")
-        .update({
-          total_referrals: (advocate.total_referrals ?? 0) + 1,
-          total_earned: Number(advocate.total_earned ?? 0) + commissionAmount,
-        })
-        .eq("id", advocate.id);
-
-      console.log(
-        `[Webhook] Affiliate commission (advocate) recorded: code=${affiliateCode} amount=$${commissionAmount} ref=${orderRef}`
-      );
-      return;
-    }
-
-    // 2. Try new system: `affiliate_referral_links` by slug or referral_code
-    const { data: link } = await admin
-      .from("affiliate_referral_links")
-      .select("id, affiliate_id, diviner_id")
-      .or(`slug.eq.${affiliateCode},referral_code.eq.${affiliateCode}`)
-      .eq("is_active", true)
-      .maybeSingle();
-
-    if (link) {
-      // Look up commission rate from the diviner_affiliates record
-      const { data: divAffiliate } = await admin
-        .from("diviner_affiliates")
-        .select("id, default_commission_type, default_commission_value")
-        .eq("id", link.affiliate_id)
-        .maybeSingle();
-
-      if (divAffiliate) {
-        const commissionRate = divAffiliate.default_commission_value;
-        const commissionType = divAffiliate.default_commission_type ?? "percentage";
-        const commissionAmountCents =
-          commissionType === "percentage"
-            ? Math.round(amountDollars * 100 * (commissionRate / 100))
-            : Math.round(commissionRate); // fixed amount in cents
-
-        await admin.from("affiliate_commissions").insert({
-          affiliate_id: divAffiliate.id,
-          diviner_id: link.diviner_id,
-          link_id: link.id,
-          order_reference: orderRef,
-          order_amount_cents: Math.round(amountDollars * 100),
-          commission_type: commissionType,
-          commission_rate: commissionRate,
-          commission_amount_cents: commissionAmountCents,
-          status: "pending",
-          notes: `${productType} commission`,
-        });
-
-        console.log(
-          `[Webhook] Affiliate commission (diviner) recorded: code=${affiliateCode} amount_cents=${commissionAmountCents} ref=${orderRef}`
-        );
-      }
-    }
+    await recordAffiliateCommission({
+      affiliateCode,
+      amountCents: Math.round(amountDollars * 100),
+      orderRef,
+      productType,
+    });
   } catch (err) {
     // Fire-and-forget — never block the main flow
     console.error("[Webhook] Failed to record signup affiliate commission:", err);
+  }
+}
+
+async function handleWeeklySubscriptionCheckoutCompleted(
+  session: Stripe.Checkout.Session
+) {
+  const supabase = createAdminClient();
+  const subscriptionId =
+    typeof session.subscription === "string"
+      ? session.subscription
+      : session.subscription?.id;
+  const customerId =
+    typeof session.customer === "string"
+      ? session.customer
+      : session.customer?.id;
+
+  const productId = session.metadata?.weeklySubscriptionProductId;
+  const divinerId = session.metadata?.divinerId;
+  const email = session.metadata?.email;
+  const name = session.metadata?.name;
+
+  if (!subscriptionId || !customerId || !productId || !divinerId || !email) {
+    console.error("[Webhook] Weekly subscription missing metadata", {
+      subscriptionId,
+      customerId,
+      productId,
+      divinerId,
+      email,
+    });
+    return;
+  }
+
+  let clientUserId: string | null = null;
+  const { data: createdUser, error: createUserError } =
+    await supabase.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: {
+        full_name: name ?? email,
+      },
+    });
+
+  if (createUserError) {
+    const { data: existingClient } = await supabase
+      .from("clients")
+      .select("user_id")
+      .eq("email", email)
+      .maybeSingle();
+    clientUserId = existingClient?.user_id ?? null;
+
+    if (!clientUserId) {
+      const { data: authList } = await supabase.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
+      clientUserId =
+        authList?.users?.find((user) => user.email === email)?.id ?? null;
+    }
+  } else {
+    clientUserId = createdUser.user.id;
+  }
+
+  if (!clientUserId) {
+    console.error("[Webhook] Weekly subscription could not resolve client user");
+    return;
+  }
+
+  const { data: client } = await supabase
+    .from("clients")
+    .upsert(
+      {
+        user_id: clientUserId,
+        email,
+        full_name: name ?? email,
+      },
+      { onConflict: "user_id" }
+    )
+    .select("id")
+    .single();
+
+  if (!client) return;
+
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const periodEnd =
+    (subscription as unknown as { current_period_end?: number }).current_period_end
+      ? new Date(
+          (subscription as unknown as { current_period_end: number })
+            .current_period_end * 1000
+        ).toISOString()
+      : null;
+
+  const mappedStatus = mapStripeSubscriptionStatus(subscription.status);
+
+  const weeklySubscriberPayload = {
+    product_id: productId,
+    diviner_id: divinerId,
+    client_id: client.id,
+    email,
+    name: name ?? null,
+    stripe_subscription_id: subscriptionId,
+    stripe_customer_id: customerId,
+    status: mappedStatus === "paused" ? "past_due" : mappedStatus,
+    current_period_end: periodEnd,
+    subscribed_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  const { data: existingWeeklySubscriber } = await supabase
+    .from("weekly_subscription_subscribers")
+    .select("id")
+    .eq("stripe_subscription_id", subscriptionId)
+    .maybeSingle();
+  if (existingWeeklySubscriber) {
+    await supabase
+      .from("weekly_subscription_subscribers")
+      .update(weeklySubscriberPayload)
+      .eq("id", existingWeeklySubscriber.id);
+  } else {
+    await supabase
+      .from("weekly_subscription_subscribers")
+      .insert(weeklySubscriberPayload);
+  }
+
+  const { data: weeklyProduct } = await supabase
+    .from("weekly_subscription_products")
+    .select("price_cents, title")
+    .eq("id", productId)
+    .maybeSingle();
+
+  const clientSubscriptionPayload = {
+    client_id: client.id,
+    diviner_id: divinerId,
+    product_id: productId,
+    subscription_type: "weekly_updates",
+    status: mappedStatus,
+    stripe_subscription_id: subscriptionId,
+    stripe_customer_id: customerId,
+    amount_cents: weeklyProduct?.price_cents ?? 1000,
+    current_period_end: periodEnd,
+    updated_at: new Date().toISOString(),
+  };
+  const { data: existingClientSubscription } = await supabase
+    .from("client_subscriptions")
+    .select("id")
+    .eq("stripe_subscription_id", subscriptionId)
+    .maybeSingle();
+  if (existingClientSubscription) {
+    await supabase
+      .from("client_subscriptions")
+      .update(clientSubscriptionPayload)
+      .eq("id", existingClientSubscription.id);
+  } else {
+    await supabase
+      .from("client_subscriptions")
+      .insert(clientSubscriptionPayload);
+  }
+
+  const { count: activeSubscriberCount } = await supabase
+    .from("weekly_subscription_subscribers")
+    .select("id", { count: "exact", head: true })
+    .eq("product_id", productId)
+    .eq("status", "active");
+
+  await supabase
+    .from("weekly_subscription_products")
+    .update({
+      subscriber_count: activeSubscriberCount ?? 0,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", productId);
+
+  if (session.metadata?.affiliateCode && session.amount_total) {
+    await recordAffiliateCommission({
+      affiliateCode: session.metadata.affiliateCode,
+      amountCents: session.amount_total,
+      orderRef: `weekly-subscription:${subscriptionId}`,
+      productType: "weekly_subscription",
+      divinerId,
+    });
   }
 }
 
@@ -686,6 +795,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Route community subscription checkouts
   if (session.metadata?.type === "community") {
     return handleCommunityCheckoutCompleted(session);
+  }
+
+  if (session.metadata?.type === "weekly_subscription") {
+    return handleWeeklySubscriptionCheckoutCompleted(session);
   }
 
   // Route Perennial multi-member household signups
@@ -793,6 +906,44 @@ async function handleMysterySchoolSubscriptionUpdated(
     .eq("id", student.id);
 }
 
+async function syncWeeklySubscriptionStatus(
+  admin: ReturnType<typeof createAdminClient>,
+  subscription: Stripe.Subscription,
+  nextStatusOverride?: "cancelled" | "past_due" | "active" | "paused"
+) {
+  const mappedStatus =
+    nextStatusOverride ?? mapStripeSubscriptionStatus(subscription.status);
+  const periodEnd =
+    (subscription as unknown as { current_period_end?: number }).current_period_end
+      ? new Date(
+          (subscription as unknown as { current_period_end: number })
+            .current_period_end * 1000
+        ).toISOString()
+      : null;
+  const cancelledAt =
+    mappedStatus === "cancelled" ? new Date().toISOString() : null;
+
+  await admin
+    .from("client_subscriptions")
+    .update({
+      status: mappedStatus,
+      current_period_end: periodEnd,
+      cancelled_at: cancelledAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_subscription_id", subscription.id);
+
+  await admin
+    .from("weekly_subscription_subscribers")
+    .update({
+      status: mappedStatus === "paused" ? "past_due" : mappedStatus,
+      current_period_end: periodEnd,
+      cancelled_at: cancelledAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_subscription_id", subscription.id);
+}
+
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
   const supabase = createAdminClient();
   const subscriptionId = getSubscriptionIdFromInvoice(invoice);
@@ -824,6 +975,9 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
       })
       .eq("id", student.id);
   }
+
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  await syncWeeklySubscriptionStatus(supabase, subscription, "active");
 }
 
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
@@ -887,10 +1041,13 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
             ? new Date(invoice.next_payment_attempt * 1000).toLocaleDateString()
             : "soon",
           billingPortalUrl: `${process.env.NEXT_PUBLIC_APP_URL}/community/plan?tab=billing`,
-        }).catch(() => {});
-      }
+      }).catch(() => {});
     }
   }
+
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  await syncWeeklySubscriptionStatus(supabase, subscription, "past_due");
+}
 
   // Mystery School: keep access state unchanged for payment failure.
   // Stripe will send subscription.updated / deleted when the lifecycle actually changes.
@@ -904,6 +1061,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       : (subscription.customer as Stripe.Customer).id;
 
   await handleMysterySchoolSubscriptionUpdated(subscription);
+  await syncWeeklySubscriptionStatus(adminClient, subscription);
 
   // ── Diviner SaaS plan upsert ────────────────────────────────────────────────
   await upsertDivinerPlanSubscription(adminClient, subscription, customerId);
@@ -1096,6 +1254,8 @@ async function handleSubscriptionDeleted(
   const now = new Date().toISOString();
   const periodEnd = getSubscriptionPeriodEndIso(subscription) ?? now;
 
+  await syncWeeklySubscriptionStatus(supabase, subscription, "cancelled");
+
   // Diviner legacy subscription cancelled
   await supabase
     .from("diviners")
@@ -1256,6 +1416,7 @@ async function handlePaymentIntentSucceeded(
 
   const bookingId = paymentIntent.metadata?.bookingId;
   const clientEmail = paymentIntent.metadata?.clientEmail;
+  const affiliateCode = paymentIntent.metadata?.affiliateCode;
   if (!bookingId || !clientEmail) return;
 
   const supabase = createAdminClient();
@@ -1326,6 +1487,16 @@ async function handlePaymentIntentSucceeded(
     status: getOrderStatusForService(svc, true),
     paidAt: new Date().toISOString(),
   });
+
+  if (affiliateCode) {
+    await recordAffiliateCommission({
+      affiliateCode,
+      amountCents: paymentIntent.amount,
+      orderRef: `booking:${bookingId}`,
+      productType: "booking",
+      divinerId: div.id,
+    });
+  }
 
   // Calendar connection checks — createCalendarEvent handles lookup internally,
   // but we still need flags for Microsoft calendar

@@ -17,6 +17,7 @@ import { TestimonialsSection } from "@/components/public/testimonials-section";
 import { PublicContentTabs } from "@/components/public/public-content-tabs";
 import { BlogSubscribeForm } from "@/app/blog/subscribe-form";
 import { CheckInForm } from "@/components/diviner/check-in-form";
+import { WeeklySubscriptionSignup } from "@/components/public/weekly-subscription-signup";
 import { isFallbackManualService } from "@/lib/public-booking";
 
 interface PageProps {
@@ -135,6 +136,18 @@ async function getActiveGiveaway(divinerId: string): Promise<{ id: string } | nu
     .maybeSingle();
 
   return withEnd ?? null;
+}
+
+async function getWeeklySubscriptionProduct(divinerId: string) {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("weekly_subscription_products")
+    .select("id, title, description, price_cents, is_active")
+    .eq("diviner_id", divinerId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  return data;
 }
 
 async function getPolicies() {
@@ -314,7 +327,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
     notFound();
   }
 
-  const [services, testimonials, stats, policies, mediaItems, livePlatformConfigs, activeGiveaway] = await Promise.all([
+  const [services, testimonials, stats, policies, mediaItems, livePlatformConfigs, activeGiveaway, weeklySubscriptionProduct] = await Promise.all([
     getServices(diviner.id),
     getTestimonials(diviner.id),
     getDivinerStats(diviner.id),
@@ -322,6 +335,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
     getMediaItems(diviner.id),
     getLivePlatforms(diviner.id),
     getActiveGiveaway(diviner.id),
+    getWeeklySubscriptionProduct(diviner.id),
   ]);
 
   const publicServices = services.filter((service) => !isFallbackManualService(service));
@@ -528,6 +542,41 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                   bookPath={bookingPreview.bookPath}
                   durationMinutes={bookingPreview.durationMinutes}
                   serviceName={bookingPreview.serviceName}
+                />
+              </div>
+
+              <div className="cosmic-divider mx-auto mt-10 max-w-6xl md:mt-14" />
+            </section>
+          )}
+
+          {weeklySubscriptionProduct && (
+            <section className="py-10 md:py-14">
+              <div className="mx-auto grid max-w-6xl gap-8 px-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+                <div className="space-y-4">
+                  <span className="inline-flex rounded-full border border-gold/25 bg-gold/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-gold">
+                    Subscription
+                  </span>
+                  <h2 className="font-display text-3xl font-semibold text-cream md:text-4xl">
+                    Weekly personalised updates from {diviner.display_name}
+                  </h2>
+                  <p className="max-w-2xl text-base leading-7 text-silver/75">
+                    Subscribe for recurring transit guidance, curated spiritual context, and ongoing touchpoints branded to this diviner&apos;s practice.
+                  </p>
+                  <div className="grid gap-3 text-sm text-silver/70 md:grid-cols-2">
+                    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3">
+                      Delivered automatically every week
+                    </div>
+                    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3">
+                      Managed inside your subscription portal
+                    </div>
+                  </div>
+                </div>
+
+                <WeeklySubscriptionSignup
+                  divinerUsername={diviner.username}
+                  productTitle={weeklySubscriptionProduct.title}
+                  description={weeklySubscriptionProduct.description}
+                  priceCents={weeklySubscriptionProduct.price_cents}
                 />
               </div>
 

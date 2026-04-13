@@ -521,37 +521,6 @@ export async function POST(request: NextRequest) {
       notes: booking_notes ?? null,
     });
 
-    // Handle affiliate tracking
-    if (affiliateCode) {
-      const { data: affiliate } = await adminSupabase
-        .from("affiliates")
-        .select("id, commission_percent, total_referrals, total_earned")
-        .eq("referral_code", affiliateCode)
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (affiliate) {
-        const commissionAmount =
-          Math.round(finalPrice * (affiliate.commission_percent / 100) * 100) / 100;
-
-        await adminSupabase.from("affiliate_referrals").insert({
-          affiliate_id: affiliate.id,
-          booking_id: booking.id,
-          commission_amount: commissionAmount,
-          status: "pending",
-        });
-
-        // Increment referral count and earned total
-        await adminSupabase
-          .from("affiliates")
-          .update({
-            total_referrals: (affiliate.total_referrals ?? 0) + 1,
-            total_earned: Number(affiliate.total_earned ?? 0) + commissionAmount,
-          })
-          .eq("id", affiliate.id);
-      }
-    }
-
     if (shouldCharge && !diviner.stripe_account_id) {
       return NextResponse.json(
         { error: "Diviner has not set up payments yet" },
@@ -573,6 +542,7 @@ export async function POST(request: NextRequest) {
           divinerId: resolvedDivinerId,
           serviceId,
           clientEmail,
+          ...(affiliateCode ? { affiliateCode } : {}),
           ...(giftCode ? { giftCode } : {}),
           ...(loyaltyRuleName
             ? { loyaltyDiscount: `${loyaltyDiscountPercent}%` }
