@@ -33,6 +33,7 @@ import {
   WEEKLY_SUBSCRIPTION_PLATFORM_SHARE_PERCENT,
 } from "@/lib/revenue-ledger";
 import { PRICING } from "@/lib/constants";
+import { provisionNatalReadiness } from "@/lib/community/provision-natal-readiness";
 
 export const dynamic = "force-dynamic";
 
@@ -177,6 +178,22 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
       .single();
 
     communityMemberId = member?.id ?? null;
+
+    // Task 08: provision natal readiness for the PM base user immediately after membership creation.
+    // Only natal + monthly transit eligibility — relationship charts are NOT provisioned here
+    // because no family context exists yet.
+    if (communityMemberId && membershipType === "perennial_mandalism") {
+      provisionNatalReadiness({
+        admin: supabase,
+        communityMemberId,
+        birthData: {
+          fullName,
+          // Birth data not available at Stripe checkout time; user fills it in onboarding.
+          // The provision function will set natal_status='not_started' and upgrade to
+          // 'queued' on the next auth callback or onboarding save.
+        },
+      }); // fire-and-forget — must not block the webhook response
+    }
   } else {
     // MS checkout — look up existing community_members row (may be PM) but do NOT overwrite it
     const { data: existingMember } = await supabase

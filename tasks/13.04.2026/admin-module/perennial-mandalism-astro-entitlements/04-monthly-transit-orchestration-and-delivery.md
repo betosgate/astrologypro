@@ -74,3 +74,30 @@ That means:
 - generation and notification state model
 - failure and retry strategy
 - admin observability requirements
+
+---
+
+## Implementation — 2026-04-13
+
+### Migration
+`supabase/migrations/20260413000184_monthly_transit_lifecycle.sql`
+
+**Columns added to `monthly_transits`:**
+- `generation_status` TEXT — `pending | generated | notified | failed | suppressed`
+- `failure_reason` TEXT
+- `retry_count` INTEGER DEFAULT 0
+- `last_attempted_at` TIMESTAMPTZ
+- `notified_at` TIMESTAMPTZ — separate from `notification_sent` for richer tracking
+
+Backfill: existing rows with `notification_sent = true` → `generation_status = 'notified'`, others → `'generated'`.
+
+### Cron update
+`src/app/api/cron/monthly-transits/route.ts` — fully rewritten:
+- Reserves a `pending` row before computation (prevents duplicate inserts on retry)
+- If a `failed` row exists for the month, reuses its ID and retries in-place
+- Marks `failed` with `failure_reason` on calculation error
+- Marks `generated` on success, `notified` after email delivery
+- Generation success and notification success tracked independently
+- Email failure leaves status as `generated` with `failure_reason = 'notification_email_failed'` — admin can see and resend
+- Returns `{ generated, notified, skipped, failed, month }` for cron monitoring
+- Only processes family members with `natal_status = 'generated'` (entitlement gate)

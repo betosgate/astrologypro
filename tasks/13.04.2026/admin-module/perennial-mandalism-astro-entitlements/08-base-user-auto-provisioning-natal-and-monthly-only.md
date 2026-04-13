@@ -121,3 +121,36 @@ Relationship generation can run after all member profiles exist and natal covera
 - signup-to-chart eligibility rules
 - exclusion rule for relationship and family-dynamic generation at signup
 - edge-case handling for missing data and household signups
+
+---
+
+## Implementation — 2026-04-13
+
+### New helper
+`src/lib/community/provision-natal-readiness.ts`
+
+**`provisionNatalReadiness({ admin, communityMemberId, birthData? })`**
+- Checks that membership is `perennial_mandalism` and `active` before doing anything
+- Checks if a `relationship = 'Self'` family member record already exists
+- If not: creates one with `natal_status = 'queued'` (birth data complete) or `'not_started'` (birth data absent)
+- If exists + `not_started` + birth data now available: upgrades to `'queued'`
+- Does NOT create relationship charts (no family context at signup)
+- Does NOT generate a monthly transit inline (monthly cron picks it up after natal chart exists)
+- Errors are swallowed and logged — must not block user creation or webhook response
+
+### Stripe webhook integration
+`src/app/api/stripe/webhooks/route.ts`
+- After PM `community_members` upsert completes, calls `provisionNatalReadiness()` fire-and-forget
+- Birth data not available at Stripe checkout → creates `Self` record with `natal_status = 'not_started'`
+- Upgrades to `'queued'` on first auth callback after onboarding captures birth info
+
+### Auth callback integration
+`src/app/auth/callback/route.ts`
+- After creating `community_members` on first PM login: calls `provisionNatalReadiness()` fire-and-forget
+- Also called for existing PM members on login — idempotent (existing Self record is not duplicated)
+- Birth data from `user.user_metadata` (`date_of_birth`, `birth_time`, `birth_city`, `birth_country`) is passed to the provisioner if available
+
+### What does NOT happen at base-user creation
+- Relationship charts: not generated (no partner exists yet)
+- Family dynamic layer: not generated (derived from pairwise charts, needs multiple people)
+- Monthly transit: not generated inline (monthly cron picks it up when `natal_status = 'generated'`)

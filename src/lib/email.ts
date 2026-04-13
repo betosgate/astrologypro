@@ -2108,6 +2108,121 @@ export async function sendFamilyMemberInvite({
   });
 }
 
+// ── Natal Chart Ready (first-time generation) ────────────────────────────────
+
+export async function sendNatalChartReady({
+  to,
+  name,
+  familyMemberName,
+  chartUrl,
+}: {
+  to: string;
+  name: string;
+  familyMemberName: string;
+  chartUrl: string;
+}) {
+  const subject = `${familyMemberName}'s natal chart is ready`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hello, ${name}.</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">The natal chart for <strong style="color:#f4f4f5;">${familyMemberName}</strong> has been generated and is now available in your Perennial Mandalism portal.</p>
+
+    ${sectionHeading("What's in the Natal Chart")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">Sun, Moon, and all planet positions at birth</li>
+      <li style="margin-bottom:6px;">Ascendant and Midheaven (where birth time was provided)</li>
+      <li style="margin-bottom:6px;">Zodiac sign and degree for each planet</li>
+      <li style="margin-bottom:6px;">Retrograde status for outer planets</li>
+    </ul>
+
+    <p style="margin:16px 0 0;color:#a1a1aa;font-size:13px;">
+      If any birth details are incorrect you can request up to 3 corrections from your family portal.
+    </p>
+  `;
+
+  if (await isSequencePaused("natal_chart_ready")) {
+    console.log("[email] natal_chart_ready sequence is paused — skipping send to", to);
+    return { success: false, id: "" };
+  }
+
+  const result = await sendEmail({
+    to,
+    subject,
+    html: buildEmailHtml({
+      title: "Natal Chart Ready",
+      badge: familyMemberName,
+      preheader: `${familyMemberName}'s natal chart is now available in your portal.`,
+      content,
+      ctaText: "View Natal Chart",
+      ctaUrl: chartUrl,
+      footer: "AstrologyPro — Perennial Mandalism",
+    }),
+  });
+
+  await logEmail({ emailTo: to, templateName: "natal_chart_ready", subject });
+  return result;
+}
+
+// ── Natal Chart Updated (correction regeneration) ────────────────────────────
+
+export async function sendNatalChartUpdated({
+  to,
+  name,
+  familyMemberName,
+  retriesUsed,
+  retriesAllowed,
+  chartUrl,
+}: {
+  to: string;
+  name: string;
+  familyMemberName: string;
+  retriesUsed: number;
+  retriesAllowed: number;
+  chartUrl: string;
+}) {
+  const retriesRemaining = retriesAllowed - retriesUsed;
+  const subject = `${familyMemberName}'s natal chart has been updated`;
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hello, ${name}.</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">The natal chart for <strong style="color:#f4f4f5;">${familyMemberName}</strong> has been recalculated with the corrected birth details.</p>
+
+    ${detailRow("Correction used", `${retriesUsed} of ${retriesAllowed}`)}
+    ${detailRow("Remaining corrections", retriesRemaining > 0 ? String(retriesRemaining) : "None — support ticket required for further changes")}
+
+    <p style="margin:16px 0 0;color:#a1a1aa;font-size:13px;">
+      ${retriesRemaining === 0
+        ? "You have used all available self-service corrections. If you need further changes, please open a support ticket from your portal."
+        : `You have ${retriesRemaining} correction${retriesRemaining === 1 ? "" : "s"} remaining.`
+      }
+    </p>
+  `;
+
+  if (await isSequencePaused("natal_chart_updated")) {
+    console.log("[email] natal_chart_updated sequence is paused — skipping send to", to);
+    return { success: false, id: "" };
+  }
+
+  const result = await sendEmail({
+    to,
+    subject,
+    html: buildEmailHtml({
+      title: "Natal Chart Updated",
+      badge: familyMemberName,
+      preheader: `${familyMemberName}'s natal chart has been recalculated.`,
+      content,
+      ctaText: "View Updated Chart",
+      ctaUrl: chartUrl,
+      footer: "AstrologyPro — Perennial Mandalism",
+    }),
+  });
+
+  await logEmail({ emailTo: to, templateName: "natal_chart_updated", subject });
+  return result;
+}
+
 // ---------------------------------------------------------------------------
 // Mystery School: Graduation Congratulations (with Ritual Builder CTA)
 // ---------------------------------------------------------------------------

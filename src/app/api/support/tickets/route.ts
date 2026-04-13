@@ -40,6 +40,10 @@ interface CreateTicketBody {
   description: string;
   related_entity_type?: string;
   related_entity_id?: string;
+  // Chart escalation fields — pre-populated when created from the PM portal
+  // after the user exhausts their self-service correction retries.
+  chart_family_member_id?: string;
+  chart_member_id?: string;
 }
 
 // ─── Problem Details helper ───────────────────────────────────────────────────
@@ -117,7 +121,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return problem(400, "Bad Request", "Invalid JSON body.");
   }
 
-  const { category, subcategory, subject, description, related_entity_type, related_entity_id } = body;
+  const {
+    category,
+    subcategory,
+    subject,
+    description,
+    related_entity_type,
+    related_entity_id,
+    chart_family_member_id,
+    chart_member_id,
+  } = body;
 
   if (!category || !subject || !description) {
     return problem(422, "Validation Error", "category, subject, and description are required.");
@@ -129,8 +142,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return problem(422, "Validation Error", "description must be at least 10 characters.");
   }
 
-  // Validate related entity if provided
-  const allowedEntityTypes = ["order", "booking", "session", "course", "payout"];
+  // Validate related entity if provided.
+  // Chart-specific types (astro_chart_issue, monthly_transit_issue,
+  // family_relationship_chart_issue) are used by the PM entitlement escalation flow
+  // when a member exhausts self-service regeneration retries.
+  const allowedEntityTypes = [
+    "order",
+    "booking",
+    "session",
+    "course",
+    "payout",
+    "natal_chart",
+    "monthly_transit",
+    "relationship_chart",
+  ];
   if (related_entity_type && !allowedEntityTypes.includes(related_entity_type)) {
     return problem(422, "Validation Error", `related_entity_type must be one of: ${allowedEntityTypes.join(", ")}.`);
   }
@@ -149,11 +174,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     requesterEmail ??
     null;
 
+  // Derive chart-specific type label so tickets route correctly
+  // to the astrology ops queue when category is chart-related.
+  const resolvedType = (() => {
+    if (body.type) return body.type;
+    const chartCategories = ["natal_chart_issue", "monthly_transit_issue", "family_relationship_chart_issue"];
+    if (chartCategories.includes(category)) return "chart_support";
+    return "support";
+  })();
+
+  // For chart escalation tickets, embed the linked entity in tags for easy filtering
+  const tags: string[] = [];
+  if (chart_family_member_id) tags.push(`family_member:${chart_family_member_id}`);
+  if (chart_member_id) tags.push(`community_member:${chart_member_id}`);
+
   const { data: ticket, error } = await admin
     .from("support_tickets")
     .insert({
       ticket_number: "", // trigger will populate
-      type: body.type ?? "support",
+      type: resolvedType,
       category: category.trim(),
       subcategory: subcategory?.trim() ?? null,
       subject: subject.trim(),
@@ -164,6 +203,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       requester_role: "customer",
       related_entity_type: related_entity_type?.trim() ?? null,
       related_entity_id: related_entity_id?.trim() ?? null,
+      tags: tags.length > 0 ? tags : [],
     })
     .select()
     .single();
