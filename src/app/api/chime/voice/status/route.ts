@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PRICING } from "@/lib/constants";
+import { syncTelephonyUsageFromPhoneSession } from "@/lib/telephony-billing";
 
 export const dynamic = "force-dynamic";
 
@@ -170,6 +171,10 @@ export async function POST(request: NextRequest) {
         chime_transaction_id: chimeTransactionId ?? null,
       })
       .eq("id", phoneSessionId);
+
+    await syncTelephonyUsageFromPhoneSession(phoneSessionId).catch((err) =>
+      console.error("Chime voice status: failed to sync telephony usage:", err)
+    );
 
     // Send receipt email for standalone calls
     if (session.session_type === "standalone" && amountCharged > 0 && session.client_id) {

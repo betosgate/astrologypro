@@ -63,6 +63,12 @@ export function MarketingHeader() {
           >
             Find a Reader
           </Link>
+          <Link
+            href="/join/advocate"
+            className="text-[15px] font-medium uppercase tracking-wide text-white/90 transition-colors hover:text-[#ecd396]"
+          >
+            Become an Affiliate
+          </Link>
         </nav>
 
         {/* Right group */}

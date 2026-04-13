@@ -6,6 +6,7 @@ const platformLinks = [
   { label: "Pricing", href: "/pricing" },
   { label: "How It Works", href: "/instructions" },
   { label: "For Astrologers", href: "/for-astrologers" },
+  { label: "Become an Affiliate", href: "/join/advocate" },
   { label: "See Demo", href: "/demo" },
   { label: "Find a Reader", href: "/discover" },
 ];

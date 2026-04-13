@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
   const { data: recentCheckIn, error: rateErr } = await admin
     .from("check_ins")
     .select("id")
-    .eq("diviner_id", diviner.id)
+    .eq("live_session_id", session.id)
     .eq("email", email.trim().toLowerCase())
     .gte("created_at", oneHourAgo)
     .maybeSingle();
@@ -151,6 +151,7 @@ export async function POST(req: NextRequest) {
     .from("check_ins")
     .insert({
       diviner_id: diviner.id,
+      live_session_id: session.id,
       first_name: (first_name as string).trim(),
       last_name: (last_name as string).trim(),
       email: email.trim().toLowerCase(),
