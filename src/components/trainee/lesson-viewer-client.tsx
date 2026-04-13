@@ -139,10 +139,11 @@ function getVideoEmbed(url: string): string | null {
   const ytMatch = url.match(
     /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/
   );
-  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?rel=0`;
+  if (ytMatch)
+    return `https://www.youtube.com/embed/${ytMatch[1]}?rel=0&autoplay=1&mute=1&playsinline=1`;
   const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
   if (vimeoMatch)
-    return `https://player.vimeo.com/video/${vimeoMatch[1]}?dnt=1`;
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}?dnt=1&autoplay=1&muted=1`;
   return null;
 }
 
@@ -194,6 +195,9 @@ function VideoPlayer({
         <video
           src={video.video_url}
           controls
+          autoPlay
+          muted
+          playsInline
           className="w-full max-h-[480px]"
           onEnded={onEnded}
         />
@@ -546,6 +550,9 @@ function TriggerVideoPlayer({
         ref={videoRef}
         src={video.video_url}
         controls={!showOverlay && !showCountdown}
+        autoPlay
+        muted
+        playsInline
         className="w-full max-h-[480px]"
         onEnded={onEnded}
         onTimeUpdate={handleTimeUpdate}
