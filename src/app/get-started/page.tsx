@@ -296,6 +296,8 @@ function GetStartedPage() {
 
     try {
       const isCombo = plan?.itemKey === "trainee_diviner_bundle";
+      const isTraineeOnly = plan?.itemKey === "trainee_program";
+      const isPerennial = plan?.itemKey === "perennial_mandalism_community";
 
       const signUpResponse = await fetch("/api/get-started/signup", {
         method: "POST",
@@ -308,6 +310,11 @@ function GetStartedPage() {
           planId: selectedPlan,
           affiliateCode,
           isCombo,
+          role: isTraineeOnly
+            ? "trainee"
+            : isPerennial
+              ? "perennial_mandalism"
+              : "diviner",
         }),
       });
 

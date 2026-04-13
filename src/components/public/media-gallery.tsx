@@ -12,6 +12,7 @@ export interface MediaItem {
   description: string | null;
   thumbnail_url: string | null;
   category: string | null;
+  album_name: string | null;
   platform: string | null;
   duration_seconds: number | null;
   sort_order: number;

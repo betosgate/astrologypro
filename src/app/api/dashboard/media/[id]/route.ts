@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { MAX_MEDIA_IMAGES, normalizeAlbumName } from "@/lib/media-gallery";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,32 @@ async function getAuthenticatedDiviner() {
 // PATCH /api/dashboard/media/[id]
 // Body: { title?, description?, url?, thumbnail_url?, featured?, is_active?, sort_order?, media_type? }
 // Enforces object-level auth: diviner_id must match
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const diviner = await getAuthenticatedDiviner();
+  if (!diviner) return problemDetail(401, "Unauthorized", "Authentication required.");
+
+  const { id } = await params;
+  const admin = createAdminClient();
+
+  const { data: item, error } = await admin
+    .from("media_items")
+    .select(
+      "id, diviner_id, type, url, title, description, thumbnail_url, category, album_name, platform, duration_seconds, sort_order, is_active, is_featured, view_count, created_at, updated_at"
+    )
+    .eq("id", id)
+    .eq("diviner_id", diviner.id)
+    .maybeSingle();
+
+  if (error || !item) {
+    return problemDetail(404, "Not Found", "Media item not found.");
+  }
+
+  return NextResponse.json(item);
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -48,7 +75,7 @@ export async function PATCH(
   // Object-level authorization check
   const { data: existing, error: fetchErr } = await admin
     .from("media_items")
-    .select("id, diviner_id")
+    .select("id, diviner_id, type")
     .eq("id", id)
     .eq("diviner_id", diviner.id)
     .maybeSingle();
@@ -62,6 +89,7 @@ export async function PATCH(
     description?: unknown;
     url?: unknown;
     thumbnail_url?: unknown;
+    album_name?: unknown;
     featured?: unknown;
     is_active?: unknown;
     sort_order?: unknown;
@@ -73,7 +101,17 @@ export async function PATCH(
     return problemDetail(400, "Bad Request", "Request body must be valid JSON.");
   }
 
-  const { title, description, url, thumbnail_url, featured, is_active, sort_order, media_type } = body;
+  const {
+    title,
+    description,
+    url,
+    thumbnail_url,
+    album_name,
+    featured,
+    is_active,
+    sort_order,
+    media_type,
+  } = body;
 
   if (media_type !== undefined && !VALID_TYPES.includes(media_type as MediaType)) {
     return problemDetail(
@@ -83,16 +121,46 @@ export async function PATCH(
     );
   }
 
+  if (media_type === "image" && existing.type !== "image") {
+    const { count, error: countError } = await admin
+      .from("media_items")
+      .select("id", { count: "exact", head: true })
+      .eq("diviner_id", diviner.id)
+      .eq("type", "image");
+
+    if (countError) {
+      return problemDetail(500, "Internal Server Error", countError.message);
+    }
+    if ((count ?? 0) >= MAX_MEDIA_IMAGES) {
+      return problemDetail(
+        422,
+        "Image Limit Reached",
+        `You can upload up to ${MAX_MEDIA_IMAGES} images across all albums.`
+      );
+    }
+  }
+
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
   if (title !== undefined) updates.title = typeof title === "string" ? title.trim() : title;
   if (description !== undefined) updates.description = typeof description === "string" && description.trim() ? description.trim() : null;
   if (url !== undefined) updates.url = typeof url === "string" ? url.trim() : url;
   if (thumbnail_url !== undefined) updates.thumbnail_url = typeof thumbnail_url === "string" && thumbnail_url.trim() ? thumbnail_url.trim() : null;
+  if (album_name !== undefined) updates.album_name = normalizeAlbumName(album_name);
   if (featured !== undefined) updates.is_featured = featured === true;
   if (is_active !== undefined) updates.is_active = is_active === true;
   if (sort_order !== undefined) updates.sort_order = sort_order;
   if (media_type !== undefined) updates.type = media_type;
+  if (media_type !== undefined && media_type !== "image") updates.album_name = null;
+  if (
+    media_type !== undefined &&
+    media_type === "image" &&
+    thumbnail_url === undefined &&
+    typeof url === "string" &&
+    url.trim()
+  ) {
+    updates.thumbnail_url = url.trim();
+  }
 
   if (Object.keys(updates).length === 1) {
     return problemDetail(422, "Validation Error", "No updatable fields provided.");

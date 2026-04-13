@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -69,9 +70,12 @@ const INITIAL_CATEGORY_VISIBLE = 5;
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-function lessonStatus(lesson: LessonSummary): "completed" | "ongoing" | "not_started" {
+function lessonStatus(
+  lesson: LessonSummary,
+  isExpanded?: boolean,
+): "completed" | "ongoing" | "not_started" {
   if (lesson.completed) return "completed";
-  if (lesson.in_progress) return "ongoing";
+  if (lesson.in_progress || isExpanded) return "ongoing";
   return "not_started";
 }
 
@@ -146,12 +150,14 @@ interface InlineLessonViewerProps {
   lessonId: string;
   programId: string;
   categoryId: string;
+  onComplete?: () => void;
 }
 
 function InlineLessonViewer({
   lessonId,
   programId,
   categoryId,
+  onComplete,
 }: InlineLessonViewerProps) {
   const [viewerProps, setViewerProps] = useState<LessonViewerProps | null>(null);
   const [loading, setLoading] = useState(true);
@@ -253,11 +259,10 @@ function InlineLessonViewer({
   return (
     <LessonViewerClient
       {...viewerProps}
-      // Override the isCompleted callback path: when the quiz onPassed fires
-      // inside the viewer, it sets local isCompleted. The LessonCompleteButton
-      // then calls /api/…/complete. We hook into completion via the viewer's
-      // existing fetch pattern — the parent polls or re-reads the program
-      // hierarchy to reflect the new state.
+      // Inside the viewer, it sets local isCompleted. The LessonCompleteButton
+      // then calls /api/…/complete. We hook into completion via the
+      // onComplete callback to notify the parent workspace.
+      onComplete={onComplete}
       key={lessonId}
     />
   );
@@ -271,6 +276,7 @@ export function ProgramWorkspace({
   initialCategoryId,
   initialLessonId,
 }: ProgramWorkspaceProps) {
+  const router = useRouter();
   const initialCategory =
     categories.find((c) => c.id === initialCategoryId) ?? null;
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
@@ -281,6 +287,10 @@ export function ProgramWorkspace({
   );
   const [showAllCategories, setShowAllCategories] = useState(false);
 
+  // Auto-progression state
+  const [pendingAdvanceLessonId, setPendingAdvanceLessonId] = useState<string | null>(null);
+  const [waitingToAutoAdvance, setWaitingToAutoAdvance] = useState(false);
+
   const selectedCategory = useMemo(
     () => categories.find((c) => c.id === selectedCategoryId) ?? null,
     [categories, selectedCategoryId],
@@ -289,6 +299,76 @@ export function ProgramWorkspace({
   const visibleCategories = showAllCategories
     ? categories
     : categories.slice(0, INITIAL_CATEGORY_VISIBLE);
+
+  const handleLessonComplete = useCallback(() => {
+    // 1. Mark as pending and trigger refresh
+    if (expandedLessonId) {
+      setPendingAdvanceLessonId(expandedLessonId);
+      setWaitingToAutoAdvance(true);
+    }
+    router.refresh();
+  }, [router, expandedLessonId]);
+
+  // Effect to handle auto-progression after categories prop updates
+  useEffect(() => {
+    if (!waitingToAutoAdvance || !pendingAdvanceLessonId) return;
+
+    // We look through all categories and lessons to find the one after pendingAdvanceLessonId
+    let foundCurrent = false;
+    let autoAdvanced = false;
+    let hasNextPhysicalItem = false;
+    
+    for (let cIdx = 0; cIdx < categories.length; cIdx++) {
+      const category = categories[cIdx];
+      const lessonIdx = category.lessons.findIndex(l => l.id === pendingAdvanceLessonId);
+      
+      if (lessonIdx !== -1) {
+        foundCurrent = true;
+        
+        // 1. Try to find the first incomplete/unlocked lesson in the CURRENT category
+        const nextInCurrent = firstOpenableLessonId(category);
+        if (nextInCurrent && nextInCurrent !== pendingAdvanceLessonId) {
+          setExpandedLessonId(nextInCurrent);
+          setSelectedCategoryId(category.id);
+          autoAdvanced = true;
+          hasNextPhysicalItem = true; // Still items to do in this category
+        } 
+        // 2. If current category is done, try the next categories
+        else {
+          for (let nIdx = cIdx + 1; nIdx < categories.length; nIdx++) {
+            const nextCategory = categories[nIdx];
+            if (!nextCategory.is_locked) {
+              const nextLId = firstOpenableLessonId(nextCategory);
+              if (nextLId) {
+                setSelectedCategoryId(nextCategory.id);
+                setExpandedLessonId(nextLId);
+                autoAdvanced = true;
+                hasNextPhysicalItem = true;
+                break;
+              }
+            } else {
+              // If we hit a locked category, we stop searching
+              hasNextPhysicalItem = true; // Technically there is more, it's just locked
+              break;
+            }
+          }
+        }
+        break;
+      }
+    }
+
+    if (autoAdvanced) {
+      toast.success("Moving to next lesson...", { duration: 2000 });
+      setWaitingToAutoAdvance(false);
+      setPendingAdvanceLessonId(null);
+    } else if (!hasNextPhysicalItem || (!foundCurrent && categories.length > 0)) {
+      // Clear flag if there's nowhere to go or we somehow lost track of the lesson
+      setWaitingToAutoAdvance(false);
+      setPendingAdvanceLessonId(null);
+    }
+    // Note: if hasNextPhysicalItem is true but autoAdvanced is false, 
+    // it means the item is STILL LOCKED. We keep waiting for the next props update.
+  }, [categories, waitingToAutoAdvance, pendingAdvanceLessonId]);
 
   const hiddenCount = Math.max(0, categories.length - INITIAL_CATEGORY_VISIBLE);
 
@@ -427,8 +507,8 @@ export function ProgramWorkspace({
             ) : (
               <ul className="space-y-2">
                 {selectedCategory.lessons.map((lesson, lIdx) => {
-                  const status = lessonStatus(lesson);
                   const isExpanded = lesson.id === expandedLessonId;
+                  const status = lessonStatus(lesson, isExpanded);
                   const isLocked = lesson.is_locked;
 
                   const handleLessonToggle = () => {
@@ -505,8 +585,9 @@ export function ProgramWorkspace({
                                 lessonId={lesson.id}
                                 programId={programId}
                                 categoryId={selectedCategory.id}
+                                onComplete={handleLessonComplete}
                               />
-                              <div className="flex justify-end pt-1">
+                              {/* <div className="flex justify-end pt-1">
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -520,7 +601,7 @@ export function ProgramWorkspace({
                                     Open full page
                                   </Link>
                                 </Button>
-                              </div>
+                              </div> */}
                             </>
                           </div>
                         )}

@@ -73,6 +73,7 @@ import {
   Key,
   DollarSign,
   Megaphone,
+  AlertTriangle,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -244,6 +245,7 @@ const NAV_GROUPS = [
       { label: "Revenue", href: "/admin/reports/revenue", icon: DollarSign },
       { label: "Bookings", href: "/admin/reports/bookings", icon: CalendarDays },
       { label: "Provider Costs", href: "/admin/reports/provider-costs", icon: TrendingUp },
+      { label: "Operations Health", href: "/admin/reports/operations", icon: AlertTriangle },
       { label: "Payouts", href: "/admin/reports/payouts", icon: CreditCard },
       { label: "Funnel", href: "/admin/reports/funnel", icon: BarChart3 },
       { label: "Readings", href: "/admin/reports/readings", icon: BarChart2 },

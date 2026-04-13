@@ -1,14 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe/client";
-import { PLANS, type PlanId } from "@/lib/plans";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
+type PricingPlanUpgradeRow = {
+  plan_id: string;
+  display_name: string;
+  item_id: string;
+  stripe_price_id: string | null;
+  recurring_amount: number | null;
+  custom_fields:
+    | {
+        slug?: string;
+        value?: string;
+      }[]
+    | null;
+};
+
 /**
  * POST /api/stripe/upgrade
- * Upgrades (or switches) a diviner's subscription to a new plan with proration.
- * Only "both" is a valid upgrade target from "tarot" or "astrology".
+ * Upgrades (or switches) a diviner's subscription to a new DB-driven plan with proration.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -23,8 +36,25 @@ export async function POST(request: NextRequest) {
 
     const { newPlanId } = await request.json();
 
-    if (!newPlanId || !PLANS[newPlanId as PlanId]) {
-      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
+    if (!newPlanId) {
+      return NextResponse.json({ error: "Missing newPlanId" }, { status: 400 });
+    }
+
+    const admin = createAdminClient();
+    const { data: rawPlan, error: planError } = await admin
+      .from("pricing_plans")
+      .select("plan_id, display_name, item_id, stripe_price_id, recurring_amount, custom_fields")
+      .eq("plan_id", newPlanId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    const newPlan = rawPlan as PricingPlanUpgradeRow | null;
+
+    if (planError || !newPlan || !newPlan.stripe_price_id) {
+      return NextResponse.json(
+        { error: "Invalid or unconfigured plan" },
+        { status: 400 }
+      );
     }
 
     const { data: diviner } = await supabase
@@ -58,20 +88,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Only allow upgrading to "both"
-    if (newPlanId !== "both") {
+    const isExplicitUpgradeTarget =
+      newPlan.custom_fields?.find((field) => field.slug === "is_full_plan")?.value ===
+      "true";
+
+    let isHigherRecurringPlan = false;
+
+    if (diviner.plan_id) {
+      const { data: currentPlan } = await admin
+        .from("pricing_plans")
+        .select("item_id, recurring_amount")
+        .eq("plan_id", diviner.plan_id)
+        .maybeSingle();
+
+      isHigherRecurringPlan =
+        !!currentPlan &&
+        currentPlan.item_id === newPlan.item_id &&
+        (newPlan.recurring_amount ?? 0) > (currentPlan.recurring_amount ?? 0);
+    }
+
+    if (!isExplicitUpgradeTarget && !isHigherRecurringPlan) {
       return NextResponse.json(
         { error: "Downgrades are not supported. Contact support." },
         { status: 400 }
-      );
-    }
-
-    const newMonthlyPriceId =
-      process.env[PLANS[newPlanId as PlanId].monthlyEnvKey];
-    if (!newMonthlyPriceId) {
-      return NextResponse.json(
-        { error: "New plan price not configured" },
-        { status: 500 }
       );
     }
 
@@ -97,7 +136,7 @@ export async function POST(request: NextRequest) {
       items: [
         {
           id: monthlyItem.id,
-          price: newMonthlyPriceId,
+          price: newPlan.stripe_price_id,
         },
       ],
       proration_behavior: "create_prorations",

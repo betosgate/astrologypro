@@ -43,26 +43,12 @@ export async function GET(_req: NextRequest, { params }: Params) {
     );
   }
 
-  // Count check-ins for this session's active window
-  const divinerObj = Array.isArray(session.diviners) ? session.diviners[0] : session.diviners;
-  const divinerId = divinerObj ? (divinerObj as { id: string }).id : null;
-  let checkInCount = 0;
+  const { count: checkInCount } = await admin
+    .from("check_ins")
+    .select("id", { count: "exact", head: true })
+    .eq("live_session_id", id);
 
-  if (divinerId) {
-    const startTime = session.started_at ?? session.scheduled_at ?? session.created_at;
-    const endTime = session.ended_at ?? new Date().toISOString();
-
-    const { count } = await admin
-      .from("check_ins")
-      .select("id", { count: "exact", head: true })
-      .eq("diviner_id", divinerId)
-      .gte("created_at", startTime)
-      .lte("created_at", endTime);
-
-    checkInCount = count ?? 0;
-  }
-
-  return NextResponse.json({ ...session, check_in_count: checkInCount });
+  return NextResponse.json({ ...session, check_in_count: checkInCount ?? 0 });
 }
 
 // ─── PATCH /api/admin/live-sessions/[id] ─────────────────────────────────────

@@ -88,7 +88,7 @@ async function getMediaItems(divinerId: string): Promise<MediaItem[]> {
   const { data } = await admin
     .from("media_items")
     .select(
-      "id, diviner_id, type, url, title, description, thumbnail_url, category, platform, duration_seconds, sort_order, is_featured, view_count, created_at"
+      "id, diviner_id, type, url, title, description, thumbnail_url, category, album_name, platform, duration_seconds, sort_order, is_featured, view_count, created_at"
     )
     .eq("diviner_id", divinerId)
     .eq("is_active", true)

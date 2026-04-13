@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendImmediateWeeklyDelivery } from "@/lib/weekly-deliveries";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ async function getAuthenticatedDiviner() {
 
 // GET /api/dashboard/weekly-subscription/deliveries
 // Returns past and scheduled deliveries ordered by scheduled_for DESC, id DESC
-export async function GET(_req: NextRequest) {
+export async function GET() {
   const diviner = await getAuthenticatedDiviner();
   if (!diviner) return problemDetail(401, "Unauthorized", "Authentication required.");
 
@@ -95,24 +96,30 @@ export async function POST(req: NextRequest) {
   const now = new Date().toISOString();
   const isSendNow = !scheduled_at;
 
-  let status: "sent" | "scheduled" = "scheduled";
+  let status: "sent" | "scheduled" | "failed" = "scheduled";
   let sentAt: string | null = null;
   let scheduledFor: string = now;
   let recipientCount = 0;
+  let failedRecipientCount = 0;
+  let attemptedAt: string | null = null;
+  let failedAt: string | null = null;
+  let lastError: string | null = null;
 
   if (isSendNow) {
-    status = "sent";
-    sentAt = now;
+    attemptedAt = now;
     scheduledFor = now;
 
-    // Count active subscribers for recipient_count
-    const { count } = await admin
-      .from("weekly_subscription_subscribers")
-      .select("id", { count: "exact", head: true })
-      .eq("diviner_id", diviner.id)
-      .eq("status", "active");
-
-    recipientCount = count ?? 0;
+    const result = await sendImmediateWeeklyDelivery({
+      divinerId: diviner.id,
+      subject: (subject as string).trim(),
+      content: (content as string).trim(),
+    });
+    recipientCount = result.sentCount;
+    failedRecipientCount = result.failedCount;
+    lastError = result.lastError;
+    status = result.sentCount > 0 || result.failedCount === 0 ? "sent" : "failed";
+    sentAt = status === "sent" ? now : null;
+    failedAt = status === "failed" ? now : null;
   } else {
     if (typeof scheduled_at !== "string") {
       return problemDetail(422, "Validation Error", "Field 'scheduled_at' must be an ISO 8601 date string.");
@@ -136,7 +143,11 @@ export async function POST(req: NextRequest) {
       content: (content as string).trim(),
       scheduled_for: scheduledFor,
       sent_at: sentAt,
+      attempted_at: attemptedAt,
+      failed_at: failedAt,
       recipient_count: recipientCount,
+      failed_recipient_count: failedRecipientCount,
+      last_error: lastError,
       status,
     })
     .select()
