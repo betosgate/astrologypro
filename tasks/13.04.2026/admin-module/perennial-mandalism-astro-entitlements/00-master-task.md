@@ -9,6 +9,11 @@ Define the product architecture for Perennial Mandalism users so they automatica
 - full family dynamic chart coverage
 - monthly transit generation
 
+Base-user creation rule:
+
+- when the base Perennial Mandalism user is created, only natal and monthly transit provisioning should happen automatically
+- relationship charts and family-dynamic coverage should happen later, after additional family-member context exists
+
 This must reuse the existing astrology module wherever possible.
 
 The system also needs operational rules:
@@ -92,12 +97,14 @@ The correct architecture is:
 5. `05-user-controls-regeneration-limits-and-audit.md`
 6. `06-support-ticket-escalation-for-chart-issues.md`
 7. `07-seed-fixtures-rollout-and-ops-monitoring.md`
+8. `08-base-user-auto-provisioning-natal-and-monthly-only.md`
 
 ## Acceptance Standard
 
 This feature set is complete only when:
 
 - Perennial Mandalism members automatically receive natal chart coverage for eligible profiles
+- base-user creation auto-provisions only natal and monthly transit eligibility
 - relationship charts are available across the family set using existing synastry logic
 - monthly transits generate exactly once per member profile per month
 - chart regeneration is capped at `3` correction attempts
