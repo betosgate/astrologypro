@@ -23,7 +23,7 @@ export async function GET(
   const { data, error } = await admin
     .from("diviners")
     .select(
-      "id, public_publish_blocked, blocked_public_sections, blocked_media_types, publish_block_reason, publish_blocked_at, publish_blocked_by"
+      "id, public_publish_blocked, blocked_public_sections, blocked_media_types, publish_block_reason, publish_blocked_at, publish_blocked_by, show_public_session_counts, public_session_counts_override, public_session_counts_override_reason, public_session_counts_override_by, public_session_counts_override_at"
     )
     .eq("id", id)
     .maybeSingle();
@@ -37,6 +37,8 @@ export async function GET(
       ...normalizePublishPolicy(data),
       publishBlockedAt: data.publish_blocked_at ?? null,
       publishBlockedBy: data.publish_blocked_by ?? null,
+      publicSessionCountsOverrideBy: data.public_session_counts_override_by ?? null,
+      publicSessionCountsOverrideAt: data.public_session_counts_override_at ?? null,
     },
   });
 }
@@ -78,6 +80,17 @@ export async function PATCH(
     typeof body.publishBlockReason === "string" && body.publishBlockReason.trim()
       ? body.publishBlockReason.trim()
       : null;
+  const showPublicSessionCounts = body.showPublicSessionCounts === true;
+  const publicSessionCountsOverride =
+    body.publicSessionCountsOverride === "force_show" ||
+    body.publicSessionCountsOverride === "force_hide"
+      ? body.publicSessionCountsOverride
+      : null;
+  const publicSessionCountsOverrideReason =
+    typeof body.publicSessionCountsOverrideReason === "string" &&
+    body.publicSessionCountsOverrideReason.trim()
+      ? body.publicSessionCountsOverrideReason.trim()
+      : null;
 
   if (
     Array.isArray(body.blockedPublicSections) &&
@@ -106,6 +119,13 @@ export async function PATCH(
     publish_block_reason: hasAnyBlock ? publishBlockReason : null,
     publish_blocked_at: hasAnyBlock ? new Date().toISOString() : null,
     publish_blocked_by: hasAnyBlock ? user.id : null,
+    show_public_session_counts: showPublicSessionCounts,
+    public_session_counts_override: publicSessionCountsOverride,
+    public_session_counts_override_reason:
+      publicSessionCountsOverride === null ? null : publicSessionCountsOverrideReason,
+    public_session_counts_override_by: publicSessionCountsOverride === null ? null : user.id,
+    public_session_counts_override_at:
+      publicSessionCountsOverride === null ? null : new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
 
@@ -114,7 +134,7 @@ export async function PATCH(
     .update(updatePayload)
     .eq("id", id)
     .select(
-      "id, public_publish_blocked, blocked_public_sections, blocked_media_types, publish_block_reason, publish_blocked_at, publish_blocked_by"
+      "id, public_publish_blocked, blocked_public_sections, blocked_media_types, publish_block_reason, publish_blocked_at, publish_blocked_by, show_public_session_counts, public_session_counts_override, public_session_counts_override_reason, public_session_counts_override_by, public_session_counts_override_at"
     )
     .single();
 
@@ -127,6 +147,8 @@ export async function PATCH(
       ...normalizePublishPolicy(data),
       publishBlockedAt: data.publish_blocked_at ?? null,
       publishBlockedBy: data.publish_blocked_by ?? null,
+      publicSessionCountsOverrideBy: data.public_session_counts_override_by ?? null,
+      publicSessionCountsOverrideAt: data.public_session_counts_override_at ?? null,
     },
   });
 }

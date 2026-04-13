@@ -24,6 +24,9 @@ export interface DivinerPublishPolicy {
   blockedPublicSections: DivinerPublicSection[];
   blockedMediaTypes: DivinerMediaType[];
   publishBlockReason: string | null;
+  showPublicSessionCounts: boolean;
+  publicSessionCountsOverride: "force_show" | "force_hide" | null;
+  publicSessionCountsOverrideReason: string | null;
 }
 
 function dedupe<T>(values: T[]): T[] {
@@ -57,6 +60,17 @@ export function normalizePublishPolicy(source: Record<string, unknown> | null | 
       typeof source?.publish_block_reason === "string" && source.publish_block_reason.trim()
         ? source.publish_block_reason.trim()
         : null,
+    showPublicSessionCounts: source?.show_public_session_counts === true,
+    publicSessionCountsOverride:
+      source?.public_session_counts_override === "force_show" ||
+      source?.public_session_counts_override === "force_hide"
+        ? source.public_session_counts_override
+        : null,
+    publicSessionCountsOverrideReason:
+      typeof source?.public_session_counts_override_reason === "string" &&
+      source.public_session_counts_override_reason.trim()
+        ? source.public_session_counts_override_reason.trim()
+        : null,
   };
 }
 
@@ -83,4 +97,22 @@ export function publishBlockMessage(
   fallback: string
 ): string {
   return policy.publishBlockReason ?? fallback;
+}
+
+export function resolvePublicSessionCountsVisibility(
+  policy: DivinerPublishPolicy
+): boolean {
+  if (policy.publicPublishBlocked || policy.blockedPublicSections.includes("hero")) {
+    return false;
+  }
+
+  if (policy.publicSessionCountsOverride === "force_show") {
+    return true;
+  }
+
+  if (policy.publicSessionCountsOverride === "force_hide") {
+    return false;
+  }
+
+  return policy.showPublicSessionCounts;
 }

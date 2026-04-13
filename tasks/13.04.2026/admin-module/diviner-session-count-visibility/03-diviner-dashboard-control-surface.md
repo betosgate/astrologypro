@@ -52,3 +52,9 @@ Use the standard dashboard pattern:
 - the diviner can manage the block from their own dashboard
 - the dashboard clearly reflects when admin override is in effect
 - visibility updates persist and affect the public page deterministically
+
+## Status
+
+Done.
+
+Implemented in `src/app/dashboard/profile/page.tsx` and `src/app/api/dashboard/profile/route.ts` with a diviner-owned toggle, save persistence, and explicit admin-override messaging.
