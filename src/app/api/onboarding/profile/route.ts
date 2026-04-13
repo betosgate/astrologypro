@@ -26,7 +26,7 @@ export async function GET() {
     let { data: diviner } = await admin
       .from("diviners")
       .select(
-        "id, onboarding_step, display_name, bio, tagline, avatar_url, cover_image_url, stripe_account_id, timezone, specialties, phone, youtube_channel_id, facebook_live_url"
+        "id, username, onboarding_step, display_name, bio, tagline, avatar_url, cover_image_url, stripe_account_id, timezone, specialties, phone, youtube_channel_id, facebook_live_url"
       )
       .eq("user_id", user.id)
       .maybeSingle();
@@ -48,7 +48,7 @@ export async function GET() {
           onboarding_step: 1,
         })
         .select(
-          "id, onboarding_step, display_name, bio, tagline, avatar_url, cover_image_url, stripe_account_id, timezone, specialties, phone, youtube_channel_id, facebook_live_url"
+          "id, username, onboarding_step, display_name, bio, tagline, avatar_url, cover_image_url, stripe_account_id, timezone, specialties, phone, youtube_channel_id, facebook_live_url"
         )
         .single();
 
