@@ -105,7 +105,8 @@ export async function GET(
           typeof record.service_id === "string" ? record.service_id : null;
 
         if (allSlots) return true;
-        if (serviceId) return templateServiceId === serviceId;
+        // Include templates that match this service OR generic templates (no service_id)
+        if (serviceId) return !templateServiceId || templateServiceId === serviceId;
         return !templateServiceId;
       })
       .map((template) => String((template as Record<string, unknown>).timezone ?? ""))

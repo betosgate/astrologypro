@@ -28,7 +28,7 @@ async function getDivinerAndBookingContext(username: string) {
 
   const { data: services } = await supabase
     .from("services")
-    .select("id, name, slug, description, duration_minutes, base_price, category, requires_birth_data, is_featured, sort_order")
+    .select("id, name, slug, description, duration_minutes, base_price, category, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields, is_featured, sort_order")
     .eq("diviner_id", diviner.id)
     .eq("is_active", true)
     .order("is_featured", { ascending: false })

@@ -83,6 +83,10 @@ function getRenderableCustomFields(fields: { label: string; value: string; slug:
 function formatFieldText(field: { label: string; value: string }) {
   return `${field.label}: ${field.value}`;
 }
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 import {
   Loader2,
   Sparkles,
@@ -293,27 +297,49 @@ function GetStartedPage() {
     try {
       const isCombo = plan?.itemKey === "trainee_diviner_bundle";
 
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: name.trim(),
-            username,
-            role: "diviner",
-            plan: selectedPlan,
-            isCombo,
-          },
-        },
+      const signUpResponse = await fetch("/api/get-started/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          password,
+          name: name.trim(),
+          username,
+          planId: selectedPlan,
+          affiliateCode,
+          isCombo,
+        }),
       });
 
-      if (signUpError) {
-        setError(signUpError.message);
+      const signUpBody = await signUpResponse.json();
+
+      if (!signUpResponse.ok) {
+        setError(signUpBody.error ?? "Failed to create your account.");
         return;
       }
 
-      if (!data.user) {
-        setError("Sign up failed. Please try again.");
+      let userId = signUpBody.userId as string | undefined;
+      let signInErrorMessage: string | null = null;
+
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const { data: signInData, error: signInError } =
+          await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+        if (!signInError && signInData.user) {
+          userId = signInData.user.id;
+          signInErrorMessage = null;
+          break;
+        }
+
+        signInErrorMessage = signInError?.message ?? "Failed to sign in.";
+        await delay(250 * (attempt + 1));
+      }
+
+      if (!userId) {
+        setError(signInErrorMessage ?? "Account created, but sign-in failed.");
         return;
       }
 
@@ -322,7 +348,7 @@ function GetStartedPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
-          userId: data.user.id,
+          userId,
           planId: selectedPlan,
           ...(affiliateCode ? { affiliateCode } : {}),
         }),
