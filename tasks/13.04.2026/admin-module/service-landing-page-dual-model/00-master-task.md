@@ -72,3 +72,12 @@ This feature set is complete only when:
 - diviner-specific pages remain direct-conversion pages with no diviner selector
 - all services can be represented by landing pages
 - diviner-specific blocks are intentionally designed rather than bolted on
+
+## Status
+
+- `01-define-two-canonical-service-landing-types.md` — Done
+- `02-service-only-landing-with-diviner-selection-flow.md` — Done
+- `03-diviner-specific-service-landing-rules.md` — Done
+- `04-diviner-block-content-and-selection-ux.md` — Done
+- `05-all-services-landing-coverage-and-admin-governance.md` — Done
+- `06-seo-routing-and-indexation-strategy-for-dual-landings.md` — Done

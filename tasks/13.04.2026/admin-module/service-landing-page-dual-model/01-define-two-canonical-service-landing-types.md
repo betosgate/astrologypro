@@ -35,3 +35,7 @@ These should be treated as two first-class public page models, not one overloade
 - page-model definitions
 - ownership boundaries
 - conversion intent differences between the two models
+
+## Status
+
+Done.

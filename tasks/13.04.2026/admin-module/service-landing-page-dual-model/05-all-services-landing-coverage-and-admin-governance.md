@@ -26,3 +26,7 @@ That means the platform needs a governed model for:
 - landing coverage policy for all services
 - admin governance requirements
 - service publication rules
+
+## Status
+
+Done.
