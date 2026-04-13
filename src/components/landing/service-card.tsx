@@ -77,14 +77,22 @@ export function ServiceCard({ service, username, imageUrl }: ServiceCardProps) {
             </span>
           </div>
 
-          {/* Book link */}
-          <Link
-            href={`/${username}/book/${service.slug}`}
-            className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-gold/80 transition-colors hover:text-gold"
-          >
-            Book This Reading
-            <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-          </Link>
+          {/* Action links */}
+          <div className="mt-3 flex items-center gap-4">
+            <Link
+              href={`/${username}/book/${service.slug}`}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-gold/80 transition-colors hover:text-gold"
+            >
+              Book This Reading
+              <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+            <Link
+              href={`/${username}/services/${service.slug}`}
+              className="text-xs text-silver/50 transition-colors hover:text-silver/80"
+            >
+              Learn More
+            </Link>
+          </div>
         </div>
 
         {/* Right: price + product image */}
