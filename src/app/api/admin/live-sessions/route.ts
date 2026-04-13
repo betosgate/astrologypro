@@ -61,7 +61,8 @@ export async function GET(req: NextRequest) {
     .select(
       `id, platform, platform_url, title, status, scheduled_at, started_at, ended_at,
        check_in_enabled, check_in_form_title, check_in_form_subtitle, created_at, updated_at,
-       diviners(id, display_name, username, avatar_url)`,
+       diviner_id,
+       diviners(id, display_name, username, avatar_url, is_live)`,
       { count: "exact" }
     )
     .order("created_at", { ascending: false })
@@ -96,27 +97,64 @@ export async function GET(req: NextRequest) {
   }
 
   const rows = data ?? [];
+  const divinerIds = Array.from(
+    new Set(
+      rows
+        .map((row) => row.diviner_id as string | null)
+        .filter((value): value is string => !!value)
+    )
+  );
 
   // Fetch exact check-in counts per session in a single query
   const sessionIds = rows.map((r) => r.id);
   const checkInCounts: Record<string, number> = {};
+  const activeLiveSessionByDiviner = new Map<string, string>();
 
-  if (sessionIds.length > 0) {
-    const { data: checkIns } = await admin
-      .from("check_ins")
-      .select("live_session_id")
-      .in("live_session_id", sessionIds);
+  if (sessionIds.length > 0 || divinerIds.length > 0) {
+    const [{ data: checkIns }, { data: activeSessions }] = await Promise.all([
+      sessionIds.length > 0
+        ? admin
+            .from("check_ins")
+            .select("live_session_id")
+            .in("live_session_id", sessionIds)
+        : Promise.resolve({ data: [] }),
+      divinerIds.length > 0
+        ? admin
+            .from("live_sessions")
+            .select("id, diviner_id")
+            .in("diviner_id", divinerIds)
+            .eq("status", "live")
+        : Promise.resolve({ data: [] }),
+    ]);
 
     for (const row of checkIns ?? []) {
       const liveSessionId = row.live_session_id as string | null;
       if (!liveSessionId) continue;
       checkInCounts[liveSessionId] = (checkInCounts[liveSessionId] ?? 0) + 1;
     }
+
+    for (const row of activeSessions ?? []) {
+      if (typeof row.diviner_id === "string" && typeof row.id === "string") {
+        activeLiveSessionByDiviner.set(row.diviner_id, row.id);
+      }
+    }
   }
 
   const enriched = rows.map((r) => ({
     ...r,
     check_in_count: checkInCounts[r.id] ?? 0,
+    is_current_live_session:
+      typeof r.diviner_id === "string" && activeLiveSessionByDiviner.get(r.diviner_id) === r.id,
+    state_mismatch:
+      (r.status === "live" &&
+        typeof r.diviner_id === "string" &&
+        activeLiveSessionByDiviner.get(r.diviner_id) !== r.id) ||
+      (r.status === "live" &&
+        !!(
+          r.diviners &&
+          !Array.isArray(r.diviners) &&
+          (r.diviners as Record<string, unknown>).is_live !== true
+        )),
   }));
 
   let nextCursor: string | null = null;
