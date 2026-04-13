@@ -9,6 +9,14 @@ function generateSlug(length = 10): string {
   return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
 }
 
+const ALLOWED_PRODUCT_TYPES = new Set([
+  "package",
+  "session",
+  "subscription",
+  "diviner_profile",
+  "diviner_service",
+]);
+
 // GET /api/dashboard/affiliates/[id]/links
 export async function GET(
   _request: Request,
@@ -120,6 +128,53 @@ export async function POST(
     );
   }
 
+  const normalizedProductType =
+    typeof product_type === "string" && product_type.trim()
+      ? product_type.trim()
+      : null;
+
+  if (normalizedProductType && !ALLOWED_PRODUCT_TYPES.has(normalizedProductType)) {
+    return NextResponse.json(
+      {
+        type: "https://httpstatuses.io/422",
+        title: "Validation error",
+        detail: "Unsupported referral destination type.",
+      },
+      { status: 422 }
+    );
+  }
+
+  if (normalizedProductType === "diviner_service") {
+    if (typeof product_id !== "string" || !product_id.trim()) {
+      return NextResponse.json(
+        {
+          type: "https://httpstatuses.io/422",
+          title: "Validation error",
+          detail: "product_id is required for diviner_service links.",
+        },
+        { status: 422 }
+      );
+    }
+
+    const { data: service } = await admin
+      .from("services")
+      .select("id")
+      .eq("id", product_id.trim())
+      .eq("diviner_id", diviner.id)
+      .maybeSingle();
+
+    if (!service) {
+      return NextResponse.json(
+        {
+          type: "https://httpstatuses.io/404",
+          title: "Service not found",
+          detail: "The selected service does not belong to this diviner.",
+        },
+        { status: 404 }
+      );
+    }
+  }
+
   // Generate unique slug — retry up to 5 times on collision
   let slug = generateSlug();
   let attempts = 0;
@@ -140,8 +195,12 @@ export async function POST(
     slug,
     is_active: true,
   };
-  if (typeof product_id === "string" && product_id.trim()) insertPayload.product_id = product_id.trim();
-  if (typeof product_type === "string" && product_type.trim()) insertPayload.product_type = product_type.trim();
+  if (normalizedProductType === "diviner_service" && typeof product_id === "string" && product_id.trim()) {
+    insertPayload.product_id = product_id.trim();
+  } else if (typeof product_id === "string" && product_id.trim()) {
+    insertPayload.product_id = product_id.trim();
+  }
+  if (normalizedProductType) insertPayload.product_type = normalizedProductType;
 
   const { data, error } = await admin
     .from("affiliate_referral_links")

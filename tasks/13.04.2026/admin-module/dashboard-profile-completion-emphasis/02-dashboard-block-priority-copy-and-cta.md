@@ -47,3 +47,9 @@ It should not sit low in the page where it competes with normal content cards.
 - copy hierarchy
 - CTA matrix by missing-data type
 - priority placement requirements
+
+## Status
+
+Done.
+
+The emphasized dashboard copy and CTA behavior already exist on the community dashboard. `src/components/community/profile-completion-card.tsx` shows missing items with direct corrective links, and `src/components/community/profile-progress-section.tsx` keeps a prominent profile-completion CTA near the top of the dashboard experience.

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCommunityProfileCompletion } from "@/lib/community/profile-completion";
 import {
   UserDetailClient,
   type UserDetailData,
@@ -59,7 +60,7 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
 
     admin
       .from("community_members")
-      .select("id, user_id, full_name, email, phone, membership_type, membership_status, joined_at")
+      .select("id, user_id, full_name, email, phone, membership_type, membership_status, joined_at, onboarding_completed")
       .eq("user_id", userId)
       .maybeSingle(),
 
@@ -226,7 +227,17 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
     profileFields = {
       membership_type:   (community.membership_type as string) ?? null,
       membership_status: (community.membership_status as string) ?? null,
+      onboarding_completed: String(community.onboarding_completed ?? false),
     };
+
+    const completion = await getCommunityProfileCompletion(admin, userId);
+    if (completion) {
+      profileFields.community_profile_completion = `${completion.overall_pct}%`;
+      profileFields.community_missing_items = completion.items
+        .filter((item) => !item.completed)
+        .map((item) => item.label)
+        .join(", ") || null;
+    }
 
   } else if (trainee) {
     role      = "trainee";

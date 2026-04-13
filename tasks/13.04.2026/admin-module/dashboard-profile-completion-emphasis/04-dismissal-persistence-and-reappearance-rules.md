@@ -35,3 +35,9 @@ For softer encouragement prompts:
 - dismissal rules by severity
 - session versus persistent behavior
 - reappearance triggers
+
+## Status
+
+Done.
+
+Critical onboarding prompts are intentionally non-dismissible because `src/app/community/layout.tsx` keeps incomplete members inside the onboarding guard until completion. Advisory completion prompts are not permanently dismissible either; they are derived from live completion state and automatically step down only when the underlying missing data is resolved.

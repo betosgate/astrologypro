@@ -56,3 +56,9 @@ The dashboard block must explain both:
 - missing-state to route map
 - deep-link recommendations
 - family-versus-self correction routing rules
+
+## Status
+
+Done.
+
+The completion system already maps each missing state to an exact corrective destination through `action_url` values in `src/app/api/community/profile-completion/route.ts`, with self-profile issues routed to `/community/profile` and family or chart blockers routed to `/community/family`.
