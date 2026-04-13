@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient();
   const pricing_item_key = typeof body.pricing_item_key === "string" ? body.pricing_item_key.trim() || null : null;
+  const platform_fee_percent = typeof body.platform_fee_percent === "number" ? body.platform_fee_percent : null;
 
   const { data, error } = await admin.from("services").insert({
     diviner_id,
@@ -76,6 +77,7 @@ export async function POST(req: NextRequest) {
     base_price,
     overage_rate,
     pricing_item_key,
+    platform_fee_percent,
     is_active: body.is_active !== false,
     is_featured: !!body.is_featured,
     is_primary: body.is_primary !== false,

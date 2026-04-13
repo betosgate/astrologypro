@@ -54,6 +54,7 @@ interface Service {
   base_price: number;
   overage_rate: number;
   pricing_item_key: string | null;
+  platform_fee_percent: number | null;
   is_active: boolean;
   is_featured: boolean;
   sort_order: number;
@@ -377,6 +378,7 @@ function ServiceDialog({
   const [duration, setDuration] = useState("60");
   const [pricingItemKey, setPricingItemKey] = useState("");
   const [overageRate, setOverageRate] = useState("0.50");
+  const [platformFeePercent, setPlatformFeePercent] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -401,6 +403,7 @@ function ServiceDialog({
       setDuration(String(editingService.duration_minutes));
       setPricingItemKey(editingService.pricing_item_key ?? "");
       setOverageRate(String(editingService.overage_rate ?? 0.50));
+      setPlatformFeePercent(editingService.platform_fee_percent != null ? String(editingService.platform_fee_percent) : "");
       setIsActive(editingService.is_active);
     } else {
       setName("");
@@ -410,6 +413,7 @@ function ServiceDialog({
       setDuration("60");
       setPricingItemKey("");
       setOverageRate("0.50");
+      setPlatformFeePercent("");
       setIsActive(true);
     }
   }, [open, editingService, diviners]);
@@ -443,6 +447,7 @@ function ServiceDialog({
           base_price: pricingItemKey ? getPriceFromPricingItem(pricingItemKey) : 0,
           overage_rate: parseFloat(overageRate) || 0.50,
           pricing_item_key: pricingItemKey || null,
+          platform_fee_percent: platformFeePercent !== "" ? parseFloat(platformFeePercent) : null,
           is_active: isActive,
         }),
       });
@@ -574,6 +579,22 @@ function ServiceDialog({
             />
             <p className="text-[10px] text-muted-foreground">
               Per-minute rate charged for time beyond the scheduled duration.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Platform Fee % <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <Input
+              type="number"
+              min="0"
+              max="100"
+              step="0.5"
+              placeholder="Leave blank to use global default (20%)"
+              value={platformFeePercent}
+              onChange={(e) => setPlatformFeePercent(e.target.value)}
+            />
+            <p className="text-[10px] text-muted-foreground">
+              % of booking price kept by the platform. Leave blank to use the global 20% default.
             </p>
           </div>
 
