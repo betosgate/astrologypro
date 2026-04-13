@@ -68,6 +68,6 @@ All prices and Stripe price IDs come exclusively from the `pricing_plans` DB tab
 | 06 | `06-fix-plan-pricing-db-only.md` | All pricing reads env vars / legacy PLANS map — must use `pricing_plans` DB only; retire `billing.ts` and `plans.ts`; fix settings page plan display and upgrade flow | — | Done |
 | 01 | `01-fix-trainee-program-webhook-provisioning.md` | Webhook creates `diviners` record for `trainee_program` — must create `trainees`; wrong `role` set at signup | 06 | Done |
 | 02 | `02-fix-perennial-community-webhook-provisioning.md` | Webhook creates `diviners` record for `perennial_mandalism_community` — must create `community_members`; wrong `role` set at signup | 06 | Done |
-| 03 | `03-build-trainee-post-login-onboarding-gate.md` | No post-login onboarding gate for `trainee` role — lands directly on `/trainee` with no required data collected | 01 | Open |
+| 03 | `03-build-trainee-post-login-onboarding-gate.md` | No post-login onboarding gate for `trainee` role — lands directly on `/trainee` with no required data collected | 01 | Done |
 | 04 | `04-build-perennial-post-login-onboarding-gate.md` | No post-login onboarding gate for `perennial_mandalism` — household members, birth data, questionnaire never collected | 02 | Open |
 | 05 | `05-build-profile-completion-indicator.md` | No profile completion percentage exists in any role's profile page | 03, 04 | Open |
