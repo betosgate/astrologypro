@@ -20,7 +20,7 @@ interface SearchParams {
 }
 
 const ALLOWED_PAGE_SIZES = [10, 25, 50, 100];
-export const DEFAULT_PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 10;
 
 // ─── Data fetch ───────────────────────────────────────────────────────────────
 

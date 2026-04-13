@@ -4,13 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "rm -rf .next && NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=\"--max-old-space-size=8192\" next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "test:ms-webhooks": "tsx --test tests/unit/mystery-school-subscription-lifecycle.test.ts",
     "seed": "tsx scripts/seed.ts",
     "migrate": "node scripts/run-migration.js",
-    "local:build": "NODE_OPTIONS=\"--max-old-space-size=4096\" npm run build"
+    "local:build": "npm run build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",

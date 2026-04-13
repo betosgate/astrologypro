@@ -31,7 +31,7 @@ import {
 import { Pencil, Trash2, Plus, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
-export const TIMEZONE_OPTIONS = [
+const TIMEZONE_OPTIONS = [
   { value: "America/New_York", label: "Eastern Time (ET) — UTC−5/−4" },
   { value: "America/Chicago", label: "Central Time (CT) — UTC−6/−5" },
   { value: "America/Denver", label: "Mountain Time (MT) — UTC−7/−6" },
