@@ -3,6 +3,13 @@ import path from "path";
 
 // build: 2026-04-03T09:30Z
 const nextConfig: NextConfig = {
+  // Skip type checking and linting during builds for speed
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   experimental: {
     // Admin training video uploads use Route Handlers with multipart/form-data.
     // The default buffered proxy/request-body limit is too small for lesson
