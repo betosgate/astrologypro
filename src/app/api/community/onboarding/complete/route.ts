@@ -5,20 +5,67 @@ import { syncProfileAcrossRoles } from "@/lib/profile-sync";
 
 export const dynamic = "force-dynamic";
 
+type FamilyMemberInput = {
+  id?: string;
+  full_name?: string;
+  relationship?: string;
+  date_of_birth?: string;
+  birth_time?: string | null;
+  birth_city?: string | null;
+  birth_country?: string | null;
+  notes?: string | null;
+};
+
+const HOUSEHOLD_LIMITS: Record<string, number> = {
+  plan_pm_individual: 0,
+  plan_pm_couple: 1,
+  plan_pm_family: 4,
+};
+
+function trimStr(value: unknown): string | null {
+  return value && typeof value === "string" ? value.trim() || null : null;
+}
+
+function getHouseholdLimit(
+  selectedPlanId: string | null,
+  planType: string | null
+): number {
+  if (selectedPlanId && selectedPlanId in HOUSEHOLD_LIMITS) {
+    return HOUSEHOLD_LIMITS[selectedPlanId];
+  }
+
+  return planType === "family" ? 4 : 0;
+}
+
+function normalizeFamilyMembers(raw: unknown): FamilyMemberInput[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
+    .map((item) => ({
+      id: typeof item.id === "string" ? item.id : undefined,
+      full_name: typeof item.full_name === "string" ? item.full_name.trim() : undefined,
+      relationship:
+        typeof item.relationship === "string" ? item.relationship.trim() : undefined,
+      date_of_birth:
+        typeof item.date_of_birth === "string" ? item.date_of_birth : undefined,
+      birth_time:
+        typeof item.birth_time === "string" ? item.birth_time : null,
+      birth_city:
+        typeof item.birth_city === "string" ? item.birth_city.trim() : null,
+      birth_country:
+        typeof item.birth_country === "string" ? item.birth_country.trim() : null,
+      notes: typeof item.notes === "string" ? item.notes.trim() : null,
+    }))
+    .filter((item) => item.full_name || item.relationship || item.date_of_birth);
+}
+
 /**
  * POST /api/community/onboarding/complete
  *
- * Saves new-member onboarding profile data to the authenticated user's
- * community_members row. Uses the same field set as the perennial-signup
- * page: required core fields (first_name, last_name, email, phone, gender,
- * state, city, zip, address, occupation, date_of_birth, birth_time) plus
- * the full 25-field optional questionnaire.
- *
- * Core fields go into dedicated columns where they exist; everything else
- * goes into the intake_data JSONB column.
- *
- * Uses `first_name IS NOT NULL` as the onboarding-complete flag so no
- * schema migration is required.
+ * Saves the authenticated user's PM onboarding profile. Core profile fields
+ * update community_members, optional questionnaire fields stay in intake_data,
+ * and couple/family household members are synced into community_family_members.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -51,7 +98,6 @@ export async function POST(req: NextRequest) {
       occupation,
       date_of_birth,
       birth_time,
-      // Optional questionnaire (25 fields)
       relationship_status,
       personality,
       strengths,
@@ -79,41 +125,43 @@ export async function POST(req: NextRequest) {
       additionalInfo,
     } = body;
 
-    // ── Validation (matches perennial-signup required fields) ───────────────
-    const trimStr = (v: unknown) =>
-      v && typeof v === "string" ? v.trim() || null : null;
-
-    if (!first_name || typeof first_name !== "string" || !String(first_name).trim()) {
+    if (!first_name || typeof first_name !== "string" || !first_name.trim()) {
       return NextResponse.json({ error: "First name is required." }, { status: 422 });
     }
-    if (!last_name || typeof last_name !== "string" || !String(last_name).trim()) {
+    if (!last_name || typeof last_name !== "string" || !last_name.trim()) {
       return NextResponse.json({ error: "Last name is required." }, { status: 422 });
     }
+
     const emailVal = typeof email === "string" ? email.trim().toLowerCase() : "";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
       return NextResponse.json({ error: "A valid email is required." }, { status: 422 });
     }
+
     const phoneDigits = typeof phone === "string" ? phone.replace(/\D/g, "") : "";
     if (phoneDigits.length !== 10) {
-      return NextResponse.json({ error: "Phone must be a 10-digit number." }, { status: 422 });
+      return NextResponse.json(
+        { error: "Phone must be a 10-digit number." },
+        { status: 422 }
+      );
     }
     if (!gender || typeof gender !== "string") {
       return NextResponse.json({ error: "Gender is required." }, { status: 422 });
     }
-    if (!state || typeof state !== "string" || !String(state).trim()) {
+    if (!state || typeof state !== "string" || !state.trim()) {
       return NextResponse.json({ error: "State is required." }, { status: 422 });
     }
-    if (!city || typeof city !== "string" || !String(city).trim()) {
+    if (!city || typeof city !== "string" || !city.trim()) {
       return NextResponse.json({ error: "City is required." }, { status: 422 });
     }
+
     const zipVal = typeof zip === "string" ? zip.trim() : "";
     if (!/^\d{5}$/.test(zipVal)) {
       return NextResponse.json({ error: "Zip must be exactly 5 digits." }, { status: 422 });
     }
-    if (!address || typeof address !== "string" || !String(address).trim()) {
+    if (!address || typeof address !== "string" || !address.trim()) {
       return NextResponse.json({ error: "Address is required." }, { status: 422 });
     }
-    if (!occupation || typeof occupation !== "string" || !String(occupation).trim()) {
+    if (!occupation || typeof occupation !== "string" || !occupation.trim()) {
       return NextResponse.json({ error: "Occupation is required." }, { status: 422 });
     }
     if (!date_of_birth || typeof date_of_birth !== "string") {
@@ -125,10 +173,9 @@ export async function POST(req: NextRequest) {
 
     const admin = createAdminClient();
 
-    // Verify authenticated user has an active PM membership
     const { data: member, error: memberErr } = await admin
       .from("community_members")
-      .select("id, membership_status, membership_type")
+      .select("id, membership_status, membership_type, plan_type, intake_data")
       .eq("user_id", user.id)
       .eq("membership_type", "perennial_mandalism")
       .maybeSingle();
@@ -137,14 +184,12 @@ export async function POST(req: NextRequest) {
       console.error("[onboarding/complete] member lookup error:", memberErr);
       return NextResponse.json({ error: "Failed to verify membership." }, { status: 500 });
     }
-
     if (!member) {
       return NextResponse.json(
         { error: "No active Perennial Mandalism membership found." },
         { status: 404 }
       );
     }
-
     if (member.membership_status !== "active") {
       return NextResponse.json(
         { error: "Your membership is not active." },
@@ -152,14 +197,56 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── Build update payload ──────────────────────────────────────────────────
-    const fullName = `${String(first_name).trim()} ${String(last_name).trim()}`;
+    const existingIntake =
+      member.intake_data && typeof member.intake_data === "object"
+        ? (member.intake_data as Record<string, unknown>)
+        : {};
+    const selectedPlanId =
+      typeof existingIntake.selected_plan_id === "string"
+        ? existingIntake.selected_plan_id
+        : null;
+    const householdLimit = getHouseholdLimit(selectedPlanId, member.plan_type);
+    const familyMembers = normalizeFamilyMembers(body.family_members);
 
-    // intake_data stores the full optional questionnaire + any core fields
-    // that don't have dedicated columns (occupation, birth location data).
+    if (selectedPlanId === "plan_pm_couple" && familyMembers.length !== 1) {
+      return NextResponse.json(
+        { error: "Couple plans require exactly one household member." },
+        { status: 422 }
+      );
+    }
+    if (familyMembers.length > householdLimit) {
+      return NextResponse.json(
+        { error: `This plan allows up to ${householdLimit} household members.` },
+        { status: 422 }
+      );
+    }
+
+    for (const [index, familyMember] of familyMembers.entries()) {
+      if (!familyMember.full_name) {
+        return NextResponse.json(
+          { error: `Household member ${index + 1} needs a full name.` },
+          { status: 422 }
+        );
+      }
+      if (!familyMember.relationship) {
+        return NextResponse.json(
+          { error: `Household member ${index + 1} needs a relationship.` },
+          { status: 422 }
+        );
+      }
+      if (!familyMember.date_of_birth) {
+        return NextResponse.json(
+          { error: `Household member ${index + 1} needs a birth date.` },
+          { status: 422 }
+        );
+      }
+    }
+
+    const fullName = `${first_name.trim()} ${last_name.trim()}`;
+
     const intakeData: Record<string, unknown> = {
+      ...existingIntake,
       occupation: trimStr(occupation),
-      // Questionnaire (25 fields)
       relationship_status: trimStr(relationship_status),
       personality: trimStr(personality),
       strengths: trimStr(strengths),
@@ -187,25 +274,9 @@ export async function POST(req: NextRequest) {
       additionalInfo: trimStr(additionalInfo),
     };
 
-    // Merge with any existing intake_data to preserve provisioning-time data
-    // (e.g. birth_location_label, birth_lat, birth_lng, birth_tzone,
-    //  household_primary_email, etc.)
-    const { data: existingRow } = await admin
-      .from("community_members")
-      .select("intake_data")
-      .eq("id", member.id)
-      .single();
-
-    const existingIntake =
-      existingRow?.intake_data && typeof existingRow.intake_data === "object"
-        ? existingRow.intake_data
-        : {};
-
-    const mergedIntake = { ...existingIntake, ...intakeData };
-
     const updatePayload: Record<string, unknown> = {
-      first_name: String(first_name).trim(),
-      last_name: String(last_name).trim(),
+      first_name: first_name.trim(),
+      last_name: last_name.trim(),
       full_name: fullName,
       email: emailVal,
       phone: String(phone).trim(),
@@ -217,10 +288,11 @@ export async function POST(req: NextRequest) {
       state: trimStr(state),
       zip: zipVal,
       relationship_status: trimStr(relationship_status),
-      intake_data: mergedIntake,
+      intake_data: intakeData,
+      plan_type: householdLimit > 0 ? "family" : "individual",
+      onboarding_completed: true,
     };
 
-    // ── Persist ───────────────────────────────────────────────────────────────
     const { error: updateError } = await admin
       .from("community_members")
       .update(updatePayload)
@@ -231,7 +303,74 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    // Fire-and-forget: sync shared fields to other role tables
+    const submittedIds = familyMembers
+      .map((familyMember) => familyMember.id)
+      .filter((id): id is string => typeof id === "string" && id.length > 0);
+
+    if (householdLimit > 0) {
+      const retainedIds = [...submittedIds];
+
+      for (const familyMember of familyMembers) {
+        const ageYears =
+          (Date.now() - new Date(familyMember.date_of_birth!).getTime()) /
+          (365.25 * 24 * 3600 * 1000);
+        const familyPayload = {
+          member_id: member.id,
+          full_name: familyMember.full_name,
+          relationship: familyMember.relationship,
+          date_of_birth: familyMember.date_of_birth,
+          birth_time: trimStr(familyMember.birth_time),
+          birth_city: trimStr(familyMember.birth_city),
+          birth_country: trimStr(familyMember.birth_country),
+          notes: trimStr(familyMember.notes),
+          age_group: ageYears < 14 ? "child" : "adult",
+        };
+
+        if (familyMember.id) {
+          const { error } = await admin
+            .from("community_family_members")
+            .update(familyPayload)
+            .eq("id", familyMember.id)
+            .eq("member_id", member.id);
+
+          if (error) {
+            console.error("[onboarding/complete] family update error:", error);
+            return NextResponse.json({ error: error.message }, { status: 500 });
+          }
+        } else {
+          const { data: insertedMember, error } = await admin
+            .from("community_family_members")
+            .insert(familyPayload)
+            .select("id")
+            .single();
+
+          if (error) {
+            console.error("[onboarding/complete] family insert error:", error);
+            return NextResponse.json({ error: error.message }, { status: 500 });
+          }
+
+          if (insertedMember?.id) {
+            retainedIds.push(insertedMember.id);
+          }
+        }
+      }
+
+      let deleteQuery = admin
+        .from("community_family_members")
+        .delete()
+        .eq("member_id", member.id);
+
+      if (retainedIds.length > 0) {
+        deleteQuery = deleteQuery.not("id", "in", `(${retainedIds.join(",")})`);
+      }
+
+      const { error: deleteError } = await deleteQuery;
+      if (deleteError) {
+        console.error("[onboarding/complete] family delete error:", deleteError);
+        return NextResponse.json({ error: deleteError.message }, { status: 500 });
+      }
+    }
+
     syncProfileAcrossRoles(
       user.id,
       {

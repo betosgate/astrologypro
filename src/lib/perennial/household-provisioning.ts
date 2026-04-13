@@ -295,22 +295,42 @@ export async function provisionPerennialHousehold(
       //    pointing at the primary's community_members row so the existing
       //    family management UI can list them.
       if (!member.is_primary && primaryCommunityMemberId) {
-        await admin
+        const familyPayload = {
+          member_id: primaryCommunityMemberId,
+          user_id: userId,
+          full_name: fullName,
+          invite_email: emailNormalized,
+          // Use the legacy sub_relation as the relationship label —
+          // it's the most specific value (e.g. "Wife", "Son").
+          relationship: member.sub_relation ?? member.relation_type ?? "Other",
+          date_of_birth: member.date_of_birth,
+          birth_time: member.birth_time,
+          birth_city: member.birth_location_label,
+          birth_lat: member.birth_lat,
+          birth_lng: member.birth_lng,
+          age_group:
+            (Date.now() - new Date(member.date_of_birth).getTime()) /
+              (365.25 * 24 * 3600 * 1000) <
+            14
+              ? "child"
+              : "adult",
+        };
+
+        const { data: existingFamilyMember } = await admin
           .from("community_family_members")
-          .upsert(
-            {
-              member_id: primaryCommunityMemberId,
-              full_name: fullName,
-              email: emailNormalized,
-              // Use the legacy sub_relation as the relationship label —
-              // it's the most specific value (e.g. "Wife", "Son").
-              relationship:
-                member.sub_relation ?? member.relation_type ?? "Other",
-              date_of_birth: member.date_of_birth,
-              birth_time: member.birth_time,
-            },
-            { onConflict: "member_id,email" },
-          );
+          .select("id")
+          .eq("member_id", primaryCommunityMemberId)
+          .or(`user_id.eq.${userId},invite_email.eq.${emailNormalized}`)
+          .maybeSingle();
+
+        if (existingFamilyMember?.id) {
+          await admin
+            .from("community_family_members")
+            .update(familyPayload)
+            .eq("id", existingFamilyMember.id);
+        } else {
+          await admin.from("community_family_members").insert(familyPayload);
+        }
       }
 
       // 4. Email the credentials only when we created a NEW account.

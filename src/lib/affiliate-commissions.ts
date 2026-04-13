@@ -55,6 +55,14 @@ export async function recordAffiliateCommission(params: {
 
   if (!link) return;
 
+  const { data: existingCommission } = await admin
+    .from("affiliate_commissions")
+    .select("id")
+    .eq("order_reference", orderRef)
+    .maybeSingle();
+
+  if (existingCommission) return;
+
   const { data: divAffiliate } = await admin
     .from("diviner_affiliates")
     .select("id, default_commission_type, default_commission_value")

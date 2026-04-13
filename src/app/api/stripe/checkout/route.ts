@@ -1,11 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createCheckoutSession } from "@/lib/stripe/billing";
-import { PLANS, type PlanId } from "@/lib/plans";
+import Stripe from "stripe";
 import { APP_URL } from "@/lib/constants";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 
 export const dynamic = "force-dynamic";
+
+type PricingPlanRow = {
+  plan_id: string;
+  display_name: string;
+  stripe_price_id: string | null;
+  onetime_amount: number | null;
+  onetime_currency: string | null;
+  recurring_amount: number | null;
+  recurring_currency: string | null;
+  recurring_interval: string | null;
+  global_pricing:
+    | {
+        item_key: string;
+        item_name: string;
+      }
+    | {
+        item_key: string;
+        item_name: string;
+      }[]
+    | null;
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,73 +38,75 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Legacy hardcoded plans (tarot, astrology, both) ──
-    if (PLANS[planId as PlanId]) {
-      const setupEnvKey = PLANS[planId as PlanId].setupEnvKey;
-      const monthlyEnvKey = PLANS[planId as PlanId].monthlyEnvKey;
-      const setupPriceId = process.env[setupEnvKey];
-      const monthlyPriceId = process.env[monthlyEnvKey];
-
-      if (!setupPriceId || !monthlyPriceId) {
-        return NextResponse.json(
-          { error: `Stripe prices not configured. Missing: ${!setupPriceId ? setupEnvKey : ""} ${!monthlyPriceId ? monthlyEnvKey : ""}`.trim() },
-          { status: 500 }
-        );
-      }
-
-      const session = await createCheckoutSession({
-        email,
-        userId,
-        planId: planId as PlanId,
-        successUrl: `${APP_URL}/onboarding?session_id={CHECKOUT_SESSION_ID}`,
-        cancelUrl: `${APP_URL}/get-started?cancelled=true`,
-        affiliateCode: affiliateCode || undefined,
-      });
-
-      return NextResponse.json({ url: session.url });
-    }
-
-    // ── DB-driven plans (trainee, combos, community, etc.) ──
     const admin = createAdminClient();
-    const { data: dbPlan } = await admin
+    const { data: rawPlan } = await admin
       .from("pricing_plans")
       .select(
-        "plan_id, display_name, stripe_price_id, onetime_amount, recurring_amount, recurring_interval, item_id, global_pricing(item_key, item_name)"
+        "plan_id, display_name, stripe_price_id, onetime_amount, onetime_currency, recurring_amount, recurring_currency, recurring_interval, global_pricing(item_key, item_name)"
       )
       .eq("plan_id", planId)
       .eq("is_active", true)
       .single();
 
+    const dbPlan = rawPlan as PricingPlanRow | null;
+
     if (!dbPlan) {
       return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 
-    // Build Stripe line items from DB plan
-    const lineItems: { price: string; quantity: number }[] = [];
+    const hasRecurring = Boolean(dbPlan.stripe_price_id);
+    const hasOneTime = typeof dbPlan.onetime_amount === "number" && dbPlan.onetime_amount > 0;
 
-    if (dbPlan.stripe_price_id) {
-      // Plan has a single Stripe price — use it directly
-      lineItems.push({ price: dbPlan.stripe_price_id, quantity: 1 });
-    } else {
-      // No Stripe price configured yet — cannot proceed
+    if (!hasRecurring && !hasOneTime) {
       return NextResponse.json(
-        { error: "This plan is not yet available for purchase. Stripe price not configured." },
+        { error: "Plan has no configured price. Contact support." },
         { status: 422 }
       );
     }
 
-    const isRecurring = !!dbPlan.recurring_amount && !!dbPlan.recurring_interval;
-    const itemInfo = dbPlan.global_pricing as unknown as { item_key: string; item_name: string } | null;
+    const itemInfo = Array.isArray(dbPlan.global_pricing)
+      ? (dbPlan.global_pricing[0] ?? null)
+      : dbPlan.global_pricing;
+    const itemKey = itemInfo?.item_key ?? "";
+
+    const typeTag =
+      itemKey === "trainee_program"
+        ? "trainee_signup"
+        : itemKey === "perennial_mandalism_community"
+          ? "perennial_community_signup"
+          : undefined;
+
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+
+    if (hasRecurring && dbPlan.stripe_price_id) {
+      lineItems.push({ price: dbPlan.stripe_price_id, quantity: 1 });
+    }
+
+    if (hasOneTime && dbPlan.onetime_amount) {
+      lineItems.push({
+        price_data: {
+          currency: (dbPlan.onetime_currency ?? dbPlan.recurring_currency ?? "USD").toLowerCase(),
+          unit_amount: Math.round(dbPlan.onetime_amount * 100),
+          product_data: {
+            name: hasRecurring
+              ? `${dbPlan.display_name} - Setup Fee`
+              : dbPlan.display_name,
+          },
+        },
+        quantity: 1,
+      });
+    }
 
     const session = await stripe.checkout.sessions.create({
       customer_email: email,
-      mode: isRecurring ? "subscription" : "payment",
+      mode: hasRecurring ? "subscription" : "payment",
       line_items: lineItems,
       metadata: {
         userId,
         planId,
-        itemKey: itemInfo?.item_key ?? "",
+        itemKey,
         planName: dbPlan.display_name,
+        ...(typeTag ? { type: typeTag } : {}),
         ...(affiliateCode ? { affiliateCode } : {}),
       },
       success_url: `${APP_URL}/onboarding?session_id={CHECKOUT_SESSION_ID}`,

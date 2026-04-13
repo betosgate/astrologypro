@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
               metadata: {
                 type: "chime_phone_session",
                 phoneSessionId,
+                phone_session_id: phoneSessionId,
                 divinerId: session.diviner_id,
                 durationMinutes: durationMinutes.toString(),
               },

@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
   const planId = String(body.planId ?? "").trim();
   const affiliateCode = String(body.affiliateCode ?? "").trim();
   const isCombo = Boolean(body.isCombo);
+  const role = String(body.role ?? "diviner").trim();
 
   if (!name || !email || !password || !username || !planId) {
     return NextResponse.json(
@@ -88,6 +89,10 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient();
 
+  if (!["diviner", "trainee", "perennial_mandalism"].includes(role)) {
+    return NextResponse.json({ error: "Invalid role." }, { status: 422 });
+  }
+
   if (await usernameExists(admin, username)) {
     return NextResponse.json(
       { error: "That public URL is already taken. Please choose another one." },
@@ -103,7 +108,7 @@ export async function POST(req: NextRequest) {
       name,
       full_name: name,
       username,
-      role: "diviner",
+      role,
       plan: planId,
       isCombo,
       ...(affiliateCode ? { affiliateCode } : {}),

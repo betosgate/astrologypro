@@ -570,6 +570,8 @@ export async function POST(request: NextRequest) {
           divinerId: resolvedDivinerId,
           serviceId,
           clientEmail,
+          grossAmountCents: String(Math.round(finalPrice * 100)),
+          platformFeeCents: String(Math.round(platformFee * 100)),
           ...(affiliateCode ? { affiliateCode } : {}),
           ...(giftCode ? { giftCode } : {}),
           ...(loyaltyRuleName

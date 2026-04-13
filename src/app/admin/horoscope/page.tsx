@@ -1113,12 +1113,12 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       <div className="space-y-2">
         {items.map((item: any, i: number) => (
           <div key={i} className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-3 horoscope-interp-header">
-              <SmartHeading title={item.title ?? item.name ?? `${title} ${i + 1}`} textSize="text-xl" iconSize="size-7" />
+            <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center">
+              <SmartHeading title={item.title ?? item.name ?? `${title} ${i + 1}`} textSize="text-[22px]" iconSize="size-7" className="text-black" />
             </div>
-            <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+            <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
               <p className="leading-relaxed">{item.interpretation ?? item.data ?? item.forecast}</p>
-              <div className="mt-2 flex justify-center">
+              <div className="mt-2 flex justify-center border-t border-black/10 pt-2">
                 <button onClick={() => trigger(item.title ?? item.name ?? title, item.interpretation ?? item.data ?? "", item, areaOfInquiry)} className="horoscope-show-more">Show More</button>
               </div>
             </div>
@@ -1215,7 +1215,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
                 <div key={p.name ?? i} className="rounded-lg border overflow-hidden">
                   <div className="px-4 py-4 horoscope-interp-header relative flex items-center justify-center min-h-[64px]">
                     <div className="flex items-center gap-4">
-                      <SmartHeading title={p.name ?? `Planet ${i + 1}`} textSize="text-2xl" iconSize="size-10" />
+                      <SmartHeading title={p.name ?? `Planet ${i + 1}`} textSize="text-2xl" iconSize="size-10" className="text-black" />
                       {p.name && p.sign && checkDacen(p.name, p.sign) && (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -1246,7 +1246,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
                       </div>
                     )}
                   </div>
-                  <div className="interp-gradient-default px-4 py-3 space-y-1.5" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                  <div className="interp-gradient-default px-4 py-3 pb-8 space-y-1.5" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
                     {forecasts.map((f: string, fi: number) => (
                       <p key={fi} className="leading-relaxed">{f}</p>
                     ))}
@@ -1750,16 +1750,12 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
 
         return (
           <div key={i} className="rounded-lg border overflow-hidden">
-            <div className={cn("px-4 py-3 flex items-center justify-center", (tabSlug === "tropical_transits_monthly_v3" || tabSlug === "tropical_transits_weekly_v2") ? "horoscope-interp-header" : "horoscope-section-header")}>
+            <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center">
               <div className="text-sm font-semibold text-center w-full">
-                {(tabSlug === "tropical_transits_monthly_v3" || tabSlug === "tropical_transits_weekly_v2") ? (
-                  <SmartHeading title={title} textSize="text-[22px]" iconSize="size-7" className="text-black" />
-                ) : (
-                  <RelationshipHeading />
-                )}
+                <SmartHeading title={title} textSize="text-[22px]" iconSize="size-7" className="text-black" />
               </div>
             </div>
-            <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+            <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
               <p className="leading-relaxed">{interpretation}</p>
               <div className="mt-2 flex justify-center pt-2 border-t border-black/10">
                 <button
@@ -1861,39 +1857,12 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
     if (!text) return null;
     return (
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 horoscope-section-header flex items-center justify-center gap-2">
-          <h4 className="text-sm font-semibold text-center w-full">{title}</h4>
-          {(() => {
-            const match = title.match(/(\b[A-Z][a-z]+\b)\s+in\s+(\b[A-Z][a-z]+\b)/);
-            if (match && checkDacen(match[1], match[2])) {
-              return (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => onDecanClick(match[1], match[2])}
-                      className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
-                        alt=""
-                        className="size-5 cursor-pointer hover:scale-125 transition-all hover:brightness-150 hover:drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]"
-                      />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
-                    Decan Information
-                  </TooltipContent>
-                </Tooltip>
-              );
-            }
-            return null;
-          })()}
+        <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center">
+          <SmartHeading title={title} textSize="text-[22px]" iconSize="size-7" className="text-black" />
         </div>
-        <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+        <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
           <p className="leading-relaxed">{text}</p>
-          <div className="mt-2 flex justify-center">
+          <div className="mt-2 flex justify-center border-t border-black/10 pt-2">
             <button onClick={() => trigger(title, text, { title, data: text }, areaOfInquiry)} className="horoscope-show-more">Show More</button>
           </div>
         </div>
@@ -1906,19 +1875,25 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
     const entries = Object.entries(obj).filter(([, v]) => v && typeof v === "string");
     if (!entries.length) return null;
     return (
-      <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">{title}</h3></div>
-        <div className="divide-y">
-          {entries.map(([k, v]) => (
-            <div key={k} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
-              <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{k.replace(/_/g, " ")}</h4>
+      <div className="space-y-2">
+        <div className="rounded-lg border overflow-hidden px-4 py-2.5 horoscope-section-header text-center">
+          <h3 className="text-sm font-semibold text-center w-full text-white">
+            <SmartHeading title={title} textSize="text-[20px]" iconSize="size-7" className="text-white" />
+          </h3>
+        </div>
+        {entries.map(([k, v]) => (
+          <div key={k} className="rounded-lg border overflow-hidden">
+            <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center border-b border-black/10">
+              <SmartHeading title={k.replace(/_/g, " ")} textSize="text-[22px]" iconSize="size-7" className="text-black" />
+            </div>
+            <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
               <p className="leading-relaxed">{String(v)}</p>
-              <div className="mt-1.5 flex justify-center">
+              <div className="mt-1.5 flex justify-center border-t border-black/10 pt-2">
                 <button onClick={() => trigger(k, String(v), obj, areaOfInquiry)} className="horoscope-show-more">Show More</button>
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     );
   }

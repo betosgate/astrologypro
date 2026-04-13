@@ -208,7 +208,7 @@ export function LessonViewerQuiz({
           </p>
         </div>
         <p className="text-xs text-muted-foreground">
-          The lesson has been marked complete. You can move on to the next lesson.
+          All questions answered correctly. You can now use the "Mark as Complete" button below to finish this lesson.
         </p>
       </div>
     );
@@ -333,7 +333,7 @@ export function LessonViewerQuiz({
       }
       setAllDone(true);
       toast.success("Quiz complete", {
-        description: "All questions answered correctly. Lesson marked complete.",
+        description: "All questions answered correctly. You can now mark the lesson complete below.",
       });
       onPassed?.();
     } catch (err) {
@@ -401,8 +401,9 @@ export function LessonViewerQuiz({
           <div className="flex items-start gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700">
             <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
             <p className="leading-snug">
-              This question was already answered correctly. Continue to the
-              next unanswered question.
+              {allQuestionsAnswered
+                ? "All questions answered correctly. You can now submit your results below."
+                : "This question was already answered correctly. Continue to the next unanswered question."}
             </p>
           </div>
         )}

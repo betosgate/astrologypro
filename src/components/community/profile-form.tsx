@@ -21,6 +21,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Save, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
+import { ProfileCompletionBar } from "@/components/ui/profile-completion-bar";
+import { calculateProfileCompletion } from "@/lib/profile-completion";
 
 interface CommunityMember {
   id: string;
@@ -87,6 +89,28 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
       ? "Mystery School"
       : "Perennial Mandalism";
 
+  const completion = calculateProfileCompletion([
+    { key: "community-first-name", label: "First name", value: firstName },
+    { key: "community-last-name", label: "Last name", value: lastName },
+    { key: "community-phone", label: "Phone", value: phone },
+    { key: "community-gender", label: "Gender", value: gender },
+    { key: "community-dob", label: "Birth date", value: dateOfBirth },
+    { key: "community-birth-time", label: "Birth time", value: birthTime },
+    { key: "community-birth-city", label: "Birth city", value: birthCity },
+    { key: "community-address", label: "Address", value: address },
+    { key: "community-city", label: "City", value: city },
+    { key: "community-state", label: "State", value: state },
+    { key: "community-zip", label: "ZIP code", value: zip },
+    { key: "community-occupation", label: "Occupation", value: occupation },
+  ]);
+
+  function focusField(fieldKey: string) {
+    document.getElementById(fieldKey)?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!firstName.trim() || !lastName.trim()) {
@@ -141,6 +165,14 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
 
   return (
     <form onSubmit={handleSave} className="space-y-6">
+      <ProfileCompletionBar
+        percentage={completion.percentage}
+        missingFields={completion.missingFields}
+        completedCount={completion.completedCount}
+        totalCount={completion.totalCount}
+        onMissingFieldClick={focusField}
+      />
+
       {/* Personal Information */}
       <Card>
         <CardHeader>
@@ -151,6 +183,7 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
             <div className="space-y-2">
               <Label>First Name *</Label>
               <Input
+                id="community-first-name"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 required
@@ -159,6 +192,7 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
             <div className="space-y-2">
               <Label>Last Name *</Label>
               <Input
+                id="community-last-name"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 required
@@ -180,6 +214,7 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
             <div className="space-y-2">
               <Label>Phone</Label>
               <Input
+                id="community-phone"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="(555) 123-4567"
@@ -191,7 +226,7 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
             <div className="space-y-2">
               <Label>Gender</Label>
               <Select value={gender} onValueChange={setGender}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectTrigger id="community-gender"><SelectValue placeholder="Select" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Male">Male</SelectItem>
                   <SelectItem value="Female">Female</SelectItem>
@@ -203,6 +238,7 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
             <div className="space-y-2">
               <Label>Occupation</Label>
               <Input
+                id="community-occupation"
                 value={occupation}
                 onChange={(e) => setOccupation(e.target.value)}
               />
@@ -235,6 +271,7 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
             <div className="space-y-2">
               <Label>Date of Birth</Label>
               <Input
+                id="community-dob"
                 type="date"
                 value={dateOfBirth}
                 onChange={(e) => setDateOfBirth(e.target.value)}
@@ -243,6 +280,7 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
             <div className="space-y-2">
               <Label>Birth Time</Label>
               <Input
+                id="community-birth-time"
                 type="time"
                 value={birthTime}
                 onChange={(e) => setBirthTime(e.target.value)}
@@ -251,6 +289,7 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
             <div className="space-y-2">
               <Label>Birth City</Label>
               <Input
+                id="community-birth-city"
                 value={birthCity}
                 onChange={(e) => setBirthCity(e.target.value)}
                 placeholder="e.g. New York, NY"
@@ -269,6 +308,7 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
           <div className="space-y-2">
             <Label>Street Address</Label>
             <Input
+              id="community-address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
             />
@@ -276,15 +316,16 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
               <Label>City</Label>
-              <Input value={city} onChange={(e) => setCity(e.target.value)} />
+              <Input id="community-city" value={city} onChange={(e) => setCity(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>State</Label>
-              <Input value={state} onChange={(e) => setState(e.target.value)} />
+              <Input id="community-state" value={state} onChange={(e) => setState(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Zip Code</Label>
               <Input
+                id="community-zip"
                 value={zip}
                 onChange={(e) => setZip(e.target.value.replace(/\D/g, "").slice(0, 5))}
                 maxLength={5}
