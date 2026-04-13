@@ -242,12 +242,9 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       { name: "activity_log", label: "System Activity", description: "Security audit trail of all admin actions.", group: "Commerce" },
 
       // Email
-      { name: "email_sequences", label: "Email Automations", description: "Drip campaign logic and triggers.", group: "Email" },
-      { name: "email_history", label: "Sent Email Logs", description: "Audit of every email sent by the system.", group: "Email" },
-      { name: "email_preview", label: "Template Designer", description: "Visual design of system notifications.", group: "Email" },
-      { name: "email_templates", label: "Template Library", description: "Management of reusable email assets.", group: "Email" },
-      { name: "email_logs", label: "Delivery Reports", description: "Tracking bounce rates and delivery health.", group: "Email" },
-      { name: "bulk_email", label: "Broadcast Mailer", description: "One-off newsletters to user segments.", group: "Email" },
+      { name: "email_sequences_v2", label: "Email Sequences", description: "Oversight of automated community email sequences.", group: "Email" },
+      { name: "email_history", label: "Email History", description: "Audit of every email sent by the system to users.", group: "Email" },
+      { name: "email_preview", label: "Email Preview", description: "Visual designer and test environment for system templates.", group: "Email" },
 
       // Engagement & Testimonials
       { name: "giveaways", label: "Giveaway Engine", description: "Management of community prize draws.", group: "Engagement" },
