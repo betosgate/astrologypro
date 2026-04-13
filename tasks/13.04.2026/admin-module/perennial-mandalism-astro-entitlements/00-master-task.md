@@ -1,5 +1,7 @@
 # Perennial Mandalism Astrology Entitlements Pack
 
+- Status: Done
+
 ## Objective
 
 Define the product architecture for Perennial Mandalism users so they automatically receive:
@@ -150,3 +152,17 @@ This feature set is complete only when:
 - chart regeneration is capped at `3` correction attempts
 - support escalation uses the existing ticket system
 - admin has visibility into chart status, failures, retries, and unresolved issues
+
+## Status
+
+- `01-membership-entitlement-and-scope-rules.md` — Done
+- `02-automatic-natal-generation-and-retry-governance.md` — Done
+- `03-relationship-chart-coverage-and-family-dynamics.md` — Done
+- `04-monthly-transit-orchestration-and-delivery.md` — Done
+- `05-user-controls-regeneration-limits-and-audit.md` — Done
+- `06-support-ticket-escalation-for-chart-issues.md` — Done
+- `07-seed-fixtures-rollout-and-ops-monitoring.md` — Done
+- `08-base-user-auto-provisioning-natal-and-monthly-only.md` — Done
+- `09-chart-creation-notifications-and-delivery-audit.md` — Done
+- `10-added-household-user-signup-invite-and-delivery-tracking.md` — Done
+- `11-household-chart-visibility-and-shared-access-rules.md` — Done

@@ -17,7 +17,11 @@ import { PublicContentTabs } from "@/components/public/public-content-tabs";
 import { BlogSubscribeForm } from "@/app/blog/subscribe-form";
 import { CheckInForm } from "@/components/diviner/check-in-form";
 import { WeeklySubscriptionSignup } from "@/components/public/weekly-subscription-signup";
-import { isPublicSectionBlocked, normalizePublishPolicy } from "@/lib/diviner-publishing";
+import {
+  isPublicSectionBlocked,
+  normalizePublishPolicy,
+  resolvePublicSessionCountsVisibility,
+} from "@/lib/diviner-publishing";
 import { getDivinerAvatarUrl, getDivinerCoverImageUrl } from "@/lib/diviner-images";
 import {
   buildProfileTitle,
@@ -163,6 +167,7 @@ async function getPolicies() {
 
 async function getDivinerStats(divinerId: string) {
   const supabase = createAdminClient();
+  const now = new Date();
 
   const formatLocalDate = (date: Date) => {
     const year = date.getFullYear();
@@ -176,6 +181,25 @@ async function getDivinerStats(divinerId: string) {
     .select("*", { count: "exact", head: true })
     .eq("diviner_id", divinerId)
     .eq("status", "completed");
+
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  const [{ count: completedSessionsLast7Days }, { count: completedSessionsLast30Days }] =
+    await Promise.all([
+      supabase
+        .from("bookings")
+        .select("*", { count: "exact", head: true })
+        .eq("diviner_id", divinerId)
+        .eq("status", "completed")
+        .gte("scheduled_at", sevenDaysAgo.toISOString()),
+      supabase
+        .from("bookings")
+        .select("*", { count: "exact", head: true })
+        .eq("diviner_id", divinerId)
+        .eq("status", "completed")
+        .gte("scheduled_at", thirtyDaysAgo.toISOString()),
+    ]);
 
   const { data: ratingData } = await supabase
     .from("testimonials")
@@ -194,7 +218,6 @@ async function getDivinerStats(divinerId: string) {
     }
   }
 
-  const now = new Date();
   const endOfWeek = new Date(now);
   endOfWeek.setDate(now.getDate() + (7 - now.getDay()));
   endOfWeek.setHours(23, 59, 59, 999);
@@ -270,6 +293,8 @@ async function getDivinerStats(divinerId: string) {
 
   return {
     completedSessions: completedSessions ?? 0,
+    completedSessionsLast7Days: completedSessionsLast7Days ?? 0,
+    completedSessionsLast30Days: completedSessionsLast30Days ?? 0,
     averageRating,
     reviewCount,
     openSlotsThisWeek: openSlots,
@@ -344,6 +369,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
   const mediaBlocked = isPublicSectionBlocked(publishPolicy, "media");
   const testimonialsBlocked = isPublicSectionBlocked(publishPolicy, "testimonials");
   const weeklySubscriptionBlocked = isPublicSectionBlocked(publishPolicy, "weekly_subscription");
+  const showSessionCountsBlock = resolvePublicSessionCountsVisibility(publishPolicy);
 
   const [services, testimonials, stats, policies, mediaItems, livePlatformConfigs, activeGiveaway, weeklySubscriptionProduct] = await Promise.all([
     servicesBlocked ? Promise.resolve([]) : getServices(diviner.id),
@@ -498,6 +524,9 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
         youtubeChannelId={heroBlocked ? null : diviner.youtube_channel_id ?? null}
         facebookLiveUrl={heroBlocked ? null : diviner.facebook_live_url ?? null}
         completedSessions={stats.completedSessions}
+        completedSessionsLast7Days={stats.completedSessionsLast7Days}
+        completedSessionsLast30Days={stats.completedSessionsLast30Days}
+        showSessionCountsBlock={showSessionCountsBlock}
         averageRating={stats.averageRating}
         reviewCount={stats.reviewCount}
         openSlotsThisWeek={heroOpenSlotsThisWeek}

@@ -66,3 +66,9 @@ Given the current codebase style, scalar columns on `diviners` are likely the pr
 - the DB cleanly represents both diviner preference and admin override
 - the app has a documented precedence model
 - visibility can be resolved consistently across public page, dashboard, and admin
+
+## Status
+
+Done.
+
+Implemented via `supabase/migrations/20260413000189_diviner_session_count_visibility.sql` plus shared policy parsing and resolution in `src/lib/diviner-publishing.ts`.
