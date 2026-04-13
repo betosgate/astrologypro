@@ -52,12 +52,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Also check existing confirmed/pending bookings
+    // Also check existing confirmed/in_progress bookings.
+    // Exclude "pending" — those are from incomplete checkout attempts and
+    // should not block new bookings. The booking-payment API handles
+    // same-client dedup separately.
     const { data: existingBookings } = await admin
       .from("bookings")
       .select("scheduled_at, duration_minutes")
       .eq("diviner_id", divinerId)
-      .in("status", ["pending", "confirmed", "in_progress"])
+      .in("status", ["confirmed", "in_progress"])
       .gte("scheduled_at", new Date(slotStart.getTime() - 4 * 60 * 60 * 1000).toISOString())
       .lte("scheduled_at", slotEnd.toISOString());
 

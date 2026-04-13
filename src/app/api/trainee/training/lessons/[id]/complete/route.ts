@@ -6,6 +6,7 @@ import {
   sendCategoryComplete,
 } from "@/lib/email";
 import { completeLessonAndProgressForUser } from "@/lib/training/completion";
+import { checkAndAwardTrainingGraduation } from "@/lib/training/graduation";
 
 export const dynamic = "force-dynamic";
 
@@ -61,12 +62,22 @@ export async function POST(
     .eq("is_active", true);
 
   if (activeTriggers && activeTriggers.length > 0) {
-    return NextResponse.json(
-      {
-        error: "Complete all in-video quiz questions before marking the lesson done.",
-      },
-      { status: 422 }
-    );
+    const activeTriggerIds = activeTriggers.map((t) => t.id);
+    const { count: passedCount } = await admin
+      .from("lesson_trigger_progress")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .in("trigger_id", activeTriggerIds)
+      .eq("passed", true);
+
+    if ((passedCount ?? 0) < activeTriggerIds.length) {
+      return NextResponse.json(
+        {
+          error: "Pass all in-video quiz questions before marking the lesson complete.",
+        },
+        { status: 422 }
+      );
+    }
   }
 
   // ── Standard quiz gate ─────────────────────────────────────────────────────
@@ -211,6 +222,11 @@ export async function POST(
       }
     }
 
+    // Graduation check — runs after category completion is recorded.
+    // The shared helper is idempotent and verifies all lessons are done.
+    checkAndAwardTrainingGraduation(user.id).catch((err) =>
+      console.error("[training-graduation] check failed:", err)
+    );
   }
 
   return NextResponse.json({ success: true, categoryCompleted });

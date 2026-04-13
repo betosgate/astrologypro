@@ -1,11 +1,13 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DynamicIntakeForm } from "@/components/portal/dynamic-intake-form";
 import { formatDateTime } from "@/lib/format";
+import { buildFallbackIntakeTemplate } from "@/lib/service-purchase";
 import { ArrowLeft, CheckCircle2, Circle, User, FileText, BookOpen } from "lucide-react";
 import type { IntakeTemplate } from "@/lib/intake-fields";
 
@@ -86,7 +88,20 @@ interface OrderDetail {
     username: string;
     avatar_url: string | null;
   } | null;
-  services: { name: string; intake_template_id: string | null } | null;
+  services: {
+    name: string;
+    slug: string | null;
+    category: string | null;
+    requires_birth_data: boolean | null;
+    intake_template_id: string | null;
+    product_kind?: string | null;
+    is_subscription?: boolean | null;
+    requires_birth_time?: boolean | null;
+    requires_birth_city?: boolean | null;
+    requires_partner_data?: boolean | null;
+    pre_checkout_fields?: unknown;
+    post_checkout_fields?: unknown;
+  } | null;
 }
 
 interface AstroReading {
@@ -138,7 +153,7 @@ export default async function PortalOrderDetailPage({ params }: RouteParams) {
       `id, product_title, product_type, amount_cents, currency, status, notes,
        paid_at, intake_submitted_at, delivered_at, created_at, service_id, booking_id,
        diviners(display_name, username, avatar_url),
-       services(name, intake_template_id)`
+       services(name, slug, category, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields)`
     )
     .eq("id", id)
     .eq("client_id", client.id)
@@ -158,13 +173,15 @@ export default async function PortalOrderDetailPage({ params }: RouteParams) {
       .maybeSingle(),
     (async (): Promise<IntakeTemplate | null> => {
       const templateId = order.services?.intake_template_id ?? null;
-      if (!templateId) return null;
+      if (!templateId) {
+        return buildFallbackIntakeTemplate(order.services);
+      }
       const { data } = await admin
         .from("intake_templates")
         .select("id, diviner_id, name, description, is_default, fields, created_at, updated_at")
         .eq("id", templateId)
         .maybeSingle();
-      return (data as IntakeTemplate | null);
+      return (data as IntakeTemplate | null) ?? buildFallbackIntakeTemplate(order.services);
     })(),
     (async (): Promise<AstroReading[]> => {
       if (!isDelivered || !order.booking_id) return [];
@@ -227,9 +244,11 @@ export default async function PortalOrderDetailPage({ params }: RouteParams) {
           <div className="flex items-start gap-3">
             <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/[0.06]">
               {diviner?.avatar_url ? (
-                <img
+                <Image
                   src={diviner.avatar_url}
                   alt={diviner.display_name}
+                  width={44}
+                  height={44}
                   className="size-11 object-cover"
                 />
               ) : (

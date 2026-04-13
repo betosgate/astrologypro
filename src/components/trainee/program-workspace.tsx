@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -146,12 +147,14 @@ interface InlineLessonViewerProps {
   lessonId: string;
   programId: string;
   categoryId: string;
+  onComplete?: () => void;
 }
 
 function InlineLessonViewer({
   lessonId,
   programId,
   categoryId,
+  onComplete,
 }: InlineLessonViewerProps) {
   const [viewerProps, setViewerProps] = useState<LessonViewerProps | null>(null);
   const [loading, setLoading] = useState(true);
@@ -253,11 +256,10 @@ function InlineLessonViewer({
   return (
     <LessonViewerClient
       {...viewerProps}
-      // Override the isCompleted callback path: when the quiz onPassed fires
-      // inside the viewer, it sets local isCompleted. The LessonCompleteButton
-      // then calls /api/…/complete. We hook into completion via the viewer's
-      // existing fetch pattern — the parent polls or re-reads the program
-      // hierarchy to reflect the new state.
+      // Inside the viewer, it sets local isCompleted. The LessonCompleteButton
+      // then calls /api/…/complete. We hook into completion via the
+      // onComplete callback to notify the parent workspace.
+      onComplete={onComplete}
       key={lessonId}
     />
   );
@@ -271,6 +273,7 @@ export function ProgramWorkspace({
   initialCategoryId,
   initialLessonId,
 }: ProgramWorkspaceProps) {
+  const router = useRouter();
   const initialCategory =
     categories.find((c) => c.id === initialCategoryId) ?? null;
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
@@ -281,6 +284,10 @@ export function ProgramWorkspace({
   );
   const [showAllCategories, setShowAllCategories] = useState(false);
 
+  // Auto-progression state
+  const [pendingAdvanceLessonId, setPendingAdvanceLessonId] = useState<string | null>(null);
+  const [isAdvancing, setIsAdvancing] = useState(false);
+
   const selectedCategory = useMemo(
     () => categories.find((c) => c.id === selectedCategoryId) ?? null,
     [categories, selectedCategoryId],
@@ -289,6 +296,62 @@ export function ProgramWorkspace({
   const visibleCategories = showAllCategories
     ? categories
     : categories.slice(0, INITIAL_CATEGORY_VISIBLE);
+
+  const handleLessonComplete = useCallback(() => {
+    // 1. Mark as pending and trigger refresh
+    if (expandedLessonId) {
+      setPendingAdvanceLessonId(expandedLessonId);
+      setIsAdvancing(true);
+    }
+    router.refresh();
+  }, [router, expandedLessonId]);
+
+  // Effect to handle auto-progression after categories prop updates
+  useEffect(() => {
+    if (!isAdvancing || !pendingAdvanceLessonId) return;
+
+    // We look through all categories and lessons to find the one after pendingAdvanceLessonId
+    let foundNext = false;
+    
+    for (let cIdx = 0; cIdx < categories.length; cIdx++) {
+      const category = categories[cIdx];
+      const lessonIdx = category.lessons.findIndex(l => l.id === pendingAdvanceLessonId);
+      
+      if (lessonIdx !== -1) {
+        // We found the category of the completed lesson
+        if (lessonIdx < category.lessons.length - 1) {
+          // Next lesson in SAME category
+          const nextLesson = category.lessons[lessonIdx + 1];
+          // After router.refresh(), the lock status should be updated
+          if (!nextLesson.is_locked) {
+            setExpandedLessonId(nextLesson.id);
+            setSelectedCategoryId(category.id);
+            foundNext = true;
+          }
+        } else if (cIdx < categories.length - 1) {
+          // It was the last lesson of the category -> look in NEXT category
+          const nextCategory = categories[cIdx + 1];
+          if (!nextCategory.is_locked) {
+            const nextLId = firstOpenableLessonId(nextCategory);
+            if (nextLId) {
+              setSelectedCategoryId(nextCategory.id);
+              setExpandedLessonId(nextLId);
+              foundNext = true;
+            }
+          }
+        }
+        break;
+      }
+    }
+
+    if (foundNext) {
+      toast.success("Moving to next lesson...", { duration: 2000 });
+    }
+    
+    // Always clear the flag so we don't keep trying to advance on every render
+    setIsAdvancing(false);
+    setPendingAdvanceLessonId(null);
+  }, [categories, isAdvancing, pendingAdvanceLessonId]);
 
   const hiddenCount = Math.max(0, categories.length - INITIAL_CATEGORY_VISIBLE);
 
@@ -505,6 +568,7 @@ export function ProgramWorkspace({
                                 lessonId={lesson.id}
                                 programId={programId}
                                 categoryId={selectedCategory.id}
+                                onComplete={handleLessonComplete}
                               />
                               <div className="flex justify-end pt-1">
                                 <Button
