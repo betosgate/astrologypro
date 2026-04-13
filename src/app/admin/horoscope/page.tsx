@@ -2335,7 +2335,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
         {items.map((item: any, i: number) => (
           <div key={i} className="rounded-lg border overflow-hidden">
             <div className="px-4 py-3 horoscope-interp-header">
-              <SmartHeading title={item.title ?? item.name ?? `${title} ${i + 1}`} />
+              <SmartHeading title={item.title ?? item.name ?? `${title} ${i + 1}`} textSize="text-xl" iconSize="size-7" />
             </div>
             <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
               <p className="leading-relaxed">{item.interpretation ?? item.data ?? item.forecast}</p>
