@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { trackDivinerActivityEvent } from "@/lib/diviner-analytics";
 
 export const dynamic = "force-dynamic";
 
@@ -168,6 +169,18 @@ export async function POST(req: NextRequest) {
     console.error("[check-in] insert error", insertErr);
     return problemDetails(500, "Internal Server Error", "Failed to save check-in.");
   }
+
+  await trackDivinerActivityEvent({
+    divinerId: diviner.id,
+    activityType: "check_in_submitted",
+    path: `/${diviner_username.trim()}/check-in`,
+    referrer: req.headers.get("referer"),
+    request: req,
+    metadata: {
+      liveSessionId: session.id,
+      checkInId: inserted.id,
+    },
+  });
 
   return NextResponse.json({ id: inserted.id, message: "You're checked in!" }, { status: 201 });
 }

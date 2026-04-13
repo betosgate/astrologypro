@@ -40,6 +40,46 @@ export const metadata = { title: "Admin — AstrologyPro" };
 
 export const dynamic = "force-dynamic";
 
+const ADMIN_ACTIVITY_LABELS: Record<string, string> = {
+  page_view: "Page View",
+  booking_checkout_started: "Booking Started",
+  weekly_subscription_checkout_started: "Subscription Started",
+  check_in_submitted: "Check-In Submitted",
+  testimonial_submitted: "Testimonial Submitted",
+};
+
+function formatAdminActivityTime(iso: string) {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+type RevenueBookingRow = {
+  total_amount: number | null;
+  base_price: number | null;
+};
+
+type RecentDivinerRow = {
+  id: string;
+  display_name: string | null;
+  username: string | null;
+  plan_id: string | null;
+  subscription_status: string | null;
+  created_at: string;
+};
+
+type RecentBookingRow = {
+  id: string;
+  scheduled_at: string;
+  status: string;
+  base_price: number | null;
+  diviners: { display_name: string | null } | null;
+  clients: { full_name: string | null } | null;
+};
+
 export default async function AdminPage() {
   const admin = createAdminClient();
 
@@ -88,6 +128,9 @@ export default async function AdminPage() {
     ordersCompleted,
     revenueThisMonth,
     revenueLastMonth,
+    activityEventsMonth,
+    activityEventsRecent,
+    pageViewsRecent,
   ] = await Promise.all([
     // Total diviners
     admin
@@ -179,6 +222,20 @@ export default async function AdminPage() {
     admin.from("bookings").select("total_amount, base_price").eq("status", "completed").gte("created_at", thisMonthStart),
     // Revenue last month
     admin.from("bookings").select("total_amount, base_price").eq("status", "completed").gte("created_at", lastMonthStart).lte("created_at", lastMonthEnd),
+    admin
+      .from("diviner_activity_events")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", thirtyDaysAgoISO),
+    admin
+      .from("diviner_activity_events")
+      .select("id, diviner_id, activity_type, path, traffic_source, created_at")
+      .gte("created_at", sevenDaysAgoISO)
+      .order("created_at", { ascending: false })
+      .limit(10),
+    admin
+      .from("page_views")
+      .select("diviner_id")
+      .gte("created_at", thirtyDaysAgoISO),
   ]);
 
   const totalBookingCount = totalBookings.count ?? 0;
@@ -255,20 +312,20 @@ export default async function AdminPage() {
       ? ((completedCount / totalBookingCount) * 100).toFixed(1)
       : "0.0";
 
-  const completedOrdersData = ordersCompleted.data ?? [];
+  const completedOrdersData = (ordersCompleted.data ?? []) as RevenueBookingRow[];
   const completedOrderCount = completedOrdersData.length;
   const completedOrderSum = completedOrdersData.reduce(
-    (sum: number, b: any) => sum + (b.total_amount ?? b.base_price ?? 0),
+    (sum, b) => sum + (b.total_amount ?? b.base_price ?? 0),
     0
   );
   const avgOrderValue = completedOrderCount > 0 ? completedOrderSum / completedOrderCount : 0;
 
-  const thisMonthRevenue = (revenueThisMonth.data ?? []).reduce(
-    (sum: number, b: any) => sum + (b.total_amount ?? b.base_price ?? 0),
+  const thisMonthRevenue = ((revenueThisMonth.data ?? []) as RevenueBookingRow[]).reduce(
+    (sum, b) => sum + (b.total_amount ?? b.base_price ?? 0),
     0
   );
-  const lastMonthRevenue = (revenueLastMonth.data ?? []).reduce(
-    (sum: number, b: any) => sum + (b.total_amount ?? b.base_price ?? 0),
+  const lastMonthRevenue = ((revenueLastMonth.data ?? []) as RevenueBookingRow[]).reduce(
+    (sum, b) => sum + (b.total_amount ?? b.base_price ?? 0),
     0
   );
   const momGrowth =
@@ -277,6 +334,47 @@ export default async function AdminPage() {
       : thisMonthRevenue > 0
       ? "100.0"
       : "0.0";
+  const activityEventCount = activityEventsMonth.count ?? 0;
+  const recentPublicActivity = (activityEventsRecent.data ?? []) as Array<{
+    id: string;
+    diviner_id: string;
+    activity_type: string;
+    path: string | null;
+    traffic_source: string | null;
+    created_at: string;
+  }>;
+  const pageViewRows = (pageViewsRecent.data ?? []) as Array<{ diviner_id: string | null }>;
+  const viewsByDiviner = new Map<string, number>();
+  for (const row of pageViewRows) {
+    if (!row.diviner_id) continue;
+    viewsByDiviner.set(row.diviner_id, (viewsByDiviner.get(row.diviner_id) ?? 0) + 1);
+  }
+  const analyticsDivinerIds = [...new Set([
+    ...viewsByDiviner.keys(),
+    ...recentPublicActivity.map((event) => event.diviner_id),
+  ])];
+  let analyticsDivinerLookup = new Map<string, { display_name: string; username: string }>();
+  if (analyticsDivinerIds.length > 0) {
+    const { data: analyticsDiviners } = await admin
+      .from("diviners")
+      .select("id, display_name, username")
+      .in("id", analyticsDivinerIds);
+    analyticsDivinerLookup = new Map(
+      (analyticsDiviners ?? []).map((diviner) => [
+        diviner.id,
+        { display_name: diviner.display_name ?? "Unknown", username: diviner.username ?? "" },
+      ])
+    );
+  }
+  const topViewedDiviners = [...viewsByDiviner.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([id, views]) => ({
+      id,
+      views,
+      display_name: analyticsDivinerLookup.get(id)?.display_name ?? "Unknown",
+      username: analyticsDivinerLookup.get(id)?.username ?? "",
+    }));
 
   // ── Role KPI data ─────────────────────────────────────────────────────────
   const roleKpis = [
@@ -425,7 +523,7 @@ export default async function AdminPage() {
       </div>
 
       {/* Extended KPI cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Users Today</CardTitle>
@@ -482,6 +580,17 @@ export default async function AdminPage() {
             <p className="text-xs text-muted-foreground">
               {formatCurrency(thisMonthRevenue)} vs {formatCurrency(lastMonthRevenue)}
             </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Public Activity</CardTitle>
+            <Activity className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activityEventCount}</div>
+            <p className="text-xs text-muted-foreground">last 30 days across all diviners</p>
           </CardContent>
         </Card>
       </div>
@@ -603,7 +712,7 @@ export default async function AdminPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recentDiviners.data.map((d: any) => (
+                  {(recentDiviners.data as RecentDivinerRow[]).map((d) => (
                     <TableRow key={d.id}>
                       <TableCell>
                         <div>
@@ -641,6 +750,83 @@ export default async function AdminPage() {
         </Card>
       </div>
 
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Top Diviners by Views</CardTitle>
+            <CardDescription>Public diviner page hits in the last 30 days</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {topViewedDiviners.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                No diviner traffic recorded yet
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Diviner</TableHead>
+                    <TableHead className="text-right">Views</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {topViewedDiviners.map((diviner) => (
+                    <TableRow key={diviner.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{diviner.display_name}</p>
+                          <p className="text-xs text-muted-foreground">@{diviner.username}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right text-sm font-medium">
+                        {diviner.views}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Diviner Activity</CardTitle>
+            <CardDescription>Latest public interactions across diviner pages</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recentPublicActivity.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                No recent activity yet
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {recentPublicActivity.map((event) => {
+                  const diviner = analyticsDivinerLookup.get(event.diviner_id);
+                  return (
+                    <div key={event.id} className="rounded-lg border border-border/60 p-3">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">
+                            {diviner?.display_name ?? "Unknown"} • {ADMIN_ACTIVITY_LABELS[event.activity_type] ?? event.activity_type}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            @{diviner?.username ?? ""} · {event.path ?? "/"}{event.traffic_source ? ` · ${event.traffic_source.replace(/_/g, " ")}` : ""}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          {formatAdminActivityTime(event.created_at)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Recent bookings */}
       <Card>
         <CardHeader>
@@ -664,7 +850,7 @@ export default async function AdminPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recentBookings.data.map((b: any) => (
+                {(recentBookings.data as RecentBookingRow[]).map((b) => (
                   <TableRow key={b.id}>
                     <TableCell className="font-medium">
                       {b.clients?.full_name ?? "—"}

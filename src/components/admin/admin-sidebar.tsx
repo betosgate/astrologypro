@@ -248,6 +248,7 @@ const NAV_GROUPS = [
       { label: "Operations Health", href: "/admin/reports/operations", icon: AlertTriangle },
       { label: "Payouts", href: "/admin/reports/payouts", icon: CreditCard },
       { label: "Funnel", href: "/admin/reports/funnel", icon: BarChart3 },
+      { label: "Diviner Traffic", href: "/admin/reports/diviner-traffic", icon: Globe },
       { label: "Readings", href: "/admin/reports/readings", icon: BarChart2 },
       { label: "Affiliates", href: "/admin/reports/affiliates", icon: Users },
       { label: "Campaigns", href: "/admin/campaigns/reports", icon: Megaphone },
