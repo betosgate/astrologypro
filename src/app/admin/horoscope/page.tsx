@@ -424,28 +424,6 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
                   <td className="td-planet">
                     <div className="flex items-center gap-2">
                       <PlanetSymbol name={p.name} />
-                      {checkDacen(p.name, p.sign) && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              onClick={() => onDecanClick(p.name, p.sign)}
-                              className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
-                              aria-label={`Open decan information for ${p.name} in ${p.sign}`}
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
-                                alt=""
-                                className="size-5 cursor-pointer hover:scale-125 transition-all hover:brightness-150 hover:drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]"
-                              />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
-                            Decan Information
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
                     </div>
                   </td>
                   <td><ZodiacSymbol sign={p.sign} /></td>
@@ -492,19 +470,19 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
                         <button
                           type="button"
                           onClick={() => onDecanClick(p.name, p.sign)}
-                          className="ml-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
+                          className="ml-2 size-9 flex items-center justify-center rounded-full bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 hover:border-amber-500/60 transition-all shadow-[0_0_15px_rgba(245,158,11,0.1)] hover:shadow-[0_0_20px_rgba(245,158,11,0.25)] active:scale-90 group"
                           aria-label={`Open decan information for ${p.name} in ${p.sign}`}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
                             alt=""
-                            className="size-5 cursor-pointer hover:scale-125 transition-all hover:brightness-150 hover:drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]"
+                            className="size-6 cursor-pointer transition-transform group-hover:scale-110 brightness-110"
                           />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
-                        Decan Information
+                        Decan Insights
                       </TooltipContent>
                     </Tooltip>
                   )}
