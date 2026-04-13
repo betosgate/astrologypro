@@ -1,7 +1,7 @@
 # Diviner Traffic Analytics and Hit Attribution — Architect Task Pack
 
 - Date: 2026-04-13
-- Status: Open
+- Status: Done
 - Priority: P0
 - Owner: Architecture / Full-stack
 
@@ -27,6 +27,13 @@ The current analytics model is too thin to support this accurately. `page_views`
 - `created_at`
 
 That is sufficient for a basic page-view count and coarse referrer grouping, but **insufficient** for the requested acquisition report.
+
+## Completion Notes
+
+- Schema expansion landed in [supabase/migrations/20260413000170_diviner_activity_analytics.sql](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/supabase/migrations/20260413000170_diviner_activity_analytics.sql:1), which adds geo, source, UTM, and attribution columns to `page_views`.
+- Tracking enrichment is live through [src/lib/diviner-analytics.ts](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/lib/diviner-analytics.ts:1), [src/app/api/analytics/track/route.ts](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/app/api/analytics/track/route.ts:1), and [src/components/landing/page-tracker.tsx](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/components/landing/page-tracker.tsx:1).
+- The admin reporting layer is live at [src/app/api/admin/reports/diviner-traffic/route.ts](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/app/api/admin/reports/diviner-traffic/route.ts:1) and [src/app/admin/reports/diviner-traffic/page.tsx](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/app/admin/reports/diviner-traffic/page.tsx:1), with sidebar access from [src/components/admin/admin-sidebar.tsx](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/components/admin/admin-sidebar.tsx:253).
+- Seed coverage for demo environments is now added in [supabase/migrations/20260413000171_seed_diviner_activity_analytics.sql](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/supabase/migrations/20260413000171_seed_diviner_activity_analytics.sql:1).
 
 ---
 
@@ -232,4 +239,3 @@ After this task pack is implemented:
 - admins can distinguish affiliate, advocate, and non-partner traffic
 - the report can be demoed immediately from seeded data
 - the analytics model is extensible enough to support future acquisition reporting without rework
-

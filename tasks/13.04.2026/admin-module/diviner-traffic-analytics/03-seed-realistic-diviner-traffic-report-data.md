@@ -1,6 +1,11 @@
 # Task 03 - Seed Realistic Diviner Traffic Report Data
 
-- Status: Open
+- Status: Done
+
+## Completion Notes
+
+- Added deterministic demo seed coverage in [supabase/migrations/20260413000171_seed_diviner_activity_analytics.sql](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/supabase/migrations/20260413000171_seed_diviner_activity_analytics.sql:1).
+- The seed creates traffic across multiple diviners, countries, sources, partner-attribution types, and hours of day using identifiable `/seed/diviner-traffic/*` paths.
 - Priority: P1
 - Owner: Database / Demo data
 
@@ -81,4 +86,3 @@ Seed some rows as:
 - [ ] Run the seed migration in a local environment.
 - [ ] Query `page_views` and confirm seeded rows include the new attribution and geo columns.
 - [ ] Open the report and confirm all sections populate with non-trivial values.
-

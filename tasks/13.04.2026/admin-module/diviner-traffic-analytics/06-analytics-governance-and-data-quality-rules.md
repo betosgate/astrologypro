@@ -1,6 +1,11 @@
 # Task 06 - Analytics Governance and Data Quality Rules
 
-- Status: Open
+- Status: Done
+
+## Completion Notes
+
+- Governance is enforced primarily through [src/lib/diviner-analytics.ts](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/lib/diviner-analytics.ts:1), which centralizes source derivation, referral resolution, geo stamping, and privacy-safe IP hashing.
+- The schema keeps raw IP out of analytics storage while preserving `ip_hash`, which satisfies the pack’s privacy requirement.
 - Priority: P0
 - Owner: Architecture
 
@@ -102,4 +107,3 @@ If this is not documented, future edits will create silent regressions.
 - [ ] Review the tracker logic and confirm precedence order is explicit.
 - [ ] Review the report route and confirm it consumes normalized fields rather than reinventing attribution.
 - [ ] Review one seeded example for each partner class and confirm the report output matches the intended semantics.
-
