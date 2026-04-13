@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertAffiliateShareWithinCap } from "@/lib/affiliate-share-cap";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +93,18 @@ export async function POST(
         status: 422,
         detail: "commission_type ('percentage'|'fixed') and commission_value (>=0) are required.",
       },
+      { status: 422 }
+    );
+  }
+
+  try {
+    await assertAffiliateShareWithinCap({
+      commissionType: commission_type,
+      commissionValue: commission_value,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { type: "https://httpstatuses.io/422", title: "Validation error", status: 422, detail: error instanceof Error ? error.message : "Affiliate share exceeds allowed cap." },
       { status: 422 }
     );
   }

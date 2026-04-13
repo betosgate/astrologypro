@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertAffiliateShareWithinCap } from "@/lib/affiliate-share-cap";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +68,18 @@ export async function PATCH(
   if (Object.keys(updatePayload).length === 0) {
     return NextResponse.json(
       { type: "https://httpstatuses.io/422", title: "No updatable fields provided", status: 422 },
+      { status: 422 }
+    );
+  }
+
+  try {
+    await assertAffiliateShareWithinCap({
+      commissionType: updatePayload.commission_type,
+      commissionValue: updatePayload.commission_value,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { type: "https://httpstatuses.io/422", title: "Validation error", status: 422, detail: error instanceof Error ? error.message : "Affiliate share exceeds allowed cap." },
       { status: 422 }
     );
   }

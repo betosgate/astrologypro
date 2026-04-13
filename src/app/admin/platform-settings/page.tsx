@@ -21,6 +21,7 @@ interface PlatformSettings {
   no_show_diviner_refund_percent: number;
   no_show_client_refund_percent: number;
   no_show_grace_minutes: number;
+  max_diviner_affiliate_share_percent: number;
   updated_at: string;
 }
 
@@ -119,9 +120,94 @@ export default function PlatformSettingsPage() {
           </Card>
 
           <NoShowPolicyCard settings={settings} onUpdated={setSettings} />
+          <AffiliateShareCapCard settings={settings} onUpdated={setSettings} />
         </div>
       ) : null}
     </div>
+  );
+}
+
+function AffiliateShareCapCard({
+  settings,
+  onUpdated,
+}: {
+  settings: PlatformSettings;
+  onUpdated: (s: PlatformSettings) => void;
+}) {
+  const [capPercent, setCapPercent] = useState(settings.max_diviner_affiliate_share_percent);
+  const [saving, setSaving] = useState(false);
+
+  const hasChanges = capPercent !== settings.max_diviner_affiliate_share_percent;
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/platform-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          max_diviner_affiliate_share_percent: capPercent,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error((data as { detail?: string }).detail ?? "Failed to save");
+      }
+      const updated = (await res.json()) as PlatformSettings;
+      onUpdated(updated);
+      setCapPercent(updated.max_diviner_affiliate_share_percent);
+      toast.success("Affiliate share cap updated.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Affiliate Share Cap</CardTitle>
+        <CardDescription>
+          Sets the maximum affiliate percentage diviners can allocate from their side of an order.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="rounded-lg border p-4 space-y-2">
+          <Label htmlFor="affiliate-share-cap" className="text-sm font-medium">
+            Maximum Diviner Affiliate Share %
+          </Label>
+          <p className="text-xs text-muted-foreground">
+            This cap applies to percentage-based affiliate rules across admin and diviner tools.
+          </p>
+          <div className="flex items-center gap-3">
+            <Input
+              id="affiliate-share-cap"
+              type="number"
+              min={0}
+              max={100}
+              value={capPercent}
+              onChange={(e) => setCapPercent(Number(e.target.value))}
+              className="w-24"
+            />
+            <span className="text-sm text-muted-foreground">% of diviner share</span>
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <Button onClick={handleSave} disabled={!hasChanges || saving}>
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Affiliate Cap"
+            )}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
