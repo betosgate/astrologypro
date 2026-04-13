@@ -19,13 +19,17 @@ export function stripHtml(html: string): string {
  *
  * - Body  : availability template description (HTML stripped to plain text).
  *           This is what the diviner wrote — meeting link, instructions, etc.
- * - Footer: cancel / reschedule link pointing at the client portal.
+ * - Footer: cancel / reschedule link pointing at the public booking page (no login required).
  */
 export function buildCalendarDescription(
   templateDescription: string | null | undefined,
-  appUrl: string
+  appUrl: string,
+  bookingToken?: string
 ): string {
   const body = templateDescription ? stripHtml(templateDescription) : "";
-  const footer = `To cancel or reschedule, visit:\n${appUrl}/portal/bookings`;
-  return body ? `${body}\n\n---\n${footer}` : footer;
+  const manageUrl = bookingToken
+    ? `${appUrl}/booking/${bookingToken}`
+    : `${appUrl}/portal/bookings`;
+  const footer = `To cancel or reschedule, <a href="${manageUrl}">click here</a>.`;
+  return body ? `${body}\n\n${footer}` : footer;
 }

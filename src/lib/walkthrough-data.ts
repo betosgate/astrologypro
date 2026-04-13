@@ -35,10 +35,28 @@ import {
   Flame,
   Package,
   Sparkles,
+  Zap,
+  Play,
+  MonitorSmartphone,
+  Workflow,
+  Stethoscope,
+  ClipboardList,
+  BarChart3,
+  Building2,
+  Briefcase,
+  Lock,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
+
+export interface Screen {
+  name: string;
+  label: string;
+  description?: string;
+  group?: string;
+}
 
 export interface FeatureCard {
   title: string;
@@ -46,6 +64,7 @@ export interface FeatureCard {
   href: string;
   icon: LucideIcon;
   status?: "live" | "beta" | "coming-soon";
+  thumbnail?: string; 
 }
 
 export interface FeatureGroup {
@@ -56,236 +75,317 @@ export interface FeatureGroup {
 export interface WalkthroughSection {
   role: string;
   slug: string;
+  tagline: string;
   roleDescription: string;
   icon: LucideIcon;
   gradient: string;
+  featureAreas: string[];
+  capabilities: string[];
+  keyPages: string[];
   groups: FeatureGroup[];
+  screens: Screen[];
 }
 
 // ─── Slug map ───────────────────────────────────────────────────────────────
 
 export const ROLE_SLUGS: Record<string, string> = {
+  admin: "Admin Back Office",
   public: "Public / Visitor",
   customer: "Customer Portal",
   community: "Community Member",
   "mystery-school": "Mystery School",
   diviner: "Diviner Dashboard",
-  admin: "Admin Back Office",
+  social_advo: "Social Advocate",
+  trainee: "Trainee",
 };
 
 // ─── Section definitions ────────────────────────────────────────────────────
 
 export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   {
-    role: "Public / Visitor",
-    slug: "public",
-    roleDescription:
-      "Pages visible to unauthenticated visitors browsing the platform.",
-    icon: Globe,
-    gradient: "from-sky-500/20 to-blue-600/10",
-    groups: [
-      {
-        cards: [
-          { title: "Homepage", description: "Landing page and hero section", href: "/", icon: Home, status: "live" },
-          { title: "Browse Diviners", description: "Discover and search practitioners", href: "/discover", icon: Search, status: "live" },
-          { title: "Diviner Profile", description: "Public practitioner page with services", href: "/discover", icon: User, status: "live" },
-          { title: "Booking Flow", description: "Service selection and checkout", href: "/discover", icon: ShoppingCart, status: "live" },
-          { title: "Blog", description: "Published articles and spiritual content", href: "/blog", icon: FileText, status: "live" },
-          { title: "Join Hub", description: "Registration and membership options", href: "/join", icon: Users, status: "live" },
-        ],
-      },
-    ],
-  },
-  {
-    role: "Customer Portal",
-    slug: "customer",
-    roleDescription:
-      "Self-service area for clients who have booked readings or purchased services.",
-    icon: User,
-    gradient: "from-emerald-500/20 to-green-600/10",
-    groups: [
-      {
-        cards: [
-          { title: "Dashboard", description: "Customer overview and quick actions", href: "/portal", icon: LayoutDashboard, status: "live" },
-          { title: "My Orders", description: "Order history and tracking", href: "/portal/orders", icon: ShoppingBag, status: "live" },
-          { title: "My Bookings", description: "Upcoming and past reading sessions", href: "/portal/bookings", icon: CalendarDays, status: "live" },
-          { title: "Subscriptions", description: "Active plans and billing cycles", href: "/portal/subscriptions", icon: CreditCard, status: "live" },
-          { title: "Profile", description: "Account settings and preferences", href: "/portal/profile", icon: User, status: "live" },
-        ],
-      },
-    ],
-  },
-  {
-    role: "Community Member",
-    slug: "community",
-    roleDescription:
-      "Perennial Mandalism subscribers accessing astrology tools and spiritual content.",
-    icon: Heart,
-    gradient: "from-pink-500/20 to-rose-600/10",
-    groups: [
-      {
-        cards: [
-          { title: "Dashboard", description: "Community hub and announcements", href: "/community", icon: LayoutDashboard, status: "live" },
-          { title: "Natal Chart", description: "Personal horoscope and birth chart", href: "/community/horoscope", icon: Star, status: "live" },
-          { title: "Relationship Charts", description: "Synastry and composite analysis", href: "/community/charts", icon: Users, status: "live" },
-          { title: "Monthly Transits", description: "Current planetary movements", href: "/community/transits", icon: Orbit, status: "live" },
-          { title: "Rituals", description: "Guided spiritual practices", href: "/community/rituals", icon: Flame, status: "live" },
-          { title: "Family", description: "Family chart management", href: "/community/family", icon: Users, status: "live" },
-          { title: "Sunday Service", description: "Weekly live spiritual gathering", href: "/community/sunday-service", icon: Radio, status: "live" },
-          { title: "Library", description: "Educational content and resources", href: "/community/library", icon: BookOpen, status: "live" },
-          { title: "My Plan", description: "Subscription tier and benefits", href: "/community/plan", icon: Layers, status: "live" },
-        ],
-      },
-    ],
-  },
-  {
-    role: "Mystery School",
-    slug: "mystery-school",
-    roleDescription:
-      "Advanced esoteric training for mystery school subscribers.",
-    icon: Eye,
-    gradient: "from-violet-500/20 to-purple-600/10",
-    groups: [
-      {
-        cards: [
-          { title: "Decans Grid", description: "36 decans overview and progress", href: "/mystery-school", icon: Eye, status: "live" },
-          { title: "Foundation Training", description: "Core curriculum and lessons", href: "/mystery-school/training", icon: GraduationCap, status: "live" },
-          { title: "Graduation", description: "Completion status and ceremony", href: "/mystery-school/training/graduation", icon: GraduationCap, status: "live" },
-          { title: "Ritual Builder", description: "Create custom ritual sequences", href: "/mystery-school/training/ritual-builder", icon: Flame, status: "live" },
-        ],
-      },
-    ],
-  },
-  {
-    role: "Diviner Dashboard",
-    slug: "diviner",
-    roleDescription:
-      "Practitioner workspace for managing bookings, clients, content, and business.",
-    icon: Star,
-    gradient: "from-amber-500/20 to-yellow-600/10",
-    groups: [
-      {
-        groupLabel: "Schedule & Bookings",
-        cards: [
-          { title: "Overview", description: "Dashboard summary and metrics", href: "/dashboard", icon: LayoutDashboard, status: "live" },
-          { title: "Bookings", description: "Manage reading appointments", href: "/dashboard/bookings", icon: CalendarDays, status: "live" },
-          { title: "Schedule", description: "Weekly schedule view", href: "/dashboard/schedule", icon: Clock, status: "live" },
-          { title: "Calendar", description: "Full calendar with all events", href: "/dashboard/calendar", icon: CalendarDays, status: "live" },
-          { title: "Availability", description: "Set working hours and breaks", href: "/dashboard/availability", icon: Clock, status: "live" },
-        ],
-      },
-      {
-        groupLabel: "Business",
-        cards: [
-          { title: "Orders", description: "Sales and order management", href: "/dashboard/orders", icon: ShoppingBag, status: "live" },
-          { title: "Clients", description: "Client list and history", href: "/dashboard/clients", icon: Users, status: "live" },
-          { title: "Services", description: "Service catalog and pricing", href: "/dashboard/services", icon: Package, status: "live" },
-          { title: "Affiliates", description: "Commission tracking and links", href: "/dashboard/affiliate-commission", icon: Users, status: "live" },
-          { title: "Billing", description: "Payouts and financial summary", href: "/dashboard/billing", icon: CreditCard, status: "live" },
-        ],
-      },
-      {
-        groupLabel: "Engagement",
-        cards: [
-          { title: "Check-Ins", description: "Daily client check-in forms", href: "/dashboard/check-ins", icon: ListChecks, status: "live" },
-          { title: "Giveaways", description: "Promotional campaigns", href: "/dashboard/giveaways", icon: Gift, status: "live" },
-          { title: "Testimonials", description: "Client reviews and feedback", href: "/dashboard/testimonials", icon: MessageSquare, status: "live" },
-          { title: "Media Gallery", description: "Images and video uploads", href: "/dashboard/media", icon: Image, status: "live" },
-          { title: "Live Stream", description: "Go live for followers", href: "/dashboard/live", icon: Radio, status: "live" },
-        ],
-      },
-      {
-        groupLabel: "Content",
-        cards: [
-          { title: "Marketing", description: "Promotional tools and SEO", href: "/dashboard/marketing", icon: Sparkles, status: "live" },
-          { title: "Subscriptions", description: "Manage follower subscriptions", href: "/dashboard/subscriptions", icon: Layers, status: "live" },
-          { title: "Rituals", description: "Shared ritual content", href: "/dashboard/rituals", icon: Flame, status: "live" },
-        ],
-      },
-    ],
-  },
-  {
     role: "Admin Back Office",
     slug: "admin",
+    tagline: "Global governance and system intelligence",
     roleDescription:
-      "Full platform administration for managing users, commerce, content, and configuration.",
+      "Full oversight for platform owners. Govern users, commerce, astrology engines, and training programs across the entire ecosystem with granular control.",
     icon: Shield,
     gradient: "from-red-500/20 to-orange-600/10",
+    featureAreas: ["Governance", "Commerce", "Content", "Astrology Engines", "Config"],
+    capabilities: [
+      "Manage all platform accounts and roles",
+      "Oversight of orders, payments, and refunds",
+      "Govern mundane astrology and chart data",
+      "Audit system logs and email sequences",
+      "Manage Mystery School curriculum and decans",
+      "Configure global platform and astrology settings",
+    ],
+    keyPages: ["Executive Home", "User Mgmt", "Commerce Hub", "Mundane Studio", "Mystery School Admin", "Audit Trail"],
     groups: [
       {
-        groupLabel: "People",
+        groupLabel: "Governance",
         cards: [
-          { title: "Users", description: "All registered accounts", href: "/admin/users", icon: Users, status: "live" },
-          { title: "Diviners", description: "Practitioner management", href: "/admin/diviners", icon: Star, status: "live" },
-          { title: "Affiliates", description: "Affiliate partner accounts", href: "/admin/affiliates", icon: Users, status: "live" },
-          { title: "Roles", description: "Permission and role config", href: "/admin/roles", icon: Shield, status: "live" },
-          { title: "Invitations", description: "Pending invitation codes", href: "/admin/invitations", icon: Mail, status: "live" },
+          { title: "Dashboard", description: "Global health and KPI overview", href: "/admin", icon: LayoutDashboard, status: "live" },
+          { title: "Users", description: "Master directory of all accounts", href: "/admin/users", icon: Users, status: "live" },
+          { title: "Roles", description: "Role-based access configuration", href: "/admin/roles", icon: Shield, status: "live" },
         ],
       },
       {
         groupLabel: "Commerce",
         cards: [
-          { title: "Orders", description: "All platform orders", href: "/admin/orders", icon: ShoppingBag, status: "live" },
-          { title: "Bookings", description: "All reading sessions", href: "/admin/bookings", icon: CalendarDays, status: "live" },
-          { title: "Payments", description: "Payment records and status", href: "/admin/payments", icon: CreditCard, status: "live" },
-          { title: "Refunds", description: "Refund requests and history", href: "/admin/refunds", icon: RefreshCcw, status: "live" },
+          { title: "Orders", description: "Consolidated platform sales log", href: "/admin/orders", icon: ShoppingBag, status: "live" },
+          { title: "Payments", description: "Gateway tracking and payouts", href: "/admin/payments", icon: CreditCard, status: "live" },
         ],
       },
+    ],
+    screens: [
+      { name: "admin-home", label: "Executive Dashboard", description: "Global KPIs for platform health.", group: "Governance" },
+      { name: "user-mgmt", label: "User Directory", description: "Filtered list of all platform personas.", group: "Governance" },
+      { name: "commerce", label: "Commerce Hub", description: "Consolidated view of all platform revenue.", group: "Commerce" },
+      { name: "mundane", label: "Mundane Studio", description: "Management of geopolitical astrology data.", group: "Astrology" },
+      { name: "mystery-school", label: "Mystery School Admin", description: "Management of esoteric curriculum.", group: "Config" },
+      { name: "audit", label: "Audit Trails", description: "Granular logs of every system action.", group: "Config" },
+    ],
+  },
+  {
+    role: "Public / Visitor",
+    slug: "public",
+    tagline: "First impressions and platform discovery",
+    roleDescription:
+      "Unauthenticated pages designed to convert visitors into community members or clients through discovery and education.",
+    icon: Globe,
+    gradient: "from-sky-500/20 to-blue-600/10",
+    featureAreas: ["Discovery", "Marketing", "Knowledge", "Onboarding"],
+    capabilities: [
+      "Browse and filter professional diviners",
+      "Read spiritual articles and transit reports",
+      "Interactive booking and service selection",
+      "Self-serve registration and hub joining",
+    ],
+    keyPages: ["Homepage", "Discover", "Practitioner Profile", "Blog", "Join Hub"],
+    groups: [
       {
-        groupLabel: "Content",
+        groupLabel: "Marketing",
         cards: [
-          { title: "Blog", description: "Article management and publishing", href: "/admin/blog", icon: FileText, status: "live" },
-          { title: "Testimonials", description: "Review moderation queue", href: "/admin/testimonials", icon: MessageSquare, status: "live" },
+          { title: "Homepage", description: "Main landing page", href: "/", icon: Home, status: "live" },
+          { title: "Blog", description: "Spiritual insights", href: "/blog", icon: FileText, status: "live" },
         ],
       },
+    ],
+    screens: [
+      { name: "home", label: "Homepage", description: "Main entry point with premium astrology branding.", group: "Marketing" },
+      { name: "discover", label: "Diviner Discovery", description: "Search interface for finding practitioners.", group: "Discovery" },
+      { name: "profile", label: "Practitioner Profile", description: "Public page for a diviner.", group: "Discovery" },
+      { name: "checkout", label: "Booking Checkout", description: "Payment and scheduling flow.", group: "Discovery" },
+      { name: "blog", label: "Blog Index", description: "Grid of latest articles.", group: "Marketing" },
+      { name: "join", label: "Registration Hub", description: "Membership tier selection.", group: "Onboarding" },
+    ],
+  },
+  {
+    role: "Customer Portal",
+    slug: "customer",
+    tagline: "Personal spiritual management and history",
+    roleDescription:
+      "A dedicated area for clients to manage their spiritual journey, track reading history, and interact with practitioners.",
+    icon: User,
+    gradient: "from-emerald-500/20 to-green-600/10",
+    featureAreas: ["Dashboard", "Orders", "Bookings", "Account"],
+    capabilities: [
+      "Track upcoming and past readings",
+      "Manage service subscriptions and billing",
+      "Access recorded sessions and transcripts",
+      "Update personal spiritual profile",
+    ],
+    keyPages: ["Dashboard", "My Bookings", "Order History", "Spiritual Profile"],
+    groups: [
       {
-        groupLabel: "Astrology",
+        groupLabel: "Dashboard",
         cards: [
-          { title: "Horoscope", description: "Horoscope content toolkit", href: "/admin/horoscope", icon: Star, status: "live" },
-          { title: "Chart Studio", description: "Mundane chart builder", href: "/admin/mundane/chart-studio", icon: Orbit, status: "live" },
-          { title: "World Map", description: "Geopolitical astrology map", href: "/admin/mundane/world-map", icon: MapPin, status: "live" },
-          { title: "Event Calendar", description: "Astrological event tracking", href: "/admin/mundane/event-calendar", icon: CalendarDays, status: "live" },
-          { title: "Research", description: "Mundane research workspace", href: "/admin/mundane/research", icon: FlaskConical, status: "live" },
-          { title: "Mundane Search", description: "Search mundane data", href: "/admin/mundane/search", icon: Search, status: "live" },
+          { title: "Dashboard", description: "Customer overview", href: "/portal", icon: LayoutDashboard, status: "live" },
         ],
       },
+    ],
+    screens: [
+      { name: "dashboard", label: "Customer Dashboard", description: "At-a-glance view of appointments.", group: "Dashboard" },
+      { name: "bookings", label: "My Bookings", description: "Management of upcoming sessions.", group: "Services" },
+      { name: "orders", label: "Order History", description: "Detailed list of all platform purchases.", group: "Services" },
+      { name: "profile", label: "User Profile", description: "Account settings.", group: "Dashboard" },
+    ],
+  },
+  {
+    role: "Community Member",
+    slug: "community",
+    tagline: "Interactive astrology and spiritual community",
+    roleDescription:
+      "Access powerful astrology tools, weekly live gatherings, and a library of spiritual wisdom for Perennial Mandalism members.",
+    icon: Heart,
+    gradient: "from-pink-500/20 to-rose-600/10",
+    featureAreas: ["Astrology Tools", "Community Hub", "Spiritual Content"],
+    capabilities: [
+      "Generate personal and relationship natal charts",
+      "Track monthly planetary transits",
+      "Participate in live Sunday services",
+      "Access esoteric resource library",
+    ],
+    keyPages: ["Central Hub", "Natal Chart", "Transits Engine", "Sunday Service", "Library"],
+    groups: [
       {
-        groupLabel: "Programs",
+        groupLabel: "Astrology Tools",
         cards: [
-          { title: "Training School", description: "Programs, lessons, analytics", href: "/admin/training", icon: GraduationCap, status: "live" },
-          { title: "Mystery School", description: "Decans, students, journals", href: "/admin/mystery-school", icon: Eye, status: "live" },
+          { title: "Natal Chart", description: "Personal birth chart", href: "/community/horoscope", icon: Star, status: "live" },
         ],
       },
+    ],
+    screens: [
+      { name: "hub", label: "Community Hub", description: "Central board for announcements.", group: "Community" },
+      { name: "natal", label: "Natal Chart Studio", description: "Aesthetic birth chart visualization.", group: "Astrology Tools" },
+      { name: "transits", label: "Monthly Transits", description: "Interactive transit calendar.", group: "Astrology Tools" },
+      { name: "sunday", label: "Sunday Service", description: "Live video player and chat.", group: "Community" },
+      { name: "rituals", label: "Ritual Path", description: "Step-by-step spiritual practice guide.", group: "Community" },
+    ],
+  },
+  {
+    role: "Mystery School",
+    slug: "mystery-school",
+    tagline: "Advanced esoteric training and decan studies",
+    roleDescription:
+      "A privileged path for serious practitioners. Dive deep into decan systems and master ritual building.",
+    icon: Eye,
+    gradient: "from-violet-500/20 to-purple-600/10",
+    featureAreas: ["Curriculum", "Decan Studies", "Ritual Mastery"],
+    capabilities: [
+      "Navigate the 36 decans grid",
+      "Progress through structured curriculum",
+      "Build custom ritual sequences",
+      "Track graduation progress",
+    ],
+    keyPages: ["Decans Grid", "Training Center", "Ritual Builder", "Graduation"],
+    groups: [
       {
-        groupLabel: "Support",
+        groupLabel: "Mastery",
         cards: [
-          { title: "Tickets", description: "Support ticket management", href: "/admin/tickets", icon: MessageSquare, status: "live" },
-          { title: "SLA Dashboard", description: "Response time monitoring", href: "/admin/tickets/sla", icon: Clock, status: "live" },
-          { title: "Queues", description: "Queue routing configuration", href: "/admin/tickets/queues", icon: ListChecks, status: "live" },
+          { title: "Decans Grid", description: "36 decans overview", href: "/mystery-school", icon: Eye, status: "live" },
         ],
       },
+    ],
+    screens: [
+      { name: "decans", label: "Decans Grid", description: "Visual map of the 36 decans.", group: "Mastery" },
+      { name: "center", label: "Training Center", description: "Learning management.", group: "Curriculum" },
+      { name: "lesson", label: "Lesson View", description: "Structured lesson content.", group: "Curriculum" },
+      { name: "builder", label: "Ritual Builder", description: "Drag-and-drop ritual designer.", group: "Mastery" },
+    ],
+  },
+  {
+    role: "Diviner Dashboard",
+    slug: "diviner",
+    tagline: "Clinical espiritual and business operations",
+    roleDescription:
+      "Manage every aspect of your spiritual business — from clients to marketing and streams.",
+    icon: Star,
+    gradient: "from-amber-500/20 to-yellow-600/10",
+    featureAreas: ["Scheduling", "CRM", "Business Operations", "Engagement"],
+    capabilities: [
+      "Manage bookings and availability",
+      "Track client history and readings",
+      "Host live broadcast sessions",
+      "Oversee affiliate commissions",
+    ],
+    keyPages: ["CRM Overview", "Bookings", "Client Spirit Twin", "Broadcast Hub", "Billing"],
+    groups: [
       {
-        groupLabel: "Config",
+        groupLabel: "Schedule",
         cards: [
-          { title: "Activity Log", description: "System-wide audit trail", href: "/admin/activity-log", icon: History, status: "live" },
-          { title: "Email Sequences", description: "Automated email workflows", href: "/admin/email-sequences", icon: MailCheck, status: "live" },
-          { title: "Platform Settings", description: "Global platform configuration", href: "/admin/platform-settings", icon: Settings2, status: "live" },
-          { title: "Diviner Plans", description: "Subscription plan tiers", href: "/admin/diviner-plans", icon: Layers, status: "live" },
-          { title: "Legal", description: "Terms, privacy, and policies", href: "/admin/legal", icon: ScrollText, status: "live" },
+          { title: "Overview", description: "Daily workload summary", href: "/dashboard", icon: LayoutDashboard, status: "live" },
         ],
       },
+    ],
+    screens: [
+      { name: "overview", label: "Practitioner CRM", description: "Overview of today's operations.", group: "Schedule" },
+      { name: "calendar", label: "Session Calendar", description: "Map of upcoming readings.", group: "Schedule" },
+      { name: "client-detail", label: "Client Spiritual Twin", description: "Comprehensive client history.", group: "Business" },
+      { name: "broadcast", label: "Live Hub", description: "Streaming and chat interface.", group: "Engagement" },
+      { name: "payouts", label: "Billing & Payouts", description: "Financial transparency.", group: "Business" },
+    ],
+  },
+  {
+    role: "Social Advocate",
+    slug: "social_advo",
+    tagline: "Affiliate growth and referral rewards",
+    roleDescription:
+      "For partners focusing on community growth. Track referrals and manage affiliate links.",
+    icon: Sparkles,
+    gradient: "from-blue-500/20 to-indigo-600/10",
+    featureAreas: ["Growth", "Referrals", "Earnings"],
+    capabilities: [
+      "Generate referral links",
+      "Track conversion stats",
+      "Review monthly payouts",
+    ],
+    keyPages: ["Referral Hub", "Performance", "Earnings Log"],
+    groups: [
+      {
+        groupLabel: "Advocacy",
+        cards: [
+          { title: "Overview", description: "Referral stats", href: "/advocate", icon: LayoutDashboard, status: "live" },
+        ],
+      },
+    ],
+    screens: [
+      { name: "advocate-home", label: "Advocacy Dashboard", description: "Overview of your impact.", group: "Advocacy" },
+      { name: "payouts", label: "Earnings Log", description: "Transparency on commissions.", group: "Advocacy" },
+    ],
+  },
+  {
+    role: "Trainee",
+    slug: "trainee",
+    tagline: "Apprenticeship and skill development",
+    roleDescription:
+      "Master divine arts through structured lessons and mentor-assigned modules.",
+    icon: GraduationCap,
+    gradient: "from-amber-500/20 to-orange-600/10",
+    featureAreas: ["Training", "Mentorship", "Milestones"],
+    capabilities: [
+      "Access assigned training modules",
+      "Track practice session requirements",
+      "Review mentor feedback",
+    ],
+    keyPages: ["Learning Hub", "Curriculum", "Milestones"],
+    groups: [
+      {
+        groupLabel: "Training",
+        cards: [
+          { title: "Dashboard", description: "Current training focus", href: "/trainee", icon: LayoutDashboard, status: "live" },
+        ],
+      },
+    ],
+    screens: [
+      { name: "trainee-hub", label: "Trainee Dashboard", description: "Personal development center.", group: "Training" },
+      { name: "curriculum", label: "Learning Path", description: "Chronological map of lessons.", group: "Training" },
     ],
   },
 ];
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
 
-/** Look up a section by its URL-safe slug. */
+export const ADDITIONAL_PAGES = [
+  {
+    slug: "shared",
+    title: "Shared Pages",
+    screenCount: 4,
+    description: "Cross-role pages accessible to every authenticated spiritualist — personal profile, settings, and support center.",
+    pages: ["Profile", "Settings", "Notifications", "Help Center"]
+  },
+  {
+    slug: "public",
+    title: "Public Pages",
+    screenCount: 6,
+    description: "Unauthenticated marketing and discovery pages — archetypal landing page, diviner directory, and join flow.",
+    pages: ["Homepage", "Discover", "Blog", "Join Hub", "Login"]
+  }
+];
+
 export function getSectionBySlug(slug: string): WalkthroughSection | undefined {
   return WALKTHROUGH_SECTIONS.find((s) => s.slug === slug);
 }
 
-/** Total feature count across all sections. */
 export function getTotalFeatureCount(): number {
   return WALKTHROUGH_SECTIONS.reduce(
     (sum, s) => sum + s.groups.reduce((gs, g) => gs + g.cards.length, 0),

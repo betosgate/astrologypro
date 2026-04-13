@@ -11,7 +11,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { data: booking, error: bErr } = await admin
     .from("bookings")
-    .select("id, diviner_id, client_id, status, duration_minutes, google_calendar_event_id, outlook_calendar_event_id, booking_token, scheduled_at, clients(full_name, email), diviners(display_name, username), services(name)")
+    .select("id, diviner_id, client_id, status, duration_minutes, google_calendar_event_id, outlook_calendar_event_id, booking_token, scheduled_at, questionnaire_responses, metadata, clients(full_name, email), diviners(display_name, username), services(name)")
     .eq("id", id)
     .single();
 
@@ -54,23 +54,48 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }).catch(() => {});
   }
 
-  // Send cancellation email (fire and forget)
+  // Send cancellation emails to all attendees (fire and forget)
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
   const clientEmail = (booking.clients as { email?: string } | null)?.email ?? "";
   const clientName = (booking.clients as { full_name?: string } | null)?.full_name ?? "Client";
   const divinerName = (booking.diviners as { display_name?: string } | null)?.display_name ?? "Your Practitioner";
-  const serviceName = (booking.services as { name?: string } | null)?.name ?? "Session";
+  const meta = (booking as Record<string, unknown>).metadata as { availability_title?: string } | null;
+  const serviceName = meta?.availability_title ?? (booking.services as { name?: string } | null)?.name ?? "Session";
+  const rebookUrl = `${appUrl}/${(booking.diviners as { username?: string } | null)?.username ?? ""}`;
 
+  // Gather all recipient emails
+  const qr = (booking as Record<string, unknown>).questionnaire_responses as Record<string, unknown> | null;
+  const cancelRecipients: Array<{ email: string; name: string }> = [];
   if (clientEmail) {
+    cancelRecipients.push({ email: clientEmail, name: clientName });
+  }
+  const spEmail = qr?.secondPersonEmail as string | undefined;
+  const spName = qr?.secondPersonName as string | undefined;
+  const spAttending = qr?.secondPersonAttending as string | undefined;
+  if (spEmail && (spAttending === "yes" || spAttending === "maybe")) {
+    if (!cancelRecipients.some((r) => r.email === spEmail)) {
+      cancelRecipients.push({ email: spEmail, name: spName || "Guest" });
+    }
+  }
+  const storedAttendees = Array.isArray(qr?.attendees) ? (qr.attendees as Array<{ name?: string; email?: string }>) : [];
+  for (const a of storedAttendees) {
+    if (a.email && !cancelRecipients.some((r) => r.email === a.email)) {
+      cancelRecipients.push({ email: a.email, name: a.name || a.email });
+    }
+  }
+
+  if (cancelRecipients.length > 0) {
     import("@/lib/email").then(({ sendCancellationConfirmation }) => {
-      sendCancellationConfirmation({
-        to: clientEmail,
-        name: clientName,
-        divinerName,
-        serviceName,
-        cancelReason: body.reason,
-        rebookUrl: `${appUrl}/${(booking.diviners as { username?: string } | null)?.username ?? ""}`,
-      }).catch(() => {});
+      for (const recipient of cancelRecipients) {
+        sendCancellationConfirmation({
+          to: recipient.email,
+          name: recipient.name,
+          divinerName,
+          serviceName,
+          cancelReason: body.reason,
+          rebookUrl,
+        }).catch(() => {});
+      }
     }).catch(() => {});
   }
 

@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
     // Route success/cancel URLs to the correct portal context
     const successUrl = isMysterySchool
       ? `${APP_URL}/mystery-school/checkout/success?session_id={CHECKOUT_SESSION_ID}`
-      : `${APP_URL}/community?subscribed=true`;
+      : `${APP_URL}/community/onboarding?subscribed=true`;
     const cancelUrl = isMysterySchool
       ? `${APP_URL}/mystery-school/checkout/cancel`
       : `${APP_URL}/community/upgrade`;

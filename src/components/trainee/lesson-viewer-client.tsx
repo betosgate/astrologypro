@@ -19,7 +19,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { PdfPreviewModal } from "@/components/trainee/pdf-preview-modal";
-import { LessonViewerQuiz, QuizQuestionClient } from "@/components/trainee/lesson-viewer-quiz";
+import {
+  LessonViewerQuiz,
+  QuizQuestionClient,
+  QuizQuestionProgressClient,
+} from "@/components/trainee/lesson-viewer-quiz";
 import { LessonCompleteButton } from "@/components/trainee/lesson-complete-button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -97,6 +101,7 @@ export type LessonViewerProps = {
 
   // Quiz
   quizQuestions: QuizQuestionClient[];
+  quizProgress?: QuizQuestionProgressClient[];
   quizPassed: boolean;
   /** @deprecated Module 05 stepwise quiz model doesn't surface a "last attempt score". */
   quizLastScore?: number | null;
@@ -134,10 +139,11 @@ function getVideoEmbed(url: string): string | null {
   const ytMatch = url.match(
     /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/
   );
-  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?rel=0`;
+  if (ytMatch)
+    return `https://www.youtube.com/embed/${ytMatch[1]}?rel=0&autoplay=1&mute=1&playsinline=1`;
   const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
   if (vimeoMatch)
-    return `https://player.vimeo.com/video/${vimeoMatch[1]}?dnt=1`;
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}?dnt=1&autoplay=1&muted=1`;
   return null;
 }
 
@@ -189,6 +195,9 @@ function VideoPlayer({
         <video
           src={video.video_url}
           controls
+          autoPlay
+          muted
+          playsInline
           className="w-full max-h-[480px]"
           onEnded={onEnded}
         />
@@ -413,6 +422,10 @@ function TriggerVideoPlayer({
       try {
         vid!.pause();
         vid!.currentTime = startSeconds;
+        // Initial lesson autoplay must be muted for browser policy compliance,
+        // but remediation starts from a learner click, so replay the required
+        // segment with normal audio for better review context.
+        vid!.muted = false;
         vid!.play().catch(() => undefined);
       } catch {
         // ignore
@@ -541,6 +554,9 @@ function TriggerVideoPlayer({
         ref={videoRef}
         src={video.video_url}
         controls={!showOverlay && !showCountdown}
+        autoPlay
+        muted
+        playsInline
         className="w-full max-h-[480px]"
         onEnded={onEnded}
         onTimeUpdate={handleTimeUpdate}
@@ -648,6 +664,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
     videos,
     assets,
     quizQuestions,
+    quizProgress = [],
     quizPassed,
     // quizLastScore / quizLastTotal: legacy props from the batch quiz model.
     // The Module 05 stepwise quiz model doesn't surface a "last attempt
@@ -659,7 +676,6 @@ export function LessonViewerClient(props: LessonViewerProps) {
     nextLabel,
     sidebarLessons,
     triggers = [],
-    lastPositionSeconds = 0,
   } = props;
 
   // Combine legacy single video + lesson_videos table entries
@@ -701,6 +717,9 @@ export function LessonViewerClient(props: LessonViewerProps) {
   } | null>(null);
   const [remediationReady, setRemediationReady] = useState(false);
   const remediationRequestSeqRef = useRef(0);
+  const remediationPlaybackActiveRef = useRef(false);
+  const videoSectionRef = useRef<HTMLDivElement>(null);
+  const quizSectionRef = useRef<HTMLDivElement>(null);
 
   const hasQuiz = quizQuestions.length > 0;
   const hasSidebarRail = sidebarLessons.length > 0;
@@ -739,13 +758,21 @@ export function LessonViewerClient(props: LessonViewerProps) {
   }, [lessonId]);
 
   // Track the latest video position for heartbeat reporting
-  const latestPositionRef = useRef<number>(lastPositionSeconds);
+  const latestPositionRef = useRef<number>(0);
   const handlePositionUpdate = useCallback((seconds: number) => {
+    if (remediationPlaybackActiveRef.current) return;
     latestPositionRef.current = seconds;
   }, []);
 
+  const scrollAndFocusSection = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    node.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => node.focus({ preventScroll: true }), 250);
+  }, []);
+
   // Heartbeat every 10 seconds while the component is mounted.
-  // Fires at ~10s cadence to keep last_position_seconds accurate for resume behavior.
+  // Remediation playback is intentionally excluded from position updates so
+  // temporary wrong-answer replay timestamps do not become future start points.
   useEffect(() => {
     let lastTick = Date.now();
 
@@ -826,7 +853,11 @@ export function LessonViewerClient(props: LessonViewerProps) {
 
           {/* Videos */}
           {allVideos.length > 0 && (
-            <div className="space-y-3">
+            <div
+              ref={videoSectionRef}
+              tabIndex={-1}
+              className="space-y-3 scroll-mt-24 outline-none"
+            >
               {/* Tab strip if multiple videos */}
               {allVideos.length > 1 && (
                 <div className="flex gap-1 overflow-x-auto pb-1">
@@ -850,7 +881,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
                 video={allVideos[activeVideoIdx]}
                 lessonId={lessonId}
                 triggers={triggers}
-                initialPosition={activeVideoIdx === 0 ? lastPositionSeconds : 0}
+                initialPosition={0}
                 onPositionUpdate={handlePositionUpdate}
                 onEnded={handleVideoEnded}
                 onPassedIdsChange={setPassedTriggerIds}
@@ -858,7 +889,9 @@ export function LessonViewerClient(props: LessonViewerProps) {
                 remediationRequest={remediationRequest}
                 onRemediationComplete={() => {
                   setRemediationReady(true);
+                  remediationPlaybackActiveRef.current = false;
                   setRemediationRequest(null);
+                  scrollAndFocusSection(quizSectionRef.current);
                 }}
               />
             </div>
@@ -971,7 +1004,11 @@ export function LessonViewerClient(props: LessonViewerProps) {
               05-show-lesson-quiz-inline-and-make-quiz-pass-required-for-
               completion.md. */}
           {hasQuiz && (
-            <div className="rounded-xl border bg-card overflow-hidden">
+            <div
+              ref={quizSectionRef}
+              tabIndex={-1}
+              className="rounded-xl border bg-card overflow-hidden scroll-mt-24 outline-none"
+            >
               <div className="px-4 py-3 border-b flex items-center justify-between">
                 <p className="text-sm font-semibold">Lesson Quiz</p>
                 {quizPassed ? (
@@ -989,6 +1026,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
                   lessonId={lessonId}
                   questions={quizQuestions}
                   alreadyPassed={quizPassed}
+                  initialProgress={quizProgress}
                   remediationReady={remediationReady}
                   onWrongAnswer={(remediation) => {
                     const start = remediation.start_seconds;
@@ -1005,6 +1043,8 @@ export function LessonViewerClient(props: LessonViewerProps) {
                     }
 
                     setRemediationReady(false);
+                    remediationPlaybackActiveRef.current = true;
+                    scrollAndFocusSection(videoSectionRef.current);
                     remediationRequestSeqRef.current += 1;
                     setRemediationRequest({
                       startSeconds: start,

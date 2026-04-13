@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendQuizPassed } from "@/lib/email";
 import { checkAndAwardTrainingGraduation } from "@/lib/training/graduation";
+import { clearQuizQuestionProgress } from "@/lib/training/quiz-question-progress";
 
 export const dynamic = "force-dynamic";
 
@@ -204,6 +205,10 @@ export async function POST(
   // This is the authoritative gate: if ANY active trigger exists, lesson completion
   // must come through that path, never through quiz submission.
   if (passed) {
+    clearQuizQuestionProgress(admin, user.id, lessonId).catch((err) =>
+      console.error("[quiz_question_progress] clear failed:", err),
+    );
+
     // Check trigger gate — if lesson has active triggers, block completion from here
     const { data: activeTriggers } = await admin
       .from("lesson_quiz_triggers")

@@ -145,8 +145,8 @@ function ProviderCard({
                     {getConnectionLabel(connection)}
                   </p>
                   <p className="text-[11px] text-muted-foreground">
-                    {index === 0 ? "Primary invite account" : "Also blocks availability"} • Added{" "}
-                    {relativeTime(connection.createdAt)}
+                    {index === 0 ? "Primary invite account" : "Also blocks availability"}
+                    {connection.createdAt ? ` • Added ${relativeTime(connection.createdAt)}` : ""}
                   </p>
                 </div>
                 <Button
@@ -206,10 +206,17 @@ export function CalendarConnections({
   ) {
     setDisconnectingConnectionId(connectionId);
     try {
-      const res = await fetch("/api/calendar/disconnect", {
+      // Legacy connections use a different disconnect path
+      const isLegacy = connectionId.startsWith("legacy-");
+      const endpoint = isLegacy ? "/api/calendar/disconnect-legacy" : "/api/calendar/disconnect";
+      const body = isLegacy
+        ? JSON.stringify({ provider })
+        : JSON.stringify({ provider, connectionId });
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, connectionId }),
+        body,
       });
 
       if (!res.ok) {

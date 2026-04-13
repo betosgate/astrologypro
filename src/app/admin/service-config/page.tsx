@@ -52,6 +52,8 @@ interface Service {
   description: string | null;
   duration_minutes: number;
   base_price: number;
+  overage_rate: number;
+  pricing_item_key: string | null;
   is_active: boolean;
   is_featured: boolean;
   sort_order: number;
@@ -63,10 +65,21 @@ interface Diviner {
   display_name: string;
 }
 
+interface PricingPlan {
+  id: string;
+  display_name: string;
+  amount: number;
+  onetime_amount: number | null;
+  currency: string;
+  is_active: boolean;
+  sort_order: number;
+}
+
 interface PricingItem {
   id: string;
   item_key: string;
   item_name: string;
+  pricing_plans?: PricingPlan[];
 }
 
 // ─── Page ──────────────────────────────────────────────────────────────────
@@ -220,6 +233,7 @@ export default function ServiceConfigPage() {
                       Duration
                     </th>
                     <th className="px-3 py-2 text-left font-medium">Price</th>
+                    <th className="px-3 py-2 text-left font-medium">Overage</th>
                     <th className="px-3 py-2 text-left font-medium">Status</th>
                     <th className="px-3 py-2 text-right font-medium w-24">
                       Actions
@@ -243,7 +257,12 @@ export default function ServiceConfigPage() {
                         {svc.duration_minutes} min
                       </td>
                       <td className="px-3 py-2 text-xs tabular-nums">
-                        ${Number(svc.base_price).toFixed(2)}
+                        {Number(svc.base_price) > 0
+                          ? `$${Number(svc.base_price).toFixed(2)}`
+                          : <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="px-3 py-2 text-xs tabular-nums">
+                        ${Number(svc.overage_rate ?? 0.50).toFixed(2)}/min
                       </td>
                       <td className="px-3 py-2">
                         <Badge
@@ -356,8 +375,21 @@ function ServiceDialog({
   const [category, setCategory] = useState("astrology");
   const [divinerId, setDivinerId] = useState("");
   const [duration, setDuration] = useState("60");
+  const [pricingItemKey, setPricingItemKey] = useState("");
+  const [overageRate, setOverageRate] = useState("0.50");
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  /** Derive base_price from the selected pricing item's first active plan. */
+  function getPriceFromPricingItem(key: string): number {
+    const item = pricingItems.find((p) => p.item_key === key);
+    if (!item?.pricing_plans?.length) return 0;
+    const activePlans = item.pricing_plans
+      .filter((p) => p.is_active)
+      .sort((a, b) => a.sort_order - b.sort_order);
+    const plan = activePlans[0] ?? item.pricing_plans[0];
+    return Number(plan.onetime_amount ?? plan.amount) || 0;
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -367,6 +399,8 @@ function ServiceDialog({
       setCategory(editingService.category);
       setDivinerId(editingService.diviner_id);
       setDuration(String(editingService.duration_minutes));
+      setPricingItemKey(editingService.pricing_item_key ?? "");
+      setOverageRate(String(editingService.overage_rate ?? 0.50));
       setIsActive(editingService.is_active);
     } else {
       setName("");
@@ -374,6 +408,8 @@ function ServiceDialog({
       setCategory("astrology");
       setDivinerId(diviners[0]?.id ?? "");
       setDuration("60");
+      setPricingItemKey("");
+      setOverageRate("0.50");
       setIsActive(true);
     }
   }, [open, editingService, diviners]);
@@ -404,7 +440,9 @@ function ServiceDialog({
           category,
           diviner_id: divinerId,
           duration_minutes: parseInt(duration, 10) || 60,
-          base_price: 0,
+          base_price: pricingItemKey ? getPriceFromPricingItem(pricingItemKey) : 0,
+          overage_rate: parseFloat(overageRate) || 0.50,
+          pricing_item_key: pricingItemKey || null,
           is_active: isActive,
         }),
       });
@@ -498,32 +536,45 @@ function ServiceDialog({
             <div className="space-y-1.5">
               <Label>Pricing Item</Label>
               <Select
-                value=""
-                onValueChange={(itemKey) => {
-                  // When admin selects a pricing item, we just record the
-                  // intent — the base_price field below can still be manually
-                  // overridden. This is a convenience selector, not a hard FK.
-                  const item = pricingItems.find((p) => p.item_key === itemKey);
-                  if (item) {
-                    toast.info(`Selected: ${item.item_name}`);
-                  }
-                }}
+                value={pricingItemKey}
+                onValueChange={setPricingItemKey}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Link to admin price (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  {pricingItems.map((p) => (
-                    <SelectItem key={p.id} value={p.item_key}>
-                      {p.item_name} ({p.item_key})
-                    </SelectItem>
-                  ))}
+                  {pricingItems.map((p) => {
+                    const plans = p.pricing_plans?.filter((pl) => pl.is_active) ?? [];
+                    const price = plans.length
+                      ? Number(plans[0].onetime_amount ?? plans[0].amount)
+                      : null;
+                    return (
+                      <SelectItem key={p.id} value={p.item_key}>
+                        {p.item_name}
+                        {price != null && price > 0 ? ` — $${price.toFixed(2)}` : ""}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               <p className="text-[10px] text-muted-foreground">
                 Optional — links this service to an admin-managed price.
               </p>
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Overage Rate ($/min)</Label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={overageRate}
+              onChange={(e) => setOverageRate(e.target.value)}
+            />
+            <p className="text-[10px] text-muted-foreground">
+              Per-minute rate charged for time beyond the scheduled duration.
+            </p>
           </div>
 
           <div className="flex items-center gap-2">
