@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { SPECIALTIES } from "@/lib/constants";
 import { toast } from "sonner";
 import {
@@ -78,23 +77,21 @@ export default function ProfilePage() {
     }
 
     setUploading(true);
-    const supabase = createClient();
-    const ext = file.name.split(".").pop();
-    const path = `avatars/${profile.id}.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("avatars")
-      .upload(path, file, { upsert: true });
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", "avatars");
 
-    if (uploadError) {
-      toast.error("Failed to upload avatar");
+    const uploadRes = await fetch("/api/upload/avatar", { method: "POST", body: formData });
+    const uploadData = await uploadRes.json();
+
+    if (!uploadRes.ok) {
+      toast.error("Failed to upload avatar: " + (uploadData.error ?? "Unknown error"));
       setUploading(false);
       return;
     }
 
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("avatars").getPublicUrl(path);
+    const publicUrl = uploadData.publicUrl;
 
     // Update avatar_url via API route so profile sync runs
     const res = await fetch("/api/dashboard/profile", {
