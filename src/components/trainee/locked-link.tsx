@@ -53,7 +53,7 @@ export function LockedLink({
     lockReason ??
     "Complete the previous lesson first to continue in sequence.";
 
-  function handleBlockedClick(e: MouseEvent<HTMLAnchorElement>) {
+  function handleBlockedClick(e: MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
     e.stopPropagation();
     toast.warning("Locked", {
@@ -61,16 +61,17 @@ export function LockedLink({
     });
   }
 
-  // Render as <a> so it still feels clickable, but cancel navigation.
+  // Do not render an <a href> for locked rows. Global route-progress
+  // listeners can react to anchor clicks before React cancellation runs.
   return (
-    <a
-      href={href}
+    <button
+      type="button"
       onClick={handleBlockedClick}
       aria-disabled="true"
       aria-label={ariaLabel}
-      className={`${className ?? ""} cursor-not-allowed opacity-60`.trim()}
+      className={`${className ?? ""} w-full cursor-not-allowed opacity-60 text-left`.trim()}
     >
       {children}
-    </a>
+    </button>
   );
 }

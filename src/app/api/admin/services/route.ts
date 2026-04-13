@@ -4,8 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-const SELECT_COLS =
-  "id, diviner_id, name, slug, category, description, duration_minutes, base_price, overage_rate, is_active, is_featured, is_primary, requires_birth_data, sort_order, created_at";
+const SELECT_COLS = "*";
 
 /**
  * GET /api/admin/services
@@ -65,6 +64,8 @@ export async function POST(req: NextRequest) {
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
   const admin = createAdminClient();
+  const pricing_item_key = typeof body.pricing_item_key === "string" ? body.pricing_item_key.trim() || null : null;
+
   const { data, error } = await admin.from("services").insert({
     diviner_id,
     name,
@@ -74,6 +75,7 @@ export async function POST(req: NextRequest) {
     duration_minutes,
     base_price,
     overage_rate,
+    pricing_item_key,
     is_active: body.is_active !== false,
     is_featured: !!body.is_featured,
     is_primary: body.is_primary !== false,
