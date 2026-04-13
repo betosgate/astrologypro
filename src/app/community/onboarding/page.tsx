@@ -915,6 +915,7 @@ export default function OnboardingPage() {
                         }
                       />
                     </div>
+                  </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label>Birth Location <span className="text-destructive">*</span></Label>

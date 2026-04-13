@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node -e \"const fs = require('fs'); if (fs.existsSync('.next')) fs.rmSync('.next', { recursive: true, force: true });\" && cross-env NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=\"--max-old-space-size=8192\" next build --webpack",
+    "build": "cross-env NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=\"--max-old-space-size=8192\" next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "test:ms-webhooks": "tsx --test tests/unit/mystery-school-subscription-lifecycle.test.ts",
