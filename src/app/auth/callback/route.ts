@@ -6,6 +6,7 @@ import { getUserPortals } from "@/lib/user-roles";
 import { provisionNatalReadiness } from "@/lib/community/provision-natal-readiness";
 import { getInvitedRoleDestination } from "@/lib/invite-destinations";
 import { ensureInvitedRoleProvisioning } from "@/lib/invite-provisioning";
+import { getPendingContractDestination } from "@/lib/contract-orchestration";
 
 function getClientIp(req: NextRequest): string {
   return (
@@ -118,6 +119,15 @@ export async function GET(request: NextRequest) {
         }
         const dest = role ? getInvitedRoleDestination(role) : "/switch";
         return NextResponse.redirect(new URL(dest, origin));
+      }
+
+      if (user?.id) {
+        const pendingContractDestination = await getPendingContractDestination(user.id).catch(
+          () => null,
+        );
+        if (pendingContractDestination) {
+          return NextResponse.redirect(new URL(pendingContractDestination, origin));
+        }
       }
 
       // ── Multi-role: if user has 2+ portals, send to switch page ──────────

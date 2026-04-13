@@ -100,6 +100,7 @@ const NAV_GROUPS = [
       { label: "Social Advocacy", href: "/admin/social-advocacy", icon: Share2 },
       { label: "Deleted Users", href: "/admin/users/deleted", icon: UserX },
       { label: "Service Packages", href: "/admin/role-service-packages", icon: Layers3 },
+      { label: "Contracts", href: "/admin/contracts", icon: ScrollText },
     ],
   },
   {

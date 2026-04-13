@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/admin-auth";
 import { getRoleDestination } from "@/types/user";
 import { getInvitedRoleDestination } from "@/lib/invite-destinations";
+import { getPendingContractDestination } from "@/lib/contract-orchestration";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +82,13 @@ export async function GET(req: NextRequest) {
   const admin = createAdminClient();
   const role = user.user_metadata?.role as string | undefined;
   const isInvited = user.user_metadata?.invited_by_admin === true;
+
+  const pendingContractDestination = await getPendingContractDestination(user.id).catch(
+    () => null,
+  );
+  if (pendingContractDestination && !isAdmin) {
+    return NextResponse.json({ destination: pendingContractDestination });
+  }
 
   if (role === "diviner" || isAdmin) {
     const { data: diviner } = await admin

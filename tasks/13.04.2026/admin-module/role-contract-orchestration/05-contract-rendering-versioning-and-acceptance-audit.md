@@ -64,3 +64,7 @@ Admin should be able to inspect:
 - every acceptance is tied to a rendered contract snapshot
 - dynamic variables do not make legal history ambiguous
 - admin can audit contract history per user and per role
+
+## Status
+
+Done.
