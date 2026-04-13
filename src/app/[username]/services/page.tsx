@@ -14,6 +14,7 @@ import { formatCurrency } from "@/lib/format";
 import { getServiceImageUrl } from "@/lib/service-images";
 import { isFallbackManualService } from "@/lib/public-booking";
 import { APP_URL } from "@/lib/constants";
+import { getDivinerAvatarUrl } from "@/lib/diviner-images";
 import { PageTracker } from "@/components/landing/page-tracker";
 
 interface PageProps {
@@ -216,12 +217,7 @@ export default async function ServicesIndexPage({
     (s) => s.category !== "astrology" && s.category !== "tarot"
   );
 
-  const initials = diviner.display_name
-    .split(" ")
-    .map((n: string) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const avatarUrl = getDivinerAvatarUrl(diviner.avatar_url);
 
   return (
     <>
@@ -254,19 +250,13 @@ export default async function ServicesIndexPage({
         <div className="relative z-10 mx-auto max-w-6xl px-4 text-center">
           {/* Avatar */}
           <div className="mx-auto mb-5 relative size-20 overflow-hidden rounded-full border-2 border-gold/20">
-            {diviner.avatar_url ? (
-              <Image
-                src={diviner.avatar_url}
-                alt={diviner.display_name}
-                fill
-                className="object-cover"
-                sizes="80px"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-cosmos-700 font-display text-lg text-gold">
-                {initials}
-              </div>
-            )}
+            <Image
+              src={avatarUrl}
+              alt={diviner.display_name}
+              fill
+              className="object-cover"
+              sizes="80px"
+            />
           </div>
 
           <h1 className="font-display text-3xl font-bold text-cream md:text-4xl lg:text-5xl">

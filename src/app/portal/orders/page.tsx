@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDateTime } from "@/lib/format";
-import { ShoppingBag, User } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
+import { getDivinerAvatarUrl } from "@/lib/diviner-images";
 
 export const metadata = {
   title: "My Orders & Readings",
@@ -165,6 +167,7 @@ export default async function PortalOrdersPage({
             const label = statusLabel[order.status] ?? order.status;
             const ctaLabel = getCtaLabel(order.status);
             const showActionIndicator = order.status === "awaiting_intake";
+            const divinerAvatarUrl = getDivinerAvatarUrl(diviner?.avatar_url);
 
             return (
               <div
@@ -174,15 +177,13 @@ export default async function PortalOrdersPage({
                 <div className="flex items-start gap-3">
                   {/* Diviner avatar */}
                   <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/[0.06]">
-                    {diviner?.avatar_url ? (
-                      <img
-                        src={diviner.avatar_url}
-                        alt={diviner.display_name}
-                        className="size-10 object-cover"
-                      />
-                    ) : (
-                      <User className="size-5 text-muted-foreground" />
-                    )}
+                    <Image
+                      src={divinerAvatarUrl}
+                      alt={diviner?.display_name ?? "Diviner"}
+                      width={40}
+                      height={40}
+                      className="size-10 object-cover"
+                    />
                   </div>
 
                   {/* Order info */}

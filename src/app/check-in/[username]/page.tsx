@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getDivinerAvatarUrl } from "@/lib/diviner-images";
 import { CheckInForm } from "@/components/public/check-in-form";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -83,6 +84,7 @@ export default async function CheckInPage({ params }: PageProps) {
     .maybeSingle<LiveSessionRow>();
 
   const hasActiveSession = session !== null && session.check_in_enabled;
+  const avatarUrl = getDivinerAvatarUrl(diviner.avatar_url);
 
   return (
     <div
@@ -99,24 +101,14 @@ export default async function CheckInPage({ params }: PageProps) {
       >
         {/* Diviner branding */}
         <div className="mb-6 flex flex-col items-center gap-3">
-          {diviner.avatar_url ? (
-            <Image
-              src={diviner.avatar_url}
-              alt={diviner.display_name}
-              width={64}
-              height={64}
-              className="rounded-full object-cover ring-2"
-              style={{ ringColor: "#c9a84c" } as React.CSSProperties}
-            />
-          ) : (
-            <div
-              className="flex h-16 w-16 items-center justify-center rounded-full text-xl font-bold"
-              style={{ background: "rgba(201,168,76,0.15)", color: "#c9a84c" }}
-              aria-hidden="true"
-            >
-              {diviner.display_name.charAt(0).toUpperCase()}
-            </div>
-          )}
+          <Image
+            src={avatarUrl}
+            alt={diviner.display_name}
+            width={64}
+            height={64}
+            className="rounded-full object-cover ring-2"
+            style={{ ringColor: "#c9a84c" } as React.CSSProperties}
+          />
           <div className="text-center">
             <h1 className="text-base font-semibold" style={{ color: "#f5f0e8" }}>
               {diviner.display_name}
