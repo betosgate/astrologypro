@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { stripe } from "@/lib/stripe/client";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
     // Validate subscription belongs to client and is currently active
     const { data: subscription, error: subError } = await supabase
       .from("client_subscriptions")
-      .select("id, status, current_period_end, client_id")
+      .select("id, status, current_period_end, client_id, stripe_subscription_id")
       .eq("id", subscriptionId)
       .eq("client_id", client.id)
       .single();
@@ -51,6 +52,12 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
 
     const now = new Date().toISOString();
     const adminSupabase = createAdminClient();
+
+    if (subscription.stripe_subscription_id) {
+      await stripe.subscriptions.update(subscription.stripe_subscription_id, {
+        cancel_at_period_end: true,
+      });
+    }
 
     const { error: updateError } = await adminSupabase
       .from("client_subscriptions")

@@ -14,9 +14,6 @@ interface OrderForBookingInput {
   notes?: string | null;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AdminLikeClient = any;
-
 export function getOrderStatusForService(
   service: ServicePurchaseShape,
   hasPaid: boolean
@@ -28,7 +25,7 @@ export function getOrderStatusForService(
 }
 
 export async function ensureOrderForBooking(
-  admin: AdminLikeClient,
+  admin: { from: (table: string) => unknown },
   input: OrderForBookingInput
 ): Promise<string> {
   const {
@@ -62,8 +59,32 @@ export async function ensureOrderForBooking(
     notes,
   };
 
-  const { data: existingOrder, error: existingOrderError } = await admin
-    .from("orders")
+  const ordersTable = admin.from("orders") as {
+    select: (columns: string) => {
+      eq: (column: string, value: string) => {
+        maybeSingle: () => Promise<{
+          data: { id: string } | null;
+          error: { message?: string } | null;
+        }>;
+      };
+    };
+    insert: (values: Record<string, unknown>) => {
+      select: (columns: string) => {
+        single: () => Promise<{
+          data: { id: string } | null;
+          error: { message?: string } | null;
+        }>;
+      };
+    };
+    update: (values: Record<string, unknown>) => {
+      eq: (
+        column: string,
+        value: string
+      ) => Promise<{ error: { message?: string } | null }>;
+    };
+  };
+
+  const { data: existingOrder, error: existingOrderError } = await ordersTable
     .select("id")
     .eq("booking_id", bookingId)
     .maybeSingle();
@@ -73,8 +94,7 @@ export async function ensureOrderForBooking(
   }
 
   if (existingOrder?.id) {
-    const { error: updateError } = await admin
-      .from("orders")
+    const { error: updateError } = await ordersTable
       .update(payload)
       .eq("id", existingOrder.id);
 
@@ -85,8 +105,7 @@ export async function ensureOrderForBooking(
     return existingOrder.id;
   }
 
-  const { data: createdOrder, error: insertError } = await admin
-    .from("orders")
+  const { data: createdOrder, error: insertError } = await ordersTable
     .insert(payload)
     .select("id")
     .single();

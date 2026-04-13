@@ -1548,8 +1548,8 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                 const fullTitle = `${sec.label}${sec.val ? `: ${sec.val}` : ""}`;
                 return (
                   <div key={sec.key} className="rounded-lg border overflow-hidden">
-                    <div className="px-4 py-2.5 horoscope-section-header flex items-center justify-center gap-2">
-                      <h4 className="text-sm font-semibold text-center w-full uppercase tracking-wider">{fullTitle}</h4>
+                    <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center">
+                      <SmartHeading title={fullTitle} textSize="text-[22px]" iconSize="size-7" className="text-black" />
                     </div>
                     <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
                       <p className="leading-relaxed line-clamp-3">{content}</p>
@@ -1750,9 +1750,13 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
 
         return (
           <div key={i} className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-3 horoscope-section-header flex items-center justify-center gap-2">
+            <div className={cn("px-4 py-3 flex items-center justify-center", (tabSlug === "tropical_transits_monthly_v3" || tabSlug === "tropical_transits_weekly_v2") ? "horoscope-interp-header" : "horoscope-section-header")}>
               <div className="text-sm font-semibold text-center w-full">
-                <RelationshipHeading />
+                {(tabSlug === "tropical_transits_monthly_v3" || tabSlug === "tropical_transits_weekly_v2") ? (
+                  <SmartHeading title={title} textSize="text-[22px]" iconSize="size-7" className="text-black" />
+                ) : (
+                  <RelationshipHeading />
+                )}
               </div>
             </div>
             <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
@@ -2409,7 +2413,7 @@ export default function AdminHoroscopePage() {
               if (form.futureWeek) {
                 const wd = await callPlanetReturn({
                   steps: "astrology_report_weekly",
-                  birth_details: birth1,
+                  birth_details: { ...birth1, tzone: form.person1.city!.timezone.offset_string },
                   week_start_date: form.futureWeek,
                 });
                 weekResData = wd?.astrology_report_weekly ?? wd;
@@ -2481,7 +2485,7 @@ export default function AdminHoroscopePage() {
                 tMonth = mMonth;
                 const md = await callPlanetReturn({
                   steps: "astrology_report_monthly",
-                  birth_details: birth1,
+                  birth_details: { ...birth1, tzone: form.person1.city!.timezone.offset_string },
                   target_year: tYear,
                   target_month: tMonth,
                 });
@@ -2592,10 +2596,11 @@ export default function AdminHoroscopePage() {
               const bod = `${pad(birth1.year)}-${pad(birth1.month)}-${pad(
                 birth1.day
               )} ${pad(birth1.hour)}:${pad(birth1.min)}:00`;
-              const retData = await callPlanetReturn({
+               const retData = await callPlanetReturn({
                 steps,
                 date_of_birth_with_time: bod,
                 natal_deg: nDeg,
+                tzone: form.person1.city!.timezone.offset_string,
               });
               const rdVal = retData?.[`${planetName}_return`];
               if (rdVal) {
