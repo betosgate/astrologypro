@@ -304,13 +304,37 @@ export async function GET() {
   const result = accessiblePrograms.map((prog) => {
     const progCategories = categoriesByProgram.get(prog.id) ?? [];
     const progCache = programCacheMap.get(prog.id) ?? null;
+    const isCategoryComplete = (categoryId: string) => {
+      const categoryLessons = lessonsByCategory.get(categoryId) ?? [];
+      if (completedCategories.has(categoryId)) return true;
+      return (
+        categoryLessons.length > 0 &&
+        categoryLessons.every((lesson) => completedLessons.has(lesson.id))
+      );
+    };
     const nextCategoryId = progCache?.next_category_id ?? null;
+    const effectiveNextCategoryId =
+      nextCategoryId ??
+      progCategories.find((cat) => !isCategoryComplete(cat.id))?.id ??
+      null;
 
     const enrichedCategories = progCategories.map((cat) => {
       const catLessons = lessonsByCategory.get(cat.id) ?? [];
       const catCache = categoryCacheMap.get(cat.id) ?? null;
-      const catCompleted = completedCategories.has(cat.id);
+      const derivedTotalLessons = catLessons.length;
+      const derivedCompletedLessons = catLessons.filter((lesson) =>
+        completedLessons.has(lesson.id),
+      ).length;
+      const derivedProgressPct =
+        derivedTotalLessons > 0
+          ? Math.round((derivedCompletedLessons / derivedTotalLessons) * 100)
+          : 0;
+      const catCompleted = isCategoryComplete(cat.id);
       const nextLessonId = catCache?.next_lesson_id ?? null;
+      const effectiveNextLessonId =
+        nextLessonId ??
+        catLessons.find((lesson) => !completedLessons.has(lesson.id))?.id ??
+        null;
 
       // ── Category sequential lock ─────────────────────────────────────────
       // A category is locked when:
@@ -323,7 +347,7 @@ export async function GET() {
         globalLock &&
         !!(prog as { is_sequential?: boolean }).is_sequential &&
         !catCompleted &&
-        cat.id !== (nextCategoryId ?? cat.id) &&
+        cat.id !== (effectiveNextCategoryId ?? cat.id) &&
         progCategories.some(
           (c) =>
             c.training_id === prog.id &&
@@ -346,7 +370,7 @@ export async function GET() {
           globalLock &&
           !lessonCompleted &&
           !!(cat as { is_sequential?: boolean }).is_sequential &&
-          l.id !== (nextLessonId ?? l.id) &&
+          l.id !== (effectiveNextLessonId ?? l.id) &&
           catLessons.some(
             (prev) =>
               prev.priority < l.priority &&
@@ -385,15 +409,20 @@ export async function GET() {
         lock_reason: isCatLocked
           ? "Complete the previous category first to unlock this section."
           : null,
-        // Cache-sourced progress fields
-        progress_pct: catCache ? Number(catCache.progress_pct) : 0,
-        completed_lessons: catCache ? catCache.completed_lessons : 0,
-        total_lessons: catCache ? catCache.total_lessons : catLessons.length,
+        // Hierarchy-derived counts are authoritative for learner-facing UI.
+        // Cache rows can become stale when lessons/categories are edited.
+        progress_pct: derivedProgressPct,
+        completed_lessons: derivedCompletedLessons,
+        total_lessons: derivedTotalLessons,
         started_at: catCache?.started_at ?? null,
         last_activity_at: catCache?.last_activity_at ?? null,
         completed_at: catCache?.completed_at ?? null,
-        next_lesson_id: catCache?.next_lesson_id ?? null,
-        next_lesson_title: catCache?.next_lesson_title ?? null,
+        next_lesson_id: effectiveNextLessonId,
+        next_lesson_title:
+          catCache?.next_lesson_title ??
+          catLessons.find((lesson) => lesson.id === effectiveNextLessonId)
+            ?.title ??
+          null,
         lessons: enrichedLessons,
       };
     });
@@ -405,10 +434,21 @@ export async function GET() {
     // complete", which misrepresents the real accessible workload — see
     // tasks/09.04.2026/admin-module/training-school/02-learner-experience/
     // 01-fix-unstarted-program-card-total-lesson-count.md.
-    const fallbackTotalLessons = enrichedCategories.reduce(
+    const derivedTotalLessons = enrichedCategories.reduce(
       (sum, c) => sum + (c.total_lessons ?? 0),
       0,
     );
+    const derivedCompletedLessons = enrichedCategories.reduce(
+      (sum, c) => sum + (c.completed_lessons ?? 0),
+      0,
+    );
+    const derivedProgressPct =
+      derivedTotalLessons > 0
+        ? Math.round((derivedCompletedLessons / derivedTotalLessons) * 100)
+        : 0;
+    const derivedCompletedCategories = enrichedCategories.filter(
+      (category) => category.completed,
+    ).length;
 
     return {
       id: prog.id,
@@ -418,14 +458,13 @@ export async function GET() {
       is_active: prog.is_active,
       is_sequential: !!(prog as { is_sequential?: boolean }).is_sequential,
       allowed_roles: prog.allowed_roles ?? [],
-      // Cache-sourced progress fields; zeroed defaults when cache row absent.
-      // total_lessons / total_categories fall back to the real hierarchy
-      // counts instead of 0 so unstarted cards show accurate totals.
-      progress_pct: progCache ? Number(progCache.progress_pct) : 0,
-      completed_lessons: progCache ? progCache.completed_lessons : 0,
-      total_lessons: progCache ? progCache.total_lessons : fallbackTotalLessons,
-      completed_categories: progCache ? progCache.completed_categories : 0,
-      total_categories: progCache ? progCache.total_categories : progCategories.length,
+      // Hierarchy-derived counts are authoritative for cards/workspace. Cache
+      // rows are retained below only for activity timestamps and next hints.
+      progress_pct: derivedProgressPct,
+      completed_lessons: derivedCompletedLessons,
+      total_lessons: derivedTotalLessons,
+      completed_categories: derivedCompletedCategories,
+      total_categories: progCategories.length,
       started_at: progCache?.started_at ?? null,
       last_activity_at: progCache?.last_activity_at ?? null,
       completed_at: progCache?.completed_at ?? null,

@@ -353,12 +353,34 @@ export default async function LessonViewerPage({
       question: string;
       options: unknown;
       explanation?: string | null;
+      remediation_video_id?: string | null;
+      remediation_video_index?: number | null;
+      remediation_start_seconds?: number | null;
+      remediation_replay_until_seconds?: number | null;
+      remediation_message?: string | null;
     }) => ({
       id: q.id,
       question: q.question,
       options: normalizeQuizOptions(q.options),
       explanation: q.explanation ?? null,
+      remediation_video_id: q.remediation_video_id ?? null,
+      remediation_video_index: q.remediation_video_index ?? null,
+      remediation_start_seconds: q.remediation_start_seconds ?? null,
+      remediation_replay_until_seconds: q.remediation_replay_until_seconds ?? null,
+      remediation_message: q.remediation_message ?? null,
     })
+  );
+
+  const quizProgress = (lessonData.quiz_progress ?? []).map(
+    (progress: {
+      question_id: string;
+      selected_answer: number;
+      answered_correctly: boolean;
+    }) => ({
+      question_id: progress.question_id,
+      selected_answer: progress.selected_answer,
+      answered_correctly: progress.answered_correctly,
+    }),
   );
 
   const viewerProps: LessonViewerProps = {
@@ -374,6 +396,7 @@ export default async function LessonViewerPage({
     videos: lessonData.videos ?? [],
     assets: lessonData.assets ?? [],
     quizQuestions,
+    quizProgress,
     quizPassed: lessonData.quiz_passed === true,
     quizLastScore: lessonData.quiz_last_score ?? null,
     quizLastTotal: lessonData.quiz_last_total ?? null,

@@ -3,10 +3,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import { PRICING } from "@/lib/constants";
 import { sendPhoneSessionReceipt, sendPhonePaymentFailed } from "@/lib/email";
+import { syncTelephonyUsageFromPhoneSession } from "@/lib/telephony-billing";
 
 export const dynamic = "force-dynamic";
 
 export const runtime = "nodejs";
+
+type PaymentError = {
+  message?: string;
+};
 
 /**
  * Twilio status callback -- called when a call ends.
@@ -71,6 +76,10 @@ export async function POST(request: NextRequest) {
         status: "completed",
       })
       .eq("id", session.id);
+
+    await syncTelephonyUsageFromPhoneSession(session.id).catch((err) =>
+      console.error("[Twilio Status] Failed to sync telephony usage:", err)
+    );
 
     // Charge client if there's an amount
     if (amountCharged > 0 && session.client_id) {
@@ -139,10 +148,16 @@ export async function POST(request: NextRequest) {
               console.error("[Twilio Status] Failed to send receipt:", err)
             );
           }
-        } catch (paymentError: any) {
+        } catch (paymentError: unknown) {
+          const errorMessage =
+            typeof paymentError === "object" &&
+            paymentError !== null &&
+            "message" in paymentError
+              ? (paymentError as PaymentError).message
+              : "Unknown payment error";
           console.error(
             "[Twilio Status] Payment failed:",
-            paymentError.message
+            errorMessage
           );
 
           // Mark the session as needing payment follow-up

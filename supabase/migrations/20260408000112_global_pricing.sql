@@ -24,6 +24,24 @@ CREATE TABLE IF NOT EXISTS global_pricing (
   CONSTRAINT global_pricing_currency_check CHECK (currency IN ('USD', 'INR'))
 );
 
+ALTER TABLE global_pricing
+  ADD COLUMN IF NOT EXISTS price NUMERIC(12,2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'INR';
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'global_pricing_currency_check'
+      AND conrelid = 'global_pricing'::regclass
+  ) THEN
+    ALTER TABLE global_pricing
+      ADD CONSTRAINT global_pricing_currency_check
+      CHECK (currency IN ('USD', 'INR'));
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_global_pricing_active
   ON global_pricing (is_active);
 

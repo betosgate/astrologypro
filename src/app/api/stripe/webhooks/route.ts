@@ -19,11 +19,20 @@ import {
 import { createCalendarEvent } from "@/lib/google-calendar";
 import { buildCalendarDescription } from "@/lib/calendar-utils";
 import { createMsCalendarEvent } from "@/lib/microsoft-calendar";
+import { ensureOrderForBooking, getOrderStatusForService } from "@/lib/orders";
+import { recordAffiliateCommission } from "@/lib/affiliate-commissions";
 import {
   getSubscriptionPeriodEndIso,
   mapMysterySchoolLifecycleUpdate,
 } from "@/lib/mystery-school/subscription-lifecycle";
 import { finalizeMysterySchoolCheckoutSession } from "@/lib/mystery-school/finalize-checkout";
+import { mapStripeSubscriptionStatus } from "@/lib/weekly-subscriptions";
+import {
+  recordRevenueLedgerEntry,
+  getAffiliateCommissionTotalForOrderRef,
+  WEEKLY_SUBSCRIPTION_PLATFORM_SHARE_PERCENT,
+} from "@/lib/revenue-ledger";
+import { PRICING } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +82,26 @@ async function handleGiftCheckoutCompleted(
       return;
     }
   }
+
+  const amountCents = session.amount_total ?? Math.round(amount * 100);
+  const platformFeeCents = Math.round(
+    amountCents * (PRICING.platformFeePercent / 100)
+  );
+
+  await recordRevenueLedgerEntry({
+    sourceType: "gift_certificate",
+    sourceReference: session.id,
+    divinerId: meta.diviner_id ?? null,
+    grossAmountCents: amountCents,
+    platformFeeCents,
+    currency: session.currency ?? "usd",
+    metadata: {
+      code,
+      purchaserEmail: meta.purchaser_email ?? null,
+      recipientEmail: meta.recipient_email ?? null,
+      divinerUsername: meta.diviner_username ?? null,
+    },
+  });
 
   // Send emails (idempotent — SES deduplication window is 24h)
   const redeemUrl = `${appUrl}/gift/${code}`;
@@ -326,19 +355,48 @@ async function handleManualBookingCheckoutCompleted(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, duration_minutes, metadata, questionnaire_responses, diviner_id, client_id, services(name, duration_minutes), diviners(id, display_name), clients(email, full_name)"
+      "id, booking_token, scheduled_at, duration_minutes, base_price, metadata, questionnaire_responses, diviner_id, client_id, service_id, services(id, name, slug, category, duration_minutes, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields), diviners(id, display_name), clients(id, email, full_name)"
     )
     .eq("id", bookingId)
     .single();
 
   if (!booking) return;
 
-  const svc = (booking as Record<string, unknown>).services as { name: string; duration_minutes: number } | null;
+  const svc = (booking as Record<string, unknown>).services as {
+    id: string;
+    name: string;
+    slug?: string | null;
+    category?: string | null;
+    duration_minutes: number;
+    requires_birth_data?: boolean | null;
+    intake_template_id?: string | null;
+    product_kind?: string | null;
+    is_subscription?: boolean | null;
+    requires_birth_time?: boolean | null;
+    requires_birth_city?: boolean | null;
+    requires_partner_data?: boolean | null;
+    pre_checkout_fields?: unknown;
+    post_checkout_fields?: unknown;
+  } | null;
   const div = (booking as Record<string, unknown>).diviners as { id: string; display_name: string } | null;
-  const clientRecord = (booking as Record<string, unknown>).clients as { email: string; full_name: string | null } | null;
+  const clientRecord = (booking as Record<string, unknown>).clients as { id: string; email: string; full_name: string | null } | null;
   const meta = (booking as Record<string, unknown>).metadata as { availability_title?: string; availability_description?: string } | null;
 
   if (!svc || !div || !clientRecord) return;
+
+  await ensureOrderForBooking(supabase, {
+    bookingId,
+    clientId: clientRecord.id,
+    divinerId: div.id,
+    serviceId: svc.id ?? ((booking as Record<string, unknown>).service_id as string),
+    service: svc,
+    amountCents: Math.round(Number((booking as Record<string, unknown>).base_price ?? 0) * 100),
+    currency: session.currency ?? "usd",
+    stripePaymentIntentId:
+      typeof session.payment_intent === "string" ? session.payment_intent : session.id,
+    status: getOrderStatusForService(svc, true),
+    paidAt: new Date().toISOString(),
+  });
 
   const startTime = new Date(booking.scheduled_at as string);
   const durationMins = (booking.duration_minutes as number) ?? svc.duration_minutes;
@@ -409,7 +467,7 @@ async function handleManualBookingCheckoutCompleted(
   {
     createCalendarEvent(div.id, {
       title: `${eventTitle} — ${clientRecord.full_name ?? clientRecord.email}`,
-      description: buildCalendarDescription(meta?.availability_description ?? null, appUrl, bookingId),
+      description: buildCalendarDescription(meta?.availability_description ?? null, appUrl, booking.booking_token as string | undefined),
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
       clientEmail: clientRecord.email,
@@ -552,6 +610,114 @@ async function handleComboBundleCheckoutCompleted(
   );
 }
 
+async function handleTraineeSignupCheckoutCompleted(
+  session: Stripe.Checkout.Session
+) {
+  const supabase = createAdminClient();
+  const userId = session.metadata?.userId;
+
+  if (!userId) {
+    console.error("[Webhook] trainee_signup: missing userId", session.metadata);
+    return;
+  }
+
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.admin.getUserById(userId);
+
+  const email = authUser?.email ?? "";
+  const username = (authUser?.user_metadata?.username as string) ?? "";
+  const displayName =
+    (authUser?.user_metadata?.name as string) ?? email.split("@")[0] ?? "Trainee";
+
+  if (!username) {
+    console.error("[Webhook] trainee_signup: missing username", session.metadata);
+    return;
+  }
+
+  const { error } = await supabase.from("trainees").upsert(
+    {
+      user_id: userId,
+      name: displayName,
+      email,
+      username,
+      training_status: "active",
+      onboarding_completed: false,
+    },
+    { onConflict: "user_id" }
+  );
+
+  if (error) {
+    console.error(
+      "[Webhook] trainee_signup: failed to upsert trainees record:",
+      error
+    );
+  }
+}
+
+async function handlePerennialCommunitySignupCheckoutCompleted(
+  session: Stripe.Checkout.Session
+) {
+  const supabase = createAdminClient();
+  const userId = session.metadata?.userId;
+  const planId = session.metadata?.planId ?? null;
+  const subscriptionId =
+    typeof session.subscription === "string"
+      ? session.subscription
+      : session.subscription?.id;
+
+  if (!userId) {
+    console.error(
+      "[Webhook] perennial_community_signup: missing userId",
+      session.metadata
+    );
+    return;
+  }
+
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.admin.getUserById(userId);
+  const email = authUser?.email ?? "";
+  const fullName =
+    (authUser?.user_metadata?.name as string) ??
+    (authUser?.user_metadata?.full_name as string) ??
+    null;
+
+  const { error } = await supabase.from("community_members").upsert(
+    {
+      user_id: userId,
+      email,
+      full_name: fullName,
+      membership_type: "perennial_mandalism",
+      membership_status: "active",
+      plan_type: "individual",
+      stripe_subscription_id: subscriptionId ?? null,
+      joined_at: new Date().toISOString(),
+      onboarding_completed: false,
+      intake_data: planId ? { selected_plan_id: planId } : {},
+    },
+    { onConflict: "user_id" }
+  );
+
+  if (error) {
+    console.error(
+      "[Webhook] perennial_community_signup: failed to upsert community_members:",
+      error
+    );
+  }
+
+  const affiliateCode = session.metadata?.affiliateCode;
+  if (affiliateCode) {
+    const amountTotal = (session.amount_total ?? 0) / 100;
+    recordSignupAffiliateCommission(
+      affiliateCode,
+      amountTotal,
+      `perennial-community-signup:${session.id}`,
+      "subscription"
+    );
+  }
+}
+
 /**
  * Fire-and-forget: record an affiliate commission for a signup/subscription checkout.
  * Supports both the old `affiliates` (social_advocates) table and the new
@@ -564,86 +730,193 @@ async function recordSignupAffiliateCommission(
   productType: "signup" | "subscription"
 ) {
   try {
-    const admin = createAdminClient();
-
-    // 1. Try old system: `affiliates` (social_advocates) table
-    const { data: advocate } = await admin
-      .from("affiliates")
-      .select("id, commission_percent, total_referrals, total_earned")
-      .eq("referral_code", affiliateCode)
-      .eq("is_active", true)
-      .maybeSingle();
-
-    if (advocate) {
-      const commissionAmount =
-        Math.round(amountDollars * (advocate.commission_percent / 100) * 100) / 100;
-
-      await admin.from("affiliate_referrals").insert({
-        affiliate_id: advocate.id,
-        commission_amount: commissionAmount,
-        status: "pending",
-        metadata: { order_reference: orderRef, product_type: productType },
-      });
-
-      await admin
-        .from("affiliates")
-        .update({
-          total_referrals: (advocate.total_referrals ?? 0) + 1,
-          total_earned: Number(advocate.total_earned ?? 0) + commissionAmount,
-        })
-        .eq("id", advocate.id);
-
-      console.log(
-        `[Webhook] Affiliate commission (advocate) recorded: code=${affiliateCode} amount=$${commissionAmount} ref=${orderRef}`
-      );
-      return;
-    }
-
-    // 2. Try new system: `affiliate_referral_links` by slug or referral_code
-    const { data: link } = await admin
-      .from("affiliate_referral_links")
-      .select("id, affiliate_id, diviner_id")
-      .or(`slug.eq.${affiliateCode},referral_code.eq.${affiliateCode}`)
-      .eq("is_active", true)
-      .maybeSingle();
-
-    if (link) {
-      // Look up commission rate from the diviner_affiliates record
-      const { data: divAffiliate } = await admin
-        .from("diviner_affiliates")
-        .select("id, default_commission_type, default_commission_value")
-        .eq("id", link.affiliate_id)
-        .maybeSingle();
-
-      if (divAffiliate) {
-        const commissionRate = divAffiliate.default_commission_value;
-        const commissionType = divAffiliate.default_commission_type ?? "percentage";
-        const commissionAmountCents =
-          commissionType === "percentage"
-            ? Math.round(amountDollars * 100 * (commissionRate / 100))
-            : Math.round(commissionRate); // fixed amount in cents
-
-        await admin.from("affiliate_commissions").insert({
-          affiliate_id: divAffiliate.id,
-          diviner_id: link.diviner_id,
-          link_id: link.id,
-          order_reference: orderRef,
-          order_amount_cents: Math.round(amountDollars * 100),
-          commission_type: commissionType,
-          commission_rate: commissionRate,
-          commission_amount_cents: commissionAmountCents,
-          status: "pending",
-          notes: `${productType} commission`,
-        });
-
-        console.log(
-          `[Webhook] Affiliate commission (diviner) recorded: code=${affiliateCode} amount_cents=${commissionAmountCents} ref=${orderRef}`
-        );
-      }
-    }
+    await recordAffiliateCommission({
+      affiliateCode,
+      amountCents: Math.round(amountDollars * 100),
+      orderRef,
+      productType,
+    });
   } catch (err) {
     // Fire-and-forget — never block the main flow
     console.error("[Webhook] Failed to record signup affiliate commission:", err);
+  }
+}
+
+async function handleWeeklySubscriptionCheckoutCompleted(
+  session: Stripe.Checkout.Session
+) {
+  const supabase = createAdminClient();
+  const subscriptionId =
+    typeof session.subscription === "string"
+      ? session.subscription
+      : session.subscription?.id;
+  const customerId =
+    typeof session.customer === "string"
+      ? session.customer
+      : session.customer?.id;
+
+  const productId = session.metadata?.weeklySubscriptionProductId;
+  const divinerId = session.metadata?.divinerId;
+  const email = session.metadata?.email;
+  const name = session.metadata?.name;
+
+  if (!subscriptionId || !customerId || !productId || !divinerId || !email) {
+    console.error("[Webhook] Weekly subscription missing metadata", {
+      subscriptionId,
+      customerId,
+      productId,
+      divinerId,
+      email,
+    });
+    return;
+  }
+
+  let clientUserId: string | null = null;
+  const { data: createdUser, error: createUserError } =
+    await supabase.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: {
+        full_name: name ?? email,
+      },
+    });
+
+  if (createUserError) {
+    const { data: existingClient } = await supabase
+      .from("clients")
+      .select("user_id")
+      .eq("email", email)
+      .maybeSingle();
+    clientUserId = existingClient?.user_id ?? null;
+
+    if (!clientUserId) {
+      const { data: authList } = await supabase.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
+      clientUserId =
+        authList?.users?.find((user) => user.email === email)?.id ?? null;
+    }
+  } else {
+    clientUserId = createdUser.user.id;
+  }
+
+  if (!clientUserId) {
+    console.error("[Webhook] Weekly subscription could not resolve client user");
+    return;
+  }
+
+  const { data: client } = await supabase
+    .from("clients")
+    .upsert(
+      {
+        user_id: clientUserId,
+        email,
+        full_name: name ?? email,
+      },
+      { onConflict: "user_id" }
+    )
+    .select("id")
+    .single();
+
+  if (!client) return;
+
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const periodEnd =
+    (subscription as unknown as { current_period_end?: number }).current_period_end
+      ? new Date(
+          (subscription as unknown as { current_period_end: number })
+            .current_period_end * 1000
+        ).toISOString()
+      : null;
+
+  const mappedStatus = mapStripeSubscriptionStatus(subscription.status);
+
+  const weeklySubscriberPayload = {
+    product_id: productId,
+    diviner_id: divinerId,
+    client_id: client.id,
+    email,
+    name: name ?? null,
+    stripe_subscription_id: subscriptionId,
+    stripe_customer_id: customerId,
+    status: mappedStatus === "paused" ? "past_due" : mappedStatus,
+    current_period_end: periodEnd,
+    subscribed_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  const { data: existingWeeklySubscriber } = await supabase
+    .from("weekly_subscription_subscribers")
+    .select("id")
+    .eq("stripe_subscription_id", subscriptionId)
+    .maybeSingle();
+  if (existingWeeklySubscriber) {
+    await supabase
+      .from("weekly_subscription_subscribers")
+      .update(weeklySubscriberPayload)
+      .eq("id", existingWeeklySubscriber.id);
+  } else {
+    await supabase
+      .from("weekly_subscription_subscribers")
+      .insert(weeklySubscriberPayload);
+  }
+
+  const { data: weeklyProduct } = await supabase
+    .from("weekly_subscription_products")
+    .select("price_cents, title")
+    .eq("id", productId)
+    .maybeSingle();
+
+  const clientSubscriptionPayload = {
+    client_id: client.id,
+    diviner_id: divinerId,
+    product_id: productId,
+    subscription_type: "weekly_updates",
+    status: mappedStatus,
+    stripe_subscription_id: subscriptionId,
+    stripe_customer_id: customerId,
+    amount_cents: weeklyProduct?.price_cents ?? 1000,
+    current_period_end: periodEnd,
+    updated_at: new Date().toISOString(),
+  };
+  const { data: existingClientSubscription } = await supabase
+    .from("client_subscriptions")
+    .select("id")
+    .eq("stripe_subscription_id", subscriptionId)
+    .maybeSingle();
+  if (existingClientSubscription) {
+    await supabase
+      .from("client_subscriptions")
+      .update(clientSubscriptionPayload)
+      .eq("id", existingClientSubscription.id);
+  } else {
+    await supabase
+      .from("client_subscriptions")
+      .insert(clientSubscriptionPayload);
+  }
+
+  const { count: activeSubscriberCount } = await supabase
+    .from("weekly_subscription_subscribers")
+    .select("id", { count: "exact", head: true })
+    .eq("product_id", productId)
+    .eq("status", "active");
+
+  await supabase
+    .from("weekly_subscription_products")
+    .update({
+      subscriber_count: activeSubscriberCount ?? 0,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", productId);
+
+  if (session.metadata?.affiliateCode && session.amount_total) {
+    await recordAffiliateCommission({
+      affiliateCode: session.metadata.affiliateCode,
+      amountCents: session.amount_total,
+      orderRef: `weekly-subscription:${subscriptionId}`,
+      productType: "weekly_subscription",
+      divinerId,
+    });
   }
 }
 
@@ -658,14 +931,26 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return handleCommunityCheckoutCompleted(session);
   }
 
+  if (session.metadata?.type === "weekly_subscription") {
+    return handleWeeklySubscriptionCheckoutCompleted(session);
+  }
+
   // Route Perennial multi-member household signups
   if (session.metadata?.type === "perennial_signup") {
     return handlePerennialSignupCheckoutCompleted(session);
   }
 
+  if (session.metadata?.type === "perennial_community_signup") {
+    return handlePerennialCommunitySignupCheckoutCompleted(session);
+  }
+
   // Route combo bundle (trainee + diviner) checkouts
   if (session.metadata?.itemKey === "trainee_diviner_bundle") {
     return handleComboBundleCheckoutCompleted(session);
+  }
+
+  if (session.metadata?.type === "trainee_signup") {
+    return handleTraineeSignupCheckoutCompleted(session);
   }
 
   // Handle manual booking payment link checkout
@@ -763,6 +1048,44 @@ async function handleMysterySchoolSubscriptionUpdated(
     .eq("id", student.id);
 }
 
+async function syncWeeklySubscriptionStatus(
+  admin: ReturnType<typeof createAdminClient>,
+  subscription: Stripe.Subscription,
+  nextStatusOverride?: "cancelled" | "past_due" | "active" | "paused"
+) {
+  const mappedStatus =
+    nextStatusOverride ?? mapStripeSubscriptionStatus(subscription.status);
+  const periodEnd =
+    (subscription as unknown as { current_period_end?: number }).current_period_end
+      ? new Date(
+          (subscription as unknown as { current_period_end: number })
+            .current_period_end * 1000
+        ).toISOString()
+      : null;
+  const cancelledAt =
+    mappedStatus === "cancelled" ? new Date().toISOString() : null;
+
+  await admin
+    .from("client_subscriptions")
+    .update({
+      status: mappedStatus,
+      current_period_end: periodEnd,
+      cancelled_at: cancelledAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_subscription_id", subscription.id);
+
+  await admin
+    .from("weekly_subscription_subscribers")
+    .update({
+      status: mappedStatus === "paused" ? "past_due" : mappedStatus,
+      current_period_end: periodEnd,
+      cancelled_at: cancelledAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_subscription_id", subscription.id);
+}
+
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
   const supabase = createAdminClient();
   const subscriptionId = getSubscriptionIdFromInvoice(invoice);
@@ -793,6 +1116,54 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
         paused_at: null,
       })
       .eq("id", student.id);
+  }
+
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  await syncWeeklySubscriptionStatus(supabase, subscription, "active");
+
+  const { data: weeklySubscription } = await supabase
+    .from("client_subscriptions")
+    .select("id, client_id, diviner_id, product_id")
+    .eq("stripe_subscription_id", subscriptionId)
+    .eq("subscription_type", "weekly_updates")
+    .maybeSingle();
+
+  if (weeklySubscription && invoice.amount_paid > 0) {
+    const affiliateCode = subscription.metadata?.affiliateCode;
+    const orderRef = `weekly-subscription-invoice:${invoice.id}`;
+
+    if (affiliateCode) {
+      await recordAffiliateCommission({
+        affiliateCode,
+        amountCents: invoice.amount_paid,
+        orderRef,
+        productType: "weekly_subscription",
+        divinerId: weeklySubscription.diviner_id,
+      });
+    }
+
+    const affiliateCommissionCents =
+      await getAffiliateCommissionTotalForOrderRef(orderRef);
+
+    await recordRevenueLedgerEntry({
+      sourceType: "weekly_subscription_invoice",
+      sourceReference: invoice.id,
+      sourceId: weeklySubscription.id,
+      divinerId: weeklySubscription.diviner_id,
+      clientId: weeklySubscription.client_id,
+      productId: weeklySubscription.product_id,
+      grossAmountCents: invoice.amount_paid,
+      platformFeeCents: Math.round(
+        invoice.amount_paid *
+          (WEEKLY_SUBSCRIPTION_PLATFORM_SHARE_PERCENT / 100),
+      ),
+      affiliateCommissionCents,
+      currency: invoice.currency,
+      metadata: {
+        stripeInvoiceId: invoice.id,
+        stripeSubscriptionId: subscriptionId,
+      },
+    });
   }
 }
 
@@ -857,10 +1228,13 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
             ? new Date(invoice.next_payment_attempt * 1000).toLocaleDateString()
             : "soon",
           billingPortalUrl: `${process.env.NEXT_PUBLIC_APP_URL}/community/plan?tab=billing`,
-        }).catch(() => {});
-      }
+      }).catch(() => {});
     }
   }
+
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  await syncWeeklySubscriptionStatus(supabase, subscription, "past_due");
+}
 
   // Mystery School: keep access state unchanged for payment failure.
   // Stripe will send subscription.updated / deleted when the lifecycle actually changes.
@@ -874,6 +1248,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       : (subscription.customer as Stripe.Customer).id;
 
   await handleMysterySchoolSubscriptionUpdated(subscription);
+  await syncWeeklySubscriptionStatus(adminClient, subscription);
 
   // ── Diviner SaaS plan upsert ────────────────────────────────────────────────
   await upsertDivinerPlanSubscription(adminClient, subscription, customerId);
@@ -1066,6 +1441,8 @@ async function handleSubscriptionDeleted(
   const now = new Date().toISOString();
   const periodEnd = getSubscriptionPeriodEndIso(subscription) ?? now;
 
+  await syncWeeklySubscriptionStatus(supabase, subscription, "cancelled");
+
   // Diviner legacy subscription cancelled
   await supabase
     .from("diviners")
@@ -1224,8 +1601,43 @@ async function handlePaymentIntentSucceeded(
     return;
   }
 
+  const phoneSessionId =
+    paymentIntent.metadata?.phone_session_id ??
+    paymentIntent.metadata?.phoneSessionId;
+  if (phoneSessionId) {
+    const supabase = createAdminClient();
+    const { data: phoneSession } = await supabase
+      .from("phone_sessions")
+      .select("id, diviner_id, client_id, booking_id, amount_charged")
+      .eq("id", phoneSessionId)
+      .maybeSingle();
+
+    if (phoneSession) {
+      await recordRevenueLedgerEntry({
+        sourceType: "telephony",
+        sourceReference: `phone-session:${phoneSession.id}`,
+        sourceId: phoneSession.id,
+        divinerId: phoneSession.diviner_id,
+        clientId: phoneSession.client_id,
+        grossAmountCents:
+          Math.round(Number(phoneSession.amount_charged ?? 0) * 100) ||
+          paymentIntent.amount,
+        platformFeeCents:
+          Number(paymentIntent.application_fee_amount ?? 0) ||
+          Math.round(paymentIntent.amount * (PRICING.platformFeePercent / 100)),
+        currency: paymentIntent.currency,
+        metadata: {
+          stripePaymentIntentId: paymentIntent.id,
+          bookingId: phoneSession.booking_id ?? null,
+        },
+      });
+    }
+    return;
+  }
+
   const bookingId = paymentIntent.metadata?.bookingId;
   const clientEmail = paymentIntent.metadata?.clientEmail;
+  const affiliateCode = paymentIntent.metadata?.affiliateCode;
   if (!bookingId || !clientEmail) return;
 
   const supabase = createAdminClient();
@@ -1240,7 +1652,7 @@ async function handlePaymentIntentSucceeded(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, duration_minutes, base_price, diviner_id, client_id, metadata, questionnaire_responses, services(name, duration_minutes), diviners(id, display_name, user_id), clients(email, full_name, user_id)"
+      "id, booking_token, scheduled_at, duration_minutes, base_price, diviner_id, client_id, service_id, metadata, questionnaire_responses, services(id, name, slug, category, duration_minutes, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields), diviners(id, display_name, user_id), clients(id, email, full_name, user_id)"
     )
     .eq("id", bookingId)
     .single();
@@ -1248,8 +1660,20 @@ async function handlePaymentIntentSucceeded(
   if (!booking) return;
 
   const svc = (booking as Record<string, unknown>).services as {
+    id: string;
     name: string;
+    slug?: string | null;
+    category?: string | null;
     duration_minutes: number;
+    requires_birth_data?: boolean | null;
+    intake_template_id?: string | null;
+    product_kind?: string | null;
+    is_subscription?: boolean | null;
+    requires_birth_time?: boolean | null;
+    requires_birth_city?: boolean | null;
+    requires_partner_data?: boolean | null;
+    pre_checkout_fields?: unknown;
+    post_checkout_fields?: unknown;
   } | null;
   const div = (booking as Record<string, unknown>).diviners as {
     id: string;
@@ -1257,6 +1681,7 @@ async function handlePaymentIntentSucceeded(
     user_id: string;
   } | null;
   const clientRecord = (booking as Record<string, unknown>).clients as {
+    id: string;
     email: string;
     full_name: string | null;
     user_id: string | null;
@@ -1268,6 +1693,57 @@ async function handlePaymentIntentSucceeded(
   const eventTitle = bookingMeta?.availability_title ?? svc?.name;
 
   if (!svc || !div) return;
+
+  const orderId = await ensureOrderForBooking(supabase, {
+    bookingId,
+    clientId:
+      clientRecord?.id ??
+      ((booking as Record<string, unknown>).client_id as string),
+    divinerId: div.id,
+    serviceId: svc.id ?? ((booking as Record<string, unknown>).service_id as string),
+    service: svc,
+    amountCents: paymentIntent.amount,
+    currency: paymentIntent.currency ?? "usd",
+    stripePaymentIntentId: paymentIntent.id,
+    status: getOrderStatusForService(svc, true),
+    paidAt: new Date().toISOString(),
+  });
+
+  if (affiliateCode) {
+    await recordAffiliateCommission({
+      affiliateCode,
+      amountCents: paymentIntent.amount,
+      orderRef: `booking:${bookingId}`,
+      productType: "booking",
+      divinerId: div.id,
+    });
+  }
+
+  const orderReference = `booking:${bookingId}`;
+  const affiliateCommissionCents =
+    await getAffiliateCommissionTotalForOrderRef(orderReference);
+
+  await recordRevenueLedgerEntry({
+    sourceType: "booking",
+    sourceReference: orderReference,
+    sourceId: orderId,
+    divinerId: div.id,
+    clientId: clientRecord?.id ?? ((booking as Record<string, unknown>).client_id as string),
+    productId: svc.id,
+    grossAmountCents:
+      Number(paymentIntent.metadata?.grossAmountCents ?? paymentIntent.amount) ||
+      paymentIntent.amount,
+    platformFeeCents:
+      Number(paymentIntent.metadata?.platformFeeCents ?? paymentIntent.application_fee_amount ?? 0) ||
+      0,
+    affiliateCommissionCents,
+    currency: paymentIntent.currency,
+    metadata: {
+      stripePaymentIntentId: paymentIntent.id,
+      bookingId,
+      orderId,
+    },
+  });
 
   // Calendar connection checks — createCalendarEvent handles lookup internally,
   // but we still need flags for Microsoft calendar
@@ -1291,7 +1767,7 @@ async function handlePaymentIntentSucceeded(
       userId: clientRecord.user_id,
       eventCategory: 'payment',
       eventType: 'payment.succeeded',
-      metadata: { amount, bookingId, divinerId: booking.diviner_id },
+      metadata: { amount, bookingId, orderId, divinerId: booking.diviner_id },
     })
     logActivity({
       userId: clientRecord.user_id,
@@ -1308,6 +1784,9 @@ async function handlePaymentIntentSucceeded(
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
   const sessionLink = `${appUrl}/session/${bookingId}`;
+  const portalOrderUrl = `${appUrl}/login?redirect=${encodeURIComponent(
+    `/portal/orders/${orderId}`
+  )}`;
   const startTime = new Date(booking.scheduled_at);
   const durationMins = booking.duration_minutes ?? svc.duration_minutes;
   const endTime = new Date(startTime.getTime() + durationMins * 60 * 1000);
@@ -1373,7 +1852,7 @@ async function handlePaymentIntentSucceeded(
     amount: Number(booking.base_price ?? paidAmount),
     totalPaid: paidAmount,
     bookingId,
-    portalUrl: `${appUrl}/portal/bookings`,
+    portalUrl: portalOrderUrl,
   }).catch((err) =>
     console.error("[Webhook] Failed to send booking invoice:", err)
   );
@@ -1421,7 +1900,7 @@ async function handlePaymentIntentSucceeded(
       description: buildCalendarDescription(
         bookingMeta?.availability_description ?? null,
         appUrl,
-        bookingId,
+        booking.booking_token as string | undefined,
       ),
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { selectLessonQuestionsForLearnerCompat } from "@/lib/training/admin-quiz-questions";
+import { listCorrectQuizQuestionProgress } from "@/lib/training/quiz-question-progress";
 
 export const dynamic = "force-dynamic";
 
@@ -163,7 +164,14 @@ export async function GET(
   }
 
   // Fetch user's completion + latest quiz attempt status + quiz triggers + progress
-  const [completionResult, quizAttemptResult, triggersResult, triggerProgressResult, lessonProgressResult] =
+  const [
+    completionResult,
+    quizAttemptResult,
+    triggersResult,
+    triggerProgressResult,
+    lessonProgressResult,
+    quizQuestionProgressResult,
+  ] =
     await Promise.all([
       admin
         .from("lesson_completions")
@@ -203,6 +211,7 @@ export async function GET(
         .eq("user_id", user.id)
         .eq("lesson_id", id)
         .maybeSingle(),
+      listCorrectQuizQuestionProgress(admin, user.id, id),
     ]);
 
   // Build a map of trigger_id -> user_progress for quick lookup
@@ -245,6 +254,8 @@ export async function GET(
       quiz_last_score: quizAttemptResult.data?.score ?? null,
       quiz_last_total: quizAttemptResult.data?.total_questions ?? null,
       quiz_last_attempted_at: quizAttemptResult.data?.attempted_at ?? null,
+      quiz_progress: quizQuestionProgressResult.progress,
+      quiz_progress_supported: quizQuestionProgressResult.supported,
       triggers,
       last_position_seconds: lessonProgressResult.data?.last_position_seconds ?? 0,
     },

@@ -60,12 +60,12 @@ export default async function TraineeProfilePage() {
   if (!user) redirect("/login");
 
   const { data: trainee } = await supabase
-    .from("trainees")
-    .select(
-      "id, name, email, username, bio, specialties, training_status, mentor_diviner_id, graduated_at, created_at"
-    )
-    .eq("user_id", user.id)
-    .single();
+      .from("trainees")
+      .select(
+        "id, name, email, username, bio, specialties, phone, timezone, goals, training_status, mentor_diviner_id, graduated_at, created_at"
+      )
+      .eq("user_id", user.id)
+      .single();
 
   if (!trainee) redirect("/join/trainee");
 
@@ -73,7 +73,7 @@ export default async function TraineeProfilePage() {
 
   // Fetch avatar_url separately (added in migration 20260406000016)
   // and mentor + progress in parallel
-  const [avatarResult, mentorResult, progressResult] = await Promise.all([
+  const [avatarResult, mentorResult, progressResult, clientResult] = await Promise.all([
     admin
       .from("trainees")
       .select("avatar_url")
@@ -90,6 +90,11 @@ export default async function TraineeProfilePage() {
       .from("user_program_progress")
       .select("total_lessons, completed_lessons, progress_pct")
       .eq("user_id", user.id),
+    admin
+      .from("clients")
+      .select("birth_date, birth_time, birth_city")
+      .eq("user_id", user.id)
+      .maybeSingle(),
   ]);
 
   const avatarUrl =
@@ -103,6 +108,11 @@ export default async function TraineeProfilePage() {
     completed_lessons: number;
     progress_pct: number;
   }[] | null) ?? [];
+  const clientProfile = clientResult.data as {
+    birth_date?: string | null;
+    birth_time?: string | null;
+    birth_city?: string | null;
+  } | null;
 
   const totalLessons = progressRows.reduce((sum, r) => sum + (r.total_lessons ?? 0), 0);
   const completedLessons = progressRows.reduce((sum, r) => sum + (r.completed_lessons ?? 0), 0);
@@ -138,6 +148,12 @@ export default async function TraineeProfilePage() {
             avatarUrl={avatarUrl}
             username={trainee.username}
             allowedSpecialties={ALLOWED_SPECIALTIES}
+            phone={trainee.phone ?? null}
+            timezone={trainee.timezone ?? null}
+            goals={trainee.goals ?? null}
+            birthDate={clientProfile?.birth_date ?? null}
+            birthTime={clientProfile?.birth_time ?? null}
+            birthCity={clientProfile?.birth_city ?? null}
           />
         </CardContent>
       </Card>

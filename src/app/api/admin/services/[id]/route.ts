@@ -56,6 +56,8 @@ export async function PUT(
   if (typeof body.is_primary === "boolean") update.is_primary = body.is_primary;
   if (typeof body.requires_birth_data === "boolean") update.requires_birth_data = body.requires_birth_data;
   if (typeof body.sort_order === "number") update.sort_order = body.sort_order;
+  if (typeof body.pricing_item_key === "string") update.pricing_item_key = body.pricing_item_key.trim() || null;
+  if (body.pricing_item_key === null) update.pricing_item_key = null;
 
   const admin = createAdminClient();
   const { data, error } = await admin

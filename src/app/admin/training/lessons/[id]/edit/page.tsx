@@ -52,7 +52,6 @@ interface QuizQuestion {
   remediation_video_index?: number | null;
   remediation_start_seconds?: number | null;
   remediation_replay_until_seconds?: number | null;
-  remediation_message?: string | null;
 }
 
 const ASSET_TYPES = ["pdf", "doc", "image", "link", "other"] as const;
@@ -164,7 +163,6 @@ export default function EditLessonPage() {
     remediation_video_index: "",
     remediation_start_seconds: "",
     remediation_replay_until_seconds: "",
-    remediation_message: "",
   });
   const [quizSaving, setQuizSaving] = useState(false);
 
@@ -449,7 +447,6 @@ export default function EditLessonPage() {
           remediation_video_index: remIndex,
           remediation_start_seconds: remStart,
           remediation_replay_until_seconds: remUntil,
-          remediation_message: quizForm.remediation_message.trim() || null,
         }),
       });
       const data = await res.json();
@@ -470,7 +467,6 @@ export default function EditLessonPage() {
         remediation_video_index: "",
         remediation_start_seconds: "",
         remediation_replay_until_seconds: "",
-        remediation_message: "",
       });
       await loadQuestions();
     } catch {
@@ -1492,27 +1488,11 @@ export default function EditLessonPage() {
                     />
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label
-                    className="text-xs font-medium"
-                    htmlFor="q-rem-message"
-                  >
-                    Wrong-answer message
-                  </label>
-                  <input
-                    id="q-rem-message"
-                    type="text"
-                    value={quizForm.remediation_message}
-                    onChange={(e) =>
-                      setQuizForm((p) => ({
-                        ...p,
-                        remediation_message: e.target.value,
-                      }))
-                    }
-                    placeholder="Let's review this part of the video, then try again."
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  Learners see the standard message: “That answer is not
+                  correct. Replaying the relevant video segment, then you can
+                  try again.”
+                </p>
               </div>
 
               <Button type="submit" size="sm" disabled={quizSaving}>

@@ -22,7 +22,7 @@ export default async function CommunityLayout({ children }: { children: React.Re
   // throwing a PostgREST single-row error.
   const { data: member } = await supabase
     .from("community_members")
-    .select("id, full_name, first_name, membership_type, membership_status")
+    .select("id, full_name, first_name, membership_type, membership_status, onboarding_completed")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -33,7 +33,7 @@ export default async function CommunityLayout({ children }: { children: React.Re
 
   // New members who haven't completed onboarding get a minimal layout
   // that client-side redirects to the onboarding wizard (unless already there).
-  if (!member.first_name) {
+  if (!member.onboarding_completed) {
     return (
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-20 border-b bg-background">

@@ -182,7 +182,8 @@ function buildWindowsForDate({
       if (template.isActive === false) return false;
       if (!allTemplates) {
         if (serviceId) {
-          if (template.serviceId !== serviceId) return false;
+          // Include templates that match this service OR generic templates (no service_id)
+          if (template.serviceId && template.serviceId !== serviceId) return false;
         } else if (template.serviceId) {
           return false;
         }

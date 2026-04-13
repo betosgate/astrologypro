@@ -61,7 +61,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -99,9 +99,18 @@ export default function LoginPage() {
     setMagicError("");
     setMagicLoading(true);
     try {
+      const redirectParam = new URLSearchParams(window.location.search).get("redirect");
+      const isTrustedRedirect =
+        !!redirectParam &&
+        PORTAL_BASES.some(
+          (base) => redirectParam === base || redirectParam.startsWith(base + "/")
+        );
+      const redirectTarget = isTrustedRedirect
+        ? `${APP_URL}/auth/callback?next=${encodeURIComponent(redirectParam)}`
+        : `${APP_URL}/auth/callback`;
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: magicEmail,
-        options: { emailRedirectTo: `${APP_URL}/auth/callback` },
+        options: { emailRedirectTo: redirectTarget },
       });
       if (otpError) { setMagicError(otpError.message); return; }
       setMagicSent(true);

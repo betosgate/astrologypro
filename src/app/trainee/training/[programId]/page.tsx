@@ -199,11 +199,13 @@ export default async function ProgramDetailPage({
             null;
 
           const initialLesson =
-            initialCategory?.next_lesson_id ??
+            initialCategory?.lessons.find(
+              (l) => l.id === initialCategory.next_lesson_id && !l.is_locked,
+            )?.id ??
             initialCategory?.lessons.find(
               (l) => !l.is_locked && !l.completed,
             )?.id ??
-            initialCategory?.lessons[0]?.id ??
+            initialCategory?.lessons.find((l) => !l.is_locked)?.id ??
             null;
 
           return (

@@ -86,6 +86,12 @@ interface TelephonyRecord {
   rate_per_minute: number;
   amount_cents: number;
   billed_at: string | null;
+  invoice_id: string | null;
+  diviner_invoices: {
+    invoice_url: string | null;
+    status: string;
+    created_at: string;
+  }[] | null;
   created_at: string;
 }
 
@@ -179,7 +185,7 @@ export default async function BillingPage() {
         .limit(12),
       admin
         .from("telephony_usage_records")
-        .select("id, duration_seconds, participant_count, rate_per_minute, amount_cents, billed_at, created_at")
+        .select("id, duration_seconds, participant_count, rate_per_minute, amount_cents, billed_at, invoice_id, created_at, diviner_invoices(invoice_url, status, created_at)")
         .eq("diviner_id", divinerId)
         .gte("created_at", sixMonthsAgo.toISOString())
         .order("created_at", { ascending: false }),
@@ -192,7 +198,14 @@ export default async function BillingPage() {
   const subscription = subResult.data as PlanSubscription | null;
   const activeAddons = (addonsResult.data ?? []) as unknown as ActiveAddon[];
   const invoices = (invoicesResult.data ?? []) as Invoice[];
-  const telephonyRecords = (telephonyResult.data ?? []) as TelephonyRecord[];
+  const telephonyRecords = ((telephonyResult.data ?? []) as unknown as TelephonyRecord[]).map((record) => ({
+    ...record,
+    diviner_invoices: Array.isArray(record.diviner_invoices)
+      ? record.diviner_invoices
+      : record.diviner_invoices
+        ? [record.diviner_invoices]
+        : null,
+  }));
   const allAddons = (allAddonsResult.data ?? []) as AddonDef[];
 
   // Determine active addon IDs for promo display
@@ -202,6 +215,11 @@ export default async function BillingPage() {
 
   // Calculate telephony total this period
   const telephonyTotal = telephonyRecords.reduce((sum, r) => sum + r.amount_cents, 0);
+  const pendingTelephonyTotal = telephonyRecords
+    .filter((r) => !r.billed_at)
+    .reduce((sum, r) => sum + r.amount_cents, 0);
+  const billedTelephonyTotal = telephonyTotal - pendingTelephonyTotal;
+  const pendingTelephonyCount = telephonyRecords.filter((r) => !r.billed_at).length;
 
   return (
     <div className="space-y-8">
@@ -443,6 +461,39 @@ export default async function BillingPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 grid gap-4 md:grid-cols-3">
+            <div className="rounded-lg border p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Pending Charges
+              </p>
+              <p className="mt-2 text-2xl font-bold">
+                {formatCents(pendingTelephonyTotal)}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {pendingTelephonyCount} usage record{pendingTelephonyCount === 1 ? "" : "s"} not yet invoiced
+              </p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Already Invoiced
+              </p>
+              <p className="mt-2 text-2xl font-bold">
+                {formatCents(billedTelephonyTotal)}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Charges already attached to generated billing records
+              </p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Billing Policy
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Phone usage is billed as pass-through cost only. Pending charges move into your invoice when the telephony billing job runs.
+              </p>
+            </div>
+          </div>
+
           {telephonyRecords.length === 0 ? (
             <p className="text-sm text-muted-foreground">No telephony usage recorded.</p>
           ) : (
@@ -456,6 +507,7 @@ export default async function BillingPage() {
                     <TableHead>Rate / min</TableHead>
                     <TableHead className="text-right">Charge</TableHead>
                     <TableHead>Billed</TableHead>
+                    <TableHead className="text-right">Invoice</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -481,6 +533,25 @@ export default async function BillingPage() {
                           <Badge variant="secondary" className="text-xs">
                             Pending
                           </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right text-sm">
+                        {rec.diviner_invoices?.[0]?.invoice_url ? (
+                          <a
+                            href={rec.diviner_invoices[0].invoice_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-amber-500 hover:underline"
+                          >
+                            Open
+                            <ExternalLink className="size-3" />
+                          </a>
+                        ) : rec.invoice_id ? (
+                          <span className="text-xs text-muted-foreground">
+                            {rec.diviner_invoices?.[0]?.status ?? "Invoiced"}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Pending</span>
                         )}
                       </TableCell>
                     </TableRow>

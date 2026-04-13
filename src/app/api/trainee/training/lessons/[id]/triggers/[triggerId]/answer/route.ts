@@ -180,8 +180,7 @@ export async function POST(
     }
 
     if (allTriggersNowPassed) {
-      await completeLessonAndProgressForUser(admin, user.id, lessonId, now);
-      return NextResponse.json({ correct: true, lesson_complete: true });
+      return NextResponse.json({ correct: true, all_triggers_passed: true });
     }
 
     return NextResponse.json({ correct: true });

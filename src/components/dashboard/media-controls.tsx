@@ -11,9 +11,11 @@ import Link from "next/link";
 export function MediaActiveToggle({
   itemId,
   active,
+  blocked = false,
 }: {
   itemId: string;
   active: boolean;
+  blocked?: boolean;
 }) {
   const router = useRouter();
 
@@ -31,15 +33,17 @@ export function MediaActiveToggle({
     router.refresh();
   }
 
-  return <Switch checked={active} onCheckedChange={handleToggle} size="sm" />;
+  return <Switch checked={active} onCheckedChange={handleToggle} size="sm" disabled={blocked} />;
 }
 
 export function MediaFeaturedToggle({
   itemId,
   featured,
+  blocked = false,
 }: {
   itemId: string;
   featured: boolean;
+  blocked?: boolean;
 }) {
   const router = useRouter();
 
@@ -57,7 +61,7 @@ export function MediaFeaturedToggle({
     router.refresh();
   }
 
-  return <Switch checked={featured} onCheckedChange={handleToggle} size="sm" />;
+  return <Switch checked={featured} onCheckedChange={handleToggle} size="sm" disabled={blocked} />;
 }
 
 export function MediaDeleteButton({ itemId }: { itemId: string }) {
@@ -103,11 +107,9 @@ export function MediaEditButton({ itemId }: { itemId: string }) {
 
 export function MediaReorderButtons({
   itemId,
-  sortOrder,
   allItems,
 }: {
   itemId: string;
-  sortOrder: number;
   allItems: { id: string; sort_order: number }[];
 }) {
   const router = useRouter();

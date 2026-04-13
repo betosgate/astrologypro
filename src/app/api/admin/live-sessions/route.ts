@@ -95,31 +95,20 @@ export async function GET(req: NextRequest) {
 
   const rows = data ?? [];
 
-  // Fetch check-in counts per session in a single query
+  // Fetch exact check-in counts per session in a single query
   const sessionIds = rows.map((r) => r.id);
-  let checkInCounts: Record<string, number> = {};
+  const checkInCounts: Record<string, number> = {};
 
   if (sessionIds.length > 0) {
-    // We count check_ins per diviner_id+session combination. Since check_ins
-    // don't store session_id directly, we approximate by counting check_ins
-    // that occurred between started_at and ended_at (or now) for each diviner.
-    // For simplicity and performance, we fetch counts grouped by diviner_id
-    // within the session's time window.
-    // A more accurate approach would require a session_id FK on check_ins,
-    // but the schema does not have that. We sum up all check_ins per diviner
-    // per session's active window.
-    for (const row of rows) {
-      const startTime = row.started_at ?? row.scheduled_at ?? row.created_at;
-      const endTime = row.ended_at ?? new Date().toISOString();
+    const { data: checkIns } = await admin
+      .from("check_ins")
+      .select("live_session_id")
+      .in("live_session_id", sessionIds);
 
-      const { count: cnt } = await admin
-        .from("check_ins")
-        .select("id", { count: "exact", head: true })
-        .eq("diviner_id", (row.diviners as unknown as { id: string } | null)?.id ?? "")
-        .gte("created_at", startTime)
-        .lte("created_at", endTime);
-
-      checkInCounts[row.id] = cnt ?? 0;
+    for (const row of checkIns ?? []) {
+      const liveSessionId = row.live_session_id as string | null;
+      if (!liveSessionId) continue;
+      checkInCounts[liveSessionId] = (checkInCounts[liveSessionId] ?? 0) + 1;
     }
   }
 

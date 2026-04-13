@@ -25,7 +25,6 @@ export interface TrainingQuizQuestionFormValue {
   remediation_video_index: number | null;
   remediation_start_seconds: number | null;
   remediation_replay_until_seconds: number | null;
-  remediation_message: string | null;
 }
 
 export interface TrainingQuizFormValue {
@@ -60,7 +59,6 @@ type QuestionDraft = {
   remediation_video_index: string;
   remediation_start_seconds: string;
   remediation_replay_until_seconds: string;
-  remediation_message: string;
 };
 
 const EMPTY_DRAFT: QuestionDraft = {
@@ -75,7 +73,6 @@ const EMPTY_DRAFT: QuestionDraft = {
   remediation_video_index: "",
   remediation_start_seconds: "",
   remediation_replay_until_seconds: "",
-  remediation_message: "",
 };
 
 function toDraft(question: TrainingQuizQuestionFormValue): QuestionDraft {
@@ -96,7 +93,6 @@ function toDraft(question: TrainingQuizQuestionFormValue): QuestionDraft {
       question.remediation_replay_until_seconds != null
         ? String(question.remediation_replay_until_seconds)
         : "",
-    remediation_message: question.remediation_message ?? "",
   };
 }
 
@@ -146,7 +142,6 @@ function buildQuestion(draft: QuestionDraft): TrainingQuizQuestionFormValue | nu
     remediation_video_index: parseIntOrNull(draft.remediation_video_index),
     remediation_start_seconds: remStart,
     remediation_replay_until_seconds: remUntil,
-    remediation_message: draft.remediation_message.trim() || null,
   };
 }
 
@@ -470,15 +465,11 @@ export function TrainingQuizForm({
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="rem-message">Wrong-answer message</Label>
-                    <Input
-                      id="rem-message"
-                      value={draft.remediation_message}
-                      onChange={(e) => updateDraft("remediation_message", e.target.value)}
-                      placeholder="Let's review this part of the video, then try again."
-                    />
-                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Learners see the standard message: “That answer is not
+                    correct. Replaying the relevant video segment, then you can
+                    try again.”
+                  </p>
                 </div>
 
                 <div className="flex gap-2">
@@ -568,17 +559,13 @@ export function TrainingQuizForm({
                           ))}
                         </div>
                         {(question.remediation_start_seconds != null ||
-                          question.remediation_replay_until_seconds != null ||
-                          question.remediation_message) && (
+                          question.remediation_replay_until_seconds != null) && (
                           <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
                             Remediation:
                             {" "}
                             start {question.remediation_start_seconds ?? "—"}s,
                             until {question.remediation_replay_until_seconds ?? "—"}s,
                             video index {question.remediation_video_index ?? "—"}
-                            {question.remediation_message
-                              ? `, message: ${question.remediation_message}`
-                              : ""}
                           </div>
                         )}
                       </CardContent>

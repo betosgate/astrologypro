@@ -163,7 +163,6 @@ export async function GET(request: NextRequest) {
   // reminder is due but not yet sent. We load the event + person rows together.
 
   const today = new Date();
-  const todayStr = today.toISOString().split("T")[0];
   const plus30 = new Date(today);
   plus30.setDate(plus30.getDate() + 30);
   const plus30Str = plus30.toISOString().split("T")[0];
@@ -282,6 +281,127 @@ export async function GET(request: NextRequest) {
       console.error("[return-event-reminders] Error sending reminder for event", evt.id, err);
       errors++;
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Phase 4: Send reminders for anonymous/public check-ins with birth dates
+  // -------------------------------------------------------------------------
+
+  let checkInOffset = 0;
+  while (true) {
+    const { data: checkIns, error: checkInsError } = await admin
+      .from("check_ins")
+      .select("id, diviner_id, first_name, last_name, email, birth_date, diviners(username)")
+      .not("birth_date", "is", null)
+      .order("id")
+      .range(checkInOffset, checkInOffset + BATCH_SIZE - 1);
+
+    if (checkInsError) {
+      console.error("[return-event-reminders] Error fetching check-ins:", checkInsError);
+      errors++;
+      break;
+    }
+
+    if (!checkIns || checkIns.length === 0) break;
+
+    for (const checkIn of checkIns) {
+      try {
+        const birthDate = new Date(checkIn.birth_date as string);
+        const events = [
+          ...computeSaturnReturns(birthDate),
+          ...computeJupiterReturns(birthDate),
+          computeSolarReturn(birthDate),
+        ];
+
+        for (const evt of events) {
+          const daysUntil = Math.round(
+            (evt.eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+          );
+
+          const reminderWindow = getReminderWindow(daysUntil);
+          if (!reminderWindow) continue;
+
+          const eventDateIso = evt.eventDate.toISOString().split("T")[0];
+          const { data: existingReminder } = await admin
+            .from("check_in_return_reminder_log")
+            .select("id")
+            .eq("check_in_id", checkIn.id)
+            .eq("event_type", evt.eventType)
+            .eq("event_date", eventDateIso)
+            .eq("reminder_window", reminderWindow)
+            .maybeSingle();
+
+          if (existingReminder) continue;
+
+          const formattedDate = evt.eventDate.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+          const divinerUsername =
+            ((checkIn.diviners as { username?: string } | null)?.username ?? "").trim();
+          const landingUrl = divinerUsername
+            ? `/${divinerUsername}`
+            : landingPageForEvent(evt.eventType);
+          const name =
+            `${(checkIn.first_name as string | null) ?? ""}`.trim() ||
+            `${(checkIn.last_name as string | null) ?? ""}`.trim() ||
+            "Friend";
+          const email = (checkIn.email as string).trim().toLowerCase();
+
+          if (evt.eventType === "saturn_return") {
+            await sendSaturnReturnReminder({
+              to: email,
+              name,
+              eventDate: formattedDate,
+              daysUntil,
+              occurrenceNumber: evt.occurrenceNumber,
+              landingPageUrl: landingUrl,
+            });
+          } else if (evt.eventType === "jupiter_return") {
+            await sendJupiterReturnReminder({
+              to: email,
+              name,
+              eventDate: formattedDate,
+              daysUntil,
+              occurrenceNumber: evt.occurrenceNumber,
+              landingPageUrl: landingUrl,
+            });
+          } else {
+            await sendSolarReturnReminder({
+              to: email,
+              name,
+              eventDate: formattedDate,
+              daysUntil,
+              landingPageUrl: landingUrl,
+            });
+          }
+
+          await admin.from("check_in_return_reminder_log").insert({
+            check_in_id: checkIn.id,
+            diviner_id: checkIn.diviner_id,
+            email,
+            event_type: evt.eventType,
+            event_date: eventDateIso,
+            occurrence_number:
+              "occurrenceNumber" in evt ? evt.occurrenceNumber : null,
+            reminder_window: reminderWindow,
+          });
+
+          emailsSent++;
+        }
+      } catch (err) {
+        console.error(
+          "[return-event-reminders] Error processing check-in reminder",
+          checkIn.id,
+          err
+        );
+        errors++;
+      }
+    }
+
+    if (checkIns.length < BATCH_SIZE) break;
+    checkInOffset += BATCH_SIZE;
   }
 
   console.log(
