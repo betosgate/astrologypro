@@ -200,130 +200,15 @@ export async function POST(
     );
   }
 
-  // If passed, mark lesson as complete — but only when the lesson has no active triggers.
-  // Trigger-based lessons are completed exclusively via the trigger answer route.
-  // This is the authoritative gate: if ANY active trigger exists, lesson completion
-  // must come through that path, never through quiz submission.
+  // If passed, clear per-question stepwise progress. Lesson completion
+  // is now handled exclusively via the manual /complete route.
   if (passed) {
     clearQuizQuestionProgress(admin, user.id, lessonId).catch((err) =>
       console.error("[quiz_question_progress] clear failed:", err),
     );
 
-    // Check trigger gate — if lesson has active triggers, block completion from here
-    const { data: activeTriggers } = await admin
-      .from("lesson_quiz_triggers")
-      .select("id")
-      .eq("lesson_id", lessonId)
-      .eq("is_active", true);
-
-    if (activeTriggers && activeTriggers.length > 0) {
-      // Quiz passed but lesson has active triggers — return quiz result only.
-      // The trigger answer route will complete the lesson once all triggers are passed.
-      return NextResponse.json({
-        score,
-        total,
-        passed: true,
-        results,
-        lesson_complete: false,
-        pending_triggers: true,
-        message: "Quiz passed. Complete the in-video questions to finish this lesson.",
-      });
-    }
-
-    const now = new Date().toISOString();
-
-    // Look up lesson_progress to carry started_at / time_spent_seconds into completion record
-    const { data: lessonProgress } = await admin
-      .from("lesson_progress")
-      .select("id, started_at, time_spent_seconds")
-      .eq("user_id", user.id)
-      .eq("lesson_id", lessonId)
-      .single();
-
-    // Mark lesson_progress.completed_at
-    if (lessonProgress) {
-      await admin
-        .from("lesson_progress")
-        .update({ completed_at: now })
-        .eq("id", lessonProgress.id);
-    }
-
-    // Upsert lesson_completions with time tracking fields
-    await admin
-      .from("lesson_completions")
-      .upsert(
-        {
-          user_id: user.id,
-          lesson_id: lessonId,
-          ...(lessonProgress?.started_at ? { started_at: lessonProgress.started_at } : {}),
-          ...(lessonProgress?.time_spent_seconds != null
-            ? { time_spent_seconds: lessonProgress.time_spent_seconds }
-            : {}),
-        },
-        { onConflict: "user_id,lesson_id", ignoreDuplicates: true }
-      );
-
-    // Check if category is now fully complete
-    const categoryId = lesson.category_id;
-    if (categoryId) {
-      const { count: totalCount } = await admin
-        .from("training_lessons")
-        .select("id", { count: "exact", head: true })
-        .eq("category_id", categoryId)
-        .eq("is_active", true);
-
-      if (totalCount && totalCount > 0) {
-        const { data: categoryLessons } = await admin
-          .from("training_lessons")
-          .select("id")
-          .eq("category_id", categoryId)
-          .eq("is_active", true);
-
-        const categoryLessonIds = (categoryLessons ?? []).map((l) => l.id);
-
-        const { count: completedCount } = await admin
-          .from("lesson_completions")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .in("lesson_id", categoryLessonIds);
-
-        if ((completedCount ?? 0) >= totalCount) {
-          // Aggregate started_at (min) and time_spent_seconds (sum) from lesson_progress
-          const { data: progressRows } = await admin
-            .from("lesson_progress")
-            .select("started_at, time_spent_seconds")
-            .eq("user_id", user.id)
-            .in("lesson_id", categoryLessonIds);
-
-          const catStartedAt =
-            progressRows && progressRows.length > 0
-              ? progressRows.reduce((min, r) =>
-                  r.started_at && (!min || r.started_at < min) ? r.started_at : min,
-                  null as string | null
-                )
-              : null;
-
-          const catTimeSpent =
-            progressRows && progressRows.length > 0
-              ? progressRows.reduce((sum, r) => sum + (r.time_spent_seconds ?? 0), 0)
-              : null;
-
-          await admin
-            .from("category_completions")
-            .upsert(
-              {
-                user_id: user.id,
-                category_id: categoryId,
-                ...(catStartedAt ? { started_at: catStartedAt } : {}),
-                ...(catTimeSpent != null ? { time_spent_seconds: catTimeSpent } : {}),
-              },
-              { onConflict: "user_id,category_id", ignoreDuplicates: true }
-            );
-        }
-      }
-    }
-
-    // Fire-and-forget: quiz passed email + graduation check
+    // Fire-and-forget: quiz passed email. Graduation and category checks
+    // are deferred until the learner clicks "Mark as Complete".
     const pct = Math.round((score / total) * 100);
     admin.auth.admin.getUserById(user.id).then(({ data: authUser }) => {
       const traineeEmail = authUser.user?.email ?? "";
@@ -342,12 +227,6 @@ export async function POST(
         }).catch(() => {});
       }
     }).catch(() => {});
-
-    // Graduation check — runs after category completion is recorded.
-    // The shared helper is idempotent and verifies all lessons are done.
-    checkAndAwardTrainingGraduation(user.id).catch((err) =>
-      console.error("[training-graduation] check failed:", err)
-    );
   }
 
   return NextResponse.json({ score, total, passed, results });

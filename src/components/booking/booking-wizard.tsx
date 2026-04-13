@@ -5,9 +5,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { CalendarPicker } from "./calendar-picker";
-import { IntakeForm, type IntakeData } from "./intake-form";
 import {
   ArrowLeft,
   ArrowRight,
@@ -23,6 +24,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { format } from "date-fns";
+import { getServicePurchaseConfig } from "@/lib/service-purchase";
 import { cn } from "@/lib/utils";
 import { formatInTimezone } from "@/lib/timezone-utils";
 import { loadStripe } from "@stripe/stripe-js";
@@ -47,6 +49,14 @@ interface Service {
   price?: number;
   category: string;
   requires_birth_data: boolean;
+  intake_template_id?: string | null;
+  product_kind?: string | null;
+  is_subscription?: boolean | null;
+  requires_birth_time?: boolean | null;
+  requires_birth_city?: boolean | null;
+  requires_partner_data?: boolean | null;
+  pre_checkout_fields?: unknown;
+  post_checkout_fields?: unknown;
 }
 
 interface Diviner {
@@ -83,26 +93,20 @@ interface BookingWizardProps {
 
 const STEPS = [
   { label: "Date & Time", icon: Calendar },
-  { label: "Your Details", icon: CreditCard },
+  { label: "Contact", icon: CreditCard },
   { label: "Confirm & Pay", icon: CheckCircle },
 ];
 
-const INITIAL_INTAKE: IntakeData = {
+interface BookingDetails {
+  fullName: string;
+  email: string;
+  phone: string;
+}
+
+const INITIAL_DETAILS: BookingDetails = {
   fullName: "",
   email: "",
   phone: "",
-  birthDate: "",
-  birthTime: "",
-  birthCity: "",
-  focusQuestion: "",
-  lifeArea: "",
-  secondPersonName: "",
-  secondPersonAttending: "",
-  secondPersonEmail: "",
-  secondPersonBirthDate: "",
-  secondPersonBirthTime: "",
-  secondPersonBirthCity: "",
-  extras: {},
 };
 
 function formatSlotDate(iso: string, timezone: string): string {
@@ -236,8 +240,7 @@ export function BookingWizard({
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
-  const [intakeData, setIntakeData] = useState<IntakeData>(INITIAL_INTAKE);
-  const [bookingNotes, setBookingNotes] = useState("");
+  const [bookingDetails, setBookingDetails] = useState<BookingDetails>(INITIAL_DETAILS);
   const [policyAcknowledged, setPolicyAcknowledged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // Stable session token for slot holds (persists for the lifetime of this wizard)
@@ -248,7 +251,11 @@ export function BookingWizard({
   );
   const [bookingComplete, setBookingComplete] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [requiresPostPaymentIntake, setRequiresPostPaymentIntake] = useState(
+    getServicePurchaseConfig(service).requiresPostPaymentIntake
+  );
   const [error, setError] = useState<string | null>(null);
   const [creatingPaymentIntent, setCreatingPaymentIntent] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
@@ -257,6 +264,7 @@ export function BookingWizard({
   const [clientTimezone, setClientTimezone] = useState(diviner.timezone || "UTC");
   const resolvedServiceName = hideServiceName ? (bookingLabel ?? "Reading Session") : (bookingLabel ?? service.name);
   const availabilityQuery = availabilityServiceId ? `&serviceId=${availabilityServiceId}` : "";
+  const purchaseConfig = getServicePurchaseConfig(service);
 
   // Effective price: slot's linked service price takes priority over the service prop's base_price
   const effectivePrice = selectedSlot?.servicePrice != null
@@ -290,14 +298,11 @@ export function BookingWizard({
 
         if (!client) return;
 
-        setIntakeData((prev) => ({
+        setBookingDetails((prev) => ({
           ...prev,
           fullName: client.full_name || prev.fullName,
           email: client.email || user.email || prev.email,
           phone: client.phone || prev.phone,
-          birthDate: client.birth_date || prev.birthDate,
-          birthTime: client.birth_time || prev.birthTime,
-          birthCity: client.birth_city || prev.birthCity,
         }));
         setPrefilled(true);
       } catch {
@@ -342,6 +347,9 @@ export function BookingWizard({
   useEffect(() => {
     if (!selectedDate) return;
 
+    // Capture requestedTimeIso at effect start so clearing it doesn't re-trigger
+    const pendingTimeIso = requestedTimeIso;
+
     async function fetchSlots() {
       setLoadingSlots(true);
       setSelectedSlot(null);
@@ -353,12 +361,12 @@ export function BookingWizard({
         if (res.ok) {
           const slots: TimeSlot[] = await res.json();
           setTimeSlots(slots);
-          if (requestedTimeIso) {
-            const requestedSlot = slots.find((slot) => slot.start === requestedTimeIso);
+          if (pendingTimeIso) {
+            const requestedSlot = slots.find((slot) => slot.start === pendingTimeIso);
             if (requestedSlot) {
               setSelectedSlot(requestedSlot);
-              setRequestedTimeIso(null);
             }
+            setRequestedTimeIso(null);
           }
         } else {
           setTimeSlots([]);
@@ -373,13 +381,12 @@ export function BookingWizard({
     }
 
     fetchSlots();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    requestedTimeIso,
     selectedDate,
     diviner.id,
     service.duration_minutes,
     availabilityQuery,
-    hasAutoAdvancedFromQuery,
   ]);
 
   function canProceed(): boolean {
@@ -389,10 +396,8 @@ export function BookingWizard({
       case 1:
         return !!(
           selectedSlot &&
-          intakeData.fullName.trim() &&
-          intakeData.email.trim() &&
-          intakeData.focusQuestion.trim() &&
-          intakeData.lifeArea
+          bookingDetails.fullName.trim() &&
+          bookingDetails.email.trim()
         );
       case 2:
         return true;
@@ -409,46 +414,31 @@ export function BookingWizard({
       const urlParams = new URLSearchParams(window.location.search);
       const affiliateCode = urlParams.get("ref") || undefined;
 
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30_000);
+
       const res = await fetch("/api/stripe/booking-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           divinerId: diviner.id,
           divinerUsername: diviner.username,
           serviceId: service.id,
           scheduledAt: selectedSlot!.start,
-          clientEmail: intakeData.email,
-          clientName: intakeData.fullName,
-          clientPhone: intakeData.phone || undefined,
-          questionnaire: {
-            focusQuestion: intakeData.focusQuestion,
-            lifeArea: intakeData.lifeArea,
-            birthDate: intakeData.birthDate || undefined,
-            birthTime: intakeData.birthTime || undefined,
-            birthCity: intakeData.birthCity || undefined,
-            birthLat: intakeData.birthLat,
-            birthLng: intakeData.birthLng,
-            birthTimezone: intakeData.birthTimezone,
-            secondPersonName: intakeData.secondPersonName || undefined,
-            secondPersonAttending: intakeData.secondPersonAttending || undefined,
-            secondPersonEmail: intakeData.secondPersonEmail || undefined,
-            secondPersonBirthDate: intakeData.secondPersonBirthDate || undefined,
-            secondPersonBirthTime: intakeData.secondPersonBirthTime || undefined,
-            secondPersonBirthCity: intakeData.secondPersonBirthCity || undefined,
-            secondPersonBirthLat: intakeData.secondPersonBirthLat,
-            secondPersonBirthLng: intakeData.secondPersonBirthLng,
-            secondPersonBirthTimezone: intakeData.secondPersonBirthTimezone,
-            ...intakeData.extras,
-          },
+          clientEmail: bookingDetails.email,
+          clientName: bookingDetails.fullName,
+          clientPhone: bookingDetails.phone || undefined,
+          questionnaire: {},
           affiliateCode,
-          booking_notes: bookingNotes.trim() || undefined,
           policyAcknowledgedAt: policyAcknowledged ? new Date().toISOString() : undefined,
         }),
       });
+      clearTimeout(timeout);
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Booking failed");
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Payment setup failed (${res.status})`);
       }
 
       const data = await res.json();
@@ -463,12 +453,24 @@ export function BookingWizard({
         if (data.bookingId) {
           setBookingId(data.bookingId);
         }
+        if (data.orderId) {
+          setOrderId(data.orderId);
+        }
+        setRequiresPostPaymentIntake(Boolean(data.requiresPostPaymentIntake));
       } else if (data.bookingId) {
         setBookingId(data.bookingId);
+        if (data.orderId) {
+          setOrderId(data.orderId);
+        }
+        setRequiresPostPaymentIntake(Boolean(data.requiresPostPaymentIntake));
         setBookingComplete(true);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setError("Payment setup timed out. Please try again.");
+      } else {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      }
     } finally {
       setCreatingPaymentIntent(false);
     }
@@ -519,6 +521,10 @@ export function BookingWizard({
   const sessionJoinUrl = bookingId
     ? `/${diviner.username}/session/${bookingId}`
     : null;
+  const portalOrderUrl = orderId ? `/portal/orders/${orderId}` : null;
+  const portalSignInUrl = portalOrderUrl
+    ? `/login?redirect=${encodeURIComponent(portalOrderUrl)}`
+    : null;
 
   const selectedAvailabilityTz = selectedSlot?.availabilityTimezone || "UTC";
 
@@ -553,12 +559,32 @@ export function BookingWizard({
             </div>
           )}
 
-          {/* Session Join Link */}
-          {sessionJoinUrl && (
+          {requiresPostPaymentIntake && portalSignInUrl && (
             <Button
               asChild
               className="mb-4 w-full gap-2 bg-amber-600 text-white hover:bg-amber-700"
               size="lg"
+            >
+              <a href={portalSignInUrl}>
+                <ExternalLink className="size-4" />
+                Complete Your Intake
+              </a>
+            </Button>
+          )}
+
+          {requiresPostPaymentIntake && (
+            <p className="mb-4 text-sm text-muted-foreground">
+              We’ll collect your birth details and product-specific questions after payment so checkout stays fast.
+            </p>
+          )}
+
+          {/* Session Join Link */}
+          {sessionJoinUrl && (
+            <Button
+              asChild
+              className="mb-4 w-full gap-2"
+              size="lg"
+              variant={requiresPostPaymentIntake ? "outline" : "default"}
             >
               <a href={sessionJoinUrl}>
                 <ExternalLink className="size-4" />
@@ -727,184 +753,226 @@ export function BookingWizard({
 
           {/* Step 2: Intake Questionnaire */}
           {step === 1 && (
-            <>
+            <div className="space-y-6">
               {prefilled && (
                 <div className="mb-4 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-400">
                   Welcome back! Your details are pre-filled from your last
                   session. Feel free to update anything before continuing.
                 </div>
               )}
-              <IntakeForm
-                requiresBirthData={service.requires_birth_data}
-                serviceSlug={service.slug}
-                serviceCategory={service.category}
-                data={intakeData}
-                onChange={setIntakeData}
-              />
-
-              {/* Notes & Special Requests */}
-              <div className="mt-5 space-y-2">
-                <label
-                  htmlFor="bookingNotes"
-                  className="block text-sm font-medium"
-                >
-                  Notes for your practitioner{" "}
-                  <span className="font-normal text-muted-foreground">
-                    (optional)
-                  </span>
-                </label>
-                <textarea
-                  id="bookingNotes"
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-                  rows={4}
-                  maxLength={1000}
-                  placeholder="Share anything that would help prepare for your session..."
-                  value={bookingNotes}
-                  onChange={(e) => setBookingNotes(e.target.value)}
-                />
-                <p className="text-right text-xs text-muted-foreground">
-                  {bookingNotes.length}/1000
-                </p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="booking-full-name">Full Name</Label>
+                  <Input
+                    id="booking-full-name"
+                    value={bookingDetails.fullName}
+                    onChange={(e) =>
+                      setBookingDetails((prev) => ({
+                        ...prev,
+                        fullName: e.target.value,
+                      }))
+                    }
+                    placeholder="Your full name"
+                    autoComplete="name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="booking-email">Email</Label>
+                  <Input
+                    id="booking-email"
+                    type="email"
+                    value={bookingDetails.email}
+                    onChange={(e) =>
+                      setBookingDetails((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
+                    }
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="booking-phone">
+                    Phone <span className="text-muted-foreground">(optional)</span>
+                  </Label>
+                  <Input
+                    id="booking-phone"
+                    type="tel"
+                    value={bookingDetails.phone}
+                    onChange={(e) =>
+                      setBookingDetails((prev) => ({
+                        ...prev,
+                        phone: e.target.value,
+                      }))
+                    }
+                    placeholder="+1 555 123 4567"
+                    autoComplete="tel"
+                  />
+                </div>
               </div>
-            </>
+
+              {purchaseConfig.requiresPostPaymentIntake && (
+                <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-muted-foreground">
+                  After payment, we&apos;ll ask only for the details needed for{" "}
+                  <span className="font-medium text-foreground">{resolvedServiceName}</span>.
+                  {purchaseConfig.postCheckoutFields.includes("birth_details") &&
+                    " Birth data will be collected in the secure post-purchase intake."}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Step 3: Payment & Confirmation */}
           {step === 2 && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold">Booking Summary</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left column — Booking Summary */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Booking Summary</h3>
 
-              <div className="rounded-lg border p-4 space-y-3">
-                {!hideServiceName && (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Service</span>
-                      <span className="font-medium">{resolvedServiceName}</span>
-                    </div>
-                    <Separator />
-                  </>
-                )}
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Duration</span>
-                  <Badge variant="outline">
-                    <Clock className="mr-1 size-3" />
-                    {service.duration_minutes} min
-                  </Badge>
-                </div>
-                <Separator />
-                {selectedSlot && (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Date</span>
-                      <span className="font-medium">
-                        {formatSlotDate(selectedSlot.start, clientTimezone)}
-                      </span>
-                    </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Time</span>
-                      <span className="font-medium">
-                        {formatSlotTime(selectedSlot.start, clientTimezone)} -{" "}
-                        {formatSlotTime(selectedSlot.end, clientTimezone)}
-                      </span>
-                    </div>
-                    {selectedSlot.availabilityTitle && (
-                      <>
-                        <Separator />
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Schedule</span>
-                          <span className="font-medium">
-                            {selectedSlot.availabilityTitle}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                    {selectedSlot.availabilityTimezone && (
-                      <>
-                        <Separator />
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Availability Timezone</span>
-                          <span className="font-medium">
-                            {selectedSlot.availabilityTimezone.replace(/_/g, " ")}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Client</span>
-                  <span className="font-medium">{intakeData.fullName}</span>
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between text-lg">
-                  <span className="font-semibold">Total</span>
-                  <span className="font-bold">
-                    {formatCurrency(effectivePrice)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Policy notice */}
-              <div className="flex items-start gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
-                <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  By proceeding with payment, you agree that{" "}
-                  <strong className="text-foreground">50% of the payment is retained as a no-show fee</strong>{" "}
-                  if you do not attend without prior notice, and that cancellations within 24 hours are non-refundable.
-                </p>
-              </div>
-
-              {error && (
-                <div className="rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
-                  <p>{error}</p>
-                  {!clientSecret && !creatingPaymentIntent && (
-                    <button
-                      type="button"
-                      onClick={handleCreatePaymentIntent}
-                      className="mt-2 underline hover:no-underline"
-                    >
-                      Try again
-                    </button>
+                <div className="rounded-lg border p-4 space-y-3">
+                  {!hideServiceName && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Service</span>
+                        <span className="font-medium">{resolvedServiceName}</span>
+                      </div>
+                      <Separator />
+                    </>
                   )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Duration</span>
+                    <Badge variant="outline">
+                      <Clock className="mr-1 size-3" />
+                      {service.duration_minutes} min
+                    </Badge>
+                  </div>
+                  <Separator />
+                  {selectedSlot && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Date</span>
+                        <span className="font-medium">
+                          {formatSlotDate(selectedSlot.start, clientTimezone)}
+                        </span>
+                      </div>
+                      <Separator />
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Time</span>
+                        <span className="font-medium">
+                          {formatSlotTime(selectedSlot.start, clientTimezone)} -{" "}
+                          {formatSlotTime(selectedSlot.end, clientTimezone)}
+                        </span>
+                      </div>
+                      {selectedSlot.availabilityTitle && (
+                        <>
+                          <Separator />
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Schedule</span>
+                            <span className="font-medium">
+                              {selectedSlot.availabilityTitle}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                      {selectedSlot.availabilityTimezone && (
+                        <>
+                          <Separator />
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Timezone</span>
+                            <span className="font-medium">
+                              {selectedSlot.availabilityTimezone.replace(/_/g, " ")}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Client</span>
+                    <span className="font-medium">{bookingDetails.fullName}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between text-lg">
+                    <span className="font-semibold">Total</span>
+                    <span className="font-bold">
+                      {formatCurrency(effectivePrice)}
+                    </span>
+                  </div>
                 </div>
-              )}
 
-              {/* Stripe Elements Payment Form */}
-              {creatingPaymentIntent && (
-                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin" />
-                  Preparing payment...
+                {/* Policy notice */}
+                <div className="flex items-start gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+                  <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    By proceeding with payment, you agree that{" "}
+                    <strong className="text-foreground">50% of the payment is retained as a no-show fee</strong>{" "}
+                    if you do not attend without prior notice, and that cancellations within 24 hours are non-refundable.
+                  </p>
                 </div>
-              )}
+              </div>
 
-              {clientSecret && (
-                <Elements
-                  stripe={stripePromise}
-                  options={{
-                    clientSecret,
-                    appearance: {
-                      theme: "night",
-                      variables: {
-                        colorPrimary: "#d4a017",
-                        colorBackground: "#0a0a0a",
-                        colorText: "#fafafa",
-                        colorDanger: "#ef4444",
-                        borderRadius: "8px",
-                        fontFamily: "inherit",
+              {/* Right column — Payment Form */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Payment</h3>
+
+                {error && (
+                  <div className="rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+                    <p>{error}</p>
+                    {!clientSecret && !creatingPaymentIntent && (
+                      <button
+                        type="button"
+                        onClick={handleCreatePaymentIntent}
+                        className="mt-2 underline hover:no-underline"
+                      >
+                        Try again
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {creatingPaymentIntent && (
+                  <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" />
+                    Preparing payment...
+                  </div>
+                )}
+
+                {clientSecret && (
+                  <Elements
+                    stripe={stripePromise}
+                    options={{
+                      clientSecret,
+                      appearance: {
+                        theme: "night",
+                        variables: {
+                          colorPrimary: "#d4a017",
+                          colorBackground: "#0a0a0a",
+                          colorText: "#fafafa",
+                          colorDanger: "#ef4444",
+                          borderRadius: "8px",
+                          fontFamily: "inherit",
+                        },
                       },
-                    },
-                  }}
-                >
-                  <StripePaymentForm
-                    onSuccess={handlePaymentSuccess}
-                    onError={handlePaymentError}
-                    submitting={submitting}
-                    setSubmitting={setSubmitting}
-                    policyAcknowledged={policyAcknowledged}
-                  />
-                </Elements>
-              )}
+                    }}
+                  >
+                    <StripePaymentForm
+                      onSuccess={handlePaymentSuccess}
+                      onError={handlePaymentError}
+                      submitting={submitting}
+                      setSubmitting={setSubmitting}
+                      policyAcknowledged={policyAcknowledged}
+                    />
+                  </Elements>
+                )}
+
+                {!creatingPaymentIntent && !clientSecret && !error && (
+                  <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" />
+                    Loading...
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </CardContent>
@@ -939,6 +1007,21 @@ export function BookingWizard({
         {step < STEPS.length - 1 && (
           <Button
             onClick={async () => {
+              // Validate intake form before advancing
+              if (step === 1 && !canProceed()) {
+                const missing: string[] = [];
+                let firstMissingId = "";
+                if (!bookingDetails.fullName.trim()) { missing.push("Full Name"); if (!firstMissingId) firstMissingId = "fullName"; }
+                if (!bookingDetails.email.trim()) { missing.push("Email"); if (!firstMissingId) firstMissingId = "email"; }
+                toast.error(`Please fill in: ${missing.join(", ")}`);
+                // Scroll to and focus the first missing field
+                if (firstMissingId) {
+                  const el = document.getElementById(firstMissingId);
+                  if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.focus(); }
+                }
+                return;
+              }
+
               // When advancing from intake form (step 1)
               if (step === 1 && selectedSlot) {
                 setCreatingPaymentIntent(true);
@@ -974,13 +1057,14 @@ export function BookingWizard({
                 }
 
                 // Paid booking — advance to payment step
+                setCreatingPaymentIntent(false);
                 setStep((s) => s + 1);
                 return;
               }
 
               setStep((s) => s + 1);
             }}
-            disabled={!canProceed() || creatingPaymentIntent}
+            disabled={(step === 0 && !canProceed()) || creatingPaymentIntent}
             className="gap-2"
           >
             {creatingPaymentIntent ? (

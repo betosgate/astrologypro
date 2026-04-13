@@ -6,6 +6,8 @@ import { createPaymentIntent } from "@/lib/stripe/connect";
 import { createCalendarEvent } from "@/lib/google-calendar";
 import { buildCalendarDescription, stripHtml } from "@/lib/calendar-utils";
 import { PRICING } from "@/lib/constants";
+import { ensureOrderForBooking, getOrderStatusForService } from "@/lib/orders";
+import { getServicePurchaseConfig } from "@/lib/service-purchase";
 import {
   sendBookingConfirmation,
   sendBookingAccessInstructions,
@@ -53,6 +55,7 @@ export async function POST(request: NextRequest) {
       booking_notes,
       discount_token,
     } = body;
+    const questionnaireData = questionnaire ?? {};
 
     // Capture request metadata for audit/analytics
     const requestMetadata = {
@@ -64,11 +67,6 @@ export async function POST(request: NextRequest) {
       referrer: request.headers.get("referer") ?? "",
       language: request.headers.get("accept-language") ?? "",
     };
-
-    // Extract birth geo from questionnaire (sent inline by the wizard)
-    const birthLat = questionnaire?.birthLat as number | undefined;
-    const birthLng = questionnaire?.birthLng as number | undefined;
-    const birthTimezone = questionnaire?.birthTimezone as string | undefined;
 
     // Validate required fields
     if (!serviceId || !scheduledAt || !clientEmail || !clientName) {
@@ -85,13 +83,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const t0 = Date.now();
+    const lap = (label: string) => console.log(`[booking-payment] ${label} +${Date.now() - t0}ms`);
+
     const supabase = await createClient();
     const adminSupabase = createAdminClient();
+    lap("clients created");
 
     // Fetch the service first (source of truth for diviner_id)
     let { data: service, error: serviceError } = await adminSupabase
       .from("services")
-      .select("id, name, base_price, duration_minutes, diviner_id")
+      .select("id, name, slug, category, base_price, duration_minutes, diviner_id, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields")
       .eq("id", serviceId)
       .eq("is_active", true)
       .single();
@@ -99,7 +101,7 @@ export async function POST(request: NextRequest) {
     if (serviceError || !service) {
       const fallback = await supabase
         .from("services")
-        .select("id, name, base_price, duration_minutes, diviner_id")
+        .select("id, name, slug, category, base_price, duration_minutes, diviner_id, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields")
         .eq("id", serviceId)
         .eq("is_active", true)
         .single();
@@ -107,12 +109,15 @@ export async function POST(request: NextRequest) {
       serviceError = serviceError ?? fallback.error;
     }
 
+    lap("service fetched");
+
     if (!service) {
       return NextResponse.json(
         { error: "Service not found", details: serviceError?.message ?? null },
         { status: 404 }
       );
     }
+    const purchaseConfig = getServicePurchaseConfig(service);
 
     let resolvedDivinerId = service.diviner_id ?? null;
     let diviner: {
@@ -203,6 +208,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    lap("diviner resolved");
+
     if (!diviner) {
       return NextResponse.json(
         { error: "Diviner not found", details: divinerError?.message ?? null },
@@ -228,7 +235,6 @@ export async function POST(request: NextRequest) {
       .or(`owner_id.eq.${resolvedDivinerId},diviner_id.eq.${resolvedDivinerId}`)
       .eq("is_active", true);
 
-    // eslint-disable-next-line no-console
     console.log("[booking-payment] template lookup", {
       resolvedDivinerId,
       bookingDateStr,
@@ -265,6 +271,8 @@ export async function POST(request: NextRequest) {
       availabilityTemplateTitle = (best.title as string) || null;
       availabilityTemplateDescription = (best.description as string) || null;
     }
+
+    lap("templates resolved");
 
     // --- Auto-create auth user if they don't exist ---
     let isNewUser = false;
@@ -313,6 +321,8 @@ export async function POST(request: NextRequest) {
       clientAuthUserId = createUserData.user.id;
     }
 
+    lap("auth user resolved");
+
     if (!clientAuthUserId) {
       return NextResponse.json(
         { error: "Could not resolve client user account" },
@@ -329,19 +339,6 @@ export async function POST(request: NextRequest) {
           email: clientEmail,
           full_name: clientName,
           phone: clientPhone ?? null,
-          ...(questionnaire?.birthDate
-            ? { birth_date: questionnaire.birthDate }
-            : {}),
-          ...(questionnaire?.birthTime
-            ? { birth_time: questionnaire.birthTime }
-            : {}),
-          ...(questionnaire?.birthCity
-            ? { birth_city: questionnaire.birthCity }
-            : {}),
-          ...(birthLat != null && birthLng != null
-            ? { birth_lat: birthLat, birth_lng: birthLng }
-            : {}),
-          ...(birthTimezone ? { birth_timezone: birthTimezone } : {}),
         },
         { onConflict: "user_id" }
       )
@@ -367,25 +364,38 @@ export async function POST(request: NextRequest) {
     // --- Duplicate / Slot Conflict Check ---
     // Prevent the same client from booking the same slot twice, and prevent
     // any two clients from claiming a slot already held by an active booking.
+    // Stale "pending" bookings from abandoned checkouts are cleaned up, not blocked.
     const { data: slotConflict } = await adminSupabase
       .from("bookings")
-      .select("id, client_id")
+      .select("id, client_id, status")
       .eq("diviner_id", resolvedDivinerId)
       .eq("scheduled_at", scheduledAt)
       .not("status", "in", '("cancelled","no_show")')
       .maybeSingle();
 
     if (slotConflict) {
-      if (slotConflict.client_id === client.id) {
+      // Same client retrying — cancel the stale pending booking so they can rebook
+      if (slotConflict.client_id === client.id && slotConflict.status === "pending") {
+        await adminSupabase
+          .from("bookings")
+          .update({ status: "cancelled", cancellation_reason: "Superseded by new checkout attempt" })
+          .eq("id", slotConflict.id);
+        lap("cancelled stale pending booking " + slotConflict.id);
+      } else if (slotConflict.client_id === client.id) {
         return NextResponse.json(
           { error: "You have already booked this time slot" },
           { status: 409 }
         );
+      } else {
+        // Different client holds an active booking — slot is taken
+        if (slotConflict.status !== "pending") {
+          return NextResponse.json(
+            { error: "This time slot is no longer available" },
+            { status: 409 }
+          );
+        }
+        // Another client's pending booking — allow override (they may have abandoned checkout)
       }
-      return NextResponse.json(
-        { error: "This time slot is no longer available" },
-        { status: 409 }
-      );
     }
 
     // --- Loyalty Discount Check ---
@@ -470,11 +480,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Calculate platform fee on the final price.
+    // Member discount token: platform fee drops from 20% → 15% (diviner payout unchanged).
+    // Floor at 10% to prevent stacking below the minimum viable platform margin.
+    const effectivePlatformFeePercent = memberDiscountApplied
+      ? Math.max(PRICING.platformFeePercent - 5, 10)
+      : PRICING.platformFeePercent;
+    const platformFee =
+      (finalPrice * effectivePlatformFeePercent) / 100;
+    const shouldCharge = hasServiceAvailability && finalPrice > 0;
+
     // Calculate end time
     const startTime = new Date(scheduledAt);
     const endTime = new Date(
       startTime.getTime() + service.duration_minutes * 60 * 1000
     );
+
+    lap("client + conflicts resolved");
 
     // Create booking record with pending status
     // Use admin client — guest bookers have no session so RLS would block the insert
@@ -488,11 +510,13 @@ export async function POST(request: NextRequest) {
         duration_minutes: service.duration_minutes,
         status: "pending",
         base_price: finalPrice,
-        video_provider: (diviner as any)?.video_provider ?? "daily",
-        questionnaire_responses: questionnaire,
+        video_provider: diviner.video_provider ?? "daily",
+        questionnaire_responses: null,
         booking_notes: booking_notes ?? null,
         metadata: {
           ...requestMetadata,
+          pre_checkout_fields: purchaseConfig.preCheckoutFields,
+          post_checkout_fields: purchaseConfig.postCheckoutFields,
           ...(availabilityTemplateTitle ? { availability_title: availabilityTemplateTitle } : {}),
           ...(availabilityTemplateDescription ? { availability_description: availabilityTemplateDescription } : {}),
         },
@@ -508,46 +532,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Handle affiliate tracking
-    if (affiliateCode) {
-      const { data: affiliate } = await adminSupabase
-        .from("affiliates")
-        .select("id, commission_percent, total_referrals, total_earned")
-        .eq("referral_code", affiliateCode)
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (affiliate) {
-        const commissionAmount =
-          Math.round(finalPrice * (affiliate.commission_percent / 100) * 100) / 100;
-
-        await adminSupabase.from("affiliate_referrals").insert({
-          affiliate_id: affiliate.id,
-          booking_id: booking.id,
-          commission_amount: commissionAmount,
-          status: "pending",
-        });
-
-        // Increment referral count and earned total
-        await adminSupabase
-          .from("affiliates")
-          .update({
-            total_referrals: (affiliate.total_referrals ?? 0) + 1,
-            total_earned: Number(affiliate.total_earned ?? 0) + commissionAmount,
-          })
-          .eq("id", affiliate.id);
-      }
-    }
-
-    // Calculate platform fee on the final price.
-    // Member discount token: platform fee drops from 20% → 15% (diviner payout unchanged).
-    // Floor at 10% to prevent stacking below the minimum viable platform margin.
-    const effectivePlatformFeePercent = memberDiscountApplied
-      ? Math.max(PRICING.platformFeePercent - 5, 10)
-      : PRICING.platformFeePercent;
-    const platformFee =
-      (finalPrice * effectivePlatformFeePercent) / 100;
-    const shouldCharge = hasServiceAvailability && finalPrice > 0;
+    const initialOrderStatus = shouldCharge
+      ? "pending_payment"
+      : getOrderStatusForService(service, true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const orderId = await ensureOrderForBooking(adminSupabase as any, {
+      bookingId: booking.id,
+      clientId: client.id,
+      divinerId: resolvedDivinerId,
+      serviceId,
+      service,
+      amountCents: Math.round(finalPrice * 100),
+      currency: "usd",
+      status: initialOrderStatus,
+      paidAt: shouldCharge ? null : new Date().toISOString(),
+      notes: booking_notes ?? null,
+    });
 
     if (shouldCharge && !diviner.stripe_account_id) {
       return NextResponse.json(
@@ -566,9 +566,13 @@ export async function POST(request: NextRequest) {
         platformFeeAmount: platformFee,
         metadata: {
           bookingId: booking.id,
+          orderId,
           divinerId: resolvedDivinerId,
           serviceId,
           clientEmail,
+          grossAmountCents: String(Math.round(finalPrice * 100)),
+          platformFeeCents: String(Math.round(platformFee * 100)),
+          ...(affiliateCode ? { affiliateCode } : {}),
           ...(giftCode ? { giftCode } : {}),
           ...(loyaltyRuleName
             ? { loyaltyDiscount: `${loyaltyDiscountPercent}%` }
@@ -577,12 +581,27 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      lap("payment intent created");
       clientSecret = paymentIntent.client_secret;
 
       await adminSupabase
         .from("bookings")
         .update({ stripe_payment_intent_id: paymentIntent.id })
         .eq("id", booking.id);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await ensureOrderForBooking(adminSupabase as any, {
+        bookingId: booking.id,
+        clientId: client.id,
+        divinerId: resolvedDivinerId,
+        serviceId,
+        service,
+        amountCents: Math.round(finalPrice * 100),
+        currency: "usd",
+        stripePaymentIntentId: paymentIntent.id,
+        status: "pending_payment",
+        notes: booking_notes ?? null,
+      });
 
       // Consume the member discount token now that the payment intent is created
       if (memberDiscountTokenId) {
@@ -617,6 +636,9 @@ export async function POST(request: NextRequest) {
       // Send confirmation emails to the booker
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
       const portalBookingsUrl = `${appUrl}/portal/bookings`;
+      const orderDetailUrl = `${appUrl}/login?redirect=${encodeURIComponent(
+        `/portal/orders/${orderId}`
+      )}`;
       const calendarLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`${availabilityTemplateTitle ?? service.name} with ${diviner.display_name}`)}&dates=${startTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}/${endTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}&details=${encodeURIComponent(availabilityTemplateDescription ? stripHtml(availabilityTemplateDescription) : `Your session with ${diviner.display_name}`)}`;
 
       const formattedDateTime = startTime.toLocaleString("en-US", {
@@ -654,7 +676,7 @@ export async function POST(request: NextRequest) {
             divinerName: diviner.display_name,
             serviceName: availabilityTemplateTitle ?? service.name,
             dateTime: formattedDateTime,
-            portalUrl: `${appUrl}/portal`,
+            portalUrl: orderDetailUrl,
           })
         );
       }
@@ -671,7 +693,7 @@ export async function POST(request: NextRequest) {
           amount: Number(service.base_price),
           totalPaid: 0,
           bookingId: booking.id,
-          portalUrl: `${appUrl}/portal/bookings`,
+          portalUrl: orderDetailUrl,
         })
       );
 
@@ -697,8 +719,8 @@ export async function POST(request: NextRequest) {
             dashboardUrl: `${appUrl}/dashboard/bookings`,
             questionnaire: questionnaire
               ? {
-                  focusQuestion: questionnaire.focusQuestion as string | undefined,
-                  lifeArea: questionnaire.lifeArea as string | undefined,
+                  focusQuestion: questionnaireData.focusQuestion as string | undefined,
+                  lifeArea: questionnaireData.lifeArea as string | undefined,
                 }
               : undefined,
           });
@@ -727,9 +749,9 @@ export async function POST(request: NextRequest) {
         );
         // Gather additional attendees for calendar event
         const calAttendees: Array<{ email: string; name?: string }> = [];
-        const spEmailCal = questionnaire?.secondPersonEmail as string | undefined;
-        const spNameCal = questionnaire?.secondPersonName as string | undefined;
-        const spAttendingCal = questionnaire?.secondPersonAttending as string | undefined;
+        const spEmailCal = questionnaireData.secondPersonEmail as string | undefined;
+        const spNameCal = questionnaireData.secondPersonName as string | undefined;
+        const spAttendingCal = questionnaireData.secondPersonAttending as string | undefined;
         if (spEmailCal && (spAttendingCal === "yes" || spAttendingCal === "maybe")) {
           calAttendees.push({ email: spEmailCal, name: spNameCal || undefined });
         }
@@ -759,7 +781,9 @@ export async function POST(request: NextRequest) {
 
     // Send welcome email for new users on the paid path (outside the $0 block)
     if (isNewUser && shouldCharge) {
-      const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/portal`;
+      const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/login?redirect=${encodeURIComponent(
+        `/portal/orders/${orderId}`
+      )}`;
       sendWelcomeAndBooked({
         clientEmail,
         clientName,
@@ -778,9 +802,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Guest invite email
-    const secondPersonEmail = questionnaire?.secondPersonEmail as string | undefined;
-    const secondPersonName = questionnaire?.secondPersonName as string | undefined;
-    const secondPersonAttending = questionnaire?.secondPersonAttending as string | undefined;
+    const secondPersonEmail = questionnaireData.secondPersonEmail as string | undefined;
+    const secondPersonName = questionnaireData.secondPersonName as string | undefined;
+    const secondPersonAttending = questionnaireData.secondPersonAttending as string | undefined;
 
     if (secondPersonEmail && (secondPersonAttending === "yes" || secondPersonAttending === "maybe")) {
       const sessionDateStr = new Date(scheduledAt).toLocaleDateString("en-US", {
@@ -823,9 +847,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    lap(`done — clientSecret=${clientSecret ? "yes" : "no"}`);
+
     return NextResponse.json({
       clientSecret,
       bookingId: booking.id,
+      orderId,
+      requiresPostPaymentIntake: purchaseConfig.requiresPostPaymentIntake,
       originalPrice: service.base_price,
       finalPrice,
       ...(loyaltyDiscountPercent > 0
@@ -846,8 +874,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("Booking payment error:", err);
+    const message =
+      err instanceof Error ? err.message : "Internal server error";
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: message },
       { status: 500 }
     );
   }

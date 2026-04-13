@@ -63,6 +63,14 @@
     {
       "path": "/api/cron/return-event-reminders",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-subscription-deliveries",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/telephony-pass-through-invoices",
+      "schedule": "15 2 * * *"
     }
   ]
 }

@@ -82,15 +82,21 @@ CREATE POLICY service_role_all_microsoft_api_keys
 
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'moddatetime') THEN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = 'extensions'
+      AND p.proname = 'moddatetime'
+  ) THEN
     DROP TRIGGER IF EXISTS google_api_keys_updated_at ON google_api_keys;
     CREATE TRIGGER google_api_keys_updated_at
       BEFORE UPDATE ON google_api_keys
-      FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+      FOR EACH ROW EXECUTE PROCEDURE extensions.moddatetime(updated_at);
 
     DROP TRIGGER IF EXISTS microsoft_api_keys_updated_at ON microsoft_api_keys;
     CREATE TRIGGER microsoft_api_keys_updated_at
       BEFORE UPDATE ON microsoft_api_keys
-      FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+      FOR EACH ROW EXECUTE PROCEDURE extensions.moddatetime(updated_at);
   END IF;
 END $$;

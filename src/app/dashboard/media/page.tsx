@@ -23,6 +23,7 @@ import {
   MediaEditButton,
   MediaReorderButtons,
 } from "@/components/dashboard/media-controls";
+import { MAX_MEDIA_IMAGES } from "@/lib/media-gallery";
 
 export const metadata = { title: "Media Gallery" };
 
@@ -57,7 +58,7 @@ export default async function MediaGalleryPage() {
   const { data: items } = await admin
     .from("media_items")
     .select(
-      "id, type, url, title, description, thumbnail_url, sort_order, is_active, is_featured, view_count, created_at"
+      "id, type, url, title, description, thumbnail_url, album_name, sort_order, is_active, is_featured, view_count, created_at"
     )
     .eq("diviner_id", diviner.id)
     .order("sort_order", { ascending: true })
@@ -67,6 +68,15 @@ export default async function MediaGalleryPage() {
   const totalCount = allItems.length;
   const featuredCount = allItems.filter((i) => i.is_featured).length;
   const activeCount = allItems.filter((i) => i.is_active).length;
+  const imageItems = allItems.filter((i) => i.type === "image");
+  const imageCount = imageItems.length;
+  const albums = Array.from(
+    new Set(
+      imageItems
+        .map((item) => item.album_name?.trim())
+        .filter((album): album is string => !!album)
+    )
+  );
 
   // Shape for reorder buttons
   const reorderItems = allItems.map((i) => ({ id: i.id, sort_order: i.sort_order }));
@@ -114,6 +124,34 @@ export default async function MediaGalleryPage() {
         </Card>
       </div>
 
+      <Card>
+        <CardContent className="flex flex-col gap-3 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium">Image albums</p>
+              <p className="text-xs text-muted-foreground">
+                {imageCount}/{MAX_MEDIA_IMAGES} images used across {albums.length} album{albums.length === 1 ? "" : "s"}
+              </p>
+            </div>
+            <Badge variant={imageCount >= MAX_MEDIA_IMAGES ? "destructive" : "secondary"}>
+              {MAX_MEDIA_IMAGES - imageCount} slots left
+            </Badge>
+          </div>
+          {albums.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {albums.map((album) => {
+                const count = imageItems.filter((item) => item.album_name === album).length;
+                return (
+                  <Badge key={album} variant="outline" className="font-normal">
+                    {album} · {count}
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Items grid or empty state */}
       <Card>
         <CardHeader>
@@ -143,7 +181,7 @@ export default async function MediaGalleryPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {allItems.map((item, idx) => {
+              {allItems.map((item) => {
                 const meta = TYPE_META[item.type] ?? TYPE_META.link;
                 const Icon = meta.icon;
                 return (
@@ -171,6 +209,11 @@ export default async function MediaGalleryPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-medium text-sm">{item.title}</p>
+                        {item.type === "image" && item.album_name && (
+                          <p className="mt-1 truncate text-xs text-muted-foreground">
+                            Album: {item.album_name}
+                          </p>
+                        )}
                       </div>
                       <Badge variant="secondary" className={`shrink-0 text-xs ${meta.color}`}>
                         {meta.label}

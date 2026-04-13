@@ -107,7 +107,8 @@ export async function GET(
         typeof record.service_id === "string" ? record.service_id : null;
       if (!allSlots) {
         if (serviceId) {
-          if (templateServiceId !== serviceId) return false;
+          // Include templates that match this service OR generic templates (no service_id)
+          if (templateServiceId && templateServiceId !== serviceId) return false;
         } else if (templateServiceId) {
           return false;
         }

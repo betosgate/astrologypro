@@ -25,6 +25,8 @@ interface LessonCompleteButtonProps {
   nextRoute?: string | null;
   /** Human-readable label for the next destination shown on the button */
   nextLabel?: string | null;
+  /** Optional callback when the lesson is successfully marked complete */
+  onComplete?: () => void;
 }
 
 export function LessonCompleteButton({
@@ -36,6 +38,7 @@ export function LessonCompleteButton({
   hideCompletedState = false,
   nextRoute,
   nextLabel,
+  onComplete,
 }: LessonCompleteButtonProps) {
   const router = useRouter();
   const [done, setDone] = useState(alreadyCompleted);
@@ -98,6 +101,7 @@ export function LessonCompleteButton({
         throw new Error(errJson.error ?? "Failed to mark complete");
       }
       setDone(true);
+      onComplete?.();
       toast.success("Lesson marked as complete!");
       // Navigate to next item after a brief delay so the success toast is visible
       if (nextRoute) {
