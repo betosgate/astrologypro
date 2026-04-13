@@ -14,7 +14,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Eye, Loader2, RotateCcw, CheckCircle2, NotebookPen } from "lucide-react";
+import { Eye, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {
@@ -33,6 +33,7 @@ interface BookingDetailProps {
     status: string;
     duration: number;
     amount: number;
+    payment_intent_id?: string | null;
     notes: string | null;
     booking_notes?: string | null;
     session_notes?: string | null;
@@ -163,12 +164,38 @@ export function BookingDetailSheet({ booking }: BookingDetailProps) {
                 <p className="text-sm font-medium">{booking.duration} min</p>
               </div>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Amount</p>
-              <p className="text-sm font-medium">
-                {formatCurrency(booking.amount)}
-              </p>
-            </div>
+            {/* Payment Info */}
+            {booking.amount > 0 && (
+              <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <CreditCard className="size-3.5 text-muted-foreground" />
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Payment</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Amount</p>
+                    <p className="text-sm font-semibold">{formatCurrency(booking.amount)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Status</p>
+                    {booking.refunded_at ? (
+                      <span className="inline-flex items-center rounded-full border border-red-500/20 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-500">Refunded</span>
+                    ) : ["confirmed", "completed", "in_progress"].includes(booking.status) ? (
+                      <span className="inline-flex items-center rounded-full border border-green-500/20 bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-500">Paid</span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full border border-yellow-500/20 bg-yellow-500/10 px-2 py-0.5 text-xs font-medium text-yellow-500">Unpaid</span>
+                    )}
+                  </div>
+                </div>
+                {booking.payment_intent_id && ["confirmed", "completed", "in_progress"].includes(booking.status) && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Payment ID</p>
+                    <p className="text-xs font-mono text-foreground/70 break-all">{booking.payment_intent_id}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {booking.notes && (
               <div>
                 <p className="text-xs text-muted-foreground">Booking Notes</p>

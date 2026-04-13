@@ -2861,6 +2861,43 @@ export default function AdminHoroscopePage() {
         }
       }
 
+      // ── Save romantic forecast report (fire-and-forget) ──────────────
+      if (currentTab.slug === "romantic_forecast_report_tropical_v2") {
+        try {
+          const birth2 = parseBirth(form.person2);
+          const savePayload = {
+            toolname: "romantic_forecast_report_tropical_v2",
+            ai_response: collected.ai_interpretations ?? {},
+            natal_chart: {
+              self: collected.natal_chart_data ?? {},
+              partner: collected.natal_chart_data_p2 ?? {},
+            },
+            formData: {
+              self: birth1,
+              partner: birth2,
+            },
+            astro_api_data: {
+              synastry: collected.synastry ?? {},
+              composite: collected.composite ?? {},
+            },
+            freeNatalWheelChart: natalSvg ?? "",
+            freeNatalWheelChartForTrasit: natalSvgTransit ?? "",
+            freeNatalWheelChartP2: natalSvgP2 ?? "",
+            freeNatalWheelChartForTrasitP2: natalSvgTransitP2 ?? "",
+          };
+          fetchWithRetry(
+            "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(savePayload),
+            },
+          ).catch(() => { });
+        } catch {
+          /* ignore save errors */
+        }
+      }
+
       addProgress("Done ✓");
       setShowScrollTop(true);
     } catch (err: unknown) {
@@ -3098,10 +3135,10 @@ export default function AdminHoroscopePage() {
                       />
                     )}
 
-                    {/* ─── Natal chart sections (all single tabs + planet return tabs) ─ */}
+                    {/* ─── Natal chart sections (single-person tabs only — not two-person relationship tabs) ─ */}
                     {natalData && (
                       <div className="space-y-6">
-                        {(!isMainTransitTab && currentSlug !== "friendship_report_tropical_v2") && (
+                        {(!isMainTransitTab && !isTwoPersonAiTab) && (
                           <>
                             <PlanetsSection
                               planets={[
