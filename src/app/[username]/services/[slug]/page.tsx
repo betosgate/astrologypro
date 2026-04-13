@@ -22,6 +22,7 @@ import { APP_URL } from "@/lib/constants";
 import { getDivinerAvatarUrl, getDivinerCoverImageUrl } from "@/lib/diviner-images";
 import { PageTracker } from "@/components/landing/page-tracker";
 import { RefLinkPreserver } from "./ref-link-preserver";
+import { filterVisiblePublicServices, getServiceCategoryLabel } from "@/lib/public-services";
 
 interface PageProps {
   params: Promise<{ username: string; slug: string }>;
@@ -51,8 +52,8 @@ async function getService(divinerId: string, slug: string) {
     .eq("diviner_id", divinerId)
     .eq("slug", slug)
     .eq("is_active", true)
-    .single();
-  return data;
+    .maybeSingle();
+  return data && filterVisiblePublicServices([data]).length > 0 ? data : null;
 }
 
 async function getTestimonials(divinerId: string, limit = 3) {
@@ -142,7 +143,7 @@ function GoldStars({ rating, size = "md" }: { rating: number; size?: "sm" | "md"
 }
 
 function CategoryBadge({ category }: { category: string }) {
-  const label = category === "astrology" ? "Astrology" : category === "tarot" ? "Tarot" : category;
+  const label = getServiceCategoryLabel(category);
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/25 bg-gold/5 px-3 py-0.5 text-xs font-medium capitalize text-gold/90">
       <Sparkles className="size-3" />
