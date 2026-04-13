@@ -19,6 +19,13 @@ interface CalendarBooking {
   duration_minutes: number;
   status: string;
   session_notes: string | null;
+  booking_notes: string | null;
+  base_price: number | null;
+  stripe_payment_intent_id: string | null;
+  questionnaire_responses: Record<string, unknown> | null;
+  refund_amount: number | null;
+  refunded_at: string | null;
+  refund_reason: string | null;
   metadata?: {
     is_reminder?: boolean;
     is_manual?: boolean;
@@ -26,7 +33,14 @@ interface CalendarBooking {
     availability_title?: string;
   } | null;
   services: { name: string } | null;
-  clients: { full_name: string | null } | null;
+  clients: {
+    full_name: string | null;
+    email: string | null;
+    phone: string | null;
+    birth_date: string | null;
+    birth_time: string | null;
+    birth_city: string | null;
+  } | null;
 }
 
 export default async function CalendarPage() {
@@ -74,7 +88,7 @@ export default async function CalendarPage() {
     supabase
       .from("bookings")
       .select(
-        "id, scheduled_at, duration_minutes, status, session_notes, metadata, services(name), clients(full_name)"
+        "id, scheduled_at, duration_minutes, status, session_notes, booking_notes, base_price, stripe_payment_intent_id, questionnaire_responses, refund_amount, refunded_at, refund_reason, metadata, services(name), clients(full_name, email, phone, birth_date, birth_time, birth_city)"
       )
       .eq("owner_id", ownerId)
       .in("status", ["pending", "pending_payment", "confirmed", "in_progress"])

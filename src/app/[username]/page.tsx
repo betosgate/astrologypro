@@ -34,10 +34,12 @@ import {
   getServiceCategoryLabel,
   isTimeBasedPublicService,
 } from "@/lib/public-services";
+import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
+import { canPubliclySellService } from "@/lib/payout-readiness";
 
 interface PageProps {
   params: Promise<{ username: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; ref?: string }>;
 }
 
 async function getDiviner(username: string) {
@@ -64,7 +66,7 @@ async function getServices(divinerId: string) {
     .order("is_featured", { ascending: false })
     .order("sort_order", { ascending: true });
 
-  return services ?? [];
+  return applyRuntimePricesToServices(supabase, services ?? []);
 }
 
 async function getTestimonials(divinerId: string) {
@@ -324,7 +326,8 @@ export async function generateMetadata({
 
 export default async function DivinerPage({ params, searchParams }: PageProps) {
   const { username } = await params;
-  const { tab } = await searchParams;
+  const { tab, ref } = await searchParams;
+  const refParam = ref ? `?ref=${encodeURIComponent(ref)}` : "";
   const diviner = await getDiviner(username);
 
   if (!diviner) {
@@ -356,15 +359,24 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
   const filteredMediaItems = mediaItems.filter(
     (item) => !publishPolicy.blockedMediaTypes.includes(item.type)
   );
-  const publicServices = filterVisiblePublicServices(services);
+  const publicServices = filterVisiblePublicServices(services).map((service) => ({
+    ...service,
+    booking_enabled: canPubliclySellService(service, diviner),
+  }));
+  const hasUnavailablePaidServices = publicServices.some(
+    (service) => service.booking_enabled === false
+  );
+  const sellablePublicServices = publicServices.filter(
+    (service) => service.booking_enabled !== false
+  );
   const astroServices = publicServices.filter((s) => s.category === "astrology");
   const tarotServices = publicServices.filter((s) => s.category === "tarot");
   const activeTab = !bioBlocked && tab === "bio" ? "bio" : "home";
-  const highlightedService = getHighlightedPublicService(publicServices);
+  const highlightedService = getHighlightedPublicService(sellablePublicServices);
   const remainingPublicServices =
-    highlightedService && publicServices.length > 1
-      ? publicServices.filter((service) => service.id !== highlightedService.id)
-      : publicServices;
+    highlightedService && sellablePublicServices.length > 1
+      ? sellablePublicServices.filter((service) => service.id !== highlightedService.id)
+      : sellablePublicServices;
   const timeBasedServices = remainingPublicServices.filter((service) =>
     isTimeBasedPublicService(service),
   );
@@ -372,7 +384,9 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
     !isTimeBasedPublicService(service),
   );
   const primaryPublicService =
-    publicServices.find((service) => service.is_featured) ?? publicServices[0] ?? null;
+    sellablePublicServices.find((service) => service.is_featured) ??
+    sellablePublicServices[0] ??
+    null;
   const bookingPreview = servicesBlocked
     ? null
     : primaryPublicService
@@ -587,6 +601,12 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                   {buildPublicServicesIntro(publicServices)}
                 </p>
 
+                {hasUnavailablePaidServices && (
+                  <div className="mx-auto mb-6 max-w-2xl rounded-2xl border border-amber-500/20 bg-amber-500/8 px-5 py-4 text-sm text-amber-100/85">
+                    Some paid services are temporarily unavailable while payment setup is being completed.
+                  </div>
+                )}
+
                 {highlightedService ? (
                   <div className="mb-8 rounded-3xl border border-gold/25 bg-[linear-gradient(135deg,rgba(201,168,76,0.12),rgba(8,10,18,0.7))] p-6 md:p-8">
                     <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
@@ -603,7 +623,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                         </p>
                       </div>
                       <Link
-                        href={`/${username}/book/${highlightedService.slug}`}
+                        href={`/${username}/book/${highlightedService.slug}${refParam}`}
                         className="inline-flex h-11 items-center justify-center rounded-full bg-gold px-6 text-sm font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
                       >
                         Book {highlightedService.name}
@@ -624,6 +644,8 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                           service={service}
                           username={username}
                           imageUrl={serviceImages[service.slug]}
+                          refParam={refParam}
+                          bookingEnabled={service.booking_enabled !== false}
                         />
                       ))}
                     </div>
@@ -642,6 +664,8 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                           service={service}
                           username={username}
                           imageUrl={serviceImages[service.slug]}
+                          refParam={refParam}
+                          bookingEnabled={service.booking_enabled !== false}
                         />
                       ))}
                     </div>
@@ -649,12 +673,13 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                 )}
 
                 {!highlightedService && astroServices.length > 0 && tarotServices.length > 0 && (
-                  <ServiceTabs
-                    astroServices={astroServices}
-                    tarotServices={tarotServices}
-                    username={username}
-                    serviceImages={serviceImages}
-                  />
+                    <ServiceTabs
+                      astroServices={astroServices}
+                      tarotServices={tarotServices}
+                      username={username}
+                      serviceImages={serviceImages}
+                      refParam={refParam}
+                    />
                 )}
               </div>
 

@@ -1,6 +1,6 @@
 # Fix Plan Pricing — Remove Env Vars, Use pricing_plans DB Only — 2026-04-13
 
-- Status: Open
+- Status: Done
 - Priority: P0
 - Owner: Backend / Full-stack
 - Scope: `src/app/api/stripe/checkout/route.ts`, `src/app/api/stripe/upgrade/route.ts`, `src/lib/stripe/billing.ts`, `src/app/dashboard/settings/page.tsx`, `pricing_plans` DB table
@@ -13,6 +13,12 @@
 All plan pricing (amounts, Stripe price IDs) must come exclusively from the `pricing_plans` DB table. No Stripe price IDs or amounts are read from environment variables. The `src/lib/plans.ts` legacy hardcoded plan map and `src/lib/stripe/billing.ts` are retired.
 
 The settings page plan display name and upgrade button must also be driven from the DB instead of hardcoded legacy plan ID strings.
+
+## Completion Notes
+
+- Replaced the legacy marketing pricing component with the database-backed pricing API and `DynamicPricingSection`, removing the hardcoded `src/lib/plans.ts` dependency from the public pricing surface.
+- Removed the legacy `both` / `tarot` / `astrology` fallback plan name map from the dashboard settings page so plan display now resolves from `pricing_plans` data and only falls back to the persisted plan id.
+- The checkout and upgrade APIs were already migrated to `pricing_plans`, so these changes close the remaining legacy plan display gap for this task.
 
 ---
 

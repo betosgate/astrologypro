@@ -368,17 +368,8 @@ function SettingsContent() {
         if (!item?.plans?.length) return;
 
         const currentPlan = item.plans.find((plan) => plan.plan_id === settings.plan_id);
-        const fallbackLegacyNames: Record<string, string> = {
-          both: "The Oracle",
-          tarot: "The Tarot Reader",
-          astrology: "The Astrologer",
-        };
 
-        setCurrentPlanName(
-          currentPlan?.display_name ??
-            fallbackLegacyNames[settings.plan_id] ??
-            settings.plan_id
-        );
+        setCurrentPlanName(currentPlan?.display_name ?? settings.plan_id);
 
         const explicitFullPlan = item.plans.find(
           (plan) =>

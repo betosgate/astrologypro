@@ -1,6 +1,11 @@
 # Task 01 - Extend `page_views` Schema for Acquisition Analytics
 
-- Status: Open
+- Status: Done
+
+## Completion Notes
+
+- Implemented in [supabase/migrations/20260413000170_diviner_activity_analytics.sql](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/supabase/migrations/20260413000170_diviner_activity_analytics.sql:1), which adds `source_host`, `traffic_source`, `utm_*`, `referral_code`, attribution flags, and geo fields to `page_views`.
+- The migration also adds the report-oriented indexes for `diviner_id` and `traffic_source` query shapes.
 - Priority: P0
 - Owner: Database
 
@@ -121,4 +126,3 @@ Boolean flags for simple reporting and filtering.
 - [ ] Run the migration locally and inspect the altered `page_views` schema.
 - [ ] Confirm the new indexes exist.
 - [ ] Confirm old `page_views` queries continue to work with the expanded schema.
-

@@ -59,6 +59,14 @@ interface Service {
   is_featured: boolean;
   sort_order: number;
   created_at: string;
+  commerce_validation?: {
+    publicSellable: boolean;
+    payoutReady: boolean;
+    pricingLinked: boolean;
+    hasValidPricingLink: boolean;
+    errors: string[];
+    warnings: string[];
+  };
 }
 
 interface Diviner {
@@ -235,6 +243,9 @@ export default function ServiceConfigPage() {
                     </th>
                     <th className="px-3 py-2 text-left font-medium">Price</th>
                     <th className="px-3 py-2 text-left font-medium">Overage</th>
+                    <th className="px-3 py-2 text-left font-medium">
+                      Commerce
+                    </th>
                     <th className="px-3 py-2 text-left font-medium">Status</th>
                     <th className="px-3 py-2 text-right font-medium w-24">
                       Actions
@@ -264,6 +275,40 @@ export default function ServiceConfigPage() {
                       </td>
                       <td className="px-3 py-2 text-xs tabular-nums">
                         ${Number(svc.overage_rate ?? 0.50).toFixed(2)}/min
+                      </td>
+                      <td className="px-3 py-2">
+                        {svc.commerce_validation?.errors?.length ? (
+                          <div className="space-y-1">
+                            <Badge
+                              variant="outline"
+                              className="bg-red-500/10 text-red-500"
+                            >
+                              Blocked
+                            </Badge>
+                            <p className="max-w-[220px] text-[11px] text-muted-foreground">
+                              {svc.commerce_validation.errors[0]}
+                            </p>
+                          </div>
+                        ) : svc.commerce_validation?.warnings?.length ? (
+                          <div className="space-y-1">
+                            <Badge
+                              variant="outline"
+                              className="bg-amber-500/10 text-amber-600"
+                            >
+                              Warning
+                            </Badge>
+                            <p className="max-w-[220px] text-[11px] text-muted-foreground">
+                              {svc.commerce_validation.warnings[0]}
+                            </p>
+                          </div>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="bg-green-500/10 text-green-500"
+                          >
+                            Ready
+                          </Badge>
+                        )}
                       </td>
                       <td className="px-3 py-2">
                         <Badge

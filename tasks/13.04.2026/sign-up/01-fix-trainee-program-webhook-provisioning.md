@@ -1,6 +1,6 @@
 # Fix Trainee Program Webhook Provisioning — 2026-04-13
 
-- Status: Open
+- Status: Done
 - Priority: P0
 - Owner: Backend
 - Depends on: **Task 06 must be completed first** — task 06 rewrites `src/app/api/stripe/checkout/route.ts`. The `metadata.type` tag for trainee routing is set inside that rewritten route based on `itemKey`. Do not touch `checkout/route.ts` in this task.
@@ -14,6 +14,13 @@
 When a user selects a `trainee_program` plan and completes Stripe checkout, the system must:
 1. Store `role: "trainee"` in the Supabase auth user metadata at signup
 2. Provision a `trainees` DB record — not a `diviners` record — via the Stripe webhook
+
+## Completion Notes
+
+- `src/app/get-started/page.tsx` already derives `isTraineeOnly` from `plan?.itemKey === "trainee_program"` and submits `role: "trainee"` for trainee-only signups.
+- `src/app/api/get-started/signup/route.ts` already accepts `role: "trainee"` and persists it into Supabase auth user metadata during account creation.
+- `src/app/api/stripe/webhooks/route.ts` already contains `handleTraineeSignupCheckoutCompleted()` plus a `session.metadata?.type === "trainee_signup"` route guard, so trainee purchases provision `trainees` instead of falling through to diviner provisioning.
+- The post-login onboarding gate for trainees remains a separate concern and is still covered by task `03`.
 
 ---
 

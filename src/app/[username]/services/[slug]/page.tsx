@@ -24,6 +24,8 @@ import { PageTracker } from "@/components/landing/page-tracker";
 import { RefLinkPreserver } from "./ref-link-preserver";
 import { filterVisiblePublicServices, getServiceCategoryLabel } from "@/lib/public-services";
 import { buildServiceDetailSchemaGraph } from "@/lib/seo/schema-builders";
+import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
+import { canPubliclySellService } from "@/lib/payout-readiness";
 
 interface PageProps {
   params: Promise<{ username: string; slug: string }>;
@@ -54,7 +56,12 @@ async function getService(divinerId: string, slug: string) {
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle();
-  return data && filterVisiblePublicServices([data]).length > 0 ? data : null;
+  if (!data || filterVisiblePublicServices([data]).length === 0) {
+    return null;
+  }
+
+  const [service] = await applyRuntimePricesToServices(supabase, [data]);
+  return service ?? null;
 }
 
 async function getTestimonials(divinerId: string, limit = 3) {
@@ -184,6 +191,7 @@ export default async function ServiceDetailPage({
   const profileUrl = `/${username}${refParam}`;
   const serviceImageUrl = getServiceImageUrl(service.slug);
   const requiresBirthData = service.category === "astrology" || !!(service as Record<string, unknown>).requires_birth_data;
+  const bookingEnabled = canPubliclySellService(service, diviner);
 
   const divinerAvatarUrl = getDivinerAvatarUrl(diviner.avatar_url);
 
@@ -273,12 +281,18 @@ export default async function ServiceDetailPage({
             <ChevronRight className="size-3 text-silver/40" />
             <span className="text-silver/40 truncate max-w-[140px]">{service.name}</span>
           </div>
-          <Link
-            href={bookUrl}
-            className="rounded-full bg-gold px-4 py-1.5 text-xs font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
-          >
-            Book Now
-          </Link>
+          {bookingEnabled ? (
+            <Link
+              href={bookUrl}
+              className="rounded-full bg-gold px-4 py-1.5 text-xs font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
+            >
+              Book Now
+            </Link>
+          ) : (
+            <span className="rounded-full border border-white/10 px-4 py-1.5 text-xs font-semibold text-silver/45">
+              Booking unavailable
+            </span>
+          )}
         </div>
       </nav>
 
@@ -301,6 +315,12 @@ export default async function ServiceDetailPage({
                 <p className="mt-4 text-base leading-relaxed text-silver/70 md:text-lg">
                   {service.description}
                 </p>
+              )}
+
+              {!bookingEnabled && (
+                <div className="mt-5 max-w-xl rounded-2xl border border-amber-500/20 bg-amber-500/8 px-4 py-3 text-sm text-amber-100/85">
+                  This paid service is temporarily unavailable while payment setup is being completed.
+                </div>
               )}
 
               {/* Diviner attribution */}
@@ -350,13 +370,19 @@ export default async function ServiceDetailPage({
 
               {/* Primary CTA */}
               <div className="mt-8">
-                <Link
-                  href={bookUrl}
-                  className="inline-flex h-12 items-center gap-2 rounded-lg bg-gold px-8 text-sm font-semibold text-cosmos-900 shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-gold-light hover:shadow-[0_0_30px_rgba(201,168,76,0.4)]"
-                >
-                  Book This Reading
-                  <ArrowRight className="size-4" />
-                </Link>
+                {bookingEnabled ? (
+                  <Link
+                    href={bookUrl}
+                    className="inline-flex h-12 items-center gap-2 rounded-lg bg-gold px-8 text-sm font-semibold text-cosmos-900 shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-gold-light hover:shadow-[0_0_30px_rgba(201,168,76,0.4)]"
+                  >
+                    Book This Reading
+                    <ArrowRight className="size-4" />
+                  </Link>
+                ) : (
+                  <span className="inline-flex h-12 items-center rounded-lg border border-white/10 px-8 text-sm font-semibold text-silver/45">
+                    Booking temporarily unavailable
+                  </span>
+                )}
               </div>
             </div>
 
@@ -678,19 +704,25 @@ export default async function ServiceDetailPage({
             {service.duration_minutes}-minute session with {diviner.display_name}
             {" "}&mdash; {formatCurrency(Number(service.base_price))}
           </p>
-          <Link
-            href={bookUrl}
-            className="inline-flex h-12 items-center gap-2 rounded-lg bg-gold px-8 text-sm font-semibold text-cosmos-900 shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-gold-light hover:shadow-[0_0_30px_rgba(201,168,76,0.4)]"
-          >
-            Book This Reading
-            <ArrowRight className="size-4" />
-          </Link>
+          {bookingEnabled ? (
+            <Link
+              href={bookUrl}
+              className="inline-flex h-12 items-center gap-2 rounded-lg bg-gold px-8 text-sm font-semibold text-cosmos-900 shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-gold-light hover:shadow-[0_0_30px_rgba(201,168,76,0.4)]"
+            >
+              Book This Reading
+              <ArrowRight className="size-4" />
+            </Link>
+          ) : (
+            <span className="inline-flex h-12 items-center rounded-lg border border-white/10 px-8 text-sm font-semibold text-silver/45">
+              Booking temporarily unavailable
+            </span>
+          )}
         </div>
       </section>
 
       {/* ===== STICKY PRICING BAR (desktop: right sidebar; mobile: bottom bar) ===== */}
       <Suspense fallback={null}>
-        <RefLinkPreserver bookUrl={bookUrl}>
+        <RefLinkPreserver bookUrl={bookingEnabled ? bookUrl : profileUrl}>
           <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-cosmos-900/95 px-4 py-3 backdrop-blur-xl md:hidden">
             <div className="mx-auto flex max-w-lg items-center justify-between">
               <div>
@@ -699,12 +731,18 @@ export default async function ServiceDetailPage({
                   {formatCurrency(Number(service.base_price))} &middot; {service.duration_minutes} min
                 </p>
               </div>
-              <Link
-                href={bookUrl}
-                className="rounded-lg bg-gold px-5 py-2.5 text-sm font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
-              >
-                Book Now
-              </Link>
+              {bookingEnabled ? (
+                <Link
+                  href={bookUrl}
+                  className="rounded-lg bg-gold px-5 py-2.5 text-sm font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
+                >
+                  Book Now
+                </Link>
+              ) : (
+                <span className="rounded-lg border border-white/10 px-5 py-2.5 text-sm font-semibold text-silver/45">
+                  Unavailable
+                </span>
+              )}
             </div>
             <div className="mt-2 flex items-center justify-center gap-1.5 text-[10px] text-silver/40">
               <Shield className="size-3" />

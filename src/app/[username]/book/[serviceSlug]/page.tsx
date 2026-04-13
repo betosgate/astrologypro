@@ -6,6 +6,8 @@ import { APP_URL } from "@/lib/constants";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
+import { canPubliclySellService } from "@/lib/payout-readiness";
 
 interface PageProps {
   params: Promise<{ username: string; serviceSlug: string }>;
@@ -16,7 +18,7 @@ async function getDivinerAndService(username: string, serviceSlug: string) {
 
   const { data: diviner } = await supabase
     .from("diviners")
-    .select("id, username, display_name, avatar_url, timezone")
+    .select("id, username, display_name, avatar_url, timezone, stripe_account_id, charges_enabled, payouts_enabled")
     .eq("username", username)
     .eq("is_active", true)
     .single();
@@ -25,13 +27,18 @@ async function getDivinerAndService(username: string, serviceSlug: string) {
 
   const { data: service } = await supabase
     .from("services")
-    .select("id, name, slug, description, duration_minutes, base_price, category, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields")
+    .select("id, name, slug, description, duration_minutes, base_price, pricing_item_key, category, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields")
     .eq("diviner_id", diviner.id)
     .eq("slug", serviceSlug)
     .eq("is_active", true)
     .single();
 
-  return { diviner, service };
+  const [resolvedService] = await applyRuntimePricesToServices(
+    supabase,
+    service ? [service] : []
+  );
+
+  return { diviner, service: resolvedService ?? service };
 }
 
 export async function generateMetadata({
@@ -73,6 +80,8 @@ export default async function BookingPage({ params }: PageProps) {
     notFound();
   }
 
+  const bookingEnabled = canPubliclySellService(service, diviner);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950">
       <div className="mx-auto max-w-4xl px-4 py-8">
@@ -95,13 +104,23 @@ export default async function BookingPage({ params }: PageProps) {
           </p>
         </div>
 
-        {/* Booking Wizard */}
-        <BookingWizard
-          diviner={diviner}
-          service={service}
-          availabilityServiceId={service.id}
-          bookingLabel={service.name}
-        />
+        {bookingEnabled ? (
+          <BookingWizard
+            diviner={diviner}
+            service={service}
+            availabilityServiceId={service.id}
+            bookingLabel={service.name}
+          />
+        ) : (
+          <div className="mx-auto max-w-xl rounded-2xl border border-amber-500/20 bg-amber-500/8 px-6 py-8 text-center">
+            <h2 className="text-2xl font-bold text-foreground">
+              Booking Temporarily Unavailable
+            </h2>
+            <p className="mt-3 text-sm text-muted-foreground">
+              This paid service is temporarily unavailable while payment setup is being completed.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
