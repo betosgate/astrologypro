@@ -1,5 +1,22 @@
 # Task 02: Structured Data Entity Graph for Local and Global Authority
 
+- **Status: DONE — 2026-04-13**
+- Implemented in: `src/lib/seo/schema-builders.ts`, `src/app/[username]/page.tsx`, `src/app/[username]/services/[slug]/page.tsx`
+
+### What was implemented
+- Created `src/lib/seo/schema-builders.ts` with:
+  - `buildProfileSchemaGraph()` — replaces old generic LocalBusiness with:
+    - `Person` node with sameAs, knowsLanguage, hasOccupation
+    - `ProfessionalService` node with address (only when city+country set), areaServed, availableChannel, priceRange, aggregateRating (when reviewCount ≥ 3 and policy allows)
+    - `Service` offering nodes each with Offer and duration
+  - `buildServiceDetailSchemaGraph()` — service detail with Service + Offer + BreadcrumbList
+- Replaced inline JSON-LD in profile page with `buildProfileSchemaGraph()`
+- Replaced inline JSON-LD in service detail page with `buildServiceDetailSchemaGraph()`
+- Local claims only emitted when `seo_city` + `seo_country` DB fields are set
+- Global remote-service only emitted when `seo_is_remote_global = true`
+
+---
+
 ## Goal
 
 Replace the current generic schema setup with a richer entity graph that supports both local trust signals and global remote-service intent.

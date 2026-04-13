@@ -23,6 +23,7 @@ import { getDivinerAvatarUrl, getDivinerCoverImageUrl } from "@/lib/diviner-imag
 import { PageTracker } from "@/components/landing/page-tracker";
 import { RefLinkPreserver } from "./ref-link-preserver";
 import { filterVisiblePublicServices, getServiceCategoryLabel } from "@/lib/public-services";
+import { buildServiceDetailSchemaGraph } from "@/lib/seo/schema-builders";
 
 interface PageProps {
   params: Promise<{ username: string; slug: string }>;
@@ -101,13 +102,17 @@ export async function generateMetadata({
 
   const ogImage = getDivinerCoverImageUrl(diviner.cover_image_url || diviner.avatar_url);
 
+  const canonical = `${APP_URL}/${username}/services/${slug}`;
+
   return {
     title,
     description,
+    alternates: { canonical },
+    robots: { index: true, follow: true },
     openGraph: {
       title,
       description,
-      url: `${APP_URL}/${username}/services/${slug}`,
+      url: canonical,
       type: "website",
       ...(ogImage && {
         images: [{ url: ogImage, width: 1200, height: 630 }],
@@ -229,25 +234,17 @@ export default async function ServiceDetailPage({
     },
   ];
 
-  // Schema.org structured data
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@type": "Service",
-    name: service.name,
-    description: service.description,
-    provider: {
-      "@type": "Person",
-      name: diviner.display_name,
-      url: `${APP_URL}/${username}`,
-      ...(diviner.avatar_url && { image: diviner.avatar_url }),
-    },
-    offers: {
-      "@type": "Offer",
-      price: Number(service.base_price),
-      priceCurrency: "USD",
-      url: `${APP_URL}/${username}/services/${service.slug}`,
-    },
-  };
+  // Schema.org structured data — rich entity graph with breadcrumbs
+  const structuredData = buildServiceDetailSchemaGraph(
+    diviner,
+    service,
+    [
+      { name: "Home", url: `${APP_URL}` },
+      { name: diviner.display_name, url: `${APP_URL}/${username}` },
+      { name: "Services", url: `${APP_URL}/${username}/services` },
+      { name: service.name, url: `${APP_URL}/${username}/services/${service.slug}` },
+    ],
+  );
 
   return (
     <>

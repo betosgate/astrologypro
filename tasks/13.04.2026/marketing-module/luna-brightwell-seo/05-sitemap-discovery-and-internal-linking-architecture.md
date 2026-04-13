@@ -1,5 +1,20 @@
 # Task 05: Sitemap, Discovery, and Internal Linking Architecture
 
+- **Status: DONE (sitemap) — 2026-04-13**
+- Implemented in: `src/app/sitemap.ts`
+
+### What was implemented
+- `sitemap.ts` now fetches all active diviner profiles and their active services from DB
+- Emits three new URL groups in correct priority order:
+  - Diviner profile pages `/{username}` — priority 0.9, weekly
+  - Diviner services hub `/{username}/services` — priority 0.8, weekly
+  - Service detail pages `/{username}/services/{slug}` — priority 0.8, weekly
+  - Uses DB `updated_at` as `lastModified` (accurate signal for crawlers)
+- Booking pages (`/{username}/book/{slug}`) intentionally excluded — they carry noindex
+- Diviner pages placed above content pages in return order (higher crawl budget priority)
+
+---
+
 ## Goal
 
 Fix crawl discovery so diviner profile and service pages can actually be found, refreshed, and prioritized by search engines.

@@ -66,14 +66,17 @@ export async function generateMetadata({
 
   const title = `Services by ${diviner.display_name} | AstrologyPro`;
   const description = `Browse astrology and tarot reading services offered by ${diviner.display_name}. Book a personal session today.`;
+  const canonical = `${APP_URL}/${username}/services`;
 
   return {
     title,
     description,
+    alternates: { canonical },
+    robots: { index: true, follow: true },
     openGraph: {
       title,
       description,
-      url: `${APP_URL}/${username}/services`,
+      url: canonical,
       type: "website",
     },
   };
