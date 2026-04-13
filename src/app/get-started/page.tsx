@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -148,7 +148,15 @@ const faqs = [
   },
 ];
 
-export default function GetStartedPage() {
+export default function GetStartedPageWrapper() {
+  return (
+    <Suspense>
+      <GetStartedPage />
+    </Suspense>
+  );
+}
+
+function GetStartedPage() {
   const supabase = createClient();
   const formRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
