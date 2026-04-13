@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertAffiliateShareWithinCap } from "@/lib/affiliate-share-cap";
+import { logFinanceAdminAction } from "@/lib/finance-ops";
 
 export const dynamic = "force-dynamic";
 
@@ -102,6 +103,17 @@ export async function PATCH(
     );
   }
 
+  await logFinanceAdminAction({
+    adminUserId: user.id,
+    targetUserId: data.diviner_id,
+    actionType: "finance_affiliate_rule_updated",
+    details: {
+      ruleId,
+      updates: updatePayload,
+      affiliateId: data.affiliate_id,
+    },
+  });
+
   return NextResponse.json({ data });
 }
 
@@ -135,6 +147,15 @@ export async function DELETE(
       { status: 404 }
     );
   }
+
+  await logFinanceAdminAction({
+    adminUserId: user.id,
+    actionType: "finance_affiliate_rule_deactivated",
+    details: {
+      ruleId,
+      isActive: data.is_active,
+    },
+  });
 
   return NextResponse.json({ data });
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertAffiliateShareWithinCap } from "@/lib/affiliate-share-cap";
+import { logFinanceAdminAction } from "@/lib/finance-ops";
 
 export const dynamic = "force-dynamic";
 
@@ -157,6 +158,18 @@ export async function POST(
       { status: 500 }
     );
   }
+
+  await logFinanceAdminAction({
+    adminUserId: user.id,
+    targetUserId: affiliate.diviner_id,
+    actionType: "finance_affiliate_rule_created",
+    details: {
+      affiliateId: id,
+      ruleId: data.id,
+      commissionType: commission_type,
+      commissionValue: commission_value,
+    },
+  });
 
   return NextResponse.json({ data }, { status: 201 });
 }

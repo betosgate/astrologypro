@@ -13,27 +13,35 @@ type RecordRefundEventParams = {
   reason?: string | null;
   status?: "pending" | "processed" | "failed" | "reversed";
   providerResponse?: Record<string, unknown>;
+  revenueLedgerEntryId?: string | null;
 };
 
 export async function recordRefundEvent(params: RecordRefundEventParams) {
   const admin = createAdminClient();
 
-  const { error } = await admin.from("refund_events").insert({
-    booking_id: params.bookingId,
-    diviner_id: params.divinerId,
-    order_reference: params.orderReference,
-    payment_intent_id: params.paymentIntentId,
-    provider_refund_id: params.providerRefundId,
-    initiated_by_user_id: params.initiatedByUserId,
-    initiated_by_role: params.initiatedByRole,
-    amount_cents: Math.max(1, Math.round(params.amountCents)),
-    currency: (params.currency ?? "usd").toLowerCase(),
-    reason: params.reason ?? null,
-    status: params.status ?? "processed",
-    provider_response: params.providerResponse ?? {},
-  });
+  const { data, error } = await admin
+    .from("refund_events")
+    .insert({
+      booking_id: params.bookingId,
+      diviner_id: params.divinerId,
+      order_reference: params.orderReference,
+      payment_intent_id: params.paymentIntentId,
+      provider_refund_id: params.providerRefundId,
+      initiated_by_user_id: params.initiatedByUserId,
+      initiated_by_role: params.initiatedByRole,
+      amount_cents: Math.max(1, Math.round(params.amountCents)),
+      currency: (params.currency ?? "usd").toLowerCase(),
+      reason: params.reason ?? null,
+      status: params.status ?? "processed",
+      provider_response: params.providerResponse ?? {},
+      revenue_ledger_entry_id: params.revenueLedgerEntryId ?? null,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     throw new Error(error.message);
   }
+
+  return data;
 }

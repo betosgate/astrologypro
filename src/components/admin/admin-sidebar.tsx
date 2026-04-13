@@ -253,6 +253,7 @@ const NAV_GROUPS = [
       { label: "Provider Costs", href: "/admin/reports/provider-costs", icon: TrendingUp },
       { label: "Operations Health", href: "/admin/reports/operations", icon: AlertTriangle },
       { label: "Payouts", href: "/admin/reports/payouts", icon: CreditCard },
+      { label: "Finance Ops", href: "/admin/reports/finance-ops", icon: Settings2 },
       { label: "Vercel Deployments", href: "/admin/reports/vercel-deployments", icon: Rocket },
       { label: "Funnel", href: "/admin/reports/funnel", icon: BarChart3 },
       { label: "Diviner Traffic", href: "/admin/reports/diviner-traffic", icon: Globe },

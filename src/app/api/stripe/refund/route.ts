@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import { sendRefundProcessed } from "@/lib/email";
 import { recordRefundEvent } from "@/lib/refund-events";
+import { applyRefundToRevenueLedger } from "@/lib/revenue-ledger";
+import { createFinanceOperationNote } from "@/lib/finance-ops";
 
 export const dynamic = "force-dynamic";
 
@@ -112,7 +114,7 @@ export async function POST(request: NextRequest) {
       })
       .eq("id", bookingId);
 
-    await recordRefundEvent({
+    const refundEvent = await recordRefundEvent({
       bookingId,
       divinerId: diviner.id,
       orderReference: `booking:${bookingId}`,
@@ -126,6 +128,26 @@ export async function POST(request: NextRequest) {
         refundStatus: refund.status,
         refundObject: refund.object,
       },
+    });
+
+    const reconciledEntry = await applyRefundToRevenueLedger({
+      sourceType: "booking",
+      sourceReference: `booking:${bookingId}`,
+      refundAmountCents,
+      refundEventId: refundEvent.id,
+      actorUserId: user.id,
+      actorRole: "diviner",
+      reason: reason ?? "Diviner-issued refund",
+    });
+
+    await createFinanceOperationNote({
+      createdByUserId: user.id,
+      revenueLedgerEntryId: reconciledEntry.id,
+      divinerId: diviner.id,
+      orderReference: `booking:${bookingId}`,
+      noteType: "refund_investigation",
+      note: reason ?? "Diviner-issued refund",
+      status: "resolved",
     });
 
     // Send refund email to client

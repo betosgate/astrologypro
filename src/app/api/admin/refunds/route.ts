@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import { sendRefundProcessed } from "@/lib/email";
 import { recordRefundEvent } from "@/lib/refund-events";
+import { applyRefundToRevenueLedger } from "@/lib/revenue-ledger";
+import { createFinanceOperationNote, logFinanceAdminAction } from "@/lib/finance-ops";
 
 export const runtime = "nodejs";
 
@@ -51,11 +53,12 @@ export async function GET(request: NextRequest) {
 
   const orderRefs = bookings.map((row) => `booking:${row.id}`);
 
-  const [{ data: ledgerRows }, { data: affiliateRows }] = await Promise.all([
+  const [{ data: ledgerRows }, { data: affiliateRows }, { data: noteRows }] =
+    await Promise.all([
     admin
       .from("revenue_ledger_entries")
       .select(
-        "source_reference, gross_amount_cents, platform_fee_cents, affiliate_commission_cents, diviner_net_amount_cents"
+        "id, source_reference, settlement_status, settlement_note, gross_amount_cents, platform_fee_cents, affiliate_commission_cents, diviner_net_amount_cents, refunded_gross_amount_cents, refunded_platform_fee_cents, refunded_affiliate_commission_cents, refunded_diviner_net_amount_cents"
       )
       .eq("source_type", "booking")
       .in("source_reference", orderRefs),
@@ -63,12 +66,21 @@ export async function GET(request: NextRequest) {
       .from("affiliate_commissions")
       .select("order_reference, commission_amount_cents, refund_amount_cents")
       .in("order_reference", orderRefs),
-  ]);
+    admin
+      .from("finance_operation_notes")
+      .select("order_reference, note_type, note, created_at")
+      .in("order_reference", orderRefs)
+      .order("created_at", { ascending: false }),
+    ]);
 
   const ledgerMap = new Map(
     (ledgerRows ?? []).map((row) => [row.source_reference, row]),
   );
   const affiliateMap = new Map<string, { total: number; refunded: number }>();
+  const noteMap = new Map<
+    string,
+    { noteType: string; note: string; createdAt: string } | undefined
+  >();
   for (const row of affiliateRows ?? []) {
     const key = row.order_reference as string;
     const existing = affiliateMap.get(key) ?? { total: 0, refunded: 0 };
@@ -76,19 +88,49 @@ export async function GET(request: NextRequest) {
     existing.refunded += Number(row.refund_amount_cents ?? 0) / 100;
     affiliateMap.set(key, existing);
   }
+  for (const row of noteRows ?? []) {
+    const key = row.order_reference as string | null;
+    if (!key || noteMap.has(key)) continue;
+    noteMap.set(key, {
+      noteType: String(row.note_type ?? "general"),
+      note: String(row.note ?? ""),
+      createdAt: String(row.created_at ?? ""),
+    });
+  }
 
   return NextResponse.json({
     rows: bookings.map((row) => {
       const ref = `booking:${row.id}`;
       const ledger = ledgerMap.get(ref);
       const affiliate = affiliateMap.get(ref);
+      const latestNote = noteMap.get(ref);
       return {
         ...row,
         ledger_gross_amount: Number(ledger?.gross_amount_cents ?? 0) / 100,
         ledger_platform_fee: Number(ledger?.platform_fee_cents ?? 0) / 100,
         ledger_affiliate_commission: Number(ledger?.affiliate_commission_cents ?? 0) / 100,
         ledger_diviner_net: Number(ledger?.diviner_net_amount_cents ?? 0) / 100,
+        ledger_remaining_gross_amount:
+          (Number(ledger?.gross_amount_cents ?? 0) -
+            Number(ledger?.refunded_gross_amount_cents ?? 0)) /
+          100,
+        ledger_remaining_platform_fee:
+          (Number(ledger?.platform_fee_cents ?? 0) -
+            Number(ledger?.refunded_platform_fee_cents ?? 0)) /
+          100,
+        ledger_remaining_affiliate_commission:
+          (Number(ledger?.affiliate_commission_cents ?? 0) -
+            Number(ledger?.refunded_affiliate_commission_cents ?? 0)) /
+          100,
+        ledger_remaining_diviner_net:
+          (Number(ledger?.diviner_net_amount_cents ?? 0) -
+            Number(ledger?.refunded_diviner_net_amount_cents ?? 0)) /
+          100,
+        settlement_status: ledger?.settlement_status ?? null,
+        settlement_note: ledger?.settlement_note ?? null,
         affiliate_refund_amount: affiliate?.refunded ?? 0,
+        finance_note_type: latestNote?.noteType ?? null,
+        finance_note: latestNote?.note ?? null,
       };
     }),
   });
@@ -159,7 +201,7 @@ export async function POST(request: NextRequest) {
     })
     .eq("id", bookingId);
 
-  await recordRefundEvent({
+  const refundEvent = await recordRefundEvent({
     bookingId,
     divinerId: booking.diviner_id ?? null,
     orderReference: `booking:${bookingId}`,
@@ -172,6 +214,38 @@ export async function POST(request: NextRequest) {
     providerResponse: {
       refundStatus: refund.status,
       refundObject: refund.object,
+    },
+  });
+
+  const reconciledEntry = await applyRefundToRevenueLedger({
+    sourceType: "booking",
+    sourceReference: `booking:${bookingId}`,
+    refundAmountCents: amountCents,
+    refundEventId: refundEvent.id,
+    actorUserId: user.id,
+    actorRole: "admin",
+    reason: reason ?? "Admin-issued refund",
+  });
+
+  await createFinanceOperationNote({
+    createdByUserId: user.id,
+    revenueLedgerEntryId: reconciledEntry.id,
+    divinerId: booking.diviner_id ?? null,
+    orderReference: `booking:${bookingId}`,
+    noteType: "refund_investigation",
+    note: reason ?? "Admin-issued refund",
+    status: "resolved",
+  });
+
+  await logFinanceAdminAction({
+    adminUserId: user.id,
+    targetUserId: booking.diviner_id ?? null,
+    actionType: "finance_refund_issued",
+    details: {
+      bookingId,
+      amountCents,
+      refundId: refund.id,
+      settlementStatus: reconciledEntry.settlement_status,
     },
   });
 

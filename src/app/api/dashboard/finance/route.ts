@@ -44,25 +44,25 @@ export async function GET(req: NextRequest) {
   let ledgerQuery = admin
     .from("revenue_ledger_entries")
     .select(
-      "id, source_type, source_reference, gross_amount_cents, platform_fee_cents, affiliate_commission_cents, diviner_gross_amount_cents, diviner_net_amount_cents, recognized_at, metadata"
+      "id, source_type, source_reference, gross_amount_cents, platform_fee_cents, affiliate_commission_cents, diviner_gross_amount_cents, diviner_net_amount_cents, refunded_gross_amount_cents, refunded_affiliate_commission_cents, refunded_diviner_net_amount_cents, settlement_status, recognized_at, metadata"
     )
     .eq("diviner_id", diviner.id);
 
   let refundQuery = admin
-    .from("bookings")
-    .select("id, refund_amount, refunded_at, refund_reason, scheduled_at")
+    .from("refund_events")
+    .select("id, amount_cents, created_at, reason, status")
     .eq("diviner_id", diviner.id)
-    .not("refunded_at", "is", null);
+    .order("created_at", { ascending: false });
 
   if (dateAfter) {
     ledgerQuery = ledgerQuery.gte("recognized_at", dateAfter);
-    refundQuery = refundQuery.gte("refunded_at", dateAfter);
+    refundQuery = refundQuery.gte("created_at", dateAfter);
   }
 
   const [{ data: ledgerRows, error: ledgerError }, { data: refundRows, error: refundError }] =
     await Promise.all([
       ledgerQuery.order("recognized_at", { ascending: false }).limit(200),
-      refundQuery.order("refunded_at", { ascending: false }).limit(200),
+      refundQuery.limit(200),
     ]);
 
   if (ledgerError) {
@@ -85,7 +85,31 @@ export async function GET(req: NextRequest) {
       rows.reduce((sum, row) => sum + Number(row.diviner_gross_amount_cents ?? 0), 0) / 100,
     divinerNet:
       rows.reduce((sum, row) => sum + Number(row.diviner_net_amount_cents ?? 0), 0) / 100,
-    refundsTotal: refunds.reduce((sum, row) => sum + Number(row.refund_amount ?? 0), 0),
+    grossRevenueAfterRefunds:
+      rows.reduce(
+        (sum, row) =>
+          sum +
+          (Number(row.gross_amount_cents ?? 0) -
+            Number(row.refunded_gross_amount_cents ?? 0)),
+        0,
+      ) / 100,
+    affiliateCommissionsAfterRefunds:
+      rows.reduce(
+        (sum, row) =>
+          sum +
+          (Number(row.affiliate_commission_cents ?? 0) -
+            Number(row.refunded_affiliate_commission_cents ?? 0)),
+        0,
+      ) / 100,
+    divinerNetAfterRefunds:
+      rows.reduce(
+        (sum, row) =>
+          sum +
+          (Number(row.diviner_net_amount_cents ?? 0) -
+            Number(row.refunded_diviner_net_amount_cents ?? 0)),
+        0,
+      ) / 100,
+    refundsTotal: refunds.reduce((sum, row) => sum + Number(row.amount_cents ?? 0), 0) / 100,
     refundsCount: refunds.length,
     eventsCount: rows.length,
   };
@@ -119,6 +143,22 @@ export async function GET(req: NextRequest) {
       grossRevenue: Math.round(value.grossRevenue * 100) / 100,
       divinerNet: Math.round(value.divinerNet * 100) / 100,
       affiliateCommissions: Math.round(value.affiliateCommissions * 100) / 100,
+      grossRevenueAfterRefunds: Math.round(
+        (value.grossRevenue -
+          rows
+            .filter((entry) => {
+              const date = new Date(entry.recognized_at as string);
+              return (
+                `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}` ===
+                month
+              );
+            })
+            .reduce(
+              (sum, entry) => sum + Number(entry.refunded_gross_amount_cents ?? 0) / 100,
+              0,
+            )) *
+          100,
+      ) / 100,
     }))
     .sort((a, b) => a.month.localeCompare(b.month));
 
@@ -131,6 +171,12 @@ export async function GET(req: NextRequest) {
     platformFees: Number(row.platform_fee_cents ?? 0) / 100,
     affiliateCommissions: Number(row.affiliate_commission_cents ?? 0) / 100,
     divinerNet: Number(row.diviner_net_amount_cents ?? 0) / 100,
+    refundedGrossRevenue: Number(row.refunded_gross_amount_cents ?? 0) / 100,
+    refundedAffiliateCommissions:
+      Number(row.refunded_affiliate_commission_cents ?? 0) / 100,
+    refundedDivinerNet:
+      Number(row.refunded_diviner_net_amount_cents ?? 0) / 100,
+    settlementStatus: String(row.settlement_status ?? "approved"),
   }));
 
   return NextResponse.json({
@@ -145,10 +191,10 @@ export async function GET(req: NextRequest) {
     monthly,
     refunds: refunds.slice(0, 12).map((row) => ({
       id: row.id,
-      refundedAt: row.refunded_at,
-      refundAmount: Number(row.refund_amount ?? 0),
-      refundReason: row.refund_reason,
-      scheduledAt: row.scheduled_at,
+      refundedAt: row.created_at,
+      refundAmount: Number(row.amount_cents ?? 0) / 100,
+      refundReason: row.reason,
+      status: row.status,
     })),
     recentActivity,
   });

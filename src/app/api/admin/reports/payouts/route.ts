@@ -17,6 +17,7 @@ interface DivinerPayout {
   stripeAccountId: string | null;
   chargesEnabled: boolean;
   payoutsEnabled: boolean;
+  settlementStatusCounts: Record<string, number>;
 }
 
 interface AffiliateCommission {
@@ -66,16 +67,15 @@ export async function GET(req: NextRequest) {
     let ledgerQuery = db
       .from("revenue_ledger_entries")
       .select(
-        "id, diviner_id, gross_amount_cents, platform_fee_cents, affiliate_commission_cents, diviner_net_amount_cents, recognized_at"
+        "id, diviner_id, gross_amount_cents, platform_fee_cents, affiliate_commission_cents, diviner_net_amount_cents, refunded_gross_amount_cents, refunded_diviner_net_amount_cents, settlement_status, recognized_at"
       )
       .order("recognized_at", { ascending: false })
       .order("id", { ascending: false });
 
     let refundsQuery = db
-      .from("bookings")
-      .select("id, diviner_id, refund_amount, refunded_at")
-      .not("refunded_at", "is", null)
-      .order("refunded_at", { ascending: false });
+      .from("refund_events")
+      .select("id, diviner_id, amount_cents, created_at")
+      .order("created_at", { ascending: false });
 
     let affiliateQuery = db
       .from("affiliate_commissions")
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
 
     if (since) {
       ledgerQuery = ledgerQuery.gte("recognized_at", since);
-      refundsQuery = refundsQuery.gte("refunded_at", since);
+      refundsQuery = refundsQuery.gte("created_at", since);
       affiliateQuery = affiliateQuery.gte("created_at", since);
     }
 
@@ -121,6 +121,7 @@ export async function GET(req: NextRequest) {
         bookings: number;
         refundAmount: number;
         refundCount: number;
+        settlementStatusCounts: Record<string, number>;
       }
     >();
 
@@ -133,6 +134,7 @@ export async function GET(req: NextRequest) {
         bookings: 0,
         refundAmount: 0,
         refundCount: 0,
+        settlementStatusCounts: {},
       });
     }
 
@@ -144,12 +146,15 @@ export async function GET(req: NextRequest) {
       bucket.affiliateCommissions += Number(row.affiliate_commission_cents ?? 0) / 100;
       bucket.payout += Number(row.diviner_net_amount_cents ?? 0) / 100;
       bucket.bookings += 1;
+      const status = String(row.settlement_status ?? "approved");
+      bucket.settlementStatusCounts[status] =
+        (bucket.settlementStatusCounts[status] ?? 0) + 1;
     }
 
     for (const row of refundRows ?? []) {
       const bucket = payoutMap.get(row.diviner_id ?? "");
       if (!bucket) continue;
-      bucket.refundAmount += Number(row.refund_amount ?? 0);
+      bucket.refundAmount += Number(row.amount_cents ?? 0) / 100;
       bucket.refundCount += 1;
     }
 
@@ -170,6 +175,7 @@ export async function GET(req: NextRequest) {
           stripeAccountId: diviner?.stripe_account_id ?? null,
           chargesEnabled: diviner?.charges_enabled === true,
           payoutsEnabled: diviner?.payouts_enabled === true,
+          settlementStatusCounts: agg.settlementStatusCounts,
         };
       })
       .sort((a, b) => b.totalRevenue - a.totalRevenue);
@@ -249,7 +255,7 @@ export async function GET(req: NextRequest) {
     }
 
     for (const row of refundRows ?? []) {
-      const date = new Date(row.refunded_at as string);
+      const date = new Date(row.created_at as string);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
       const existing = monthlyMap.get(key) ?? {
         revenue: 0,
@@ -258,7 +264,7 @@ export async function GET(req: NextRequest) {
         affiliateCommissions: 0,
         refunds: 0,
       };
-      existing.refunds += Number(row.refund_amount ?? 0);
+      existing.refunds += Number(row.amount_cents ?? 0) / 100;
       monthlyMap.set(key, existing);
     }
 

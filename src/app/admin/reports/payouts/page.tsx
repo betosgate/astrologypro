@@ -41,6 +41,7 @@ interface DivinerPayout {
   stripeAccountId: string | null;
   chargesEnabled: boolean;
   payoutsEnabled: boolean;
+  settlementStatusCounts: Record<string, number>;
 }
 
 interface AffiliateCommission {
@@ -249,6 +250,7 @@ export default function PayoutsReportPage() {
                     <TableHead className="text-right">Net Share</TableHead>
                     <TableHead className="text-right">Refunds</TableHead>
                     <TableHead className="text-right">Bookings</TableHead>
+                    <TableHead>Review States</TableHead>
                     <TableHead>Stripe Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -276,6 +278,19 @@ export default function PayoutsReportPage() {
                         {formatCurrency(d.refundAmount)}
                       </TableCell>
                       <TableCell className="text-right">{d.bookings}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {Object.entries(d.settlementStatusCounts).length === 0 ? (
+                            <span className="text-xs text-muted-foreground">none</span>
+                          ) : (
+                            Object.entries(d.settlementStatusCounts).map(([key, value]) => (
+                              <Badge key={key} variant="outline">
+                                {key}:{value}
+                              </Badge>
+                            ))
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         {d.stripeAccountId ? (
                           <div className="flex flex-wrap gap-1">

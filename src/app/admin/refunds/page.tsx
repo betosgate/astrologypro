@@ -29,7 +29,15 @@ type RefundRow = {
   ledger_platform_fee: number;
   ledger_affiliate_commission: number;
   ledger_diviner_net: number;
+  ledger_remaining_gross_amount: number;
+  ledger_remaining_platform_fee: number;
+  ledger_remaining_affiliate_commission: number;
+  ledger_remaining_diviner_net: number;
+  settlement_status: string | null;
+  settlement_note: string | null;
   affiliate_refund_amount: number;
+  finance_note_type: string | null;
+  finance_note: string | null;
   clients: { full_name: string | null; email: string } | null;
   diviners: { id?: string | null; display_name: string | null } | null;
 };
@@ -184,8 +192,10 @@ export default function AdminRefundsPage() {
                     <th className="pb-2 text-right font-medium">Platform</th>
                     <th className="pb-2 text-right font-medium">Affiliate</th>
                     <th className="pb-2 text-right font-medium">Diviner Net</th>
+                    <th className="pb-2 text-right font-medium">Remaining</th>
                     <th className="pb-2 text-right font-medium">Refund</th>
                     <th className="pb-2 text-left font-medium">Reason</th>
+                    <th className="pb-2 text-left font-medium">Finance Note</th>
                     <th className="pb-2 text-center font-medium">No-Show</th>
                     <th className="pb-2 text-center font-medium">Status</th>
                     <th className="pb-2 text-center font-medium">Actions</th>
@@ -227,12 +237,18 @@ export default function AdminRefundsPage() {
                           {formatCurrency(r.ledger_diviner_net ?? 0)}
                         </td>
                         <td className="py-2 text-right">
+                          {formatCurrency(r.ledger_remaining_gross_amount ?? 0)}
+                        </td>
+                        <td className="py-2 text-right">
                           {r.refund_amount != null
                             ? formatCurrency(r.refund_amount)
                             : "—"}
                         </td>
                         <td className="py-2 max-w-[180px] truncate text-muted-foreground">
                           {r.refund_reason ?? "—"}
+                        </td>
+                        <td className="py-2 max-w-[220px] truncate text-muted-foreground">
+                          {r.finance_note ?? r.settlement_note ?? "—"}
                         </td>
                         <td className="py-2 text-center">
                           {r.no_show_type ? (
@@ -254,7 +270,7 @@ export default function AdminRefundsPage() {
                           <Badge
                             variant={isRefunded ? "default" : "outline"}
                           >
-                            {isRefunded ? "Refunded" : r.status}
+                            {isRefunded ? "Refunded" : r.settlement_status ?? r.status}
                           </Badge>
                         </td>
                         <td className="py-2 text-center">

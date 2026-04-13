@@ -36,6 +36,9 @@ type FinanceResponse = {
     affiliateCommissions: number;
     divinerGross: number;
     divinerNet: number;
+    grossRevenueAfterRefunds: number;
+    affiliateCommissionsAfterRefunds: number;
+    divinerNetAfterRefunds: number;
     refundsTotal: number;
     refundsCount: number;
     eventsCount: number;
@@ -45,13 +48,14 @@ type FinanceResponse = {
     grossRevenue: number;
     divinerNet: number;
     affiliateCommissions: number;
+    grossRevenueAfterRefunds: number;
   }>;
   refunds: Array<{
     id: string;
     refundedAt: string;
     refundAmount: number;
     refundReason: string | null;
-    scheduledAt: string | null;
+    status: string | null;
   }>;
   recentActivity: Array<{
     id: string;
@@ -62,6 +66,10 @@ type FinanceResponse = {
     platformFees: number;
     affiliateCommissions: number;
     divinerNet: number;
+    refundedGrossRevenue: number;
+    refundedAffiliateCommissions: number;
+    refundedDivinerNet: number;
+    settlementStatus: string;
   }>;
 };
 
@@ -201,7 +209,10 @@ export default function DashboardFinancePage() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{fmtCurrency(data.summary.grossRevenue)}</p>
-            <p className="text-xs text-muted-foreground">{data.summary.eventsCount} monetized events</p>
+            <p className="text-xs text-muted-foreground">
+              {data.summary.eventsCount} monetized events • after refunds{" "}
+              {fmtCurrency(data.summary.grossRevenueAfterRefunds)}
+            </p>
           </CardContent>
         </Card>
 
@@ -222,6 +233,9 @@ export default function DashboardFinancePage() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{fmtCurrency(data.summary.affiliateCommissions)}</p>
+            <p className="text-xs text-muted-foreground">
+              after refunds {fmtCurrency(data.summary.affiliateCommissionsAfterRefunds)}
+            </p>
           </CardContent>
         </Card>
 
@@ -243,6 +257,9 @@ export default function DashboardFinancePage() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{fmtCurrency(data.summary.divinerNet)}</p>
+            <p className="text-xs text-muted-foreground">
+              after refunds {fmtCurrency(data.summary.divinerNetAfterRefunds)}
+            </p>
           </CardContent>
         </Card>
 
@@ -271,6 +288,7 @@ export default function DashboardFinancePage() {
                 <TableRow>
                   <TableHead>Month</TableHead>
                   <TableHead className="text-right">Gross</TableHead>
+                  <TableHead className="text-right">After Refunds</TableHead>
                   <TableHead className="text-right">Affiliate Share</TableHead>
                   <TableHead className="text-right">Net</TableHead>
                 </TableRow>
@@ -280,6 +298,7 @@ export default function DashboardFinancePage() {
                   <TableRow key={row.month}>
                     <TableCell>{row.month}</TableCell>
                     <TableCell className="text-right">{fmtCurrency(row.grossRevenue)}</TableCell>
+                    <TableCell className="text-right">{fmtCurrency(row.grossRevenueAfterRefunds)}</TableCell>
                     <TableCell className="text-right">{fmtCurrency(row.affiliateCommissions)}</TableCell>
                     <TableCell className="text-right font-medium">{fmtCurrency(row.divinerNet)}</TableCell>
                   </TableRow>
@@ -307,6 +326,8 @@ export default function DashboardFinancePage() {
                   <TableHead className="text-right">Platform Fee</TableHead>
                   <TableHead className="text-right">Affiliate</TableHead>
                   <TableHead className="text-right">Net</TableHead>
+                  <TableHead className="text-right">Refunded</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -318,6 +339,8 @@ export default function DashboardFinancePage() {
                     <TableCell className="text-right">{fmtCurrency(row.platformFees)}</TableCell>
                     <TableCell className="text-right">{fmtCurrency(row.affiliateCommissions)}</TableCell>
                     <TableCell className="text-right font-medium">{fmtCurrency(row.divinerNet)}</TableCell>
+                    <TableCell className="text-right">{fmtCurrency(row.refundedGrossRevenue)}</TableCell>
+                    <TableCell className="capitalize">{row.settlementStatus.replaceAll("_", " ")}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -338,7 +361,7 @@ export default function DashboardFinancePage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Refunded</TableHead>
-                  <TableHead>Scheduled</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Reason</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                 </TableRow>
@@ -347,7 +370,7 @@ export default function DashboardFinancePage() {
                 {data.refunds.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell>{fmtDate(row.refundedAt)}</TableCell>
-                    <TableCell>{fmtDate(row.scheduledAt)}</TableCell>
+                    <TableCell>{row.status ?? "—"}</TableCell>
                     <TableCell>{row.refundReason ?? "—"}</TableCell>
                     <TableCell className="text-right font-medium">{fmtCurrency(row.refundAmount)}</TableCell>
                   </TableRow>

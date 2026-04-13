@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logFinanceAdminAction } from "@/lib/finance-ops";
 
 export const dynamic = "force-dynamic";
 
@@ -147,6 +148,25 @@ export async function PUT(request: NextRequest) {
       { type: "about:blank", title: "Internal Error", status: 500, detail: "Failed to update settings." },
       { status: 500 }
     );
+  }
+
+  const financeFieldNames = [
+    "max_diviner_affiliate_share_percent",
+    "no_show_diviner_refund_percent",
+    "no_show_client_refund_percent",
+    "no_show_grace_minutes",
+  ];
+  const financeUpdates = Object.fromEntries(
+    Object.entries(updates).filter(([key]) => financeFieldNames.includes(key)),
+  );
+  if (Object.keys(financeUpdates).length > 0) {
+    await logFinanceAdminAction({
+      adminUserId: adminUser.id,
+      actionType: "finance_platform_settings_updated",
+      details: {
+        updates: financeUpdates,
+      },
+    });
   }
 
   return NextResponse.json(data);
