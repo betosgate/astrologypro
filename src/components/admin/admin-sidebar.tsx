@@ -245,6 +245,7 @@ const NAV_GROUPS = [
       { label: "Payouts", href: "/admin/reports/payouts", icon: CreditCard },
       { label: "Funnel", href: "/admin/reports/funnel", icon: BarChart3 },
       { label: "Readings", href: "/admin/reports/readings", icon: BarChart2 },
+      { label: "Affiliates", href: "/admin/reports/affiliates", icon: Users },
     ],
   },
   {
