@@ -2777,7 +2777,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                 return (
                   <div key={sec.key} className="rounded-lg border overflow-hidden">
                     <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center">
-                      <SmartHeading title={fullTitle} textSize="text-[18px]" iconSize="size-6" className="text-black" />
+                      <SmartHeading title={fullTitle} textSize="text-[22px]" iconSize="size-7" className="text-black" />
                     </div>
                     <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
                       <p className="leading-relaxed line-clamp-3">{content}</p>
@@ -2981,7 +2981,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
             <div className={cn("px-4 py-3 flex items-center justify-center", (tabSlug === "tropical_transits_monthly_v3" || tabSlug === "tropical_transits_weekly_v2") ? "horoscope-interp-header" : "horoscope-section-header")}>
               <div className="text-sm font-semibold text-center w-full">
                 {(tabSlug === "tropical_transits_monthly_v3" || tabSlug === "tropical_transits_weekly_v2") ? (
-                  <SmartHeading title={title} textSize="text-[18px]" iconSize="size-6" className="text-black" />
+                  <SmartHeading title={title} textSize="text-[22px]" iconSize="size-7" className="text-black" />
                 ) : (
                   <RelationshipHeading />
                 )}
