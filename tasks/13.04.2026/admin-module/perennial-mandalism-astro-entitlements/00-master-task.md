@@ -22,6 +22,7 @@ The system also needs operational rules:
 - natal and relationship generation should normally happen once
 - members may regenerate up to `3` times if they entered information incorrectly
 - after the retry limit, they must open a job or support ticket for review
+- when natal or monthly transit artifacts are created, the user must be notified
 
 This pack is architecture and task writing only. It does not implement the feature.
 
@@ -98,6 +99,7 @@ The correct architecture is:
 6. `06-support-ticket-escalation-for-chart-issues.md`
 7. `07-seed-fixtures-rollout-and-ops-monitoring.md`
 8. `08-base-user-auto-provisioning-natal-and-monthly-only.md`
+9. `09-chart-creation-notifications-and-delivery-audit.md`
 
 ## Acceptance Standard
 
@@ -107,6 +109,7 @@ This feature set is complete only when:
 - base-user creation auto-provisions only natal and monthly transit eligibility
 - relationship charts are available across the family set using existing synastry logic
 - monthly transits generate exactly once per member profile per month
+- users are notified when natal charts and monthly transit artifacts are created
 - chart regeneration is capped at `3` correction attempts
 - support escalation uses the existing ticket system
 - admin has visibility into chart status, failures, retries, and unresolved issues
