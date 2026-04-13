@@ -88,7 +88,7 @@ export async function PUT(_req: NextRequest, { params: _params }: RouteParams) {
 /**
  * @deprecated — original PUT kept for reference
  */
-export async function _PUT_ORIGINAL(req: NextRequest, { params }: RouteParams) {
+async function _PUT_ORIGINAL(req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   const { user, diviner } = await resolveDiviner();
 
@@ -217,7 +217,7 @@ export async function DELETE(_req: NextRequest, { params: _params2 }: RouteParam
 }
 
 /** @deprecated — original DELETE kept for reference */
-export async function _DELETE_ORIGINAL(_req: NextRequest, { params }: RouteParams) {
+async function _DELETE_ORIGINAL(_req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   const { user, diviner } = await resolveDiviner();
 

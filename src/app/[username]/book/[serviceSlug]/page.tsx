@@ -49,9 +49,13 @@ export async function generateMetadata({
     service.description ??
     `Book a ${service.duration_minutes}-minute ${service.name} reading with ${diviner.display_name}`;
 
+  // Booking pages are conversion utilities — keep them out of the search index
+  // so they do not compete with service detail pages for purchase-intent queries.
   return {
     title,
     description,
+    robots: { index: false, follow: true },
+    alternates: { canonical: `${APP_URL}/${username}/services/${serviceSlug}` },
     openGraph: {
       title,
       description,

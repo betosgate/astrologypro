@@ -8,7 +8,6 @@ import { getServiceImageUrl } from "@/lib/service-images";
 import { StickyNav } from "@/components/landing/sticky-nav";
 import { AvailabilityPreview } from "@/components/landing/availability-preview";
 import { ServiceTabs } from "./service-tabs";
-import { APP_URL } from "@/lib/constants";
 import { Gift, ArrowRight, ShieldAlert } from "lucide-react";
 import { PageTracker } from "@/components/landing/page-tracker";
 import { MediaGallery, type MediaItem } from "@/components/public/media-gallery";
@@ -18,29 +17,27 @@ import { PublicContentTabs } from "@/components/public/public-content-tabs";
 import { BlogSubscribeForm } from "@/app/blog/subscribe-form";
 import { CheckInForm } from "@/components/diviner/check-in-form";
 import { WeeklySubscriptionSignup } from "@/components/public/weekly-subscription-signup";
-import { isFallbackManualService } from "@/lib/public-booking";
 import { isPublicSectionBlocked, normalizePublishPolicy } from "@/lib/diviner-publishing";
 import { getDivinerAvatarUrl, getDivinerCoverImageUrl } from "@/lib/diviner-images";
+import {
+  buildProfileTitle,
+  buildProfileDescription,
+  buildProfileCanonical,
+  buildProfileRobots,
+  buildProfileOgImage,
+} from "@/lib/seo/diviner-profile";
+import { buildProfileSchemaGraph } from "@/lib/seo/schema-builders";
+import {
+  buildPublicServicesIntro,
+  filterVisiblePublicServices,
+  getHighlightedPublicService,
+  getServiceCategoryLabel,
+  isTimeBasedPublicService,
+} from "@/lib/public-services";
 
 interface PageProps {
   params: Promise<{ username: string }>;
   searchParams: Promise<{ tab?: string }>;
-}
-
-function isTimeBasedService(service: Record<string, unknown>) {
-  const triggerEvent = String(service.trigger_event ?? "").trim();
-  const slug = String(service.slug ?? "").toLowerCase();
-  const name = String(service.name ?? "").toLowerCase();
-
-  return Boolean(
-    triggerEvent ||
-      slug.includes("return") ||
-      slug.includes("transit") ||
-      slug.includes("forecast") ||
-      name.includes("return") ||
-      name.includes("transit") ||
-      name.includes("forecast"),
-  );
 }
 
 async function getDiviner(username: string) {
@@ -289,43 +286,38 @@ export async function generateMetadata({
   if (!diviner) {
     return { title: "Not Found" };
   }
+
   const publishPolicy = normalizePublishPolicy(diviner as Record<string, unknown>);
   if (publishPolicy.publicPublishBlocked) {
     return { title: "Not Found" };
   }
+
   const heroBlocked = isPublicSectionBlocked(publishPolicy, "hero");
   const bioBlocked = isPublicSectionBlocked(publishPolicy, "bio");
 
-  const title = `${diviner.display_name} - Book a Reading`;
-  const description =
-    !heroBlocked && diviner.tagline
-      ? diviner.tagline
-      : !bioBlocked && diviner.bio
-        ? diviner.bio
-        : `Book an astrology or tarot reading with ${diviner.display_name}`;
+  const title = buildProfileTitle(diviner);
+  const description = buildProfileDescription(diviner, heroBlocked, bioBlocked);
+  const canonical = buildProfileCanonical(username);
+  const robots = buildProfileRobots(diviner, !!publishPolicy.publicPublishBlocked);
+  const ogImage = buildProfileOgImage(diviner, heroBlocked);
 
-  const ogImage = heroBlocked ? null : getDivinerCoverImageUrl(diviner.cover_image_url) || getDivinerAvatarUrl(diviner.avatar_url);
   return {
     title,
     description,
+    alternates: { canonical },
+    robots,
     openGraph: {
       title,
       description,
-      url: `${APP_URL}/${username}`,
+      url: canonical,
       type: "profile",
-      ...(ogImage && {
-        images: [
-          diviner.cover_image_url
-            ? { url: getDivinerCoverImageUrl(diviner.cover_image_url), width: 1200, height: 400 }
-            : { url: getDivinerAvatarUrl(diviner.avatar_url), width: 400, height: 400 },
-        ],
-      }),
+      ...(ogImage && { images: [ogImage] }),
     },
     twitter: {
       card: ogImage ? "summary_large_image" : "summary",
       title,
       description,
-      ...(ogImage && { images: [ogImage] }),
+      ...(ogImage && { images: [ogImage.url] }),
     },
   };
 }
@@ -364,28 +356,23 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
   const filteredMediaItems = mediaItems.filter(
     (item) => !publishPolicy.blockedMediaTypes.includes(item.type)
   );
-  const publicServices = services.filter((service) => !isFallbackManualService(service));
+  const publicServices = filterVisiblePublicServices(services);
   const astroServices = publicServices.filter((s) => s.category === "astrology");
   const tarotServices = publicServices.filter((s) => s.category === "tarot");
   const activeTab = !bioBlocked && tab === "bio" ? "bio" : "home";
-  const birthChartService =
-    publicServices.find((service) => service.slug === "natal-chart") ??
-    publicServices.find((service) =>
-      String(service.name ?? "").toLowerCase().includes("natal chart"),
-    ) ??
-    null;
-  const timeBasedServices = publicServices.filter(
-    (service) =>
-      service.id !== birthChartService?.id && isTimeBasedService(service),
+  const highlightedService = getHighlightedPublicService(publicServices);
+  const remainingPublicServices =
+    highlightedService && publicServices.length > 1
+      ? publicServices.filter((service) => service.id !== highlightedService.id)
+      : publicServices;
+  const timeBasedServices = remainingPublicServices.filter((service) =>
+    isTimeBasedPublicService(service),
   );
-  const evergreenServices = publicServices.filter(
-    (service) =>
-      service.id !== birthChartService?.id && !isTimeBasedService(service),
+  const evergreenServices = remainingPublicServices.filter((service) =>
+    !isTimeBasedPublicService(service),
   );
   const primaryPublicService =
     publicServices.find((service) => service.is_featured) ?? publicServices[0] ?? null;
-  const fallbackBookingService =
-    services.find((service) => isFallbackManualService(service)) ?? null;
   const bookingPreview = servicesBlocked
     ? null
     : primaryPublicService
@@ -401,7 +388,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
             bookPath: "/book",
             durationMinutes:
               stats.unscopedDurationMinutes ??
-              fallbackBookingService?.duration_minutes ??
+              primaryPublicService?.duration_minutes ??
               60,
             serviceName: undefined,
           }
@@ -427,38 +414,12 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
     pullQuote = firstSentence ?? diviner.bio.slice(0, 120);
   }
 
-  // Schema.org structured data
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "LocalBusiness",
-        name: diviner.display_name,
-        description: heroBlocked ? undefined : diviner.tagline ?? (!bioBlocked ? diviner.bio : undefined) ?? undefined,
-        url: `${APP_URL}/${username}`,
-        ...(!heroBlocked && { image: getDivinerAvatarUrl(diviner.avatar_url) }),
-        priceRange:
-          publicServices.length > 0
-            ? `$${Math.min(...publicServices.map((s) => Number(s.base_price)))} - $${Math.max(...publicServices.map((s) => Number(s.base_price)))}`
-            : undefined,
-      },
-      ...publicServices.map((service) => ({
-        "@type": "Service",
-        name: service.name,
-        description: service.description,
-        provider: {
-          "@type": "Person",
-          name: diviner.display_name,
-        },
-        offers: {
-          "@type": "Offer",
-          price: Number(service.base_price),
-          priceCurrency: "USD",
-          url: `${APP_URL}/${username}/book/${service.slug}`,
-        },
-      })),
-    ],
-  };
+  // Schema.org structured data — rich entity graph
+  const structuredData = buildProfileSchemaGraph(
+    diviner,
+    publicServices,
+    { averageRating: stats.averageRating, reviewCount: stats.reviewCount },
+  );
 
   return (
     <>
@@ -623,29 +584,29 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                   Services &amp; Offerings
                 </h2>
                 <p className="mx-auto mb-6 max-w-2xl text-center text-sm text-silver/60">
-                  Time-based readings for major cycles, non-time-based readings for deeper guidance, and a featured birth-chart path for first-time clients.
+                  {buildPublicServicesIntro(publicServices)}
                 </p>
 
-                {birthChartService ? (
+                {highlightedService ? (
                   <div className="mb-8 rounded-3xl border border-gold/25 bg-[linear-gradient(135deg,rgba(201,168,76,0.12),rgba(8,10,18,0.7))] p-6 md:p-8">
                     <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
                       <div className="max-w-2xl">
                         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.25em] text-gold/80">
-                          Featured Nativity Offering
+                          {highlightedService.is_featured ? "Featured Offering" : "Current Offering"}
                         </p>
                         <h3 className="font-display text-2xl font-semibold text-cream md:text-3xl">
-                          {birthChartService.name}
+                          {highlightedService.name}
                         </h3>
                         <p className="mt-3 text-sm leading-relaxed text-silver/70">
-                          {birthChartService.description ??
-                            "The birth chart is the foundation of this practice and the best place for many clients to begin."}
+                          {highlightedService.description ??
+                            `${diviner.display_name} is currently offering this ${getServiceCategoryLabel(highlightedService.category).toLowerCase()} session on AstrologyPro.`}
                         </p>
                       </div>
                       <Link
-                        href={`/${username}/book/${birthChartService.slug}`}
+                        href={`/${username}/book/${highlightedService.slug}`}
                         className="inline-flex h-11 items-center justify-center rounded-full bg-gold px-6 text-sm font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
                       >
-                        Book {birthChartService.name}
+                        Book {highlightedService.name}
                       </Link>
                     </div>
                   </div>
@@ -687,7 +648,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                   </div>
                 )}
 
-                {!birthChartService && astroServices.length > 0 && tarotServices.length > 0 && (
+                {!highlightedService && astroServices.length > 0 && tarotServices.length > 0 && (
                   <ServiceTabs
                     astroServices={astroServices}
                     tarotServices={tarotServices}

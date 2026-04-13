@@ -4,6 +4,14 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   CheckCircle2,
   Download,
   Eye,
@@ -720,8 +728,19 @@ export function LessonViewerClient(props: LessonViewerProps) {
     replayUntilSeconds: number;
     requestId: number; // increments on every request so the player effect re-fires
   } | null>(null);
+  const [pendingRemediationChoice, setPendingRemediationChoice] = useState<{
+    startSeconds: number;
+    replayUntilSeconds: number;
+    videoIndex: number | null;
+  } | null>(null);
   const [remediationReady, setRemediationReady] = useState(false);
   const remediationRequestSeqRef = useRef(0);
+  const activeRemediationChoiceRef = useRef<{
+    startSeconds: number;
+    replayUntilSeconds: number;
+    videoIndex: number | null;
+  } | null>(null);
+  const ignoreNextRemediationDialogCloseRef = useRef(false);
   const remediationPlaybackActiveRef = useRef(false);
   const videoSectionRef = useRef<HTMLDivElement>(null);
   const quizSectionRef = useRef<HTMLDivElement>(null);
@@ -774,6 +793,52 @@ export function LessonViewerClient(props: LessonViewerProps) {
     node.scrollIntoView({ behavior: "smooth", block: "start" });
     window.setTimeout(() => node.focus({ preventScroll: true }), 250);
   }, []);
+
+  function startRemediationReplay(
+    choice = pendingRemediationChoice,
+  ) {
+    if (!choice || allVideos.length === 0) {
+      reattemptQuizWithoutReplay();
+      return;
+    }
+
+    const { startSeconds, replayUntilSeconds, videoIndex } =
+      choice;
+
+    if (
+      videoIndex != null &&
+      videoIndex !== activeVideoIdx &&
+      videoIndex >= 0 &&
+      videoIndex < allVideos.length
+    ) {
+      setActiveVideoIdx(videoIndex);
+    }
+
+    ignoreNextRemediationDialogCloseRef.current = true;
+    setPendingRemediationChoice(null);
+    setRemediationReady(false);
+    activeRemediationChoiceRef.current = choice;
+    remediationPlaybackActiveRef.current = true;
+    const requestId = remediationRequestSeqRef.current + 1;
+    remediationRequestSeqRef.current = requestId;
+    window.setTimeout(() => {
+      scrollAndFocusSection(videoSectionRef.current);
+      setRemediationRequest({
+        startSeconds,
+        replayUntilSeconds,
+        requestId,
+      });
+    }, 100);
+  }
+
+  function reattemptQuizWithoutReplay() {
+    setPendingRemediationChoice(null);
+    setRemediationRequest(null);
+    activeRemediationChoiceRef.current = null;
+    remediationPlaybackActiveRef.current = false;
+    setRemediationReady(true);
+    scrollAndFocusSection(quizSectionRef.current);
+  }
 
   // Heartbeat every 10 seconds while the component is mounted.
   // Remediation playback is intentionally excluded from position updates so
@@ -828,6 +893,37 @@ export function LessonViewerClient(props: LessonViewerProps) {
           onClose={() => setPdfPreview(null)}
         />
       )}
+
+      <Dialog
+        open={pendingRemediationChoice != null}
+        onOpenChange={(open) => {
+          if (!open && pendingRemediationChoice) {
+            if (ignoreNextRemediationDialogCloseRef.current) {
+              ignoreNextRemediationDialogCloseRef.current = false;
+              return;
+            }
+            reattemptQuizWithoutReplay();
+          }
+        }}
+      >
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Review the lesson segment?</DialogTitle>
+            <DialogDescription>
+              The related lesson segment has finished playing. You can replay
+              it once more or go back to the quiz and reattempt now.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={reattemptQuizWithoutReplay}>
+              Reattempt quiz
+            </Button>
+            <Button onClick={() => startRemediationReplay()}>
+              Replay lesson segment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className={cn("flex flex-col gap-6 items-start", hasSidebarRail && "lg:flex-row")}>
         {/* ── Left: Main content ────────────────────────────────────────── */}
@@ -893,10 +989,9 @@ export function LessonViewerClient(props: LessonViewerProps) {
                 onLessonCompleted={() => { /* completion is manual via button */ }}
                 remediationRequest={remediationRequest}
                 onRemediationComplete={() => {
-                  setRemediationReady(true);
                   remediationPlaybackActiveRef.current = false;
                   setRemediationRequest(null);
-                  scrollAndFocusSection(quizSectionRef.current);
+                  setPendingRemediationChoice(activeRemediationChoiceRef.current);
                 }}
               />
             </div>
@@ -1038,23 +1133,10 @@ export function LessonViewerClient(props: LessonViewerProps) {
                     const until = remediation.replay_until_seconds;
                     if (start == null || until == null || until <= start) return;
 
-                    if (
-                      remediation.video_index != null &&
-                      remediation.video_index !== activeVideoIdx &&
-                      remediation.video_index >= 0 &&
-                      remediation.video_index < allVideos.length
-                    ) {
-                      setActiveVideoIdx(remediation.video_index);
-                    }
-
-                    setRemediationReady(false);
-                    remediationPlaybackActiveRef.current = true;
-                    scrollAndFocusSection(videoSectionRef.current);
-                    remediationRequestSeqRef.current += 1;
-                    setRemediationRequest({
+                    startRemediationReplay({
                       startSeconds: start,
                       replayUntilSeconds: until,
-                      requestId: remediationRequestSeqRef.current,
+                      videoIndex: remediation.video_index ?? null,
                     });
                   }}
                    onPassed={() => {

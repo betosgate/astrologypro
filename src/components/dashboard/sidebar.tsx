@@ -47,6 +47,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { createClient } from "@/lib/supabase/client";
+import { getDivinerAvatarUrl } from "@/lib/diviner-images";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
@@ -113,7 +114,6 @@ function NavLink({
   collapsed,
   isExpanded,
   onToggle,
-  pathname,
   isActiveCheck,
 }: {
   item: NavItem;
@@ -121,7 +121,6 @@ function NavLink({
   collapsed?: boolean;
   isExpanded?: boolean;
   onToggle?: () => void;
-  pathname?: string;
   isActiveCheck?: (href: string) => boolean;
 }) {
   const Icon = item.icon;
@@ -288,6 +287,7 @@ export function Sidebar({ diviner }: SidebarProps) {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+  const avatarUrl = getDivinerAvatarUrl(diviner.avatar_url);
 
   return (
     <>
@@ -314,7 +314,6 @@ export function Sidebar({ diviner }: SidebarProps) {
                     isActive={isItemActive(item)}
                     isExpanded={expandedMenus.has(item.label)}
                     onToggle={() => toggleMenu(item.label)}
-                    pathname={pathname}
                     isActiveCheck={isActive}
                   />
                 </div>
@@ -323,7 +322,7 @@ export function Sidebar({ diviner }: SidebarProps) {
             <div className="mt-auto border-t p-4">
               <div className="flex items-center gap-3">
                 <Avatar className="size-8">
-                  <AvatarImage src={diviner.avatar_url ?? undefined} />
+                  <AvatarImage src={avatarUrl} />
                   <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 truncate">
@@ -359,7 +358,7 @@ export function Sidebar({ diviner }: SidebarProps) {
           <p className="text-sm font-semibold">AstrologyPro</p>
         </div>
         <Avatar className="size-8">
-          <AvatarImage src={diviner.avatar_url ?? undefined} />
+          <AvatarImage src={avatarUrl} />
           <AvatarFallback className="text-xs">{initials}</AvatarFallback>
         </Avatar>
       </header>
@@ -379,7 +378,6 @@ export function Sidebar({ diviner }: SidebarProps) {
               isActive={isItemActive(item)}
               isExpanded={expandedMenus.has(item.label)}
               onToggle={() => toggleMenu(item.label)}
-              pathname={pathname}
               isActiveCheck={isActive}
             />
           ))}
@@ -387,7 +385,7 @@ export function Sidebar({ diviner }: SidebarProps) {
         <div className="border-t p-4">
           <div className="flex items-center gap-3">
             <Avatar className="size-8">
-              <AvatarImage src={diviner.avatar_url ?? undefined} />
+              <AvatarImage src={avatarUrl} />
               <AvatarFallback className="text-xs">{initials}</AvatarFallback>
             </Avatar>
             <div className="flex-1 truncate">

@@ -18,10 +18,12 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCurrency } from "@/lib/format";
 import { getServiceImageUrl } from "@/lib/service-images";
-import { getWhatToExpect } from "@/lib/what-to-expect";
 import { APP_URL } from "@/lib/constants";
+import { getDivinerAvatarUrl, getDivinerCoverImageUrl } from "@/lib/diviner-images";
 import { PageTracker } from "@/components/landing/page-tracker";
 import { RefLinkPreserver } from "./ref-link-preserver";
+import { filterVisiblePublicServices, getServiceCategoryLabel } from "@/lib/public-services";
+import { buildServiceDetailSchemaGraph } from "@/lib/seo/schema-builders";
 
 interface PageProps {
   params: Promise<{ username: string; slug: string }>;
@@ -51,8 +53,8 @@ async function getService(divinerId: string, slug: string) {
     .eq("diviner_id", divinerId)
     .eq("slug", slug)
     .eq("is_active", true)
-    .single();
-  return data;
+    .maybeSingle();
+  return data && filterVisiblePublicServices([data]).length > 0 ? data : null;
 }
 
 async function getTestimonials(divinerId: string, limit = 3) {
@@ -98,15 +100,19 @@ export async function generateMetadata({
     service.description ??
     `Book a ${service.name} session with ${diviner.display_name}. ${service.duration_minutes}-minute ${service.category} reading.`;
 
-  const ogImage = diviner.cover_image_url || diviner.avatar_url;
+  const ogImage = getDivinerCoverImageUrl(diviner.cover_image_url || diviner.avatar_url);
+
+  const canonical = `${APP_URL}/${username}/services/${slug}`;
 
   return {
     title,
     description,
+    alternates: { canonical },
+    robots: { index: true, follow: true },
     openGraph: {
       title,
       description,
-      url: `${APP_URL}/${username}/services/${slug}`,
+      url: canonical,
       type: "website",
       ...(ogImage && {
         images: [{ url: ogImage, width: 1200, height: 630 }],
@@ -142,7 +148,7 @@ function GoldStars({ rating, size = "md" }: { rating: number; size?: "sm" | "md"
 }
 
 function CategoryBadge({ category }: { category: string }) {
-  const label = category === "astrology" ? "Astrology" : category === "tarot" ? "Tarot" : category;
+  const label = getServiceCategoryLabel(category);
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/25 bg-gold/5 px-3 py-0.5 text-xs font-medium capitalize text-gold/90">
       <Sparkles className="size-3" />
@@ -177,15 +183,9 @@ export default async function ServiceDetailPage({
   const bookUrl = `/${username}/book/${service.slug}${refParam}`;
   const profileUrl = `/${username}${refParam}`;
   const serviceImageUrl = getServiceImageUrl(service.slug);
-  const bullets = getWhatToExpect(service.category, service.slug);
   const requiresBirthData = service.category === "astrology" || !!(service as Record<string, unknown>).requires_birth_data;
 
-  const initials = diviner.display_name
-    .split(" ")
-    .map((n: string) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const divinerAvatarUrl = getDivinerAvatarUrl(diviner.avatar_url);
 
   // Category-specific included bullets
   const includedBullets =
@@ -234,25 +234,17 @@ export default async function ServiceDetailPage({
     },
   ];
 
-  // Schema.org structured data
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@type": "Service",
-    name: service.name,
-    description: service.description,
-    provider: {
-      "@type": "Person",
-      name: diviner.display_name,
-      url: `${APP_URL}/${username}`,
-      ...(diviner.avatar_url && { image: diviner.avatar_url }),
-    },
-    offers: {
-      "@type": "Offer",
-      price: Number(service.base_price),
-      priceCurrency: "USD",
-      url: `${APP_URL}/${username}/services/${service.slug}`,
-    },
-  };
+  // Schema.org structured data — rich entity graph with breadcrumbs
+  const structuredData = buildServiceDetailSchemaGraph(
+    diviner,
+    service,
+    [
+      { name: "Home", url: `${APP_URL}` },
+      { name: diviner.display_name, url: `${APP_URL}/${username}` },
+      { name: "Services", url: `${APP_URL}/${username}/services` },
+      { name: service.name, url: `${APP_URL}/${username}/services/${service.slug}` },
+    ],
+  );
 
   return (
     <>
@@ -317,19 +309,13 @@ export default async function ServiceDetailPage({
                 className="mt-6 inline-flex items-center gap-3 rounded-full border border-white/[0.06] bg-white/[0.02] px-4 py-2 transition-colors hover:border-gold/20 hover:bg-gold/5"
               >
                 <div className="relative size-9 overflow-hidden rounded-full border border-gold/20">
-                  {diviner.avatar_url ? (
-                    <Image
-                      src={diviner.avatar_url}
-                      alt={diviner.display_name}
-                      fill
-                      className="object-cover"
-                      sizes="36px"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-cosmos-700 text-xs text-gold">
-                      {initials}
-                    </div>
-                  )}
+                  <Image
+                    src={divinerAvatarUrl}
+                    alt={diviner.display_name}
+                    fill
+                    className="object-cover"
+                    sizes="36px"
+                  />
                 </div>
                 <span className="text-sm text-cream/80">
                   with <span className="font-semibold text-cream">{diviner.display_name}</span>
@@ -491,19 +477,13 @@ export default async function ServiceDetailPage({
             <div className="flex flex-col items-center gap-6 p-8 sm:flex-row sm:items-start">
               {/* Avatar */}
               <div className="relative size-24 shrink-0 overflow-hidden rounded-full border-2 border-gold/20 sm:size-28">
-                {diviner.avatar_url ? (
-                  <Image
-                    src={diviner.avatar_url}
-                    alt={diviner.display_name}
-                    fill
-                    className="object-cover"
-                    sizes="112px"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-cosmos-700 font-display text-2xl text-gold">
-                    {initials}
-                  </div>
-                )}
+                <Image
+                  src={divinerAvatarUrl}
+                  alt={diviner.display_name}
+                  fill
+                  className="object-cover"
+                  sizes="112px"
+                />
               </div>
 
               {/* Text */}
