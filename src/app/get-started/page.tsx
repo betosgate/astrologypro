@@ -169,7 +169,7 @@ export default function GetStartedPage() {
     (async () => {
       try {
         const r = await fetch(
-          "/api/pricing?keys=professional_divination_course,perennial_mandalism_community",
+          "/api/pricing?keys=professional_divination_course,trainee_program,trainee_diviner_bundle,perennial_mandalism_community",
         );
         const body = await r.json();
         if (!r.ok || !body.items?.length) return;
@@ -187,7 +187,7 @@ export default function GetStartedPage() {
               name: p.display_name,
               tagline: p.description ?? "",
               setupPrice: p.onetime_amount ?? 0,
-              monthlyPrice: p.recurring_amount ?? p.onetime_amount ?? 0,
+              monthlyPrice: p.recurring_amount ?? 0,
               highlights: parseHighlights(p.html_description),
               customFields: cf,
               isFeatured: getField(cf, "is_featured") === "true",
@@ -469,7 +469,7 @@ export default function GetStartedPage() {
                         )}
                       </div>
 
-                      <div className="grid items-start gap-6 md:grid-cols-3">
+                      <div className={`grid items-start gap-6 ${section.planOrder.length === 1 ? "mx-auto max-w-md" : section.planOrder.length === 2 ? "md:grid-cols-2 max-w-3xl mx-auto" : "md:grid-cols-3"}`}>
                         {section.planOrder.map((planId) => {
                           const p = section.plans[planId];
                           if (!p) return null;
@@ -498,15 +498,28 @@ export default function GetStartedPage() {
                                 <p className="mt-1 text-sm text-[#b8bcd0]/60">{p.tagline}</p>
 
                                 <div className="mt-5">
-                                  <div className="flex items-baseline gap-1">
-                                    <span className="font-display text-4xl font-bold text-[#f5f0e8]">
-                                      ${p.monthlyPrice}
-                                    </span>
-                                    <span className="text-[#b8bcd0]/60">/mo</span>
-                                  </div>
-                                  <p className="mt-1 text-sm text-[#b8bcd0]/50">
-                                    + ${p.setupPrice} one-time setup
-                                  </p>
+                                  {p.monthlyPrice > 0 ? (
+                                    <>
+                                      <div className="flex items-baseline gap-1">
+                                        <span className="font-display text-4xl font-bold text-[#f5f0e8]">
+                                          ${p.monthlyPrice}
+                                        </span>
+                                        <span className="text-[#b8bcd0]/60">/mo</span>
+                                      </div>
+                                      {p.setupPrice > 0 && (
+                                        <p className="mt-1 text-sm text-[#b8bcd0]/50">
+                                          + ${p.setupPrice} one-time setup
+                                        </p>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <div className="flex items-baseline gap-1">
+                                      <span className="font-display text-4xl font-bold text-[#f5f0e8]">
+                                        ${p.setupPrice}
+                                      </span>
+                                      <span className="text-[#b8bcd0]/60">one-time</span>
+                                    </div>
+                                  )}
                                 </div>
 
                                 {displaySummaryFields.length > 0 && (
