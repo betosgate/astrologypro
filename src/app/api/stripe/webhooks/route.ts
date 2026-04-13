@@ -19,6 +19,7 @@ import {
 import { createCalendarEvent } from "@/lib/google-calendar";
 import { buildCalendarDescription } from "@/lib/calendar-utils";
 import { createMsCalendarEvent } from "@/lib/microsoft-calendar";
+import { ensureOrderForBooking, getOrderStatusForService } from "@/lib/orders";
 import {
   getSubscriptionPeriodEndIso,
   mapMysterySchoolLifecycleUpdate,
@@ -326,19 +327,48 @@ async function handleManualBookingCheckoutCompleted(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, booking_token, scheduled_at, duration_minutes, metadata, questionnaire_responses, diviner_id, client_id, services(name, duration_minutes), diviners(id, display_name), clients(email, full_name)"
+      "id, booking_token, scheduled_at, duration_minutes, base_price, metadata, questionnaire_responses, diviner_id, client_id, service_id, services(id, name, slug, category, duration_minutes, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields), diviners(id, display_name), clients(id, email, full_name)"
     )
     .eq("id", bookingId)
     .single();
 
   if (!booking) return;
 
-  const svc = (booking as Record<string, unknown>).services as { name: string; duration_minutes: number } | null;
+  const svc = (booking as Record<string, unknown>).services as {
+    id: string;
+    name: string;
+    slug?: string | null;
+    category?: string | null;
+    duration_minutes: number;
+    requires_birth_data?: boolean | null;
+    intake_template_id?: string | null;
+    product_kind?: string | null;
+    is_subscription?: boolean | null;
+    requires_birth_time?: boolean | null;
+    requires_birth_city?: boolean | null;
+    requires_partner_data?: boolean | null;
+    pre_checkout_fields?: unknown;
+    post_checkout_fields?: unknown;
+  } | null;
   const div = (booking as Record<string, unknown>).diviners as { id: string; display_name: string } | null;
-  const clientRecord = (booking as Record<string, unknown>).clients as { email: string; full_name: string | null } | null;
+  const clientRecord = (booking as Record<string, unknown>).clients as { id: string; email: string; full_name: string | null } | null;
   const meta = (booking as Record<string, unknown>).metadata as { availability_title?: string; availability_description?: string } | null;
 
   if (!svc || !div || !clientRecord) return;
+
+  await ensureOrderForBooking(supabase, {
+    bookingId,
+    clientId: clientRecord.id,
+    divinerId: div.id,
+    serviceId: svc.id ?? ((booking as Record<string, unknown>).service_id as string),
+    service: svc,
+    amountCents: Math.round(Number((booking as Record<string, unknown>).base_price ?? 0) * 100),
+    currency: session.currency ?? "usd",
+    stripePaymentIntentId:
+      typeof session.payment_intent === "string" ? session.payment_intent : session.id,
+    status: getOrderStatusForService(svc, true),
+    paidAt: new Date().toISOString(),
+  });
 
   const startTime = new Date(booking.scheduled_at as string);
   const durationMins = (booking.duration_minutes as number) ?? svc.duration_minutes;
@@ -1240,7 +1270,7 @@ async function handlePaymentIntentSucceeded(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, booking_token, scheduled_at, duration_minutes, base_price, diviner_id, client_id, metadata, questionnaire_responses, services(name, duration_minutes), diviners(id, display_name, user_id), clients(email, full_name, user_id)"
+      "id, booking_token, scheduled_at, duration_minutes, base_price, diviner_id, client_id, service_id, metadata, questionnaire_responses, services(id, name, slug, category, duration_minutes, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields), diviners(id, display_name, user_id), clients(id, email, full_name, user_id)"
     )
     .eq("id", bookingId)
     .single();
@@ -1248,8 +1278,20 @@ async function handlePaymentIntentSucceeded(
   if (!booking) return;
 
   const svc = (booking as Record<string, unknown>).services as {
+    id: string;
     name: string;
+    slug?: string | null;
+    category?: string | null;
     duration_minutes: number;
+    requires_birth_data?: boolean | null;
+    intake_template_id?: string | null;
+    product_kind?: string | null;
+    is_subscription?: boolean | null;
+    requires_birth_time?: boolean | null;
+    requires_birth_city?: boolean | null;
+    requires_partner_data?: boolean | null;
+    pre_checkout_fields?: unknown;
+    post_checkout_fields?: unknown;
   } | null;
   const div = (booking as Record<string, unknown>).diviners as {
     id: string;
@@ -1257,6 +1299,7 @@ async function handlePaymentIntentSucceeded(
     user_id: string;
   } | null;
   const clientRecord = (booking as Record<string, unknown>).clients as {
+    id: string;
     email: string;
     full_name: string | null;
     user_id: string | null;
@@ -1268,6 +1311,21 @@ async function handlePaymentIntentSucceeded(
   const eventTitle = bookingMeta?.availability_title ?? svc?.name;
 
   if (!svc || !div) return;
+
+  const orderId = await ensureOrderForBooking(supabase, {
+    bookingId,
+    clientId:
+      clientRecord?.id ??
+      ((booking as Record<string, unknown>).client_id as string),
+    divinerId: div.id,
+    serviceId: svc.id ?? ((booking as Record<string, unknown>).service_id as string),
+    service: svc,
+    amountCents: paymentIntent.amount,
+    currency: paymentIntent.currency ?? "usd",
+    stripePaymentIntentId: paymentIntent.id,
+    status: getOrderStatusForService(svc, true),
+    paidAt: new Date().toISOString(),
+  });
 
   // Calendar connection checks — createCalendarEvent handles lookup internally,
   // but we still need flags for Microsoft calendar
@@ -1291,7 +1349,7 @@ async function handlePaymentIntentSucceeded(
       userId: clientRecord.user_id,
       eventCategory: 'payment',
       eventType: 'payment.succeeded',
-      metadata: { amount, bookingId, divinerId: booking.diviner_id },
+      metadata: { amount, bookingId, orderId, divinerId: booking.diviner_id },
     })
     logActivity({
       userId: clientRecord.user_id,
@@ -1308,6 +1366,9 @@ async function handlePaymentIntentSucceeded(
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
   const sessionLink = `${appUrl}/session/${bookingId}`;
+  const portalOrderUrl = `${appUrl}/login?redirect=${encodeURIComponent(
+    `/portal/orders/${orderId}`
+  )}`;
   const startTime = new Date(booking.scheduled_at);
   const durationMins = booking.duration_minutes ?? svc.duration_minutes;
   const endTime = new Date(startTime.getTime() + durationMins * 60 * 1000);
@@ -1373,7 +1434,7 @@ async function handlePaymentIntentSucceeded(
     amount: Number(booking.base_price ?? paidAmount),
     totalPaid: paidAmount,
     bookingId,
-    portalUrl: `${appUrl}/portal/bookings`,
+    portalUrl: portalOrderUrl,
   }).catch((err) =>
     console.error("[Webhook] Failed to send booking invoice:", err)
   );
