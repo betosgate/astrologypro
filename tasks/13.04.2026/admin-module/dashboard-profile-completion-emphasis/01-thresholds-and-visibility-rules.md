@@ -48,3 +48,9 @@ The decisive rule should be based on missing required fields, not just a raw per
 - threshold definitions
 - rules for critical versus advisory prompts
 - per-role visibility matrix
+
+## Status
+
+Done.
+
+The community dashboard already separates hard onboarding gating from softer completion prompts. `src/app/community/layout.tsx` and `src/components/community/onboarding-guard.tsx` enforce the critical incomplete state, while `src/components/community/profile-completion-card.tsx` and `src/components/community/profile-progress-section.tsx` cover the advisory state for incomplete but active members.

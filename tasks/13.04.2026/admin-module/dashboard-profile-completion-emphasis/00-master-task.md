@@ -65,3 +65,11 @@ This feature set is complete only when:
 - CTAs route to the exact place needed to resolve the missing data
 - the block steps down or disappears once completion reaches the required threshold
 - admin and support can understand why a user is still being prompted
+
+## Status
+
+- `01-thresholds-and-visibility-rules.md` — Done
+- `02-dashboard-block-priority-copy-and-cta.md` — Done
+- `03-missing-data-mapping-and-destination-routing.md` — Done
+- `04-dismissal-persistence-and-reappearance-rules.md` — Done
+- `05-admin-observability-and-support-alignment.md` — Done
