@@ -187,6 +187,18 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
     metadata: { planName: membershipType, planType, status: 'active' },
   })
 
+  // ── Affiliate commission on community/subscription signup ────────────────
+  const communityAffiliateCode = session.metadata?.affiliateCode;
+  if (communityAffiliateCode) {
+    const amountTotal = (session.amount_total ?? 0) / 100;
+    recordSignupAffiliateCommission(
+      communityAffiliateCode,
+      amountTotal,
+      `community-signup:${session.id}`,
+      "subscription"
+    );
+  }
+
   // Send community welcome email for all membership types (idempotent via SES dedup window)
   if (email) {
     sendCommunityMembershipWelcome({
@@ -523,9 +535,116 @@ async function handleComboBundleCheckoutCompleted(
     );
   }
 
+  // ── Affiliate commission on combo bundle signup ──────────────────────────
+  const comboAffiliateCode = meta.affiliateCode;
+  if (comboAffiliateCode) {
+    const amountTotal = (session.amount_total ?? 0) / 100;
+    recordSignupAffiliateCommission(
+      comboAffiliateCode,
+      amountTotal,
+      `combo-signup:${session.id}`,
+      "signup"
+    );
+  }
+
   console.log(
     `[Webhook] Combo bundle provisioned: userId=${userId} username=${username} plan=${planName}`
   );
+}
+
+/**
+ * Fire-and-forget: record an affiliate commission for a signup/subscription checkout.
+ * Supports both the old `affiliates` (social_advocates) table and the new
+ * `diviner_affiliates` system via `affiliate_referral_links`.
+ */
+async function recordSignupAffiliateCommission(
+  affiliateCode: string,
+  amountDollars: number,
+  orderRef: string,
+  productType: "signup" | "subscription"
+) {
+  try {
+    const admin = createAdminClient();
+
+    // 1. Try old system: `affiliates` (social_advocates) table
+    const { data: advocate } = await admin
+      .from("affiliates")
+      .select("id, commission_percent, total_referrals, total_earned")
+      .eq("referral_code", affiliateCode)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (advocate) {
+      const commissionAmount =
+        Math.round(amountDollars * (advocate.commission_percent / 100) * 100) / 100;
+
+      await admin.from("affiliate_referrals").insert({
+        affiliate_id: advocate.id,
+        commission_amount: commissionAmount,
+        status: "pending",
+        metadata: { order_reference: orderRef, product_type: productType },
+      });
+
+      await admin
+        .from("affiliates")
+        .update({
+          total_referrals: (advocate.total_referrals ?? 0) + 1,
+          total_earned: Number(advocate.total_earned ?? 0) + commissionAmount,
+        })
+        .eq("id", advocate.id);
+
+      console.log(
+        `[Webhook] Affiliate commission (advocate) recorded: code=${affiliateCode} amount=$${commissionAmount} ref=${orderRef}`
+      );
+      return;
+    }
+
+    // 2. Try new system: `affiliate_referral_links` by slug or referral_code
+    const { data: link } = await admin
+      .from("affiliate_referral_links")
+      .select("id, affiliate_id, diviner_id")
+      .or(`slug.eq.${affiliateCode},referral_code.eq.${affiliateCode}`)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (link) {
+      // Look up commission rate from the diviner_affiliates record
+      const { data: divAffiliate } = await admin
+        .from("diviner_affiliates")
+        .select("id, default_commission_type, default_commission_value")
+        .eq("id", link.affiliate_id)
+        .maybeSingle();
+
+      if (divAffiliate) {
+        const commissionRate = divAffiliate.default_commission_value;
+        const commissionType = divAffiliate.default_commission_type ?? "percentage";
+        const commissionAmountCents =
+          commissionType === "percentage"
+            ? Math.round(amountDollars * 100 * (commissionRate / 100))
+            : Math.round(commissionRate); // fixed amount in cents
+
+        await admin.from("affiliate_commissions").insert({
+          affiliate_id: divAffiliate.id,
+          diviner_id: link.diviner_id,
+          link_id: link.id,
+          order_reference: orderRef,
+          order_amount_cents: Math.round(amountDollars * 100),
+          commission_type: commissionType,
+          commission_rate: commissionRate,
+          commission_amount_cents: commissionAmountCents,
+          status: "pending",
+          notes: `${productType} commission`,
+        });
+
+        console.log(
+          `[Webhook] Affiliate commission (diviner) recorded: code=${affiliateCode} amount_cents=${commissionAmountCents} ref=${orderRef}`
+        );
+      }
+    }
+  } catch (err) {
+    // Fire-and-forget — never block the main flow
+    console.error("[Webhook] Failed to record signup affiliate commission:", err);
+  }
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
@@ -597,6 +716,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (error) {
     console.error("Failed to upsert diviner record:", error);
+  }
+
+  // ── Affiliate commission on diviner signup ────────────────────────────────
+  const signupAffiliateCode = session.metadata?.affiliateCode;
+  if (signupAffiliateCode) {
+    const amountTotal = (session.amount_total ?? 0) / 100;
+    recordSignupAffiliateCommission(
+      signupAffiliateCode,
+      amountTotal,
+      `diviner-signup:${session.id}`,
+      "signup"
+    );
   }
 }
 

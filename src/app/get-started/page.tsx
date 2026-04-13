@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
@@ -150,6 +151,8 @@ const faqs = [
 export default function GetStartedPage() {
   const supabase = createClient();
   const formRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
+  const affiliateCode = searchParams.get("ref") ?? searchParams.get("affiliate") ?? "";
 
   const [pricingSections, setPricingSections] = useState<PricingSection[]>([]);
   const [pricingLoaded, setPricingLoaded] = useState(false);
@@ -313,6 +316,7 @@ export default function GetStartedPage() {
           email,
           userId: data.user.id,
           planId: selectedPlan,
+          ...(affiliateCode ? { affiliateCode } : {}),
         }),
       });
 

@@ -2782,3 +2782,64 @@ export async function sendComboBundleWelcome({
     }),
   });
 }
+
+// ── Affiliate Invitation Email ──────────────────────────────────────────────
+
+interface AffiliateInvitationParams {
+  to: string;
+  affiliateName: string;
+  divinerName: string;
+  message?: string;
+  acceptUrl: string;
+}
+
+export async function sendAffiliateInvitation({
+  to,
+  affiliateName,
+  divinerName,
+  message,
+  acceptUrl,
+}: AffiliateInvitationParams) {
+  const personalNote = message
+    ? `
+    ${sectionHeading("Personal Note")}
+    <p style="margin:0 0 16px;color:#a1a1aa;font-style:italic;">&ldquo;${message}&rdquo;</p>
+  `
+    : "";
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${affiliateName},</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">
+      <strong style="color:#f4f4f5;">${divinerName}</strong> has invited you to join their
+      affiliate program on AstrologyPro. As an affiliate partner, you&rsquo;ll earn
+      commissions on referrals you send their way.
+    </p>
+
+    ${personalNote}
+
+    ${sectionHeading("How It Works")}
+    <ol style="margin:0 0 16px;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">Accept the invitation using the button below</li>
+      <li style="margin-bottom:6px;">Share your unique referral link with your audience</li>
+      <li style="margin-bottom:6px;">Earn commissions on every booking or signup from your referrals</li>
+    </ol>
+
+    <p style="margin-top:16px;font-size:13px;color:#9ca3af;">
+      If you did not expect this invitation, you can safely ignore this email.
+    </p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `${divinerName} invited you to their affiliate program on AstrologyPro`,
+    html: buildEmailHtml({
+      title: "You've Been Invited as an Affiliate Partner",
+      preheader: `${divinerName} wants you to join their affiliate program.`,
+      content,
+      ctaText: "Accept Invitation",
+      ctaUrl: acceptUrl,
+      footer: "AstrologyPro &mdash; Grow Together",
+    }),
+  });
+}

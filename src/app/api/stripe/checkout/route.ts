@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, userId, planId } = await request.json();
+    const { email, userId, planId, affiliateCode } = await request.json();
 
     if (!email || !userId || !planId) {
       return NextResponse.json(
@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
         planId: planId as PlanId,
         successUrl: `${APP_URL}/onboarding?session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${APP_URL}/get-started?cancelled=true`,
+        affiliateCode: affiliateCode || undefined,
       });
 
       return NextResponse.json({ url: session.url });
@@ -84,6 +85,7 @@ export async function POST(request: NextRequest) {
         planId,
         itemKey: itemInfo?.item_key ?? "",
         planName: dbPlan.display_name,
+        ...(affiliateCode ? { affiliateCode } : {}),
       },
       success_url: `${APP_URL}/onboarding?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${APP_URL}/get-started?cancelled=true`,

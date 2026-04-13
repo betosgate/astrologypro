@@ -31,6 +31,15 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import {
   Loader2,
   Plus,
   Eye,
@@ -38,6 +47,7 @@ import {
   DollarSign,
   Wallet,
   UserPlus,
+  Send,
 } from "lucide-react";
 
 interface Affiliate {
@@ -89,6 +99,50 @@ export default function DashboardAffiliatesPage() {
   const [formCommType, setFormCommType] = useState("percentage");
   const [formCommValue, setFormCommValue] = useState("10");
   const [formNotes, setFormNotes] = useState("");
+
+  // Invite dialog state
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteSaving, setInviteSaving] = useState(false);
+  const [inviteName, setInviteName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteMessage, setInviteMessage] = useState("");
+
+  function resetInviteForm() {
+    setInviteName("");
+    setInviteEmail("");
+    setInviteMessage("");
+  }
+
+  async function handleInvite() {
+    if (!inviteName || !inviteEmail) {
+      toast.error("Name and email are required");
+      return;
+    }
+    setInviteSaving(true);
+    const res = await fetch("/api/dashboard/affiliates/invite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: inviteName,
+        email: inviteEmail,
+        message: inviteMessage || undefined,
+      }),
+    });
+    if (res.ok) {
+      const json = await res.json();
+      toast.success("Invitation sent successfully");
+      if (json.referralLink) {
+        toast.info(`Referral link: ${json.referralLink}`, { duration: 8000 });
+      }
+      setInviteOpen(false);
+      resetInviteForm();
+      await loadAffiliates();
+    } else {
+      const err = await res.json();
+      toast.error(err.title ?? "Failed to send invitation");
+    }
+    setInviteSaving(false);
+  }
 
   const loadAffiliates = useCallback(async () => {
     setLoading(true);
@@ -184,13 +238,73 @@ export default function DashboardAffiliatesPage() {
             Manage your affiliate partners and track commissions.
           </p>
         </div>
-        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-          <SheetTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="mr-2 size-4" />
-              Add Affiliate
-            </Button>
-          </SheetTrigger>
+        <div className="flex items-center gap-2">
+          <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" onClick={resetInviteForm}>
+                <Send className="mr-2 size-4" />
+                Invite Affiliate
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Invite Affiliate Partner</DialogTitle>
+                <DialogDescription>
+                  Send an invitation email to a potential affiliate partner.
+                  They will receive a link to accept and start referring clients.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="mt-4 space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="invite-name">Name</Label>
+                  <Input
+                    id="invite-name"
+                    value={inviteName}
+                    onChange={(e) => setInviteName(e.target.value)}
+                    placeholder="Jane Smith"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="invite-email">Email</Label>
+                  <Input
+                    id="invite-email"
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="jane@example.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="invite-message">Personal message (optional)</Label>
+                  <Textarea
+                    id="invite-message"
+                    value={inviteMessage}
+                    onChange={(e) => setInviteMessage(e.target.value)}
+                    placeholder="I'd love for you to join my affiliate program..."
+                    rows={3}
+                  />
+                </div>
+                <Button onClick={handleInvite} disabled={inviteSaving} className="w-full">
+                  {inviteSaving ? (
+                    <><Loader2 className="mr-2 size-4 animate-spin" />Sending...</>
+                  ) : (
+                    <>
+                      <Send className="mr-2 size-4" />
+                      Send Invitation
+                    </>
+                  )}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+            <SheetTrigger asChild>
+              <Button onClick={resetForm}>
+                <Plus className="mr-2 size-4" />
+                Add Affiliate
+              </Button>
+            </SheetTrigger>
           <SheetContent>
             <SheetHeader>
               <SheetTitle>Add Affiliate</SheetTitle>
@@ -267,6 +381,7 @@ export default function DashboardAffiliatesPage() {
             </div>
           </SheetContent>
         </Sheet>
+        </div>
       </div>
 
       {/* Summary Stats */}
