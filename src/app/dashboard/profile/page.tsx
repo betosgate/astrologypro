@@ -19,6 +19,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Upload } from "lucide-react";
+import { ProfileCompletionBar } from "@/components/ui/profile-completion-bar";
+import { calculateProfileCompletion } from "@/lib/profile-completion";
 
 interface DivinerProfile {
   id: string;
@@ -29,6 +31,8 @@ interface DivinerProfile {
   specialties: string[];
   avatar_url: string | null;
   credentials: string | null;
+  phone: string | null;
+  timezone: string | null;
 }
 
 export default function ProfilePage() {
@@ -52,6 +56,8 @@ export default function ProfilePage() {
             ...data,
             specialties: data.specialties ?? [],
             credentials: data.credentials ?? null,
+            phone: data.phone ?? null,
+            timezone: data.timezone ?? null,
           });
         }
       } catch {
@@ -120,6 +126,8 @@ export default function ProfilePage() {
           tagline: profile.tagline || null,
           specialties: profile.specialties,
           credentials: profile.credentials || null,
+          phone: profile.phone || null,
+          timezone: profile.timezone || null,
         }),
       });
 
@@ -176,6 +184,23 @@ export default function ProfilePage() {
     .toUpperCase()
     .slice(0, 2);
 
+  const completion = calculateProfileCompletion([
+    { key: "display_name", label: "Display name", value: profile.display_name },
+    { key: "tagline", label: "Tagline", value: profile.tagline },
+    { key: "bio", label: "Bio", value: profile.bio },
+    { key: "avatar_url", label: "Profile photo", value: profile.avatar_url },
+    { key: "phone", label: "Phone number", value: profile.phone },
+    { key: "timezone", label: "Timezone", value: profile.timezone },
+    { key: "specialties", label: "Specialties", value: profile.specialties },
+  ]);
+
+  function focusField(fieldKey: string) {
+    document.getElementById(fieldKey)?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -184,6 +209,14 @@ export default function ProfilePage() {
           Manage your public diviner profile.
         </p>
       </div>
+
+      <ProfileCompletionBar
+        percentage={completion.percentage}
+        missingFields={completion.missingFields}
+        completedCount={completion.completedCount}
+        totalCount={completion.totalCount}
+        onMissingFieldClick={focusField}
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Avatar Card */}
@@ -280,37 +313,64 @@ export default function ProfilePage() {
                   placeholder="Tell clients about your background and approach..."
                   rows={5}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="credentials">Credentials &amp; Certifications</Label>
-                <Textarea
-                  id="credentials"
-                  value={profile.credentials ?? ""}
-                  onChange={(e) =>
-                    setProfile({ ...profile, credentials: e.target.value })
-                  }
-                  placeholder={
-                    "One certification per line, e.g.:\nCertified Vedic Astrologer — ACVA 2019\nTarot Certification — Biddy Tarot 2020"
-                  }
-                  rows={4}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Enter one credential per line. These will appear on your public profile.
-                </p>
-              </div>
-              <div className="space-y-3">
-                <Label>Specialties</Label>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {SPECIALTIES.map((specialty) => (
-                    <div
-                      key={specialty}
-                      className="flex items-center space-x-2"
+                </div>
+                <div className="space-y-2">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        value={profile.phone ?? ""}
+                        onChange={(e) =>
+                          setProfile({ ...profile, phone: e.target.value })
+                        }
+                        placeholder="+1 (555) 123-4567"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="timezone">Timezone</Label>
+                      <Input
+                        id="timezone"
+                        value={profile.timezone ?? ""}
+                        onChange={(e) =>
+                          setProfile({ ...profile, timezone: e.target.value })
+                        }
+                        placeholder="America/New_York"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="credentials">Credentials &amp; Certifications</Label>
+                  <Textarea
+                    id="credentials"
+                    value={profile.credentials ?? ""}
+                    onChange={(e) =>
+                      setProfile({ ...profile, credentials: e.target.value })
+                    }
+                    placeholder={
+                      "One certification per line, e.g.:\nCertified Vedic Astrologer — ACVA 2019\nTarot Certification — Biddy Tarot 2020"
+                    }
+                    rows={4}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter one credential per line. These will appear on your public profile.
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  <Label htmlFor="specialties">Specialties</Label>
+                  <div id="specialties" />
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {SPECIALTIES.map((specialty) => (
+                      <div
+                        key={specialty}
+                        className="flex items-center space-x-2"
                     >
                       <Checkbox
                         id={`specialty-${specialty}`}
                         checked={profile.specialties.includes(specialty)}
-                        onCheckedChange={() => toggleSpecialty(specialty)}
-                      />
+                          onCheckedChange={() => toggleSpecialty(specialty)}
+                        />
                       <Label
                         htmlFor={`specialty-${specialty}`}
                         className="text-sm font-normal"

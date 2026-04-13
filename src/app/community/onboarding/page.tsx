@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Loader2,
   ChevronRight,
@@ -27,9 +28,10 @@ import {
   ChevronDown,
   ChevronUp,
   CheckCircle2,
+  Plus,
+  Trash2,
+  Users,
 } from "lucide-react";
-
-// ─── Constants matching perennial-signup exactly ─────────────────────────
 
 const GENDERS = ["Male", "Female", "Non-binary", "Prefer not to say"] as const;
 
@@ -44,17 +46,6 @@ const RELATIONSHIP_STATUSES = [
   "Prefer not to say",
 ] as const;
 
-const TOTAL_STEPS = 3;
-
-// Legacy phone formatter from perennial-signup (task 03)
-function legacyFormatPhone(raw: string): string {
-  const digits = raw.replace(/\D/g, "").slice(0, 10);
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-}
-
-// All 24 optional questionnaire textarea fields (matching perennial-signup)
 const QUESTIONNAIRE_FIELDS: Array<[string, string]> = [
   ["personality", "Personality"],
   ["strengths", "Strengths"],
@@ -82,7 +73,14 @@ const QUESTIONNAIRE_FIELDS: Array<[string, string]> = [
   ["additionalInfo", "Anything else you'd like to share"],
 ];
 
-// ─── Form state (mirrors MemberForm from perennial-signup) ───────────────
+const PLAN_CONFIG: Record<
+  string,
+  { label: string; additionalMembers: number }
+> = {
+  plan_pm_individual: { label: "Individual Plan", additionalMembers: 0 },
+  plan_pm_couple: { label: "Couple Plan", additionalMembers: 1 },
+  plan_pm_family: { label: "Family Plan", additionalMembers: 4 },
+};
 
 interface ProfileForm {
   firstName: string;
@@ -97,7 +95,6 @@ interface ProfileForm {
   occupation: string;
   dateOfBirth: string;
   birthTime: string;
-  // Optional questionnaire (25 fields: relationship_status + 24 textareas)
   relationship_status: string;
   personality: string;
   strengths: string;
@@ -123,6 +120,17 @@ interface ProfileForm {
   practicalSpiritualPref: string;
   mainConcern: string;
   additionalInfo: string;
+}
+
+interface HouseholdMemberForm {
+  id: string | null;
+  fullName: string;
+  relationship: string;
+  dateOfBirth: string;
+  birthTime: string;
+  birthCity: string;
+  birthCountry: string;
+  notes: string;
 }
 
 function emptyForm(): ProfileForm {
@@ -167,7 +175,57 @@ function emptyForm(): ProfileForm {
   };
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────
+function createHouseholdMember(
+  member?: Partial<HouseholdMemberForm>
+): HouseholdMemberForm {
+  return {
+    id: member?.id ?? null,
+    fullName: member?.fullName ?? "",
+    relationship: member?.relationship ?? "",
+    dateOfBirth: member?.dateOfBirth ?? "",
+    birthTime: member?.birthTime ?? "",
+    birthCity: member?.birthCity ?? "",
+    birthCountry: member?.birthCountry ?? "",
+    notes: member?.notes ?? "",
+  };
+}
+
+function legacyFormatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 10);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+type PrefillResponse = {
+  member?: {
+    email?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+    phone?: string | null;
+    gender?: string | null;
+    state?: string | null;
+    city?: string | null;
+    zip?: string | null;
+    address?: string | null;
+    occupation?: string | null;
+    date_of_birth?: string | null;
+    birth_time?: string | null;
+    relationship_status?: string | null;
+    plan_type?: string | null;
+    intake_data?: Record<string, unknown> | null;
+  };
+  family_members?: Array<{
+    id: string;
+    full_name: string | null;
+    relationship: string | null;
+    date_of_birth: string | null;
+    birth_time: string | null;
+    birth_city: string | null;
+    birth_country: string | null;
+    notes: string | null;
+  }>;
+};
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -176,14 +234,49 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [questionnaireOpen, setQuestionnaireOpen] = useState(false);
-
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [householdMembers, setHouseholdMembers] = useState<HouseholdMemberForm[]>([]);
   const [form, setForm] = useState<ProfileForm>(emptyForm());
+
+  const planConfig = selectedPlanId ? PLAN_CONFIG[selectedPlanId] : null;
+  const maxAdditionalMembers = planConfig?.additionalMembers ?? 0;
+  const householdStepEnabled = maxAdditionalMembers > 0;
+  const totalSteps = householdStepEnabled ? 4 : 3;
+
+  const stepTitles = useMemo(
+    () => [
+      "Personal",
+      "Address",
+      ...(householdStepEnabled ? ["Household"] : []),
+      "Journey",
+    ],
+    [householdStepEnabled]
+  );
 
   function patch(fields: Partial<ProfileForm>) {
     setForm((prev) => ({ ...prev, ...fields }));
   }
 
-  // ── Pre-fill from existing member data ──────────────────────────────────
+  function updateHouseholdMember(
+    index: number,
+    fields: Partial<HouseholdMemberForm>
+  ) {
+    setHouseholdMembers((prev) =>
+      prev.map((member, memberIndex) =>
+        memberIndex === index ? { ...member, ...fields } : member
+      )
+    );
+  }
+
+  function addHouseholdMember() {
+    if (householdMembers.length >= maxAdditionalMembers) return;
+    setHouseholdMembers((prev) => [...prev, createHouseholdMember()]);
+  }
+
+  function removeHouseholdMember(index: number) {
+    setHouseholdMembers((prev) => prev.filter((_, memberIndex) => memberIndex !== index));
+  }
+
   useEffect(() => {
     async function loadPrefill() {
       try {
@@ -192,147 +285,172 @@ export default function OnboardingPage() {
           setLoading(false);
           return;
         }
-        const { member } = await res.json();
+
+        const { member, family_members } = (await res.json()) as PrefillResponse;
         if (!member) {
           setLoading(false);
           return;
         }
 
-        // intake_data may contain fields that were set during provisioning
-        // but don't have dedicated columns on community_members
         const intake =
           member.intake_data && typeof member.intake_data === "object"
             ? member.intake_data
             : {};
+        const nextSelectedPlanId =
+          typeof intake.selected_plan_id === "string"
+            ? intake.selected_plan_id
+            : member.plan_type === "family"
+              ? "plan_pm_family"
+              : null;
+        const nextPlanConfig = nextSelectedPlanId
+          ? PLAN_CONFIG[nextSelectedPlanId] ?? null
+          : null;
 
+        setSelectedPlanId(nextSelectedPlanId);
         patch({
-          firstName: member.first_name || intake.first_name || "",
-          lastName: member.last_name || intake.last_name || "",
+          firstName: member.first_name || String(intake.first_name ?? "") || "",
+          lastName: member.last_name || String(intake.last_name ?? "") || "",
           email: member.email || "",
-          phone: member.phone || intake.phone || "",
-          gender: member.gender || intake.gender || "",
-          state: member.state || intake.state || "",
-          city: member.city || intake.city || "",
-          zip: member.zip || intake.zip || "",
-          address: member.address || intake.address || "",
-          occupation: member.occupation || intake.occupation || "",
-          dateOfBirth: member.date_of_birth || intake.date_of_birth || "",
-          birthTime: member.birth_time || intake.birth_time || "",
+          phone: member.phone || String(intake.phone ?? "") || "",
+          gender: member.gender || String(intake.gender ?? "") || "",
+          state: member.state || String(intake.state ?? "") || "",
+          city: member.city || String(intake.city ?? "") || "",
+          zip: member.zip || String(intake.zip ?? "") || "",
+          address: member.address || String(intake.address ?? "") || "",
+          occupation: member.occupation || String(intake.occupation ?? "") || "",
+          dateOfBirth: member.date_of_birth || String(intake.date_of_birth ?? "") || "",
+          birthTime: member.birth_time || String(intake.birth_time ?? "") || "",
           relationship_status:
-            member.relationship_status || intake.relationship_status || "",
-          personality: intake.personality || "",
-          strengths: intake.strengths || "",
-          lifeAreasFulfilling: intake.lifeAreasFulfilling || "",
-          lifeAreasImprovement: intake.lifeAreasImprovement || "",
-          longTermGoals: intake.longTermGoals || "",
-          majorLifeEvents: intake.majorLifeEvents || "",
-          stressManagement: intake.stressManagement || "",
-          workLifeBalance: intake.workLifeBalance || "",
-          relationship_with_family: intake.relationship_with_family || "",
-          biggest_current_challenges: intake.biggest_current_challenges || "",
-          focus_on_specific_relationships:
-            intake.focus_on_specific_relationships || "",
-          guidance_on_specific_decision:
-            intake.guidance_on_specific_decision || "",
-          concerns_about_romantic_life:
-            intake.concerns_about_romantic_life || "",
-          ongoing_projects_or_plans: intake.ongoing_projects_or_plans || "",
-          social_life_fulfillment: intake.social_life_fulfillment || "",
-          spiritualPractices: intake.spiritualPractices || "",
-          selfDiscovery: intake.selfDiscovery || "",
-          externalInfluences: intake.externalInfluences || "",
-          achieveFromReading: intake.achieveFromReading || "",
-          specificQuestions: intake.specificQuestions || "",
-          goalsOutcomes: intake.goalsOutcomes || "",
-          practicalSpiritualPref: intake.practicalSpiritualPref || "",
-          mainConcern: intake.mainConcern || "",
-          additionalInfo: intake.additionalInfo || "",
+            member.relationship_status || String(intake.relationship_status ?? "") || "",
+          personality: String(intake.personality ?? ""),
+          strengths: String(intake.strengths ?? ""),
+          lifeAreasFulfilling: String(intake.lifeAreasFulfilling ?? ""),
+          lifeAreasImprovement: String(intake.lifeAreasImprovement ?? ""),
+          longTermGoals: String(intake.longTermGoals ?? ""),
+          majorLifeEvents: String(intake.majorLifeEvents ?? ""),
+          stressManagement: String(intake.stressManagement ?? ""),
+          workLifeBalance: String(intake.workLifeBalance ?? ""),
+          relationship_with_family: String(intake.relationship_with_family ?? ""),
+          biggest_current_challenges: String(intake.biggest_current_challenges ?? ""),
+          focus_on_specific_relationships: String(
+            intake.focus_on_specific_relationships ?? ""
+          ),
+          guidance_on_specific_decision: String(
+            intake.guidance_on_specific_decision ?? ""
+          ),
+          concerns_about_romantic_life: String(
+            intake.concerns_about_romantic_life ?? ""
+          ),
+          ongoing_projects_or_plans: String(intake.ongoing_projects_or_plans ?? ""),
+          social_life_fulfillment: String(intake.social_life_fulfillment ?? ""),
+          spiritualPractices: String(intake.spiritualPractices ?? ""),
+          selfDiscovery: String(intake.selfDiscovery ?? ""),
+          externalInfluences: String(intake.externalInfluences ?? ""),
+          achieveFromReading: String(intake.achieveFromReading ?? ""),
+          specificQuestions: String(intake.specificQuestions ?? ""),
+          goalsOutcomes: String(intake.goalsOutcomes ?? ""),
+          practicalSpiritualPref: String(intake.practicalSpiritualPref ?? ""),
+          mainConcern: String(intake.mainConcern ?? ""),
+          additionalInfo: String(intake.additionalInfo ?? ""),
         });
+
+        const prefilledHousehold = (family_members ?? []).map((member) =>
+          createHouseholdMember({
+            id: member.id,
+            fullName: member.full_name ?? "",
+            relationship: member.relationship ?? "",
+            dateOfBirth: member.date_of_birth ?? "",
+            birthTime: member.birth_time ?? "",
+            birthCity: member.birth_city ?? "",
+            birthCountry: member.birth_country ?? "",
+            notes: member.notes ?? "",
+          })
+        );
+
+        if (prefilledHousehold.length > 0) {
+          setHouseholdMembers(prefilledHousehold);
+        } else if (nextPlanConfig?.additionalMembers === 1) {
+          setHouseholdMembers([createHouseholdMember()]);
+        }
       } catch {
-        // Silently continue with empty form if prefill fails
+        // fall back to empty form
       } finally {
         setLoading(false);
       }
     }
+
     loadPrefill();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Validation (matches perennial-signup required fields) ───────────────
+  function validateCurrentStep(targetStep = step): string | null {
+    if (targetStep === 1) {
+      if (!form.firstName.trim()) return "First name is required.";
+      if (!form.lastName.trim()) return "Last name is required.";
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim().toLowerCase())) {
+        return "A valid email is required.";
+      }
+      if (form.phone.replace(/\D/g, "").length !== 10) {
+        return "Phone must be a 10-digit number.";
+      }
+      if (!form.gender) return "Gender is required.";
+      if (!form.occupation.trim()) return "Occupation is required.";
+      if (!form.dateOfBirth) return "Date of birth is required.";
+      if (!form.birthTime) return "Birth time is required.";
+    }
 
-  function validate(): { message: string; step: number } | null {
-    if (!form.firstName.trim()) {
-      return { message: "First name is required.", step: 1 };
+    if (targetStep === 2) {
+      if (!form.address.trim()) return "Address is required.";
+      if (!form.city.trim()) return "City is required.";
+      if (!form.state.trim()) return "State is required.";
+      if (!/^\d{5}$/.test(form.zip.trim())) return "Zip must be exactly 5 digits.";
     }
-    if (!form.lastName.trim()) {
-      return { message: "Last name is required.", step: 1 };
+
+    if (householdStepEnabled && targetStep === 3) {
+      if (selectedPlanId === "plan_pm_couple" && householdMembers.length !== 1) {
+        return "Couple plans require one household member.";
+      }
+
+      for (const [index, member] of householdMembers.entries()) {
+        if (!member.fullName.trim()) {
+          return `Household member ${index + 1} needs a full name.`;
+        }
+        if (!member.relationship.trim()) {
+          return `Household member ${index + 1} needs a relationship.`;
+        }
+        if (!member.dateOfBirth) {
+          return `Household member ${index + 1} needs a birth date.`;
+        }
+      }
     }
-    const emailVal = form.email.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-      return { message: "A valid email is required.", step: 1 };
-    }
-    if (form.phone.replace(/\D/g, "").length !== 10) {
-      return { message: "Phone must be a 10-digit number.", step: 1 };
-    }
-    if (!form.gender) {
-      return { message: "Gender is required.", step: 1 };
-    }
-    if (!form.state.trim()) {
-      return { message: "State is required.", step: 2 };
-    }
-    if (!form.city.trim()) {
-      return { message: "City is required.", step: 2 };
-    }
-    if (!/^\d{5}$/.test(form.zip.trim())) {
-      return { message: "Zip must be exactly 5 digits.", step: 2 };
-    }
-    if (!form.address.trim()) {
-      return { message: "Address is required.", step: 2 };
-    }
-    if (!form.occupation.trim()) {
-      return { message: "Occupation is required.", step: 2 };
-    }
-    if (!form.dateOfBirth) {
-      return { message: "Date of birth is required.", step: 1 };
-    }
-    if (!form.birthTime) {
-      return { message: "Birth time is required.", step: 1 };
-    }
+
     return null;
   }
 
   function handleNext() {
     setError("");
-    // Validate fields relevant to current step before proceeding
-    if (step === 1) {
-      if (!form.firstName.trim()) {
-        setError("First name is required.");
-        return;
-      }
-      if (!form.lastName.trim()) {
-        setError("Last name is required.");
-        return;
-      }
-      if (form.phone && form.phone.replace(/\D/g, "").length !== 10) {
-        setError("Phone must be a 10-digit number.");
-        return;
-      }
+    const failure = validateCurrentStep();
+    if (failure) {
+      setError(failure);
+      return;
     }
-    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+    setStep((current) => Math.min(current + 1, totalSteps));
   }
 
   function handleBack() {
     setError("");
-    setStep((s) => Math.max(s - 1, 1));
+    setStep((current) => Math.max(current - 1, 1));
   }
 
   async function handleSubmit() {
     setError("");
-    const failure = validate();
-    if (failure) {
-      setError(failure.message);
-      setStep(failure.step);
-      return;
+
+    for (let currentStep = 1; currentStep <= totalSteps; currentStep += 1) {
+      const failure = validateCurrentStep(currentStep);
+      if (failure) {
+        setError(failure);
+        setStep(currentStep);
+        return;
+      }
     }
 
     setSaving(true);
@@ -354,7 +472,6 @@ export default function OnboardingPage() {
           date_of_birth: form.dateOfBirth,
           birth_time: form.birthTime,
           relationship_status: form.relationship_status || null,
-          // Full optional questionnaire (24 fields)
           personality: form.personality.trim() || null,
           strengths: form.strengths.trim() || null,
           lifeAreasFulfilling: form.lifeAreasFulfilling.trim() || null,
@@ -363,8 +480,7 @@ export default function OnboardingPage() {
           majorLifeEvents: form.majorLifeEvents.trim() || null,
           stressManagement: form.stressManagement.trim() || null,
           workLifeBalance: form.workLifeBalance.trim() || null,
-          relationship_with_family:
-            form.relationship_with_family.trim() || null,
+          relationship_with_family: form.relationship_with_family.trim() || null,
           biggest_current_challenges:
             form.biggest_current_challenges.trim() || null,
           focus_on_specific_relationships:
@@ -386,6 +502,16 @@ export default function OnboardingPage() {
           practicalSpiritualPref: form.practicalSpiritualPref.trim() || null,
           mainConcern: form.mainConcern.trim() || null,
           additionalInfo: form.additionalInfo.trim() || null,
+          family_members: householdMembers.map((member) => ({
+            ...(member.id ? { id: member.id } : {}),
+            full_name: member.fullName.trim(),
+            relationship: member.relationship.trim(),
+            date_of_birth: member.dateOfBirth,
+            birth_time: member.birthTime || null,
+            birth_city: member.birthCity.trim() || null,
+            birth_country: member.birthCountry.trim() || null,
+            notes: member.notes.trim() || null,
+          })),
         }),
       });
 
@@ -412,24 +538,29 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       <div className="text-center">
         <h1 className="text-2xl font-bold tracking-tight">
           Welcome to Perennial Mandalism
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Let&apos;s set up your profile so we can personalise your experience.
+          Finish your profile so your community access is fully wired.
         </p>
+        {planConfig && (
+          <div className="mt-3 flex justify-center">
+            <Badge variant="secondary">{planConfig.label}</Badge>
+          </div>
+        )}
       </div>
 
-      {/* Progress indicator */}
       <div className="flex items-center justify-center gap-2">
-        {Array.from({ length: TOTAL_STEPS }, (_, i) => {
-          const n = i + 1;
-          const isActive = n === step;
-          const isCompleted = n < step;
+        {stepTitles.map((title, index) => {
+          const number = index + 1;
+          const isActive = number === step;
+          const isCompleted = number < step;
+
           return (
-            <div key={n} className="flex items-center gap-2">
+            <div key={title} className="flex items-center gap-2">
               <div
                 className={`flex size-8 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
                   isCompleted
@@ -439,9 +570,12 @@ export default function OnboardingPage() {
                       : "border-2 border-muted text-muted-foreground"
                 }`}
               >
-                {isCompleted ? <CheckCircle2 className="size-4" /> : n}
+                {isCompleted ? <CheckCircle2 className="size-4" /> : number}
               </div>
-              {n < TOTAL_STEPS && (
+              <span className="hidden text-sm text-muted-foreground sm:inline">
+                {title}
+              </span>
+              {number < stepTitles.length && (
                 <div
                   className={`h-0.5 w-8 transition-colors ${
                     isCompleted ? "bg-primary" : "bg-muted"
@@ -453,7 +587,6 @@ export default function OnboardingPage() {
         })}
       </div>
 
-      {/* Step 1 -- Personal Details + Contact */}
       {step === 1 && (
         <Card>
           <CardHeader>
@@ -463,7 +596,6 @@ export default function OnboardingPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Name */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="firstName">
@@ -473,7 +605,6 @@ export default function OnboardingPage() {
                   id="firstName"
                   value={form.firstName}
                   onChange={(e) => patch({ firstName: e.target.value })}
-                  required
                 />
               </div>
               <div className="space-y-1.5">
@@ -484,12 +615,10 @@ export default function OnboardingPage() {
                   id="lastName"
                   value={form.lastName}
                   onChange={(e) => patch({ lastName: e.target.value })}
-                  required
                 />
               </div>
             </div>
 
-            {/* Email + Phone */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="email">
@@ -500,8 +629,6 @@ export default function OnboardingPage() {
                   type="email"
                   value={form.email}
                   onChange={(e) => patch({ email: e.target.value })}
-                  placeholder="member@example.com"
-                  required
                 />
               </div>
               <div className="space-y-1.5">
@@ -515,13 +642,10 @@ export default function OnboardingPage() {
                   onChange={(e) =>
                     patch({ phone: legacyFormatPhone(e.target.value) })
                   }
-                  placeholder="(123) 456-7890"
-                  required
                 />
               </div>
             </div>
 
-            {/* Gender + Occupation */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="gender">
@@ -529,15 +653,15 @@ export default function OnboardingPage() {
                 </Label>
                 <Select
                   value={form.gender}
-                  onValueChange={(v) => patch({ gender: v })}
+                  onValueChange={(value) => patch({ gender: value })}
                 >
                   <SelectTrigger id="gender">
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
-                    {GENDERS.map((g) => (
-                      <SelectItem key={g} value={g}>
-                        {g}
+                    {GENDERS.map((gender) => (
+                      <SelectItem key={gender} value={gender}>
+                        {gender}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -551,12 +675,10 @@ export default function OnboardingPage() {
                   id="occupation"
                   value={form.occupation}
                   onChange={(e) => patch({ occupation: e.target.value })}
-                  required
                 />
               </div>
             </div>
 
-            {/* Date of birth + Birth time */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="dateOfBirth">
@@ -567,7 +689,6 @@ export default function OnboardingPage() {
                   type="date"
                   value={form.dateOfBirth}
                   onChange={(e) => patch({ dateOfBirth: e.target.value })}
-                  required
                 />
               </div>
               <div className="space-y-1.5">
@@ -579,7 +700,6 @@ export default function OnboardingPage() {
                   type="time"
                   value={form.birthTime}
                   onChange={(e) => patch({ birthTime: e.target.value })}
-                  required
                 />
               </div>
             </div>
@@ -587,7 +707,6 @@ export default function OnboardingPage() {
         </Card>
       )}
 
-      {/* Step 2 -- Address */}
       {step === 2 && (
         <Card>
           <CardHeader>
@@ -605,7 +724,6 @@ export default function OnboardingPage() {
                 id="address"
                 value={form.address}
                 onChange={(e) => patch({ address: e.target.value })}
-                required
               />
             </div>
 
@@ -618,7 +736,6 @@ export default function OnboardingPage() {
                   id="city"
                   value={form.city}
                   onChange={(e) => patch({ city: e.target.value })}
-                  required
                 />
               </div>
               <div className="space-y-1.5">
@@ -629,7 +746,6 @@ export default function OnboardingPage() {
                   id="state"
                   value={form.state}
                   onChange={(e) => patch({ state: e.target.value })}
-                  required
                 />
               </div>
               <div className="space-y-1.5">
@@ -646,7 +762,6 @@ export default function OnboardingPage() {
                       zip: e.target.value.replace(/\D/g, "").slice(0, 5),
                     })
                   }
-                  required
                 />
               </div>
             </div>
@@ -654,52 +769,195 @@ export default function OnboardingPage() {
         </Card>
       )}
 
-      {/* Step 3 -- Optional Questionnaire (all 25 fields) */}
-      {step === 3 && (
+      {householdStepEnabled && step === 3 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Household Members</CardTitle>
+            <CardDescription>
+              Add the people included in your {planConfig?.label.toLowerCase()}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-4 py-3 text-sm">
+              <div className="flex items-center gap-2">
+                <Users className="size-4 text-muted-foreground" />
+                <span>
+                  {householdMembers.length}/{maxAdditionalMembers} household member
+                  {maxAdditionalMembers === 1 ? "" : "s"} added
+                </span>
+              </div>
+              {householdMembers.length < maxAdditionalMembers && (
+                <Button type="button" variant="outline" size="sm" onClick={addHouseholdMember}>
+                  <Plus className="mr-1 size-4" />
+                  Add member
+                </Button>
+              )}
+            </div>
+
+            {householdMembers.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                Add each household member you want included in this plan.
+              </div>
+            ) : (
+              householdMembers.map((member, index) => (
+                <div key={member.id ?? `new-${index}`} className="space-y-4 rounded-xl border p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Household member {index + 1}</p>
+                      <p className="text-sm text-muted-foreground">
+                        This profile powers charts, invites, and family features.
+                      </p>
+                    </div>
+                    {householdMembers.length > (selectedPlanId === "plan_pm_couple" ? 1 : 0) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeHouseholdMember(index)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`family-name-${index}`}>
+                        Full name <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id={`family-name-${index}`}
+                        value={member.fullName}
+                        onChange={(e) =>
+                          updateHouseholdMember(index, { fullName: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`family-relationship-${index}`}>
+                        Relationship <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id={`family-relationship-${index}`}
+                        value={member.relationship}
+                        onChange={(e) =>
+                          updateHouseholdMember(index, { relationship: e.target.value })
+                        }
+                        placeholder="Spouse, Partner, Child, Parent"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`family-dob-${index}`}>
+                        Birth date <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id={`family-dob-${index}`}
+                        type="date"
+                        value={member.dateOfBirth}
+                        onChange={(e) =>
+                          updateHouseholdMember(index, { dateOfBirth: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`family-birth-time-${index}`}>Birth time</Label>
+                      <Input
+                        id={`family-birth-time-${index}`}
+                        type="time"
+                        value={member.birthTime}
+                        onChange={(e) =>
+                          updateHouseholdMember(index, { birthTime: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`family-birth-city-${index}`}>Birth city</Label>
+                      <Input
+                        id={`family-birth-city-${index}`}
+                        value={member.birthCity}
+                        onChange={(e) =>
+                          updateHouseholdMember(index, { birthCity: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`family-birth-country-${index}`}>Birth country</Label>
+                      <Input
+                        id={`family-birth-country-${index}`}
+                        value={member.birthCountry}
+                        onChange={(e) =>
+                          updateHouseholdMember(index, { birthCountry: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`family-notes-${index}`}>Notes</Label>
+                      <Input
+                        id={`family-notes-${index}`}
+                        value={member.notes}
+                        onChange={(e) =>
+                          updateHouseholdMember(index, { notes: e.target.value })
+                        }
+                        placeholder="Anything important to remember"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {step === totalSteps && (
         <Card>
           <CardHeader>
             <CardTitle>About Your Journey</CardTitle>
             <CardDescription>
-              Help us understand where you are so we can guide you better. All
-              fields on this step are optional.
+              These questions are optional, but they help tailor your experience.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Relationship status (select) */}
             <div className="space-y-1.5">
               <Label htmlFor="relationship_status">Relationship status</Label>
               <Select
                 value={form.relationship_status}
-                onValueChange={(v) => patch({ relationship_status: v })}
+                onValueChange={(value) => patch({ relationship_status: value })}
               >
                 <SelectTrigger id="relationship_status">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
                 <SelectContent>
-                  {RELATIONSHIP_STATUSES.map((rs) => (
-                    <SelectItem key={rs} value={rs}>
-                      {rs}
+                  {RELATIONSHIP_STATUSES.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Collapsible questionnaire (24 textarea fields) */}
             <button
               type="button"
-              onClick={() => setQuestionnaireOpen(!questionnaireOpen)}
-              className="flex w-full items-center justify-between text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors pt-2"
+              onClick={() => setQuestionnaireOpen((current) => !current)}
+              className="flex w-full items-center justify-between border-t pt-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
             >
-              <span>Optional questionnaire (24 fields)</span>
+              <span>Optional questionnaire</span>
               {questionnaireOpen ? (
                 <ChevronUp className="size-3.5" />
               ) : (
                 <ChevronDown className="size-3.5" />
               )}
             </button>
+
             {questionnaireOpen && (
-              <div className="space-y-3 border-t pt-3">
+              <div className="space-y-3">
                 {QUESTIONNAIRE_FIELDS.map(([key, label]) => (
                   <div key={key} className="space-y-1.5">
                     <Label htmlFor={`q-${key}`}>{label}</Label>
@@ -708,9 +966,7 @@ export default function OnboardingPage() {
                       rows={2}
                       value={(form as unknown as Record<string, string>)[key] ?? ""}
                       onChange={(e) =>
-                        patch({
-                          [key]: e.target.value,
-                        } as Partial<ProfileForm>)
+                        patch({ [key]: e.target.value } as Partial<ProfileForm>)
                       }
                     />
                   </div>
@@ -721,14 +977,12 @@ export default function OnboardingPage() {
         </Card>
       )}
 
-      {/* Error message */}
       {error && (
         <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-center text-sm text-amber-800">
           {error}
         </div>
       )}
 
-      {/* Navigation buttons */}
       <div className="flex justify-between">
         {step > 1 ? (
           <Button type="button" variant="outline" onClick={handleBack}>
@@ -739,7 +993,7 @@ export default function OnboardingPage() {
           <div />
         )}
 
-        {step < TOTAL_STEPS ? (
+        {step < totalSteps ? (
           <Button type="button" onClick={handleNext}>
             Next
             <ChevronRight className="ml-1 size-4" />
