@@ -83,8 +83,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const t0 = Date.now();
+    const lap = (label: string) => console.log(`[booking-payment] ${label} +${Date.now() - t0}ms`);
+
     const supabase = await createClient();
     const adminSupabase = createAdminClient();
+    lap("clients created");
 
     // Fetch the service first (source of truth for diviner_id)
     let { data: service, error: serviceError } = await adminSupabase
@@ -104,6 +108,8 @@ export async function POST(request: NextRequest) {
       service = fallback.data ?? null;
       serviceError = serviceError ?? fallback.error;
     }
+
+    lap("service fetched");
 
     if (!service) {
       return NextResponse.json(
@@ -202,6 +208,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    lap("diviner resolved");
+
     if (!diviner) {
       return NextResponse.json(
         { error: "Diviner not found", details: divinerError?.message ?? null },
@@ -264,6 +272,8 @@ export async function POST(request: NextRequest) {
       availabilityTemplateDescription = (best.description as string) || null;
     }
 
+    lap("templates resolved");
+
     // --- Auto-create auth user if they don't exist ---
     let isNewUser = false;
 
@@ -311,6 +321,8 @@ export async function POST(request: NextRequest) {
       clientAuthUserId = createUserData.user.id;
     }
 
+    lap("auth user resolved");
+
     if (!clientAuthUserId) {
       return NextResponse.json(
         { error: "Could not resolve client user account" },
@@ -352,25 +364,38 @@ export async function POST(request: NextRequest) {
     // --- Duplicate / Slot Conflict Check ---
     // Prevent the same client from booking the same slot twice, and prevent
     // any two clients from claiming a slot already held by an active booking.
+    // Stale "pending" bookings from abandoned checkouts are cleaned up, not blocked.
     const { data: slotConflict } = await adminSupabase
       .from("bookings")
-      .select("id, client_id")
+      .select("id, client_id, status")
       .eq("diviner_id", resolvedDivinerId)
       .eq("scheduled_at", scheduledAt)
       .not("status", "in", '("cancelled","no_show")')
       .maybeSingle();
 
     if (slotConflict) {
-      if (slotConflict.client_id === client.id) {
+      // Same client retrying — cancel the stale pending booking so they can rebook
+      if (slotConflict.client_id === client.id && slotConflict.status === "pending") {
+        await adminSupabase
+          .from("bookings")
+          .update({ status: "cancelled", cancellation_reason: "Superseded by new checkout attempt" })
+          .eq("id", slotConflict.id);
+        lap("cancelled stale pending booking " + slotConflict.id);
+      } else if (slotConflict.client_id === client.id) {
         return NextResponse.json(
           { error: "You have already booked this time slot" },
           { status: 409 }
         );
+      } else {
+        // Different client holds an active booking — slot is taken
+        if (slotConflict.status !== "pending") {
+          return NextResponse.json(
+            { error: "This time slot is no longer available" },
+            { status: 409 }
+          );
+        }
+        // Another client's pending booking — allow override (they may have abandoned checkout)
       }
-      return NextResponse.json(
-        { error: "This time slot is no longer available" },
-        { status: 409 }
-      );
     }
 
     // --- Loyalty Discount Check ---
@@ -471,6 +496,8 @@ export async function POST(request: NextRequest) {
       startTime.getTime() + service.duration_minutes * 60 * 1000
     );
 
+    lap("client + conflicts resolved");
+
     // Create booking record with pending status
     // Use admin client — guest bookers have no session so RLS would block the insert
     const { data: booking, error: bookingError } = await adminSupabase
@@ -508,7 +535,8 @@ export async function POST(request: NextRequest) {
     const initialOrderStatus = shouldCharge
       ? "pending_payment"
       : getOrderStatusForService(service, true);
-    const orderId = await ensureOrderForBooking(adminSupabase, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const orderId = await ensureOrderForBooking(adminSupabase as any, {
       bookingId: booking.id,
       clientId: client.id,
       divinerId: resolvedDivinerId,
@@ -551,6 +579,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      lap("payment intent created");
       clientSecret = paymentIntent.client_secret;
 
       await adminSupabase
@@ -558,7 +587,8 @@ export async function POST(request: NextRequest) {
         .update({ stripe_payment_intent_id: paymentIntent.id })
         .eq("id", booking.id);
 
-      await ensureOrderForBooking(adminSupabase, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await ensureOrderForBooking(adminSupabase as any, {
         bookingId: booking.id,
         clientId: client.id,
         divinerId: resolvedDivinerId,
@@ -815,6 +845,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    lap(`done — clientSecret=${clientSecret ? "yes" : "no"}`);
+
     return NextResponse.json({
       clientSecret,
       bookingId: booking.id,
@@ -840,8 +872,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("Booking payment error:", err);
+    const message =
+      err instanceof Error ? err.message : "Internal server error";
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: message },
       { status: 500 }
     );
   }

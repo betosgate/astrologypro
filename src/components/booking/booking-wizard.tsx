@@ -347,6 +347,9 @@ export function BookingWizard({
   useEffect(() => {
     if (!selectedDate) return;
 
+    // Capture requestedTimeIso at effect start so clearing it doesn't re-trigger
+    const pendingTimeIso = requestedTimeIso;
+
     async function fetchSlots() {
       setLoadingSlots(true);
       setSelectedSlot(null);
@@ -358,12 +361,12 @@ export function BookingWizard({
         if (res.ok) {
           const slots: TimeSlot[] = await res.json();
           setTimeSlots(slots);
-          if (requestedTimeIso) {
-            const requestedSlot = slots.find((slot) => slot.start === requestedTimeIso);
+          if (pendingTimeIso) {
+            const requestedSlot = slots.find((slot) => slot.start === pendingTimeIso);
             if (requestedSlot) {
               setSelectedSlot(requestedSlot);
-              setRequestedTimeIso(null);
             }
+            setRequestedTimeIso(null);
           }
         } else {
           setTimeSlots([]);
@@ -378,13 +381,12 @@ export function BookingWizard({
     }
 
     fetchSlots();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    requestedTimeIso,
     selectedDate,
     diviner.id,
     service.duration_minutes,
     availabilityQuery,
-    hasAutoAdvancedFromQuery,
   ]);
 
   function canProceed(): boolean {
@@ -412,9 +414,13 @@ export function BookingWizard({
       const urlParams = new URLSearchParams(window.location.search);
       const affiliateCode = urlParams.get("ref") || undefined;
 
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30_000);
+
       const res = await fetch("/api/stripe/booking-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           divinerId: diviner.id,
           divinerUsername: diviner.username,
@@ -428,10 +434,11 @@ export function BookingWizard({
           policyAcknowledgedAt: policyAcknowledged ? new Date().toISOString() : undefined,
         }),
       });
+      clearTimeout(timeout);
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Booking failed");
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Payment setup failed (${res.status})`);
       }
 
       const data = await res.json();
@@ -459,7 +466,11 @@ export function BookingWizard({
         setBookingComplete(true);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setError("Payment setup timed out. Please try again.");
+      } else {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      }
     } finally {
       setCreatingPaymentIntent(false);
     }
@@ -814,140 +825,154 @@ export function BookingWizard({
 
           {/* Step 3: Payment & Confirmation */}
           {step === 2 && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold">Booking Summary</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left column — Booking Summary */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Booking Summary</h3>
 
-              <div className="rounded-lg border p-4 space-y-3">
-                {!hideServiceName && (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Service</span>
-                      <span className="font-medium">{resolvedServiceName}</span>
-                    </div>
-                    <Separator />
-                  </>
-                )}
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Duration</span>
-                  <Badge variant="outline">
-                    <Clock className="mr-1 size-3" />
-                    {service.duration_minutes} min
-                  </Badge>
-                </div>
-                <Separator />
-                {selectedSlot && (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Date</span>
-                      <span className="font-medium">
-                        {formatSlotDate(selectedSlot.start, clientTimezone)}
-                      </span>
-                    </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Time</span>
-                      <span className="font-medium">
-                        {formatSlotTime(selectedSlot.start, clientTimezone)} -{" "}
-                        {formatSlotTime(selectedSlot.end, clientTimezone)}
-                      </span>
-                    </div>
-                    {selectedSlot.availabilityTitle && (
-                      <>
-                        <Separator />
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Schedule</span>
-                          <span className="font-medium">
-                            {selectedSlot.availabilityTitle}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                    {selectedSlot.availabilityTimezone && (
-                      <>
-                        <Separator />
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Availability Timezone</span>
-                          <span className="font-medium">
-                            {selectedSlot.availabilityTimezone.replace(/_/g, " ")}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Client</span>
-                  <span className="font-medium">{bookingDetails.fullName}</span>
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between text-lg">
-                  <span className="font-semibold">Total</span>
-                  <span className="font-bold">
-                    {formatCurrency(effectivePrice)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Policy notice */}
-              <div className="flex items-start gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
-                <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  By proceeding with payment, you agree that{" "}
-                  <strong className="text-foreground">50% of the payment is retained as a no-show fee</strong>{" "}
-                  if you do not attend without prior notice, and that cancellations within 24 hours are non-refundable.
-                </p>
-              </div>
-
-              {error && (
-                <div className="rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
-                  <p>{error}</p>
-                  {!clientSecret && !creatingPaymentIntent && (
-                    <button
-                      type="button"
-                      onClick={handleCreatePaymentIntent}
-                      className="mt-2 underline hover:no-underline"
-                    >
-                      Try again
-                    </button>
+                <div className="rounded-lg border p-4 space-y-3">
+                  {!hideServiceName && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Service</span>
+                        <span className="font-medium">{resolvedServiceName}</span>
+                      </div>
+                      <Separator />
+                    </>
                   )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Duration</span>
+                    <Badge variant="outline">
+                      <Clock className="mr-1 size-3" />
+                      {service.duration_minutes} min
+                    </Badge>
+                  </div>
+                  <Separator />
+                  {selectedSlot && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Date</span>
+                        <span className="font-medium">
+                          {formatSlotDate(selectedSlot.start, clientTimezone)}
+                        </span>
+                      </div>
+                      <Separator />
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Time</span>
+                        <span className="font-medium">
+                          {formatSlotTime(selectedSlot.start, clientTimezone)} -{" "}
+                          {formatSlotTime(selectedSlot.end, clientTimezone)}
+                        </span>
+                      </div>
+                      {selectedSlot.availabilityTitle && (
+                        <>
+                          <Separator />
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Schedule</span>
+                            <span className="font-medium">
+                              {selectedSlot.availabilityTitle}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                      {selectedSlot.availabilityTimezone && (
+                        <>
+                          <Separator />
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Timezone</span>
+                            <span className="font-medium">
+                              {selectedSlot.availabilityTimezone.replace(/_/g, " ")}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Client</span>
+                    <span className="font-medium">{bookingDetails.fullName}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between text-lg">
+                    <span className="font-semibold">Total</span>
+                    <span className="font-bold">
+                      {formatCurrency(effectivePrice)}
+                    </span>
+                  </div>
                 </div>
-              )}
 
-              {/* Stripe Elements Payment Form */}
-              {creatingPaymentIntent && (
-                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin" />
-                  Preparing payment...
+                {/* Policy notice */}
+                <div className="flex items-start gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+                  <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    By proceeding with payment, you agree that{" "}
+                    <strong className="text-foreground">50% of the payment is retained as a no-show fee</strong>{" "}
+                    if you do not attend without prior notice, and that cancellations within 24 hours are non-refundable.
+                  </p>
                 </div>
-              )}
+              </div>
 
-              {clientSecret && (
-                <Elements
-                  stripe={stripePromise}
-                  options={{
-                    clientSecret,
-                    appearance: {
-                      theme: "night",
-                      variables: {
-                        colorPrimary: "#d4a017",
-                        colorBackground: "#0a0a0a",
-                        colorText: "#fafafa",
-                        colorDanger: "#ef4444",
-                        borderRadius: "8px",
-                        fontFamily: "inherit",
+              {/* Right column — Payment Form */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Payment</h3>
+
+                {error && (
+                  <div className="rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+                    <p>{error}</p>
+                    {!clientSecret && !creatingPaymentIntent && (
+                      <button
+                        type="button"
+                        onClick={handleCreatePaymentIntent}
+                        className="mt-2 underline hover:no-underline"
+                      >
+                        Try again
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {creatingPaymentIntent && (
+                  <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" />
+                    Preparing payment...
+                  </div>
+                )}
+
+                {clientSecret && (
+                  <Elements
+                    stripe={stripePromise}
+                    options={{
+                      clientSecret,
+                      appearance: {
+                        theme: "night",
+                        variables: {
+                          colorPrimary: "#d4a017",
+                          colorBackground: "#0a0a0a",
+                          colorText: "#fafafa",
+                          colorDanger: "#ef4444",
+                          borderRadius: "8px",
+                          fontFamily: "inherit",
+                        },
                       },
-                    },
-                  }}
-                >
-                  <StripePaymentForm
-                    onSuccess={handlePaymentSuccess}
-                    onError={handlePaymentError}
-                    submitting={submitting}
-                    setSubmitting={setSubmitting}
-                    policyAcknowledged={policyAcknowledged}
-                  />
-                </Elements>
-              )}
+                    }}
+                  >
+                    <StripePaymentForm
+                      onSuccess={handlePaymentSuccess}
+                      onError={handlePaymentError}
+                      submitting={submitting}
+                      setSubmitting={setSubmitting}
+                      policyAcknowledged={policyAcknowledged}
+                    />
+                  </Elements>
+                )}
+
+                {!creatingPaymentIntent && !clientSecret && !error && (
+                  <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" />
+                    Loading...
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </CardContent>
@@ -982,6 +1007,21 @@ export function BookingWizard({
         {step < STEPS.length - 1 && (
           <Button
             onClick={async () => {
+              // Validate intake form before advancing
+              if (step === 1 && !canProceed()) {
+                const missing: string[] = [];
+                let firstMissingId = "";
+                if (!bookingDetails.fullName.trim()) { missing.push("Full Name"); if (!firstMissingId) firstMissingId = "fullName"; }
+                if (!bookingDetails.email.trim()) { missing.push("Email"); if (!firstMissingId) firstMissingId = "email"; }
+                toast.error(`Please fill in: ${missing.join(", ")}`);
+                // Scroll to and focus the first missing field
+                if (firstMissingId) {
+                  const el = document.getElementById(firstMissingId);
+                  if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.focus(); }
+                }
+                return;
+              }
+
               // When advancing from intake form (step 1)
               if (step === 1 && selectedSlot) {
                 setCreatingPaymentIntent(true);
@@ -1017,13 +1057,14 @@ export function BookingWizard({
                 }
 
                 // Paid booking — advance to payment step
+                setCreatingPaymentIntent(false);
                 setStep((s) => s + 1);
                 return;
               }
 
               setStep((s) => s + 1);
             }}
-            disabled={!canProceed() || creatingPaymentIntent}
+            disabled={(step === 0 && !canProceed()) || creatingPaymentIntent}
             className="gap-2"
           >
             {creatingPaymentIntent ? (
