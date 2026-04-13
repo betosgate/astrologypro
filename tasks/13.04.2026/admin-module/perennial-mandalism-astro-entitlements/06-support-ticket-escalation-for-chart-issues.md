@@ -70,3 +70,37 @@ Otherwise:
 - ticket type and entity-linking plan
 - admin resolution actions
 - SLA expectations for chart problems
+
+---
+
+## Implementation — 2026-04-13
+
+### API update
+`src/app/api/support/tickets/route.ts`
+
+**Changes:**
+- Extended `allowedEntityTypes` to include: `natal_chart`, `monthly_transit`, `relationship_chart`
+- Added `chart_family_member_id` and `chart_member_id` optional body fields for chart escalation pre-fill
+- When `category` is a chart-specific type (`natal_chart_issue`, `monthly_transit_issue`, `family_relationship_chart_issue`), `type` is auto-set to `'chart_support'` so it can be filtered to a dedicated queue
+- Chart-specific entity IDs are embedded as `tags` (e.g. `family_member:uuid`) for admin filtering without new columns
+
+### Escalation flow (from generate-natal API)
+When `natal_status = 'locked_for_review'`, the generate-natal API returns:
+```json
+{
+  "error": "Correction retry limit reached. Please open a support ticket for this profile.",
+  "natal_status": "locked_for_review",
+  "retries_used": 3,
+  "retries_allowed": 3
+}
+```
+The frontend should show a "Create support ticket" CTA that pre-fills:
+- `category: "natal_chart_issue"`
+- `related_entity_type: "natal_chart"`
+- `related_entity_id: <family_member_id>`
+- `chart_family_member_id: <family_member_id>`
+
+### Admin resolution actions (via DB or future admin UI)
+- Reset retry: `UPDATE community_family_members SET natal_retry_count = 0, natal_status = 'generated', natal_lock_reason = NULL WHERE id = ?`
+- Force regeneration: call generate-natal as service_role after resetting retry count
+- Raise limit: `UPDATE community_family_members SET natal_max_retries = 5 WHERE id = ?`

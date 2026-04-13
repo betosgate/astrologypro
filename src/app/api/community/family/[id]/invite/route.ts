@@ -89,16 +89,33 @@ export async function POST(
 
     // Generate a secure invite token
     const inviteToken = crypto.randomUUID();
-    const now = new Date().toISOString();
+    const now = new Date();
+    const nowIso = now.toISOString();
+    // Invite links expire after 7 days
+    const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    // Persist invite fields
+    // Determine whether this is a resend by checking existing invite_status
+    const { data: currentStatus } = await supabase
+      .from("community_family_members")
+      .select("invite_status, invite_resend_count")
+      .eq("id", familyMemberId)
+      .single();
+
+    const isResend = currentStatus?.invite_status === "sent" || currentStatus?.invite_status === "resent";
+    const newResendCount = isResend ? (currentStatus?.invite_resend_count ?? 0) + 1 : 0;
+
+    // Persist invite fields with full lifecycle state
     const { error: updateError } = await supabase
       .from("community_family_members")
       .update({
         invite_email: email,
         invite_token: inviteToken,
-        invite_sent_at: now,
-        updated_at: now,
+        invite_sent_at: nowIso,
+        invite_expires_at: expiresAt,
+        invite_status: isResend ? "resent" : "sent",
+        invite_resend_count: newResendCount,
+        invite_failure_reason: null,
+        updated_at: nowIso,
       })
       .eq("id", familyMemberId)
       .eq("member_id", member.id);
@@ -117,7 +134,7 @@ export async function POST(
 
     const inviteUrl = `${appUrl}/join/family-invite?token=${inviteToken}`;
 
-    // Send invite email (non-blocking failure — don't fail the request if SES is down)
+    // Send invite email — on failure, record it in invite_status but don't fail the request
     try {
       await sendFamilyMemberInvite({
         to: email,
@@ -127,10 +144,21 @@ export async function POST(
       });
     } catch (emailErr) {
       console.error("[family/invite] Email send failed:", emailErr);
-      // Token is already saved — they can retry
+      // Token is saved — status tracks the failure so admin/member can see it and retry
+      await supabase
+        .from("community_family_members")
+        .update({
+          invite_status: "failed",
+          invite_failure_reason: emailErr instanceof Error ? emailErr.message : "email_send_failed",
+        })
+        .eq("id", familyMemberId);
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      invite_status: isResend ? "resent" : "sent",
+      expires_at: expiresAt,
+    });
   } catch (err) {
     console.error("[family/invite] POST error:", err);
     return NextResponse.json(

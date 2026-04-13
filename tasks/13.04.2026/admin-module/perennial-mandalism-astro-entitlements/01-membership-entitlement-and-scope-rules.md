@@ -76,3 +76,21 @@ Safer model:
 - profile eligibility rules
 - definition of family dynamic coverage
 - non-entitled and paused-state behavior
+
+---
+
+## Implementation — 2026-04-13
+
+### Migration
+`supabase/migrations/20260413000181_pm_entitlement_scope_rules.sql`
+
+**What was done:**
+- Created `pm_entitlement_rules` table with columns: `membership_type`, `natal_chart_enabled`, `relationship_chart_enabled`, `monthly_transit_enabled`, `family_dynamic_enabled`, `max_family_profiles`, `eligible_statuses`, `description`
+- Seeded the `perennial_mandalism` entitlement row (all chart types enabled, max 5 profiles, eligible_statuses = `['active']`)
+- RLS: authenticated users can read; service_role manages
+- Created `is_pm_chart_entitled(member_id UUID) → BOOLEAN` SQL function for use in generation APIs and cron
+- Created `get_pm_entitlement(member_id UUID)` function to return the full rule row for a given member
+
+### Key decisions
+- `eligible_statuses` is a TEXT[] column so admin can add `'cancelling'` without a migration if business needs change
+- Family dynamic coverage is NOT a separate chart type — it is derived from existing pairwise synastry (task 03 implements the coverage layer)

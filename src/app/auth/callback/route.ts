@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRoleDestination } from "@/types/user";
 import { getUserPortals } from "@/lib/user-roles";
+import { provisionNatalReadiness } from "@/lib/community/provision-natal-readiness";
 
 function getClientIp(req: NextRequest): string {
   return (
@@ -69,13 +70,45 @@ export async function GET(request: NextRequest) {
           .maybeSingle();
 
         if (!existing) {
-          await admin.from("community_members").insert({
-            user_id: user.id,
-            email: user.email,
-            full_name: metadata.full_name ?? metadata.name ?? null,
-            membership_type: pendingMembership,
-            membership_status: "active",
-          });
+          const { data: newMember } = await admin
+            .from("community_members")
+            .insert({
+              user_id: user.id,
+              email: user.email,
+              full_name: metadata.full_name ?? metadata.name ?? null,
+              membership_type: pendingMembership,
+              membership_status: "active",
+            })
+            .select("id")
+            .single();
+
+          // Task 08: auto-provision natal readiness for PM members on first login
+          if (newMember?.id && pendingMembership === "perennial_mandalism") {
+            provisionNatalReadiness({
+              admin,
+              communityMemberId: newMember.id,
+              birthData: {
+                fullName: (metadata.full_name ?? metadata.name ?? null) as string | null,
+                dateOfBirth: (metadata.date_of_birth ?? null) as string | null,
+                birthTime: (metadata.birth_time ?? null) as string | null,
+                birthCity: (metadata.birth_city ?? null) as string | null,
+                birthCountry: (metadata.birth_country ?? null) as string | null,
+              },
+            }); // fire-and-forget — non-blocking
+          }
+        } else if (existing && pendingMembership === "perennial_mandalism") {
+          // Existing PM member logging in — ensure natal readiness is provisioned
+          provisionNatalReadiness({
+            admin,
+            communityMemberId: existing.id,
+            birthData: {
+              fullName: (metadata.full_name ?? metadata.name ?? null) as string | null,
+              dateOfBirth: (metadata.date_of_birth ?? null) as string | null,
+              birthTime: (metadata.birth_time ?? null) as string | null,
+              birthCity: (metadata.birth_city ?? null) as string | null,
+              birthCountry: (metadata.birth_country ?? null) as string | null,
+            },
+          }); // fire-and-forget
         }
       }
 

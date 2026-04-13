@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { sendFamilyMemberInvite } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,7 @@ export async function POST(request: NextRequest) {
     birthCountry,
     relationship,
     notes,
+    inviteEmail, // Task 10: optional — if provided, auto-send household invite
   } = body;
 
   if (!fullName || !dateOfBirth) {
@@ -110,5 +112,53 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Task 10: auto-send household signup invite if an email was supplied at creation time.
+  // The invite is automatic — the primary user does not need to press a separate "send invite" button.
+  const normalizedInviteEmail = inviteEmail?.trim().toLowerCase();
+  if (data && normalizedInviteEmail && normalizedInviteEmail.includes("@")) {
+    const inviteToken = crypto.randomUUID();
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const inviterName =
+      ((await supabase.auth.getUser()).data.user?.user_metadata?.full_name as string | undefined) ??
+      normalizedInviteEmail;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+    const inviteUrl = `${appUrl}/join/family-invite?token=${inviteToken}`;
+
+    // Persist invite fields and initial status before sending
+    await supabase
+      .from("community_family_members")
+      .update({
+        invite_email: normalizedInviteEmail,
+        invite_token: inviteToken,
+        invite_sent_at: now.toISOString(),
+        invite_expires_at: expiresAt,
+        invite_status: "sent",
+        invite_resend_count: 0,
+        updated_at: now.toISOString(),
+      })
+      .eq("id", data.id);
+
+    try {
+      await sendFamilyMemberInvite({
+        to: normalizedInviteEmail,
+        inviterName,
+        familyMemberName: fullName,
+        inviteUrl,
+      });
+    } catch (emailErr) {
+      // Email failure is non-blocking — token is already saved so resend is possible
+      console.error("[family/POST] invite email failed for", data.id, emailErr);
+      await supabase
+        .from("community_family_members")
+        .update({
+          invite_status: "failed",
+          invite_failure_reason: emailErr instanceof Error ? emailErr.message : "email_send_failed",
+        })
+        .eq("id", data.id);
+    }
+  }
+
   return NextResponse.json({ member: data }, { status: 201 });
 }

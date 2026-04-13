@@ -1,6 +1,6 @@
 # Build Trainee Post-Login Onboarding Gate — 2026-04-13
 
-- Status: Open
+- Status: Done
 - Priority: P1
 - Owner: Full-stack
 - Scope: `src/app/api/auth/post-login-redirect/route.ts`, `src/app/trainee/` area, new onboarding page for trainee role
@@ -11,6 +11,14 @@
 ## Goal
 
 After a trainee logs in for the first time, they must be taken through an onboarding gate that collects the required fields needed to load their trainee dashboard — before they can access `/trainee`. Currently, trainees are sent directly to `/trainee` with no data collected.
+
+## Completion Notes
+
+- `src/app/api/auth/post-login-redirect/route.ts` already checks `trainees.onboarding_completed` and sends incomplete trainee users to `/join/trainee/profile` before allowing `/trainee`.
+- `src/app/trainee/layout.tsx` already enforces the same guard server-side and redirects incomplete trainees away from `/trainee` routes to `/join/trainee/profile`, which prevents URL bypass.
+- The onboarding surface already exists at `src/app/join/trainee/profile/page.tsx` and submits to `src/app/api/trainee/profile/complete/route.ts`.
+- `src/app/api/trainee/profile/complete/route.ts` already updates the trainee profile fields and sets `onboarding_completed = true`, then the UI redirects to `/trainee`.
+- The implemented route name differs from the original task proposal: the repo uses `/join/trainee/profile` instead of creating a separate `/trainee/onboarding` path.
 
 ---
 

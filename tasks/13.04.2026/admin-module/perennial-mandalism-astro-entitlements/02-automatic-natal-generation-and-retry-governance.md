@@ -85,3 +85,31 @@ Instead, a material-change rule should decide whether:
 - retry-limit rules
 - material birth-data change rules
 - failure handling and lockout policy
+
+---
+
+## Implementation — 2026-04-13
+
+### Migration
+`supabase/migrations/20260413000182_natal_generation_governance.sql`
+
+**Columns added to `community_family_members`:**
+- `natal_status` TEXT — lifecycle: `not_started | queued | generated | failed | locked_for_review`
+- `natal_retry_count` INTEGER — number of correction retries consumed
+- `natal_max_retries` INTEGER DEFAULT 3 — per-profile limit (admin can raise without migration)
+- `natal_first_generated_at` TIMESTAMPTZ
+- `natal_last_generated_at` TIMESTAMPTZ
+- `natal_failure_reason` TEXT
+- `natal_lock_reason` TEXT
+
+Backfill: existing rows with `natal_chart IS NOT NULL` → `natal_status = 'generated'` with timestamps from `chart_updated_at`.
+
+### API update
+`src/app/api/community/generate-natal/route.ts` — fully rewritten:
+- Gates on `natal_status = 'locked_for_review'` → 403 with retry info
+- Distinguishes first-time generation (free, no retry consumed) vs user correction (consumes a retry)
+- Checks remaining retries before attempting; locks profile when limit is hit
+- Marks `natal_status = 'queued'` while generating, `'generated'` on success, `'failed'` on error
+- Writes `natal_regeneration_audit` record for every user correction (task 05)
+- Sends `sendNatalChartReady` or `sendNatalChartUpdated` email on success (task 09)
+- Returns `{ natal_status, retries_used, retries_remaining, is_first_generation }` in response

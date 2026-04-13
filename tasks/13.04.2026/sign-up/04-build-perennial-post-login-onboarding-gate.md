@@ -1,6 +1,6 @@
 # Build Perennial Community Post-Login Onboarding Gate — 2026-04-13
 
-- Status: Open
+- Status: Done
 - Priority: P1
 - Owner: Full-stack
 - Scope: `src/app/api/auth/post-login-redirect/route.ts`, `src/app/community/onboarding/`, `community_members` table
@@ -11,6 +11,14 @@
 ## Goal
 
 After a perennial member logs in for the first time (via the new get-started flow — task 02), they must be taken through an onboarding gate at `/community/onboarding` that collects all role-specific required data before they can access the `/community` dashboard. This replaces the pre-payment data collection that existed in the old `/perennial-signup` page.
+
+## Completion Notes
+
+- `src/app/api/auth/post-login-redirect/route.ts` already checks `community_members.onboarding_completed` for `role === "perennial_mandalism"` and routes incomplete members to `/community/onboarding`.
+- `src/app/community/layout.tsx` already enforces the same gate at the portal level and wraps incomplete members with `OnboardingGuard`, preventing direct access to `/community` before onboarding is complete.
+- `src/app/community/onboarding/page.tsx` already exists as a multi-step onboarding flow with personal details, address, household-member handling, and journey/questionnaire sections.
+- `src/app/api/community/onboarding/complete/route.ts` already persists profile data into `community_members`, saves questionnaire data into `intake_data`, syncs family-member rows, updates `plan_type`, and sets `onboarding_completed = true`.
+- The required `community_members.onboarding_completed` support is already present in the migration registry and migration set, so this onboarding gate has the DB support it needs.
 
 Currently, perennial users are routed directly to `/community` with no onboarding gate and no data collected beyond name and email.
 

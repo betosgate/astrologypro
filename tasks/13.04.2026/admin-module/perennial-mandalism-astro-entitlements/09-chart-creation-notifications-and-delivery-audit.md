@@ -112,3 +112,41 @@ Admin should be able to inspect:
 - email versus in-app delivery rules
 - delivery audit model
 - resend and failure-handling policy
+
+---
+
+## Implementation — 2026-04-13
+
+### Migration
+`supabase/migrations/20260413000186_chart_notification_delivery_audit.sql`
+
+**New table `chart_notification_deliveries`:**
+- `artifact_type` — `natal_chart | monthly_transit | relationship_chart`
+- `artifact_id` — ID of the specific artifact
+- `recipient_user_id`, `recipient_email`
+- `delivery_channel` — `email | in_app | both`
+- `delivery_status` — `pending | sent | failed | resent`
+- `is_regeneration_notice` BOOLEAN — distinguishes first-time vs update notifications
+- `first_sent_at`, `last_attempted_at`, `resend_count`, `failure_reason`
+
+### Email functions added to `src/lib/email.ts`
+
+**`sendNatalChartReady({ to, name, familyMemberName, chartUrl })`**
+- Subject: `"{familyMemberName}'s natal chart is ready"`
+- Lists what's in the natal chart
+- Explains that up to 3 corrections are available
+- CTA: "View Natal Chart" → `/community/family`
+- Respects `isSequencePaused("natal_chart_ready")` gate
+
+**`sendNatalChartUpdated({ to, name, familyMemberName, retriesUsed, retriesAllowed, chartUrl })`**
+- Subject: `"{familyMemberName}'s natal chart has been updated"`
+- Shows corrections used / remaining
+- If retries exhausted: tells user to open a support ticket
+- CTA: "View Updated Chart" → `/community/family`
+- Respects `isSequencePaused("natal_chart_updated")` gate
+
+### Integration in generate-natal API
+- First-time generation → `sendNatalChartReady`
+- User correction → `sendNatalChartUpdated`
+- Email failure is non-blocking — chart is saved and generation succeeds regardless
+- Admin can see missed notifications via `chart_notification_deliveries` table (status = `failed`)

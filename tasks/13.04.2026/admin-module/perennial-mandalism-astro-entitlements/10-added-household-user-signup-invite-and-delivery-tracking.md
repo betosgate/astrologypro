@@ -114,3 +114,37 @@ If the product later wants a richer invite domain, it should be layered on top o
 - signup-completion invite lifecycle
 - member and admin visibility requirements
 - resend, expiration, and failure-handling policy
+
+---
+
+## Implementation — 2026-04-13
+
+### Migration
+`supabase/migrations/20260413000187_invite_status_tracking.sql`
+
+**Columns added to `community_family_members`:**
+- `invite_status` TEXT — `not_sent | sent | accepted | expired | failed | resent`
+- `invite_resend_count` INTEGER DEFAULT 0 — total invites sent (initial + resends)
+- `invite_expires_at` TIMESTAMPTZ — 7 days from `invite_sent_at`
+- `invite_failure_reason` TEXT — for admin debugging
+
+Backfill: rows with `invite_accepted_at` → `'accepted'`; rows with `invite_sent_at` only → `'sent'`.
+
+### Auto-invite on family add
+`src/app/api/community/family/route.ts` — POST handler updated:
+- Accepts optional `inviteEmail` in the request body
+- If `inviteEmail` is provided: automatically sends invite at the point of family member creation
+- No second manual "send invite" button required
+- Invite token, `invite_sent_at`, `invite_expires_at`, and `invite_status = 'sent'` are persisted before email is sent
+- If email fails: status set to `'failed'` with `invite_failure_reason` — token is saved so resend works
+
+### Updated invite route
+`src/app/api/community/family/[id]/invite/route.ts` — updated:
+- Detects resend by checking existing `invite_status`
+- Sets `invite_status = 'resent'` and increments `invite_resend_count` on resend
+- Sets `invite_expires_at` to 7 days from now on every send/resend
+- Sets `invite_status = 'failed'` with `invite_failure_reason` on email error (token still valid for retry)
+- Returns `{ success, invite_status, expires_at }` in response
+
+### Acceptance flow (existing)
+`/join/family-invite?token=<token>` validates the token and sets `invite_accepted_at` and `user_id` on the family member row — the `invite_status` should be updated to `'accepted'` in that route (frontend ticket to implement).

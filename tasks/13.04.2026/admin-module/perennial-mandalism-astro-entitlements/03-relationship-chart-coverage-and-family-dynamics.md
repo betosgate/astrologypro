@@ -75,3 +75,30 @@ That means the architecture should:
 - pairwise generation strategy
 - derived family overview specification
 - recalculation triggers and invalidation rules
+
+---
+
+## Implementation — 2026-04-13
+
+### Migration
+`supabase/migrations/20260413000183_relationship_chart_batch_tracking.sql`
+
+**Columns added to `relationship_charts`:**
+- `invalidated_at` TIMESTAMPTZ — NULL = chart is current; non-NULL = needs regeneration
+- `invalidation_reason` TEXT — e.g. `'natal_chart_updated:person_a_id'`
+- `updated_at` TIMESTAMPTZ
+
+**Database trigger:**
+- `trg_invalidate_rc_on_natal_change` — fires AFTER UPDATE OF `natal_chart` on `community_family_members`
+- When a natal chart changes, all relationship charts where that person is `person_a_id` or `person_b_id` are automatically marked `invalidated_at = NOW()`
+- Only marks currently-valid charts (does not reset already-invalidated ones)
+
+### New API endpoint
+`src/app/api/community/relationship-charts/batch/route.ts`
+
+**POST** — generates all missing or invalidated pairwise charts in one request:
+- Filters to members with `natal_status = 'generated'`
+- Skips pairs with current (non-invalidated) charts
+- Generates and upserts missing pairs using existing `calculateSynastry()`
+- Returns `{ generated, skipped, blocked, invalidatedRegenerated }`
+- Family dynamic view is a derived layer on top of these pairwise records (scorecard, strongest/friction pairs can be computed at query time from existing `chart_data`)
