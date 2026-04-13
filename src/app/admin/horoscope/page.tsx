@@ -636,8 +636,8 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
                                   <span className={cn(
                                     "text-lg font-bold",
                                     pName === "Node" ? "text-indigo-600" :
-                                    pName === "Chiron" ? "text-emerald-600" :
-                                    "text-amber-600"
+                                      pName === "Chiron" ? "text-emerald-600" :
+                                        "text-amber-600"
                                   )}>
                                     {PLANET_SYMBOLS[pName] ?? "✦"}
                                   </span>
@@ -676,7 +676,7 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
                   <h4 className="uppercase tracking-wide text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>House {item.house}</h4>
                 </div>
                 <div className="interp-gradient-default px-4 py-3">
-                  <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{item.interpretation}</p>
+                  <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px' }}>{item.interpretation}</p>
                   <div className="mt-3 flex justify-center">
                     <button onClick={() => trigger(`House ${item.house}`, item.interpretation, { ...item, sign }, areaOfInquiry, undefined, false, "house")} className="horoscope-show-more">Show More</button>
                   </div>
@@ -770,7 +770,7 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
                 </div>
                 {/* Golden-orange gradient interpretation */}
                 <div className="interp-gradient-default px-4 py-3">
-                  <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{item.interpretation}</p>
+                  <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px' }}>{item.interpretation}</p>
                   <div className="mt-3 flex justify-center">
                     <button onClick={() => trigger(item.title ?? `Aspect ${i + 1}`, item.interpretation, item, areaOfInquiry, item.title)} className="horoscope-show-more">Show More</button>
                   </div>
@@ -2549,7 +2549,7 @@ export default function AdminHoroscopePage() {
               const bod = `${pad(birth1.year)}-${pad(birth1.month)}-${pad(
                 birth1.day
               )} ${pad(birth1.hour)}:${pad(birth1.min)}:00`;
-               const retData = await callPlanetReturn({
+              const retData = await callPlanetReturn({
                 steps,
                 date_of_birth_with_time: bod,
                 natal_deg: nDeg,

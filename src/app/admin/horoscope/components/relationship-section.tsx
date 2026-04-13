@@ -18,6 +18,7 @@ export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen,
   const { modal, trigger, close } = useShowMore();
   const isBusiness = tabSlug === "business_partner_v2";
   const isFriendship = tabSlug === "friendship_report_tropical_v2";
+  const isRomantic = tabSlug === "romantic_forecast_report_tropical_v2";
 
   function AiBlock({ title, sectionKey, data }: { title: string; sectionKey: string; data: any }) {
     if (!data && data !== "error") return <SectionSkeleton title={title} />;
@@ -25,21 +26,56 @@ export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen,
     const items: any[] = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
     if (!items.length) return null;
 
+    const getBgClass = (itemTitle: string) => {
+      if (!isRomantic && !isFriendship) return "interp-gradient-default";
+
+      const lower = itemTitle.toLowerCase();
+      
+      // 1. Planet-specific detection (Highest Priority)
+      if (lower.includes("sun")) return "planet-interp-sun";
+      if (lower.includes("moon")) return "planet-interp-moon";
+      if (lower.includes("mercury")) return "planet-interp-mercury";
+      if (lower.includes("venus")) return "planet-interp-venus";
+      if (lower.includes("mars")) return "planet-interp-mars";
+      if (lower.includes("jupiter")) return "planet-interp-jupiter";
+      if (lower.includes("saturn")) return "planet-interp-saturn";
+      if (lower.includes("uranus")) return "planet-interp-uranus";
+      if (lower.includes("neptune")) return "planet-interp-neptune";
+      if (lower.includes("pluto")) return "planet-interp-pluto";
+      
+      // Karmic bodies
+      if (lower.includes("node") || lower.includes("chiron")) return "section-karmic-indicators";
+
+      // 2. Elemental fallback
+      if (lower.includes("fire")) return "planet-interp-mars";
+      if (lower.includes("water")) return "planet-interp-neptune";
+      if (lower.includes("air")) return "planet-interp-mercury";
+      if (lower.includes("earth")) return "planet-interp-venus";
+
+      // 3. Section fallback
+      if (sectionKey === "timing_and_transits") return "section-timing-transits";
+      if (sectionKey === "karmic_and_soulmate_indicators") return "section-karmic-indicators";
+
+      return "interp-gradient-default";
+    };
+
     return (
       <div className="space-y-2">
-        <div className="rounded-lg border overflow-hidden px-4 py-2.5 horoscope-section-header flex items-center justify-center">
-          <h3 className="text-sm font-semibold text-center w-full text-white">
-            <SmartHeading title={title} textSize="text-[20px]" iconSize="size-7" className="text-white" />
+        <div className="rounded-lg border overflow-hidden px-4 py-2.5 horoscope-section-header-dark flex items-center justify-center">
+          <h3 className="text-sm font-semibold text-center w-full text-[#ffffff]">
+            <SmartHeading title={title} textSize="text-[20px]" iconSize="size-7" className="text-[#ffffff]" />
           </h3>
         </div>
-        
+
         {items.map((item: any, i: number) => {
           const itemTitle = item.title ?? item.name;
+          const bgClass = getBgClass(itemTitle ?? "");
+
           return (
             <div key={i} className="rounded-lg border overflow-hidden">
               {itemTitle && (
                 <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center border-b border-black/10 gap-5">
-                  <SmartHeading title={itemTitle} textSize="text-[22px]" iconSize="size-7" className="text-black" />
+                  <SmartHeading title={itemTitle} textSize="text-[22px]" iconSize="size-7" className="text-[#000000]" />
                   {(() => {
                     const titleStr = String(itemTitle ?? title);
                     const match = titleStr.match(/(\b[A-Za-z\s]+\b)\s+in\s+(\b[A-Z][a-z]+\b)/);
@@ -53,7 +89,7 @@ export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen,
                               <button
                                 type="button"
                                 onClick={() => onDecanClick(p, s)}
-                                className="size-10 flex items-center justify-center rounded-full bg-amber-500/15 border-2 border-amber-500/50 hover:bg-amber-500/25 hover:border-amber-500 transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] active:scale-90 group shrink-0"
+                                className="size-10 flex items-center justify-center rounded-full decan-accent-glow transition-all active:scale-90 group shrink-0"
                               >
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
@@ -74,8 +110,8 @@ export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen,
                   })()}
                 </div>
               )}
-              
-              <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+
+              <div className={cn(bgClass, "px-4 py-3 pb-8")} style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px' }}>
                 <div className="flex items-center justify-center gap-2 mb-1">
                   {!itemTitle && <h4 className="text-xs font-semibold uppercase tracking-wider text-center">{title}</h4>}
                 </div>
