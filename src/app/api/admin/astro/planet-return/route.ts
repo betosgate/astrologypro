@@ -40,6 +40,8 @@ export async function POST(req: NextRequest) {
   const config = await configRes.json().catch(() => ({}));
   const lambdaUrl = config?.ASTRO_PLANET_RETURN_URL;
 
+  console.log("lambdaUrl", lambdaUrl);
+
   if (!lambdaUrl) {
     return NextResponse.json(
       {
@@ -51,11 +53,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    console.log("body123", JSON.stringify(body));
     const res = await fetch(lambdaUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+
+    console.log("res123", res);
 
     if (!res.ok) {
       const text = await res.text();
