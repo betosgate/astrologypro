@@ -19,9 +19,18 @@ const FROM_ADDRESS =
 function getSESClient() {
   const region = process.env.AWS_SES_REGION ?? process.env.AWS_REGION ?? "us-east-1";
 
-  // Use default credential chain — picks up AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY/
-  // AWS_SESSION_TOKEN env vars, IAM instance role, or OIDC role automatically.
-  // Never hardcode credentials.
+  // Support both AWS_SES_* prefixed vars and standard AWS_* vars
+  const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID ?? process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SES_SECRET_ACCESS_KEY ?? process.env.AWS_SECRET_ACCESS_KEY;
+
+  if (accessKeyId && secretAccessKey) {
+    return new SESClient({
+      region,
+      credentials: { accessKeyId, secretAccessKey },
+    });
+  }
+
+  // Fallback to default credential chain (IAM role, instance profile, etc.)
   return new SESClient({ region });
 }
 
@@ -43,8 +52,14 @@ export async function sendEmail({ to, subject, html }: SendEmailParams) {
     },
   });
 
-  const result = await ses.send(command);
-  return { success: true, id: result.MessageId ?? "" };
+  try {
+    const result = await ses.send(command);
+    console.log(`[sendEmail] SUCCESS — to: ${to}, subject: "${subject}", messageId: ${result.MessageId}`);
+    return { success: true, id: result.MessageId ?? "" };
+  } catch (err) {
+    console.error(`[sendEmail] FAILED — to: ${to}, subject: "${subject}"`, err);
+    throw err;
+  }
 }
 
 
@@ -2494,4 +2509,337 @@ export async function sendSolarReturnReminder({
   });
 
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// Payment Link (for manual bookings with a paid service)
+// ---------------------------------------------------------------------------
+
+export async function sendPaymentLinkEmail({
+  clientEmail,
+  clientName,
+  divinerName,
+  serviceName,
+  dateTime,
+  amount,
+  paymentUrl,
+}: {
+  clientEmail: string;
+  clientName: string;
+  divinerName: string;
+  serviceName: string;
+  dateTime: string;
+  amount: number;
+  paymentUrl: string;
+}) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">
+      <strong style="color:#f4f4f5;">${divinerName}</strong> has scheduled a
+      <strong style="color:#f4f4f5;">${serviceName}</strong> session for you
+      on <strong style="color:#f4f4f5;">${dateTime}</strong>.
+    </p>
+    <p style="margin:0 0 20px;color:#d4d4d8;">
+      To confirm your spot, please complete your payment of
+      <strong style="color:#f4f4f5;">$${amount.toFixed(2)}</strong> using the button below.
+      Your booking will be confirmed automatically once payment is received.
+    </p>
+    ${infoCard(`<strong style="color:#e4e4e7;">Booking Summary</strong><br/>
+      Service: ${serviceName}<br/>
+      Diviner: ${divinerName}<br/>
+      Date &amp; Time: ${dateTime}<br/>
+      Amount: $${amount.toFixed(2)}`)}
+    <p style="margin:16px 0 0;color:#71717a;font-size:12px;">
+      This payment link expires in 48 hours. If you have questions, reply to this email.
+    </p>
+  `;
+
+  return sendEmail({
+    to: clientEmail,
+    subject: `Payment required — ${serviceName} with ${divinerName}`,
+    html: buildEmailHtml({
+      title: "Complete Your Payment",
+      preheader: `${serviceName} with ${divinerName} on ${dateTime} — $${amount.toFixed(2)} due`,
+      content,
+      ctaText: "Pay Now →",
+      ctaUrl: paymentUrl,
+      footer: "AstrologyPro &mdash; Secure payment powered by Stripe",
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Booking Invoice — sent to client after successful payment
+// ---------------------------------------------------------------------------
+
+interface BookingInvoiceParams {
+  clientEmail: string;
+  clientName: string;
+  divinerName: string;
+  serviceName: string;
+  dateTime: string;
+  duration: number;
+  amount: number;
+  discount?: number;
+  giftDeduction?: number;
+  totalPaid: number;
+  bookingId: string;
+  portalUrl: string;
+}
+
+export async function sendBookingInvoice({
+  clientEmail,
+  clientName,
+  divinerName,
+  serviceName,
+  dateTime,
+  duration,
+  amount,
+  discount,
+  giftDeduction,
+  totalPaid,
+  bookingId,
+  portalUrl,
+}: BookingInvoiceParams) {
+  const discountRow = discount && discount > 0
+    ? detailRow("Loyalty Discount", `-$${discount.toFixed(2)}`)
+    : "";
+  const giftRow = giftDeduction && giftDeduction > 0
+    ? detailRow("Gift Certificate", `-$${giftDeduction.toFixed(2)}`)
+    : "";
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${clientName}, thank you for your purchase! Here is your invoice.</p>
+
+    ${sectionHeading("Invoice Details")}
+    ${detailRow("Invoice #", bookingId.slice(0, 8).toUpperCase())}
+    ${detailRow("Date", new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }))}
+
+    ${sectionHeading("Session")}
+    ${detailRow("Service", serviceName)}
+    ${detailRow("Diviner", divinerName)}
+    ${detailRow("Scheduled", dateTime)}
+    ${detailRow("Duration", `${duration} minutes`)}
+
+    ${sectionHeading("Payment Summary")}
+    ${detailRow("Session Price", `$${amount.toFixed(2)}`)}
+    ${discountRow}
+    ${giftRow}
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:8px 0 0;">
+      <tr>
+        <td style="padding:12px 16px;border-top:2px solid #3f3f46;font-family:system-ui,-apple-system,sans-serif;font-size:16px;font-weight:700;color:#f4f4f5;">Total Paid</td>
+        <td style="padding:12px 16px;border-top:2px solid #3f3f46;font-family:system-ui,-apple-system,sans-serif;font-size:16px;font-weight:700;color:#22c55e;text-align:right;">$${totalPaid.toFixed(2)}</td>
+      </tr>
+    </table>
+
+    <p style="margin:16px 0 0;color:#71717a;font-size:12px;">Payment processed securely via Stripe. A charge from AstrologyPro will appear on your statement.</p>
+  `;
+
+  return sendEmail({
+    to: clientEmail,
+    subject: `Invoice — ${serviceName} with ${divinerName} — $${totalPaid.toFixed(2)}`,
+    html: buildEmailHtml({
+      title: "Your Invoice",
+      preheader: `Invoice for ${serviceName} with ${divinerName} — $${totalPaid.toFixed(2)}`,
+      content,
+      ctaText: "View My Bookings",
+      ctaUrl: portalUrl,
+      footer: "AstrologyPro &mdash; Secure payment powered by Stripe",
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// New Booking Notification — sent to diviner when a client books
+// ---------------------------------------------------------------------------
+
+interface DivinerNewBookingParams {
+  divinerEmail: string;
+  divinerName: string;
+  clientName: string;
+  clientEmail: string;
+  serviceName: string;
+  dateTime: string;
+  duration: number;
+  amount: number;
+  bookingId: string;
+  dashboardUrl: string;
+  questionnaire?: {
+    focusQuestion?: string;
+    lifeArea?: string;
+  };
+  birthData?: string;
+}
+
+export async function sendDivinerNewBookingNotification({
+  divinerEmail,
+  divinerName,
+  clientName,
+  clientEmail,
+  serviceName,
+  dateTime,
+  duration,
+  amount,
+  bookingId,
+  dashboardUrl,
+  questionnaire,
+  birthData,
+}: DivinerNewBookingParams) {
+  const focusSection = questionnaire?.focusQuestion
+    ? `${sectionHeading("Client's Focus Question")}
+       ${infoCard(questionnaire.focusQuestion)}
+       ${questionnaire.lifeArea ? `<p style="margin:4px 0 0;color:#a1a1aa;font-size:13px;">Life area: <strong style="color:#e4e4e7;">${questionnaire.lifeArea}</strong></p>` : ""}`
+    : "";
+
+  const birthSection = birthData
+    ? `${sectionHeading("Client Birth Data")}
+       ${infoCard(birthData)}`
+    : "";
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Great news, ${divinerName}! You have a new booking.</p>
+
+    ${sectionHeading("Booking Details")}
+    ${detailRow("Service", serviceName)}
+    ${detailRow("Client", `${clientName} (${clientEmail})`)}
+    ${detailRow("Date &amp; Time", dateTime)}
+    ${detailRow("Duration", `${duration} minutes`)}
+    ${detailRow("Amount", `$${amount.toFixed(2)}`)}
+    ${detailRow("Booking ID", bookingId.slice(0, 8).toUpperCase())}
+
+    ${focusSection}
+    ${birthSection}
+
+    ${sectionHeading("Next Steps")}
+    <ul style="margin:0;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">Review the client's details and prepare for the session</li>
+      <li style="margin-bottom:6px;">The session room will be available at the scheduled time</li>
+      <li>You can view all details from your dashboard</li>
+    </ul>
+  `;
+
+  return sendEmail({
+    to: divinerEmail,
+    subject: `New booking! ${clientName} booked ${serviceName} — ${dateTime}`,
+    html: buildEmailHtml({
+      title: "New Booking Received",
+      preheader: `${clientName} booked ${serviceName} for ${dateTime}`,
+      content,
+      ctaText: "View in Dashboard",
+      ctaUrl: dashboardUrl,
+      footer: "AstrologyPro &mdash; Run Your Divination Business",
+    }),
+  });
+}
+
+// ── Combo Bundle Welcome Email ──────────────────────────────────────────────
+
+interface ComboBundleWelcomeParams {
+  to: string;
+  name: string;
+  planName: string;
+  onboardingUrl: string;
+}
+
+export async function sendComboBundleWelcome({
+  to,
+  name,
+  planName,
+  onboardingUrl,
+}: ComboBundleWelcomeParams) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Welcome to AstrologyPro, ${name}!</p>
+
+    <p style="margin:0 0 16px;color:#d4d4d8;">
+      You&rsquo;ve signed up for the <strong style="color:#e4e4e7;">${planName}</strong> bundle &mdash;
+      which means you get <em>both</em> a professional diviner practice <em>and</em>
+      full access to our training program.
+    </p>
+
+    ${sectionHeading("What's Included")}
+    <ul style="margin:0 0 16px;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;"><strong style="color:#e4e4e7;">Diviner Practice</strong> &mdash; your branded page, booking calendar, video sessions, CRM, and payment processing</li>
+      <li style="margin-bottom:6px;"><strong style="color:#e4e4e7;">Training Program</strong> &mdash; structured coursework, mentorship, quizzes, and certification upon completion</li>
+    </ul>
+
+    ${sectionHeading("Next Steps")}
+    <ol style="margin:0 0 16px;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">Complete your diviner profile setup (bio, specialties, availability)</li>
+      <li style="margin-bottom:6px;">Connect your Stripe account to receive payments</li>
+      <li style="margin-bottom:6px;">Explore the training center at your own pace</li>
+    </ol>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Welcome to AstrologyPro — Your ${planName} bundle is active!`,
+    html: buildEmailHtml({
+      title: "Welcome to Your Diviner + Training Bundle",
+      preheader: `Your ${planName} bundle is active — let's set up your practice`,
+      content,
+      ctaText: "Start Onboarding",
+      ctaUrl: onboardingUrl,
+      footer: "AstrologyPro &mdash; Run Your Divination Business",
+    }),
+  });
+}
+
+// ── Affiliate Invitation Email ──────────────────────────────────────────────
+
+interface AffiliateInvitationParams {
+  to: string;
+  affiliateName: string;
+  divinerName: string;
+  message?: string;
+  acceptUrl: string;
+}
+
+export async function sendAffiliateInvitation({
+  to,
+  affiliateName,
+  divinerName,
+  message,
+  acceptUrl,
+}: AffiliateInvitationParams) {
+  const personalNote = message
+    ? `
+    ${sectionHeading("Personal Note")}
+    <p style="margin:0 0 16px;color:#a1a1aa;font-style:italic;">&ldquo;${message}&rdquo;</p>
+  `
+    : "";
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${affiliateName},</p>
+
+    <p style="margin:0 0 16px;color:#a1a1aa;">
+      <strong style="color:#f4f4f5;">${divinerName}</strong> has invited you to join their
+      affiliate program on AstrologyPro. As an affiliate partner, you&rsquo;ll earn
+      commissions on referrals you send their way.
+    </p>
+
+    ${personalNote}
+
+    ${sectionHeading("How It Works")}
+    <ol style="margin:0 0 16px;padding-left:20px;color:#a1a1aa;">
+      <li style="margin-bottom:6px;">Accept the invitation using the button below</li>
+      <li style="margin-bottom:6px;">Share your unique referral link with your audience</li>
+      <li style="margin-bottom:6px;">Earn commissions on every booking or signup from your referrals</li>
+    </ol>
+
+    <p style="margin-top:16px;font-size:13px;color:#9ca3af;">
+      If you did not expect this invitation, you can safely ignore this email.
+    </p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `${divinerName} invited you to their affiliate program on AstrologyPro`,
+    html: buildEmailHtml({
+      title: "You've Been Invited as an Affiliate Partner",
+      preheader: `${divinerName} wants you to join their affiliate program.`,
+      content,
+      ctaText: "Accept Invitation",
+      ctaUrl: acceptUrl,
+      footer: "AstrologyPro &mdash; Grow Together",
+    }),
+  });
 }

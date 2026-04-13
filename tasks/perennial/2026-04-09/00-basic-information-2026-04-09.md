@@ -39,7 +39,7 @@
 12. `12.5-couple-ux-routing-guards-and-first-login-experience-2026-04-09.md`
 13. `12.6-couple-acceptance-qa-checklist-2026-04-09.md`
 
-### Group 13 - Signup Birth Location Autocomplete
+### Group 13 - Post-Login Birth Location Autocomplete
 
 1. `13-master-task-signup-birth-location-autocomplete-2026-04-09.md`
 2. `13.1-signup-birth-location-ui-and-autocomplete-behavior-2026-04-09.md`
@@ -68,5 +68,6 @@
 1. Single, Couple, and Family tasks use the same structure and same naming style.
 2. Mixed frontend/backend planning items are now split into separate frontend and backend tasks for easier understanding.
 3. City search/birth-location behavior is aligned between Single, Couple, and Family tasks.
-4. Group 13 is planning-only for signup birth-location autocomplete.
+4. Group 13 is planning-only for post-login birth-location autocomplete and validation.
 5. Group 14 applies the same phased signup + post-login completion pattern to Family plan.
+6. The intended public-entry UX for these tasks is: website landing -> `GET START` -> Perennial choose-plan screen with `Single`, `Couple`, and `Family` cards -> user selects a plan -> the signup form is shown below on the same screen -> user submits basic information only -> user reaches home/dashboard -> a post-login completion form opens for birth date, birth time, birth place, and remaining guidance fields.

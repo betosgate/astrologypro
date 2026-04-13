@@ -90,13 +90,13 @@ function JoinTraineeContent() {
           username: form.username,
           mentor_diviner_id: mentorDivinerId,
           training_status: "active",
-          onboarding_completed: true,
+          onboarding_completed: false,
         });
 
       if (insertError) { toast.error("Could not create trainee profile. Username may be taken."); return; }
 
-      toast.success("Welcome to your training journey!");
-      router.push("/trainee");
+      toast.success("Account created! Let's complete your profile.");
+      router.push("/join/trainee/profile");
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {

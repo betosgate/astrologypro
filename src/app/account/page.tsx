@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ChangePasswordForm } from "@/components/account/change-password-form";
 import { SignOutButton } from "@/components/portal/logout-button";
 import Link from "next/link";
-import { LayoutDashboard, User, Share2, Users, GraduationCap } from "lucide-react";
+import { LayoutDashboard, User, Share2, Users, GraduationCap, Pencil } from "lucide-react";
 
 const ROLE_ICONS: Record<string, React.ElementType> = {
   diviner: LayoutDashboard,
@@ -65,6 +65,14 @@ export default async function AccountPage() {
                 year: "numeric",
               })}
             </span>
+          </div>
+          <div className="pt-2">
+            <Button asChild size="sm" variant="outline">
+              <Link href="/account/profile">
+                <Pencil className="mr-1.5 size-3.5" />
+                Edit Profile
+              </Link>
+            </Button>
           </div>
         </CardContent>
       </Card>

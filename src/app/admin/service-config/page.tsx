@@ -52,6 +52,7 @@ interface Service {
   description: string | null;
   duration_minutes: number;
   base_price: number;
+  overage_rate: number;
   is_active: boolean;
   is_featured: boolean;
   sort_order: number;
@@ -220,6 +221,7 @@ export default function ServiceConfigPage() {
                       Duration
                     </th>
                     <th className="px-3 py-2 text-left font-medium">Price</th>
+                    <th className="px-3 py-2 text-left font-medium">Overage</th>
                     <th className="px-3 py-2 text-left font-medium">Status</th>
                     <th className="px-3 py-2 text-right font-medium w-24">
                       Actions
@@ -244,6 +246,9 @@ export default function ServiceConfigPage() {
                       </td>
                       <td className="px-3 py-2 text-xs tabular-nums">
                         ${Number(svc.base_price).toFixed(2)}
+                      </td>
+                      <td className="px-3 py-2 text-xs tabular-nums">
+                        ${Number(svc.overage_rate ?? 0.50).toFixed(2)}/min
                       </td>
                       <td className="px-3 py-2">
                         <Badge
@@ -356,7 +361,8 @@ function ServiceDialog({
   const [category, setCategory] = useState("astrology");
   const [divinerId, setDivinerId] = useState("");
   const [duration, setDuration] = useState("60");
-  const [price, setPrice] = useState("0");
+  const [basePrice, setBasePrice] = useState("0");
+  const [overageRate, setOverageRate] = useState("0.50");
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -368,7 +374,8 @@ function ServiceDialog({
       setCategory(editingService.category);
       setDivinerId(editingService.diviner_id);
       setDuration(String(editingService.duration_minutes));
-      setPrice(String(editingService.base_price));
+      setBasePrice(String(editingService.base_price ?? 0));
+      setOverageRate(String(editingService.overage_rate ?? 0.50));
       setIsActive(editingService.is_active);
     } else {
       setName("");
@@ -376,7 +383,8 @@ function ServiceDialog({
       setCategory("astrology");
       setDivinerId(diviners[0]?.id ?? "");
       setDuration("60");
-      setPrice("0");
+      setBasePrice("0");
+      setOverageRate("0.50");
       setIsActive(true);
     }
   }, [open, editingService, diviners]);
@@ -407,7 +415,8 @@ function ServiceDialog({
           category,
           diviner_id: divinerId,
           duration_minutes: parseInt(duration, 10) || 60,
-          base_price: parseFloat(price) || 0,
+          base_price: parseFloat(basePrice) || 0,
+          overage_rate: parseFloat(overageRate) || 0.50,
           is_active: isActive,
         }),
       });
@@ -529,18 +538,30 @@ function ServiceDialog({
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Base Price ($)</Label>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-            />
-            <p className="text-[10px] text-muted-foreground">
-              Manual price override. If a pricing item is linked, this should match.
-            </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Base Price ($)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={basePrice}
+                onChange={(e) => setBasePrice(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Overage Rate ($/min)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={overageRate}
+                onChange={(e) => setOverageRate(e.target.value)}
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Per-minute rate charged for time beyond the scheduled duration.
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">

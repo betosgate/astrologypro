@@ -67,6 +67,9 @@ interface TimeSlot {
   availabilityStartTime?: string;
   availabilityEndTime?: string;
   availabilitySlotIntervalMinutes?: number;
+  availabilityServiceId?: string | null;
+  serviceName?: string | null;
+  servicePrice?: number | null;
   source?: "template" | "legacy" | "override";
 }
 
@@ -117,6 +120,32 @@ function formatSlotTime(iso: string, timezone: string): string {
     minute: "2-digit",
     hour12: true,
   });
+}
+
+/** Decodes HTML entities and renders as HTML. Handles double-escaped content. */
+function DescriptionHtml({ html }: { html: string }) {
+  // Decode HTML entities (handles double-escaped like &lt;p&gt; → <p>)
+  let decoded = html;
+  // Keep decoding until no more entities remain
+  const entityPattern = /&(?:lt|gt|amp|quot|#39|#x27|nbsp);/i;
+  let iterations = 0;
+  while (entityPattern.test(decoded) && iterations < 3) {
+    decoded = decoded
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&amp;/gi, "&")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;|&#x27;/gi, "'")
+      .replace(/&nbsp;/gi, " ");
+    iterations++;
+  }
+
+  return (
+    <div
+      className="mt-2 text-sm text-muted-foreground prose prose-invert prose-sm max-w-none [&_a]:text-amber-400 [&_a]:underline [&_a]:break-all"
+      dangerouslySetInnerHTML={{ __html: decoded }}
+    />
+  );
 }
 
 // Inner payment form that uses Stripe hooks
@@ -228,6 +257,12 @@ export function BookingWizard({
   const [clientTimezone, setClientTimezone] = useState(diviner.timezone || "UTC");
   const resolvedServiceName = hideServiceName ? (bookingLabel ?? "Reading Session") : (bookingLabel ?? service.name);
   const availabilityQuery = availabilityServiceId ? `&serviceId=${availabilityServiceId}` : "";
+
+  // Effective price: slot's linked service price takes priority over the service prop's base_price
+  const effectivePrice = selectedSlot?.servicePrice != null
+    ? selectedSlot.servicePrice
+    : Number(service.base_price ?? service.price ?? 0);
+  const isFreeBooking = effectivePrice <= 0;
 
   // Prefill intake data from stored client profile when ?prefill=true
   useEffect(() => {
@@ -379,6 +414,7 @@ export function BookingWizard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           divinerId: diviner.id,
+          divinerUsername: diviner.username,
           serviceId: service.id,
           scheduledAt: selectedSlot!.start,
           clientEmail: intakeData.email,
@@ -427,6 +463,9 @@ export function BookingWizard({
         if (data.bookingId) {
           setBookingId(data.bookingId);
         }
+      } else if (data.bookingId) {
+        setBookingId(data.bookingId);
+        setBookingComplete(true);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -435,9 +474,10 @@ export function BookingWizard({
     }
   }
 
-  // Create the payment intent when arriving at step 2
+  // Create the payment intent immediately when arriving at step 2
   useEffect(() => {
-    if (step === 2 && !clientSecret && !creatingPaymentIntent) {
+    if (step === 2 && !clientSecret && !creatingPaymentIntent && !bookingComplete) {
+      setPolicyAcknowledged(true);
       handleCreatePaymentIntent();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -585,7 +625,7 @@ export function BookingWizard({
       {/* Step Content */}
       <Card>
         <CardHeader>
-          <CardTitle>{STEPS[step].label}</CardTitle>
+          <CardTitle>{STEPS[step]?.label ?? "Booking"}</CardTitle>
         </CardHeader>
         <CardContent>
           {/* Step 1: Date & Time */}
@@ -626,9 +666,19 @@ export function BookingWizard({
                             {selectedAvailabilityTz.replace(/_/g, " ")}
                           </p>
                           {selectedSlot.availabilityDescription && (
-                            <p className="mt-2 text-sm text-muted-foreground">
-                              {selectedSlot.availabilityDescription}
-                            </p>
+                            <DescriptionHtml html={selectedSlot.availabilityDescription} />
+                          )}
+                          {selectedSlot.serviceName && (
+                            <div className="mt-2 flex items-center justify-between rounded-md bg-background/50 px-3 py-2 border border-border/30">
+                              <span className="text-xs text-muted-foreground">
+                                Service: <span className="text-foreground font-medium">{selectedSlot.serviceName}</span>
+                              </span>
+                              {selectedSlot.servicePrice != null && selectedSlot.servicePrice > 0 && (
+                                <span className="text-sm font-semibold text-foreground">
+                                  {formatCurrency(selectedSlot.servicePrice)}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                       )}
@@ -790,36 +840,20 @@ export function BookingWizard({
                 <div className="flex items-center justify-between text-lg">
                   <span className="font-semibold">Total</span>
                   <span className="font-bold">
-                    {formatCurrency(Number(service.base_price ?? service.price ?? 0))}
+                    {formatCurrency(effectivePrice)}
                   </span>
                 </div>
               </div>
 
-              {/* Policy acknowledgement */}
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
-                <input
-                  type="checkbox"
-                  checked={policyAcknowledged}
-                  onChange={(e) => setPolicyAcknowledged(e.target.checked)}
-                  className="mt-0.5 size-4 shrink-0 accent-amber-500"
-                />
-                <span className="text-sm text-muted-foreground leading-relaxed">
-                  <ShieldAlert className="mb-0.5 mr-1 inline size-3.5 text-amber-500" />
-                  I understand that{" "}
-                  <strong className="text-foreground">50% of my payment is retained as a no-show fee</strong>{" "}
-                  if I do not attend without prior notice, and that cancellations within 24 hours are non-refundable.{" "}
-                  <a
-                    href="#policies"
-                    className="underline underline-offset-2 text-amber-500 hover:text-amber-400"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      document.getElementById("policies")?.scrollIntoView({ behavior: "smooth" });
-                    }}
-                  >
-                    View full policy
-                  </a>
-                </span>
-              </label>
+              {/* Policy notice */}
+              <div className="flex items-start gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+                <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  By proceeding with payment, you agree that{" "}
+                  <strong className="text-foreground">50% of the payment is retained as a no-show fee</strong>{" "}
+                  if you do not attend without prior notice, and that cancellations within 24 hours are non-refundable.
+                </p>
+              </div>
 
               {error && (
                 <div className="rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
@@ -905,8 +939,11 @@ export function BookingWizard({
         {step < STEPS.length - 1 && (
           <Button
             onClick={async () => {
-              // When advancing to the payment step, try to place a hold on the slot
+              // When advancing from intake form (step 1)
               if (step === 1 && selectedSlot) {
+                setCreatingPaymentIntent(true);
+
+                // Place a hold on the slot
                 try {
                   const res = await fetch("/api/availability/hold", {
                     method: "POST",
@@ -921,19 +958,44 @@ export function BookingWizard({
                   if (!res.ok) {
                     const data = await res.json();
                     toast.error(data.error ?? "This slot is no longer available. Please go back and choose a different time.");
-                    return; // block advancing
+                    setCreatingPaymentIntent(false);
+                    return;
                   }
                 } catch {
-                  // Non-critical — proceed anyway; the booking insert will catch duplicates
+                  // Non-critical
                 }
+
+                // For free bookings ($0), skip payment step — book directly
+                const isFree = isFreeBooking;
+                if (isFree) {
+                  setPolicyAcknowledged(true);
+                  await handleCreatePaymentIntent();
+                  return;
+                }
+
+                // Paid booking — advance to payment step
+                setStep((s) => s + 1);
+                return;
               }
+
               setStep((s) => s + 1);
             }}
-            disabled={!canProceed()}
+            disabled={!canProceed() || creatingPaymentIntent}
             className="gap-2"
           >
-            Next
-            <ArrowRight className="size-4" />
+            {creatingPaymentIntent ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Booking...
+              </>
+            ) : (
+              <>
+                {step === 1 && isFreeBooking
+                  ? "Confirm Booking"
+                  : "Next"}
+                <ArrowRight className="size-4" />
+              </>
+            )}
           </Button>
         )}
 

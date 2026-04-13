@@ -23,19 +23,20 @@ import {
   Loader2, ChevronDown, ChevronRight, ChevronLeft, Star, Sun, Moon,
   Calendar as CalendarIcon, Heart, Users, Briefcase, Eye, Zap,
   Sparkles, CircleDot, Clock, MapPin, Printer, ArrowUp, RotateCcw,
-  X, Maximize2, Search,
+  X, Maximize2, Search, Link, User, Home,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
+import "./horoscope-tables.css";
 
 // ─── Planet & Zodiac symbols ─────────────────────────────────────────────────
 
 const PLANET_SYMBOLS: Record<string, string> = {
   Sun: "☉", Moon: "☽", Mercury: "☿", Venus: "♀", Mars: "♂",
   Jupiter: "♃", Saturn: "♄", Uranus: "♅", Neptune: "♆", Pluto: "♇",
-  Node: "☊", "Part of Fortune": "⊕", Chiron: "⚷", Lilith: "⚸",
+  Node: "☊", "Part of Fortune": "⊕", Fortune: "⊕", Chiron: "⚷", Lilith: "⚸",
 };
 
 const ZODIAC_SYMBOLS: Record<string, string> = {
@@ -62,6 +63,11 @@ const PLANET_IMAGES: Record<string, string> = {
   Uranus: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_png/urenus.png",
   Neptune: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_png/neptune+(1).png",
   Pluto: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/planet_png/pluto+(1).png",
+  // Manual icons requested for these
+  Node: "",
+  "Part of Fortune": "",
+  Fortune: "",
+  Chiron: "",
 };
 
 // Planet sign images + aspect images — exact URLs from Angular's astroHeaderModifierPipe
@@ -85,6 +91,19 @@ const ASTRO_HEADER_IMAGES: Record<string, string> = {
   Square: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/squar.png",
   Trine: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/trine.png",
   Sextile: "https://all-frontend-assets.s3.amazonaws.com/divine_astro_assates/connection_singn/sextile.png",
+  // Zodiac signs (Manual icons requested - S3 disabled for signs)
+  Aries: "",
+  Taurus: "",
+  Gemini: "",
+  Cancer: "",
+  Leo: "",
+  Virgo: "",
+  Libra: "",
+  Scorpio: "",
+  Sagittarius: "",
+  Capricorn: "",
+  Aquarius: "",
+  Pisces: "",
 };
 
 // Keep ASPECT_IMAGES alias for table column aspect-type icon (same URLs as above)
@@ -125,6 +144,25 @@ const ASPECT_KEYWORDS: Record<string, string[]> = {
 
 const ASPECT_TYPE_WORDS = ["Conjunction", "Conjunct", "Opposition", "Square", "Trine", "Sextile"];
 
+// ─── Planet-specific interpretation gradient class (matches Angular's createClass) ─
+// Returns the CSS class name for the planet-specific gradient background
+function getPlanetInterpClass(planetName: string): string {
+  const key = planetName?.toLowerCase().trim();
+  const map: Record<string, string> = {
+    sun: "planet-interp-sun",
+    moon: "planet-interp-moon",
+    mercury: "planet-interp-mercury",
+    venus: "planet-interp-venus",
+    mars: "planet-interp-mars",
+    jupiter: "planet-interp-jupiter",
+    saturn: "planet-interp-saturn",
+    uranus: "planet-interp-uranus",
+    neptune: "planet-interp-neptune",
+    pluto: "planet-interp-pluto",
+  };
+  return map[key] ?? "interp-gradient-default";
+}
+
 function parseAspectTitle(title?: string): { p1: string; aspectType: string; p2: string } {
   if (!title) return { p1: "", aspectType: "", p2: "" };
   const parts = title.split(/\s+/);
@@ -143,20 +181,37 @@ function parseAspectTitle(title?: string): { p1: string; aspectType: string; p2:
 // Renders "PLANET [sign_img] ASPECT [aspect_img] PLANET [sign_img]"
 // — exact visual equivalent of Angular's astroHeaderModifierPipe
 function AstroHeaderParts({ title }: { title?: string }) {
+  if (!title) return null;
   const { p1, aspectType, p2 } = parseAspectTitle(title);
   const terms = [p1, aspectType, p2].filter(Boolean);
+
+  function getImg(term: string) {
+    const clean = term.trim().replace(/[(),]/g, "");
+    if (!clean) return null;
+    // Try exact match, then Title Case
+    if (ASTRO_HEADER_IMAGES[clean]) return ASTRO_HEADER_IMAGES[clean];
+    const titled = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+    return ASTRO_HEADER_IMAGES[titled];
+  }
 
   return (
     <div className="flex items-center justify-center gap-2 flex-wrap w-full">
       {terms.map((term, i) => {
-        const img = ASTRO_HEADER_IMAGES[term];
+        const img = getImg(term);
+        // Special manual handling for zodiac signs in headers
+        const isZodiac = ZODIAC_SYMBOLS[term.charAt(0).toUpperCase() + term.slice(1).toLowerCase()];
+
         return (
-          <span key={i} className="flex items-center gap-1.5">
-            <span className="text-xs font-bold uppercase tracking-widest text-foreground">{term}</span>
-            {img && (
+          <span key={i} className="flex items-center gap-1.5 grow-0">
+            <span className="font-bold uppercase tracking-widest text-current whitespace-nowrap">{term}</span>
+            {img ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={img} alt={term} className="size-5 object-contain shrink-0" />
-            )}
+              <img src={img} alt="" className="size-5 object-contain shrink-0" />
+            ) : isZodiac ? (
+              <ManualZodiacIcon sign={term} />
+            ) : PLANET_SYMBOLS[term.charAt(0).toUpperCase() + term.slice(1).toLowerCase()] || PLANET_SYMBOLS[term] ? (
+              <ManualPlanetIcon name={term} />
+            ) : null}
           </span>
         );
       })}
@@ -245,42 +300,54 @@ function getAspectOrbColor(orb: number, type: string, ap: string, asp: string): 
   return orb < 0 ? "#fffdba" : "#a6ffad";
 }
 
-// ─── API callers ──────────────────────────────────────────────────────────────
+// ─── API callers with Retry ──────────────────────────────────────────────────
+
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3, delay = 1000) {
+  let lastError: any;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const r = await fetch(url, options);
+      if (r.ok) return r;
+      // If not ok, try to parse error but don't throw yet unless it's the last try
+      try {
+        const d = await r.json();
+        lastError = new Error(d.error || d.message || `HTTP ${r.status}`);
+      } catch {
+        lastError = new Error(`HTTP ${r.status}`);
+      }
+    } catch (err) {
+      lastError = err;
+    }
+    if (i < maxRetries - 1) {
+      await new Promise(res => setTimeout(res, delay));
+    }
+  }
+  throw lastError;
+}
 
 async function callCompute(endpoint: string, payload: Record<string, unknown>) {
-  const r = await fetch("/api/admin/astro/compute", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint, payload }) });
-  if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? r.statusText); }
+  const r = await fetchWithRetry("/api/admin/astro/compute", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint, payload }) });
   return r.json();
 }
 async function callAI(aiPayload: Record<string, unknown>, areaOfInquiry?: string) {
-  const r = await fetch("/api/admin/astro/ai-interpret", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aiPayload, areaOfInquiry }) });
-  if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? r.statusText); }
+  const r = await fetchWithRetry("/api/admin/astro/ai-interpret", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aiPayload, areaOfInquiry }) });
   return r.json();
 }
 async function callPlanetReturn(body: Record<string, unknown>) {
-  const r = await fetch("/api/admin/astro/planet-return", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? r.statusText); }
+  const r = await fetchWithRetry("/api/admin/astro/planet-return", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   return r.json();
 }
 async function callNatalWheel(body: Record<string, unknown>) {
-  const r = await fetch("/api/admin/astro/natal-wheel", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? r.statusText); }
+  const r = await fetchWithRetry("/api/admin/astro/natal-wheel", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   return r.json();
 }
 async function callDecanLookup(signs: string, planet: string) {
-  const r = await fetch("/api/astro-decan/fetch-decan-details", {
+  const r = await fetchWithRetry("/api/astro-decan/fetch-decan-details", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ signs, planet })
   });
-  if (!r.ok) {
-    const d = await r.json();
-    throw new Error(d.message || d.error || r.statusText);
-  }
   const json = await r.json();
-
-  // The new API returns a single object in json.results.
-  // The frontend component expects an array of DecanRow.
   const row = json.results;
   if (row && !Array.isArray(row)) {
     // Parse decan string (e.g. "1st Decan") to number if needed
@@ -566,10 +633,15 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
   const { p1, aspectType, p2 } = isAspect ? parseAspectTitle(aspectTitle ?? title) : { p1: "", aspectType: "", p2: "" };
   const [showFullImage, setShowFullImage] = useState(false);
 
+  // Reset fullscreen state when the main modal is closed
+  useEffect(() => {
+    if (!open) setShowFullImage(false);
+  }, [open]);
+
   return (
     <>
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
           {/* Custom Close Icon - Fixed to top-right */}
           <button
             onClick={onClose}
@@ -640,9 +712,9 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
               {/* Pictorial Representation — Below the text */}
               {pictureUrl && (
                 <div className="px-6 pb-6 pt-2 flex flex-col items-center justify-center bg-slate-900/20">
-                  <div className="relative group rounded-xl border border-amber-500/20 overflow-hidden bg-slate-950 shadow-[0_0_50px_rgba(245,158,11,0.08)] transition-all hover:border-amber-500/40 max-w-sm w-full">
+                  <div className="relative group rounded-xl border border-amber-500/20 overflow-hidden bg-slate-950 shadow-[0_0_50px_rgba(245,158,11,0.08)] transition-all hover:border-amber-500/40 w-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={pictureUrl} alt={title} className="w-full h-auto max-h-[280px] object-contain transition-transform duration-1000 group-hover:scale-[1.05]" />
+                    <img src={pictureUrl} alt={title} className="w-full h-auto max-h-[600px] object-contain transition-transform duration-1000 group-hover:scale-[1.05]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
 
                     {/* Maximize Icon */}
@@ -670,7 +742,10 @@ function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, pr
         <ChartImageModal
           src={pictureUrl}
           open={showFullImage}
-          onClose={() => setShowFullImage(false)}
+          onClose={() => {
+            setShowFullImage(false);
+            onClose();
+          }}
         />
       )}
     </>
@@ -690,7 +765,10 @@ function ChartImageModal({ src, open, onClose }: { src: string; open: boolean; o
     <div className="fixed inset-0 z-[999999] bg-black flex flex-col items-center justify-center animate-in fade-in duration-300">
       {/* Persistent High-Visibility Close Icon */}
       <button
-        onClick={onClose}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
         className="absolute top-6 right-6 z-[110] size-12 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:text-white transition-all active:scale-95 shadow-[0_0_30px_rgba(245,158,11,0.3)] group"
         aria-label="Exit Fullscreen"
       >
@@ -724,15 +802,53 @@ function ChartImageModal({ src, open, onClose }: { src: string; open: boolean; o
 
 // ─── Planet Symbol ────────────────────────────────────────────────────────────
 
+function ManualPlanetIcon({ name, size = "size-7" }: { name: string; size?: string }) {
+  const clean = String(name || "").trim().replace(/[(),]/g, "");
+  const titled = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+  const symbol = PLANET_SYMBOLS[titled] ?? PLANET_SYMBOLS[clean] ?? "•";
+
+  const colors: Record<string, string> = {
+    Node: "from-indigo-600 to-purple-700 border-indigo-400/30 shadow-indigo-500/20",
+    "Part of Fortune": "from-yellow-400 to-amber-600 border-yellow-300/30 shadow-yellow-500/20",
+    Fortune: "from-yellow-400 to-amber-600 border-yellow-300/30 shadow-yellow-500/20",
+    Chiron: "from-stone-500 to-emerald-800 border-stone-400/30 shadow-stone-500/20",
+    Lilith: "from-slate-700 to-slate-900 border-slate-600/30 shadow-slate-800/20",
+    Default: "from-amber-400 to-orange-600 border-amber-300/30 shadow-amber-500/20"
+  };
+
+  const colorClass = colors[titled] ?? colors[clean] ?? colors.Default;
+
+  return (
+    <div className={cn(
+      "flex items-center justify-center rounded-sm bg-gradient-to-br border shadow-md transition-all hover:scale-110",
+      colorClass,
+      size
+    )}>
+      <span className="text-white font-bold leading-none select-none drop-shadow-md text-[18px]">
+        {symbol}
+      </span>
+    </div>
+  );
+}
+
 function PlanetSymbol({ name, showImage = true }: { name: string; showImage?: boolean }) {
-  const imgSrc = PLANET_IMAGES[name];
+  const [imgError, setImgError] = useState(false);
+  const clean = String(name || "").trim().replace(/[(),]/g, "");
+  const titled = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+  const imgSrc = PLANET_IMAGES[titled] ?? PLANET_IMAGES[clean];
+
   return (
     <span className="inline-flex items-center gap-1.5">
-      {showImage && imgSrc ? (
+      {showImage && imgSrc && !imgError ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={imgSrc} alt={name} className="size-5 object-contain shrink-0" />
+        <img
+          src={imgSrc}
+          alt={name}
+          className="size-5 object-contain shrink-0"
+          onError={() => setImgError(true)}
+        />
       ) : (
-        <span className="text-amber-500 font-semibold text-base leading-none shrink-0" aria-hidden>{PLANET_SYMBOLS[name] ?? "✦"}</span>
+        <ManualPlanetIcon name={name} />
       )}
       <span>{name}</span>
     </span>
@@ -783,11 +899,85 @@ function WordAssociationChips({ aspecting, type, aspected }: { aspecting: string
   );
 }
 
-function ZodiacSymbol({ sign }: { sign: string }) {
+function AspectSymbol({ type, showText = true }: { type: string; showText?: boolean }) {
+  const [imgError, setImgError] = useState(false);
+  const clean = String(type || "").trim().replace(/[(),]/g, "");
+  // Normalize "Conjunct" -> "Conjunction"
+  const normalized = clean.toLowerCase() === "conjunct" ? "Conjunction" : clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+  const imgSrc = ASPECT_IMAGES[normalized] ?? ASPECT_IMAGES[clean];
+
   return (
-    <span className="inline-flex items-center gap-1">
-      <span className="text-amber-500" aria-hidden>{ZODIAC_SYMBOLS[sign] ?? "•"}</span>
-      <span>{sign}</span>
+    <span className="inline-flex items-center gap-1.5">
+      {imgSrc && !imgError ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imgSrc}
+          alt={type}
+          className="size-4 object-contain shrink-0"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <span className="text-amber-500 text-sm leading-none shrink-0" aria-hidden>
+          {ASPECT_SYMBOLS[normalized] ?? ASPECT_SYMBOLS[clean] ?? ""}
+        </span>
+      )}
+      {showText && <span>{type}</span>}
+    </span>
+  );
+}
+
+function ManualZodiacIcon({ sign, size = "size-8" }: { sign: string; size?: string }) {
+  const symbol = ZODIAC_SYMBOLS[sign] || ZODIAC_SYMBOLS[sign.charAt(0).toUpperCase() + sign.slice(1).toLowerCase()] || "";
+  if (!symbol) return null;
+
+  // Determine element color for background/border
+  const elements: Record<string, string> = {
+    Aries: "fire", Leo: "fire", Sagittarius: "fire",
+    Taurus: "earth", Virgo: "earth", Capricorn: "earth",
+    Gemini: "air", Libra: "air", Aquarius: "air",
+    Cancer: "water", Scorpio: "water", Pisces: "water"
+  };
+  const type = elements[sign.charAt(0).toUpperCase() + sign.slice(1).toLowerCase()] || "fire";
+  const colors: Record<string, string> = {
+    fire: "from-orange-500 to-red-600 border-orange-400/30 shadow-orange-500/20",
+    earth: "from-emerald-600 to-green-800 border-emerald-400/30 shadow-emerald-500/20",
+    air: "from-blue-400 to-indigo-600 border-blue-300/30 shadow-blue-500/20",
+    water: "from-cyan-500 to-blue-700 border-cyan-400/30 shadow-cyan-500/20"
+  };
+
+  return (
+    <div className={cn(
+      "flex items-center justify-center rounded-md bg-gradient-to-br border shadow-lg transition-transform hover:scale-110",
+      colors[type],
+      size
+    )}>
+      <span className="text-white font-bold leading-none select-none drop-shadow-md" style={{ fontSize: '1.25rem' }}>
+        {symbol}
+      </span>
+    </div>
+  );
+}
+
+function ZodiacSymbol({ sign }: { sign: string }) {
+  const [imgError, setImgError] = useState(false);
+  const clean = String(sign || "").trim().replace(/[(),]/g, "");
+  const titled = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+  const imgSrc = ASTRO_HEADER_IMAGES[titled] ?? ASTRO_HEADER_IMAGES[clean];
+
+  return (
+    <span className="inline-flex items-center gap-2">
+      {imgSrc && !imgError ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imgSrc}
+          alt={sign}
+          className="size-5 object-contain shrink-0"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <ManualZodiacIcon sign={sign} size="size-5" />
+      )}
+      <span className="font-medium">{sign}</span>
     </span>
   );
 }
@@ -848,7 +1038,7 @@ function AspectsLegend() {
 function SectionSkeleton({ title }: { title: string }) {
   return (
     <div className="border rounded-lg overflow-hidden animate-pulse">
-      <div className="flex items-center justify-center gap-3 px-4 py-3 bg-muted/40">
+      <div className="flex items-center justify-center gap-3 px-4 py-3 horoscope-section-header">
         <Loader2 className="size-4 animate-spin text-amber-500" />
         <span className="text-sm font-semibold">{title}</span>
       </div>
@@ -944,7 +1134,7 @@ function useShowMore() {
     const payload = buildPicturePayload(type, title, promptData);
     if (!payload) return null;
     try {
-      const res = await fetch("/api/admin/astro/astro-picture-content", {
+      const res = await fetchWithRetry("/api/admin/astro/astro-picture-content", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -1109,7 +1299,7 @@ function DecanAiBlock({ title, data, loading }: { title: string; data: DecanAi |
       {expanded && <p className="text-sm leading-relaxed text-muted-foreground mt-1">{data.long_format}</p>}
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
+        className="horoscope-show-more"
       >
         {expanded ? "Show Less" : "Read More"}
       </button>
@@ -1120,7 +1310,7 @@ function DecanAiBlock({ title, data, loading }: { title: string; data: DecanAi |
 function DecanImage({ src, alt, onFull }: { src: string; alt: string; onFull: (src: string) => void }) {
   const [loaded, setLoaded] = useState(false);
   return (
-    <div className="relative group/img bg-slate-950 border-b border-white/5 flex justify-center p-4 min-h-[160px]">
+    <div className="relative group/img bg-slate-950 border-b border-white/5 flex justify-center min-h-[160px]">
       {!loaded && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/40 animate-pulse gap-2">
           <Loader2 className="size-6 animate-spin text-amber-500/40" />
@@ -1133,7 +1323,7 @@ function DecanImage({ src, alt, onFull }: { src: string; alt: string; onFull: (s
         alt={alt}
         onLoad={() => setLoaded(true)}
         className={cn(
-          "max-h-[320px] w-auto object-contain rounded-lg shadow-2xl transition-all duration-700 ease-in-out hover:scale-[1.02]",
+          "max-h-[600px] w-full object-contain shadow-2xl transition-all duration-700 ease-in-out hover:scale-[1.01]",
           loaded ? "opacity-100 scale-100" : "opacity-0 scale-95"
         )}
       />
@@ -1158,6 +1348,12 @@ function DecanModal({ planet, sign, open, onClose }: {
   const [loadingRows, setLoadingRows] = useState(false);
   const [rowError, setRowError] = useState<string | null>(null);
   const [fullscreenImg, setFullscreenImg] = useState<string | null>(null);
+
+  // Reset fullscreen state when the main modal is closed
+  useEffect(() => {
+    if (!open) setFullscreenImg(null);
+  }, [open]);
+  const [viewMode, setViewMode] = useState<'image' | 'text'>('image');
 
   // Fetch decan rows from the new decan-info API which returns cached descriptions
   // (and auto-generates + persists via AI if missing on the server side)
@@ -1211,21 +1407,26 @@ function DecanModal({ planet, sign, open, onClose }: {
       <ChartImageModal
         src={fullscreenImg || ""}
         open={!!fullscreenImg}
-        onClose={() => setFullscreenImg(null)}
+        onClose={() => {
+          setFullscreenImg(null);
+          onClose();
+        }}
       />
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
-          {/* Custom Close Icon - Fixed to top-right */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.15)] group"
-            aria-label="Close modal"
-          >
-            <X className="size-5 transition-transform group-hover:rotate-90" />
-          </button>
+        <DialogContent className="sm:max-w-6xl max-h-[90vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
+          {/* Custom Close Icon - Fixed to top-right (hide when image is fullscreen) */}
+          {!fullscreenImg && (
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.15)] group"
+              aria-label="Close modal"
+            >
+              <X className="size-5 transition-transform group-hover:rotate-90" />
+            </button>
+          )}
 
           {/* Sticky Header Section */}
-          <div className="px-6 py-5 border-b border-white/5 bg-slate-900/40 pr-16 shrink-0">
+          <div className="px-6 py-5 border-b border-white/5 bg-slate-900/40 pr-16 shrink-0 flex items-center justify-between">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3 text-lg font-bold gold-text">
                 {PLANET_IMAGES[planet] && (
@@ -1235,10 +1436,36 @@ function DecanModal({ planet, sign, open, onClose }: {
                 <span>{planet} Decans in {sign}</span>
               </DialogTitle>
             </DialogHeader>
+
+            {/* Toggle Switch */}
+            <div className="flex bg-slate-950/80 p-1 rounded-lg border border-white/10 ml-4">
+              <button
+                onClick={() => setViewMode('image')}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all",
+                  viewMode === 'image'
+                    ? "bg-amber-500 text-white shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                    : "text-muted-foreground hover:text-white"
+                )}
+              >
+                Image
+              </button>
+              <button
+                onClick={() => setViewMode('text')}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all",
+                  viewMode === 'text'
+                    ? "bg-amber-500 text-white shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                    : "text-muted-foreground hover:text-white"
+                )}
+              >
+                Text
+              </button>
+            </div>
           </div>
 
           {/* Scrollable Content Section */}
-          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-1 custom-scrollbar">
 
             {loadingRows && (
               <div className="flex items-center gap-3 py-8 justify-center text-muted-foreground">
@@ -1258,57 +1485,68 @@ function DecanModal({ planet, sign, open, onClose }: {
                   return (
                     <div key={row.decan} className="rounded-lg border overflow-hidden bg-slate-900/20">
                       {/* Decan header */}
-                      <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-500/10 border-b">
+                      {/* <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-500/10 border-b">
                         <span className="text-xs font-bold uppercase tracking-widest text-amber-600">{ordinalDecan(row.decan)} Decan</span>
                         <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-400 ml-auto">{planet} in {sign}</Badge>
-                      </div>
+                      </div> */}
 
-                      {/* Decan Image if available */}
-                      {row.decan_img && (
-                        <DecanImage
-                          src={row.decan_img}
-                          alt={`${ordinalDecan(row.decan)} Decan Imagery`}
-                          onFull={(src) => setFullscreenImg(src)}
-                        />
+                      {/* Content based on viewMode */}
+                      {viewMode === 'image' ? (
+                        <div className="p-0 animate-in fade-in duration-500">
+                          {row.decan_img ? (
+                            <DecanImage
+                              src={row.decan_img}
+                              alt={`${ordinalDecan(row.decan)} Decan Imagery`}
+                              onFull={(src) => setFullscreenImg(src)}
+                            />
+                          ) : (
+                            <div className="py-20 flex flex-col items-center justify-center text-muted-foreground bg-slate-900/40">
+                              <Eye className="size-8 mb-3 opacity-20" />
+                              <p className="text-sm">No imagery available for this decan.</p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-white/5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                          {/* Static labels row */}
+                          <div className="grid grid-cols-2 gap-px bg-white/5">
+                            <div className="bg-slate-950 px-4 py-3 space-y-1">
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-500/70">Greek Daemon</p>
+                              <p className="text-sm font-medium text-slate-200">{row.greek_daemon || "—"}</p>
+                            </div>
+                            <div className="bg-slate-950 px-4 py-3 space-y-1">
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-500/70">Tarot Card</p>
+                              <p className="text-sm font-medium text-slate-200">{row.tarot_name || "—"}</p>
+                            </div>
+                          </div>
+
+                          {/* Static description if present */}
+                          {row.description && (
+                            <div className="px-4 py-4 bg-slate-900/30">
+                              <p className="text-xs text-slate-400 leading-relaxed italic">{row.description}</p>
+                            </div>
+                          )}
+
+                          {/* AI sections */}
+                          <div className="px-4 py-5 space-y-6 bg-slate-950">
+                            <DecanAiBlock
+                              title={`${planet} in ${ordinalDecan(row.decan)} Decan of ${sign}`}
+                              data={sec?.planetAi ?? null}
+                              loading={sec?.loading ?? true}
+                            />
+                            <DecanAiBlock
+                              title={`Greek Daemon: ${row.greek_daemon}`}
+                              data={sec?.daemonAi ?? null}
+                              loading={sec?.loading ?? true}
+                            />
+                            <DecanAiBlock
+                              title={`Tarot: ${row.tarot_name}`}
+                              data={sec?.tarotAi ?? null}
+                              loading={sec?.loading ?? true}
+                            />
+                          </div>
+                        </div>
                       )}
-
-                      {/* Static labels row */}
-                      <div className="grid grid-cols-2 gap-px bg-border">
-                        <div className="bg-background px-4 py-2.5 space-y-0.5">
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Greek Daemon</p>
-                          <p className="text-sm font-medium text-foreground">{row.greek_daemon || "—"}</p>
-                        </div>
-                        <div className="bg-background px-4 py-2.5 space-y-0.5">
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tarot Card</p>
-                          <p className="text-sm font-medium text-foreground">{row.tarot_name || "—"}</p>
-                        </div>
-                      </div>
-
-                      {/* Static description if present */}
-                      {row.description && (
-                        <div className="px-4 py-3 bg-muted/5 border-t">
-                          <p className="text-xs text-muted-foreground leading-relaxed">{row.description}</p>
-                        </div>
-                      )}
-
-                      {/* AI sections */}
-                      <div className="px-4 py-4 space-y-5 border-t">
-                        <DecanAiBlock
-                          title={`${planet} in ${ordinalDecan(row.decan)} Decan of ${sign}`}
-                          data={sec?.planetAi ?? null}
-                          loading={sec?.loading ?? true}
-                        />
-                        <DecanAiBlock
-                          title={`Greek Daemon: ${row.greek_daemon}`}
-                          data={sec?.daemonAi ?? null}
-                          loading={sec?.loading ?? true}
-                        />
-                        <DecanAiBlock
-                          title={`Tarot: ${row.tarot_name}`}
-                          data={sec?.tarotAi ?? null}
-                          loading={sec?.loading ?? true}
-                        />
-                      </div>
                     </div>
                   );
                 })}
@@ -1353,23 +1591,23 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
 
       {/* Table */}
-      <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
-          <h3 className="text-sm font-semibold text-center w-full">Planet Information</h3>
+      <div className="horoscope-table-container">
+        <div className="horoscope-table-header">
+          <h3>Planet Information</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="horoscope-table-wrapper">
+          <table className="horoscope-table">
             <thead>
-              <tr className="border-b bg-muted/20">
+              <tr>
                 {["Planet", "Sign", "Full Degree", "House", "Norm Degree", "Speed", "Retro?"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {ordered.map((p, i) => (
-                <tr key={p.name} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
-                  <td className="px-3 py-2 font-medium whitespace-nowrap">
+                <tr key={p.name}>
+                  <td className="td-planet">
                     <div className="flex items-center gap-2">
                       <PlanetSymbol name={p.name} />
                       {checkDacen(p.name, p.sign) && (
@@ -1385,7 +1623,7 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
                               <img
                                 src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
                                 alt=""
-                                className="size-4 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
+                                className="size-5 cursor-pointer hover:scale-125 transition-all hover:brightness-150 hover:drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]"
                               />
                             </button>
                           </TooltipTrigger>
@@ -1396,15 +1634,15 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
                       )}
                     </div>
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap"><ZodiacSymbol sign={p.sign} /></td>
-                  <td className="px-3 py-2 font-mono text-xs">{Number(p.full_degree).toFixed(2)}°</td>
-                  <td className="px-3 py-2">{p.house}</td>
-                  <td className="px-3 py-2 font-mono text-xs">{Number(p.norm_degree).toFixed(2)}°</td>
-                  <td className="px-3 py-2 font-mono text-xs">{Number(p.speed).toFixed(4)}</td>
-                  <td className="px-3 py-2">
-                    <Badge variant={p.is_retro === "true" ? "destructive" : "outline"} className="text-[10px]">
-                      {p.is_retro === "true" ? "R" : "—"}
-                    </Badge>
+                  <td><ZodiacSymbol sign={p.sign} /></td>
+                  <td className="td-mono">{Number(p.full_degree).toFixed(2)}°</td>
+                  <td>{p.house}</td>
+                  <td className="td-mono">{Number(p.norm_degree).toFixed(2)}°</td>
+                  <td className="td-mono">{Number(p.speed).toFixed(4)}</td>
+                  <td>
+                    <span className={cn("retro-badge-v2", p.is_retro === "true" ? "retro" : "direct")}>
+                      {p.is_retro === "true" ? "Yes" : "No"}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -1422,11 +1660,18 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
             const interp = aiMap[p.name];
             if (!interp) return null;
             const hasDecan = checkDacen(p.name, p.sign);
+            const planetImg = ASTRO_HEADER_IMAGES[p.name];
             return (
-              <div key={p.name} className="rounded-lg border overflow-hidden">
-                <div className="flex items-center justify-center gap-2 px-4 py-2.5 bg-muted/40 border-b text-center">
-                  <span className="text-amber-500 text-base">{PLANET_SYMBOLS[p.name] ?? "✦"}</span>
-                  <h4 className="text-sm font-semibold uppercase tracking-wide">{p.name}</h4>
+              <div key={p.name} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
+                {/* Interpretation Header — white bg, dark text, centered icon + name */}
+                <div className="horoscope-interp-header flex items-center justify-center gap-5 px-4 py-2.5" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
+                  {planetImg ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={planetImg} alt={p.name} className="size-[30px] object-contain shrink-0" />
+                  ) : (
+                    <ManualPlanetIcon name={p.name} size="size-11" />
+                  )}
+                  <h4 className="uppercase tracking-wide" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>{p.name}</h4>
                   {hasDecan && (
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -1440,7 +1685,7 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
                           <img
                             src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
                             alt=""
-                            className="size-5 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
+                            className="size-5 cursor-pointer hover:scale-125 transition-all hover:brightness-150 hover:drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]"
                           />
                         </button>
                       </TooltipTrigger>
@@ -1451,12 +1696,13 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
                   )}
                   <Badge variant="outline" className="ml-auto text-[10px] text-amber-600 border-amber-400">{p.sign} · House {p.house}</Badge>
                 </div>
-                <div className="px-4 py-3">
-                  <p className="text-sm leading-relaxed text-foreground">{interp}</p>
-                  <div className="mt-2 flex justify-center">
+                {/* Interpretation Content — Planet-specific gradient */}
+                <div className={cn("px-4 py-3", getPlanetInterpClass(p.name))}>
+                  <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px' }}>{interp}</p>
+                  <div className="mt-3 flex justify-center">
                     <button
                       onClick={() => trigger(p.name, interp, p, areaOfInquiry, undefined, false, "planet")}
-                      className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
+                      className="horoscope-show-more"
                     >Show More</button>
                   </div>
                 </div>
@@ -1498,31 +1744,32 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
 
       {/* House table */}
-      <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
-          <h3 className="text-sm font-semibold text-center w-full">House Information</h3>
+      <div className="horoscope-table-container">
+        <div className="horoscope-table-header">
+          <h3>House Information</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="horoscope-table-wrapper">
+          <table className="horoscope-table">
             <thead>
-              <tr className="border-b bg-muted/20">
+              <tr>
                 {["House", "Sign", "Degree", "Planets"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {houses.map((h: any, i: number) => (
-                <tr key={h.house} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
-                  <td className="px-3 py-2 font-semibold">House {h.house}</td>
-                  <td className="px-3 py-2"><ZodiacSymbol sign={h.sign} /></td>
-                  <td className="px-3 py-2 font-mono text-xs">{Number(h.degree).toFixed(2)}°</td>
-                  <td className="px-3 py-2">
-                    <div className="flex flex-wrap gap-1">
+                <tr key={h.house}>
+                  <td className="font-semibold">House {h.house}</td>
+                  <td><ZodiacSymbol sign={h.sign} /></td>
+                  <td className="td-mono">{Number(h.degree).toFixed(2)}°</td>
+                  <td>
+                    <div className="flex flex-wrap gap-2">
                       {(houseMap[Number(h.house)] ?? []).map((pName) => (
-                        <Badge key={pName} variant="secondary" className="text-[10px]">
-                          <span className="text-amber-500 mr-1">{PLANET_SYMBOLS[pName] ?? "✦"}</span>{pName}
-                        </Badge>
+                        <div key={pName} className="planet-tag-v2">
+                          <span className="symbol">{PLANET_SYMBOLS[pName] ?? "✦"}</span>
+                          <span>{pName}</span>
+                        </div>
                       ))}
                     </div>
                   </td>
@@ -1533,147 +1780,94 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
         </div>
       </div>
 
-      {/* House Distribution Grid - Precise & Compact with Rich Tooltips */}
-      <TooltipProvider delayDuration={200}>
-        <div className="rounded-xl border border-amber-500/20 overflow-hidden bg-card shadow-sm mt-4">
-          <div className="px-4 py-2.5 bg-gradient-to-r from-amber-500/5 via-background to-background border-b border-amber-500/10 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="size-1.5 rounded-full bg-amber-500" />
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-700 dark:text-amber-500">Distribution Analysis</h3>
-            </div>
-            <Badge variant="outline" className="h-5 text-[9px] uppercase tracking-widest border-amber-500/20 text-amber-600 px-1.5 font-bold">Western V2</Badge>
-          </div>
+      {/* Distribution Analysis - Exact Mockup Replication [Paper-and-Ink Style] */}
+      <div className="mt-8 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+        <div className="p-8 overflow-x-auto">
+          <div className="flex flex-col gap-1 min-w-[850px] font-sans">
 
-          <div className="p-4 overflow-x-auto bg-slate-50/30 dark:bg-slate-950/20">
-            <div className="flex flex-col gap-0.5 min-w-[850px]">
-              {/* Compact Legend Row */}
-              <div className="flex items-center gap-6 mb-2 border-b border-muted/20 pb-2 ml-1">
-                <div className="w-40 shrink-0 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">Planetary Track</div>
-                <div className="flex gap-1.5 flex-1 justify-between max-w-4xl px-2">
-                  {["Sun", "Moon", "Mercury", "Venus", "Mars", "Saturn", "Jupiter", "Uranus", "Neptune", "Pluto", "Node", "Part of Fortune", "Chiron"].map((p) => {
-                    const pImg = PLANET_IMAGES[p];
-                    return (
-                      <Tooltip key={p}>
-                        <TooltipTrigger asChild>
-                          <div className="size-7 flex items-center justify-center grayscale opacity-30 hover:opacity-100 transition-opacity cursor-help">
-                            {pImg ? (
-                              <img src={pImg} alt={p} className="size-4 object-contain brightness-0 dark:invert" />
-                            ) : (
-                              <span className="text-[10px] font-bold">{PLANET_SYMBOLS[p] ?? "✦"}</span>
-                            )}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="text-[10px] font-bold uppercase tracking-wider">{p}</TooltipContent>
-                      </Tooltip>
-                    );
-                  })}
-                </div>
-              </div>
+            {houses.map((h: any) => {
+              const hNum = Number(h.house);
+              const gridPlanets = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Saturn", "Jupiter", "Uranus", "Neptune", "Pluto", "Node", "Part of Fortune", "Chiron"];
 
-              {houses.map((h: any) => {
-                const planetsInHouse = (houseMap[Number(h.house)] ?? []) as string[];
-                const gridPlanets = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Saturn", "Jupiter", "Uranus", "Neptune", "Pluto", "Node", "Part of Fortune", "Chiron"];
+              // Special Rule: H1 and H12 only icon. Others follow Staircase (H2=1, H3=2... H11=10)
+              const skipBlocks = hNum === 1 || hNum === 12;
 
-                let maxIdx = -1;
-                planetsInHouse.forEach(pName => {
-                  const idx = gridPlanets.indexOf(pName);
-                  if (idx > maxIdx) maxIdx = idx;
-                });
+              // Map house to the specific planet sequence AS PER IMAGE
+              // H1-H9: Sun, Moon, Mercury, Venus, Mars, Saturn, Jupiter, Uranus, Neptune (idx 0-8)
+              // H10: Node (idx 10), H11: Part of Fortune (idx 11), H12: Chiron (idx 12)
+              // Note: Skipping Pluto (idx 9) to match the 12-house track in the reference image
+              let planetIdx = hNum - 1;
+              if (hNum === 10) planetIdx = 10; // Node
+              if (hNum === 11) planetIdx = 11; // Part of Fortune
+              if (hNum === 12) planetIdx = 12; // Chiron
 
-                return (
-                  <div key={h.house} className="flex items-center gap-6 py-2 group hover:bg-amber-500/10 rounded-lg px-2 transition-all border-b border-muted/5 last:border-0">
-                    {/* High-Readability House Header */}
-                    <div className="flex items-center gap-4 w-44 shrink-0">
-                      <div className="flex flex-col w-12 italic">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none mb-1">Cusp</span>
-                        <span className="text-sm font-black text-foreground/90 leading-none">H{String(h.house).padStart(2, "0")}</span>
-                      </div>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center justify-center size-9 rounded-full bg-background border-2 border-amber-500/20 group-hover:border-amber-500/50 group-hover:scale-110 transition-all shadow-sm cursor-pointer overflow-hidden">
-                            <span className="text-amber-500 text-xl leading-none font-bold">{ZODIAC_SYMBOLS[h.sign] ?? "•"}</span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="bg-white dark:bg-slate-900 border-2 border-amber-500/20 p-3 shadow-2xl rounded-xl">
-                          <p className="font-black text-sm uppercase tracking-widest text-amber-600 dark:text-amber-400 mb-1">{h.sign}</p>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase italic pb-2 border-b border-muted/20">House {h.house} Custodian</p>
-                          <div className="mt-2 text-xs font-mono font-bold text-foreground/80">Position: {Number(h.full_degree || h.degree).toFixed(2)}°</div>
-                        </TooltipContent>
-                      </Tooltip>
-                      <div className="flex flex-col items-end flex-1">
-                        <span className="text-xs font-mono font-black text-amber-700 dark:text-amber-400 leading-none">{Number(h.full_degree || h.degree).toFixed(2)}°</span>
-                      </div>
+              const pName = gridPlanets[planetIdx] || "Sun";
+              const pImg = PLANET_IMAGES[pName];
+              const forcedIconIdx = skipBlocks ? 0 : (hNum - 1);
+
+              return (
+                <div key={h.house} className="flex items-center gap-4 py-0 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
+                  {/* Mockup-style House Header: [House N] [Sign Icon] [Degree] */}
+                  <div className="flex items-center gap-4 w-40 shrink-0 h-8">
+                    <div className="w-12">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">H{h.house}</p>
                     </div>
 
-                    {/* Interaction Track with Animated Scale */}
-                    <div className="flex gap-2 flex-1 items-center justify-between max-w-4xl px-2">
-                      {gridPlanets.map((colPlanet, colIdx) => {
-                        const isHere = planetsInHouse.includes(colPlanet);
-                        const pImg = PLANET_IMAGES[colPlanet];
-                        const planetData = planets?.find(p => p.name === colPlanet);
-
-                        if (isHere) {
-                          return (
-                            <Tooltip key={colPlanet}>
-                              <TooltipTrigger asChild>
-                                <div className="size-8 flex items-center justify-center rounded-lg bg-background border-2 border-amber-500/40 text-foreground hover:scale-125 hover:rotate-6 hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:z-20 hover:border-amber-500 transition-all cursor-zoom-in overflow-hidden" >
-                                  {pImg ? (
-                                    <img src={pImg} alt={colPlanet} className="size-6 object-contain" />
-                                  ) : (
-                                    <span className="text-lg font-bold leading-none text-amber-600">{PLANET_SYMBOLS[colPlanet] ?? "✦"}</span>
-                                  )}
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="p-0 border-0 bg-transparent shadow-none overflow-visible">
-                                <div className="p-4 bg-white dark:bg-slate-900 border-2 border-amber-500/30 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.2)] min-w-[220px] relative">
-                                  <div className="flex items-center gap-4 mb-3 pb-3 border-b border-amber-500/10">
-                                    <div className="size-11 flex items-center justify-center rounded-xl bg-amber-500/5 shadow-inner p-2 border border-amber-500/10">
-                                      {pImg ? <img src={pImg} alt={colPlanet} className="size-full object-contain" /> : <span className="text-2xl">{PLANET_SYMBOLS[colPlanet]}</span>}
-                                    </div>
-                                    <div>
-                                      <p className="text-xs font-black text-foreground uppercase tracking-widest leading-none mb-1">{colPlanet}</p>
-                                      <p className="text-[10px] text-amber-600 font-bold uppercase tracking-tight opacity-70">Resident in Sign {planetData?.sign ?? "N/A"}</p>
-                                    </div>
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-2 text-[11px] font-bold">
-                                    <div className="bg-slate-500/5 p-2 rounded-lg border border-border/40">
-                                      <span className="text-muted-foreground block text-[9px] uppercase tracking-widest mb-1 opacity-50">Degree</span>
-                                      <p className="font-mono text-amber-600">{Number(planetData?.full_degree ?? 0).toFixed(2)}°</p>
-                                    </div>
-                                    <div className="bg-slate-500/5 p-2 rounded-lg border border-border/40">
-                                      <span className="text-muted-foreground block text-[9px] uppercase tracking-widest mb-1 opacity-50">Motion</span>
-                                      <p className={planetData?.is_retro === "true" ? "text-red-500" : "text-green-500"}>{planetData?.is_retro === "true" ? "Retrograde" : "Direct"}</p>
-                                    </div>
-                                  </div>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          );
-                        }
-
-                        if (colIdx < maxIdx) {
-                          return (
-                            <Tooltip key={colIdx}>
-                              <TooltipTrigger asChild>
-                                <div className="size-8 bg-slate-950 border border-slate-800 dark:bg-slate-200 dark:border-slate-300 rounded shadow-inner opacity-90 transition-all hover:opacity-100 hover:scale-105 cursor-pointer" />
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="bg-slate-900 text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20">
-                                <span className="opacity-50 text-amber-400 mr-1">Zone:</span> {colPlanet}
-                              </TooltipContent>
-                            </Tooltip>
-                          );
-                        }
-
-                        return <div key={colIdx} className="size-8" />;
-                      })}
+                    <div className="flex items-center justify-between flex-1">
+                      <span className="text-black text-xl leading-none">
+                        {ZODIAC_SYMBOLS[h.sign] ?? "•"}
+                      </span>
+                      <span className="text-[11px] font-mono font-medium text-slate-500 ml-2">
+                        {Number(h.full_degree || h.degree).toFixed(2)}
+                      </span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* Ladder Track - Gap minimized to match mockup */}
+                  {/* Ladder Track - Rectangular & Extremely Compact */}
+                  <div className="flex gap-0.5 flex-1 items-center justify-start ml-2">
+                    {Array.from({ length: forcedIconIdx + 1 }).map((_, colIdx) => {
+                      const isIcon = colIdx === forcedIconIdx;
+
+                      if (isIcon) {
+                        return (
+                          <div key="icon" className="w-10 h-6 flex items-center justify-center shrink-0">
+                            {pImg && pName !== "Part of Fortune" ? (
+                              <img src={pImg} alt={pName} className="size-5 object-contain" />
+                            ) : (
+                              <span className="flex items-center justify-center">
+                                {pName === "Part of Fortune" ? (
+                                  <div className="size-4 border border-amber-600 rounded-full flex items-center justify-center translate-y-[1px]">
+                                    <span className="text-[9px] font-black leading-none -translate-y-[0.5px] text-amber-600">✕</span>
+                                  </div>
+                                ) : (
+                                  <span className={cn(
+                                    "text-lg font-bold",
+                                    pName === "Node" ? "text-indigo-600" :
+                                    pName === "Chiron" ? "text-emerald-600" :
+                                    "text-amber-600"
+                                  )}>
+                                    {PLANET_SYMBOLS[pName] ?? "✦"}
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div key={colIdx} className="w-10 h-6 bg-black shrink-0" />
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-      </TooltipProvider>
+      </div>
+
 
 
       {/* AI interpretations */}
@@ -1685,14 +1879,14 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
             const hRaw = houses.find((h: any) => Number(h.house) === Number(item.house));
             const sign = hRaw?.sign ?? "";
             return (
-              <div key={item.house} className="rounded-lg border overflow-hidden">
-                <div className="px-4 py-2.5 bg-muted/40 border-b flex justify-center">
-                  <h4 className="text-sm font-semibold uppercase tracking-wide text-center w-full">House {item.house}</h4>
+              <div key={item.house} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
+                <div className="horoscope-interp-header px-4 py-2.5 flex justify-center" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
+                  <h4 className="uppercase tracking-wide text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>House {item.house}</h4>
                 </div>
-                <div className="px-4 py-3">
-                  <p className="text-sm leading-relaxed">{item.interpretation}</p>
-                  <div className="mt-2 flex justify-center">
-                    <button onClick={() => trigger(`House ${item.house}`, item.interpretation, { ...item, sign }, areaOfInquiry, undefined, false, "house")} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                <div className="interp-gradient-default px-4 py-3">
+                  <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{item.interpretation}</p>
+                  <div className="mt-3 flex justify-center">
+                    <button onClick={() => trigger(`House ${item.house}`, item.interpretation, { ...item, sign }, areaOfInquiry, undefined, false, "house")} className="horoscope-show-more">Show More</button>
                   </div>
                 </div>
               </div>
@@ -1730,44 +1924,36 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
       <AspectsLegend />
 
-      <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
-          <h3 className="text-sm font-semibold text-center w-full">Aspects</h3>
+      <div className="horoscope-table-container">
+        <div className="horoscope-table-header">
+          <h3>Aspects</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="horoscope-table-wrapper">
+          <table className="horoscope-table">
             <thead>
-              <tr className="border-b bg-muted/20">
+              <tr>
                 {["Aspected Planet", "Aspecting Planet", "Orb", "Type", "Diff", "Aspected °", "Aspecting °"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {enriched.map((a: any, i: number) => (
-                <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
-                  <td className="px-3 py-2 whitespace-nowrap"><PlanetSymbol name={a.aspected_planet} /></td>
-                  <td className="px-3 py-2 whitespace-nowrap"><PlanetSymbol name={a.aspecting_planet} /></td>
-                  <td className="px-3 py-2">
+                <tr key={i}>
+                  <td><PlanetSymbol name={a.aspected_planet} /></td>
+                  <td><PlanetSymbol name={a.aspecting_planet} /></td>
+                  <td>
                     <div className="flex items-center gap-2">
                       <OrbCircle orb={Number(a.orb ?? 0)} color={a.color} />
-                      <span className="font-mono text-xs">{Number(a.orb ?? 0).toFixed(2)}°</span>
+                      <span className="td-mono">{Number(a.orb ?? 0).toFixed(2)}°</span>
                     </div>
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1.5">
-                      {ASPECT_IMAGES[a.type] ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={ASPECT_IMAGES[a.type]} alt={a.type} className="size-4 object-contain" />
-                      ) : (
-                        <span className="text-amber-500 text-sm">{ASPECT_SYMBOLS[a.type] ?? ""}</span>
-                      )}
-                      <span>{a.type}</span>
-                    </span>
+                  <td>
+                    <AspectSymbol type={a.type} />
                   </td>
-                  <td className="px-3 py-2 font-mono text-xs">{a.diff}</td>
-                  <td className="px-3 py-2 font-mono text-xs">{a.aspected_degree ?? "—"}°</td>
-                  <td className="px-3 py-2 font-mono text-xs">{a.aspecting_degree ?? "—"}°</td>
+                  <td className="td-mono">{a.diff}</td>
+                  <td className="td-mono">{a.aspected_degree ?? "—"}°</td>
+                  <td className="td-mono">{a.aspecting_degree ?? "—"}°</td>
                 </tr>
               ))}
             </tbody>
@@ -1783,17 +1969,18 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
           {aiData.map((item: any, i: number) => {
             // Parse planet/aspect names directly from the AI title — no fuzzy rawAspect lookup
             // e.g. "Moon Conjunction Venus" → p1="Moon", aspectType="Conjunction", p2="Venus"
-            const { p1, aspectType, p2 } = parseAspectTitle(item.title);
+            const { p1, aspectType: _at, p2 } = parseAspectTitle(item.title);
             return (
-              <div key={i} className="rounded-lg border overflow-hidden">
-                {/* Header — Angular astroHeaderModifierPipe pattern: WORD [img] WORD [img] WORD [img] */}
-                <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+              <div key={i} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
+                {/* Header — white bg with dark text, Angular astroHeaderModifierPipe icon pattern */}
+                <div className="horoscope-interp-header px-4 py-2.5 text-center" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
                   <AstroHeaderParts title={item.title ?? `Aspect ${i + 1}`} />
                 </div>
-                <div className="px-4 py-3">
-                  <p className="text-sm leading-relaxed">{item.interpretation}</p>
-                  <div className="mt-2 flex justify-center">
-                    <button onClick={() => trigger(item.title ?? `Aspect ${i + 1}`, item.interpretation, item, areaOfInquiry, item.title)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                {/* Golden-orange gradient interpretation */}
+                <div className="interp-gradient-default px-4 py-3">
+                  <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{item.interpretation}</p>
+                  <div className="mt-3 flex justify-center">
+                    <button onClick={() => trigger(item.title ?? `Aspect ${i + 1}`, item.interpretation, item, areaOfInquiry, item.title)} className="horoscope-show-more">Show More</button>
                   </div>
                 </div>
               </div>
@@ -1821,14 +2008,14 @@ function DharmaKarmaSection({ data, rawData, areaOfInquiry }: { data: any; rawDa
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
       {[{ key: "dharma", label: "Dharma", text: dharma }, { key: "karma", label: "Karma", text: karma }].map(({ key, label, text }) => (
         text ? (
-          <div key={key} className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20 flex justify-center">
-              <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-300 text-center w-full">{label}</h4>
+          <div key={key} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
+            <div className="horoscope-interp-header px-4 py-2.5 flex justify-center" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
+              <h4 className="text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>{label}</h4>
             </div>
-            <div className="px-4 py-3">
-              <p className="text-sm leading-relaxed">{text}</p>
-              <div className="mt-2 flex justify-center">
-                <button onClick={() => trigger(label, text, rawData ?? data, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+            <div className="interp-gradient-default px-4 py-3">
+              <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{text}</p>
+              <div className="mt-3 flex justify-center">
+                <button onClick={() => trigger(label, text, rawData ?? data, areaOfInquiry)} className="horoscope-show-more">Show More</button>
               </div>
             </div>
           </div>
@@ -1854,61 +2041,63 @@ function LilithSection({ lilith, aiData, areaOfInquiry, checkDacen, onDecanClick
   return (
     <div className="space-y-4">
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
-      <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
-          <h3 className="text-sm font-semibold flex items-center justify-center gap-2">
-            <span>Lilith</span>
-            <span className="text-amber-500">⚸</span>
-            {lilith.sign && checkDacen("Lilith", lilith.sign) && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => onDecanClick("Lilith", lilith.sign)}
-                    className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
-                      alt=""
-                      className="size-4 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
-                    />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
-                  Decan Information
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </h3>
+      <div className="horoscope-table-container">
+        <div className="horoscope-table-header flex items-center justify-center gap-2">
+          <h3>Lilith</h3>
+          <span className="text-amber-500 text-xl">⚸</span>
+          {lilith.sign && checkDacen("Lilith", lilith.sign) && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => onDecanClick("Lilith", lilith.sign)}
+                  className="rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
+                    alt=""
+                    className="size-5 cursor-pointer hover:scale-125 transition-all hover:brightness-150 hover:drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]"
+                  />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
+                Decan Information
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="horoscope-table-wrapper">
+          <table className="horoscope-table">
             <thead>
-              <tr className="border-b bg-muted/20">
+              <tr className="horoscope-thead">
                 {["Planet", "Sign", "Full Degree", "House", "Norm Degree", "Speed", "Retro?"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              <tr className="bg-background">
+              <tr className="horoscope-tbody-row">
                 <td className="px-3 py-2 font-medium"><PlanetSymbol name={lilith.name ?? "Lilith"} /></td>
                 <td className="px-3 py-2"><ZodiacSymbol sign={lilith.sign} /></td>
                 <td className="px-3 py-2 font-mono text-xs">{Number(lilith.full_degree).toFixed(2)}°</td>
                 <td className="px-3 py-2">{lilith.house}</td>
                 <td className="px-3 py-2 font-mono text-xs">{Number(lilith.norm_degree).toFixed(2)}°</td>
                 <td className="px-3 py-2 font-mono text-xs">{Number(lilith.speed).toFixed(4)}</td>
-                <td className="px-3 py-2"><Badge variant={lilith.is_retro === "true" ? "destructive" : "outline"} className="text-[10px]">{lilith.is_retro === "true" ? "R" : "—"}</Badge></td>
+                <td>
+                  <span className={cn("retro-badge-v2", lilith.is_retro === "true" ? "retro" : "direct")}>
+                    {lilith.is_retro === "true" ? "Yes" : "No"}
+                  </span>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
         {interp && (
-          <div className="px-4 py-3 border-t">
-            <p className="text-sm leading-relaxed">{interp}</p>
-            <div className="mt-2 flex justify-center">
-              <button onClick={() => trigger("Lilith", interp, lilith, areaOfInquiry, undefined, false, "planet")} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+          <div className="interp-gradient-default px-4 py-3 border-t">
+            <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{interp}</p>
+            <div className="mt-3 flex justify-center">
+              <button onClick={() => trigger("Lilith", interp, lilith, areaOfInquiry, undefined, false, "planet")} className="horoscope-show-more">Show More</button>
             </div>
           </div>
         )}
@@ -1937,27 +2126,29 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry }: { natal
   if (aiData === "error") return <SectionError title="Ascendant · Midheaven · Vertex" />;
 
   return (
-    <div className="rounded-lg border overflow-hidden">
+    <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
-      <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
-        <h3 className="text-sm font-semibold text-center w-full">Ascendant · Midheaven · Vertex</h3>
+      <div className="horoscope-section-header px-4 py-2.5 text-center">
+        <h3 className="text-[20px] font-semibold text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 600, lineHeight: '26px' }}>Ascendant · Midheaven · Vertex</h3>
       </div>
-      <div className="divide-y">
+      <div>
         {keys.map((key) => {
           const degree = natalData?.[key];
           const interp = aiMap[key];
           return (
-            <div key={key} className="px-4 py-3">
-              <div className="flex items-center gap-2 mb-1.5">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 text-center">{key}</h4>
+            <div key={key}>
+              <div className="horoscope-interp-header px-4 py-2 flex items-center gap-2" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
+                <h4 className="uppercase tracking-wider text-center" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>{key}</h4>
                 {degree && <Badge variant="outline" className="text-[10px]">{typeof degree === "object" ? `${degree.sign ?? ""} ${Number(degree.degree ?? 0).toFixed(2)}°` : String(degree)}</Badge>}
               </div>
-              <p className="text-sm leading-relaxed">{interp ?? <span className="text-muted-foreground italic">Loading…</span>}</p>
-              {interp && (
-                <div className="mt-1.5 flex justify-center">
-                  <button onClick={() => trigger(key, interp, { [key]: degree }, areaOfInquiry, undefined, false, "planet")} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
-                </div>
-              )}
+              <div className="interp-gradient-default px-4 py-3">
+                <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{interp ?? <span className="italic" style={{ color: '#666' }}>Loading…</span>}</p>
+                {interp && (
+                  <div className="mt-3 flex justify-center">
+                    <button onClick={() => trigger(key, interp, { [key]: degree }, areaOfInquiry, undefined, false, "planet")} className="horoscope-show-more">Show More</button>
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
@@ -1968,27 +2159,35 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry }: { natal
 
 // ─── Natal Charts Row ─────────────────────────────────────────────────────────
 
-function NatalChartsRow({ svg1, svg2, label1 = "Natal Wheel Chart", label2 = "Natal Wheel Chart (Alt)", onExpandImg }: {
-  svg1: string | null; svg2: string | null; label1?: string; label2?: string; onExpandImg: (src: string) => void;
+function NatalChartsRow({ svgs, labels, onExpandImg }: {
+  svgs: (string | null)[]; labels: string[]; onExpandImg: (src: string) => void;
 }) {
-  if (!svg1 && !svg2) return null;
+  const activeItems = svgs.map((s, i) => ({ s, l: labels[i] })).filter(item => item.s);
+  if (!activeItems.length) return null;
 
-  const renderImg = (src: string, label: string) => (
-    <div className="flex-1 min-w-[200px] border rounded-lg p-2 bg-background cursor-pointer hover:ring-2 ring-amber-400 transition" onClick={() => onExpandImg(src)}>
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">{label} <Eye className="inline size-3 ml-1 opacity-60" /></p>
-      {src.startsWith("<svg") ? (
-        <div dangerouslySetInnerHTML={{ __html: src }} className="overflow-hidden max-h-80" />
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={label} className="w-full h-auto rounded" />
-      )}
-    </div>
-  );
+  const renderImg = (src: string, label: string) => {
+    const isP2 = label.toLowerCase().includes("person 2") || label.toLowerCase().includes("transit");
+    const Icon = isP2 ? Heart : User;
+    return (
+      <div className="flex-1 min-w-[200px] max-w-[calc(50%-0.5rem)] border rounded-lg p-2 bg-background cursor-pointer hover:ring-2 ring-amber-400 transition" onClick={() => onExpandImg(src)}>
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1 flex items-center gap-1.5">
+          <Icon className="size-3 text-amber-500" />
+          <span className="truncate">{label}</span>
+          <Eye className="size-3 ml-auto opacity-60" />
+        </p>
+        {src.startsWith("<svg") ? (
+          <div dangerouslySetInnerHTML={{ __html: src }} className="overflow-hidden aspect-square flex items-center justify-center grayscale-0" />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt={label} className="w-full h-auto rounded aspect-square object-contain" />
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-wrap gap-4">
-      {svg1 && renderImg(svg1, label1)}
-      {svg2 && renderImg(svg2, label2)}
+      {activeItems.map((item, i) => renderImg(item.s!, item.l))}
     </div>
   );
 }
@@ -2004,20 +2203,20 @@ function PlanetReturnSummaryTable({ tab, birth, returnDate, natalData }: {
 
   return (
     <div className="rounded-lg border overflow-hidden">
-      <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20 text-center">
-        <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-300">{label} Return — Summary</h3>
+      <div className="px-4 py-2.5 horoscope-section-header text-center">
+        <h3 className="text-sm font-semibold text-center w-full">{label} Return — Summary</h3>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-muted/20">
+            <tr className="horoscope-thead">
               {["Date of Birth", "Place of Birth", "Time of Birth", "House System", `${label} at Birth`, `Next ${label} Return`].map((h) => (
-                <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            <tr className="bg-background">
+            <tr className="horoscope-tbody-row">
               <td className="px-3 py-2">{birth.dob ? format(parse(birth.dob, "yyyy-MM-dd", new Date()), "PPP") : "—"}</td>
               <td className="px-3 py-2">{birth.city?.label ?? "—"}</td>
               <td className="px-3 py-2">{birth.tob || "—"}</td>
@@ -2045,23 +2244,23 @@ function PlanetReturnInterpretation({ tab, aiData, areaOfInquiry }: { tab: strin
   return (
     <div className="rounded-lg border overflow-hidden">
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
-      <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+      <div className="px-4 py-2.5 horoscope-section-header text-center">
         <h3 className="text-sm font-semibold text-center w-full">{title}</h3>
       </div>
       <div className="divide-y">
         {interp && typeof interp === "object" ? (
           Object.entries(interp).map(([k, v]) => (
-            <div key={k} className="px-4 py-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1.5 text-center w-full">{k}</h4>
-              <p className="text-sm leading-relaxed">{String(v)}</p>
+            <div key={k} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px' }}>
+              <h4 className="text-xs font-semibold uppercase tracking-wider mb-1.5 text-center w-full" style={{ color: '#000' }}>{k}</h4>
+              <p className="leading-relaxed" style={{ color: '#000' }}>{String(v)}</p>
               <div className="mt-1.5 flex justify-center">
-                <button onClick={() => trigger(k, String(v), interp, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                <button onClick={() => trigger(k, String(v), interp, areaOfInquiry)} className="horoscope-show-more">Show More</button>
               </div>
             </div>
           ))
         ) : interp ? (
-          <div className="px-4 py-3">
-            <p className="text-sm leading-relaxed">{String(interp)}</p>
+          <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+            <p className="leading-relaxed">{String(interp)}</p>
           </div>
         ) : null}
         {aiData && typeof aiData === "object" && aiData.chart_data && (
@@ -2100,17 +2299,19 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       <div className="space-y-2">
         {items.map((item: any, i: number) => (
           <div key={i} className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-2 bg-muted/30 border-b flex items-center justify-center gap-2">
-              {item.name && PLANET_IMAGES[item.name] && (
+            <div className="px-4 py-2 horoscope-interp-header flex items-center justify-center gap-2">
+              {item.name && (PLANET_IMAGES[item.name] ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={PLANET_IMAGES[item.name]} alt={item.name} className="size-5 object-contain" />
-              )}
-              <h4 className="text-sm font-semibold text-center w-full">{item.title ?? item.name ?? `${title} ${i + 1}`}</h4>
+              ) : (
+                <ManualPlanetIcon name={item.name} size="size-7" />
+              ))}
+              <h4 className="text-center w-full">{item.title ?? item.name ?? `${title} ${i + 1}`}</h4>
             </div>
-            <div className="px-4 py-3">
-              <p className="text-sm leading-relaxed">{item.interpretation ?? item.data ?? item.forecast}</p>
+            <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+              <p className="leading-relaxed">{item.interpretation ?? item.data ?? item.forecast}</p>
               <div className="mt-2 flex justify-center">
-                <button onClick={() => trigger(item.title ?? item.name ?? title, item.interpretation ?? item.data ?? "", item, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                <button onClick={() => trigger(item.title ?? item.name ?? title, item.interpretation ?? item.data ?? "", item, areaOfInquiry)} className="horoscope-show-more">Show More</button>
               </div>
             </div>
           </div>
@@ -2130,21 +2331,27 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
 
       {/* 1. Solar Return Details */}
       {details && (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return Details</h3></div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="border-b bg-muted/20">
-                {["Native Birth Date", "Solar Return Date", "Sun Degree", "Solar Return ASC"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
-                ))}
-              </tr></thead>
-              <tbody><tr className="bg-background">
-                <td className="px-3 py-2">{details.native_birth_date ?? details.date_of_birth ?? "—"}</td>
-                <td className="px-3 py-2 font-semibold text-amber-600">{details.solar_return_date ?? details.return_date ?? "—"}</td>
-                <td className="px-3 py-2 font-mono text-xs">{details.sun_degree ?? "—"}</td>
-                <td className="px-3 py-2">{details.solar_return_asc ?? details.ascendant ?? "—"}</td>
-              </tr></tbody>
+        <div className="horoscope-table-container">
+          <div className="horoscope-table-header">
+            <h3>Solar Return Details</h3>
+          </div>
+          <div className="horoscope-table-wrapper">
+            <table className="horoscope-table">
+              <thead>
+                <tr>
+                  {["Native Birth Date", "Solar Return Date", "Sun Degree", "Solar Return ASC"].map((h) => (
+                    <th key={h}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{details.native_birth_date ?? details.date_of_birth ?? "—"}</td>
+                  <td className="font-semibold text-amber-500">{details.solar_return_date ?? details.return_date ?? "—"}</td>
+                  <td className="td-mono">{details.sun_degree ?? "—"}</td>
+                  <td>{details.solar_return_asc ?? details.ascendant ?? "—"}</td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </div>
@@ -2152,25 +2359,33 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
 
       {/* 2. Solar Return Planets table */}
       {planetList.length > 0 && (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return Planets</h3></div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="border-b bg-muted/20">
-                {["Planet", "House", "Full Degree", "Sign", "Norm Degree", "Speed", "Retro?"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
-                ))}
-              </tr></thead>
+        <div className="horoscope-table-container">
+          <div className="horoscope-table-header">
+            <h3>Solar Return Planets</h3>
+          </div>
+          <div className="horoscope-table-wrapper">
+            <table className="horoscope-table">
+              <thead>
+                <tr>
+                  {["Planet", "House", "Full Degree", "Sign", "Norm Degree", "Speed", "Retro?"].map((h) => (
+                    <th key={h}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
               <tbody>
                 {planetList.map((p: any, i: number) => (
-                  <tr key={p.name ?? i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
-                    <td className="px-3 py-2 font-medium whitespace-nowrap"><PlanetSymbol name={p.name} /></td>
-                    <td className="px-3 py-2 text-center">{p.house ?? "—"}</td>
-                    <td className="px-3 py-2 font-mono text-xs">{Number(p.full_degree ?? 0).toFixed(2)}°</td>
-                    <td className="px-3 py-2 whitespace-nowrap"><ZodiacSymbol sign={p.sign} /></td>
-                    <td className="px-3 py-2 font-mono text-xs">{Number(p.norm_degree ?? 0).toFixed(2)}°</td>
-                    <td className="px-3 py-2 font-mono text-xs">{Number(p.speed ?? 0).toFixed(4)}</td>
-                    <td className="px-3 py-2"><Badge variant={p.is_retro === "true" || p.is_retro === true ? "destructive" : "outline"} className="text-[10px]">{p.is_retro === "true" || p.is_retro === true ? "R" : "—"}</Badge></td>
+                  <tr key={p.name ?? i}>
+                    <td className="td-planet"><PlanetSymbol name={p.name} /></td>
+                    <td className="text-center">{p.house ?? "—"}</td>
+                    <td className="td-mono">{Number(p.full_degree ?? 0).toFixed(2)}°</td>
+                    <td><ZodiacSymbol sign={p.sign} /></td>
+                    <td className="td-mono">{Number(p.norm_degree ?? 0).toFixed(2)}°</td>
+                    <td className="td-mono">{Number(p.speed ?? 0).toFixed(4)}</td>
+                    <td>
+                      <span className={cn("retro-badge-v2", p.is_retro === "true" || p.is_retro === true ? "retro" : "direct")}>
+                        {p.is_retro === "true" || p.is_retro === true ? "Yes" : "No"}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -2192,12 +2407,14 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
               const forecasts: string[] = Array.isArray(p.forecast) ? p.forecast : (p.forecast ? [String(p.forecast)] : []);
               return (
                 <div key={p.name ?? i} className="rounded-lg border overflow-hidden">
-                  <div className="px-4 py-2 bg-muted/30 border-b flex items-center justify-center gap-2">
-                    {p.name && PLANET_IMAGES[p.name] && (
+                  <div className="px-4 py-2 horoscope-interp-header flex items-center justify-center gap-2">
+                    {p.name && (PLANET_IMAGES[p.name] ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={PLANET_IMAGES[p.name]} alt={p.name} className="size-5 object-contain" />
-                    )}
-                    <h4 className="text-sm font-semibold text-center w-full">{p.name ?? `Planet ${i + 1}`}</h4>
+                    ) : (
+                      <ManualPlanetIcon name={p.name} size="size-7" />
+                    ))}
+                    <h4 className="text-center w-full">{p.name ?? `Planet ${i + 1}`}</h4>
                     {p.name && p.sign && checkDacen(p.name, p.sign) && (
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -2210,7 +2427,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
                             <img
                               src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
                               alt=""
-                              className="size-5 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
+                              className="size-5 cursor-pointer hover:scale-125 transition-all hover:brightness-150 hover:drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]"
                             />
                           </button>
                         </TooltipTrigger>
@@ -2221,11 +2438,11 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
                     )}
                     {p.sign && <Badge variant="outline" className="ml-auto text-[10px] text-amber-600 border-amber-400">{p.sign}{p.house ? ` · House ${p.house}` : ""}</Badge>}
                   </div>
-                  <div className="px-4 py-3 space-y-1.5">
+                  <div className="interp-gradient-default px-4 py-3 space-y-1.5" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
                     {forecasts.map((f: string, fi: number) => (
-                      <p key={fi} className="text-sm leading-relaxed text-foreground">{f}</p>
+                      <p key={fi} className="leading-relaxed">{f}</p>
                     ))}
-                    {forecasts.length === 0 && <p className="text-sm text-muted-foreground italic">No forecast available.</p>}
+                    {forecasts.length === 0 && <p className="italic">No forecast available.</p>}
                   </div>
                 </div>
               );
@@ -2234,39 +2451,59 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
         );
       })()}
 
+      {/* 4. Solar Return House Cusps section */}
       {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex || houseList.length > 0) && (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return House Cusps</h3></div>
+        <div className="horoscope-table-container">
+          <div className="horoscope-table-header">
+            <h3>Solar Return House Cusps</h3>
+          </div>
+
+          {/* Critical Points Subset */}
           {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex) && (
-            <div className="overflow-x-auto border-b">
-              <table className="w-full text-sm">
-                <thead><tr className="border-b bg-muted/20">
-                  {["Point", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>)}
-                </tr></thead>
+            <div className="horoscope-table-wrapper border-b border-white/5">
+              <table className="horoscope-table">
+                <thead>
+                  <tr>
+                    {["Ascendant", "Midheaven", "Vertex"].map((h) => (
+                      <th key={h}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
                 <tbody>
-                  {[{ label: "Ascendant", val: cuspObj.ascendant }, { label: "Midheaven", val: cuspObj.midheaven }, { label: "Vertex", val: cuspObj.vertex }].filter((r) => r.val).map((r) => (
-                    <tr key={r.label} className="border-b last:border-0 bg-background">
-                      <td className="px-3 py-2 font-medium">{r.label}</td>
-                      <td className="px-3 py-2"><ZodiacSymbol sign={typeof r.val === "object" ? r.val?.sign : String(r.val)} /></td>
-                      <td className="px-3 py-2 font-mono text-xs">{typeof r.val === "object" ? `${Number(r.val?.degree ?? 0).toFixed(2)}°` : "—"}</td>
-                    </tr>
-                  ))}
+                  <tr>
+                    {[cuspObj.ascendant, cuspObj.midheaven, cuspObj.vertex].map((val, i) => (
+                      <td key={i}>
+                        {val ? (
+                          <div className="flex items-center gap-3">
+                            <ZodiacSymbol sign={typeof val === "object" ? val?.sign : String(val)} />
+                            <span className="td-mono">{typeof val === "object" ? `${Number(val?.degree ?? 0).toFixed(2)}°` : "—"}</span>
+                          </div>
+                        ) : "—"}
+                      </td>
+                    ))}
+                  </tr>
                 </tbody>
               </table>
             </div>
           )}
+
+          {/* Regular Houses Subset */}
           {houseList.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead><tr className="border-b bg-muted/20">
-                  {["House", "Sign", "Degree"].map((h) => <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>)}
-                </tr></thead>
+            <div className="horoscope-table-wrapper">
+              <table className="horoscope-table">
+                <thead>
+                  <tr>
+                    {["House", "Sign", "Degree"].map((h) => (
+                      <th key={h}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
                 <tbody>
                   {houseList.map((h: any, i: number) => (
-                    <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
-                      <td className="px-3 py-2 font-medium">{h.house}</td>
-                      <td className="px-3 py-2"><ZodiacSymbol sign={h.sign} /></td>
-                      <td className="px-3 py-2 font-mono text-xs">{Number(h.degree ?? 0).toFixed(2)}°</td>
+                    <tr key={`house-${i}`}>
+                      <td className="font-medium">House {h.house}</td>
+                      <td><ZodiacSymbol sign={h.sign} /></td>
+                      <td className="td-mono">{Number(h.degree ?? 0).toFixed(2)}°</td>
                     </tr>
                   ))}
                 </tbody>
@@ -2280,29 +2517,36 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
       {detailsAi && <AiCards data={detailsAi} title="Solar Return Interpretation" />}
 
 
-      {/* 5. Solar Return Aspects table */}
+      {/* 5. Solar Return Planet Aspects table */}
       {aspectList.length > 0 && (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Solar Return Planet Aspects</h3></div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="border-b bg-muted/20">
-                {["SR Planet", "Natal Planet", "Type", "Orb"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
-                ))}
-              </tr></thead>
+        <div className="horoscope-table-container">
+          <div className="horoscope-table-header">
+            <h3>Solar Return Planet Aspects</h3>
+          </div>
+          <div className="horoscope-table-wrapper">
+            <table className="horoscope-table">
+              <thead>
+                <tr>
+                  {["SR Planet", "Natal Planet", "Type", "Orb"].map((h) => (
+                    <th key={h}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
               <tbody>
                 {aspectList.map((a: any, i: number) => (
-                  <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
-                    <td className="px-3 py-2 whitespace-nowrap"><PlanetSymbol name={a.solar_return_planet ?? a.aspecting_planet ?? a.planet1 ?? "—"} /></td>
-                    <td className="px-3 py-2 whitespace-nowrap"><PlanetSymbol name={a.natal_planet ?? a.aspected_planet ?? a.planet2 ?? "—"} /></td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                  <tr key={i}>
+                    <td className="td-planet"><PlanetSymbol name={a.solar_return_planet ?? a.aspecting_planet ?? a.planet1 ?? "—"} /></td>
+                    <td className="td-planet"><PlanetSymbol name={a.natal_planet ?? a.aspected_planet ?? a.planet2 ?? "—"} /></td>
+                    <td>
                       <span className="inline-flex items-center gap-1.5">
-                        {ASPECT_IMAGES[a.type] && <img src={ASPECT_IMAGES[a.type]} alt={a.type} className="size-4 object-contain" />}
+                        {ASPECT_IMAGES[a.type] && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={ASPECT_IMAGES[a.type]} alt={a.type} className="size-4 object-contain" />
+                        )}
                         {a.type}
                       </span>
                     </td>
-                    <td className="px-3 py-2 font-mono text-xs">{Number(a.orb ?? 0).toFixed(2)}°</td>
+                    <td className="td-mono">{Number(a.orb ?? 0).toFixed(2)}°</td>
                   </tr>
                 ))}
               </tbody>
@@ -2311,41 +2555,6 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
         </div>
       )}
 
-      {/* 6. Solar Return Aspects Report — from AstrologyAPI solar_return_aspects_report
-           Shape: [{solar_return_planet, type, natal_planet, forecast}]
-           Ported from Angular solar-return-v2 getHttpHoroscopePost("solar_return_aspects_report") */}
-      {/* {aspectsReport !== null && aspectsReport !== undefined && (() => {
-        const items: any[] = Array.isArray(aspectsReport) ? aspectsReport : [];
-        if (items.length === 0) return null;
-        return (
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold px-1">Solar Return Planet Aspects Interpretations</h3>
-            {items.map((a: any, i: number) => {
-              const srPlanet = a.solar_return_planet ?? a.aspecting_planet ?? "";
-              const nPlanet = a.natal_planet ?? a.aspected_planet ?? "";
-              const aType = a.type ?? "";
-              const header = [srPlanet, aType, nPlanet].filter(Boolean).join(" ");
-              const forecast = a.forecast ?? a.interpretation ?? "";
-              return (
-                <div key={i} className="rounded-lg border overflow-hidden">
-                  <div className="px-4 py-2 bg-muted/30 border-b flex items-center gap-2 flex-wrap">
-                    {srPlanet && <PlanetSymbol name={srPlanet} showImage />}
-                    {aType && ASPECT_IMAGES[aType] && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={ASPECT_IMAGES[aType]} alt={aType} className="size-4 object-contain" />
-                    )}
-                    {nPlanet && <PlanetSymbol name={nPlanet} showImage />}
-                    <h4 className="text-sm font-semibold ml-1">{header || `Aspect ${i + 1}`}</h4>
-                  </div>
-                  <div className="px-4 py-3">
-                    <p className="text-sm leading-relaxed text-foreground">{String(forecast)}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        );
-      })()} */}
       {/* 6. Solar Return Aspects Report — Unified Grouping */}
       {aspectsReport !== null && aspectsReport !== undefined && (() => {
         const items: any[] = Array.isArray(aspectsReport) ? aspectsReport : [];
@@ -2381,18 +2590,18 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
               return (
                 <div key={i} className="rounded-lg border overflow-hidden">
                   {/* Header: Centered with Icons using existing AstroHeaderParts logic */}
-                  <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
+                  <div className="px-4 py-2.5 horoscope-section-header text-center">
                     <AstroHeaderParts title={unifiedTitle} />
                   </div>
 
-                  <div className="px-4 py-3">
-                    <p className="text-sm leading-relaxed text-foreground text-center">
+                  <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                    <p className="leading-relaxed text-center">
                       {String(forecast)}
                     </p>
                     <div className="mt-2 flex justify-center">
                       <button
                         onClick={() => trigger(unifiedTitle, String(forecast), a, areaOfInquiry, unifiedTitle)}
-                        className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
+                        className="horoscope-show-more"
                       >
                         Show More
                       </button>
@@ -2426,11 +2635,9 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
   // Normalise transit relation rows — handles both Lambda and AstrologyAPI shapes
   const transitRows: any[] = (() => {
     if (!data) return [];
-    // Lambda: {transit_relation: [...] } or direct array
     if (Array.isArray(data?.transit_relation)) return data.transit_relation;
     if (Array.isArray(data?.transits)) return data.transits;
     if (Array.isArray(data)) return data;
-    // AstrologyAPI weekly shape: {transit_planet: {Sun: {...}, ... } } — flatten
     if (data?.transit_planet && typeof data.transit_planet === "object") {
       return Object.entries(data.transit_planet).flatMap(([tPlanet, aspects]: [string, any]) =>
         Object.entries(aspects ?? {}).map(([nPlanet, detail]: [string, any]) => ({
@@ -2445,12 +2652,10 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
     return [];
   })();
 
-  // Lunar metrics rows
   const lunarRows: any[] = (() => {
     const src = lunarMetrics ?? data?.lunar_data ?? data?.lunar_metrics;
     if (!src) return [];
     if (Array.isArray(src)) return src;
-    // Object keyed by month or numeric index
     if (typeof src === "object") return Object.values(src);
     return [];
   })();
@@ -2462,8 +2667,8 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {/* Transit Chart Image Section */}
       {transitWheelSvg && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
-            <h3 className="text-sm font-semibold text-center w-full">Transit Chart</h3>
+          <div className="px-4 py-2.5 horoscope-section-header text-center">
+            <h3 className="text-[20px] font-semibold text-center w-full" style={{ fontFamily: "'Roboto', sans-serif" }}>Transit Chart</h3>
           </div>
           <div className="p-6 bg-slate-950 flex justify-center border-b border-white/5">
             <div className="relative group max-w-lg w-full">
@@ -2482,22 +2687,22 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {/* Future Lunar Metrics Table — specifically for monthly v3 */}
       {tabSlug === "tropical_transits_monthly_v3" && lunarMetrics && (
         <div className="space-y-6">
-          <div className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
-              <h3 className="text-sm font-semibold text-center w-full">Future Lunar Metrics</h3>
+          <div className="horoscope-table-container">
+            <div className="horoscope-table-header">
+              <h3>Future Lunar Metrics</h3>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="horoscope-table-wrapper">
+              <table className="horoscope-table">
                 <thead>
-                  <tr className="border-b bg-muted/20">
+                  <tr>
                     {["Month", "Moon Day", "Moon Illumination", "Moon Phase", "Moon Sign"].map((h) => (
-                      <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                      <th key={h}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b bg-background">
-                    <td className="px-3 py-2 text-xs font-medium">
+                  <tr>
+                    <td>
                       {(() => {
                         const mStr = String(lunarMetrics.month || "");
                         if (mStr.includes("-")) {
@@ -2507,12 +2712,10 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                         return mStr || "—";
                       })()}
                     </td>
-                    <td className="px-3 py-2 text-xs">{lunarMetrics.moon_day ?? "—"}</td>
-                    <td className="px-3 py-2 text-xs">{lunarMetrics.moon_illumination != null ? `${lunarMetrics.moon_illumination}%` : "—"}</td>
-                    <td className="px-3 py-2 text-xs">{lunarMetrics.moon_phase ?? "—"}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {lunarMetrics.moon_sign ? <ZodiacSymbol sign={lunarMetrics.moon_sign} /> : "—"}
-                    </td>
+                    <td>{lunarMetrics.moon_day ?? "—"}</td>
+                    <td>{lunarMetrics.moon_illumination != null ? `${lunarMetrics.moon_illumination}%` : "—"}</td>
+                    <td>{lunarMetrics.moon_phase ?? "—"}</td>
+                    <td>{lunarMetrics.moon_sign ? <ZodiacSymbol sign={lunarMetrics.moon_sign} /> : "—"}</td>
                   </tr>
                 </tbody>
               </table>
@@ -2534,15 +2737,15 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                 const fullTitle = `${sec.label}${sec.val ? `: ${sec.val}` : ""}`;
                 return (
                   <div key={sec.key} className="rounded-lg border overflow-hidden">
-                    <div className="px-4 py-2.5 bg-muted/40 border-b flex items-center justify-center gap-2">
+                    <div className="px-4 py-2.5 horoscope-section-header flex items-center justify-center gap-2">
                       <h4 className="text-sm font-semibold text-center w-full uppercase tracking-wider">{fullTitle}</h4>
                     </div>
-                    <div className="px-4 py-3">
-                      <p className="text-sm leading-relaxed line-clamp-3 text-muted-foreground">{content}</p>
-                      <div className="mt-2 flex justify-center border-t border-white/5 pt-2">
+                    <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                      <p className="leading-relaxed line-clamp-3">{content}</p>
+                      <div className="mt-2 flex justify-center border-t border-black/10 pt-2">
                         <button
                           onClick={() => trigger(fullTitle, content, null, areaOfInquiry)}
-                          className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
+                          className="horoscope-show-more"
                         >
                           Show More
                         </button>
@@ -2564,16 +2767,16 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
 
       {/* Future Tropical Transits Monthly Relation Table — specifically for monthly v3 */}
       {tabSlug === "tropical_transits_monthly_v3" && transitRows.length > 0 && (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
-            <h3 className="text-sm font-semibold text-center w-full">Future Tropical Transits Monthly Relation</h3>
+        <div className="horoscope-table-container">
+          <div className="horoscope-table-header">
+            <h3>Future Tropical Transits Monthly Relation</h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="horoscope-table-wrapper">
+            <table className="horoscope-table">
               <thead>
-                <tr className="border-b bg-muted/20">
+                <tr>
                   {["Date", "Natal Planet", "Type", "Transit Planet"].map((h) => (
-                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -2584,16 +2787,11 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                   const aspType = row.type ?? row.aspect ?? "";
                   const dt = row.date ?? row.transit_date ?? "";
                   return (
-                    <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
-                      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{dt || "—"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5">
-                          {ASPECT_IMAGES[aspType] && <img src={ASPECT_IMAGES[aspType]} alt={aspType} className="size-4 object-contain" />}
-                          <span>{aspType || "—"}</span>
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
+                    <tr key={i}>
+                      <td className="td-mono">{dt || "—"}</td>
+                      <td>{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
+                      <td><AspectSymbol type={aspType} /></td>
+                      <td>{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
                     </tr>
                   );
                 })}
@@ -2605,22 +2803,22 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
 
       {/* Weekly / Monthly Transit Relation Table */}
       {tabSlug !== "tropical_transits_monthly_v3" && transitRows.length > 0 && (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
-            <h3 className="text-sm font-semibold text-center w-full">
+        <div className="horoscope-table-container">
+          <div className="horoscope-table-header">
+            <h3>
               {tabSlug === "tropical_transits_weekly_v2" ? "Tropical Transits Weekly Relation" : `${label} — Transit Aspects`}
             </h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="horoscope-table-wrapper">
+            <table className="horoscope-table">
               <thead>
-                <tr className="border-b bg-muted/20">
+                <tr>
                   {(() => {
                     const headers = tabSlug === "tropical_transits_weekly_v2"
                       ? ["Date", "Transit Planet", "Aspect", "Natal Planet"]
                       : ["Transit Planet", "Aspect", "Natal Planet", "Orb", "Date"];
                     return headers.map((h) => (
-                      <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                      <th key={h}>{h}</th>
                     ));
                   })()}
                 </tr>
@@ -2634,31 +2832,21 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                   const dt = row.date ?? row.transit_date ?? "";
 
                   return (
-                    <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                    <tr key={i}>
                       {tabSlug === "tropical_transits_weekly_v2" ? (
                         <>
-                          <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{dt || "—"}</td>
-                          <td className="px-3 py-2 whitespace-nowrap">{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
-                          <td className="px-3 py-2 whitespace-nowrap">
-                            <span className="inline-flex items-center gap-1.5">
-                              {ASPECT_IMAGES[aspType] && <img src={ASPECT_IMAGES[aspType]} alt={aspType} className="size-4 object-contain" />}
-                              <span>{aspType || "—"}</span>
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap">{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
+                          <td className="td-mono">{dt || "—"}</td>
+                          <td>{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
+                          <td><AspectSymbol type={aspType} /></td>
+                          <td>{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
                         </>
                       ) : (
                         <>
-                          <td className="px-3 py-2 whitespace-nowrap">{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
-                          <td className="px-3 py-2 whitespace-nowrap">
-                            <span className="inline-flex items-center gap-1.5">
-                              {ASPECT_IMAGES[aspType] && <img src={ASPECT_IMAGES[aspType]} alt={aspType} className="size-4 object-contain" />}
-                              <span>{aspType || "—"}</span>
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap">{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
-                          <td className="px-3 py-2 font-mono text-xs">{orb}</td>
-                          <td className="px-3 py-2 text-xs text-muted-foreground">{dt || "—"}</td>
+                          <td>{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
+                          <td><AspectSymbol type={aspType} /></td>
+                          <td>{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
+                          <td className="td-mono">{orb}</td>
+                          <td className="td-mono">{dt || "—"}</td>
                         </>
                       )}
                     </tr>
@@ -2672,27 +2860,27 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
 
       {/* Lunar Return Metrics (monthly only) */}
       {tabSlug !== "tropical_transits_monthly_v3" && !isWeekly && lunarRows.length > 0 && (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center">
-            <h3 className="text-sm font-semibold text-center w-full">Lunar Return Metrics</h3>
+        <div className="horoscope-table-container">
+          <div className="horoscope-table-header">
+            <h3>Lunar Return Metrics</h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="horoscope-table-wrapper">
+            <table className="horoscope-table">
               <thead>
-                <tr className="border-b bg-muted/20">
+                <tr>
                   {["Date / Month", "Moon Day", "Illumination", "Phase", "Moon Sign"].map((h) => (
-                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {lunarRows.map((row: any, i: number) => (
-                  <tr key={i} className={cn("border-b last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/10")}>
-                    <td className="px-3 py-2 text-xs">{row.date ?? row.month ?? `Month ${i + 1}`}</td>
-                    <td className="px-3 py-2 text-xs">{row.moon_day ?? row.day ?? "—"}</td>
-                    <td className="px-3 py-2 text-xs">{row.moon_illumination != null ? `${Number(row.moon_illumination).toFixed(1)}%` : (row.illumination ?? "—")}</td>
-                    <td className="px-3 py-2 text-xs">{row.moon_phase ?? row.phase ?? "—"}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{row.moon_sign ? <ZodiacSymbol sign={row.moon_sign} /> : (row.sign ? <ZodiacSymbol sign={row.sign} /> : "—")}</td>
+                  <tr key={i}>
+                    <td>{row.date ?? row.month ?? `Month ${i + 1}`}</td>
+                    <td>{row.moon_day ?? row.day ?? "—"}</td>
+                    <td>{row.moon_illumination != null ? `${Number(row.moon_illumination).toFixed(1)}%` : (row.illumination ?? "—")}</td>
+                    <td>{row.moon_phase ?? row.phase ?? "—"}</td>
+                    <td>{row.moon_sign ? <ZodiacSymbol sign={row.moon_sign} /> : (row.sign ? <ZodiacSymbol sign={row.sign} /> : "—")}</td>
                   </tr>
                 ))}
               </tbody>
@@ -2702,7 +2890,6 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       )}
 
       {/* AI interpretation cards */}
-      {/* AI interpretation cards */}
       {!aiData && <SectionSkeleton title={`${label} Interpretation`} />}
       {aiData === "error" && <SectionError title={`${label} Interpretation`} />}
       {Array.isArray(aiData) && aiData.map((item: any, i: number) => {
@@ -2710,28 +2897,21 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
         const interpretation = item.interpretation ?? item.data ?? "";
         if (!interpretation) return null;
 
-        // Visual Heading Parser
         const RelationshipHeading = () => {
-          // Patterns: "TransitPlanet Aspect NatalPlanet" or "Planet Aspect Planet"
-          // We look for known planets and aspects in the string
           const planets = Object.keys(PLANET_IMAGES);
           const aspects = Object.keys(ASPECT_IMAGES);
-
-          // Find matches in the title
           const foundPlanets = planets.filter(p => new RegExp(`\\b${p}\\b`, "i").test(title));
           const foundAspect = aspects.find(a => new RegExp(`\\b${a}\\b`, "i").test(title));
 
           if (foundPlanets.length >= 2 && foundAspect) {
-            // Determine p1 and p2 based on order in string
             const p1 = foundPlanets.find(p => title.toLowerCase().indexOf(p.toLowerCase()) < title.toLowerCase().indexOf(foundAspect.toLowerCase()));
             const p2 = foundPlanets.find(p => title.toLowerCase().indexOf(p.toLowerCase()) > title.toLowerCase().indexOf(foundAspect.toLowerCase()));
-
             if (p1 && p2) {
               return (
                 <div className="flex items-center justify-center gap-3">
                   <PlanetSymbol name={p1} />
                   <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 shadow-sm">
-                    {ASPECT_IMAGES[foundAspect] && <img src={ASPECT_IMAGES[foundAspect]} alt={foundAspect} className="size-4 object-contain" />}
+                    <AspectSymbol type={foundAspect} showText={false} />
                     <span className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">{foundAspect}</span>
                   </div>
                   <PlanetSymbol name={p2} />
@@ -2740,7 +2920,6 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
             }
           }
 
-          // Fallback to simple regex if above failed
           const relMatch = title.match(/(\b[A-Z][a-z]+\b)\s+(\b[A-Z][a-z]+\b)\s+(\b[A-Z][a-z]+\b)/);
           if (relMatch) {
             const [, p1, asp, p2] = relMatch;
@@ -2748,38 +2927,29 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
               <div className="flex items-center justify-center gap-3">
                 <PlanetSymbol name={p1} />
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 shadow-sm">
-                  {ASPECT_IMAGES[asp] && <img src={ASPECT_IMAGES[asp]} alt={asp} className="size-4 object-contain" />}
+                  <AspectSymbol type={asp} showText={false} />
                   <span className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">{asp}</span>
                 </div>
                 <PlanetSymbol name={p2} />
               </div>
             );
           }
-
           return <span className="uppercase tracking-widest font-bold text-amber-500/80">{title || `${label} ${i + 1}`}</span>;
         };
 
         return (
           <div key={i} className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-3 bg-muted/40 border-b flex items-center justify-center gap-2">
+            <div className="px-4 py-3 horoscope-section-header flex items-center justify-center gap-2">
               <div className="text-sm font-semibold text-center w-full">
                 <RelationshipHeading />
               </div>
-              {(() => {
-                const titleStr = String(title);
-                const match = titleStr.match(/(\b[A-Z][a-z]+\b)\s+in\s+(\b[A-Z][a-z]+\b)/);
-                if (match && checkDacen(match[1], match[1])) {
-                   // ... decan logic ...
-                }
-                return null;
-              })()}
             </div>
-            <div className="px-4 py-3">
-              <p className="text-sm leading-relaxed">{interpretation}</p>
-              <div className="mt-2 flex justify-center pt-2 border-t border-white/5">
+            <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+              <p className="leading-relaxed">{interpretation}</p>
+              <div className="mt-2 flex justify-center pt-2 border-t border-black/10">
                 <button
                   onClick={() => trigger(title || `${label} ${i + 1}`, interpretation, item, areaOfInquiry)}
-                  className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2"
+                  className="horoscope-show-more"
                 >
                   Show More
                 </button>
@@ -2789,7 +2959,6 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
         );
       })}
 
-      {/* Lunar AI interpretation (monthly only) — from AI Lambda lunar_metrics prompt */}
       {tabSlug !== "tropical_transits_monthly_v3" && !isWeekly && lunarAiData && (() => {
         const items: any[] = Array.isArray(lunarAiData) ? lunarAiData : (typeof lunarAiData === "object" ? [lunarAiData] : []);
         return items.length > 0 ? (
@@ -2797,7 +2966,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
             <h3 className="text-sm font-semibold px-1">Lunar Return AI Interpretation</h3>
             {items.map((item: any, i: number) => (
               <div key={i} className="rounded-lg border overflow-hidden">
-                <div className="px-4 py-2.5 bg-muted/40 border-b flex items-center justify-center gap-2">
+                <div className="px-4 py-2.5 horoscope-section-header flex items-center justify-center gap-2">
                   <h4 className="text-sm font-semibold text-center w-full">{item.title ?? `Lunar Return ${i + 1}`}</h4>
                   {(() => {
                     const titleStr = String(item.title ?? "");
@@ -2818,7 +2987,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                                 <img
                                   src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
                                   alt=""
-                                  className="size-4 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
+                                  className="size-5 cursor-pointer hover:scale-125 transition-all hover:brightness-150 hover:drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]"
                                 />
                               </button>
                             </TooltipTrigger>
@@ -2832,10 +3001,10 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                     return null;
                   })()}
                 </div>
-                <div className="px-4 py-3">
-                  <p className="text-sm leading-relaxed">{item.interpretation ?? item.data ?? JSON.stringify(item)}</p>
+                <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                  <p className="leading-relaxed">{item.interpretation ?? item.data ?? JSON.stringify(item)}</p>
                   <div className="mt-2 flex justify-center">
-                    <button onClick={() => trigger(item.title ?? "Lunar Return", item.interpretation ?? "", item, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                    <button onClick={() => trigger(item.title ?? "Lunar Return", item.interpretation ?? "", item, areaOfInquiry)} className="horoscope-show-more">Show More</button>
                   </div>
                 </div>
               </div>
@@ -2844,7 +3013,6 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
         ) : null;
       })()}
 
-      {/* Raw data fallback */}
       {data && transitRows.length === 0 && !Array.isArray(aiData) && (
         <details className="rounded-lg border">
           <summary className="px-4 py-2.5 text-sm font-semibold cursor-pointer bg-muted/20 hover:bg-muted/40">{label} Raw Data</summary>
@@ -2854,6 +3022,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
     </div>
   );
 }
+
 
 // ─── Horary Section ───────────────────────────────────────────────────────────
 
@@ -2877,7 +3046,7 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
     if (!text) return null;
     return (
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b flex items-center justify-center gap-2">
+        <div className="px-4 py-2.5 horoscope-section-header flex items-center justify-center gap-2">
           <h4 className="text-sm font-semibold text-center w-full">{title}</h4>
           {(() => {
             const match = title.match(/(\b[A-Z][a-z]+\b)\s+in\s+(\b[A-Z][a-z]+\b)/);
@@ -2894,7 +3063,7 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
                       <img
                         src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
                         alt=""
-                        className="size-4 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
+                        className="size-5 cursor-pointer hover:scale-125 transition-all hover:brightness-150 hover:drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]"
                       />
                     </button>
                   </TooltipTrigger>
@@ -2907,10 +3076,10 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
             return null;
           })()}
         </div>
-        <div className="px-4 py-3">
-          <p className="text-sm leading-relaxed">{text}</p>
+        <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+          <p className="leading-relaxed">{text}</p>
           <div className="mt-2 flex justify-center">
-            <button onClick={() => trigger(title, text, { title, data: text }, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+            <button onClick={() => trigger(title, text, { title, data: text }, areaOfInquiry)} className="horoscope-show-more">Show More</button>
           </div>
         </div>
       </div>
@@ -2923,14 +3092,14 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
     if (!entries.length) return null;
     return (
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">{title}</h3></div>
+        <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">{title}</h3></div>
         <div className="divide-y">
           {entries.map(([k, v]) => (
-            <div key={k} className="px-4 py-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{k.replace(/_/g, " ")}</h4>
-              <p className="text-sm leading-relaxed">{String(v)}</p>
+            <div key={k} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+              <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{k.replace(/_/g, " ")}</h4>
+              <p className="leading-relaxed">{String(v)}</p>
               <div className="mt-1.5 flex justify-center">
-                <button onClick={() => trigger(k, String(v), obj, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                <button onClick={() => trigger(k, String(v), obj, areaOfInquiry)} className="horoscope-show-more">Show More</button>
               </div>
             </div>
           ))}
@@ -2965,14 +3134,14 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
       {/* Summary — timeline entries */}
       {Array.isArray(inner?.summary?.recommendation_on_date_and_timeline) && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Summary</h3></div>
+          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Summary</h3></div>
           <div className="divide-y">
             {inner.summary.recommendation_on_date_and_timeline.map((s: any, i: number) => (
-              <div key={i} className="px-4 py-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{s.timeline_title}</h4>
-                <p className="text-sm leading-relaxed">{s.timeline_data}</p>
+              <div key={i} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{s.timeline_title}</h4>
+                <p className="leading-relaxed">{s.timeline_data}</p>
                 <div className="mt-1.5 flex justify-center">
-                  <button onClick={() => trigger(s.timeline_title, s.timeline_data, s, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                  <button onClick={() => trigger(s.timeline_title, s.timeline_data, s, areaOfInquiry)} className="horoscope-show-more">Show More</button>
                 </div>
               </div>
             ))}
@@ -2983,12 +3152,12 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
       {/* Summary — answer array */}
       {Array.isArray(inner?.summary?.answer) && inner.summary.answer.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20 text-center"><h3 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Answer</h3></div>
+          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Answer</h3></div>
           <div className="divide-y">
             {inner.summary.answer.map((a: any, i: number) => (
-              <div key={i} className="px-4 py-3">
-                {a.title && <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{a.title}</h4>}
-                <p className="text-sm leading-relaxed">{a.data ?? a.text ?? String(a)}</p>
+              <div key={i} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                {a.title && <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{a.title}</h4>}
+                <p className="leading-relaxed">{a.data ?? a.text ?? String(a)}</p>
               </div>
             ))}
           </div>
@@ -2998,12 +3167,12 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
       {/* Summary — recommendation array */}
       {Array.isArray(inner?.summary?.recommendation) && inner.summary.recommendation.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Recommendations</h3></div>
+          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Recommendations</h3></div>
           <div className="divide-y">
             {inner.summary.recommendation.map((r: any, i: number) => (
-              <div key={i} className="px-4 py-3">
-                {r.title && <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{r.title}</h4>}
-                <p className="text-sm leading-relaxed">{r.data ?? r.text ?? String(r)}</p>
+              <div key={i} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                {r.title && <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{r.title}</h4>}
+                <p className="leading-relaxed">{r.data ?? r.text ?? String(r)}</p>
               </div>
             ))}
           </div>
@@ -3013,14 +3182,14 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
       {/* Houses */}
       {Array.isArray(inner?.house) && inner.house.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">House Analysis</h3></div>
+          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">House Analysis</h3></div>
           <div className="divide-y">
             {inner.house.map((h: any, i: number) => (
-              <div key={i} className="px-4 py-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{h.title}</h4>
-                <p className="text-sm leading-relaxed">{h.data}</p>
+              <div key={i} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{h.title}</h4>
+                <p className="leading-relaxed">{h.data}</p>
                 <div className="mt-1.5 flex justify-center">
-                  <button onClick={() => trigger(h.title, h.data, h, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                  <button onClick={() => trigger(h.title, h.data, h, areaOfInquiry)} className="horoscope-show-more">Show More</button>
                 </div>
               </div>
             ))}
@@ -3031,19 +3200,19 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
       {/* Planets (inner.planet array) */}
       {Array.isArray(inner?.planet) && inner.planet.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Planet Analysis</h3></div>
+          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Planet Analysis</h3></div>
           <div className="divide-y">
             {inner.planet.map((p: any, i: number) => {
               const pName = p.title?.split(" ")[0];
               return (
-                <div key={i} className="px-4 py-3">
+                <div key={i} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
                   <div className="flex items-center gap-2 mb-1">
                     {pName && PLANET_IMAGES[pName] && <img src={PLANET_IMAGES[pName]} alt={pName} className="size-5 object-contain" />}
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 text-center w-full">{p.title}</h4>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-center w-full">{p.title}</h4>
                   </div>
-                  <p className="text-sm leading-relaxed">{p.data}</p>
+                  <p className="leading-relaxed">{p.data}</p>
                   <div className="mt-1.5 flex justify-center">
-                    <button onClick={() => trigger(p.title, p.data, p, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                    <button onClick={() => trigger(p.title, p.data, p, areaOfInquiry)} className="horoscope-show-more">Show More</button>
                   </div>
                 </div>
               );
@@ -3055,12 +3224,12 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
       {/* Astrological aspects sub-section */}
       {inner?.astrological_aspect && typeof inner.astrological_aspect === "object" && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">Astrological Aspects</h3></div>
+          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Astrological Aspects</h3></div>
           <div className="divide-y">
             {Object.entries(inner.astrological_aspect).map(([k, v]: [string, any]) => (
-              <div key={k} className="px-4 py-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1 text-center w-full">{k.replace(/_/g, " ")}</h4>
-                <p className="text-sm leading-relaxed">{typeof v === "string" ? v : JSON.stringify(v)}</p>
+              <div key={k} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{k.replace(/_/g, " ")}</h4>
+                <p className="leading-relaxed">{typeof v === "string" ? v : JSON.stringify(v)}</p>
               </div>
             ))}
           </div>
@@ -3108,12 +3277,12 @@ function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen, onDeca
     if (!items.length) return null;
     return (
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/40 border-b text-center"><h3 className="text-sm font-semibold text-center w-full">{title}</h3></div>
+        <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">{title}</h3></div>
         <div className="divide-y">
           {items.map((item: any, i: number) => (
-            <div key={i} className="px-4 py-3">
+            <div key={i} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
               <div className="flex items-center justify-center gap-2 mb-1">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600 text-center">{item.title ?? item.name}</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-center">{item.title ?? item.name}</h4>
                 {(() => {
                   const titleStr = String(item.title ?? item.name ?? "");
                   // Simple parsing for "Planet in Sign" pattern
@@ -3134,7 +3303,7 @@ function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen, onDeca
                               <img
                                 src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
                                 alt=""
-                                className="size-4 cursor-pointer hover:scale-125 transition-transform brightness-0 invert"
+                                className="size-5 cursor-pointer hover:scale-125 transition-all hover:brightness-150 hover:drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]"
                               />
                             </button>
                           </TooltipTrigger>
@@ -3148,9 +3317,9 @@ function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen, onDeca
                   return null;
                 })()}
               </div>
-              <p className="text-sm leading-relaxed">{item.data ?? item.interpretation ?? item.description}</p>
+              <p className="leading-relaxed">{item.data ?? item.interpretation ?? item.description}</p>
               <div className="mt-1.5 flex justify-center">
-                <button onClick={() => trigger(item.title ?? title, item.data ?? item.interpretation ?? "", item, areaOfInquiry)} className="text-xs text-amber-600 hover:text-amber-700 font-medium underline underline-offset-2">Show More</button>
+                <button onClick={() => trigger(item.title ?? title, item.data ?? item.interpretation ?? "", item, areaOfInquiry)} className="horoscope-show-more">Show More</button>
               </div>
             </div>
           ))}
@@ -3240,7 +3409,7 @@ function CityAutocomplete({ value, onChange, label = "Place of Birth", disabled 
   const search = useCallback((q: string) => {
     if (q.length < 2) { setOptions([]); setOpen(false); return; }
     setLoading(true);
-    fetch("/api/admin/astro/city-search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ q }) })
+    fetchWithRetry("/api/admin/astro/city-search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ q }) })
       .then((r) => r.json()).then((d) => { setOptions(d.results ?? []); setOpen((d.results ?? []).length > 0); })
       .catch(() => setOptions([])).finally(() => setLoading(false));
   }, []);
@@ -3395,17 +3564,19 @@ function TabBar({ currentSlug, onSelect }: { currentSlug: string; onSelect: (slu
 
 function BirthBlock({ title, value, onChange, disabled }: { title?: string; value: BirthInput; onChange: (v: BirthInput) => void; disabled?: boolean }) {
   return (
-    <div className="space-y-4">
-      {title && <p className="text-xs font-semibold uppercase tracking-wider text-amber-600">{title}</p>}
-      <div>
-        <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Date of Birth</Label>
-        <DatePicker value={value.dob} onChange={(v) => onChange({ ...value, dob: v })} disabled={disabled} />
+    <div className="space-y-3">
+      {title && <p className="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">{title}</p>}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Date of Birth</Label>
+          <DatePicker value={value.dob} onChange={(v) => onChange({ ...value, dob: v })} disabled={disabled} />
+        </div>
+        <div>
+          <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Time of Birth</Label>
+          <TimePicker value={value.tob} onChange={(v) => onChange({ ...value, tob: v })} disabled={disabled} />
+        </div>
+        <CityAutocomplete value={value.city} onChange={(c) => onChange({ ...value, city: c })} disabled={disabled} />
       </div>
-      <div>
-        <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Time of Birth</Label>
-        <TimePicker value={value.tob} onChange={(v) => onChange({ ...value, tob: v })} disabled={disabled} />
-      </div>
-      <CityAutocomplete value={value.city} onChange={(c) => onChange({ ...value, city: c })} disabled={disabled} />
     </div>
   );
 }
@@ -3437,6 +3608,8 @@ export default function AdminHoroscopePage() {
   const [results, setResults] = useState<Record<string, any> | null>(null);
   const [natalSvg, setNatalSvg] = useState<string | null>(null);
   const [natalSvgTransit, setNatalSvgTransit] = useState<string | null>(null);
+  const [natalSvgP2, setNatalSvgP2] = useState<string | null>(null);
+  const [natalSvgTransitP2, setNatalSvgTransitP2] = useState<string | null>(null);
   const [returnDate, setReturnDate] = useState<string | null>(null);
   const [progress, setProgress] = useState<string[]>([]);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -3460,13 +3633,14 @@ export default function AdminHoroscopePage() {
   // Reset on tab change
   useEffect(() => {
     setResults(null); setNatalSvg(null); setNatalSvgTransit(null);
+    setNatalSvgP2(null); setNatalSvgTransitP2(null);
     setReturnDate(null); setError(null); setProgress([]); setForm(defaultForm());
     setShowScrollTop(false); setShowChartBtn(false); setTransitChartSvg(null);
   }, [currentSlug]);
 
   // Pre-fetch decan possibilities (distinct planet+sign pairs)
   useEffect(() => {
-    fetch("/api/astro-decan/fetch-planet-signs")
+    fetchWithRetry("/api/astro-decan/fetch-planet-signs", { method: "GET" })
       .then((r) => r.json())
       .then((data) => {
         if (data?.results && Array.isArray(data.results)) {
@@ -3543,6 +3717,8 @@ export default function AdminHoroscopePage() {
     setResults({}); // Initialize results so the section shows up immediately
     setNatalSvg(null);
     setNatalSvgTransit(null);
+    setNatalSvgP2(null);
+    setNatalSvgTransitP2(null);
     setReturnDate(null);
     setProgress([]);
 
@@ -3999,24 +4175,27 @@ export default function AdminHoroscopePage() {
         );
 
         // Wheels
+        // Person 1
         relTasks.push(
-          callNatalWheel(
-            freeWheelBody(form.person1) as unknown as Record<string, unknown>
-          ).then((r) => {
-            const svg = r?.results?.output;
-            if (svg) {
-              setNatalSvg(svg);
-              setShowChartBtn(true);
-            }
-          })
+          callCompute("natal_wheel_chart", birth1 as unknown as Record<string, unknown>)
+            .then((w) => { if (w?.chart_url) { setNatalSvg(w.chart_url); setShowChartBtn(true); } })
+            .catch(() => { })
         );
         relTasks.push(
-          callNatalWheel(
-            freeWheelBody(form.person2) as unknown as Record<string, unknown>
-          ).then((r) => {
-            const svg = r?.results?.output;
-            if (svg) setNatalSvgTransit(svg);
-          })
+          callNatalWheel(freeWheelBody(form.person1) as unknown as Record<string, unknown>)
+            .then((r) => { if (r?.results?.output) { setNatalSvgTransit(r.results.output); setShowChartBtn(true); } })
+            .catch(() => { })
+        );
+        // Person 2
+        relTasks.push(
+          callCompute("natal_wheel_chart", birth2 as unknown as Record<string, unknown>)
+            .then((w) => { if (w?.chart_url) { setNatalSvgP2(w.chart_url); } })
+            .catch(() => { })
+        );
+        relTasks.push(
+          callNatalWheel(freeWheelBody(form.person2) as unknown as Record<string, unknown>)
+            .then((r) => { if (r?.results?.output) { setNatalSvgTransitP2(r.results.output); } })
+            .catch(() => { })
         );
 
         await Promise.allSettled(relTasks);
@@ -4077,16 +4256,14 @@ export default function AdminHoroscopePage() {
             freeNatalWheelChart: natalSvg ?? "",
             freeNatalWheelChartForTrasit: natalSvgTransit ?? "",
           };
-          fetch(
+          fetchWithRetry(
             "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(savePayload),
             },
-          ).catch(() => {
-            /* fire-and-forget — save failure does not block the user */
-          });
+          ).catch(() => { });
         } catch {
           /* ignore save errors */
         }
@@ -4110,7 +4287,7 @@ export default function AdminHoroscopePage() {
   const isSolarReturn = currentSlug === "solar_return_v2";
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] lg:h-screen overflow-hidden flex flex-col">
+    <div className="horoscope-toolkit h-[calc(100vh-3.5rem)] lg:h-screen overflow-hidden flex flex-col" style={{ background: '#0a0c10' }}>
       {chartModal && <ChartImageModal src={chartModal} open={!!chartModal} onClose={() => setChartModal(null)} />}
 
       {/* Horizontal tab bar with scroll arrows */}
@@ -4139,7 +4316,7 @@ export default function AdminHoroscopePage() {
                 {currentTab.type === "single" ? (
                   <BirthBlock value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading} />
                 ) : (
-                  <div className="grid md:grid-cols-2 gap-6">
+                  <div className="flex flex-col gap-6">
                     <BirthBlock title="Person 1 (Self)" value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading} />
                     <BirthBlock title="Person 2 (Partner)" value={form.person2} onChange={(v) => setForm((f) => ({ ...f, person2: v }))} disabled={loading} />
                   </div>
@@ -4219,152 +4396,176 @@ export default function AdminHoroscopePage() {
 
                 return (
                   <div className="space-y-6">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold">Results</h2>
-                  <Badge variant="outline" className="text-amber-600 border-amber-400 text-xs">{currentTab.label}</Badge>
-                  <button onClick={printResult} className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors border rounded px-2 py-1">
-                    <Printer className="size-3" />Print
-                  </button>
-                </div>
+                    <div className="flex items-center gap-2">
+                      <Zap className="size-5 text-amber-500" />
+                      <h2 className="text-base font-bold">Results</h2>
+                      <Badge variant="outline" className="text-amber-600 border-amber-400 text-xs">{currentTab.label}</Badge>
+                      <button onClick={printResult} className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors border rounded px-2 py-1">
+                        <Printer className="size-3" />Print
+                      </button>
+                    </div>
 
-                {/* Return date banner */}
-                {returnDate && (
-                  <div className="rounded-md border border-amber-400/40 bg-amber-500/10 px-4 py-3">
-                    <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">Return Date: <span className="font-bold">{returnDate}</span></p>
-                  </div>
-                )}
-
-                {/* Natal charts — always show first */}
-                <div id="natal-charts-row">
-                  <NatalChartsRow
-                    svg1={natalSvg}
-                    svg2={natalSvgTransit}
-                    label1={isTwoPersonAiTab ? "Person 1 Natal Wheel" : "Natal Wheel Chart (AstrologyAPI)"}
-                    label2={isTwoPersonAiTab ? "Person 2 Natal Wheel" : "Natal Wheel Chart (FreeAstrology)"}
-                    onExpandImg={(src) => setChartModal(src)}
-                  />
-                </div>
-
-                {/* ─── Planet Return Summary ──────────────────── */}
-                {isPlanetReturn && (
-                  <PlanetReturnSummaryTable tab={currentSlug} birth={form.person1} returnDate={returnDate} natalData={natalData} />
-                )}
-
-                {/* ─── Solar Return ───────────────────────────── */}
-                {isSolarReturn && (
-                  <SolarReturnSection
-                    details={results.solar_return_details}
-                    planets={results.solar_return_planets}
-                    cusps={results.solar_return_cusps}
-                    aspects={results.solar_return_aspects}
-                    planetReport={results.solar_return_planet_report}
-                    aspectsReport={results.solar_return_aspects_report}
-                    aiData={ai}
-                    areaOfInquiry={form.areaOfInquiry}
-                    checkDacen={checkDacen}
-                    onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                  />
-                )}
-
-                {/* ─── Saturn Return also shows solar return ──── */}
-                {currentSlug === "saturn_return_v2" && results.solar_return_details && (
-                  <SolarReturnSection
-                    details={results.solar_return_details}
-                    planets={results.solar_return_planets}
-                    cusps={results.solar_return_cusps}
-                    aspects={results.solar_return_aspects}
-                    planetReport={results.solar_return_planet_report}
-                    aspectsReport={results.solar_return_aspects_report}
-                    aiData={null}
-                    areaOfInquiry={form.areaOfInquiry}
-                    checkDacen={checkDacen}
-                    onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                  />
-                )}
-
-                {/* ─── Transits ───────────────────────────────── */}
-                {isTransit && (
-                  <TransitSection
-                    data={results.transit_data}
-                    lunarMetrics={results.lunar_metrics}
-                    aiData={currentSlug === "tropical_transits_weekly_v2" ? ai.tropical_transits_weekly : ai.tropical_transits_monthly}
-                    lunarAiData={currentSlug === "tropical_transits_monthly_v3" ? ai.lunar_metrics : undefined}
-                    tabSlug={currentSlug}
-                    areaOfInquiry={form.areaOfInquiry}
-                    checkDacen={checkDacen}
-                    onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                    transitWheelSvg={transitChartSvg}
-                    setChartModal={setChartModal}
-                  />
-                )}
-
-                {/* ─── Horary ─────────────────────────────────── */}
-                {isHorary && (
-                  <HorarySection
-                    data={ai.horary_chart_question}
-                    areaOfInquiry={form.areaOfInquiry}
-                    checkDacen={checkDacen}
-                    onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                  />
-                )}
-
-                {/* ─── Two-person relationship (all 8 AI sections) ─ */}
-                {isTwoPersonAiTab && (
-                  <RelationshipSection
-                    aiMap={ai}
-                    areaOfInquiry={form.areaOfInquiry}
-                    tabSlug={currentSlug}
-                    checkDacen={checkDacen}
-                    onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                  />
-                )}
-
-                {/* ─── Natal chart sections (all single tabs + planet return tabs) ─ */}
-                {natalData && (
-                  <div className="space-y-6">
-                    {!isMainTransitTab && (
-                      <>
-                        <PlanetsSection
-                          planets={natalData.planets}
-                          aiData={ai.western_horoscope_planets}
-                          areaOfInquiry={form.areaOfInquiry}
-                          checkDacen={checkDacen}
-                          onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                        />
-                        <div className="rounded-lg border overflow-hidden">
-                          <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">House Information</h2></div>
-                          <div className="p-4">
-                            <HousesSection houses={natalData.houses} planets={natalData.planets} aiData={ai.western_horoscope_houses} areaOfInquiry={form.areaOfInquiry} />
-                          </div>
-                        </div>
-                        <div className="rounded-lg border overflow-hidden">
-                          <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-400/20"><h2 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Dharma & Karma</h2></div>
-                          <div className="p-4">
-                            <DharmaKarmaSection data={ai.dharma_karma} rawData={natalData} areaOfInquiry={form.areaOfInquiry} />
-                          </div>
-                        </div>
-                        <div className="rounded-lg border overflow-hidden">
-                          <div className="px-4 py-2.5 bg-muted/40 border-b"><h2 className="text-sm font-semibold">Aspects</h2></div>
-                          <div className="p-4">
-                            <AspectsSection aspects={natalData.aspects} planets={natalData.planets} aiData={ai.western_horoscope_aspects} areaOfInquiry={form.areaOfInquiry} />
-                          </div>
-                        </div>
-                        <AscMidheavenVertexSection natalData={natalData} aiData={ai.western_horoscope_ascendant_midheaven_vertex} areaOfInquiry={form.areaOfInquiry} />
-                        <LilithSection
-                          lilith={natalData.lilith}
-                          aiData={ai.western_horoscope_lilith}
-                          areaOfInquiry={form.areaOfInquiry}
-                          checkDacen={checkDacen}
-                          onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                        />
-                      </>
+                    {/* Return date banner */}
+                    {returnDate && (
+                      <div className="rounded-md border border-amber-400/40 bg-amber-500/10 px-4 py-3">
+                        <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">Return Date: <span className="font-bold">{returnDate}</span></p>
+                      </div>
                     )}
-                  </div>
-                )}
 
-                {isPlanetReturn && (
-                  <PlanetReturnInterpretation tab={currentSlug} aiData={ai[currentSlug]} areaOfInquiry={form.areaOfInquiry} />
-                )}
+                    {/* Natal charts — always show first */}
+                    <div id="natal-charts-row" className="space-y-4">
+                      <NatalChartsRow
+                        svgs={[natalSvg, natalSvgTransit]}
+                        labels={[
+                          isTwoPersonAiTab ? "Person 1 (AstrologyAPI)" : "Natal Wheel Chart (AstrologyAPI)",
+                          isTwoPersonAiTab ? "Person 1 (FreeAstrology)" : "Natal Wheel Chart (FreeAstrology)"
+                        ]}
+                        onExpandImg={(src) => setChartModal(src)}
+                      />
+                      <NatalChartsRow
+                        svgs={[natalSvgP2, natalSvgTransitP2]}
+                        labels={[
+                          "Person 2 (AstrologyAPI)",
+                          "Person 2 (FreeAstrology)"
+                        ]}
+                        onExpandImg={(src) => setChartModal(src)}
+                      />
+                    </div>
+
+                    {/* ─── Planet Return Summary ──────────────────── */}
+                    {isPlanetReturn && (
+                      <PlanetReturnSummaryTable tab={currentSlug} birth={form.person1} returnDate={returnDate} natalData={natalData} />
+                    )}
+
+                    {/* ─── Solar Return ───────────────────────────── */}
+                    {isSolarReturn && (
+                      <SolarReturnSection
+                        details={results.solar_return_details}
+                        planets={results.solar_return_planets}
+                        cusps={results.solar_return_cusps}
+                        aspects={results.solar_return_aspects}
+                        planetReport={results.solar_return_planet_report}
+                        aspectsReport={results.solar_return_aspects_report}
+                        aiData={ai}
+                        areaOfInquiry={form.areaOfInquiry}
+                        checkDacen={checkDacen}
+                        onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                      />
+                    )}
+
+                    {/* ─── Saturn Return also shows solar return ──── */}
+                    {currentSlug === "saturn_return_v2" && results.solar_return_details && (
+                      <SolarReturnSection
+                        details={results.solar_return_details}
+                        planets={results.solar_return_planets}
+                        cusps={results.solar_return_cusps}
+                        aspects={results.solar_return_aspects}
+                        planetReport={results.solar_return_planet_report}
+                        aspectsReport={results.solar_return_aspects_report}
+                        aiData={null}
+                        areaOfInquiry={form.areaOfInquiry}
+                        checkDacen={checkDacen}
+                        onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                      />
+                    )}
+
+                    {/* ─── Transits ───────────────────────────────── */}
+                    {isTransit && (
+                      <TransitSection
+                        data={results.transit_data}
+                        lunarMetrics={results.lunar_metrics}
+                        aiData={currentSlug === "tropical_transits_weekly_v2" ? ai.tropical_transits_weekly : ai.tropical_transits_monthly}
+                        lunarAiData={currentSlug === "tropical_transits_monthly_v3" ? ai.lunar_metrics : undefined}
+                        tabSlug={currentSlug}
+                        areaOfInquiry={form.areaOfInquiry}
+                        checkDacen={checkDacen}
+                        onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                        transitWheelSvg={transitChartSvg}
+                        setChartModal={setChartModal}
+                      />
+                    )}
+
+                    {/* ─── Horary ─────────────────────────────────── */}
+                    {isHorary && (
+                      <HorarySection
+                        data={ai.horary_chart_question}
+                        areaOfInquiry={form.areaOfInquiry}
+                        checkDacen={checkDacen}
+                        onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                      />
+                    )}
+
+                    {/* ─── Two-person relationship (all 8 AI sections) ─ */}
+                    {isTwoPersonAiTab && (
+                      <RelationshipSection
+                        aiMap={ai}
+                        areaOfInquiry={form.areaOfInquiry}
+                        tabSlug={currentSlug}
+                        checkDacen={checkDacen}
+                        onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                      />
+                    )}
+
+                    {/* ─── Natal chart sections (all single tabs + planet return tabs) ─ */}
+                    {natalData && (
+                      <div className="space-y-6">
+                        {(!isMainTransitTab && currentSlug !== "friendship_report_tropical_v2") && (
+                          <>
+                            <PlanetsSection
+                              planets={[
+                                ...(natalData?.planets || []),
+                                ...(natalData?.node && !(natalData.planets || []).some((p: any) => p.name === "Node") ? [{ name: "Node", ...natalData.node }] : []),
+                                ...(natalData?.chiron && !(natalData.planets || []).some((p: any) => p.name === "Chiron") ? [{ name: "Chiron", ...natalData.chiron }] : []),
+                                ...(natalData?.fortune && !(natalData.planets || []).some((p: any) => p.name === "Part of Fortune") ? [{ name: "Part of Fortune", ...natalData.fortune }] : []),
+                              ]}
+                              aiData={ai.western_horoscope_planets}
+                              areaOfInquiry={form.areaOfInquiry}
+                              checkDacen={checkDacen}
+                              onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                            />
+                            <div className="rounded-lg border overflow-hidden">
+                              <div className="px-4 py-2.5 horoscope-section-header flex items-center gap-2">
+                                <Home className="size-4 text-amber-600" />
+                                <h2 className="text-sm font-semibold">House Information</h2>
+                              </div>
+                              <div className="p-4">
+                                <HousesSection houses={natalData.houses} planets={natalData.planets} aiData={ai.western_horoscope_houses} areaOfInquiry={form.areaOfInquiry} />
+                              </div>
+                            </div>
+                            <div className="rounded-lg border overflow-hidden">
+                              <div className="px-4 py-2.5 horoscope-section-header flex items-center gap-2">
+                                <Sparkles className="size-4" style={{ color: '#f1f1f1' }} />
+                                <h2 className="text-sm font-semibold" style={{ color: '#f1f1f1' }}>Dharma & Karma</h2>
+                              </div>
+                              <div className="p-4">
+                                <DharmaKarmaSection data={ai.dharma_karma} rawData={natalData} areaOfInquiry={form.areaOfInquiry} />
+                              </div>
+                            </div>
+                            <div className="rounded-lg border overflow-hidden">
+                              <div className="px-4 py-2.5 horoscope-section-header flex items-center gap-2">
+                                <Link className="size-4 text-amber-600" />
+                                <h2 className="text-sm font-semibold">Aspects</h2>
+                              </div>
+                              <div className="p-4">
+                                <AspectsSection aspects={natalData.aspects} planets={natalData.planets} aiData={ai.western_horoscope_aspects} areaOfInquiry={form.areaOfInquiry} />
+                              </div>
+                            </div>
+                            <AscMidheavenVertexSection natalData={natalData} aiData={ai.western_horoscope_ascendant_midheaven_vertex} areaOfInquiry={form.areaOfInquiry} />
+                            <LilithSection
+                              lilith={natalData.lilith}
+                              aiData={ai.western_horoscope_lilith}
+                              areaOfInquiry={form.areaOfInquiry}
+                              checkDacen={checkDacen}
+                              onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                            />
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {isPlanetReturn && (
+                      <PlanetReturnInterpretation tab={currentSlug} aiData={ai[currentSlug]} areaOfInquiry={form.areaOfInquiry} />
+                    )}
                   </div>
                 );
               })()}

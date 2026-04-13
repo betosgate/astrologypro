@@ -41,6 +41,7 @@ export interface AvailableSlot {
   availabilityStartTime?: string;
   availabilityEndTime?: string;
   availabilitySlotIntervalMinutes?: number;
+  availabilityServiceId?: string | null;
   source: "template" | "legacy" | "override";
 }
 
@@ -48,6 +49,8 @@ interface GetAvailableSlotsParams {
   date: string;
   templates?: AvailabilityTemplateConfig[];
   serviceId?: string | null;
+  /** When true, ignore service_id filtering and return slots from all templates */
+  allTemplates?: boolean;
   weeklySlots: SlotConfig[];
   bookedSlots: BookedSlot[];
   overrides: Override[];
@@ -60,6 +63,7 @@ interface AvailabilityWindow {
   availabilityId?: string;
   availabilityTitle?: string;
   availabilityDescription?: string | null;
+  availabilityServiceId?: string | null;
   timezone: string;
   startTime: string;
   endTime: string;
@@ -150,6 +154,7 @@ function buildWindowsForDate({
   weeklySlots,
   overrides,
   serviceId,
+  allTemplates,
   timezone,
   durationMinutes,
 }: Omit<GetAvailableSlotsParams, "bookedSlots">): AvailabilityWindow[] {
@@ -175,10 +180,12 @@ function buildWindowsForDate({
   const templateWindows = (templates ?? [])
     .filter((template) => {
       if (template.isActive === false) return false;
-      if (serviceId) {
-        if (template.serviceId !== serviceId) return false;
-      } else if (template.serviceId) {
-        return false;
+      if (!allTemplates) {
+        if (serviceId) {
+          if (template.serviceId !== serviceId) return false;
+        } else if (template.serviceId) {
+          return false;
+        }
       }
       if (!template.weekdays?.includes(dayOfWeek)) return false;
       return date >= template.startDate && date <= template.endDate;
@@ -188,6 +195,7 @@ function buildWindowsForDate({
       availabilityId: template.id,
       availabilityTitle: template.title,
       availabilityDescription: template.description ?? null,
+      availabilityServiceId: template.serviceId ?? null,
       timezone: template.timezone || timezone,
       startTime: template.startTime,
       endTime: template.endTime,
@@ -211,6 +219,7 @@ export function getAvailableSlots({
   date,
   templates = [],
   serviceId,
+  allTemplates,
   weeklySlots,
   bookedSlots,
   overrides,
@@ -221,6 +230,7 @@ export function getAvailableSlots({
     date,
     templates,
     serviceId,
+    allTemplates,
     weeklySlots,
     overrides,
     durationMinutes,
@@ -254,6 +264,7 @@ export function getAvailableSlots({
         availabilityStartTime: window.startTime,
         availabilityEndTime: window.endTime,
         availabilitySlotIntervalMinutes: stepMinutes,
+        availabilityServiceId: window.availabilityServiceId ?? null,
         source: window.source,
       };
 

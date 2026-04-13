@@ -389,6 +389,18 @@ export function ProgramWorkspace({
                   const isExpanded = lesson.id === expandedLessonId;
                   const isLocked = lesson.is_locked;
 
+                  const handleLessonToggle = () => {
+                    if (isLocked) {
+                      toast.warning("Locked", {
+                        description:
+                          lesson.lock_reason ??
+                          "Complete the previous lesson first to continue in sequence.",
+                      });
+                      return;
+                    }
+                    setExpandedLessonId((cur) => (cur === lesson.id ? null : lesson.id));
+                  };
+
                   return (
                     <li key={lesson.id}>
                       <div
@@ -399,11 +411,8 @@ export function ProgramWorkspace({
                       >
                         <button
                           type="button"
-                          onClick={() =>
-                            setExpandedLessonId((cur) =>
-                              cur === lesson.id ? null : lesson.id,
-                            )
-                          }
+                          onClick={handleLessonToggle}
+                          aria-disabled={isLocked}
                           className="w-full text-left p-4 flex items-start gap-3"
                         >
                           <div className="mt-0.5 shrink-0">
@@ -446,45 +455,31 @@ export function ProgramWorkspace({
                           )}
                         </button>
 
-                        {isExpanded && (
+                        {isExpanded && !isLocked && (
                           <div className="border-t px-4 py-4 space-y-4">
-                            {isLocked ? (
-                              /* Locked — show description + lock message only */
-                              <>
-                                {lesson.description && (
-                                  <p className="text-xs text-muted-foreground leading-relaxed">
-                                    {lesson.description}
-                                  </p>
-                                )}
-                                <p className="text-xs text-muted-foreground italic">
-                                  {lesson.lock_reason ?? "Complete the previous lesson first to continue in sequence."}
-                                </p>
-                              </>
-                            ) : (
-                              /* Unlocked — inline lesson viewer replaces the deep-link CTA */
-                              <>
-                                <InlineLessonViewer
-                                  lessonId={lesson.id}
-                                  programId={programId}
-                                  categoryId={selectedCategory.id}
-                                />
-                                <div className="flex justify-end pt-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    asChild
-                                    className="text-xs text-muted-foreground gap-1.5"
+                            {/* Unlocked — inline lesson viewer replaces the deep-link CTA */}
+                            <>
+                              <InlineLessonViewer
+                                lessonId={lesson.id}
+                                programId={programId}
+                                categoryId={selectedCategory.id}
+                              />
+                              <div className="flex justify-end pt-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  asChild
+                                  className="text-xs text-muted-foreground gap-1.5"
+                                >
+                                  <Link
+                                    href={`/trainee/training/${programId}/${selectedCategory.id}/${lesson.id}`}
                                   >
-                                    <Link
-                                      href={`/trainee/training/${programId}/${selectedCategory.id}/${lesson.id}`}
-                                    >
-                                      <ExternalLink className="size-3" />
-                                      Open full page
-                                    </Link>
-                                  </Button>
-                                </div>
-                              </>
-                            )}
+                                    <ExternalLink className="size-3" />
+                                    Open full page
+                                  </Link>
+                                </Button>
+                              </div>
+                            </>
                           </div>
                         )}
                       </div>

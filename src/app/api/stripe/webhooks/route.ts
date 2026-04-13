@@ -6,14 +6,18 @@ import Stripe from "stripe";
 import {
   sendBookingConfirmation,
   sendBookingAccessInstructions,
+  sendBookingInvoice,
+  sendDivinerNewBookingNotification,
   sendGiftCertificateToRecipient,
   sendGiftCertificateConfirmation,
   sendCommunityPaymentFailed,
   sendCommunitySubscriptionCancelled,
   sendMysterySchoolEnrollmentConfirmation,
   sendCommunityMembershipWelcome,
+  sendComboBundleWelcome,
 } from "@/lib/email";
 import { createCalendarEvent } from "@/lib/google-calendar";
+import { buildCalendarDescription } from "@/lib/calendar-utils";
 import { createMsCalendarEvent } from "@/lib/microsoft-calendar";
 import {
   getSubscriptionPeriodEndIso,
@@ -183,6 +187,18 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
     metadata: { planName: membershipType, planType, status: 'active' },
   })
 
+  // ── Affiliate commission on community/subscription signup ────────────────
+  const communityAffiliateCode = session.metadata?.affiliateCode;
+  if (communityAffiliateCode) {
+    const amountTotal = (session.amount_total ?? 0) / 100;
+    recordSignupAffiliateCommission(
+      communityAffiliateCode,
+      amountTotal,
+      `community-signup:${session.id}`,
+      "subscription"
+    );
+  }
+
   // Send community welcome email for all membership types (idempotent via SES dedup window)
   if (email) {
     sendCommunityMembershipWelcome({
@@ -291,6 +307,346 @@ async function handlePerennialSignupCheckoutCompleted(
   );
 }
 
+async function handleManualBookingCheckoutCompleted(
+  session: Stripe.Checkout.Session
+) {
+  const bookingId = session.metadata?.bookingId;
+  if (!bookingId) return;
+
+  const supabase = createAdminClient();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+
+  // Confirm the booking
+  await supabase
+    .from("bookings")
+    .update({ status: "confirmed" })
+    .eq("id", bookingId);
+
+  // Fetch full booking for calendar + email
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select(
+      "id, scheduled_at, duration_minutes, metadata, questionnaire_responses, diviner_id, client_id, services(name, duration_minutes), diviners(id, display_name), clients(email, full_name)"
+    )
+    .eq("id", bookingId)
+    .single();
+
+  if (!booking) return;
+
+  const svc = (booking as Record<string, unknown>).services as { name: string; duration_minutes: number } | null;
+  const div = (booking as Record<string, unknown>).diviners as { id: string; display_name: string } | null;
+  const clientRecord = (booking as Record<string, unknown>).clients as { email: string; full_name: string | null } | null;
+  const meta = (booking as Record<string, unknown>).metadata as { availability_title?: string; availability_description?: string } | null;
+
+  if (!svc || !div || !clientRecord) return;
+
+  const startTime = new Date(booking.scheduled_at as string);
+  const durationMins = (booking.duration_minutes as number) ?? svc.duration_minutes;
+  const endTime = new Date(startTime.getTime() + durationMins * 60 * 1000);
+  const sessionLink = `${appUrl}/portal/bookings`;
+
+  const formattedDateTime = startTime.toLocaleString("en-US", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+    hour: "numeric", minute: "2-digit",
+  });
+
+  const eventTitle = meta?.availability_title ?? svc.name;
+  const calendarLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`${eventTitle} with ${div.display_name}`)}&dates=${startTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}/${endTime.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}`;
+
+  // Gather all attendee emails from questionnaire_responses
+  const qr = (booking as Record<string, unknown>).questionnaire_responses as Record<string, unknown> | null;
+  const additionalEmails: Array<{ email: string; name?: string }> = [];
+  const spEmail = qr?.secondPersonEmail as string | undefined;
+  const spName = qr?.secondPersonName as string | undefined;
+  const spAttending = qr?.secondPersonAttending as string | undefined;
+  if (spEmail && (spAttending === "yes" || spAttending === "maybe")) {
+    additionalEmails.push({ email: spEmail, name: spName || undefined });
+  }
+  const storedAttendees = Array.isArray(qr?.attendees) ? (qr.attendees as Array<{ name?: string; email?: string }>) : [];
+  for (const a of storedAttendees) {
+    if (a.email && a.email !== clientRecord.email && !additionalEmails.some((x) => x.email === a.email)) {
+      additionalEmails.push({ email: a.email, name: a.name || undefined });
+    }
+  }
+
+  // Send booking confirmation emails to primary client + all attendees
+  const confirmationPromises = [
+    sendBookingConfirmation({
+      clientEmail: clientRecord.email,
+      divinerName: div.display_name,
+      serviceName: eventTitle,
+      dateTime: formattedDateTime,
+      duration: durationMins,
+      sessionLink,
+    }),
+    sendBookingAccessInstructions({
+      clientEmail: clientRecord.email,
+      divinerName: div.display_name,
+      serviceName: eventTitle,
+      dateTime: formattedDateTime,
+      sessionLink,
+      calendarLink,
+    }),
+  ];
+  // Send confirmation to additional attendees
+  for (const attendee of additionalEmails) {
+    confirmationPromises.push(
+      sendBookingConfirmation({
+        clientEmail: attendee.email,
+        divinerName: div.display_name,
+        serviceName: eventTitle,
+        dateTime: formattedDateTime,
+        duration: durationMins,
+        sessionLink,
+      })
+    );
+  }
+  await Promise.all(confirmationPromises).catch((err) =>
+    console.error("[Webhook] Failed to send manual booking confirmation emails:", err)
+  );
+
+  // Push Google Calendar event (createCalendarEvent handles connection lookup internally)
+  {
+    createCalendarEvent(div.id, {
+      title: `${eventTitle} — ${clientRecord.full_name ?? clientRecord.email}`,
+      description: buildCalendarDescription(meta?.availability_description ?? null, appUrl, bookingId),
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
+      clientEmail: clientRecord.email,
+      clientName: clientRecord.full_name ?? undefined,
+      additionalAttendees: additionalEmails,
+    })
+      .then(({ eventId }) =>
+        supabase.from("bookings").update({ google_calendar_event_id: eventId }).eq("id", bookingId)
+      )
+      .catch((err) =>
+        console.error("[Webhook] Failed to create Google Calendar event for manual booking:", err)
+      );
+  }
+}
+
+async function handleComboBundleCheckoutCompleted(
+  session: Stripe.Checkout.Session
+) {
+  const supabase = createAdminClient();
+  const meta = session.metadata ?? {};
+  const userId = meta.userId;
+  const planId = meta.planId;
+  const planName = meta.planName ?? "Combo Bundle";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+
+  if (!userId) {
+    console.error("[Webhook] Combo bundle checkout missing userId", meta);
+    return;
+  }
+
+  const subscriptionId =
+    typeof session.subscription === "string"
+      ? session.subscription
+      : session.subscription?.id;
+
+  // Fetch user metadata (name + username set at signup)
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.admin.getUserById(userId);
+  const email = authUser?.email ?? "";
+  const username = (authUser?.user_metadata?.username as string) ?? "";
+  const displayName =
+    (authUser?.user_metadata?.name as string) ??
+    email.split("@")[0] ??
+    "Diviner";
+
+  if (!username) {
+    console.error(
+      "[Webhook] Combo bundle checkout missing username in user metadata for userId:",
+      userId
+    );
+    return;
+  }
+
+  // ── 1. Upsert diviner record ──────────────────────────────────────────────
+  const { error: divinerError } = await supabase.from("diviners").upsert(
+    {
+      user_id: userId,
+      username,
+      display_name: displayName,
+      stripe_subscription_id: subscriptionId ?? null,
+      subscription_status: "active",
+      onboarding_completed: false,
+      onboarding_step: 1,
+      ...(planId ? { plan_id: planId } : {}),
+    },
+    { onConflict: "user_id" }
+  );
+
+  if (divinerError) {
+    console.error(
+      "[Webhook] Combo bundle: failed to upsert diviner record:",
+      divinerError
+    );
+  }
+
+  // ── 2. Upsert trainee record ──────────────────────────────────────────────
+  const { error: traineeError } = await supabase.from("trainees").upsert(
+    {
+      user_id: userId,
+      name: displayName,
+      email,
+      username,
+      training_status: "active",
+      onboarding_completed: false,
+    },
+    { onConflict: "user_id" }
+  );
+
+  if (traineeError) {
+    console.error(
+      "[Webhook] Combo bundle: failed to upsert trainee record:",
+      traineeError
+    );
+  }
+
+  // ── 3. Log activity ───────────────────────────────────────────────────────
+  logActivity({
+    userId,
+    eventCategory: "subscription",
+    eventType: "subscription.created",
+    metadata: {
+      planName,
+      planId,
+      itemKey: "trainee_diviner_bundle",
+      isCombo: true,
+      status: "active",
+    },
+  });
+
+  // ── 4. Send combo welcome email ───────────────────────────────────────────
+  if (email) {
+    sendComboBundleWelcome({
+      to: email,
+      name: displayName,
+      planName,
+      onboardingUrl: `${appUrl}/onboarding`,
+    }).catch((err) =>
+      console.error(
+        "[Webhook] Failed to send combo bundle welcome email:",
+        err
+      )
+    );
+  }
+
+  // ── Affiliate commission on combo bundle signup ──────────────────────────
+  const comboAffiliateCode = meta.affiliateCode;
+  if (comboAffiliateCode) {
+    const amountTotal = (session.amount_total ?? 0) / 100;
+    recordSignupAffiliateCommission(
+      comboAffiliateCode,
+      amountTotal,
+      `combo-signup:${session.id}`,
+      "signup"
+    );
+  }
+
+  console.log(
+    `[Webhook] Combo bundle provisioned: userId=${userId} username=${username} plan=${planName}`
+  );
+}
+
+/**
+ * Fire-and-forget: record an affiliate commission for a signup/subscription checkout.
+ * Supports both the old `affiliates` (social_advocates) table and the new
+ * `diviner_affiliates` system via `affiliate_referral_links`.
+ */
+async function recordSignupAffiliateCommission(
+  affiliateCode: string,
+  amountDollars: number,
+  orderRef: string,
+  productType: "signup" | "subscription"
+) {
+  try {
+    const admin = createAdminClient();
+
+    // 1. Try old system: `affiliates` (social_advocates) table
+    const { data: advocate } = await admin
+      .from("affiliates")
+      .select("id, commission_percent, total_referrals, total_earned")
+      .eq("referral_code", affiliateCode)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (advocate) {
+      const commissionAmount =
+        Math.round(amountDollars * (advocate.commission_percent / 100) * 100) / 100;
+
+      await admin.from("affiliate_referrals").insert({
+        affiliate_id: advocate.id,
+        commission_amount: commissionAmount,
+        status: "pending",
+        metadata: { order_reference: orderRef, product_type: productType },
+      });
+
+      await admin
+        .from("affiliates")
+        .update({
+          total_referrals: (advocate.total_referrals ?? 0) + 1,
+          total_earned: Number(advocate.total_earned ?? 0) + commissionAmount,
+        })
+        .eq("id", advocate.id);
+
+      console.log(
+        `[Webhook] Affiliate commission (advocate) recorded: code=${affiliateCode} amount=$${commissionAmount} ref=${orderRef}`
+      );
+      return;
+    }
+
+    // 2. Try new system: `affiliate_referral_links` by slug or referral_code
+    const { data: link } = await admin
+      .from("affiliate_referral_links")
+      .select("id, affiliate_id, diviner_id")
+      .or(`slug.eq.${affiliateCode},referral_code.eq.${affiliateCode}`)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (link) {
+      // Look up commission rate from the diviner_affiliates record
+      const { data: divAffiliate } = await admin
+        .from("diviner_affiliates")
+        .select("id, default_commission_type, default_commission_value")
+        .eq("id", link.affiliate_id)
+        .maybeSingle();
+
+      if (divAffiliate) {
+        const commissionRate = divAffiliate.default_commission_value;
+        const commissionType = divAffiliate.default_commission_type ?? "percentage";
+        const commissionAmountCents =
+          commissionType === "percentage"
+            ? Math.round(amountDollars * 100 * (commissionRate / 100))
+            : Math.round(commissionRate); // fixed amount in cents
+
+        await admin.from("affiliate_commissions").insert({
+          affiliate_id: divAffiliate.id,
+          diviner_id: link.diviner_id,
+          link_id: link.id,
+          order_reference: orderRef,
+          order_amount_cents: Math.round(amountDollars * 100),
+          commission_type: commissionType,
+          commission_rate: commissionRate,
+          commission_amount_cents: commissionAmountCents,
+          status: "pending",
+          notes: `${productType} commission`,
+        });
+
+        console.log(
+          `[Webhook] Affiliate commission (diviner) recorded: code=${affiliateCode} amount_cents=${commissionAmountCents} ref=${orderRef}`
+        );
+      }
+    }
+  } catch (err) {
+    // Fire-and-forget — never block the main flow
+    console.error("[Webhook] Failed to record signup affiliate commission:", err);
+  }
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Route gift certificate checkouts to their own handler
   if (session.metadata?.type === "gift_certificate") {
@@ -305,6 +661,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Route Perennial multi-member household signups
   if (session.metadata?.type === "perennial_signup") {
     return handlePerennialSignupCheckoutCompleted(session);
+  }
+
+  // Route combo bundle (trainee + diviner) checkouts
+  if (session.metadata?.itemKey === "trainee_diviner_bundle") {
+    return handleComboBundleCheckoutCompleted(session);
+  }
+
+  // Handle manual booking payment link checkout
+  if (session.metadata?.bookingId) {
+    return handleManualBookingCheckoutCompleted(session);
   }
 
   const supabase = createAdminClient();
@@ -350,6 +716,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (error) {
     console.error("Failed to upsert diviner record:", error);
+  }
+
+  // ── Affiliate commission on diviner signup ────────────────────────────────
+  const signupAffiliateCode = session.metadata?.affiliateCode;
+  if (signupAffiliateCode) {
+    const amountTotal = (session.amount_total ?? 0) / 100;
+    recordSignupAffiliateCommission(
+      signupAffiliateCode,
+      amountTotal,
+      `diviner-signup:${session.id}`,
+      "signup"
+    );
   }
 }
 
@@ -862,7 +1240,7 @@ async function handlePaymentIntentSucceeded(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, duration_minutes, diviner_id, client_id, services(name, duration_minutes), diviners(id, display_name), clients(email, full_name, user_id)"
+      "id, scheduled_at, duration_minutes, base_price, diviner_id, client_id, metadata, questionnaire_responses, services(name, duration_minutes), diviners(id, display_name, user_id), clients(email, full_name, user_id)"
     )
     .eq("id", bookingId)
     .single();
@@ -876,24 +1254,36 @@ async function handlePaymentIntentSucceeded(
   const div = (booking as Record<string, unknown>).diviners as {
     id: string;
     display_name: string;
+    user_id: string;
   } | null;
   const clientRecord = (booking as Record<string, unknown>).clients as {
     email: string;
     full_name: string | null;
     user_id: string | null;
   } | null;
+  const bookingMeta = (booking as Record<string, unknown>).metadata as {
+    availability_title?: string;
+    availability_description?: string;
+  } | null;
+  const eventTitle = bookingMeta?.availability_title ?? svc?.name;
 
   if (!svc || !div) return;
 
-  const { data: connections } = await supabase
+  // Calendar connection checks — createCalendarEvent handles lookup internally,
+  // but we still need flags for Microsoft calendar
+  const hasGoogleCalendar = true; // Always try — createCalendarEvent handles connection lookup
+  const { data: msConnections } = await supabase
     .from("calendar_connections")
     .select("provider")
     .eq("owner_id", div.id);
-
-  const hasGoogleCalendar =
-    connections?.some((connection) => connection.provider === "google") ?? false;
+  const { data: divinerCalPaid } = await supabase
+    .from("diviners")
+    .select("outlook_calendar_token")
+    .eq("id", div.id)
+    .single();
   const hasMicrosoftCalendar =
-    connections?.some((connection) => connection.provider === "microsoft") ?? false;
+    msConnections?.some((connection) => connection.provider === "microsoft") ||
+    !!(divinerCalPaid?.outlook_calendar_token);
 
   if (clientRecord?.user_id) {
     const amount = paymentIntent.amount / 100
@@ -940,20 +1330,104 @@ async function handlePaymentIntentSucceeded(
     duration: svc.duration_minutes,
   };
 
-  await Promise.all([
+  // Gather additional attendees from questionnaire_responses
+  const paidQR = (booking as Record<string, unknown>).questionnaire_responses as Record<string, unknown> | null;
+  const paidAdditionalAttendees: Array<{ email: string; name?: string }> = [];
+  const paidSpEmail = paidQR?.secondPersonEmail as string | undefined;
+  const paidSpName = paidQR?.secondPersonName as string | undefined;
+  const paidSpAttending = paidQR?.secondPersonAttending as string | undefined;
+  if (paidSpEmail && (paidSpAttending === "yes" || paidSpAttending === "maybe")) {
+    paidAdditionalAttendees.push({ email: paidSpEmail, name: paidSpName || undefined });
+  }
+  const paidStoredAttendees = Array.isArray(paidQR?.attendees) ? (paidQR.attendees as Array<{ name?: string; email?: string }>) : [];
+  for (const a of paidStoredAttendees) {
+    if (a.email && a.email !== clientEmail && !paidAdditionalAttendees.some((x) => x.email === a.email)) {
+      paidAdditionalAttendees.push({ email: a.email, name: a.name || undefined });
+    }
+  }
+
+  // Send confirmation to primary client + all additional attendees
+  const paidConfirmPromises = [
     sendBookingConfirmation(emailParams),
     sendBookingAccessInstructions({ ...emailParams, calendarLink }),
-  ]);
+  ];
+  for (const attendee of paidAdditionalAttendees) {
+    paidConfirmPromises.push(
+      sendBookingConfirmation({
+        ...emailParams,
+        clientEmail: attendee.email,
+      })
+    );
+  }
+  await Promise.all(paidConfirmPromises);
+
+  // Send invoice to client (fire-and-forget)
+  const paidAmount = paymentIntent.amount / 100;
+  sendBookingInvoice({
+    clientEmail,
+    clientName: clientRecord?.full_name ?? clientEmail.split("@")[0],
+    divinerName: div.display_name,
+    serviceName: svc.name,
+    dateTime: emailParams.dateTime,
+    duration: durationMins,
+    amount: Number(booking.base_price ?? paidAmount),
+    totalPaid: paidAmount,
+    bookingId,
+    portalUrl: `${appUrl}/portal/bookings`,
+  }).catch((err) =>
+    console.error("[Webhook] Failed to send booking invoice:", err)
+  );
+
+  // Notify diviner about the new booking (fire-and-forget)
+  (async () => {
+    try {
+      // Get diviner's email from auth.users
+      const { data: divinerAuth } = await supabase.auth.admin.getUserById(
+        div.user_id
+      );
+      const divinerEmail = divinerAuth?.user?.email;
+      if (!divinerEmail) return;
+
+      const questionnaire = (booking as Record<string, unknown>)
+        .questionnaire_responses as Record<string, string> | null;
+
+      await sendDivinerNewBookingNotification({
+        divinerEmail,
+        divinerName: div.display_name,
+        clientName: clientRecord?.full_name ?? clientEmail.split("@")[0],
+        clientEmail,
+        serviceName: svc.name,
+        dateTime: emailParams.dateTime,
+        duration: durationMins,
+        amount: paidAmount,
+        bookingId,
+        dashboardUrl: `${appUrl}/dashboard/bookings`,
+        questionnaire: questionnaire
+          ? {
+              focusQuestion: questionnaire.focusQuestion,
+              lifeArea: questionnaire.lifeArea,
+            }
+          : undefined,
+      });
+    } catch (err) {
+      console.error("[Webhook] Failed to send diviner booking notification:", err);
+    }
+  })();
 
   // Push event to diviner's Google Calendar if connected
   if (hasGoogleCalendar) {
     createCalendarEvent(div.id, {
-      title: `${svc.name} — ${clientRecord?.full_name ?? clientEmail}`,
-      description: `Client: ${clientEmail}\nSession link: ${sessionLink}`,
+      title: `${eventTitle} — ${clientRecord?.full_name ?? clientEmail}`,
+      description: buildCalendarDescription(
+        bookingMeta?.availability_description ?? null,
+        appUrl,
+        bookingId,
+      ),
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
       clientEmail: clientRecord?.email ?? clientEmail,
       clientName: clientRecord?.full_name ?? undefined,
+      additionalAttendees: paidAdditionalAttendees,
     })
       .then(({ eventId }) =>
         supabase

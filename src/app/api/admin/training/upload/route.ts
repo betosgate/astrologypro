@@ -6,6 +6,15 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
+ * Extend the serverless function timeout to 300 s (5 min).
+ *
+ * Without this the Vercel default (~60 s on Pro, ~10 s on Hobby) causes
+ * uploads of ~200 MB+ to be killed mid-transfer with a 504 Gateway Timeout
+ * before the Supabase Storage PUT completes.
+ */
+export const maxDuration = 300;
+
+/**
  * POST /api/admin/training/upload
  *
  * Server-mediated admin video upload for training lessons. The client
@@ -78,8 +87,8 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient();
 
-  // Convert File to ArrayBuffer for the admin upload. The service-role
-  // client bypasses storage RLS — this is the intended secure admin path.
+  // Convert File → ArrayBuffer → Buffer for the admin upload.
+  // The service-role client bypasses storage RLS.
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const { error: uploadError } = await admin.storage
@@ -92,6 +101,24 @@ export async function POST(req: NextRequest) {
 
   if (uploadError) {
     console.error("[admin/training/upload] storage error:", uploadError.message);
+
+    // Detect Supabase bucket-level size rejection and return a descriptive
+    // 413 instead of a generic 500 so the UI can guide the admin.
+    const isBucketSizeError =
+      uploadError.message?.includes("exceeded the maximum allowed size") ||
+      uploadError.message?.includes("Payload too large");
+
+    if (isBucketSizeError) {
+      return NextResponse.json(
+        {
+          error:
+            `The file (${(file.size / (1024 * 1024)).toFixed(1)} MB) was rejected by the storage bucket's file_size_limit. ` +
+            `Run migration 20260410000001 from Admin → DB Migrations to increase the bucket limit to 500 MB.`,
+        },
+        { status: 413 },
+      );
+    }
+
     return NextResponse.json(
       { error: `Storage upload failed: ${uploadError.message}` },
       { status: 500 },

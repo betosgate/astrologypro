@@ -12,6 +12,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Calendar, Play, Search, User } from "lucide-react";
+import { RoleUpgradeBanners } from "@/components/dashboard/role-upgrade-banners";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata = {
   title: "My Portal - Dashboard",
@@ -32,6 +34,23 @@ export default async function PortalDashboardPage() {
     .single();
 
   if (!client) redirect("/login");
+
+  // Check roles for cross-sell banners
+  const adminDb = createAdminClient();
+  const [divinerCheck, traineeCheck, pmCheck] = await Promise.all([
+    adminDb.from("diviners").select("id").eq("user_id", user.id).maybeSingle(),
+    adminDb.from("trainees").select("id").eq("user_id", user.id).maybeSingle(),
+    adminDb
+      .from("community_members")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("membership_type", "perennial_mandalism")
+      .eq("membership_status", "active")
+      .maybeSingle(),
+  ]);
+  const isDiviner = !!divinerCheck.data;
+  const isTrainee = !!traineeCheck.data;
+  const isPerennialMandalism = !!pmCheck.data;
 
   // Fetch upcoming bookings and recent recordings in parallel
   const [upcomingResult, recordingsResult] = await Promise.all([
@@ -68,6 +87,13 @@ export default async function PortalDashboardPage() {
 
   return (
     <div className="space-y-8">
+      {/* Cross-sell banners */}
+      <RoleUpgradeBanners
+        isDiviner={isDiviner}
+        isTrainee={isTrainee}
+        isPerennialMandalism={isPerennialMandalism}
+      />
+
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
           Welcome back, {client.full_name}

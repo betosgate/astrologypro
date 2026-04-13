@@ -26,7 +26,7 @@ export async function GET(
   // Fetch the item
   const { data: item, error: itemErr } = await admin
     .from("global_pricing")
-    .select("id, item_key, item_name, description")
+    .select("id, item_key, item_name, description, html_description")
     .eq("item_key", itemKey)
     .eq("is_active", true)
     .maybeSingle();
@@ -44,7 +44,7 @@ export async function GET(
   // Fetch active plans for this item
   const { data: plans, error: plansErr } = await admin
     .from("pricing_plans")
-    .select("plan_id, display_name, amount, mrp, stripe_price_id, currency, description, custom_fields, sort_order")
+    .select("plan_id, display_name, amount, mrp, stripe_price_id, currency, description, html_description, custom_fields, sort_order, onetime_amount, onetime_currency, recurring_amount, recurring_currency, recurring_interval")
     .eq("item_id", item.id)
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
@@ -57,6 +57,7 @@ export async function GET(
     item_key: item.item_key,
     item_name: item.item_name,
     description: item.description,
+    html_description: item.html_description,
     plans: plans ?? [],
   });
 }

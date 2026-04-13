@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const dynamic = "force-dynamic";
 
 const SELECT_COLS =
-  "id, diviner_id, name, slug, category, description, duration_minutes, base_price, is_active, is_featured, is_primary, requires_birth_data, sort_order, created_at";
+  "id, diviner_id, name, slug, category, description, duration_minutes, base_price, overage_rate, is_active, is_featured, is_primary, requires_birth_data, sort_order, created_at";
 
 /**
  * GET /api/admin/services
@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
   const description = typeof body.description === "string" ? body.description.trim() : null;
   const duration_minutes = typeof body.duration_minutes === "number" ? body.duration_minutes : 60;
   const base_price = typeof body.base_price === "number" ? body.base_price : 0;
+  const overage_rate = typeof body.overage_rate === "number" ? body.overage_rate : 0.50;
 
   if (!name) return NextResponse.json({ error: "Name is required." }, { status: 422 });
   if (!diviner_id) return NextResponse.json({ error: "diviner_id is required." }, { status: 422 });
@@ -72,6 +73,7 @@ export async function POST(req: NextRequest) {
     description,
     duration_minutes,
     base_price,
+    overage_rate,
     is_active: body.is_active !== false,
     is_featured: !!body.is_featured,
     is_primary: body.is_primary !== false,

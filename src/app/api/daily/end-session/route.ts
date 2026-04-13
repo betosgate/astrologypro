@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     // Fetch booking with service info
     const { data: booking, error: bookingError } = await admin
       .from("bookings")
-      .select("id, diviner_id, base_price, duration_minutes, services(duration_minutes)")
+      .select("id, diviner_id, base_price, duration_minutes, services(duration_minutes, overage_rate)")
       .eq("id", bookingId)
       .single();
 
@@ -62,8 +62,10 @@ export async function POST(request: NextRequest) {
       0,
       actualDurationMinutes - scheduledDuration
     );
+    const perMinuteRate =
+      (booking.services as any)?.overage_rate ?? PRICING.overagePerMinute;
     const overageAmount = Math.round(
-      overageMinutes * PRICING.overagePerMinute * 100
+      overageMinutes * perMinuteRate * 100
     ); // in cents
     const totalAmount = Math.round((booking.base_price ?? 0) * 100) + overageAmount;
 

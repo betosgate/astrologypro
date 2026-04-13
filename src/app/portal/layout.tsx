@@ -51,6 +51,7 @@ export default async function PortalLayout({
     { label: "Bookings", href: "/portal/bookings" },
     { label: "My Orders", href: "/portal/orders" },
     { label: "Subscriptions", href: "/portal/subscriptions" },
+    { label: "Library", href: "/portal/library" },
     { label: "Profile", href: "/portal/profile" },
   ];
 

@@ -55,6 +55,9 @@ async function getAstrologyApiAuth(): Promise<{ access_key: string; secret_key: 
     console.warn(`[astrology-api] ASTROLOGY_API key missing in fetch-config response`);
     return null;
   }
+
+  console.log("ASTROLOGY_API", config.ASTROLOGY_API);
+
   return config.ASTROLOGY_API;
 }
 

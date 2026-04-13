@@ -15,6 +15,7 @@ export async function GET(
   const date = searchParams.get("date");
   const duration = searchParams.get("duration");
   const serviceId = searchParams.get("serviceId");
+  const allSlots = searchParams.get("allSlots") === "1";
   const debugBusy = searchParams.get("debugBusy") === "1";
 
   if (!date || !duration) {
@@ -104,10 +105,12 @@ export async function GET(
 
       const templateServiceId =
         typeof record.service_id === "string" ? record.service_id : null;
-      if (serviceId) {
-        if (templateServiceId !== serviceId) return false;
-      } else if (templateServiceId) {
-        return false;
+      if (!allSlots) {
+        if (serviceId) {
+          if (templateServiceId !== serviceId) return false;
+        } else if (templateServiceId) {
+          return false;
+        }
       }
 
       const startDate = String(record.start_date ?? "");
@@ -255,6 +258,7 @@ export async function GET(
         };
       }),
       serviceId,
+      allTemplates: allSlots,
       weeklySlots: (weeklySlots ?? []).map((s) => ({
         dayOfWeek: s.day_of_week,
         startTime: s.start_time,
@@ -324,7 +328,37 @@ export async function GET(
       });
     }
 
-    return NextResponse.json(slots);
+    // Enrich slots with service price info when a service is linked
+    const serviceIds = [...new Set(
+      slots
+        .map((s: { availabilityServiceId?: string | null }) => s.availabilityServiceId)
+        .filter(Boolean) as string[]
+    )];
+
+    let servicePriceMap: Record<string, { name: string; price: number }> = {};
+    if (serviceIds.length > 0) {
+      const { data: services } = await admin
+        .from("services")
+        .select("id, name, base_price")
+        .in("id", serviceIds);
+      if (services) {
+        for (const svc of services) {
+          servicePriceMap[svc.id] = { name: svc.name, price: Number(svc.base_price ?? 0) };
+        }
+      }
+    }
+
+    const enrichedSlots = slots.map((slot) => {
+      const svcId = (slot as unknown as Record<string, unknown>).availabilityServiceId as string | null;
+      const svcInfo = svcId ? servicePriceMap[svcId] : null;
+      return {
+        ...slot,
+        serviceName: svcInfo?.name ?? null,
+        servicePrice: svcInfo?.price ?? null,
+      };
+    });
+
+    return NextResponse.json(enrichedSlots);
   } catch {
     return NextResponse.json(
       { error: "Failed to fetch availability" },

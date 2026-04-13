@@ -10,8 +10,30 @@
 
 Implement a two-phase Perennial onboarding flow for the `Couple` plan:
 
-1. Signup phase collects essential fields for primary and partner, including `date_of_birth`, `birth_time`, `birth_location_label`.
-2. After payment + login, show a couple profile-completion form with prefilled signup values and remaining guidance fields.
+1. Signup phase collects essential basic fields for primary and partner.
+2. After payment + login, show a couple profile-completion form with prefilled signup values plus birth date, birth time, birth place, and remaining guidance fields.
+
+## User Scenario
+
+1. User lands on AstrologyPro website.
+2. User clicks `GET START`.
+3. User opens the Perennial signup screen at `/perennial-signup`.
+4. The first view on that screen shows the three Perennial plan choices: `Single`, `Couple`, and `Family`.
+5. User selects `Couple`.
+6. The page scrolls to or reveals the shared signup form below the plan cards.
+7. User fills the Couple signup basic-information fields for the primary member and partner.
+8. User completes signup + payment.
+9. User logs in.
+10. On first login, user sees the planned couple profile-completion flow with signup values prefilled and birth fields still to complete.
+11. After completion, the normal post-login experience continues unchanged.
+
+## Non-Negotiable Product Rules
+
+1. This task applies to `Couple` plan onboarding only.
+2. The plan-selection step happens before the form on the same Perennial signup screen.
+3. Do not ask manual password creation in signup.
+4. Keep generated-password-by-email model.
+5. After basic signup, the user reaches home/dashboard and the completion form opens there.
 
 ## Child Tasks
 
@@ -42,9 +64,6 @@ Implement a two-phase Perennial onboarding flow for the `Couple` plan:
 8. `city`
 9. `state`
 10. `zip`
-11. `date_of_birth`
-12. `birth_time`
-13. `birth_location_label`
 
 ### Second member (partner)
 
@@ -60,9 +79,6 @@ Implement a two-phase Perennial onboarding flow for the `Couple` plan:
 10. `city`
 11. `state`
 12. `zip`
-13. `date_of_birth`
-14. `birth_time`
-15. `birth_location_label`
 
 ## Couple Post-Login Fields (Phase B)
 
@@ -73,22 +89,27 @@ Implement a two-phase Perennial onboarding flow for the `Couple` plan:
 
 ### High-value insight fields
 
-1. `relationship_status`
-2. `mainConcern`
-3. `longTermGoals`
-4. `personality`
-5. `strengths`
-6. `lifeAreasFulfilling`
-7. `lifeAreasImprovement`
-8. `majorLifeEvents`
-9. `relationship_with_family`
-10. `focus_on_specific_relationships`
-11. `guidance_on_specific_decision`
-12. `concerns_about_romantic_life`
+1. `date_of_birth`
+2. `birth_time`
+3. `birth_location_label`
+4. `relationship_status`
+5. `mainConcern`
+6. `longTermGoals`
+7. `personality`
+8. `strengths`
+9. `lifeAreasFulfilling`
+10. `lifeAreasImprovement`
+11. `majorLifeEvents`
+12. `relationship_with_family`
+13. `focus_on_specific_relationships`
+14. `guidance_on_specific_decision`
+15. `concerns_about_romantic_life`
 
 ## Done Definition
 
-1. Couple signup includes `date_of_birth`, `birth_time`, `birth_location_label` for both members.
-2. After login, completion form opens with signup values prefilled.
-3. Birth location search uses same city API contract as single flow.
-4. Couple chart/transit readiness gates are enforced.
+1. The public `GET START` journey reaches a Perennial choose-plan screen that includes `Single`, `Couple`, and `Family`.
+2. After selecting `Couple`, the user completes the Couple signup form below on the same screen.
+3. Couple signup excludes birth date, birth time, and birth place for both members.
+4. After login, completion form opens with signup values prefilled and birth fields visible.
+5. Birth location search uses same city API contract as single flow.
+6. Couple chart/transit readiness gates are enforced.

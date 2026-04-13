@@ -1,39 +1,86 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, ChevronDown, ChevronUp } from "lucide-react";
+import { toast } from "sonner";
+
+interface CommunityMember {
+  id: string;
+  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+  phone: string | null;
+  gender: string | null;
+  date_of_birth: string | null;
+  birth_time: string | null;
+  birth_city: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  relationship_status: string | null;
+  intake_data: Record<string, string> | null;
+  membership_type: string;
+  membership_status: string;
+  joined_at: string;
+  expires_at: string | null;
+}
 
 interface CommunityProfileFormProps {
-  member: {
-    id: string;
-    full_name: string | null;
-    email: string;
-    membership_type: string;
-    membership_status: string;
-    joined_at: string;
-    expires_at: string | null;
-  };
-  /**
-   * @deprecated No longer used. The component now filters by member.id and
-   * relies on the `community_update_own` RLS policy (auth.uid() = user_id)
-   * for object-level authorization. Kept on the type so callers don't break.
-   */
+  member: CommunityMember;
   userId?: string;
 }
 
 export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
-  const supabase = createClient();
+  const intake = member.intake_data ?? {};
 
-  const [fullName, setFullName] = useState(member.full_name ?? "");
+  const [firstName, setFirstName] = useState(member.first_name ?? "");
+  const [lastName, setLastName] = useState(member.last_name ?? "");
+  const [phone, setPhone] = useState(member.phone ?? "");
+  const [gender, setGender] = useState(member.gender ?? "");
+  const [dateOfBirth, setDateOfBirth] = useState(member.date_of_birth ?? "");
+  const [birthTime, setBirthTime] = useState(member.birth_time ?? "");
+  const [birthCity, setBirthCity] = useState(member.birth_city ?? "");
+  const [address, setAddress] = useState(member.address ?? "");
+  const [city, setCity] = useState(member.city ?? "");
+  const [state, setState] = useState(member.state ?? "");
+  const [zip, setZip] = useState(member.zip ?? "");
+  const [relationshipStatus, setRelationshipStatus] = useState(
+    member.relationship_status ?? ""
+  );
+  const [occupation, setOccupation] = useState(intake.occupation ?? "");
+
+  // Questionnaire fields from intake_data
+  const [personality, setPersonality] = useState(intake.personality ?? "");
+  const [strengths, setStrengths] = useState(intake.strengths ?? "");
+  const [lifeAreasFulfilling, setLifeAreasFulfilling] = useState(intake.lifeAreasFulfilling ?? "");
+  const [lifeAreasImprovement, setLifeAreasImprovement] = useState(intake.lifeAreasImprovement ?? "");
+  const [longTermGoals, setLongTermGoals] = useState(intake.longTermGoals ?? "");
+  const [majorLifeEvents, setMajorLifeEvents] = useState(intake.majorLifeEvents ?? "");
+  const [mainConcern, setMainConcern] = useState(intake.mainConcern ?? "");
+  const [additionalInfo, setAdditionalInfo] = useState(intake.additionalInfo ?? "");
+
   const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState("");
+  const [showQuestionnaire, setShowQuestionnaire] = useState(false);
 
   const programName =
     member.membership_type === "mystery_school"
@@ -42,27 +89,51 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
-    setSuccess(false);
+    if (!firstName.trim() || !lastName.trim()) {
+      toast.error("First name and last name are required.");
+      return;
+    }
+
     setSaving(true);
-
     try {
-      // Filter by row PK; the community_update_own RLS policy
-      // (auth.uid() = user_id) provides the object-level authorization.
-      const { error: updateError } = await supabase
-        .from("community_members")
-        .update({ full_name: fullName })
-        .eq("id", member.id);
+      const res = await fetch("/api/community/onboarding/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          email: member.email,
+          phone: phone.trim(),
+          gender,
+          date_of_birth: dateOfBirth || null,
+          birth_time: birthTime || null,
+          birth_city: birthCity.trim() || null,
+          address: address.trim(),
+          city: city.trim(),
+          state: state.trim(),
+          zip: zip.trim(),
+          occupation: occupation.trim(),
+          relationship_status: relationshipStatus,
+          personality,
+          strengths,
+          lifeAreasFulfilling,
+          lifeAreasImprovement,
+          longTermGoals,
+          majorLifeEvents,
+          mainConcern,
+          additionalInfo,
+        }),
+      });
 
-      if (updateError) {
-        setError(updateError.message);
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.detail ?? "Failed to save profile.");
         return;
       }
 
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      toast.success("Profile updated successfully.");
     } catch {
-      setError("An unexpected error occurred.");
+      toast.error("An unexpected error occurred.");
     } finally {
       setSaving(false);
     }
@@ -70,6 +141,7 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
 
   return (
     <form onSubmit={handleSave} className="space-y-6">
+      {/* Personal Information */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Personal Information</CardTitle>
@@ -77,19 +149,27 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="full-name">Full Name</Label>
+              <Label>First Name *</Label>
               <Input
-                id="full-name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Your full name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label>Last Name *</Label>
               <Input
-                id="email"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
                 type="email"
                 value={member.email}
                 readOnly
@@ -97,31 +177,162 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
                 className="bg-muted"
               />
             </div>
+            <div className="space-y-2">
+              <Label>Phone</Label>
+              <Input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="(555) 123-4567"
+              />
+            </div>
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          {success && (
-            <p className="text-sm text-green-500">Profile updated successfully.</p>
-          )}
-
-          <div className="flex justify-end">
-            <Button type="submit" disabled={saving}>
-              {saving ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 size-4" />
-                  Save Changes
-                </>
-              )}
-            </Button>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-2">
+              <Label>Gender</Label>
+              <Select value={gender} onValueChange={setGender}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Non-binary">Non-binary</SelectItem>
+                  <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Occupation</Label>
+              <Input
+                value={occupation}
+                onChange={(e) => setOccupation(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Relationship Status</Label>
+              <Select value={relationshipStatus} onValueChange={setRelationshipStatus}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Single">Single</SelectItem>
+                  <SelectItem value="In a relationship">In a relationship</SelectItem>
+                  <SelectItem value="Married">Married</SelectItem>
+                  <SelectItem value="Divorced">Divorced</SelectItem>
+                  <SelectItem value="Widowed">Widowed</SelectItem>
+                  <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Birth Data */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Birth Data</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-2">
+              <Label>Date of Birth</Label>
+              <Input
+                type="date"
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Birth Time</Label>
+              <Input
+                type="time"
+                value={birthTime}
+                onChange={(e) => setBirthTime(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Birth City</Label>
+              <Input
+                value={birthCity}
+                onChange={(e) => setBirthCity(e.target.value)}
+                placeholder="e.g. New York, NY"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Address */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Address</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Street Address</Label>
+            <Input
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-2">
+              <Label>City</Label>
+              <Input value={city} onChange={(e) => setCity(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>State</Label>
+              <Input value={state} onChange={(e) => setState(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Zip Code</Label>
+              <Input
+                value={zip}
+                onChange={(e) => setZip(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                maxLength={5}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Questionnaire (collapsible) */}
+      <Card>
+        <CardHeader>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between"
+            onClick={() => setShowQuestionnaire(!showQuestionnaire)}
+          >
+            <CardTitle className="text-base">Spiritual Journey Questionnaire</CardTitle>
+            {showQuestionnaire ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+          </button>
+        </CardHeader>
+        {showQuestionnaire && (
+          <CardContent className="space-y-4">
+            {[
+              { label: "What is your personality type?", value: personality, set: setPersonality },
+              { label: "What are your key strengths?", value: strengths, set: setStrengths },
+              { label: "Which life areas are most fulfilling?", value: lifeAreasFulfilling, set: setLifeAreasFulfilling },
+              { label: "Which life areas need improvement?", value: lifeAreasImprovement, set: setLifeAreasImprovement },
+              { label: "What are your long-term goals?", value: longTermGoals, set: setLongTermGoals },
+              { label: "Any major life events recently?", value: majorLifeEvents, set: setMajorLifeEvents },
+              { label: "What is your main concern?", value: mainConcern, set: setMainConcern },
+              { label: "Anything else you'd like to share?", value: additionalInfo, set: setAdditionalInfo },
+            ].map((field) => (
+              <div key={field.label} className="space-y-2">
+                <Label className="text-sm">{field.label}</Label>
+                <Textarea
+                  value={field.value}
+                  onChange={(e) => field.set(e.target.value)}
+                  rows={2}
+                  className="resize-none"
+                />
+              </div>
+            ))}
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Membership Info (read-only) */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Membership</CardTitle>
@@ -133,37 +344,37 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Status</span>
-            <Badge
-              variant={
-                member.membership_status === "active" ? "default" : "secondary"
-              }
-            >
+            <Badge variant={member.membership_status === "active" ? "default" : "secondary"}>
               {member.membership_status}
             </Badge>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Member Since</span>
             <span className="font-medium">
-              {new Date(member.joined_at).toLocaleDateString("en-US", {
-                month: "long",
-                year: "numeric",
-              })}
+              {new Date(member.joined_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
             </span>
           </div>
           {member.expires_at && (
             <div className="flex justify-between">
               <span className="text-muted-foreground">Expires</span>
               <span className="font-medium">
-                {new Date(member.expires_at).toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
+                {new Date(member.expires_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
               </span>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Save button */}
+      <div className="flex justify-end">
+        <Button type="submit" disabled={saving}>
+          {saving ? (
+            <><Loader2 className="mr-2 size-4 animate-spin" /> Saving...</>
+          ) : (
+            <><Save className="mr-2 size-4" /> Save Changes</>
+          )}
+        </Button>
+      </div>
     </form>
   );
 }
