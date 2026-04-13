@@ -55,3 +55,7 @@ The platform must choose one of these explicitly:
 - existing targeted users are forced into amendment acceptance on next login
 - enforcement is role-aware and deterministic
 - the amendment queue is explicit and auditable
+
+## Status
+
+Done.

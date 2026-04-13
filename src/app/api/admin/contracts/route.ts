@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
   const roleScope = Array.isArray(templatePayload.role_scope)
     ? templatePayload.role_scope.map((value) => String(value))
     : [];
+  const familyKey = String(templatePayload.family_key ?? contractKey).trim() || contractKey;
 
   if (!contractKey || !title || !templateBody || !version) {
     return NextResponse.json(
@@ -83,6 +84,11 @@ export async function POST(req: NextRequest) {
       effective_date: String(templatePayload.effective_date ?? new Date().toISOString().slice(0, 10)),
       is_active: templatePayload.is_active !== false,
       legacy_document_type: String(templatePayload.legacy_document_type ?? "").trim() || null,
+      family_key: familyKey,
+      version_kind: String(templatePayload.version_kind ?? "base"),
+      amends_template_id: String(templatePayload.amends_template_id ?? "").trim() || null,
+      applicability_mode: String(templatePayload.applicability_mode ?? "all_users"),
+      is_current_consolidated: templatePayload.is_current_consolidated !== false,
       created_by: user.id,
     })
     .select("*")
@@ -160,6 +166,13 @@ export async function PATCH(req: NextRequest) {
       effective_date: String(body.template.effective_date ?? new Date().toISOString().slice(0, 10)),
       is_active: body.template.is_active !== false,
       legacy_document_type: String(body.template.legacy_document_type ?? "").trim() || null,
+      family_key:
+        String(body.template.family_key ?? body.template.contract_key ?? "")
+          .trim() || String(body.template.contract_key ?? "").trim(),
+      version_kind: String(body.template.version_kind ?? "base"),
+      amends_template_id: String(body.template.amends_template_id ?? "").trim() || null,
+      applicability_mode: String(body.template.applicability_mode ?? "all_users"),
+      is_current_consolidated: body.template.is_current_consolidated !== false,
       updated_at: new Date().toISOString(),
     })
     .eq("id", templateId);

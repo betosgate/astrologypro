@@ -60,3 +60,7 @@ They should not need:
 
 - the system can tell base agreements apart from amendments
 - future-user agreements can be consolidated without breaking historical amendment chains
+
+## Status
+
+Done.

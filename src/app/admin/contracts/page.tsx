@@ -1,5 +1,7 @@
+import { ContractAmendmentsClient } from "@/components/admin/contract-amendments-client";
 import { ContractsClient } from "@/components/admin/contracts-client";
 import {
+  listContractAmendmentRollouts,
   listContractTemplates,
   listContractVariables,
   listRoleContractRequirements,
@@ -9,17 +11,21 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Contracts - Admin" };
 
 export default async function AdminContractsPage() {
-  const [templates, variables, requirements] = await Promise.all([
+  const [templates, variables, requirements, rollouts] = await Promise.all([
     listContractTemplates(),
     listContractVariables(),
     listRoleContractRequirements(),
+    listContractAmendmentRollouts(),
   ]);
 
   return (
-    <ContractsClient
-      initialTemplates={templates}
-      initialVariables={variables}
-      initialRequirements={requirements}
-    />
+    <div className="space-y-8">
+      <ContractsClient
+        initialTemplates={templates}
+        initialVariables={variables}
+        initialRequirements={requirements}
+      />
+      <ContractAmendmentsClient initialRollouts={rollouts} templates={templates} />
+    </div>
   );
 }

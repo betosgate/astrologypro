@@ -33,6 +33,8 @@ const ROLE_OPTIONS = [
 ] as const;
 
 const TRIGGER_OPTIONS = ["post_login", "before_role_activation", "before_payout", "signup"] as const;
+const VERSION_KIND_OPTIONS = ["base", "amendment", "consolidated"] as const;
+const APPLICABILITY_OPTIONS = ["all_users", "existing_users_snapshot", "future_users_only"] as const;
 
 function newVariable(): EditableVariable {
   return {
@@ -156,6 +158,11 @@ export function ContractsClient({
       effective_date: new Date().toISOString().slice(0, 10),
       is_active: true,
       legacy_document_type: null,
+      family_key: "",
+      version_kind: "base",
+      amends_template_id: null,
+      applicability_mode: "all_users",
+      is_current_consolidated: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -311,6 +318,114 @@ export function ContractsClient({
                       }
                     />
                   </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="family-key">Family Key</Label>
+                    <Input
+                      id="family-key"
+                      value={templateDraft.family_key}
+                      onChange={(event) =>
+                        setTemplateDraft({ ...templateDraft, family_key: event.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="version-kind">Version Kind</Label>
+                    <select
+                      id="version-kind"
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                      value={templateDraft.version_kind}
+                      onChange={(event) =>
+                        setTemplateDraft({
+                          ...templateDraft,
+                          version_kind: event.target.value as ContractTemplate["version_kind"],
+                        })
+                      }
+                    >
+                      {VERSION_KIND_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="applicability-mode">Applicability</Label>
+                    <select
+                      id="applicability-mode"
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                      value={templateDraft.applicability_mode}
+                      onChange={(event) =>
+                        setTemplateDraft({
+                          ...templateDraft,
+                          applicability_mode: event.target.value as ContractTemplate["applicability_mode"],
+                        })
+                      }
+                    >
+                      {APPLICABILITY_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="amends-template-id">Amends Template Id</Label>
+                    <Input
+                      id="amends-template-id"
+                      value={templateDraft.amends_template_id ?? ""}
+                      onChange={(event) =>
+                        setTemplateDraft({
+                          ...templateDraft,
+                          amends_template_id: event.target.value || null,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Role Scope</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {ROLE_OPTIONS.map((roleKey) => {
+                      const selected = templateDraft.role_scope.includes(roleKey);
+                      return (
+                        <Button
+                          key={roleKey}
+                          type="button"
+                          variant={selected ? "default" : "outline"}
+                          size="sm"
+                          onClick={() =>
+                            setTemplateDraft({
+                              ...templateDraft,
+                              role_scope: selected
+                                ? templateDraft.role_scope.filter((value) => value !== roleKey)
+                                : [...templateDraft.role_scope, roleKey],
+                            })
+                          }
+                        >
+                          {roleKey}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="current-consolidated">Current Consolidated Path</Label>
+                  <select
+                    id="current-consolidated"
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                    value={templateDraft.is_current_consolidated ? "yes" : "no"}
+                    onChange={(event) =>
+                      setTemplateDraft({
+                        ...templateDraft,
+                        is_current_consolidated: event.target.value === "yes",
+                      })
+                    }
+                  >
+                    <option value="yes">yes</option>
+                    <option value="no">no</option>
+                  </select>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="contract-summary">Summary</Label>
