@@ -9,6 +9,8 @@ import { PRICING } from "@/lib/constants";
 import {
   sendBookingConfirmation,
   sendBookingAccessInstructions,
+  sendBookingInvoice,
+  sendDivinerNewBookingNotification,
   sendWelcomeAndBooked,
   sendGuestBookingInvite,
 } from "@/lib/email";
@@ -115,15 +117,17 @@ export async function POST(request: NextRequest) {
     let resolvedDivinerId = service.diviner_id ?? null;
     let diviner: {
       id: string;
+      user_id?: string;
       stripe_account_id: string | null;
       display_name: string;
+      video_provider?: string;
     } | null = null;
     let divinerError: { message?: string } | null = null;
 
     async function fetchDivinerById(id: string) {
       let result = await adminSupabase
         .from("diviners")
-        .select("id, stripe_account_id, display_name")
+        .select("id, user_id, stripe_account_id, display_name, video_provider")
         .eq("id", id)
         .eq("is_active", true)
         .single();
@@ -131,7 +135,7 @@ export async function POST(request: NextRequest) {
       if (result.error || !result.data) {
         result = await supabase
           .from("diviners")
-          .select("id, stripe_account_id, display_name")
+          .select("id, user_id, stripe_account_id, display_name, video_provider")
           .eq("id", id)
           .eq("is_active", true)
           .single();
@@ -143,7 +147,7 @@ export async function POST(request: NextRequest) {
     async function fetchDivinerByUsername(username: string) {
       let result = await adminSupabase
         .from("diviners")
-        .select("id, stripe_account_id, display_name")
+        .select("id, user_id, stripe_account_id, display_name, video_provider")
         .eq("username", username)
         .eq("is_active", true)
         .single();
@@ -151,7 +155,7 @@ export async function POST(request: NextRequest) {
       if (result.error || !result.data) {
         result = await supabase
           .from("diviners")
-          .select("id, stripe_account_id, display_name")
+          .select("id, user_id, stripe_account_id, display_name, video_provider")
           .eq("username", username)
           .eq("is_active", true)
           .single();
@@ -484,6 +488,7 @@ export async function POST(request: NextRequest) {
         duration_minutes: service.duration_minutes,
         status: "pending",
         base_price: finalPrice,
+        video_provider: (diviner as any)?.video_provider ?? "daily",
         questionnaire_responses: questionnaire,
         booking_notes: booking_notes ?? null,
         metadata: {
@@ -653,6 +658,52 @@ export async function POST(request: NextRequest) {
           })
         );
       }
+
+      // Send invoice for free bookings (amount = 0 but still confirms the booking)
+      emailPromises.push(
+        sendBookingInvoice({
+          clientEmail,
+          clientName,
+          divinerName: diviner.display_name,
+          serviceName: availabilityTemplateTitle ?? service.name,
+          dateTime: formattedDateTime,
+          duration: service.duration_minutes,
+          amount: Number(service.base_price),
+          totalPaid: 0,
+          bookingId: booking.id,
+          portalUrl: `${appUrl}/portal/bookings`,
+        })
+      );
+
+      // Notify diviner about the new booking
+      emailPromises.push(
+        (async () => {
+          const { data: divinerAuth } = await adminSupabase.auth.admin.getUserById(
+            diviner.user_id ?? ""
+          );
+          const divinerEmail = divinerAuth?.user?.email;
+          if (!divinerEmail) return;
+
+          await sendDivinerNewBookingNotification({
+            divinerEmail,
+            divinerName: diviner.display_name,
+            clientName,
+            clientEmail,
+            serviceName: availabilityTemplateTitle ?? service.name,
+            dateTime: formattedDateTime,
+            duration: service.duration_minutes,
+            amount: 0,
+            bookingId: booking.id,
+            dashboardUrl: `${appUrl}/dashboard/bookings`,
+            questionnaire: questionnaire
+              ? {
+                  focusQuestion: questionnaire.focusQuestion as string | undefined,
+                  lifeArea: questionnaire.lifeArea as string | undefined,
+                }
+              : undefined,
+          });
+        })()
+      );
 
       // Fire-and-forget — don't block the response
       console.log("[booking-payment] Sending booking emails to:", clientEmail, "bookingId:", booking.id);

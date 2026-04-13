@@ -65,14 +65,30 @@ export default async function BookingDetailPage({ params }: PageProps) {
 
   if (!booking) notFound();
 
+  // Cast booking to typed shape for template rendering
+  const b = booking as unknown as {
+    id: string;
+    scheduled_at: string;
+    status: string;
+    duration_minutes: number;
+    base_price: number;
+    session_notes: string | null;
+    booking_token: string | null;
+    metadata: { availability_title?: string; is_reminder?: boolean } | null;
+    questionnaire_responses: Record<string, string> | null;
+    services: { name: string; slug: string } | null;
+    diviners: { id: string; display_name: string; username: string } | null;
+    clients: { id: string; full_name: string | null; email: string; user_id: string | null } | null;
+  };
+
   // Verify the user is either the client or the diviner
-  const client = (booking as Record<string, unknown>).clients as {
+  const client = b.clients as {
     id: string;
     full_name: string | null;
     email: string;
     user_id: string | null;
   } | null;
-  const diviner = (booking as Record<string, unknown>).diviners as {
+  const diviner = b.diviners as {
     id: string;
     display_name: string;
     username: string;
@@ -93,23 +109,23 @@ export default async function BookingDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const service = (booking as Record<string, unknown>).services as {
+  const service = b.services as {
     name: string;
     slug: string;
   } | null;
-  const meta = (booking as Record<string, unknown>).metadata as {
+  const meta = b.metadata as {
     availability_title?: string;
     is_reminder?: boolean;
   } | null;
-  const qr = (booking as Record<string, unknown>).questionnaire_responses as Record<string, unknown> | null;
+  const qr = b.questionnaire_responses as Record<string, string> | null;
 
   const serviceName = meta?.availability_title ?? service?.name ?? "Session";
-  const scheduledAt = new Date(booking.scheduled_at as string);
+  const scheduledAt = new Date(b.scheduled_at);
   const isUpcoming =
     scheduledAt > new Date() &&
-    ["pending", "confirmed", "pending_payment"].includes(booking.status as string);
+    ["pending", "confirmed", "pending_payment"].includes(b.status);
   const isCancellable =
-    ["pending", "confirmed", "pending_payment"].includes(booking.status as string);
+    ["pending", "confirmed", "pending_payment"].includes(b.status);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -137,9 +153,9 @@ export default async function BookingDetailPage({ params }: PageProps) {
             <span className="text-sm text-muted-foreground">Status</span>
             <Badge
               variant="outline"
-              className={statusColors[booking.status as string] ?? ""}
+              className={statusColors[b.status] ?? ""}
             >
-              {statusLabels[booking.status as string] ?? booking.status}
+              {statusLabels[b.status] ?? b.status}
             </Badge>
           </div>
 
@@ -177,7 +193,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
               Duration
             </div>
             <span className="text-sm font-medium">
-              {booking.duration_minutes} minutes
+              {b.duration_minutes} minutes
             </span>
           </div>
 
@@ -204,7 +220,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
             </div>
             <div className="text-right">
               <p className="text-sm font-medium">
-                {meta?.is_reminder ? "Personal Reminder" : client?.full_name ?? "Unknown"}
+                {meta?.is_reminder ? "Personal Reminder" : (client?.full_name ?? "Unknown")}
               </p>
               {client?.email && (
                 <p className="text-xs text-muted-foreground">{client.email}</p>
@@ -213,13 +229,13 @@ export default async function BookingDetailPage({ params }: PageProps) {
           </div>
 
           {/* Amount */}
-          {(booking.base_price as number) > 0 && (
+          {(b.base_price) > 0 && (
             <>
               <Separator />
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Amount</span>
                 <span className="text-sm font-medium">
-                  {formatCurrency(booking.base_price as number)}
+                  {formatCurrency(b.base_price)}
                 </span>
               </div>
             </>
@@ -262,16 +278,16 @@ export default async function BookingDetailPage({ params }: PageProps) {
                   Birth Details
                 </div>
                 <div className="text-sm rounded-lg bg-muted/30 p-3 space-y-0.5">
-                  {qr.birthDate && <p>Date: {qr.birthDate as string}</p>}
-                  {qr.birthTime && <p>Time: {qr.birthTime as string}</p>}
-                  {qr.birthCity && <p>Place: {qr.birthCity as string}</p>}
+                  {qr.birthDate && <p>Date: {String(qr.birthDate)}</p>}
+                  {qr.birthTime && <p>Time: {String(qr.birthTime)}</p>}
+                  {qr.birthCity && <p>Place: {String(qr.birthCity)}</p>}
                 </div>
               </div>
             </>
           )}
 
           {/* Session Notes */}
-          {(booking.session_notes as string) && (
+          {(b.session_notes) && (
             <>
               <Separator />
               <div className="space-y-1">
@@ -279,7 +295,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
                 <div
                   className="text-sm rounded-lg bg-muted/30 p-3 prose prose-invert prose-sm max-w-none"
                   dangerouslySetInnerHTML={{
-                    __html: booking.session_notes as string,
+                    __html: b.session_notes,
                   }}
                 />
               </div>
@@ -307,7 +323,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
       {/* Action Buttons */}
       {isCancellable && (
         <BookingActions
-          bookingId={booking.id as string}
+          bookingId={b.id}
           divinerUsername={diviner?.username ?? ""}
           isUpcoming={isUpcoming}
         />

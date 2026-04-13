@@ -487,7 +487,7 @@ export function BookingsClient({
                               questionnaire_responses:
                                 (booking.questionnaire_responses as Record<
                                   string,
-                                  unknown
+                                  string | undefined
                                 >) ?? null,
                               previous_session_count: prev?.count ?? 0,
                               last_session_date: prev?.lastDate ?? null,

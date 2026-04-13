@@ -6,12 +6,15 @@ import Stripe from "stripe";
 import {
   sendBookingConfirmation,
   sendBookingAccessInstructions,
+  sendBookingInvoice,
+  sendDivinerNewBookingNotification,
   sendGiftCertificateToRecipient,
   sendGiftCertificateConfirmation,
   sendCommunityPaymentFailed,
   sendCommunitySubscriptionCancelled,
   sendMysterySchoolEnrollmentConfirmation,
   sendCommunityMembershipWelcome,
+  sendComboBundleWelcome,
 } from "@/lib/email";
 import { createCalendarEvent } from "@/lib/google-calendar";
 import { buildCalendarDescription } from "@/lib/calendar-utils";
@@ -183,6 +186,18 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
     eventType: 'subscription.created',
     metadata: { planName: membershipType, planType, status: 'active' },
   })
+
+  // ── Affiliate commission on community/subscription signup ────────────────
+  const communityAffiliateCode = session.metadata?.affiliateCode;
+  if (communityAffiliateCode) {
+    const amountTotal = (session.amount_total ?? 0) / 100;
+    recordSignupAffiliateCommission(
+      communityAffiliateCode,
+      amountTotal,
+      `community-signup:${session.id}`,
+      "subscription"
+    );
+  }
 
   // Send community welcome email for all membership types (idempotent via SES dedup window)
   if (email) {
@@ -410,6 +425,228 @@ async function handleManualBookingCheckoutCompleted(
   }
 }
 
+async function handleComboBundleCheckoutCompleted(
+  session: Stripe.Checkout.Session
+) {
+  const supabase = createAdminClient();
+  const meta = session.metadata ?? {};
+  const userId = meta.userId;
+  const planId = meta.planId;
+  const planName = meta.planName ?? "Combo Bundle";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+
+  if (!userId) {
+    console.error("[Webhook] Combo bundle checkout missing userId", meta);
+    return;
+  }
+
+  const subscriptionId =
+    typeof session.subscription === "string"
+      ? session.subscription
+      : session.subscription?.id;
+
+  // Fetch user metadata (name + username set at signup)
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.admin.getUserById(userId);
+  const email = authUser?.email ?? "";
+  const username = (authUser?.user_metadata?.username as string) ?? "";
+  const displayName =
+    (authUser?.user_metadata?.name as string) ??
+    email.split("@")[0] ??
+    "Diviner";
+
+  if (!username) {
+    console.error(
+      "[Webhook] Combo bundle checkout missing username in user metadata for userId:",
+      userId
+    );
+    return;
+  }
+
+  // ── 1. Upsert diviner record ──────────────────────────────────────────────
+  const { error: divinerError } = await supabase.from("diviners").upsert(
+    {
+      user_id: userId,
+      username,
+      display_name: displayName,
+      stripe_subscription_id: subscriptionId ?? null,
+      subscription_status: "active",
+      onboarding_completed: false,
+      onboarding_step: 1,
+      ...(planId ? { plan_id: planId } : {}),
+    },
+    { onConflict: "user_id" }
+  );
+
+  if (divinerError) {
+    console.error(
+      "[Webhook] Combo bundle: failed to upsert diviner record:",
+      divinerError
+    );
+  }
+
+  // ── 2. Upsert trainee record ──────────────────────────────────────────────
+  const { error: traineeError } = await supabase.from("trainees").upsert(
+    {
+      user_id: userId,
+      name: displayName,
+      email,
+      username,
+      training_status: "active",
+      onboarding_completed: false,
+    },
+    { onConflict: "user_id" }
+  );
+
+  if (traineeError) {
+    console.error(
+      "[Webhook] Combo bundle: failed to upsert trainee record:",
+      traineeError
+    );
+  }
+
+  // ── 3. Log activity ───────────────────────────────────────────────────────
+  logActivity({
+    userId,
+    eventCategory: "subscription",
+    eventType: "subscription.created",
+    metadata: {
+      planName,
+      planId,
+      itemKey: "trainee_diviner_bundle",
+      isCombo: true,
+      status: "active",
+    },
+  });
+
+  // ── 4. Send combo welcome email ───────────────────────────────────────────
+  if (email) {
+    sendComboBundleWelcome({
+      to: email,
+      name: displayName,
+      planName,
+      onboardingUrl: `${appUrl}/onboarding`,
+    }).catch((err) =>
+      console.error(
+        "[Webhook] Failed to send combo bundle welcome email:",
+        err
+      )
+    );
+  }
+
+  // ── Affiliate commission on combo bundle signup ──────────────────────────
+  const comboAffiliateCode = meta.affiliateCode;
+  if (comboAffiliateCode) {
+    const amountTotal = (session.amount_total ?? 0) / 100;
+    recordSignupAffiliateCommission(
+      comboAffiliateCode,
+      amountTotal,
+      `combo-signup:${session.id}`,
+      "signup"
+    );
+  }
+
+  console.log(
+    `[Webhook] Combo bundle provisioned: userId=${userId} username=${username} plan=${planName}`
+  );
+}
+
+/**
+ * Fire-and-forget: record an affiliate commission for a signup/subscription checkout.
+ * Supports both the old `affiliates` (social_advocates) table and the new
+ * `diviner_affiliates` system via `affiliate_referral_links`.
+ */
+async function recordSignupAffiliateCommission(
+  affiliateCode: string,
+  amountDollars: number,
+  orderRef: string,
+  productType: "signup" | "subscription"
+) {
+  try {
+    const admin = createAdminClient();
+
+    // 1. Try old system: `affiliates` (social_advocates) table
+    const { data: advocate } = await admin
+      .from("affiliates")
+      .select("id, commission_percent, total_referrals, total_earned")
+      .eq("referral_code", affiliateCode)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (advocate) {
+      const commissionAmount =
+        Math.round(amountDollars * (advocate.commission_percent / 100) * 100) / 100;
+
+      await admin.from("affiliate_referrals").insert({
+        affiliate_id: advocate.id,
+        commission_amount: commissionAmount,
+        status: "pending",
+        metadata: { order_reference: orderRef, product_type: productType },
+      });
+
+      await admin
+        .from("affiliates")
+        .update({
+          total_referrals: (advocate.total_referrals ?? 0) + 1,
+          total_earned: Number(advocate.total_earned ?? 0) + commissionAmount,
+        })
+        .eq("id", advocate.id);
+
+      console.log(
+        `[Webhook] Affiliate commission (advocate) recorded: code=${affiliateCode} amount=$${commissionAmount} ref=${orderRef}`
+      );
+      return;
+    }
+
+    // 2. Try new system: `affiliate_referral_links` by slug or referral_code
+    const { data: link } = await admin
+      .from("affiliate_referral_links")
+      .select("id, affiliate_id, diviner_id")
+      .or(`slug.eq.${affiliateCode},referral_code.eq.${affiliateCode}`)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (link) {
+      // Look up commission rate from the diviner_affiliates record
+      const { data: divAffiliate } = await admin
+        .from("diviner_affiliates")
+        .select("id, default_commission_type, default_commission_value")
+        .eq("id", link.affiliate_id)
+        .maybeSingle();
+
+      if (divAffiliate) {
+        const commissionRate = divAffiliate.default_commission_value;
+        const commissionType = divAffiliate.default_commission_type ?? "percentage";
+        const commissionAmountCents =
+          commissionType === "percentage"
+            ? Math.round(amountDollars * 100 * (commissionRate / 100))
+            : Math.round(commissionRate); // fixed amount in cents
+
+        await admin.from("affiliate_commissions").insert({
+          affiliate_id: divAffiliate.id,
+          diviner_id: link.diviner_id,
+          link_id: link.id,
+          order_reference: orderRef,
+          order_amount_cents: Math.round(amountDollars * 100),
+          commission_type: commissionType,
+          commission_rate: commissionRate,
+          commission_amount_cents: commissionAmountCents,
+          status: "pending",
+          notes: `${productType} commission`,
+        });
+
+        console.log(
+          `[Webhook] Affiliate commission (diviner) recorded: code=${affiliateCode} amount_cents=${commissionAmountCents} ref=${orderRef}`
+        );
+      }
+    }
+  } catch (err) {
+    // Fire-and-forget — never block the main flow
+    console.error("[Webhook] Failed to record signup affiliate commission:", err);
+  }
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Route gift certificate checkouts to their own handler
   if (session.metadata?.type === "gift_certificate") {
@@ -424,6 +661,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Route Perennial multi-member household signups
   if (session.metadata?.type === "perennial_signup") {
     return handlePerennialSignupCheckoutCompleted(session);
+  }
+
+  // Route combo bundle (trainee + diviner) checkouts
+  if (session.metadata?.itemKey === "trainee_diviner_bundle") {
+    return handleComboBundleCheckoutCompleted(session);
   }
 
   // Handle manual booking payment link checkout
@@ -474,6 +716,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (error) {
     console.error("Failed to upsert diviner record:", error);
+  }
+
+  // ── Affiliate commission on diviner signup ────────────────────────────────
+  const signupAffiliateCode = session.metadata?.affiliateCode;
+  if (signupAffiliateCode) {
+    const amountTotal = (session.amount_total ?? 0) / 100;
+    recordSignupAffiliateCommission(
+      signupAffiliateCode,
+      amountTotal,
+      `diviner-signup:${session.id}`,
+      "signup"
+    );
   }
 }
 
@@ -986,7 +1240,7 @@ async function handlePaymentIntentSucceeded(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, duration_minutes, diviner_id, client_id, metadata, questionnaire_responses, services(name, duration_minutes), diviners(id, display_name), clients(email, full_name, user_id)"
+      "id, scheduled_at, duration_minutes, base_price, diviner_id, client_id, metadata, questionnaire_responses, services(name, duration_minutes), diviners(id, display_name, user_id), clients(email, full_name, user_id)"
     )
     .eq("id", bookingId)
     .single();
@@ -1000,6 +1254,7 @@ async function handlePaymentIntentSucceeded(
   const div = (booking as Record<string, unknown>).diviners as {
     id: string;
     display_name: string;
+    user_id: string;
   } | null;
   const clientRecord = (booking as Record<string, unknown>).clients as {
     email: string;
@@ -1105,6 +1360,59 @@ async function handlePaymentIntentSucceeded(
     );
   }
   await Promise.all(paidConfirmPromises);
+
+  // Send invoice to client (fire-and-forget)
+  const paidAmount = paymentIntent.amount / 100;
+  sendBookingInvoice({
+    clientEmail,
+    clientName: clientRecord?.full_name ?? clientEmail.split("@")[0],
+    divinerName: div.display_name,
+    serviceName: svc.name,
+    dateTime: emailParams.dateTime,
+    duration: durationMins,
+    amount: Number(booking.base_price ?? paidAmount),
+    totalPaid: paidAmount,
+    bookingId,
+    portalUrl: `${appUrl}/portal/bookings`,
+  }).catch((err) =>
+    console.error("[Webhook] Failed to send booking invoice:", err)
+  );
+
+  // Notify diviner about the new booking (fire-and-forget)
+  (async () => {
+    try {
+      // Get diviner's email from auth.users
+      const { data: divinerAuth } = await supabase.auth.admin.getUserById(
+        div.user_id
+      );
+      const divinerEmail = divinerAuth?.user?.email;
+      if (!divinerEmail) return;
+
+      const questionnaire = (booking as Record<string, unknown>)
+        .questionnaire_responses as Record<string, string> | null;
+
+      await sendDivinerNewBookingNotification({
+        divinerEmail,
+        divinerName: div.display_name,
+        clientName: clientRecord?.full_name ?? clientEmail.split("@")[0],
+        clientEmail,
+        serviceName: svc.name,
+        dateTime: emailParams.dateTime,
+        duration: durationMins,
+        amount: paidAmount,
+        bookingId,
+        dashboardUrl: `${appUrl}/dashboard/bookings`,
+        questionnaire: questionnaire
+          ? {
+              focusQuestion: questionnaire.focusQuestion,
+              lifeArea: questionnaire.lifeArea,
+            }
+          : undefined,
+      });
+    } catch (err) {
+      console.error("[Webhook] Failed to send diviner booking notification:", err);
+    }
+  })();
 
   // Push event to diviner's Google Calendar if connected
   if (hasGoogleCalendar) {

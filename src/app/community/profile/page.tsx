@@ -11,7 +11,7 @@ export default async function CommunityProfilePage() {
 
   const { data: member } = await supabase
     .from("community_members")
-    .select("id, full_name, email, membership_type, membership_status, joined_at, expires_at")
+    .select("id, full_name, first_name, last_name, email, phone, gender, date_of_birth, birth_time, birth_city, address, city, state, zip, relationship_status, intake_data, membership_type, membership_status, joined_at, expires_at")
     .eq("user_id", user.id)
     .single();
 

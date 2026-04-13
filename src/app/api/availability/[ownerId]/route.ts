@@ -348,8 +348,8 @@ export async function GET(
       }
     }
 
-    const enrichedSlots = slots.map((slot: Record<string, unknown>) => {
-      const svcId = slot.availabilityServiceId as string | null;
+    const enrichedSlots = slots.map((slot) => {
+      const svcId = (slot as unknown as Record<string, unknown>).availabilityServiceId as string | null;
       const svcInfo = svcId ? servicePriceMap[svcId] : null;
       return {
         ...slot,

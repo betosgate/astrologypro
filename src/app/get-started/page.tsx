@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
@@ -101,6 +102,7 @@ import {
   Heart,
   Share2,
   Crown,
+  GraduationCap,
 } from "lucide-react";
 
 const faqs = [
@@ -146,9 +148,19 @@ const faqs = [
   },
 ];
 
-export default function GetStartedPage() {
+export default function GetStartedPageWrapper() {
+  return (
+    <Suspense>
+      <GetStartedPage />
+    </Suspense>
+  );
+}
+
+function GetStartedPage() {
   const supabase = createClient();
   const formRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
+  const affiliateCode = searchParams.get("ref") ?? searchParams.get("affiliate") ?? "";
 
   const [pricingSections, setPricingSections] = useState<PricingSection[]>([]);
   const [pricingLoaded, setPricingLoaded] = useState(false);
@@ -169,7 +181,7 @@ export default function GetStartedPage() {
     (async () => {
       try {
         const r = await fetch(
-          "/api/pricing?keys=professional_divination_course,perennial_mandalism_community",
+          "/api/pricing?keys=professional_divination_course,trainee_program,trainee_diviner_bundle,perennial_mandalism_community",
         );
         const body = await r.json();
         if (!r.ok || !body.items?.length) return;
@@ -187,7 +199,7 @@ export default function GetStartedPage() {
               name: p.display_name,
               tagline: p.description ?? "",
               setupPrice: p.onetime_amount ?? 0,
-              monthlyPrice: p.recurring_amount ?? p.onetime_amount ?? 0,
+              monthlyPrice: p.recurring_amount ?? 0,
               highlights: parseHighlights(p.html_description),
               customFields: cf,
               isFeatured: getField(cf, "is_featured") === "true",
@@ -279,6 +291,8 @@ export default function GetStartedPage() {
     setLoading(true);
 
     try {
+      const isCombo = plan?.itemKey === "trainee_diviner_bundle";
+
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -288,6 +302,7 @@ export default function GetStartedPage() {
             username,
             role: "diviner",
             plan: selectedPlan,
+            isCombo,
           },
         },
       });
@@ -309,6 +324,7 @@ export default function GetStartedPage() {
           email,
           userId: data.user.id,
           planId: selectedPlan,
+          ...(affiliateCode ? { affiliateCode } : {}),
         }),
       });
 
@@ -469,7 +485,7 @@ export default function GetStartedPage() {
                         )}
                       </div>
 
-                      <div className="grid items-start gap-6 md:grid-cols-3">
+                      <div className={`grid items-start gap-6 ${section.planOrder.length === 1 ? "mx-auto max-w-md" : section.planOrder.length === 2 ? "md:grid-cols-2 max-w-3xl mx-auto" : "md:grid-cols-3"}`}>
                         {section.planOrder.map((planId) => {
                           const p = section.plans[planId];
                           if (!p) return null;
@@ -498,15 +514,28 @@ export default function GetStartedPage() {
                                 <p className="mt-1 text-sm text-[#b8bcd0]/60">{p.tagline}</p>
 
                                 <div className="mt-5">
-                                  <div className="flex items-baseline gap-1">
-                                    <span className="font-display text-4xl font-bold text-[#f5f0e8]">
-                                      ${p.monthlyPrice}
-                                    </span>
-                                    <span className="text-[#b8bcd0]/60">/mo</span>
-                                  </div>
-                                  <p className="mt-1 text-sm text-[#b8bcd0]/50">
-                                    + ${p.setupPrice} one-time setup
-                                  </p>
+                                  {p.monthlyPrice > 0 ? (
+                                    <>
+                                      <div className="flex items-baseline gap-1">
+                                        <span className="font-display text-4xl font-bold text-[#f5f0e8]">
+                                          ${p.monthlyPrice}
+                                        </span>
+                                        <span className="text-[#b8bcd0]/60">/mo</span>
+                                      </div>
+                                      {p.setupPrice > 0 && (
+                                        <p className="mt-1 text-sm text-[#b8bcd0]/50">
+                                          + ${p.setupPrice} one-time setup
+                                        </p>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <div className="flex items-baseline gap-1">
+                                      <span className="font-display text-4xl font-bold text-[#f5f0e8]">
+                                        ${p.setupPrice}
+                                      </span>
+                                      <span className="text-[#b8bcd0]/60">one-time</span>
+                                    </div>
+                                  )}
                                 </div>
 
                                 {displaySummaryFields.length > 0 && (
@@ -603,52 +632,168 @@ export default function GetStartedPage() {
         </section>
 
         {/* ===== COST COMPARISON ===== */}
-        <section className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-3xl">
+        <section className="px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-4xl">
             <h2 className="mb-3 text-center font-display text-3xl font-bold text-[#f5f0e8] sm:text-4xl">
               What You&apos;re <span className="gold-text">Replacing</span>
             </h2>
-            <p className="mb-10 text-center text-[#b8bcd0]/60">
-              Most practitioners spend $120&ndash;250/mo piecing together separate tools
+            <p className="mb-4 text-center text-[#b8bcd0]/60">
+              Most practitioners spend <strong className="text-[#f5f0e8]">$300&ndash;600+/mo</strong> piecing together separate tools for their practice
+            </p>
+            <p className="mb-12 text-center text-xs text-[#b8bcd0]/40">
+              Here&apos;s the real cost of running a divination business without AstrologyPro
             </p>
 
-            <div className="space-y-2">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Category: Client-Facing */}
               {[
-                { tool: "Website builder", cost: "$16–40/mo" },
-                { tool: "Video conferencing", cost: "$13–20/mo" },
-                { tool: "Booking/scheduling", cost: "$12–16/mo" },
-                { tool: "Session recording", cost: "$10–25/mo" },
-                { tool: "Client CRM", cost: "$15–30/mo" },
-                { tool: "Email marketing", cost: "$10–20/mo" },
-                { tool: "Social media tools", cost: "$15–50/mo" },
-                { tool: "Affiliate system", cost: "$30–50/mo" },
-              ].map(({ tool, cost }) => (
-                <div
-                  key={tool}
-                  className="flex items-center justify-between rounded-lg border border-white/[0.06] px-4 py-3"
-                >
-                  <span className="text-sm text-[#b8bcd0]/70">{tool}</span>
-                  <span className="text-sm font-medium text-red-400/80">{cost}</span>
-                </div>
-              ))}
+                {
+                  category: "Client-Facing Platform",
+                  icon: Globe,
+                  items: [
+                    { tool: "Website builder (Squarespace, Wix)", cost: "$16–40/mo", mid: 28 },
+                    { tool: "Booking & scheduling (Calendly, Acuity)", cost: "$12–20/mo", mid: 16 },
+                    { tool: "Payment processing setup (Stripe Atlas)", cost: "$15–30/mo", mid: 22 },
+                    { tool: "Gift certificate system", cost: "$10–20/mo", mid: 15 },
+                  ],
+                },
+                {
+                  category: "Session Delivery",
+                  icon: Video,
+                  items: [
+                    { tool: "HD video conferencing (Zoom Pro)", cost: "$13–22/mo", mid: 17 },
+                    { tool: "Session recording & storage", cost: "$10–25/mo", mid: 17 },
+                    { tool: "Phone reading line (Twilio/RingCentral)", cost: "$20–50/mo", mid: 35 },
+                    { tool: "Screen sharing for chart display", cost: "Included in Zoom", mid: 0 },
+                  ],
+                },
+                {
+                  category: "Client Management",
+                  icon: Users,
+                  items: [
+                    { tool: "CRM & client database (HubSpot, Dubsado)", cost: "$15–45/mo", mid: 30 },
+                    { tool: "Intake forms & questionnaires", cost: "$10–20/mo", mid: 15 },
+                    { tool: "Follow-up email automation", cost: "$10–30/mo", mid: 20 },
+                    { tool: "Client testimonial collection", cost: "$10–25/mo", mid: 17 },
+                  ],
+                },
+                {
+                  category: "Marketing & Growth",
+                  icon: BarChart3,
+                  items: [
+                    { tool: "Email marketing (Mailchimp, ConvertKit)", cost: "$10–30/mo", mid: 20 },
+                    { tool: "Social media auto-posting", cost: "$15–50/mo", mid: 32 },
+                    { tool: "Affiliate/referral system", cost: "$30–60/mo", mid: 45 },
+                    { tool: "Analytics dashboard", cost: "$10–30/mo", mid: 20 },
+                  ],
+                },
+                {
+                  category: "Professional Tools",
+                  icon: Star,
+                  items: [
+                    { tool: "Astrology chart software", cost: "$15–50/mo", mid: 32 },
+                    { tool: "Tarot spread builder", cost: "$5–15/mo", mid: 10 },
+                    { tool: "Birth data lookup API", cost: "$10–30/mo", mid: 20 },
+                    { tool: "Event calendar & reminders", cost: "$8–15/mo", mid: 11 },
+                  ],
+                },
+                {
+                  category: "Training & Certification",
+                  icon: GraduationCap,
+                  items: [
+                    { tool: "Online course platform (Teachable, Kajabi)", cost: "$39–149/mo", mid: 94 },
+                    { tool: "Quiz & assessment tools", cost: "$10–30/mo", mid: 20 },
+                    { tool: "Video hosting for lessons", cost: "$10–25/mo", mid: 17 },
+                    { tool: "Certificate generation", cost: "$5–15/mo", mid: 10 },
+                  ],
+                },
+              ].map(({ category, icon: Icon, items }) => {
+                const subtotal = items.reduce((sum, i) => sum + i.mid, 0);
+                return (
+                  <div key={category} className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-5">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex size-8 items-center justify-center rounded-lg bg-[#c9a84c]/10">
+                          <Icon className="size-4 text-[#c9a84c]" />
+                        </div>
+                        <h3 className="text-sm font-semibold text-[#f5f0e8]">{category}</h3>
+                      </div>
+                      <span className="rounded-full bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-400">
+                        ~${subtotal}/mo
+                      </span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {items.map(({ tool, cost }) => (
+                        <div key={tool} className="flex items-center justify-between py-1">
+                          <span className="text-xs text-[#b8bcd0]/60">{tool}</span>
+                          <span className="ml-2 shrink-0 text-xs font-medium text-red-400/70">{cost}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
-              {/* Total */}
-              <div className="mt-4 flex items-center justify-between rounded-xl border border-[#c9a84c]/20 bg-[#c9a84c]/5 px-5 py-4">
+            {/* Grand total vs AstrologyPro */}
+            <div className="mt-8 space-y-3">
+              {/* Them */}
+              <div className="flex items-center justify-between rounded-xl border border-red-500/20 bg-red-500/5 px-6 py-4">
                 <div>
                   <p className="text-sm font-semibold text-[#f5f0e8]">
-                    AstrologyPro replaces all of this
+                    Doing it yourself with 15+ separate tools
                   </p>
                   <p className="mt-0.5 text-xs text-[#b8bcd0]/50">
-                    Plus astrology/tarot tools no generic platform offers
+                    Plus the time to manage, integrate, and troubleshoot them all
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-display text-2xl font-bold text-[#c9a84c]">
-                    From $97/mo
+                  <p className="font-display text-2xl font-bold text-red-400 line-through decoration-red-500/50">
+                    $450+/mo
+                  </p>
+                  <p className="text-xs text-red-400/60">+ hours of setup</p>
+                </div>
+              </div>
+
+              {/* Us */}
+              <div className="flex items-center justify-between rounded-xl border-2 border-[#c9a84c]/30 bg-gradient-to-r from-[#c9a84c]/[0.04] to-[#c9a84c]/[0.08] px-6 py-5">
+                <div>
+                  <p className="text-base font-bold text-[#f5f0e8]">
+                    AstrologyPro — everything above, built for diviners
+                  </p>
+                  <p className="mt-1 text-xs text-[#b8bcd0]/60">
+                    One platform. One login. One bill. Plus astrology &amp; tarot tools no generic platform offers.
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-display text-3xl font-bold text-[#c9a84c]">
+                    {(() => {
+                      const allPlans = pricingSections.flatMap((s) =>
+                        s.planOrder.map((id) => s.plans[id]).filter(Boolean)
+                      );
+                      const monthlyPlans = allPlans.filter((p) => p.monthlyPrice > 0);
+                      const lowestMonthly = monthlyPlans.length
+                        ? Math.min(...monthlyPlans.map((p) => p.monthlyPrice))
+                        : null;
+                      const onetimeOnly = allPlans.filter((p) => p.monthlyPrice === 0 && p.setupPrice > 0);
+                      const lowestOnetime = onetimeOnly.length
+                        ? Math.min(...onetimeOnly.map((p) => p.setupPrice))
+                        : null;
+                      if (lowestMonthly) return `From $${lowestMonthly}/mo`;
+                      if (lowestOnetime) return `From $${lowestOnetime}`;
+                      return "See plans above";
+                    })()}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[#c9a84c]/60">
+                    Save $350+/mo vs doing it yourself
                   </p>
                 </div>
               </div>
             </div>
+
+            <p className="mt-6 text-center text-xs text-[#b8bcd0]/30">
+              Prices based on publicly available pricing of comparable tools as of 2026. Actual costs vary by provider and plan.
+            </p>
           </div>
         </section>
 
@@ -707,7 +852,7 @@ export default function GetStartedPage() {
                 </h3>
                 {plan && (
                   <p className="mt-1 text-sm text-[#b8bcd0]/70">
-                    {plan.name} &middot; ${plan.setupPrice} setup + ${plan.monthlyPrice}/mo
+                    {plan.name} &middot; {plan.monthlyPrice > 0 ? `$${plan.setupPrice} setup + $${plan.monthlyPrice}/mo` : `$${plan.setupPrice} one-time`}
                   </p>
                 )}
                 {plan && (
@@ -860,7 +1005,7 @@ export default function GetStartedPage() {
                       </>
                     ) : (
                       <>
-                        Continue with {plan?.name ?? "your plan"} — ${plan?.setupPrice ?? 0} + ${plan?.monthlyPrice ?? 0}/mo
+                        Continue with {plan?.name ?? "your plan"} — {plan?.monthlyPrice ? `$${plan.setupPrice} + $${plan.monthlyPrice}/mo` : `$${plan?.setupPrice ?? 0}`}
                         <ArrowRight className="ml-2 size-4" />
                       </>
                     )}

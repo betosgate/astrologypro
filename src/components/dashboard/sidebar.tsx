@@ -28,6 +28,7 @@ import {
   Globe,
   Play,
   Rss,
+  Target,
   UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -76,10 +77,13 @@ const navItems: NavItem[] = [
   { label: "Testimonials", href: "/dashboard/testimonials", icon: MessageSquare },
   { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { label: "Affiliates", href: "/dashboard/affiliates", icon: Users2 },
+  { label: "Campaigns", href: "/dashboard/campaigns", icon: Target },
   { label: "Live", href: "/dashboard/live", icon: Radio },
   { label: "Video Sessions", href: "/dashboard/video", icon: Video },
+  { label: "Session Library", href: "/dashboard/library", icon: Play },
   { label: "Marketing", href: "/dashboard/marketing", icon: Megaphone },
   { label: "Reading Reports", href: "/dashboard/reports/readings", icon: BarChart2 },
+  { label: "Campaign Reports", href: "/dashboard/campaigns/reports", icon: Target },
   { label: "Mundane Astrology", href: "/dashboard/mundane", icon: Globe },
   { label: "Services", href: "/dashboard/services", icon: Sparkles },
   { label: "Media Gallery", href: "/dashboard/media", icon: Play },

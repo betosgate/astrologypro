@@ -9,6 +9,7 @@ import { MobileNav } from "@/components/community/mobile-nav";
 import { NavLink } from "@/components/shared/nav-link";
 import { NavDropdown } from "@/components/shared/nav-dropdown";
 import { PortalLogoutButton } from "@/components/portal/logout-button";
+import { OnboardingGuard } from "@/components/community/onboarding-guard";
 
 export const metadata = { title: "Community - AstrologyPro" };
 
@@ -21,7 +22,7 @@ export default async function CommunityLayout({ children }: { children: React.Re
   // throwing a PostgREST single-row error.
   const { data: member } = await supabase
     .from("community_members")
-    .select("id, full_name, membership_type, membership_status")
+    .select("id, full_name, first_name, membership_type, membership_status")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -29,6 +30,28 @@ export default async function CommunityLayout({ children }: { children: React.Re
   if (member.membership_status !== "active") redirect("/join/community?status=inactive");
   // PM-only gate: legacy Mystery School-only users must use /mystery-school
   if (member.membership_type !== "perennial_mandalism") redirect("/mystery-school");
+
+  // New members who haven't completed onboarding get a minimal layout
+  // that client-side redirects to the onboarding wizard (unless already there).
+  if (!member.first_name) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-20 border-b bg-background">
+          <div className="flex h-14 items-center justify-between px-4">
+            <Link href="/community" className="text-lg font-bold">
+              AstrologyPro
+            </Link>
+            <div className="flex items-center gap-2">
+              <PortalLogoutButton />
+            </div>
+          </div>
+        </header>
+        <main className="container mx-auto w-full max-w-2xl p-4 py-6 lg:p-8">
+          <OnboardingGuard>{children}</OnboardingGuard>
+        </main>
+      </div>
+    );
+  }
 
   const portals = await getUserPortals(supabase, user.id);
   const membershipLabel = "Perennial Mandalism";
