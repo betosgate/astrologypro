@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import {
   Card,
   CardContent,
@@ -14,7 +15,6 @@ import { Progress } from "@/components/ui/progress";
 import {
   BookOpen,
   Calendar,
-  Star,
   TrendingUp,
   User,
   GraduationCap,
@@ -64,16 +64,36 @@ function formatDuration(totalSeconds: number): string {
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-type ProgramProgress = {
-  program_id: string;
+type TrainingLessonSummary = {
+  id: string;
+  title: string;
+  completed: boolean;
+  in_progress?: boolean;
+  is_locked: boolean;
+};
+
+type TrainingCategorySummary = {
+  id: string;
+  name: string;
+  completed: boolean;
+  is_locked: boolean;
   total_lessons: number;
-  completed_lessons: number;
-  progress_pct: number;
   next_lesson_id: string | null;
   next_lesson_title: string | null;
+  lessons: TrainingLessonSummary[];
+};
+
+type TrainingProgramSummary = {
+  id: string;
+  name: string;
+  progress_pct: number;
+  completed_lessons: number;
+  total_lessons: number;
+  completed_categories: number;
+  total_categories: number;
   next_category_id: string | null;
   next_category_name: string | null;
-  last_activity_at: string | null;
+  categories: TrainingCategorySummary[];
 };
 
 type LessonCompletion = {
@@ -100,6 +120,84 @@ type ActivityItem = {
   time: string;
   href: string | null;
 };
+
+async function fetchTrainingPrograms(): Promise<TrainingProgramSummary[]> {
+  const base =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    `http://localhost:${process.env.PORT ?? 3000}`;
+
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((c) => `${c.name}=${c.value}`)
+    .join("; ");
+
+  const res = await fetch(`${base}/api/trainee/training/programs`, {
+    headers: { cookie: cookieHeader },
+    cache: "no-store",
+  });
+
+  if (!res.ok) return [];
+
+  const json = await res.json();
+  return Array.isArray(json.programs)
+    ? (json.programs as TrainingProgramSummary[])
+    : [];
+}
+
+function programHasStarted(program: TrainingProgramSummary) {
+  return program.categories.some((category) =>
+    category.lessons.some((lesson) => lesson.completed || lesson.in_progress),
+  );
+}
+
+function programIsComplete(program: TrainingProgramSummary) {
+  return program.total_lessons > 0 && program.completed_lessons >= program.total_lessons;
+}
+
+function findNextTrainingTarget(program: TrainingProgramSummary) {
+  const category =
+    program.categories.find(
+      (candidate) =>
+        candidate.id === program.next_category_id && !candidate.is_locked,
+    ) ??
+    program.categories.find((candidate) =>
+      candidate.lessons.some((lesson) => lesson.in_progress && !lesson.is_locked),
+    ) ??
+    program.categories.find(
+      (candidate) =>
+        !candidate.is_locked &&
+        !candidate.completed &&
+        candidate.total_lessons > 0,
+    ) ??
+    null;
+
+  if (!category) return null;
+
+  const lesson =
+    category.lessons.find(
+      (candidate) =>
+        candidate.id === category.next_lesson_id && !candidate.is_locked,
+    ) ??
+    category.lessons.find(
+      (candidate) => candidate.in_progress && !candidate.is_locked,
+    ) ??
+    category.lessons.find(
+      (candidate) => !candidate.completed && !candidate.is_locked,
+    ) ??
+    category.lessons.find((candidate) => !candidate.is_locked) ??
+    null;
+
+  if (!lesson) return null;
+
+  return {
+    programId: program.id,
+    programName: program.name,
+    categoryName: category.name,
+    lessonTitle: lesson.title,
+    href: `/trainee/training/${program.id}`,
+  };
+}
 
 export default async function TraineeDashboardPage() {
   const supabase = await createClient();
@@ -137,7 +235,7 @@ export default async function TraineeDashboardPage() {
   // ── All data fetched in parallel ──────────────────────────────────────────
   const [
     mentorResult,
-    programProgressResult,
+    trainingPrograms,
     recentCompletionsResult,
     quizStatsResult,
     timeSpentResult,
@@ -151,13 +249,9 @@ export default async function TraineeDashboardPage() {
           .single()
       : Promise.resolve({ data: null }),
 
-    // Overall progress summary (all programs for this user)
-    admin
-      .from("user_program_progress")
-      .select(
-        "program_id, total_lessons, completed_lessons, progress_pct, next_lesson_id, next_lesson_title, next_category_id, next_category_name, last_activity_at"
-      )
-      .eq("user_id", user.id),
+    // Overall progress summary from the same hierarchy-derived source used
+    // by /trainee/training, so dashboard totals cannot drift from program cards.
+    fetchTrainingPrograms(),
 
     // Recent completions (last 5)
     admin
@@ -188,9 +282,6 @@ export default async function TraineeDashboardPage() {
     ? (mentorResult.data as { display_name: string }).display_name
     : "Unassigned";
 
-  const programProgress: ProgramProgress[] =
-    (programProgressResult.data as ProgramProgress[] | null) ?? [];
-
   const recentCompletions: LessonCompletion[] =
     (recentCompletionsResult.data as LessonCompletion[] | null) ?? [];
 
@@ -205,12 +296,12 @@ export default async function TraineeDashboardPage() {
     );
 
   // ── Aggregate progress across all programs ────────────────────────────────
-  const totalLessons = programProgress.reduce(
-    (s, p) => s + (p.total_lessons ?? 0),
+  const totalLessons = trainingPrograms.reduce(
+    (s, p) => s + p.total_lessons,
     0
   );
-  const completedLessons = programProgress.reduce(
-    (s, p) => s + (p.completed_lessons ?? 0),
+  const completedLessons = trainingPrograms.reduce(
+    (s, p) => s + p.completed_lessons,
     0
   );
   const overallPct =
@@ -218,31 +309,32 @@ export default async function TraineeDashboardPage() {
       ? Math.round((completedLessons / totalLessons) * 100)
       : 0;
 
-  const programsStarted = programProgress.filter(
-    (p) => p.completed_lessons > 0
-  ).length;
-  const programsCompleted = programProgress.filter(
-    (p) => p.progress_pct >= 100
-  ).length;
+  const programsStarted = trainingPrograms.filter(programHasStarted).length;
+  const programsCompleted = trainingPrograms.filter(programIsComplete).length;
 
-  const passedQuizCount = quizAttempts.filter((q) => q.passed).length;
-  const quizAvgPct =
+  const quizScoreAvgPct =
     quizAttempts.length > 0
-      ? Math.round((passedQuizCount / quizAttempts.length) * 100)
+      ? Math.round(
+          quizAttempts.reduce((sum, attempt) => {
+            if (attempt.total_questions <= 0) return sum;
+            return sum + (attempt.score / attempt.total_questions) * 100;
+          }, 0) / quizAttempts.length,
+        )
       : null;
 
-  // ── Next lesson: pick in-progress program first (lowest progress_pct > 0) ─
-  let nextLessonProgram: ProgramProgress | null = null;
-  const inProgressPrograms = programProgress.filter(
-    (p) => p.progress_pct > 0 && p.progress_pct < 100
+  // ── Next lesson: prefer already-started incomplete programs, then first
+  // not-complete program. Links to the workspace so the inline lesson panel
+  // owns the learner flow.
+  const inProgressPrograms = trainingPrograms.filter(
+    (program) => programHasStarted(program) && !programIsComplete(program),
   );
-  if (inProgressPrograms.length > 0) {
-    nextLessonProgram = inProgressPrograms.reduce((a, b) =>
-      a.progress_pct <= b.progress_pct ? a : b
-    );
-  } else if (programProgress.length > 0) {
-    nextLessonProgram = programProgress[0];
-  }
+  const nextLessonProgram =
+    inProgressPrograms[0] ??
+    trainingPrograms.find((program) => !programIsComplete(program)) ??
+    null;
+  const nextTrainingTarget = nextLessonProgram
+    ? findNextTrainingTarget(nextLessonProgram)
+    : null;
 
   // ── Build activity feed ───────────────────────────────────────────────────
   const completionItems: ActivityItem[] = recentCompletions.map((c) => ({
@@ -351,7 +443,7 @@ export default async function TraineeDashboardPage() {
       )}
 
       {/* ── Training Progress Summary ────────────────────────────────────────── */}
-      {programProgress.length > 0 && (
+      {trainingPrograms.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
@@ -372,9 +464,9 @@ export default async function TraineeDashboardPage() {
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
               <span>
                 <span className="font-medium text-foreground">
-                  {programsStarted} of {programProgress.length}
+                  {programsStarted} of {trainingPrograms.length}
                 </span>{" "}
-                {programProgress.length === 1 ? "program" : "programs"} started
+                {trainingPrograms.length === 1 ? "program" : "programs"} started
               </span>
               {programsCompleted > 0 && (
                 <span>
@@ -384,11 +476,11 @@ export default async function TraineeDashboardPage() {
                   completed
                 </span>
               )}
-              {quizAvgPct !== null && (
+              {quizScoreAvgPct !== null && (
                 <span>
-                  Quiz avg:{" "}
+                  Quiz score avg:{" "}
                   <span className="font-medium text-foreground">
-                    {quizAvgPct}%
+                    {quizScoreAvgPct}%
                   </span>
                 </span>
               )}
@@ -409,7 +501,7 @@ export default async function TraineeDashboardPage() {
       {/* ── Continue Learning / Begin / Graduate CTA ────────────────────────── */}
       {trainee.training_status !== "graduated" && (
         <>
-          {programProgress.length === 0 ? (
+          {programsStarted === 0 ? (
             // No programs started yet
             <Card className="border-primary/30 bg-primary/5">
               <CardContent className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center">
@@ -430,7 +522,7 @@ export default async function TraineeDashboardPage() {
                 </Button>
               </CardContent>
             </Card>
-          ) : nextLessonProgram?.next_lesson_id ? (
+          ) : nextTrainingTarget ? (
             // In-progress: show continue learning
             <Card className="border-primary/30 bg-primary/5">
               <CardContent className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center">
@@ -443,25 +535,17 @@ export default async function TraineeDashboardPage() {
                       Continue Learning
                     </p>
                     <p className="font-semibold">
-                      {nextLessonProgram.next_lesson_title}
+                      {nextTrainingTarget.lessonTitle}
                     </p>
-                    {nextLessonProgram.next_category_name && (
-                      <p className="text-sm text-muted-foreground">
-                        {nextLessonProgram.next_category_name}
-                      </p>
-                    )}
+                    <p className="text-sm text-muted-foreground">
+                      {nextTrainingTarget.categoryName}
+                    </p>
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-2">
                   <Button asChild>
-                    <Link
-                      href={
-                        nextLessonProgram.next_category_id
-                          ? `/trainee/training/${nextLessonProgram.program_id}/${nextLessonProgram.next_category_id}/${nextLessonProgram.next_lesson_id}`
-                          : `/trainee/training/${nextLessonProgram.program_id}`
-                      }
-                    >
-                      Start Lesson
+                    <Link href={nextTrainingTarget.href}>
+                      Continue
                     </Link>
                   </Button>
                   <Button variant="outline" asChild>
@@ -470,7 +554,7 @@ export default async function TraineeDashboardPage() {
                 </div>
               </CardContent>
             </Card>
-          ) : programsCompleted > 0 && programsCompleted === programProgress.length ? (
+          ) : programsCompleted > 0 && programsCompleted === trainingPrograms.length ? (
             // All programs completed — awaiting graduation status
             <Card className="border-green-300/50 bg-green-50/30 dark:border-green-700/50 dark:bg-green-950/20">
               <CardContent className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center">
