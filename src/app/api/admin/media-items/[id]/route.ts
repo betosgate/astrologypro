@@ -71,6 +71,8 @@ export async function PATCH(
     sort_order,
     is_active,
     is_featured,
+    moderation_status,
+    admin_review_notes,
   } = body as {
     type?: string;
     url?: string;
@@ -83,6 +85,8 @@ export async function PATCH(
     sort_order?: number;
     is_active?: boolean;
     is_featured?: boolean;
+    moderation_status?: "pending" | "approved" | "rejected" | "blocked";
+    admin_review_notes?: string | null;
   };
 
   if (type !== undefined && !VALID_TYPES.includes(type as MediaType)) {
@@ -107,6 +111,19 @@ export async function PATCH(
       { status: 422 }
     );
   }
+  if (
+    moderation_status !== undefined &&
+    !["pending", "approved", "rejected", "blocked"].includes(moderation_status)
+  ) {
+    return NextResponse.json(
+      {
+        type: "https://astrologypro.com/errors/validation",
+        title: "Invalid moderation status",
+        status: 422,
+      },
+      { status: 422 }
+    );
+  }
 
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
@@ -121,6 +138,29 @@ export async function PATCH(
   if (sort_order !== undefined) update.sort_order = sort_order;
   if (is_active !== undefined) update.is_active = is_active;
   if (is_featured !== undefined) update.is_featured = is_featured;
+  if (admin_review_notes !== undefined) update.admin_review_notes = admin_review_notes?.trim() || null;
+  if (moderation_status !== undefined) {
+    update.moderation_status = moderation_status;
+    update.reviewed_at = new Date().toISOString();
+    update.reviewed_by = user.id;
+    if (moderation_status === "pending") {
+      update.submitted_for_review_at = new Date().toISOString();
+      update.blocked_at = null;
+    }
+    if (moderation_status === "approved") {
+      update.is_active = true;
+      update.blocked_at = null;
+    }
+    if (moderation_status === "rejected") {
+      update.is_active = false;
+      update.blocked_at = null;
+    }
+    if (moderation_status === "blocked") {
+      update.is_active = false;
+      update.is_featured = false;
+      update.blocked_at = new Date().toISOString();
+    }
+  }
 
   const { data, error } = await admin
     .from("media_items")

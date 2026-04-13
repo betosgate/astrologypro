@@ -48,7 +48,7 @@ export async function GET(
   const { data: item, error } = await admin
     .from("media_items")
     .select(
-      "id, diviner_id, type, url, title, description, thumbnail_url, category, album_name, platform, duration_seconds, sort_order, is_active, is_featured, view_count, created_at, updated_at"
+      "id, diviner_id, type, url, title, description, thumbnail_url, category, album_name, platform, duration_seconds, sort_order, is_active, is_featured, moderation_status, submitted_for_review_at, reviewed_at, admin_review_notes, view_count, created_at, updated_at"
     )
     .eq("id", id)
     .eq("diviner_id", diviner.id)
@@ -75,13 +75,20 @@ export async function PATCH(
   // Object-level authorization check
   const { data: existing, error: fetchErr } = await admin
     .from("media_items")
-    .select("id, diviner_id, type")
+    .select("id, diviner_id, type, moderation_status")
     .eq("id", id)
     .eq("diviner_id", diviner.id)
     .maybeSingle();
 
   if (fetchErr || !existing) {
     return problemDetail(404, "Not Found", "Media item not found.");
+  }
+  if (existing.moderation_status === "blocked") {
+    return problemDetail(
+      403,
+      "Blocked",
+      "This media item has been permanently blocked by an administrator and cannot be edited."
+    );
   }
 
   let body: {
@@ -166,6 +173,16 @@ export async function PATCH(
     return problemDetail(422, "Validation Error", "No updatable fields provided.");
   }
 
+  const shouldResubmit =
+    existing.moderation_status === "approved" || existing.moderation_status === "rejected";
+  if (shouldResubmit) {
+    updates.moderation_status = "pending";
+    updates.submitted_for_review_at = new Date().toISOString();
+    updates.reviewed_at = null;
+    updates.reviewed_by = null;
+    updates.admin_review_notes = null;
+  }
+
   const { data: updated, error } = await admin
     .from("media_items")
     .update(updates)
@@ -197,13 +214,20 @@ export async function DELETE(
   // Object-level authorization check
   const { data: existing, error: fetchErr } = await admin
     .from("media_items")
-    .select("id, diviner_id")
+    .select("id, diviner_id, moderation_status")
     .eq("id", id)
     .eq("diviner_id", diviner.id)
     .maybeSingle();
 
   if (fetchErr || !existing) {
     return problemDetail(404, "Not Found", "Media item not found.");
+  }
+  if (existing.moderation_status === "blocked") {
+    return problemDetail(
+      403,
+      "Blocked",
+      "This media item has been permanently blocked by an administrator and cannot be managed from the diviner dashboard."
+    );
   }
 
   const { error } = await admin
