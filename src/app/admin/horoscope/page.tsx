@@ -402,7 +402,7 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
 
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} relationshipEntries={modal?.relationshipEntries} bgClass={modal?.bgClass} pictureUrl={modal?.pictureUrl} />
 
       {/* Table */}
       <div className="horoscope-table-container">
@@ -533,7 +533,7 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
 
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} relationshipEntries={modal?.relationshipEntries} bgClass={modal?.bgClass} pictureUrl={modal?.pictureUrl} />
 
       {/* House table */}
       <div className="horoscope-table-container">
@@ -713,7 +713,7 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
 
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} relationshipEntries={modal?.relationshipEntries} bgClass={modal?.bgClass} pictureUrl={modal?.pictureUrl} />
       <AspectsLegend />
 
       <div className="horoscope-table-container">
@@ -797,7 +797,7 @@ function DharmaKarmaSection({ data, rawData, areaOfInquiry }: { data: any; rawDa
 
   return (
     <div className="space-y-3">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} relationshipEntries={modal?.relationshipEntries} bgClass={modal?.bgClass} pictureUrl={modal?.pictureUrl} />
       {[{ key: "dharma", label: "Dharma", text: dharma }, { key: "karma", label: "Karma", text: karma }].map(({ key, label, text }) => (
         text ? (
           <div key={key} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
@@ -832,7 +832,7 @@ function LilithSection({ lilith, aiData, areaOfInquiry, checkDacen, onDecanClick
 
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} relationshipEntries={modal?.relationshipEntries} bgClass={modal?.bgClass} pictureUrl={modal?.pictureUrl} />
       <div className="horoscope-table-container">
         <div className="horoscope-table-header flex items-center justify-center gap-2">
           <h3>Lilith</h3>
@@ -919,7 +919,7 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry }: { natal
 
   return (
     <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} relationshipEntries={modal?.relationshipEntries} bgClass={modal?.bgClass} pictureUrl={modal?.pictureUrl} />
       <div className="horoscope-section-header px-4 py-2.5 text-center">
         <h3 className="text-[20px] font-semibold text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 600, lineHeight: '26px' }}>Ascendant · Midheaven · Vertex</h3>
       </div>
@@ -1035,7 +1035,7 @@ function PlanetReturnInterpretation({ tab, aiData, areaOfInquiry }: { tab: strin
 
   return (
     <div className="rounded-lg border overflow-hidden">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} relationshipEntries={modal?.relationshipEntries} bgClass={modal?.bgClass} pictureUrl={modal?.pictureUrl} />
       <div className="px-4 py-2.5 horoscope-section-header text-center">
         <h3 className="text-sm font-semibold text-center w-full">{title}</h3>
       </div>
@@ -1113,7 +1113,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
 
   return (
     <div className="space-y-5">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} relationshipEntries={modal?.relationshipEntries} bgClass={modal?.bgClass} pictureUrl={modal?.pictureUrl} />
 
       {/* 1. Solar Return Details */}
       {details && (
@@ -1451,7 +1451,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
 
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} relationshipEntries={modal?.relationshipEntries} bgClass={modal?.bgClass} pictureUrl={modal?.pictureUrl} />
 
       {/* Transit Chart Image Section */}
       {transitWheelSvg && (
@@ -1880,7 +1880,7 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
 
   return (
     <div className="space-y-4">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} relationshipEntries={modal?.relationshipEntries} bgClass={modal?.bgClass} pictureUrl={modal?.pictureUrl} />
 
       {/* Recommendation on Date & Timeline */}
       {inner?.recomendation_on_date_and_timeline?.data && (
@@ -3110,6 +3110,7 @@ export default function AdminHoroscopePage() {
                         tabSlug={currentSlug}
                         checkDacen={checkDacen}
                         onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
+                        rawData={results}
                       />
                     )}
 
