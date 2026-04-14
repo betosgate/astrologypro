@@ -3142,7 +3142,7 @@ export default function AdminHoroscopePage() {
                     {/* ─── Natal chart sections (single-person tabs only — not two-person relationship tabs) ─ */}
                     {natalData && (
                       <div className="space-y-6">
-                        {(!isMainTransitTab && !isTwoPersonAiTab) && (
+                        {(!isMainTransitTab && !isTwoPersonAiTab && !isHorary) && (
                           <>
                             <PlanetsSection
                               planets={[

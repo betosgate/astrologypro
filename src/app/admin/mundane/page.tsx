@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Globe, Plus, Building2, CalendarDays, ArrowRight, Loader2, UserRound, BookOpen, CheckCircle2, FlaskConical, Search } from "lucide-react";
+import { Globe, Plus, Building2, CalendarDays, ArrowRight, Loader2, UserRound, BookOpen, CheckCircle2, FlaskConical, Search, Bell } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -283,6 +283,17 @@ export default function AdminMundanePage() {
                 <span className="font-medium text-sm">Mundane Search</span>
               </div>
               <p className="text-xs text-muted-foreground">Search across all entities, leaders, events, and forecasts.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/alerts">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <Bell className="size-4 text-amber-500" />
+                <span className="font-medium text-sm">Alert Center</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Notifications and watchlist alert rules for mundane signals.</p>
             </CardContent>
           </Link>
         </Card>
