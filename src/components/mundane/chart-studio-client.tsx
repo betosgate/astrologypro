@@ -319,7 +319,7 @@ export function ChartStudioClient({
   // M04-13: Export dropdown
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
-  const wheelRef = useRef<SVGSVGElement | null>(null);
+  const wheelRef = useRef<HTMLDivElement>(null);
 
   // M04-14: Save Snapshot
   const [savingSnapshot, setSavingSnapshot] = useState(false);
@@ -813,7 +813,7 @@ export function ChartStudioClient({
             <Loader2 className="size-8 animate-spin text-amber-500" />
           </div>
         ) : (
-          <div data-astro-wheel ref={wheelRef as React.RefObject<HTMLDivElement>}>
+          <div data-astro-wheel ref={wheelRef}>
             <AstroWheel planets={planets} houses={houses} aspects={aspects} />
           </div>
         )}
