@@ -18,21 +18,38 @@ async function resolveDestination(): Promise<string> {
 }
 
 /**
- * Invisible component — if the user already has a session, redirects them
- * to their correct dashboard immediately. Renders nothing in the DOM.
- * Used on marketing pages (home, login) so logged-in users never get stuck.
+ * Invisible component — redirects logged-in users to their dashboard.
+ *
+ * Handles two cases:
+ * 1. User already has a session (returning visit) — getSession() catches it
+ * 2. Supabase implicit flow lands user here with #access_token in the hash —
+ *    onAuthStateChange fires once the client parses the fragment and sets the session
  */
 export function AuthRedirect() {
   const router = useRouter();
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        const dest = await resolveDestination();
-        router.replace(dest);
-      }
+    let redirected = false;
+
+    async function go() {
+      if (redirected) return;
+      redirected = true;
+      const dest = await resolveDestination();
+      router.replace(dest);
+    }
+
+    // Case 1: session already exists (e.g. returning visitor)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) go();
     });
+
+    // Case 2: implicit flow — #access_token in URL hash, client parses async
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) go();
+    });
+
+    return () => subscription.unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

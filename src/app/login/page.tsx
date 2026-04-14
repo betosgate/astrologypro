@@ -45,14 +45,20 @@ export default function LoginPage() {
   const supabase = createClient();
   const router = useRouter();
 
-  // If already logged in, skip the login page entirely
+  // If already logged in, skip the login page entirely.
+  // onAuthStateChange handles the implicit flow (#access_token hash) in addition
+  // to sessions that are already established.
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        const dest = await resolveDestination();
-        router.replace(dest);
-      }
-    });
+    let redirected = false;
+    async function go() {
+      if (redirected) return;
+      redirected = true;
+      const dest = await resolveDestination();
+      router.replace(dest);
+    }
+    supabase.auth.getSession().then(({ data: { session } }) => { if (session) go(); });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => { if (session) go(); });
+    return () => subscription.unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
