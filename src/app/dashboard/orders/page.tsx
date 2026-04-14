@@ -36,6 +36,8 @@ import {
   StickyNote,
   Loader2,
   CalendarRange,
+  Trash2,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -101,10 +103,14 @@ export default function DivinerOrdersPage() {
   const [sortBy, setSortBy] = useState<SortBy>("created_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
-  // Notes editing state
+  // Notes panel state
+  type OrderNote = { id: string; content: string; created_by_name: string; created_at: string };
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
-  const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
+  const [notesList, setNotesList] = useState<Record<string, OrderNote[]>>({});
+  const [loadingNotesId, setLoadingNotesId] = useState<string | null>(null);
+  const [newNoteText, setNewNoteText] = useState<Record<string, string>>({});
   const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -149,40 +155,47 @@ export default function DivinerOrdersPage() {
   const fmt = (amount: number, currency: string) =>
     `$${Number(amount).toFixed(2)} ${currency.toUpperCase()}`;
 
-  async function handleSaveNote(orderId: string) {
-    setSavingNoteId(orderId);
+  async function openNotes(orderId: string) {
+    if (expandedNoteId === orderId) { setExpandedNoteId(null); return; }
+    setExpandedNoteId(orderId);
+    if (notesList[orderId]) return; // already loaded
+    setLoadingNotesId(orderId);
     try {
-      const notes = editingNotes[orderId] ?? "";
-      const res = await fetch(`/api/dashboard/orders/${orderId}/notes`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notes }),
-      });
-      if (!res.ok) {
-        toast.error("Failed to save note");
-        return;
+      const res = await fetch(`/api/dashboard/orders/${orderId}/notes`);
+      if (res.ok) {
+        const json = await res.json();
+        setNotesList((prev) => ({ ...prev, [orderId]: json.notes ?? [] }));
       }
-      setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, notes } : o))
-      );
-      setExpandedNoteId(null);
-      toast.success("Note saved");
-    } catch {
-      toast.error("Failed to save note");
-    } finally {
-      setSavingNoteId(null);
-    }
+    } finally { setLoadingNotesId(null); }
   }
 
-  function openNote(order: Order) {
-    if (expandedNoteId === order.id) {
-      setExpandedNoteId(null);
-      return;
-    }
-    if (!(order.id in editingNotes)) {
-      setEditingNotes((prev) => ({ ...prev, [order.id]: order.notes ?? "" }));
-    }
-    setExpandedNoteId(order.id);
+  async function handleAddNote(orderId: string) {
+    const content = (newNoteText[orderId] ?? "").trim();
+    if (!content) return;
+    setSavingNoteId(orderId);
+    try {
+      const res = await fetch(`/api/dashboard/orders/${orderId}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) { toast.error("Failed to add note"); return; }
+      const json = await res.json();
+      setNotesList((prev) => ({ ...prev, [orderId]: [json.note, ...(prev[orderId] ?? [])] }));
+      setNewNoteText((prev) => ({ ...prev, [orderId]: "" }));
+      toast.success("Note added");
+    } catch { toast.error("Failed to add note"); }
+    finally { setSavingNoteId(null); }
+  }
+
+  async function handleDeleteNote(orderId: string, noteId: string) {
+    setDeletingNoteId(noteId);
+    try {
+      const res = await fetch(`/api/dashboard/orders/${orderId}/notes/${noteId}`, { method: "DELETE" });
+      if (!res.ok) { toast.error("Failed to delete note"); return; }
+      setNotesList((prev) => ({ ...prev, [orderId]: (prev[orderId] ?? []).filter((n) => n.id !== noteId) }));
+    } catch { toast.error("Failed to delete note"); }
+    finally { setDeletingNoteId(null); }
   }
 
   const kpiCards = [
@@ -394,11 +407,11 @@ export default function DivinerOrdersPage() {
                           variant="ghost"
                           size="sm"
                           className="text-xs gap-1 relative"
-                          onClick={() => openNote(order)}
+                          onClick={() => openNotes(order.id)}
                         >
                           <StickyNote className="size-3.5" />
-                          Note
-                          {order.notes && (
+                          Notes
+                          {(notesList[order.id]?.length ?? 0) > 0 && (
                             <span className="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-amber-400" />
                           )}
                         </Button>
@@ -413,41 +426,97 @@ export default function DivinerOrdersPage() {
                     </TableCell>
                   </TableRow>
 
-                  {/* Expandable notes row */}
+                  {/* Expandable multi-note panel */}
                   {expandedNoteId === order.id && (
-                    <TableRow key={`${order.id}-note`} className="bg-muted/30 hover:bg-muted/30">
-                      <TableCell colSpan={6} className="pb-3 pt-0">
-                        <div className="flex gap-2 pt-2">
-                          <Textarea
-                            rows={2}
-                            value={editingNotes[order.id] ?? order.notes ?? ""}
-                            onChange={(e) =>
-                              setEditingNotes((prev) => ({ ...prev, [order.id]: e.target.value }))
-                            }
-                            placeholder="Add a note for this order…"
-                            className="flex-1 text-sm"
-                          />
-                          <div className="flex flex-col gap-1.5">
-                            <Button
-                              size="sm"
-                              disabled={savingNoteId === order.id}
-                              onClick={() => handleSaveNote(order.id)}
-                            >
-                              {savingNoteId === order.id ? (
-                                <Loader2 className="size-3.5 animate-spin" />
-                              ) : (
-                                "Save"
-                              )}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => setExpandedNoteId(null)}
-                            >
-                              Cancel
-                            </Button>
+                    <TableRow key={`${order.id}-notes`} className="bg-muted/30 hover:bg-muted/30">
+                      <TableCell colSpan={6} className="pt-2 pb-4 px-4">
+                        {loadingNotesId === order.id ? (
+                          <div className="flex items-center gap-2 text-muted-foreground text-sm py-2">
+                            <Loader2 className="size-4 animate-spin" />
+                            Loading notes…
                           </div>
-                        </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {/* Existing notes list */}
+                            {(notesList[order.id] ?? []).length === 0 ? (
+                              <p className="text-xs text-muted-foreground">No notes yet.</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {(notesList[order.id] ?? []).map((note) => (
+                                  <div
+                                    key={note.id}
+                                    className="flex items-start gap-2 rounded-md bg-background border p-2.5 text-sm"
+                                  >
+                                    <div className="flex-1 space-y-0.5">
+                                      <p className="text-sm leading-snug">{note.content}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {note.created_by_name} &middot;{" "}
+                                        {new Date(note.created_at).toLocaleString("en-US", {
+                                          month: "short",
+                                          day: "numeric",
+                                          year: "numeric",
+                                          hour: "numeric",
+                                          minute: "2-digit",
+                                        })}
+                                      </p>
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="size-7 text-muted-foreground hover:text-destructive shrink-0"
+                                      disabled={deletingNoteId === note.id}
+                                      onClick={() => handleDeleteNote(order.id, note.id)}
+                                    >
+                                      {deletingNoteId === note.id ? (
+                                        <Loader2 className="size-3.5 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="size-3.5" />
+                                      )}
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Add note form */}
+                            <div className="flex gap-2 pt-1">
+                              <Textarea
+                                rows={2}
+                                value={newNoteText[order.id] ?? ""}
+                                onChange={(e) =>
+                                  setNewNoteText((prev) => ({ ...prev, [order.id]: e.target.value }))
+                                }
+                                placeholder="Add a note…"
+                                className="flex-1 text-sm"
+                                maxLength={2000}
+                              />
+                              <div className="flex flex-col gap-1.5">
+                                <Button
+                                  size="sm"
+                                  disabled={savingNoteId === order.id || !(newNoteText[order.id] ?? "").trim()}
+                                  onClick={() => handleAddNote(order.id)}
+                                  className="gap-1"
+                                >
+                                  {savingNoteId === order.id ? (
+                                    <Loader2 className="size-3.5 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <Plus className="size-3.5" />
+                                      Add
+                                    </>
+                                  )}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setExpandedNoteId(null)}
+                                >
+                                  Close
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   )}
