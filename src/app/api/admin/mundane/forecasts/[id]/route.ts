@@ -19,20 +19,26 @@ export async function GET(
   const { id } = await params;
   const admin = createAdminClient();
 
-  const { data, error } = await admin
-    .from("mundane_forecasts")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const [forecastResult, evidenceResult] = await Promise.all([
+    admin.from("mundane_forecasts").select("*").eq("id", id).single(),
+    admin
+      .from("forecast_evidence")
+      .select("id, evidence_type, note, chart_calc_id, astro_event_id, entity_id, added_by, created_at")
+      .eq("forecast_id", id)
+      .order("created_at", { ascending: false }),
+  ]);
 
-  if (error || !data) {
+  if (forecastResult.error || !forecastResult.data) {
     return NextResponse.json(
       { type: "https://httpstatuses.com/404", title: "Not Found", status: 404, detail: "Forecast not found" },
       { status: 404 }
     );
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json({
+    ...forecastResult.data,
+    evidence: evidenceResult.data ?? [],
+  });
 }
 
 export async function PATCH(

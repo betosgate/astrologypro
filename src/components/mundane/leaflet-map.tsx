@@ -43,6 +43,16 @@ export type MapForecast = {
   outcome_status: string;
 };
 
+export type SignalOverlayPoint = {
+  entity_id: string;
+  name: string;
+  flag_emoji: string | null;
+  lat: number;
+  lng: number;
+  score: number;
+  score_date: string;
+};
+
 export type LeafletMapProps = {
   entities: MapEntity[];
   events: MapEvent[];
@@ -53,6 +63,7 @@ export type LeafletMapProps = {
     showForecasts: boolean;
     severities: Set<string>;
   };
+  signalPoints?: SignalOverlayPoint[];
 };
 
 // ─── Color helpers ─────────────────────────────────────────────────────────────
@@ -95,7 +106,25 @@ function confidenceColor(level: string): string {
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
-export function LeafletMap({ entities, events, forecasts, filters }: LeafletMapProps) {
+const SIGNAL_COLORS: Record<string, string> = {
+  low: "#22c55e",    // green
+  medium: "#f59e0b", // amber
+  high: "#ef4444",   // red
+};
+
+function signalColor(score: number): string {
+  if (score <= 3) return SIGNAL_COLORS.low;
+  if (score <= 6) return SIGNAL_COLORS.medium;
+  return SIGNAL_COLORS.high;
+}
+
+function signalLabel(score: number): string {
+  if (score <= 3) return "Low";
+  if (score <= 6) return "Medium";
+  return "High";
+}
+
+export function LeafletMap({ entities, events, forecasts, filters, signalPoints }: LeafletMapProps) {
   // Build forecast lookup by entity_id
   const forecastsByEntity = useMemo(() => {
     const map: Record<string, MapForecast[]> = {};
@@ -222,6 +251,37 @@ export function LeafletMap({ entities, events, forecasts, filters }: LeafletMapP
           </CircleMarker>
         );
       })}
+
+      {/* Signal overlay dots */}
+      {signalPoints && signalPoints.map((sp) => (
+        <CircleMarker
+          key={`signal-${sp.entity_id}`}
+          center={[sp.lat, sp.lng]}
+          radius={9}
+          pathOptions={{
+            color: signalColor(sp.score),
+            weight: 2,
+            fillColor: signalColor(sp.score),
+            fillOpacity: 0.55,
+          }}
+        >
+          <Popup>
+            <div className="min-w-[160px] text-xs">
+              <p className="font-bold text-sm">
+                {sp.flag_emoji ?? ""} {sp.name}
+              </p>
+              <p className="text-muted-foreground">Signal Overlay</p>
+              <p className="mt-1">
+                Stress score: <strong>{sp.score.toFixed(1)}</strong>{" "}
+                <span style={{ color: signalColor(sp.score) }}>
+                  ({signalLabel(sp.score)})
+                </span>
+              </p>
+              <p className="text-muted-foreground text-[10px] mt-0.5">As of {sp.score_date}</p>
+            </div>
+          </Popup>
+        </CircleMarker>
+      ))}
 
       {/* Event markers */}
       {visibleEvents.map((ev) => (

@@ -3,21 +3,48 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Globe, Building2, CalendarDays, Users, BookOpen,
-  TrendingUp, Star, Telescope, ScrollText, Eye,
+  Globe,
+  Bell,
+  BookOpen,
+  Users,
+  Calendar,
+  Sparkles,
+  Star,
+  Eye,
+  Clock,
+  TrendingUp,
+  FileText,
+  AlertTriangle,
+  Info,
+  Telescope,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Mundane Astrology — Dashboard" };
+export const metadata = { title: "Mundane Astrology — My Dashboard" };
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+    timeZoneName: "short",
+  });
 }
+
+// ─── Badge colour maps ───────────────────────────────────────────────────────
 
 const OUTCOME_BADGE: Record<string, string> = {
   open: "bg-blue-100 text-blue-700 border-blue-200",
@@ -34,13 +61,6 @@ const CONFIDENCE_BADGE: Record<string, string> = {
   speculative: "bg-gray-100 text-gray-600 border-gray-200",
 };
 
-const SIGNAL_COLOR: Record<string, string> = {
-  critical: "text-red-500",
-  high: "text-orange-500",
-  medium: "text-yellow-500",
-  low: "text-green-500",
-};
-
 const ASTRO_TYPE_BADGE: Record<string, string> = {
   eclipse: "bg-purple-100 text-purple-700 border-purple-200",
   ingress: "bg-blue-100 text-blue-700 border-blue-200",
@@ -51,354 +71,668 @@ const ASTRO_TYPE_BADGE: Record<string, string> = {
   direct: "bg-emerald-100 text-emerald-700 border-emerald-200",
 };
 
-type Entity = { id: string; name: string; entity_type: string; flag_emoji: string | null; region: string | null };
+const PRIORITY_ICON: Record<string, React.ReactNode> = {
+  critical: <AlertTriangle className="size-3.5 text-red-500 shrink-0" />,
+  high: <AlertTriangle className="size-3.5 text-orange-500 shrink-0" />,
+  medium: <Info className="size-3.5 text-yellow-500 shrink-0" />,
+  low: <Info className="size-3.5 text-blue-400 shrink-0" />,
+};
+
+const TRADITION_BADGE: Record<string, string> = {
+  western: "bg-violet-100 text-violet-700 border-violet-200",
+  vedic: "bg-amber-100 text-amber-700 border-amber-200",
+  hybrid: "bg-teal-100 text-teal-700 border-teal-200",
+};
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyRow = any;
 
-export default async function DashboardMundanePage() {
+type WatchlistRow = {
+  id: string;
+  entity_ids: string[] | null;
+};
+
+type EntityRow = {
+  id: string;
+  name: string;
+  flag_emoji: string | null;
+  entity_type: string;
+};
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+
+interface PageProps {
+  searchParams: Promise<{ tradition?: string }>;
+}
+
+export default async function DashboardMundanePage({ searchParams }: PageProps) {
+  // Auth
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const admin = createAdminClient();
-  const today = new Date().toISOString().slice(0, 10);
-  const in90 = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10);
 
+  // Tradition toggle (URL param, UI only — calculation integration is Phase 2)
+  const params = await searchParams;
+  const tradition = (params.tradition ?? "western") as "western" | "vedic" | "hybrid";
+
+  // Date helpers
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const tomorrowStr = new Date(now.getTime() + 86400000).toISOString().slice(0, 10);
+  const in7Str = new Date(now.getTime() + 7 * 86400000).toISOString().slice(0, 10);
+
+  // ── Parallel fetches ──────────────────────────────────────────────────────
   const [
-    entitiesRes,
-    leadersRes,
-    upcomingEventsRes,
-    recentEventsRes,
-    astroEventsRes,
-    forecastsRes,
-    projectsRes,
+    todayAstroRes,
+    alertsUnreadRes,
+    watchlistRes,
+    openProjectsRes,
+    upcomingForecastsRes,
+    next7AstroRes,
   ] = await Promise.all([
-    admin.from("mundane_entities").select("id, name, entity_type, flag_emoji, region")
-      .eq("is_active", true).order("name").limit(16),
-    admin.from("mundane_leaders").select("id, full_name, office_title, is_current, birth_data_confidence")
-      .eq("is_public", true).eq("is_current", true).order("full_name").limit(8),
-    admin.from("mundane_events").select("id, title, event_type, event_date, is_forecast, forecast_confidence, location")
-      .eq("is_public", true).gte("event_date", today).order("event_date").limit(6),
-    admin.from("mundane_events").select("id, title, event_type, event_date, is_forecast, location")
-      .eq("is_public", true).lt("event_date", today).order("event_date", { ascending: false }).limit(5),
-    admin.from("mundane_astro_events").select("id, title, event_type, planet_primary, planet_secondary, sign, event_datetime_utc")
-      .gte("event_datetime_utc", new Date().toISOString())
-      .lte("event_datetime_utc", new Date(Date.now() + 180 * 86400000).toISOString())
-      .order("event_datetime_utc").limit(8),
-    admin.from("mundane_forecasts").select("id, title, entity_id, forecast_period_start, forecast_period_end, confidence_level, signal_strength, outcome_status, is_public")
-      .eq("is_public", true).eq("outcome_status", "open")
-      .gte("forecast_period_end", today).order("forecast_period_start").limit(6),
-    admin.from("mundane_research_projects").select("id, title, project_type, status, created_at")
-      .eq("status", "active").order("created_at", { ascending: false }).limit(4),
+    // 1. Today's astronomical events
+    admin
+      .from("mundane_astro_events")
+      .select("id, title, event_type, planet_primary, planet_secondary, sign, event_datetime_utc")
+      .gte("event_datetime_utc", `${todayStr}T00:00:00Z`)
+      .lt("event_datetime_utc", `${tomorrowStr}T00:00:00Z`)
+      .order("event_datetime_utc"),
+
+    // 2. Active (unread) alerts — count + top 3
+    admin
+      .from("mundane_alert_notifications")
+      .select("id, title, message, priority, triggered_at")
+      .eq("user_id", user.id)
+      .eq("is_read", false)
+      .order("triggered_at", { ascending: false })
+      .limit(3),
+
+    // 3. Watchlist(s) — grab all for this user
+    admin
+      .from("mundane_watchlists")
+      .select("id, entity_ids")
+      .eq("user_id", user.id),
+
+    // 4. Open research projects (not completed), limit 5
+    admin
+      .from("mundane_research_projects")
+      .select("id, title, project_type, status, created_at")
+      .neq("status", "completed")
+      .eq("created_by", user.id)
+      .order("created_at", { ascending: false })
+      .limit(5),
+
+    // 5+6. Upcoming forecast windows (7 days)
+    admin
+      .from("mundane_forecasts")
+      .select("id, title, entity_id, forecast_period_start, forecast_period_end, confidence_level, outcome_status")
+      .eq("outcome_status", "open")
+      .gte("forecast_period_start", todayStr)
+      .lte("forecast_period_start", in7Str)
+      .order("forecast_period_start")
+      .limit(10),
+
+    // 7. Next-7-day astro events — count
+    admin
+      .from("mundane_astro_events")
+      .select("id", { count: "exact", head: true })
+      .gte("event_datetime_utc", now.toISOString())
+      .lte("event_datetime_utc", `${in7Str}T23:59:59Z`),
   ]);
 
-  const entities = (entitiesRes.data ?? []) as Entity[];
-  const leaders = (leadersRes.data ?? []) as AnyRow[];
-  const upcomingEvents = (upcomingEventsRes.data ?? []) as AnyRow[];
-  const recentEvents = (recentEventsRes.data ?? []) as AnyRow[];
-  const astroEvents = (astroEventsRes.data ?? []) as AnyRow[];
-  const forecasts = (forecastsRes.data ?? []) as AnyRow[];
-  const projects = (projectsRes.data ?? []) as AnyRow[];
+  const todayAstroEvents = (todayAstroRes.data ?? []) as AnyRow[];
+  const unreadAlerts = (alertsUnreadRes.data ?? []) as AnyRow[];
+  const unreadCount = unreadAlerts.length; // top-3 displayed; badge from count
 
-  const counts = {
-    entities: entitiesRes.data?.length ?? 0,
-    leaders: leadersRes.data?.length ?? 0,
-    upcomingEvents: upcomingEvents.length,
-    astroEvents: astroEvents.length,
-    forecasts: forecasts.length,
-    projects: projects.length,
+  // Watchlist — collect unique entity IDs across all watchlists
+  const watchlistRows = (watchlistRes.data ?? []) as WatchlistRow[];
+  const watchedEntityIds = Array.from(
+    new Set(watchlistRows.flatMap((w) => w.entity_ids ?? []))
+  );
+
+  // Fetch entity details for watched IDs (max first 12 for display)
+  let watchedEntities: EntityRow[] = [];
+  if (watchedEntityIds.length > 0) {
+    const entRes = await admin
+      .from("mundane_entities")
+      .select("id, name, flag_emoji, entity_type")
+      .in("id", watchedEntityIds.slice(0, 12))
+      .order("name");
+    watchedEntities = (entRes.data ?? []) as EntityRow[];
+  }
+
+  const openProjects = (openProjectsRes.data ?? []) as AnyRow[];
+
+  // Recent notes — fetch last 5 from user's projects
+  let recentNotes: AnyRow[] = [];
+  if (openProjects.length > 0) {
+    const projectIds = openProjects.map((p: AnyRow) => p.id);
+    const notesRes = await admin
+      .from("mundane_project_notes")
+      .select("id, project_id, title, body, created_at")
+      .in("project_id", projectIds)
+      .eq("created_by", user.id)
+      .order("created_at", { ascending: false })
+      .limit(5);
+    recentNotes = (notesRes.data ?? []) as AnyRow[];
+  }
+
+  const upcomingForecasts = (upcomingForecastsRes.data ?? []) as AnyRow[];
+
+  // Fetch entity names for forecasts that have entity_id
+  const forecastEntityIds = Array.from(
+    new Set(upcomingForecasts.map((f: AnyRow) => f.entity_id).filter(Boolean))
+  );
+  const forecastEntityMap: Record<string, string> = {};
+  if (forecastEntityIds.length > 0) {
+    const fentRes = await admin
+      .from("mundane_entities")
+      .select("id, name")
+      .in("id", forecastEntityIds);
+    for (const row of fentRes.data ?? []) {
+      forecastEntityMap[row.id] = row.name;
+    }
+  }
+
+  const next7AstroCount = next7AstroRes.count ?? 0;
+
+  // ── KPI counts ────────────────────────────────────────────────────────────
+  const kpis = {
+    watchedEntities: watchedEntityIds.length,
+    unreadAlerts: unreadCount,
+    todayAstro: todayAstroEvents.length,
+    openForecasts: upcomingForecasts.length,
+    activeProjects: openProjects.length,
+    next7Days: next7AstroCount,
   };
 
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-2">
-          <Globe className="size-6 text-violet-500" />
-          <h1 className="text-2xl font-bold tracking-tight">Mundane Astrology</h1>
+
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <div className="flex items-center gap-2">
+            <Globe className="size-6 text-violet-500" />
+            <h1 className="text-2xl font-bold tracking-tight">Mundane Astrology</h1>
+          </div>
+          <p className="text-muted-foreground mt-1">
+            World events, astronomical sky, watchlist, and research.
+          </p>
         </div>
-        <p className="text-muted-foreground mt-1">
-          World entities, astronomical events, forecasts, and research.
-        </p>
+
+        {/* Tradition toggle */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-xs text-muted-foreground">Tradition:</span>
+          <div className="flex rounded-md border overflow-hidden text-xs font-medium">
+            {(["western", "vedic", "hybrid"] as const).map((t) => (
+              <Link
+                key={t}
+                href={`?tradition=${t}`}
+                className={`px-3 py-1.5 capitalize transition-colors ${
+                  tradition === t
+                    ? "bg-violet-600 text-white"
+                    : "bg-background text-muted-foreground hover:bg-muted/60"
+                }`}
+              >
+                {t}
+              </Link>
+            ))}
+          </div>
+          <Badge
+            variant="outline"
+            className={`text-[11px] capitalize ${TRADITION_BADGE[tradition] ?? ""}`}
+          >
+            {tradition}
+          </Badge>
+        </div>
       </div>
 
-      {/* KPI strip */}
+      {/* ── KPI bar ── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {[
-          { label: "Entities", value: counts.entities, icon: <Building2 className="size-4 text-violet-500" />, href: "/admin/mundane/entities" },
-          { label: "Leaders", value: counts.leaders, icon: <Users className="size-4 text-blue-500" />, href: "/admin/mundane/leaders" },
-          { label: "Upcoming Events", value: counts.upcomingEvents, icon: <CalendarDays className="size-4 text-emerald-500" />, href: "/admin/mundane/events" },
-          { label: "Astro Events", value: counts.astroEvents, icon: <Telescope className="size-4 text-purple-500" />, href: "/admin/mundane/event-calendar" },
-          { label: "Open Forecasts", value: counts.forecasts, icon: <TrendingUp className="size-4 text-amber-500" />, href: "/admin/mundane/forecasts" },
-          { label: "Research Projects", value: counts.projects, icon: <BookOpen className="size-4 text-rose-500" />, href: "/admin/mundane/research" },
+          {
+            label: "Watched Entities",
+            value: kpis.watchedEntities,
+            icon: <Eye className="size-4 text-violet-500" />,
+            href: "/admin/mundane/entities",
+          },
+          {
+            label: "Unread Alerts",
+            value: kpis.unreadAlerts,
+            icon: <Bell className="size-4 text-amber-500" />,
+            href: "/admin/mundane/alerts",
+            amber: kpis.unreadAlerts > 0,
+          },
+          {
+            label: "Today's Events",
+            value: kpis.todayAstro,
+            icon: <Sparkles className="size-4 text-purple-500" />,
+            href: "/admin/mundane/event-calendar",
+          },
+          {
+            label: "Open Forecasts",
+            value: kpis.openForecasts,
+            icon: <TrendingUp className="size-4 text-blue-500" />,
+            href: "/admin/mundane/forecasts",
+          },
+          {
+            label: "Active Projects",
+            value: kpis.activeProjects,
+            icon: <BookOpen className="size-4 text-rose-500" />,
+            href: "/admin/mundane/research",
+          },
+          {
+            label: "Sky: Next 7 Days",
+            value: kpis.next7Days,
+            icon: <Telescope className="size-4 text-emerald-500" />,
+            href: "/admin/mundane/event-calendar",
+          },
         ].map((kpi) => (
           <Link key={kpi.label} href={kpi.href}>
-            <Card className="hover:bg-muted/30 transition-colors cursor-pointer h-full">
+            <Card
+              className={`hover:bg-muted/30 transition-colors cursor-pointer h-full ${
+                kpi.amber ? "border-amber-300 bg-amber-50/60" : ""
+              }`}
+            >
               <CardContent className="py-3 px-4">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs text-muted-foreground">{kpi.label}</span>
                   {kpi.icon}
                 </div>
-                <p className="text-2xl font-bold">{kpi.value}</p>
+                <p
+                  className={`text-2xl font-bold ${
+                    kpi.amber ? "text-amber-600" : ""
+                  }`}
+                >
+                  {kpi.value}
+                </p>
               </CardContent>
             </Card>
           </Link>
         ))}
       </div>
 
+      {/* ── Main 3-column grid ── */}
       <div className="grid gap-6 lg:grid-cols-3">
 
-        {/* ---- LEFT: Upcoming Astro Events ---- */}
-        <div className="space-y-4 lg:col-span-1">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Telescope className="size-4 text-purple-500" />
-              <h2 className="text-base font-semibold">Upcoming Astro Events</h2>
-            </div>
-            <Link href="/admin/mundane/event-calendar" className="text-xs text-muted-foreground hover:text-foreground">View calendar →</Link>
-          </div>
-          {astroEvents.length === 0 ? (
-            <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">No upcoming events.</CardContent></Card>
-          ) : (
-            <div className="space-y-2">
-              {astroEvents.map((ev) => (
-                <Card key={ev.id} className="hover:bg-muted/20 transition-colors">
-                  <CardContent className="py-3 px-4">
-                    <div className="flex items-start gap-2">
+        {/* ── Column 1: Today's Sky ── */}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Sparkles className="size-4 text-purple-500" />
+                  Today&apos;s Sky
+                </CardTitle>
+                <Link
+                  href="/admin/mundane/event-calendar"
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Calendar →
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {todayAstroEvents.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  Clear sky today — no major events.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {todayAstroEvents.map((ev) => (
+                    <div
+                      key={ev.id}
+                      className="flex items-start gap-2 py-2 border-b border-border/40 last:border-0"
+                    >
+                      {/* Planet symbol or star */}
+                      <Star className="size-3.5 text-violet-400 mt-0.5 shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium leading-snug truncate">{ev.title}</p>
-                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          <span className="text-xs text-muted-foreground">{formatDateTime(ev.event_datetime_utc)}</span>
-                          {ev.sign && <span className="text-xs text-muted-foreground">· {ev.sign}</span>}
+                        <p className="text-sm font-medium leading-snug truncate">
+                          {ev.title}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          <span className="text-xs text-muted-foreground">
+                            {formatTime(ev.event_datetime_utc)}
+                          </span>
+                          {ev.sign && (
+                            <span className="text-xs text-muted-foreground">
+                              · {ev.sign}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <Badge
                         variant="outline"
-                        className={`text-[10px] capitalize shrink-0 ${ASTRO_TYPE_BADGE[ev.event_type] ?? ""}`}
+                        className={`text-[10px] capitalize shrink-0 ${
+                          ASTRO_TYPE_BADGE[ev.event_type] ?? ""
+                        }`}
                       >
                         {ev.event_type}
                       </Badge>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
-        {/* ---- CENTER: Open Forecasts ---- */}
-        <div className="space-y-4 lg:col-span-1">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="size-4 text-amber-500" />
-              <h2 className="text-base font-semibold">Open Forecasts</h2>
-            </div>
-            <Link href="/admin/mundane/forecasts" className="text-xs text-muted-foreground hover:text-foreground">All forecasts →</Link>
-          </div>
-          {forecasts.length === 0 ? (
-            <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">No open forecasts.</CardContent></Card>
-          ) : (
-            <div className="space-y-2">
-              {forecasts.map((fc) => (
-                <Card key={fc.id} className="hover:bg-muted/20 transition-colors">
-                  <CardContent className="py-3 px-4">
-                    <p className="text-sm font-medium leading-snug">{fc.title}</p>
-                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(fc.forecast_period_start)} → {formatDate(fc.forecast_period_end)}
+        {/* ── Column 2: Watchlist + Active Alerts ── */}
+        <div className="space-y-4">
+
+          {/* Watchlist */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Eye className="size-4 text-violet-500" />
+                  Watchlist
+                </CardTitle>
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" asChild>
+                  <Link href="/admin/mundane/entities">Manage</Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {watchedEntities.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  No entities on your watchlist yet.
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {watchedEntities.map((e) => (
+                    <Link
+                      key={e.id}
+                      href={`/admin/mundane/entities/${e.id}`}
+                      className="flex items-center gap-2 py-1.5 rounded-md px-1 hover:bg-muted/50 transition-colors"
+                    >
+                      {e.flag_emoji ? (
+                        <span className="text-xl shrink-0">{e.flag_emoji}</span>
+                      ) : (
+                        <Users className="size-4 text-muted-foreground shrink-0" />
+                      )}
+                      <span className="text-sm font-medium flex-1 min-w-0 truncate">
+                        {e.name}
                       </span>
-                    </div>
-                    <div className="flex gap-1.5 mt-1.5 flex-wrap">
-                      {fc.confidence_level && (
-                        <Badge variant="outline" className={`text-[10px] capitalize ${CONFIDENCE_BADGE[fc.confidence_level] ?? ""}`}>
-                          {fc.confidence_level}
-                        </Badge>
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] capitalize shrink-0"
+                      >
+                        {e.entity_type}
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Active Alerts */}
+          <Card className={unreadCount > 0 ? "border-amber-200" : ""}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Bell className={`size-4 ${unreadCount > 0 ? "text-amber-500" : "text-muted-foreground"}`} />
+                  Active Alerts
+                  {unreadCount > 0 && (
+                    <span className="inline-flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold w-4 h-4">
+                      {unreadCount}
+                    </span>
+                  )}
+                </CardTitle>
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" asChild>
+                  <Link href="/admin/mundane/alerts">View All</Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {unreadAlerts.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  No unread alerts. All clear.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {unreadAlerts.map((alert) => (
+                    <div
+                      key={alert.id}
+                      className="flex items-start gap-2 py-2 border-b border-border/40 last:border-0"
+                    >
+                      {PRIORITY_ICON[alert.priority] ?? (
+                        <Info className="size-3.5 text-muted-foreground shrink-0" />
                       )}
-                      {fc.signal_strength && (
-                        <span className={`text-[10px] font-semibold uppercase ${SIGNAL_COLOR[fc.signal_strength] ?? ""}`}>
-                          ● {fc.signal_strength} signal
-                        </span>
-                      )}
-                      <Badge variant="outline" className={`text-[10px] capitalize ${OUTCOME_BADGE[fc.outcome_status] ?? ""}`}>
-                        {fc.outcome_status?.replace("_", " ")}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium leading-snug truncate">
+                          {alert.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          <Clock className="size-3 inline mr-0.5" />
+                          {formatDate(alert.triggered_at)}
+                        </p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] capitalize shrink-0"
+                      >
+                        {alert.priority}
                       </Badge>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
-        {/* ---- RIGHT: Research Projects + Leaders ---- */}
-        <div className="space-y-4 lg:col-span-1">
-          {/* Research Projects */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <ScrollText className="size-4 text-rose-500" />
-                <h2 className="text-base font-semibold">Active Research</h2>
-              </div>
-              <Link href="/admin/mundane/research" className="text-xs text-muted-foreground hover:text-foreground">All projects →</Link>
-            </div>
-            {projects.length === 0 ? (
-              <Card><CardContent className="py-6 text-center text-sm text-muted-foreground">No active projects.</CardContent></Card>
-            ) : (
-              <div className="space-y-2">
-                {projects.map((p) => (
-                  <Link key={p.id} href={`/admin/mundane/research/${p.id}`}>
-                    <Card className="hover:bg-muted/20 transition-colors cursor-pointer">
-                      <CardContent className="py-3 px-4">
-                        <p className="text-sm font-medium leading-snug truncate">{p.title}</p>
-                        <span className="text-xs text-muted-foreground capitalize">{p.project_type?.replace("_", " ")}</span>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Current World Leaders */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Star className="size-4 text-blue-500" />
-                <h2 className="text-base font-semibold">Current Leaders</h2>
-              </div>
-              <Link href="/admin/mundane/leaders" className="text-xs text-muted-foreground hover:text-foreground">All leaders →</Link>
-            </div>
-            {leaders.length === 0 ? (
-              <Card><CardContent className="py-6 text-center text-sm text-muted-foreground">No leaders on record.</CardContent></Card>
-            ) : (
-              <div className="space-y-2">
-                {leaders.map((l) => (
-                  <div key={l.id} className="flex items-center gap-2 py-1.5 border-b border-border/40 last:border-0">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{l.full_name}</p>
-                      {l.office_title && <p className="text-xs text-muted-foreground truncate">{l.office_title}</p>}
-                    </div>
-                    {l.birth_data_confidence && (
-                      <Badge variant="outline" className="text-[10px] shrink-0">{l.birth_data_confidence}</Badge>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ---- Bottom: Entities + Events ---- */}
-      <div className="grid gap-6 lg:grid-cols-2">
-
-        {/* Entity grid */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Building2 className="size-4 text-violet-500" />
-              <h2 className="text-base font-semibold">World Entities</h2>
-            </div>
-            <Link href="/admin/mundane/entities" className="text-xs text-muted-foreground hover:text-foreground">Manage →</Link>
-          </div>
-          {entities.length === 0 ? (
-            <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">No entities in the registry yet.</CardContent></Card>
-          ) : (
-            <div className="grid gap-2 sm:grid-cols-2">
-              {entities.map((e) => (
-                <Card key={e.id} className="hover:bg-muted/30 transition-colors cursor-default">
-                  <CardContent className="flex items-center gap-3 py-3 px-4">
-                    {e.flag_emoji && <span className="text-2xl shrink-0">{e.flag_emoji}</span>}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{e.name}</p>
-                      {e.region && <p className="text-xs text-muted-foreground truncate">{e.region}</p>}
-                    </div>
-                    <Badge variant="outline" className="text-xs capitalize shrink-0">{e.entity_type}</Badge>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Events timeline */}
+        {/* ── Column 3: Research + Notes ── */}
         <div className="space-y-4">
-          {/* Upcoming world events */}
-          {upcomingEvents.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <CalendarDays className="size-4 text-emerald-500" />
-                <h2 className="text-base font-semibold">Upcoming World Events</h2>
-              </div>
-              <div className="space-y-2">
-                {upcomingEvents.map((ev) => (
-                  <Card key={ev.id}>
-                    <CardContent className="py-3 px-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm">{ev.title}</p>
-                          <div className="flex flex-wrap items-center gap-2 mt-1">
-                            <span className="text-xs text-muted-foreground">{formatDate(ev.event_date)}</span>
-                            {ev.location && <span className="text-xs text-muted-foreground">· {ev.location}</span>}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
-                          <Badge variant="outline" className="text-xs capitalize">{ev.event_type.replace("_", " ")}</Badge>
-                          {ev.is_forecast && (
-                            <Badge variant="outline" className="text-xs text-violet-600 border-violet-200 bg-violet-50">Forecast</Badge>
-                          )}
-                          {ev.forecast_confidence && (
-                            <Badge variant="outline" className={`text-xs capitalize ${CONFIDENCE_BADGE[ev.forecast_confidence] ?? ""}`}>
-                              {ev.forecast_confidence}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
 
-          {/* Recent historical events */}
-          {recentEvents.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Eye className="size-4 text-muted-foreground" />
-                <h2 className="text-base font-semibold">Recent Historical Events</h2>
+          {/* Open Projects */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <BookOpen className="size-4 text-rose-500" />
+                  Open Projects
+                </CardTitle>
+                <Link
+                  href="/admin/mundane/research"
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  All projects →
+                </Link>
               </div>
-              <div className="space-y-2">
-                {recentEvents.map((ev) => (
-                  <Card key={ev.id}>
-                    <CardContent className="py-3 px-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm">{ev.title}</p>
-                          <div className="flex flex-wrap items-center gap-2 mt-1">
-                            <span className="text-xs text-muted-foreground">{formatDate(ev.event_date)}</span>
-                            {ev.location && <span className="text-xs text-muted-foreground">· {ev.location}</span>}
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-xs capitalize shrink-0">{ev.event_type.replace("_", " ")}</Badge>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {openProjects.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  No open research projects.
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {openProjects.map((p) => (
+                    <Link
+                      key={p.id}
+                      href={`/admin/mundane/research/${p.id}`}
+                      className="flex items-center gap-2 py-1.5 rounded-md px-1 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium leading-snug truncate">
+                          {p.title}
+                        </p>
+                        <span className="text-xs text-muted-foreground capitalize">
+                          {p.project_type?.replace(/_/g, " ")}
+                        </span>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] capitalize shrink-0 ${
+                          p.status === "active"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-gray-50 text-gray-600 border-gray-200"
+                        }`}
+                      >
+                        {p.status}
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-          {upcomingEvents.length === 0 && recentEvents.length === 0 && (
-            <Card>
-              <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                <CalendarDays className="size-8 mx-auto mb-2 text-muted-foreground/30" />
-                No world events recorded yet.
-              </CardContent>
-            </Card>
-          )}
+          {/* Recent Notes */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <FileText className="size-4 text-sky-500" />
+                Recent Notes
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {recentNotes.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  No recent notes. Open a project to add notes.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {recentNotes.map((note) => {
+                    const project = openProjects.find(
+                      (p: AnyRow) => p.id === note.project_id
+                    );
+                    return (
+                      <Link
+                        key={note.id}
+                        href={`/admin/mundane/research/${note.project_id}`}
+                        className="block py-2 border-b border-border/40 last:border-0 hover:bg-muted/30 rounded-sm px-1 transition-colors"
+                      >
+                        {note.title && (
+                          <p className="text-sm font-medium truncate">{note.title}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                          {note.body.slice(0, 100)}
+                          {note.body.length > 100 ? "…" : ""}
+                        </p>
+                        {project && (
+                          <p className="text-[10px] text-violet-600 mt-0.5 truncate">
+                            {project.title}
+                          </p>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      {/* ── Bottom: Upcoming Forecast Windows ── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Calendar className="size-4 text-blue-500" />
+              Upcoming Forecast Windows
+              <span className="text-xs text-muted-foreground font-normal">
+                (next 7 days)
+              </span>
+            </CardTitle>
+            <Link
+              href="/admin/mundane/forecasts"
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              All forecasts →
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {upcomingForecasts.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">
+              No forecast windows opening in the next 7 days.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                      Title
+                    </th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs uppercase tracking-wide whitespace-nowrap">
+                      Period Start
+                    </th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                      Confidence
+                    </th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                      Entity
+                    </th>
+                    <th className="pb-2 font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {upcomingForecasts.map((fc) => (
+                    <tr
+                      key={fc.id}
+                      className="border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors"
+                    >
+                      <td className="py-2.5 pr-4">
+                        <Link
+                          href={`/admin/mundane/forecasts/${fc.id}`}
+                          className="font-medium hover:text-violet-600 transition-colors line-clamp-1"
+                        >
+                          {fc.title}
+                        </Link>
+                      </td>
+                      <td className="py-2.5 pr-4 whitespace-nowrap text-muted-foreground text-xs">
+                        {formatDate(fc.forecast_period_start)}
+                      </td>
+                      <td className="py-2.5 pr-4">
+                        {fc.confidence_level ? (
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] capitalize ${
+                              CONFIDENCE_BADGE[fc.confidence_level] ?? ""
+                            }`}
+                          >
+                            {fc.confidence_level}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="py-2.5 pr-4 text-xs text-muted-foreground truncate max-w-[120px]">
+                        {fc.entity_id ? forecastEntityMap[fc.entity_id] ?? "—" : "—"}
+                      </td>
+                      <td className="py-2.5">
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] capitalize ${
+                            OUTCOME_BADGE[fc.outcome_status] ?? ""
+                          }`}
+                        >
+                          {fc.outcome_status?.replace(/_/g, " ")}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
