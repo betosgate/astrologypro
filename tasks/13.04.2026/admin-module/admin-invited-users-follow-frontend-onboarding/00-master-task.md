@@ -80,3 +80,11 @@ This feature set is complete only when:
 - invited users are routed into the same frontend onboarding path as self-signup users
 - onboarding and completion gates remain authoritative
 - admin can inspect invite status without bypassing the normal user journey
+
+## Status
+
+- `01-admin-invite-to-role-flow-mapping.md` — Done
+- `02-same-onboarding-gates-as-public-signup.md` — Done
+- `03-stepper-prefill-and-invited-user-context.md` — Done
+- `04-role-record-provisioning-and-first-login-state.md` — Done
+- `05-admin-visibility-resend-and-exception-rules.md` — Done

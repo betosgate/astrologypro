@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  getRoleServicePackages,
+  resolveRoleServicePackage,
+} from "@/lib/role-service-packages";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +29,7 @@ export async function GET(req: NextRequest) {
 
   const { data: diviner } = await admin
     .from("diviners")
-    .select("id")
+    .select("id, service_package_code")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -35,6 +39,12 @@ export async function GET(req: NextRequest) {
       { status: 403 },
     );
   }
+
+  const roleServicePackages = await getRoleServicePackages();
+  const resolvedPackage = resolveRoleServicePackage(
+    roleServicePackages,
+    diviner.service_package_code,
+  );
 
   const sp = req.nextUrl.searchParams;
   const page = Math.max(1, parseInt(sp.get("page") ?? "1", 10));
@@ -52,7 +62,20 @@ export async function GET(req: NextRequest) {
     )
     .eq("diviner_id", diviner.id);
 
-  if (category) query = query.eq("category", category);
+  if (category) {
+    if (!resolvedPackage.allowedCategories.includes(category as "astrology" | "tarot")) {
+      return NextResponse.json({
+        services: [],
+        total: 0,
+        page,
+        pages: 0,
+        servicePackage: resolvedPackage,
+      });
+    }
+    query = query.eq("category", category);
+  } else {
+    query = query.in("category", resolvedPackage.allowedCategories);
+  }
   if (activeOnly) query = query.eq("is_active", true);
 
   const { data, count, error } = await query
@@ -73,6 +96,7 @@ export async function GET(req: NextRequest) {
     total: count ?? 0,
     page,
     pages: Math.ceil((count ?? 0) / limit),
+    servicePackage: resolvedPackage,
   });
 }
 
@@ -98,7 +122,6 @@ export async function POST(_req: NextRequest) {
 // The following is the original POST body, preserved as a non-exported
 // function for git-history reference during the rollback window. It will
 // be cleaned up in a follow-up PR.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function _POST_ORIGINAL(_req: NextRequest) {
   const supabase = await createClient();
   const {

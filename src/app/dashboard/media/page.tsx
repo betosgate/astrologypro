@@ -23,6 +23,7 @@ import {
   MediaEditButton,
   MediaReorderButtons,
 } from "@/components/dashboard/media-controls";
+import { ImportLiveSessionButton } from "@/components/dashboard/import-live-session-button";
 import { MAX_MEDIA_IMAGES } from "@/lib/media-gallery";
 
 export const metadata = { title: "Media Gallery" };
@@ -96,12 +97,15 @@ export default async function MediaGalleryPage() {
             Manage videos, recordings, articles, and links that showcase your work.
           </p>
         </div>
-        <Button asChild>
-          <Link href="/dashboard/media/new">
-            <PlusCircle className="mr-2 size-4" />
-            Add Media
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <ImportLiveSessionButton />
+          <Button asChild>
+            <Link href="/dashboard/media/new">
+              <PlusCircle className="mr-2 size-4" />
+              Add Media
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Stats row */}
@@ -206,7 +210,6 @@ export default async function MediaGalleryPage() {
                     {/* Thumbnail or type icon */}
                     <div className="aspect-video w-full overflow-hidden rounded-md bg-muted flex items-center justify-center">
                       {item.thumbnail_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={item.thumbnail_url}
                           alt={item.title}

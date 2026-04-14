@@ -51,3 +51,9 @@ Do not let stored stale platform keys pass through.
 - diviner dashboard reflects admin platform governance in real time
 - backend validation matches frontend availability
 - invalid or disallowed platform keys cannot be persisted
+
+## Status
+
+Done.
+
+Implemented in `src/app/dashboard/live/page.tsx`, `src/app/api/dashboard/live-platforms/route.ts`, `src/app/api/dashboard/live-platforms/[platform]/route.ts`, and `src/app/api/dashboard/live-status/route.ts`.

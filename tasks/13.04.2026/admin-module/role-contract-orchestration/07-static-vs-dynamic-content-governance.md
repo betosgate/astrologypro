@@ -52,3 +52,7 @@ Prefer a small, controlled variable vocabulary. Do not allow arbitrary free-form
 - contract authors know what should be static versus dynamic
 - dynamic fields remain easy to manage
 - substantive legal changes still trigger proper versioning and acceptance
+
+## Status
+
+Done.

@@ -116,3 +116,13 @@ This feature set is complete only when:
 - diviner settings cannot bypass admin policy
 - `twitch` is added as a first-class modeled platform
 - public rendering follows platform capability rules instead of hardcoded assumptions
+
+## Status
+
+- `01-platform-registry-and-capability-model.md` — Done
+- `02-global-admin-enable-disable-controls.md` — Done
+- `03-diviner-level-availability-and-override-rules.md` — Done
+- `04-dashboard-live-settings-constrained-by-admin-policy.md` — Done
+- `05-public-player-and-linkout-rendering-rules.md` — Done
+- `06-twitch-addition-and-migration-alignment.md` — Done
+- `07-announcements-sync-and-ops-governance.md` — Done

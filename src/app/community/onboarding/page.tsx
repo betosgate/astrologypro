@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +31,10 @@ import {
   Plus,
   Trash2,
   Users,
+  MapPin,
+  Globe,
 } from "lucide-react";
+import { CitySearch } from "@/components/booking/city-search";
 
 const GENDERS = ["Male", "Female", "Non-binary", "Prefer not to say"] as const;
 
@@ -95,6 +98,8 @@ interface ProfileForm {
   occupation: string;
   dateOfBirth: string;
   birthTime: string;
+  birthCity: string;
+  birthCountry: string;
   relationship_status: string;
   personality: string;
   strengths: string;
@@ -147,6 +152,8 @@ function emptyForm(): ProfileForm {
     occupation: "",
     dateOfBirth: "",
     birthTime: "",
+    birthCity: "",
+    birthCountry: "",
     relationship_status: "",
     personality: "",
     strengths: "",
@@ -211,6 +218,8 @@ type PrefillResponse = {
     occupation?: string | null;
     date_of_birth?: string | null;
     birth_time?: string | null;
+    birth_city?: string | null;
+    birth_country?: string | null;
     relationship_status?: string | null;
     plan_type?: string | null;
     intake_data?: Record<string, unknown> | null;
@@ -229,6 +238,8 @@ type PrefillResponse = {
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isInvited = searchParams.get("invited") === "true";
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -320,6 +331,8 @@ export default function OnboardingPage() {
           occupation: member.occupation || String(intake.occupation ?? "") || "",
           dateOfBirth: member.date_of_birth || String(intake.date_of_birth ?? "") || "",
           birthTime: member.birth_time || String(intake.birth_time ?? "") || "",
+          birthCity: member.birth_city || String(intake.birth_city ?? "") || "",
+          birthCountry: member.birth_country || String(intake.birth_country ?? "") || "",
           relationship_status:
             member.relationship_status || String(intake.relationship_status ?? "") || "",
           personality: String(intake.personality ?? ""),
@@ -394,8 +407,9 @@ export default function OnboardingPage() {
       }
       if (!form.gender) return "Gender is required.";
       if (!form.occupation.trim()) return "Occupation is required.";
-      if (!form.dateOfBirth) return "Date of birth is required.";
       if (!form.birthTime) return "Birth time is required.";
+      if (!form.birthCity.trim()) return "Birth city is required.";
+      if (!form.birthCountry.trim()) return "Birth country is required.";
     }
 
     if (targetStep === 2) {
@@ -471,6 +485,8 @@ export default function OnboardingPage() {
           occupation: form.occupation.trim(),
           date_of_birth: form.dateOfBirth,
           birth_time: form.birthTime,
+          birth_city: form.birthCity.trim(),
+          birth_country: form.birthCountry.trim(),
           relationship_status: form.relationship_status || null,
           personality: form.personality.trim() || null,
           strengths: form.strengths.trim() || null,
@@ -543,6 +559,11 @@ export default function OnboardingPage() {
         <h1 className="text-2xl font-bold tracking-tight">
           Welcome to Perennial Mandalism
         </h1>
+        {isInvited ? (
+          <p className="mt-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+            Your membership was invited by admin. Complete the same community onboarding flow here before dashboard access opens.
+          </p>
+        ) : null}
         <p className="mt-1 text-muted-foreground">
           Finish your profile so your community access is fully wired.
         </p>
@@ -702,6 +723,27 @@ export default function OnboardingPage() {
                   onChange={(e) => patch({ birthTime: e.target.value })}
                 />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>
+                Birth Location <span className="text-destructive">*</span>
+              </Label>
+              <CitySearch
+                value={form.birthCity}
+                placeholder="Search birth city..."
+                onChange={(result) =>
+                  patch({
+                    birthCity: result.city,
+                    birthCountry: result.city.split(",").pop()?.trim() || "",
+                  })
+                }
+              />
+              {form.birthCity && (
+                <p className="text-[10px] text-muted-foreground">
+                  Detected: {form.birthCity}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -873,26 +915,18 @@ export default function OnboardingPage() {
                         }
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor={`family-birth-city-${index}`}>Birth city</Label>
-                      <Input
-                        id={`family-birth-city-${index}`}
-                        value={member.birthCity}
-                        onChange={(e) =>
-                          updateHouseholdMember(index, { birthCity: e.target.value })
-                        }
-                      />
-                    </div>
                   </div>
-
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label htmlFor={`family-birth-country-${index}`}>Birth country</Label>
-                      <Input
-                        id={`family-birth-country-${index}`}
-                        value={member.birthCountry}
-                        onChange={(e) =>
-                          updateHouseholdMember(index, { birthCountry: e.target.value })
+                      <Label>Birth Location <span className="text-destructive">*</span></Label>
+                      <CitySearch
+                        value={member.birthCity}
+                        placeholder="Search birth city..."
+                        onChange={(result) =>
+                          updateHouseholdMember(index, {
+                            birthCity: result.city,
+                            birthCountry: result.city.split(",").pop()?.trim() || "",
+                          })
                         }
                       />
                     </div>

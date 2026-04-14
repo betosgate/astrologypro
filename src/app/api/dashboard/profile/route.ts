@@ -8,6 +8,10 @@ import {
   normalizePublishPolicy,
   publishBlockMessage,
 } from "@/lib/diviner-publishing";
+import {
+  getRoleServicePackages,
+  resolveRoleServicePackage,
+} from "@/lib/role-service-packages";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +20,7 @@ const ALLOWED_SPECIALTIES = new Set<string>(SPECIALTIES);
 
 // ── Columns returned by GET ─────────────────────────────────────────────
 const PROFILE_SELECT =
-  "id, display_name, username, bio, tagline, specialties, avatar_url, credentials, phone, timezone";
+  "id, display_name, username, bio, tagline, specialties, avatar_url, credentials, phone, timezone, show_public_session_counts, public_session_counts_override, public_session_counts_override_reason, service_package_code";
 
 // ── GET /api/dashboard/profile ──────────────────────────────────────────
 export async function GET() {
@@ -28,6 +32,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createAdminClient();
+  const packages = await getRoleServicePackages();
   const { data, error } = await admin
     .from("diviners")
     .select(PROFILE_SELECT)
@@ -41,7 +46,12 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json({ profile: data });
+  return NextResponse.json({
+    profile: {
+      ...data,
+      service_package: resolveRoleServicePackage(packages, data.service_package_code),
+    },
+  });
 }
 
 // ── PATCH /api/dashboard/profile ────────────────────────────────────────
@@ -132,6 +142,12 @@ export async function PATCH(req: NextRequest) {
     updates.timezone = body.timezone ? String(body.timezone).trim() : null;
   }
 
+  // show_public_session_counts — boolean
+  if (body.show_public_session_counts !== undefined) {
+    updates.show_public_session_counts = body.show_public_session_counts === true;
+    updates.public_session_counts_updated_at = new Date().toISOString();
+  }
+
   // credentials — string
   if (body.credentials !== undefined) {
     updates.credentials = body.credentials
@@ -156,7 +172,7 @@ export async function PATCH(req: NextRequest) {
   const admin = createAdminClient();
   const { data: divinerPolicyRow } = await admin
     .from("diviners")
-    .select("id, public_publish_blocked, blocked_public_sections, blocked_media_types, publish_block_reason")
+    .select("id, public_publish_blocked, blocked_public_sections, blocked_media_types, publish_block_reason, show_public_session_counts, public_session_counts_override, public_session_counts_override_reason")
     .eq("user_id", user.id)
     .maybeSingle();
   const publishPolicy = normalizePublishPolicy(divinerPolicyRow as Record<string, unknown> | null);
@@ -220,5 +236,13 @@ export async function PATCH(req: NextRequest) {
     .eq("user_id", user.id)
     .single();
 
-  return NextResponse.json({ profile: updated });
+  return NextResponse.json({
+    profile: {
+      ...updated,
+      service_package: resolveRoleServicePackage(
+        await getRoleServicePackages(),
+        updated.service_package_code,
+      ),
+    },
+  });
 }

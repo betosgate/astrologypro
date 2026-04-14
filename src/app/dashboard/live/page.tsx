@@ -30,38 +30,30 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  getLivePlatformEmoji,
+  getLivePlatformLabel,
+  type GovernedLivePlatform,
+  type GovernedStreamPlatformConfig,
+  type LivePlatformKey,
+} from "@/lib/live-platform-governance";
 
-interface StreamPlatformConfig {
-  id: string;
-  diviner_id: string;
-  platform: string;
-  display_name: string | null;
-  stream_url: string | null;
-  embed_url: string | null;
-  is_enabled: boolean;
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
-}
+type StreamPlatformConfig = GovernedStreamPlatformConfig;
 
 interface DivinerLiveState {
   is_live: boolean;
   live_platforms: string[];
 }
 
-const ALL_PLATFORMS = [
-  { id: "youtube", label: "YouTube", emoji: "📺" },
-  { id: "facebook", label: "Facebook", emoji: "👤" },
-  { id: "instagram", label: "Instagram", emoji: "📷" },
-  { id: "tiktok", label: "TikTok", emoji: "🎵" },
-  { id: "zoom", label: "Zoom", emoji: "💻" },
-  { id: "other", label: "Other", emoji: "🌐" },
-] as const;
-
-type PlatformId = (typeof ALL_PLATFORMS)[number]["id"];
-
-function getPlatformMeta(id: string) {
-  return ALL_PLATFORMS.find((p) => p.id === id) ?? { id, label: id, emoji: "🌐" };
+interface LiveSessionSummary {
+  id: string;
+  platform: string;
+  title: string | null;
+  status: "scheduled" | "live" | "ended" | "cancelled";
+  scheduled_at: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  check_in_enabled: boolean;
 }
 
 export default function LiveStreamPage() {
@@ -69,6 +61,9 @@ export default function LiveStreamPage() {
   const [liveState, setLiveState] = useState<DivinerLiveState>({ is_live: false, live_platforms: [] });
   const [togglingLive, setTogglingLive] = useState(false);
   const [platforms, setPlatforms] = useState<StreamPlatformConfig[]>([]);
+  const [availablePlatforms, setAvailablePlatforms] = useState<GovernedLivePlatform[]>([]);
+  const [currentSession, setCurrentSession] = useState<LiveSessionSummary | null>(null);
+  const [nextScheduledSession, setNextScheduledSession] = useState<LiveSessionSummary | null>(null);
   const [savingPlatform, setSavingPlatform] = useState<string | null>(null);
   const [deletingPlatform, setDeletingPlatform] = useState<string | null>(null);
   // Local edits to platform configs before saving
@@ -82,8 +77,12 @@ export default function LiveStreamPage() {
       ]);
 
       if (platformsRes.ok) {
-        const data = await platformsRes.json() as { platforms: StreamPlatformConfig[] };
+        const data = await platformsRes.json() as {
+          platforms: StreamPlatformConfig[];
+          availablePlatforms: GovernedLivePlatform[];
+        };
         setPlatforms(data.platforms ?? []);
+        setAvailablePlatforms((data.availablePlatforms ?? []).filter((platform) => platform.is_available_for_diviner));
         // Initialize edits from loaded data
         const initialEdits: Record<string, Partial<StreamPlatformConfig>> = {};
         for (const p of data.platforms ?? []) {
@@ -101,6 +100,8 @@ export default function LiveStreamPage() {
           is_live: liveRes.diviner.is_live ?? false,
           live_platforms: liveRes.diviner.live_platforms ?? [],
         });
+        setCurrentSession((liveRes.currentSession ?? null) as LiveSessionSummary | null);
+        setNextScheduledSession((liveRes.nextScheduledSession ?? null) as LiveSessionSummary | null);
       }
     } catch {
       toast.error("Failed to load live stream settings");
@@ -110,29 +111,6 @@ export default function LiveStreamPage() {
   }, []);
 
   useEffect(() => {
-    // Load live state from server via a client-side supabase call
-    async function loadLiveState() {
-      try {
-        const { createClient } = await import("@/lib/supabase/client");
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const { data } = await supabase
-          .from("diviners")
-          .select("is_live, live_platforms")
-          .eq("user_id", user.id)
-          .single();
-        if (data) {
-          setLiveState({
-            is_live: (data as { is_live?: boolean }).is_live ?? false,
-            live_platforms: (data as { live_platforms?: string[] }).live_platforms ?? [],
-          });
-        }
-      } catch {
-        // Non-fatal: state defaults to offline
-      }
-    }
-    loadLiveState();
     load();
   }, [load]);
 
@@ -152,11 +130,17 @@ export default function LiveStreamPage() {
         toast.error(err.error ?? "Failed to update live status");
         return;
       }
-      const result = await res.json() as { diviner: { is_live: boolean; live_platforms: string[] } };
+      const result = await res.json() as {
+        diviner: { is_live: boolean; live_platforms: string[] };
+        currentSession?: LiveSessionSummary | null;
+        nextScheduledSession?: LiveSessionSummary | null;
+      };
       setLiveState({
         is_live: result.diviner.is_live,
         live_platforms: result.diviner.live_platforms ?? [],
       });
+      setCurrentSession(result.currentSession ?? null);
+      setNextScheduledSession(result.nextScheduledSession ?? null);
       toast.success(newIsLive ? "You are now LIVE!" : "Live stream ended");
     } catch {
       toast.error("Network error updating live status");
@@ -181,11 +165,17 @@ export default function LiveStreamPage() {
         toast.error(err.error ?? "Failed to update live platforms");
         return;
       }
-      const result = await res.json() as { diviner: { is_live: boolean; live_platforms: string[] } };
+      const result = await res.json() as {
+        diviner: { is_live: boolean; live_platforms: string[] };
+        currentSession?: LiveSessionSummary | null;
+        nextScheduledSession?: LiveSessionSummary | null;
+      };
       setLiveState({
         is_live: result.diviner.is_live,
         live_platforms: result.diviner.live_platforms ?? [],
       });
+      setCurrentSession(result.currentSession ?? null);
+      setNextScheduledSession(result.nextScheduledSession ?? null);
     } catch {
       toast.error("Network error updating live platforms");
     }
@@ -222,6 +212,7 @@ export default function LiveStreamPage() {
         return [...prev, result.platform];
       });
       setEdits((prev) => ({ ...prev, [platformId]: { ...result.platform } }));
+      await load();
       toast.success("Platform saved");
     } catch {
       toast.error("Network error saving platform");
@@ -257,7 +248,7 @@ export default function LiveStreamPage() {
     }
   }
 
-  function addPlatform(platformId: PlatformId) {
+  function addPlatform(platformId: LivePlatformKey) {
     if (edits[platformId]) return; // already added
     setEdits((prev) => ({
       ...prev,
@@ -284,7 +275,9 @@ export default function LiveStreamPage() {
 
   // Active platform IDs (configured or being added)
   const activePlatformIds = Object.keys(edits);
-  const availableToAdd = ALL_PLATFORMS.filter((p) => !activePlatformIds.includes(p.id));
+  const availableToAdd = availablePlatforms.filter(
+    (platform) => !activePlatformIds.includes(platform.platform_key)
+  );
 
   if (loading) {
     return (
@@ -352,6 +345,40 @@ export default function LiveStreamPage() {
             </Button>
           </div>
 
+          {(currentSession || nextScheduledSession) && (
+            <div className="grid gap-3 md:grid-cols-2">
+              {currentSession && (
+                <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-green-400">
+                    Current session
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {currentSession.title ?? "Live now"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Platform: {currentSession.platform} · Check-in{" "}
+                    {currentSession.check_in_enabled ? "enabled" : "disabled"}
+                  </p>
+                </div>
+              )}
+              {nextScheduledSession && !currentSession && (
+                <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-blue-400">
+                    Next scheduled session
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {nextScheduledSession.title ?? "Scheduled live session"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {nextScheduledSession.scheduled_at
+                      ? new Date(nextScheduledSession.scheduled_at).toLocaleString()
+                      : "No scheduled time set"}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Platform checkboxes when live */}
           {liveState.is_live && activePlatformIds.length > 0 && (
             <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-4">
@@ -360,7 +387,14 @@ export default function LiveStreamPage() {
               </p>
               <div className="flex flex-wrap gap-3">
                 {activePlatformIds.map((pid) => {
-                  const meta = getPlatformMeta(pid);
+                  const platform = availablePlatforms.find((item) => item.platform_key === pid);
+                  const label = getLivePlatformLabel(
+                    (platform?.platform_key ?? "other") as LivePlatformKey,
+                    platform?.display_name
+                  );
+                  const emoji = getLivePlatformEmoji(
+                    (platform?.platform_key ?? "other") as LivePlatformKey
+                  );
                   return (
                     <label
                       key={pid}
@@ -370,8 +404,8 @@ export default function LiveStreamPage() {
                         checked={liveState.live_platforms.includes(pid)}
                         onCheckedChange={(checked) => updateLivePlatforms(pid, checked === true)}
                       />
-                      <span>{meta.emoji}</span>
-                      <span>{meta.label}</span>
+                      <span>{emoji}</span>
+                      <span>{label}</span>
                     </label>
                   );
                 })}
@@ -402,9 +436,9 @@ export default function LiveStreamPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {availableToAdd.map((p) => (
-                  <DropdownMenuItem key={p.id} onClick={() => addPlatform(p.id as PlatformId)}>
-                    <span className="mr-2">{p.emoji}</span>
-                    {p.label}
+                  <DropdownMenuItem key={p.platform_key} onClick={() => addPlatform(p.platform_key)}>
+                    <span className="mr-2">{getLivePlatformEmoji(p.platform_key)}</span>
+                    {p.display_name}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -425,11 +459,17 @@ export default function LiveStreamPage() {
         )}
 
         {activePlatformIds.map((pid) => {
-          const meta = getPlatformMeta(pid);
           const edit = edits[pid] ?? {};
           const isSaving = savingPlatform === pid;
           const isDeleting = deletingPlatform === pid;
           const savedConfig = platforms.find((p) => p.platform === pid);
+          const platform = availablePlatforms.find((item) => item.platform_key === pid);
+          const platformKey = (savedConfig?.platform ?? platform?.platform_key ?? "other") as LivePlatformKey;
+          const platformLabel = getLivePlatformLabel(
+            platformKey,
+            savedConfig?.platform_display_name ?? platform?.display_name
+          );
+          const platformEmoji = getLivePlatformEmoji(platformKey);
           const isDirty =
             !savedConfig ||
             edit.stream_url !== savedConfig.stream_url ||
@@ -443,11 +483,21 @@ export default function LiveStreamPage() {
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <span className="text-lg">{meta.emoji}</span>
-                    {meta.label}
+                    <span className="text-lg">{platformEmoji}</span>
+                    {platformLabel}
                     {liveState.live_platforms.includes(pid) && liveState.is_live && (
                       <Badge className="ml-1 gap-1 bg-green-500/20 text-green-400 hover:bg-green-500/20 text-xs">
                         🔴 Live
+                      </Badge>
+                    )}
+                    {savedConfig?.playback_mode === "external_link" && (
+                      <Badge variant="outline" className="text-xs">
+                        Link-out
+                      </Badge>
+                    )}
+                    {savedConfig?.playback_mode === "manual_status" && (
+                      <Badge variant="outline" className="text-xs">
+                        Manual
                       </Badge>
                     )}
                   </CardTitle>
@@ -468,7 +518,7 @@ export default function LiveStreamPage() {
                       className="size-8 text-destructive hover:text-destructive"
                       onClick={() => deletePlatform(pid)}
                       disabled={isDeleting}
-                      aria-label={`Remove ${meta.label}`}
+                      aria-label={`Remove ${platformLabel}`}
                     >
                       {isDeleting ? (
                         <Loader2 className="size-4 animate-spin" />
@@ -490,6 +540,8 @@ export default function LiveStreamPage() {
                       placeholder={
                         pid === "youtube"
                           ? "UCxxxxxxxxxxxxxxxxx (Channel ID)"
+                          : pid === "twitch"
+                          ? "https://www.twitch.tv/yourchannel"
                           : pid === "facebook"
                           ? "https://www.facebook.com/yourpage/videos/..."
                           : pid === "zoom"
@@ -533,7 +585,7 @@ export default function LiveStreamPage() {
                       id={`display-name-${pid}`}
                       value={edit.display_name ?? ""}
                       onChange={(e) => updateEdit(pid, "display_name", e.target.value || null)}
-                      placeholder={`e.g. My ${meta.label} Channel`}
+                      placeholder={`e.g. My ${platformLabel} Channel`}
                     />
                   </div>
 

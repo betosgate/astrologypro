@@ -1,7 +1,7 @@
 # Unified Signup Flow — Broken & Not Implemented Tasks
 
 - Date: 2026-04-13
-- Status: Open
+- Status: Done
 - Priority: P0
 - Owner: Full-stack
 
@@ -70,4 +70,4 @@ All prices and Stripe price IDs come exclusively from the `pricing_plans` DB tab
 | 02 | `02-fix-perennial-community-webhook-provisioning.md` | Webhook creates `diviners` record for `perennial_mandalism_community` — must create `community_members`; wrong `role` set at signup | 06 | Done |
 | 03 | `03-build-trainee-post-login-onboarding-gate.md` | No post-login onboarding gate for `trainee` role — lands directly on `/trainee` with no required data collected | 01 | Done |
 | 04 | `04-build-perennial-post-login-onboarding-gate.md` | No post-login onboarding gate for `perennial_mandalism` — household members, birth data, questionnaire never collected | 02 | Done |
-| 05 | `05-build-profile-completion-indicator.md` | No profile completion percentage exists in any role's profile page | 03, 04 | Open |
+| 05 | `05-build-profile-completion-indicator.md` | No profile completion percentage exists in any role's profile page | 03, 04 | Done |

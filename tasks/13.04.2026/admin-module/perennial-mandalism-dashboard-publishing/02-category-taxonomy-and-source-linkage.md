@@ -117,3 +117,7 @@ Instead:
 - category-to-source mapping matrix
 - required-field matrix per category
 - validation rules for native versus source-linked cards
+
+## Status
+
+Done

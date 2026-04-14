@@ -1,6 +1,6 @@
 # Task 02 - Standardize Public Service and Purchase Entry Routes
 
-- Status: Open
+- Status: Done
 - Priority: P1
 - Owner: Frontend / Full-stack
 
@@ -37,6 +37,15 @@ The route structure exists, but the system-level product rule is not yet fully d
 - when should the customer land on generic booking?
 - when should the customer land on service booking?
 - when should a service purchase behave like “book a session” vs “buy a digital/report/subscription product”?
+
+## Completion Notes
+
+- Service-specific public CTAs already route into `/{username}/book/{serviceSlug}` from the services index and service-detail pages.
+- Preserved attribution-safe routing on the main public profile surface by threading `?ref=` through:
+  - [src/components/landing/service-card.tsx](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/components/landing/service-card.tsx:1)
+  - [src/app/[username]/service-tabs.tsx](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/app/[username]/service-tabs.tsx:1)
+  - [src/app/[username]/page.tsx](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/app/[username]/page.tsx:1)
+- Generic booking remains an intentional fallback path in [src/app/[username]/book/page.tsx](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/app/[username]/book/page.tsx:1), where the system selects a primary public service or fallback booking mode.
 
 ## Required Routing Rule
 
@@ -75,4 +84,3 @@ If `product_kind` later supports report, subscription, or digital items with dif
 - [ ] Click a service card CTA and confirm it lands in the correct service booking route.
 - [ ] Click a generic “book with diviner” CTA and confirm it selects the intended primary/fallback service.
 - [ ] Confirm the route behavior still preserves `ref` attribution where applicable.
-

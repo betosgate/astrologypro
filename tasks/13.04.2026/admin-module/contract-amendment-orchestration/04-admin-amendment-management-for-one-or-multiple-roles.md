@@ -48,3 +48,7 @@ Admin should also be able to mark a newer agreement as the consolidated path for
 - admin can target amendments by one or multiple roles
 - admin can manage rollout state from backend tools
 - amendment rollout and future-user agreement path are both controllable
+
+## Status
+
+Done.

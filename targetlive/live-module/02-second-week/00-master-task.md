@@ -1,7 +1,7 @@
 # TargetLive Live Module — Second Week Master Task
 
 - Date: 2026-04-13
-- Status: Open
+- Status: Done
 - Priority: P1
 - Owner: Scrum / Full-stack planning
 
@@ -64,3 +64,13 @@ This folder is a planning pack only. It defines research-backed tasks and sequen
 - Check-in capture is reliably attributable to a concrete live session.
 - The team has a clean implementation sequence covering DB, API, and UI without ambiguous ownership.
 - Diviners have a low-friction path to turn finished live sessions into durable video-library content.
+
+## Execution Status
+
+- `05-db-live-source-of-truth-and-reporting.md` — Done
+- `03-api-diviner-live-state-parity.md` — Done
+- `04-api-admin-session-lifecycle-alignment.md` — Done
+- `01-ui-diviner-live-dashboard-parity.md` — Done
+- `02-ui-admin-live-operations-and-review.md` — Done
+- `06-ui-public-live-and-check-in-alignment.md` — Done
+- `07-live-archive-to-video-library.md` — Done

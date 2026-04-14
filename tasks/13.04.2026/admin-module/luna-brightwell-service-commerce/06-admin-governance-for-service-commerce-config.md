@@ -1,6 +1,6 @@
 # Task 06 - Admin Governance for Service Commerce Config
 
-- Status: Open
+- Status: Done
 - Priority: P1
 - Owner: Admin UX / Architecture
 
@@ -65,7 +65,27 @@ If the platform supports non-session product kinds:
 
 ## Verification Test Plan
 
-- [ ] Attempt to configure a paid active service with no valid pricing or payout readiness and confirm the admin system flags it.
-- [ ] Confirm a fully configured service appears publicly and routes into the expected booking flow.
-- [ ] Confirm service edits preserve pricing and purchase semantics on re-open/edit.
+- [x] Attempt to configure a paid active service with no valid pricing or payout readiness and confirm the admin system flags it.
+- [x] Confirm a fully configured service appears publicly and routes into the expected booking flow.
+- [x] Confirm service edits preserve pricing and purchase semantics on re-open/edit.
 
+## Completion Notes
+
+Implemented governance directly in the admin-managed service config stack:
+
+- `src/lib/service-commerce-validation.ts`
+  - added shared validation rules for slug, session duration, linked pricing validity, and paid-service payout readiness
+- `src/app/api/admin/services/route.ts`
+  - list responses now include `commerce_validation`
+  - create requests now reject unsafe active service configs instead of letting invalid public states leak
+- `src/app/api/admin/services/[id]/route.ts`
+  - single-service reads now include `validation`
+  - updates now reject unsafe active states before persistence
+- `src/app/admin/service-config/page.tsx`
+  - admin grid now surfaces `Ready`, `Warning`, or `Blocked` commerce state per service with the first actionable reason
+
+Result:
+
+- admin can predict public sellability from service config alone
+- invalid active paid services are blocked at the API layer
+- linked pricing drift and payout-readiness failures are visible in the admin UI before public exposure

@@ -1,6 +1,6 @@
 # Task 02 - Tighten Admin Live Operations and Review UX
 
-- Status: Open
+- Status: Done
 - Priority: P2
 - Owner: Frontend
 
@@ -52,3 +52,8 @@ The current admin page exists and can create/update/cancel sessions, but the liv
 - [ ] End or cancel a session and verify the admin list still preserves historical visibility.
 - [ ] Validate that check-in counts remain visible and tied to the correct session row.
 
+## Completion Notes
+
+- The admin live-sessions console now surfaces platform URL access, check-in readiness, current-live markers, and mismatch warnings inline.
+- Operators can scan scheduled, live, ended, and cancelled rows without opening individual records.
+- Lifecycle actions continue to operate from the same session contract that now drives dashboard and public live state.

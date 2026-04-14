@@ -18,6 +18,7 @@ import {
   LayoutGrid,
   UserCheck,
   Gift,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -42,6 +43,7 @@ const moreNavItems = [
   { label: "Testimonials", href: "/dashboard/testimonials", icon: MessageSquare },
   { label: "Affiliates", href: "/dashboard/affiliates", icon: Users2 },
   { label: "Marketing", href: "/dashboard/marketing", icon: Megaphone },
+  { label: "Finance", href: "/dashboard/finance", icon: Wallet },
   { label: "Live", href: "/dashboard/live", icon: Radio },
   { label: "Check-Ins", href: "/dashboard/check-ins", icon: UserCheck },
   { label: "Giveaways", href: "/dashboard/giveaways", icon: Gift },

@@ -49,3 +49,7 @@ Admin should be able to find signed agreements by:
 
 - admin can retrieve and resend signed agreements from backend tools
 - resend behavior is bounded and auditable
+
+## Status
+
+Done

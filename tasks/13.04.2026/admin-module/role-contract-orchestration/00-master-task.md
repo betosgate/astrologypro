@@ -88,3 +88,13 @@ This system is complete only when:
 - contracts can mix fixed legal text with dynamic variables cleanly
 - every acceptance is tied to the rendered contract version actually shown
 - role activation and protected flows can enforce missing contracts
+
+## Status
+
+- `01-contract-template-and-variable-model.md` — Done
+- `02-role-to-contract-assignment-and-multi-role-requirements.md` — Done
+- `03-post-signup-contract-sequencing-and-role-activation-gates.md` — Done
+- `04-admin-contract-management-ui-and-dynamic-part-editing.md` — Done
+- `05-contract-rendering-versioning-and-acceptance-audit.md` — Done
+- `06-role-aware-legal-status-api-and-backend-enforcement.md` — Done
+- `07-static-vs-dynamic-content-governance.md` — Done

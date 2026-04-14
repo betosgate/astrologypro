@@ -78,3 +78,9 @@ The per-diviner row decides what that diviner configured.
 - platform support is no longer purely hardcoded
 - the app can answer capability questions from one source of truth
 - new platform policy changes can happen without code edits to every UI component
+
+## Status
+
+Done.
+
+Implemented with `live_platform_registry`, `diviner_live_platform_overrides`, and the shared resolver in `src/lib/live-platform-governance.ts`.

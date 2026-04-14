@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  buildGovernedLivePlatforms,
+  isValidLivePlatformKey,
+} from "@/lib/live-platform-governance";
 
 export const dynamic = "force-dynamic";
 
@@ -19,21 +23,6 @@ async function getAuthenticatedDiviner() {
   return data;
 }
 
-const VALID_PLATFORMS = [
-  "youtube",
-  "facebook",
-  "instagram",
-  "tiktok",
-  "zoom",
-  "other",
-] as const;
-
-type ValidPlatform = (typeof VALID_PLATFORMS)[number];
-
-function isValidPlatform(value: string): value is ValidPlatform {
-  return (VALID_PLATFORMS as readonly string[]).includes(value);
-}
-
 interface RouteContext {
   params: Promise<{ platform: string }>;
 }
@@ -45,8 +34,27 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   }
 
   const { platform } = await context.params;
-  if (!isValidPlatform(platform)) {
+  if (!isValidLivePlatformKey(platform)) {
     return NextResponse.json({ error: "Invalid platform" }, { status: 404 });
+  }
+
+  const admin = createAdminClient();
+  const [{ data: registryRows }, { data: overrideRows }] = await Promise.all([
+    admin
+      .from("live_platform_registry")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("platform_key", { ascending: true }),
+    admin
+      .from("diviner_live_platform_overrides")
+      .select("*")
+      .eq("diviner_id", diviner.id),
+  ]);
+  const governedPlatforms = buildGovernedLivePlatforms(registryRows ?? [], overrideRows ?? []);
+  const requestedPlatform = governedPlatforms.find((item) => item.platform_key === platform);
+
+  if (!requestedPlatform || !requestedPlatform.is_available_for_diviner) {
+    return NextResponse.json({ error: "This live platform is not available for your account." }, { status: 403 });
   }
 
   let body: Record<string, unknown>;
@@ -69,7 +77,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 422 });
   }
 
-  const admin = createAdminClient();
   const { data, error } = await admin
     .from("stream_platform_configs")
     .update(updates)
@@ -96,7 +103,7 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
   }
 
   const { platform } = await context.params;
-  if (!isValidPlatform(platform)) {
+  if (!isValidLivePlatformKey(platform)) {
     return NextResponse.json({ error: "Invalid platform" }, { status: 404 });
   }
 

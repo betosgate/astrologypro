@@ -1,5 +1,7 @@
 # Luna Brightwell QA SEO Architecture Pack
 
+- Status: Done
+
 ## Objective
 
 Raise the SEO standard of `https://astrologypro.com/luna-brightwell-qa` and its service funnel to a top-tier level for both:
@@ -87,3 +89,13 @@ This SEO program should not be considered complete until:
 - local SEO claims are backed by actual DB fields and visible page content
 - global remote-service intent is explicitly represented in copy and schema
 - admin users can manage SEO-critical profile fields without code changes
+
+## Status
+
+- `01-profile-metadata-canonicals-and-indexation.md` — Done
+- `02-structured-data-entity-graph-local-and-global-authority.md` — Done
+- `03-service-and-booking-indexation-strategy.md` — Done
+- `04-diviner-seo-database-fields-and-admin-governance.md` — Done
+- `05-sitemap-discovery-and-internal-linking-architecture.md` — Done
+- `06-content-authority-local-and-global-landing-strategy.md` — Done
+- `07-seo-measurement-governance-and-rollout.md` — Done

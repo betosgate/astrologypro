@@ -56,3 +56,9 @@ If a diviner already has a config for a platform that later becomes disallowed:
 
 - admin can govern platform access for one diviner without changing all diviners
 - effective platform availability is deterministic and shared across backend and UI
+
+## Status
+
+Done.
+
+Implemented with `diviner_live_platform_overrides`, `src/app/api/admin/diviners/[id]/live-platforms/route.ts`, and `src/app/admin/diviners/[id]/live-platform-overrides.tsx`.

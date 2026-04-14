@@ -21,3 +21,9 @@ Referral params and redirects must not create competing canonical public URLs.
 - reporting dimensions
 - canonical URL rules
 - analytics breakdown for affiliate profile traffic
+
+## Status
+
+Done.
+
+Reporting already distinguishes link intent through `affiliate_referral_links.product_type`, and the redirect layer now lands on canonical public profile or service URLs with only the `ref` attribution param added.

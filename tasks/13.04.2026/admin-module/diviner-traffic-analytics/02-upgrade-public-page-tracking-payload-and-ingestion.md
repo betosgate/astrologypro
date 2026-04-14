@@ -1,6 +1,11 @@
 # Task 02 - Upgrade Public Page Tracking Payload and Ingestion
 
-- Status: Open
+- Status: Done
+
+## Completion Notes
+
+- The client tracker now submits `search` alongside `divinerId`, `path`, and `referrer` from [src/components/landing/page-tracker.tsx](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/components/landing/page-tracker.tsx:1).
+- Ingestion now enriches analytics at write time in [src/app/api/analytics/track/route.ts](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/app/api/analytics/track/route.ts:1) using [src/lib/diviner-analytics.ts](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/lib/diviner-analytics.ts:1).
 - Priority: P0
 - Owner: Backend / Full-stack
 
@@ -100,4 +105,3 @@ If a `ref` code is present but does not resolve:
 - [ ] Load a diviner page with `?ref=<known-affiliate-code>` and confirm the row is marked affiliate-related.
 - [ ] Load a diviner page with a generic Google referrer and confirm `traffic_source = organic_search`.
 - [ ] Load a diviner page with no referrer and no UTM and confirm `traffic_source = direct`.
-

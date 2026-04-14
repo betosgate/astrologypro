@@ -27,3 +27,9 @@ Examples:
 - canonical role-to-frontend flow map
 - redirect ownership rules
 - mismatch prevention rules
+
+## Status
+
+Done.
+
+Implemented with shared destination ownership in `src/lib/invite-destinations.ts`, used by both `src/app/api/admin/invite-user/route.ts` and `src/app/auth/callback/route.ts` so admin invite redirects cannot drift from the frontend onboarding map.

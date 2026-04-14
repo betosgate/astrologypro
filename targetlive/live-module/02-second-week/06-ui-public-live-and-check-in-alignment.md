@@ -1,6 +1,6 @@
 # Task 06 - Align Public Live Section and Check-In Flow
 
-- Status: Open
+- Status: Done
 - Priority: P1
 - Owner: Frontend / Full-stack
 
@@ -53,3 +53,8 @@ That means a visitor can potentially see a public page that looks live while the
 - [ ] Visit while a session is live and confirm both surfaces present consistent live and check-in affordances.
 - [ ] Disable check-in for the active session and confirm both surfaces handle that state consistently.
 
+## Completion Notes
+
+- The public diviner page now treats the active `live_sessions` row as the live-state source instead of trusting mirrored diviner flags directly.
+- The embedded profile check-in CTA only renders when the active session exists and has `check_in_enabled = true`.
+- The public profile and `/check-in/[username]` now gate from the same operational live-session truth.

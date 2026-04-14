@@ -20,3 +20,9 @@ The user experience should feel native, not like a separate admin shortcut flow.
 - prefill rules
 - invited-user context flags
 - frontend copy rules for invited users
+
+## Status
+
+Done.
+
+Invited routes now carry a canonical `?invited=true` flag via `src/lib/invite-destinations.ts`, and invited-context copy is rendered on the real onboarding screens in `src/app/onboarding/page.tsx`, `src/app/join/trainee/profile/page.tsx`, and `src/app/community/onboarding/page.tsx`. Existing prefill behavior continues to source known user and membership data from auth metadata and onboarding prefill APIs.

@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncProfileAcrossRoles } from "@/lib/profile-sync";
+import {
+  getAllowedSpecialtiesForPackage,
+  getRoleServicePackages,
+  resolveRoleServicePackage,
+} from "@/lib/role-service-packages";
 
 export const dynamic = "force-dynamic";
 
@@ -91,7 +96,7 @@ export async function POST(req: NextRequest) {
     // ── Look up trainee ──
     const { data: trainee, error: lookupError } = await admin
       .from("trainees")
-      .select("id")
+      .select("id, service_package_code")
       .eq("user_id", user.id)
       .single();
 
@@ -102,6 +107,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const allowedSpecialtiesForPackage = new Set(
+      getAllowedSpecialtiesForPackage(
+        ALLOWED_SPECIALTIES,
+        resolveRoleServicePackage(
+          await getRoleServicePackages(),
+          trainee.service_package_code,
+        ),
+      ),
+    );
+
     // ── Update trainee record ──
     const { error: updateError } = await admin
       .from("trainees")
@@ -111,7 +126,9 @@ export async function POST(req: NextRequest) {
         avatar_url: avatar_url?.trim() || null,
         phone: phone?.trim() || null,
         timezone: timezone || null,
-        specialties: validSpecialties,
+        specialties: validSpecialties.filter((item) =>
+          allowedSpecialtiesForPackage.has(item),
+        ),
         goals: goals?.trim() || null,
         onboarding_completed: true,
         updated_at: new Date().toISOString(),
