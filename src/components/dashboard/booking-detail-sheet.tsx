@@ -14,7 +14,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Eye, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw, CalendarClock, XCircle, Send } from "lucide-react";
+import { Eye, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw, CalendarClock, XCircle, Send, Receipt } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {
@@ -25,6 +26,13 @@ const statusColors: Record<string, string> = {
   "in_progress": "bg-purple-500/10 text-purple-500 border-purple-500/20",
   no_show: "bg-gray-500/10 text-gray-500 border-gray-500/20",
 };
+
+interface LinkedOrder {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+}
 
 interface BookingDetailProps {
   booking: {
@@ -44,6 +52,7 @@ interface BookingDetailProps {
     refunded_at?: string | null;
     refund_reason?: string | null;
   };
+  linkedOrder?: LinkedOrder | null;
 }
 
 // Format an ISO string into the value expected by <input type="datetime-local">
@@ -53,7 +62,7 @@ function toDatetimeLocal(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function BookingDetailSheet({ booking }: BookingDetailProps) {
+export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [showRefundForm, setShowRefundForm] = useState(false);
@@ -292,27 +301,23 @@ export function BookingDetailSheet({ booking }: BookingDetailProps) {
           <span className="sr-only">View details</span>
         </Button>
       </SheetTrigger>
-      <SheetContent>
+      <SheetContent className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Booking Details</SheetTitle>
         </SheetHeader>
-        <div className="flex flex-col gap-6 p-4">
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs text-muted-foreground">Status</p>
-              <Badge
-                className={statusColors[booking.status] ?? ""}
-                variant="outline"
-              >
+        <div className="flex flex-col gap-5 p-4">
+
+          {/* ── Info block ────────────────────────────────────────────── */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Badge className={statusColors[booking.status] ?? ""} variant="outline">
                 {booking.status}
               </Badge>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Client</p>
               <p className="text-sm font-medium">{booking.client_name}</p>
-              <p className="text-xs text-muted-foreground">
-                {booking.client_email}
-              </p>
+              <p className="text-xs text-muted-foreground">{booking.client_email}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Service</p>
@@ -321,346 +326,242 @@ export function BookingDetailSheet({ booking }: BookingDetailProps) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-xs text-muted-foreground">Date & Time</p>
-                <p className="text-sm font-medium">
-                  {formatDateTime(booking.scheduled_at)}
-                </p>
+                <p className="text-sm font-medium">{formatDateTime(booking.scheduled_at)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Duration</p>
                 <p className="text-sm font-medium">{booking.duration} min</p>
               </div>
             </div>
-            {/* Payment Info */}
-            {booking.amount > 0 && (
-              <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <CreditCard className="size-3.5 text-muted-foreground" />
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Payment</p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Amount</p>
-                    <p className="text-sm font-semibold">{formatCurrency(booking.amount)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Status</p>
-                    {booking.refunded_at ? (
-                      <span className="inline-flex items-center rounded-full border border-red-500/20 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-500">Refunded</span>
-                    ) : ["confirmed", "completed", "in_progress"].includes(booking.status) ? (
-                      <span className="inline-flex items-center rounded-full border border-green-500/20 bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-500">Paid</span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-full border border-yellow-500/20 bg-yellow-500/10 px-2 py-0.5 text-xs font-medium text-yellow-500">Unpaid</span>
-                    )}
-                  </div>
-                </div>
-                {booking.payment_intent_id && ["confirmed", "completed", "in_progress"].includes(booking.status) && (
-                  <div>
-                    <p className="text-xs text-muted-foreground">Payment ID</p>
-                    <p className="text-xs font-mono text-foreground/70 break-all">{booking.payment_intent_id}</p>
-                  </div>
-                )}
-                {canSyncPayment && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full mt-1 gap-1.5 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10"
-                    onClick={handleSyncPayment}
-                    disabled={syncing}
-                  >
-                    {syncing ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
-                    {syncing ? "Checking…" : "Sync Payment Status"}
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {booking.notes && (
-              <div>
-                <p className="text-xs text-muted-foreground">Booking Notes</p>
-                <p className="text-sm">{booking.notes}</p>
-              </div>
-            )}
-
-            {booking.booking_notes && (
-              <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3">
-                <p className="text-xs font-medium text-amber-400 mb-1">Client Notes</p>
-                <p className="text-sm text-muted-foreground">{booking.booking_notes}</p>
-              </div>
-            )}
-
-            {/* Session Notes — only for completed bookings */}
-            {booking.status === "completed" && (
-              <div className="space-y-2">
-                <Label htmlFor="session-notes" className="flex items-center gap-1.5">
-                  <NotebookPen className="size-3.5" />
-                  Session Notes
-                  <span className="text-xs font-normal text-muted-foreground">(private)</span>
-                </Label>
-                <Textarea
-                  id="session-notes"
-                  rows={4}
-                  placeholder="Add notes about this session — themes covered, follow-up topics, key insights…"
-                  value={sessionNotes}
-                  onChange={(e) => setSessionNotes(e.target.value)}
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleSaveNotes}
-                  disabled={savingNotes}
-                >
-                  {savingNotes ? (
-                    <>
-                      <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                      Saving…
-                    </>
-                  ) : (
-                    "Save Notes"
-                  )}
-                </Button>
-              </div>
-            )}
-
-            {/* Note to Client */}
-            {booking.status !== "canceled" && (
-              <div className="space-y-2 rounded-lg border bg-muted/20 p-4">
-                <Label htmlFor="client-note" className="flex items-center gap-1.5">
-                  <Send className="size-3.5" />
-                  Note to Client
-                  {booking.client_email && (
-                    <span className="ml-auto text-xs font-normal text-muted-foreground truncate max-w-[160px]">
-                      → {booking.client_email}
-                    </span>
-                  )}
-                </Label>
-                <Textarea
-                  id="client-note"
-                  rows={4}
-                  placeholder="Write a note to send to your client — session highlights, follow-up suggestions, resources, or any message…"
-                  value={clientNote}
-                  onChange={(e) => setClientNote(e.target.value)}
-                />
-                <Button
-                  size="sm"
-                  onClick={handleSendNote}
-                  disabled={sendingNote || !clientNote.trim()}
-                  className="gap-1.5"
-                >
-                  {sendingNote ? (
-                    <><Loader2 className="size-3.5 animate-spin" />Sending…</>
-                  ) : (
-                    <><Send className="size-3.5" />Send to Client</>
-                  )}
-                </Button>
-              </div>
-            )}
-
-            {/* Reschedule Action */}
-            {canReschedule && !showRescheduleForm && !showCancelForm && (
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={() => setShowRescheduleForm(true)}
-              >
-                <CalendarClock className="size-4" />
-                Reschedule
-              </Button>
-            )}
-
-            {canReschedule && showRescheduleForm && (
-              <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
-                <h4 className="text-sm font-semibold">Reschedule Booking</h4>
-                <p className="text-xs text-muted-foreground">
-                  Select a new date and time. The client will be notified by email.
-                </p>
-                <div className="space-y-1.5">
-                  <Label htmlFor="new-datetime">New Date & Time</Label>
-                  <input
-                    id="new-datetime"
-                    type="datetime-local"
-                    value={newScheduledAt}
-                    onChange={(e) => setNewScheduledAt(e.target.value)}
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={handleReschedule}
-                    disabled={rescheduling}
-                  >
-                    {rescheduling ? (
-                      <><Loader2 className="mr-1.5 size-3.5 animate-spin" />Rescheduling…</>
-                    ) : (
-                      "Confirm Reschedule"
-                    )}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setShowRescheduleForm(false);
-                      setNewScheduledAt(toDatetimeLocal(booking.scheduled_at));
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Cancel Action */}
-            {canCancel && !showCancelForm && !showRescheduleForm && (
-              <Button
-                variant="outline"
-                className="w-full gap-2 border-red-500/30 text-red-500 hover:bg-red-500/10 hover:text-red-500"
-                onClick={() => setShowCancelForm(true)}
-              >
-                <XCircle className="size-4" />
-                Cancel Booking
-                {booking.payment_intent_id && booking.amount > 0 && !refunded && (
-                  <span className="ml-1 text-xs opacity-70">+ auto-refund</span>
-                )}
-              </Button>
-            )}
-
-            {canCancel && showCancelForm && (
-              <div className="space-y-3 rounded-lg border border-red-500/20 bg-red-500/5 p-4">
-                <h4 className="text-sm font-semibold text-red-500">Cancel Booking</h4>
-                {booking.payment_intent_id && booking.amount > 0 && !refunded ? (
-                  <p className="text-xs text-muted-foreground">
-                    This booking has a payment of <strong>{formatCurrency(booking.amount)}</strong>.
-                    Cancelling will automatically issue a full refund to {booking.client_name}.
-                    This action cannot be undone.
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    The booking will be cancelled and the client will be notified.
-                    This action cannot be undone.
-                  </p>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="cancel-reason">Reason for cancellation</Label>
-                  <Textarea
-                    id="cancel-reason"
-                    rows={3}
-                    placeholder="Provide a reason for cancellation…"
-                    value={cancelReason}
-                    onChange={(e) => setCancelReason(e.target.value)}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={handleCancel}
-                    disabled={canceling}
-                  >
-                    {canceling ? (
-                      <><Loader2 className="mr-1.5 size-3.5 animate-spin" />Processing…</>
-                    ) : (
-                      booking.payment_intent_id && booking.amount > 0 && !refunded
-                        ? "Cancel & Refund"
-                        : "Confirm Cancellation"
-                    )}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setShowCancelForm(false);
-                      setCancelReason("");
-                    }}
-                  >
-                    Go Back
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Refund Status */}
-            {refunded && (
-              <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="size-4 text-green-500" />
-                  <p className="text-sm font-medium text-green-500">Refunded</p>
-                </div>
-                {booking.refund_amount && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Amount: {formatCurrency(booking.refund_amount)}
-                  </p>
-                )}
-                {booking.refunded_at && (
-                  <p className="text-xs text-muted-foreground">
-                    Date: {formatDateTime(booking.refunded_at)}
-                  </p>
-                )}
-                {booking.refund_reason && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Reason: {booking.refund_reason}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Refund Action */}
-            {canRefund && !showRefundForm && (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => setShowRefundForm(true)}
-              >
-                <RotateCcw className="mr-2 size-4" />
-                Issue Refund
-              </Button>
-            )}
-
-            {canRefund && showRefundForm && (
-              <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
-                <h4 className="text-sm font-semibold">Confirm Refund</h4>
-                <p className="text-xs text-muted-foreground">
-                  You are about to refund{" "}
-                  <strong>{formatCurrency(booking.amount)}</strong> to{" "}
-                  {booking.client_name}. This action cannot be undone.
-                </p>
-                <div className="space-y-2">
-                  <Label htmlFor="refund-reason">Reason for refund</Label>
-                  <Textarea
-                    id="refund-reason"
-                    rows={3}
-                    placeholder="Provide a reason for this refund..."
-                    value={refundReason}
-                    onChange={(e) => setRefundReason(e.target.value)}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="destructive"
-                    onClick={handleRefund}
-                    disabled={refunding}
-                  >
-                    {refunding ? (
-                      <>
-                        <Loader2 className="mr-2 size-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      "Confirm Refund"
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowRefundForm(false);
-                      setRefundReason("");
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            )}
           </div>
+
+          {/* ── PRIMARY ACTIONS (always visible at top) ───────────────── */}
+          {(canReschedule || canCancel || canRefund) && !showRescheduleForm && !showCancelForm && !showRefundForm && (
+            <div className="flex flex-col gap-2">
+              {canReschedule && (
+                <Button variant="outline" className="w-full gap-2" onClick={() => setShowRescheduleForm(true)}>
+                  <CalendarClock className="size-4" />
+                  Reschedule
+                </Button>
+              )}
+              {canCancel && (
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 border-red-500/30 text-red-500 hover:bg-red-500/10 hover:text-red-500"
+                  onClick={() => setShowCancelForm(true)}
+                >
+                  <XCircle className="size-4" />
+                  Cancel Booking
+                  {booking.payment_intent_id && booking.amount > 0 && !refunded && (
+                    <span className="ml-1 text-xs opacity-70">+ auto-refund</span>
+                  )}
+                </Button>
+              )}
+              {canRefund && (
+                <Button variant="outline" className="w-full gap-2" onClick={() => setShowRefundForm(true)}>
+                  <RotateCcw className="size-4" />
+                  Issue Refund
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* ── Reschedule form ───────────────────────────────────────── */}
+          {canReschedule && showRescheduleForm && (
+            <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+              <h4 className="text-sm font-semibold">Reschedule Booking</h4>
+              <p className="text-xs text-muted-foreground">Select a new date and time. The client will be notified by email.</p>
+              <div className="space-y-1.5">
+                <Label htmlFor="new-datetime">New Date & Time</Label>
+                <input
+                  id="new-datetime"
+                  type="datetime-local"
+                  value={newScheduledAt}
+                  onChange={(e) => setNewScheduledAt(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleReschedule} disabled={rescheduling}>
+                  {rescheduling ? <><Loader2 className="mr-1.5 size-3.5 animate-spin" />Rescheduling…</> : "Confirm Reschedule"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => { setShowRescheduleForm(false); setNewScheduledAt(toDatetimeLocal(booking.scheduled_at)); }}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Cancel form ───────────────────────────────────────────── */}
+          {canCancel && showCancelForm && (
+            <div className="space-y-3 rounded-lg border border-red-500/20 bg-red-500/5 p-4">
+              <h4 className="text-sm font-semibold text-red-500">Cancel Booking</h4>
+              {booking.payment_intent_id && booking.amount > 0 && !refunded ? (
+                <p className="text-xs text-muted-foreground">
+                  This booking has a payment of <strong>{formatCurrency(booking.amount)}</strong>.
+                  Cancelling will automatically issue a full refund to {booking.client_name}. This action cannot be undone.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  The booking will be cancelled and the client will be notified. This action cannot be undone.
+                </p>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="cancel-reason">Reason for cancellation</Label>
+                <Textarea id="cancel-reason" rows={3} placeholder="Provide a reason for cancellation…" value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} />
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="destructive" onClick={handleCancel} disabled={canceling}>
+                  {canceling ? <><Loader2 className="mr-1.5 size-3.5 animate-spin" />Processing…</> : (booking.payment_intent_id && booking.amount > 0 && !refunded ? "Cancel & Refund" : "Confirm Cancellation")}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => { setShowCancelForm(false); setCancelReason(""); }}>Go Back</Button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Refund form ───────────────────────────────────────────── */}
+          {canRefund && showRefundForm && (
+            <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+              <h4 className="text-sm font-semibold">Confirm Refund</h4>
+              <p className="text-xs text-muted-foreground">
+                You are about to refund <strong>{formatCurrency(booking.amount)}</strong> to {booking.client_name}. This action cannot be undone.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="refund-reason">Reason for refund</Label>
+                <Textarea id="refund-reason" rows={3} placeholder="Provide a reason for this refund..." value={refundReason} onChange={(e) => setRefundReason(e.target.value)} />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="destructive" onClick={handleRefund} disabled={refunding}>
+                  {refunding ? <><Loader2 className="mr-2 size-4 animate-spin" />Processing…</> : "Confirm Refund"}
+                </Button>
+                <Button variant="outline" onClick={() => { setShowRefundForm(false); setRefundReason(""); }}>Cancel</Button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Refund status ─────────────────────────────────────────── */}
+          {refunded && (
+            <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="size-4 text-green-500" />
+                <p className="text-sm font-medium text-green-500">Refunded</p>
+              </div>
+              {booking.refund_amount && <p className="mt-1 text-xs text-muted-foreground">Amount: {formatCurrency(booking.refund_amount)}</p>}
+              {booking.refunded_at && <p className="text-xs text-muted-foreground">Date: {formatDateTime(booking.refunded_at)}</p>}
+              {booking.refund_reason && <p className="mt-1 text-xs text-muted-foreground">Reason: {booking.refund_reason}</p>}
+            </div>
+          )}
+
+          {/* ── Payment Info ──────────────────────────────────────────── */}
+          {booking.amount > 0 && (
+            <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+              <div className="flex items-center gap-1.5 mb-1">
+                <CreditCard className="size-3.5 text-muted-foreground" />
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Payment</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Amount</p>
+                  <p className="text-sm font-semibold">{formatCurrency(booking.amount)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  {booking.refunded_at ? (
+                    <span className="inline-flex items-center rounded-full border border-red-500/20 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-500">Refunded</span>
+                  ) : ["confirmed", "completed", "in_progress"].includes(booking.status) ? (
+                    <span className="inline-flex items-center rounded-full border border-green-500/20 bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-500">Paid</span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full border border-yellow-500/20 bg-yellow-500/10 px-2 py-0.5 text-xs font-medium text-yellow-500">Unpaid</span>
+                  )}
+                </div>
+              </div>
+              {booking.payment_intent_id && ["confirmed", "completed", "in_progress"].includes(booking.status) && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Payment ID</p>
+                  <p className="text-xs font-mono text-foreground/70 break-all">{booking.payment_intent_id}</p>
+                </div>
+              )}
+              {canSyncPayment && (
+                <Button size="sm" variant="outline" className="w-full mt-1 gap-1.5 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10" onClick={handleSyncPayment} disabled={syncing}>
+                  {syncing ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+                  {syncing ? "Checking…" : "Sync Payment Status"}
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* ── Linked Order ──────────────────────────────────────────── */}
+          {linkedOrder && (
+            <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Receipt className="size-3.5 text-muted-foreground" />
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Linked Order</p>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">${Number(linkedOrder.amount).toFixed(2)} {linkedOrder.currency.toUpperCase()}</p>
+                  <p className="text-xs text-muted-foreground font-mono">{linkedOrder.id.slice(0, 8)}…</p>
+                </div>
+                <span className={["inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize",
+                  linkedOrder.status === "completed" ? "border-green-500/20 bg-green-500/10 text-green-500" :
+                  linkedOrder.status === "refunded" ? "border-red-500/20 bg-red-500/10 text-red-500" :
+                  linkedOrder.status === "pending" ? "border-yellow-500/20 bg-yellow-500/10 text-yellow-500" :
+                  "border-border bg-muted text-muted-foreground"].join(" ")}>
+                  {linkedOrder.status}
+                </span>
+              </div>
+              <Link href="/dashboard/orders">
+                <Button size="sm" variant="ghost" className="w-full text-xs mt-1 text-muted-foreground">View all orders →</Button>
+              </Link>
+            </div>
+          )}
+
+          {/* ── Notes ────────────────────────────────────────────────── */}
+          {booking.notes && (
+            <div>
+              <p className="text-xs text-muted-foreground">Booking Notes</p>
+              <p className="text-sm">{booking.notes}</p>
+            </div>
+          )}
+          {booking.booking_notes && (
+            <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3">
+              <p className="text-xs font-medium text-amber-400 mb-1">Client Notes</p>
+              <p className="text-sm text-muted-foreground">{booking.booking_notes}</p>
+            </div>
+          )}
+
+          {/* ── Session Notes (completed only) ────────────────────────── */}
+          {booking.status === "completed" && (
+            <div className="space-y-2">
+              <Label htmlFor="session-notes" className="flex items-center gap-1.5">
+                <NotebookPen className="size-3.5" />
+                Session Notes
+                <span className="text-xs font-normal text-muted-foreground">(private)</span>
+              </Label>
+              <Textarea id="session-notes" rows={4} placeholder="Add notes about this session…" value={sessionNotes} onChange={(e) => setSessionNotes(e.target.value)} />
+              <Button size="sm" variant="outline" onClick={handleSaveNotes} disabled={savingNotes}>
+                {savingNotes ? <><Loader2 className="mr-1.5 size-3.5 animate-spin" />Saving…</> : "Save Notes"}
+              </Button>
+            </div>
+          )}
+
+          {/* ── Note to Client ────────────────────────────────────────── */}
+          {booking.status !== "canceled" && (
+            <div className="space-y-2 rounded-lg border bg-muted/20 p-4">
+              <Label htmlFor="client-note" className="flex items-center gap-1.5">
+                <Send className="size-3.5" />
+                Note to Client
+                {booking.client_email && (
+                  <span className="ml-auto text-xs font-normal text-muted-foreground truncate max-w-[160px]">→ {booking.client_email}</span>
+                )}
+              </Label>
+              <Textarea id="client-note" rows={3} placeholder="Write a note to send to your client…" value={clientNote} onChange={(e) => setClientNote(e.target.value)} />
+              <Button size="sm" onClick={handleSendNote} disabled={sendingNote || !clientNote.trim()} className="gap-1.5">
+                {sendingNote ? <><Loader2 className="size-3.5 animate-spin" />Sending…</> : <><Send className="size-3.5" />Send to Client</>}
+              </Button>
+            </div>
+          )}
+
         </div>
       </SheetContent>
     </Sheet>
