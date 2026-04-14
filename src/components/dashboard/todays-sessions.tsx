@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, PlayCircle, FileText, Calendar } from "lucide-react";
+import { Clock, PlayCircle, FileText, Calendar, ArrowUpRight } from "lucide-react";
 
 interface TodaySession {
   id: string;
@@ -101,11 +101,18 @@ export function TodaysSessions({
 }: TodaysSessionsProps) {
   return (
     <Card className="border-amber-500/30 shadow-[0_0_15px_-3px_rgba(212,160,23,0.15)]">
-      <CardHeader className="pb-3">
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle className="flex items-center gap-2">
           <Calendar className="size-5" style={{ color: "#d4a017" }} />
           Today&apos;s Sessions
         </CardTitle>
+        <Link
+          href="/dashboard/bookings"
+          className="flex items-center gap-1 text-xs text-primary hover:underline"
+        >
+          View All
+          <ArrowUpRight className="size-3" />
+        </Link>
       </CardHeader>
       <CardContent>
         {sessions.length === 0 ? (

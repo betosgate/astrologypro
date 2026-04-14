@@ -85,69 +85,69 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
             <X className="size-5 transition-transform group-hover:rotate-90" />
           </button>
 
-          <div className="px-6 py-5 border-b border-white/5 bg-slate-900/40 pr-16 shrink-0">
-            <DialogHeader>
-              {isAspect ? (
-                <div className="pb-1">
-                  <AstroHeaderParts title={aspectTitle ?? title} />
-                </div>
-              ) : (
-                <DialogTitle className="text-lg font-bold capitalize gold-text">{title.replace(/_/g, " ")} (Pictorial Analysis)</DialogTitle>
-              )}
-            </DialogHeader>
+          <div className="px-6 pt-4 pb-0 pr-2 shrink-0 flex flex-col items-center">
+            <h2 className="text-xl md:text-2xl font-bold uppercase tracking-[0.2em] gold-text text-center">
+              Deep Astrological Analysis
+            </h2>
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-950/50">
             <div className="flex flex-col gap-0 h-full">
-              <div className="p-6 shrink-0 border-b border-white/5">
+              <div className="pt-0 pb-6 px-6 shrink-0 border-b border-white/5">
                 {loading ? (
                   <div className="flex flex-col items-center gap-3 py-12 justify-center text-muted-foreground">
                     <Loader2 className="size-8 animate-spin text-amber-500 mb-2" />
                     <span className="text-sm font-medium tracking-widest uppercase opacity-70">Cosmic Retrieval...</span>
                   </div>
                 ) : (
-                  <div>
+                  <div className="max-w-4xl mx-auto">
                     {promptType === "planet" && planetEntries && planetEntries.length > 0 ? (
-                      <div className="space-y-6">
+                      <div className="space-y-4">
                         {planetEntries.map(({ planet, items }) => (
-                          <div key={planet} className="rounded-xl border border-amber-500/10 bg-amber-500/5 p-4 space-y-3 shadow-inner">
-                            <div className="flex items-center gap-3">
-                              <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                                <PlanetSymbol name={planet} />
-                              </div>
-                              <div className="h-px flex-1 bg-gradient-to-r from-amber-500/30 to-transparent" />
-                            </div>
-                            <ol className="space-y-3 list-none">
-                              {items.map((item, idx) => (
-                                <li key={idx} className="text-sm leading-relaxed text-foreground/90 flex gap-3 group">
-                                  <span className="flex-shrink-0 size-5 flex items-center justify-center rounded-full bg-amber-500/20 text-amber-500 font-bold text-[10px] border border-amber-500/30 group-hover:bg-amber-500 group-hover:text-amber-950 transition-all">{idx + 1}</span>
-                                  <span className="opacity-90 group-hover:opacity-100">{item}</span>
-                                </li>
-                              ))}
-                            </ol>
+                          <div key={planet} className="flex flex-col gap-5 items-center">
+                             <div className="bg-white px-8 py-3.5 rounded-lg shadow-xl border border-black/5 text-center" style={{ width: "-webkit-fill-available" }}>
+                               <h3 className="text-[20px] font-semibold text-black uppercase tracking-wide leading-tight">
+                                 {planet} Insights
+                               </h3>
+                             </div>
+                             <div className="w-full rounded-xl border border-black/10 bg-[#f0a023] pt-6 pb-2 px-8 space-y-4 shadow-2xl text-black">
+                                <ol className="space-y-4 list-none">
+                                  {items.map((item, idx) => (
+                                    <li key={idx} className="text-[18px] leading-relaxed flex gap-4 font-normal">
+                                      <span className="flex-shrink-0 size-6 flex items-center justify-center rounded-full bg-black/10 text-black font-bold text-xs border border-black/20">{idx + 1}</span>
+                                      <span>{item}</span>
+                                    </li>
+                                  ))}
+                                </ol>
+                             </div>
                           </div>
                         ))}
                       </div>
                     ) : relationshipEntries && relationshipEntries.length > 0 ? (
-                      <div className="space-y-6">
+                      <div className="space-y-4">
                         {relationshipEntries.map(({ title: entryTitle, content: entryContent, bgClass: entryBg }) => (
-                          <div key={entryTitle} className={cn("rounded-xl border border-black/10 p-6 space-y-3 shadow-2xl relative overflow-hidden", entryBg || "bg-slate-900/40")}>
-                            {!entryBg && <div className="absolute top-0 left-0 w-1 h-full bg-amber-500/40" />}
-                            <h4 className={cn("text-lg font-bold flex items-center gap-2", entryBg ? "text-inherit" : "gold-text")}>
-                              <Sparkles className={cn("size-4", entryBg ? "text-inherit/40" : "text-amber-500/40")} />
-                              {entryTitle}
-                            </h4>
-                            <div className="text-sm leading-relaxed whitespace-pre-wrap font-light tracking-wide italic">
-                              &quot;{entryContent}&quot;
-                            </div>
+                          <div key={entryTitle} className="flex flex-col gap-5 items-center">
+                             <div className="bg-white px-8 py-3.5 rounded-lg shadow-xl border border-black/5 text-center" style={{ width: "-webkit-fill-available" }}>
+                               <h4 className="text-[20px] font-semibold text-black uppercase tracking-wide leading-tight">
+                                 {entryTitle}
+                               </h4>
+                             </div>
+                             <div className={cn("rounded-xl border border-black/10 pt-6 pb-2 px-8 shadow-2xl relative overflow-hidden text-black text-[19px] leading-[28px] font-normal", entryBg || "bg-[#f0a023]")}>
+                                {entryContent}
+                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className={cn("text-sm leading-relaxed whitespace-pre-wrap font-light tracking-wide p-6 rounded-2xl border italic relative overflow-hidden shadow-2xl", bgClass || "bg-slate-900/40 border-white/5 text-foreground/90")}>
-                        {!bgClass && <div className="absolute top-0 left-0 w-1 h-full bg-amber-500/40" />}
-                        {!bgClass && <Sparkles className="absolute top-3 right-3 size-4 text-amber-500/20" />}
-                        &quot;{content}&quot;
+                      <div className="flex flex-col gap-2 items-center">
+                        <div className="bg-white px-8 py-4 rounded-lg shadow-xl border border-black/5 text-center" style={{ width: "-webkit-fill-available" }}>
+                           <h2 className="text-2xl md:text-3xl font-bold text-black tracking-tight">
+                             {isAspect ? (aspectTitle ?? title) : title.replace(/_/g, " ")}
+                           </h2>
+                        </div>
+                        <div className={cn("rounded-xl border border-black/10 pt-6 pb-4 px-8 shadow-3xl text-black text-[19px] leading-[28px] font-normal relative overflow-hidden", bgClass || "bg-[#f0a023]")}>
+                          {content}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -155,7 +155,12 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
               </div>
 
               {pictureUrl && (
-                <div className="px-6 pb-6 pt-2 flex flex-col items-center justify-center bg-slate-900/20">
+                <div className="px-6 pb-6 pt-2 flex flex-col items-center justify-center bg-slate-900/20 gap-6">
+                  <div className="bg-white px-8 py-3.5 rounded-lg shadow-xl border border-black/5 text-center mt-6" style={{ width: "-webkit-fill-available" }}>
+                    <h4 className="text-[20px] font-semibold text-black uppercase tracking-wide leading-tight">
+                      Picture Representation
+                    </h4>
+                  </div>
                   <div className="relative group rounded-xl border border-amber-500/20 overflow-hidden bg-slate-950 shadow-[0_0_50px_rgba(245,158,11,0.08)] transition-all hover:border-amber-500/40 w-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={pictureUrl} alt={title} className="w-full h-auto max-h-[600px] object-contain transition-transform duration-1000 group-hover:scale-[1.05]" />
@@ -219,16 +224,36 @@ export function useShowMore() {
         }
       } else if (type === "planet") {
         const p = promptData?.planet ?? promptData;
-        const planet = p?.name ?? title.trim();
-        const sign = p?.sign ?? p?.Sign ?? p?.[title.toLowerCase()]?.sign ?? p?.[title.toLowerCase()]?.Sign ?? "";
+        let planet = p?.name ?? "";
+        let sign = p?.sign ?? p?.Sign ?? p?.[title.toLowerCase()]?.sign ?? p?.[title.toLowerCase()]?.Sign ?? "";
+        
+        if (!planet || !sign) {
+          const lower = title.toLowerCase();
+          const planets = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "lilith", "chiron"];
+          if (!planet) planet = planets.find(pl => lower.includes(pl)) || "";
+          if (!sign) {
+             const match = title.match(/in\s+([A-Za-z]+)/);
+             if (match) sign = match[1];
+          }
+        }
+
         if (planet && sign) {
           const capPlanet = planet.charAt(0).toUpperCase() + planet.slice(1);
           const capSign = sign.charAt(0).toUpperCase() + sign.slice(1);
           return { filename: `${capPlanet}-In-${capSign}`, foldername: "planets" };
         }
       } else if (type === "house") {
-        const houseNum = promptData?.house ?? promptData?.House ?? "";
-        const sign = promptData?.sign ?? promptData?.Sign ?? "";
+        const h = promptData?.house ?? promptData?.House ?? promptData;
+        let houseNum = h && typeof h === "object" ? (h.house || h.House || "") : (typeof h === "number" || typeof h === "string" ? h : "");
+        let sign = promptData?.sign ?? promptData?.Sign ?? "";
+
+        if (!houseNum || !sign) {
+          const matchNum = title.match(/house\s+(\d+)/i) || title.match(/(\d+)(?:st|nd|rd|th)\s+house/i);
+          if (matchNum) houseNum = matchNum[1];
+          const matchSign = title.match(/in\s+([A-Za-z]+)/);
+          if (matchSign) sign = matchSign[1];
+        }
+
         if (houseNum && sign) {
           const ordinal = String(houseNum).replace(/\D/g, "");
           const suffix = ordinal === "1" ? "st" : ordinal === "2" ? "nd" : ordinal === "3" ? "rd" : "th";
@@ -272,7 +297,20 @@ export function useShowMore() {
     tabSlug?: string,
     rawData?: any,
   ) {
-    const resolvedType = promptType ?? (aspectTitle ? "aspect" : "generic");
+    let resolvedType = promptType ?? (aspectTitle ? "aspect" : "generic");
+
+    // Auto-detect type from title if generic
+    if (resolvedType === "generic") {
+      const lowerTitle = (aspectTitle ?? title).toLowerCase();
+      if (ASPECT_TYPE_WORDS.some(w => lowerTitle.includes(w.toLowerCase()))) {
+        resolvedType = "aspect";
+      } else if (lowerTitle.includes(" house") || lowerTitle.startsWith("house ")) {
+        resolvedType = "house";
+      } else if (["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "lilith", "chiron"].some(p => lowerTitle.includes(p))) {
+        // If it's a relationship tab, it might be a planet in sign/house
+        resolvedType = "planet";
+      }
+    }
     setModal({ title, content: "", loading: true, aspectTitle, promptType: resolvedType, pictureUrl: null });
 
     const picturePromise = fetchPicture(resolvedType, aspectTitle ?? title, promptData);
@@ -342,6 +380,8 @@ export function useShowMore() {
           json: [promptData],
         };
       }
+
+      // picturePromise is already initialized at the start of trigger
 
       const [aiResult, pictureResult] = await Promise.all([
         fetchWithRetry("/api/admin/astro/ai-interpret", {
