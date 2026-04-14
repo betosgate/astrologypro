@@ -1,36 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isTrustedPortal } from "@/lib/auth/resolve-login-destination";
 
 export const dynamic = "force-dynamic";
-
-const VALID_PORTAL_BASES = [
-  "/dashboard",
-  "/portal",
-  "/community",
-  "/mystery-school",
-  "/trainee",
-  "/advocate",
-  "/admin",
-];
 
 /**
  * POST /api/auth/save-last-portal
  * Body: { url: string }
  *
- * Persists the last visited portal to the diviners table so it survives
- * across devices and browser sessions.
+ * Persists the last visited portal to user_portal_preferences so it survives
+ * across devices and browser sessions for all role types.
  */
 export async function POST(request: NextRequest) {
   try {
     const { url } = await request.json();
 
-    if (
-      !url ||
-      !VALID_PORTAL_BASES.some(
-        (base) => url === base || url.startsWith(base + "/")
-      )
-    ) {
+    if (!url || !isTrustedPortal(url)) {
       return NextResponse.json({ error: "Invalid portal URL" }, { status: 400 });
     }
 
@@ -45,9 +31,11 @@ export async function POST(request: NextRequest) {
 
     const admin = createAdminClient();
     await admin
-      .from("diviners")
-      .update({ last_portal_url: url })
-      .eq("user_id", user.id);
+      .from("user_portal_preferences")
+      .upsert(
+        { user_id: user.id, last_portal_url: url, updated_at: new Date().toISOString() },
+        { onConflict: "user_id" }
+      );
 
     return NextResponse.json({ ok: true });
   } catch {
