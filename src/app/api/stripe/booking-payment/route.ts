@@ -561,7 +561,7 @@ export async function POST(request: NextRequest) {
         status: "pending",
         base_price: finalPrice,
         video_provider: diviner.video_provider ?? "daily",
-        questionnaire_responses: null,
+        questionnaire_responses: Object.keys(questionnaireData).length > 0 ? questionnaireData : null,
         booking_notes: booking_notes ?? null,
         metadata: {
           ...requestMetadata,

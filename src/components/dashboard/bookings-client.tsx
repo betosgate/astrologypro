@@ -503,6 +503,7 @@ export function BookingsClient({
                               notes: booking.session_notes as string | null,
                               session_notes:
                                 (booking.session_notes as string) ?? null,
+                              booking_notes: (booking.booking_notes as string) ?? null,
                               client_name: client?.full_name ?? "Unknown",
                               client_email: client?.email ?? "",
                               service_name: service?.name ?? "Unknown",

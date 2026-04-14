@@ -365,22 +365,22 @@ function PrepContent({ booking }: SessionPrepProps) {
                     <p className="text-xs font-medium text-muted-foreground">
                       Primary: {questionnaire.firstName || booking.client_name}
                     </p>
-                    {booking.birth_date && (
+                    {(booking.birth_date || questionnaire.birthDate) && (
                       <p className="text-xs">
                         <span className="text-muted-foreground">DOB: </span>
-                        {booking.birth_date}
+                        {booking.birth_date || questionnaire.birthDate}
                       </p>
                     )}
-                    {booking.birth_time && (
+                    {(booking.birth_time || questionnaire.birthTime) && (
                       <p className="text-xs">
                         <span className="text-muted-foreground">Time: </span>
-                        {booking.birth_time}
+                        {booking.birth_time || questionnaire.birthTime}
                       </p>
                     )}
-                    {booking.birth_city && (
+                    {(booking.birth_city || questionnaire.birthCity) && (
                       <p className="text-xs">
                         <span className="text-muted-foreground">City: </span>
-                        {booking.birth_city}
+                        {booking.birth_city || questionnaire.birthCity}
                       </p>
                     )}
                   </div>
