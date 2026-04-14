@@ -28,6 +28,8 @@ import {
   Calendar,
   ClipboardList,
   Sparkles,
+  Video,
+  Loader2,
 } from "lucide-react";
 import { getSessionInsights } from "@/lib/astrology";
 
@@ -38,6 +40,7 @@ interface BookingData {
   service_name: string;
   client_name: string;
   client_email: string;
+  client_id: string | null;
   birth_date: string | null;
   birth_time: string | null;
   birth_city: string | null;
@@ -104,6 +107,7 @@ function useCountdown(targetDate: string) {
 function PrepContent({ booking }: SessionPrepProps) {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [joiningSession, setJoiningSession] = useState(false);
   const timeLeft = useCountdown(booking.scheduled_at);
 
   const storageKey = `session-prep-${booking.id}`;
@@ -161,7 +165,7 @@ function PrepContent({ booking }: SessionPrepProps) {
 
   return (
     <div className="flex flex-col gap-5 p-1">
-      {/* Timer */}
+      {/* Timer + Join Session */}
       <div className="flex items-center justify-between rounded-lg bg-muted p-3">
         <div className="flex items-center gap-2 text-sm">
           <Clock className="size-4 text-muted-foreground" />
@@ -169,6 +173,62 @@ function PrepContent({ booking }: SessionPrepProps) {
         </div>
         <span className="text-sm font-semibold">{timeLeft}</span>
       </div>
+
+      {["confirmed", "in_progress", "pending"].includes(booking.status) && (
+        <Button
+          className="w-full"
+          onClick={async () => {
+            setJoiningSession(true);
+            try {
+              // Check if a video session already exists for this booking
+              const checkRes = await fetch(
+                `/api/dashboard/video-sessions?booking_id=${booking.id}`
+              );
+              const checkData = await checkRes.json();
+              const existing = checkData?.sessions?.[0];
+
+              if (existing) {
+                window.open(`/dashboard/video/${existing.id}`, "_blank");
+                return;
+              }
+
+              // Create a new video session linked to this booking
+              const createRes = await fetch("/api/dashboard/video-sessions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  booking_id: booking.id,
+                  ...(booking.client_id ? { client_id: booking.client_id } : {}),
+                  room_name: `${booking.service_name} – ${booking.client_name}`,
+                }),
+              });
+
+              if (!createRes.ok) {
+                const err = await createRes.json().catch(() => ({}));
+                throw new Error(
+                  (err as { detail?: string }).detail ?? "Failed to create session"
+                );
+              }
+
+              const session = await createRes.json();
+              window.open(`/dashboard/video/${session.id}`, "_blank");
+            } catch {
+              // toast would be better but keeping it simple
+              alert("Could not start video session. Please try again.");
+            } finally {
+              setJoiningSession(false);
+            }
+          }}
+          disabled={joiningSession}
+        >
+          {joiningSession ? (
+            <Loader2 className="mr-2 size-4 animate-spin" />
+          ) : (
+            <Video className="mr-2 size-4" />
+          )}
+          {joiningSession ? "Starting..." : "Join Session"}
+        </Button>
+      )}
 
       {/* Client info */}
       <div className="space-y-3">
