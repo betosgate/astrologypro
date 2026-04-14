@@ -136,13 +136,14 @@ export async function POST(request: NextRequest) {
       payouts_enabled?: boolean | null;
       display_name: string;
       video_provider?: string;
+      username?: string;
     } | null = null;
     let divinerError: { message?: string } | null = null;
 
     async function fetchDivinerById(id: string) {
       let result = await adminSupabase
         .from("diviners")
-        .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider")
+        .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider, username")
         .eq("id", id)
         .eq("is_active", true)
         .single();
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest) {
       if (result.error || !result.data) {
         result = await supabase
           .from("diviners")
-          .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider")
+          .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider, username")
           .eq("id", id)
           .eq("is_active", true)
           .single();
@@ -162,7 +163,7 @@ export async function POST(request: NextRequest) {
     async function fetchDivinerByUsername(username: string) {
       let result = await adminSupabase
         .from("diviners")
-        .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider")
+        .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider, username")
         .eq("username", username)
         .eq("is_active", true)
         .single();
@@ -170,7 +171,7 @@ export async function POST(request: NextRequest) {
       if (result.error || !result.data) {
         result = await supabase
           .from("diviners")
-          .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider")
+          .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider, username")
           .eq("username", username)
           .eq("is_active", true)
           .single();
@@ -736,7 +737,10 @@ export async function POST(request: NextRequest) {
 
       // Send confirmation emails to the booker
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
-      const portalBookingsUrl = `${appUrl}/portal/bookings`;
+      // Token-based direct join link — no login required for client
+      const portalBookingsUrl = diviner?.username
+        ? `${appUrl}/${diviner.username}/session/${booking.id}?token=${booking.booking_token}`
+        : `${appUrl}/booking/${booking.booking_token}`;
       const orderDetailUrl = `${appUrl}/login?redirect=${encodeURIComponent(
         `/portal/orders/${orderId}`
       )}`;
@@ -919,7 +923,7 @@ export async function POST(request: NextRequest) {
         divinerName: diviner.display_name,
         serviceName: service.name,
         sessionDate: sessionDateStr,
-        divinerLandingUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://astrologypro.com"}/${(diviner as Record<string, string>).slug || ""}`,
+        divinerLandingUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://astrologypro.com"}/${(diviner as any).slug || ""}`,
       }).catch((err) => console.error("Failed to send guest invite:", err));
     }
 

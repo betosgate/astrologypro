@@ -111,6 +111,13 @@ export async function POST(request: NextRequest) {
       customerId = newCustomer.id;
     }
 
+    const successPath =
+      itemKey === "perennial_mandalism_community"
+        ? "/perennial-signup/success?session_id={CHECKOUT_SESSION_ID}"
+        : itemKey === "trainee_program"
+          ? "/join/trainee/profile?session_id={CHECKOUT_SESSION_ID}"
+          : "/onboarding?session_id={CHECKOUT_SESSION_ID}";
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: hasRecurring ? "subscription" : "payment",
@@ -123,7 +130,7 @@ export async function POST(request: NextRequest) {
         ...(typeTag ? { type: typeTag } : {}),
         ...(affiliateCode ? { affiliateCode } : {}),
       },
-      success_url: `${APP_URL}/onboarding?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${APP_URL}${successPath}`,
       cancel_url: `${APP_URL}/get-started?cancelled=true`,
     });
 

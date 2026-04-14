@@ -102,27 +102,10 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/dashboard/services
- * BLOCKED — service creation is now admin-managed via /admin/service-config.
- * See souradip/admin-module/04-make-diviner-services-read-only-and-assigned-only.md.
+ * Create a new service for the authenticated diviner.
+ * Diviners may add services from the predefined template catalog.
  */
 export async function POST(_req: NextRequest) {
-  // Service creation is now admin-managed via /admin/service-config.
-  // Original implementation removed. See git history for the prior code.
-  return NextResponse.json(
-    {
-      type: "https://httpstatuses.com/403",
-      title: "Forbidden",
-      status: 403,
-      detail: "Service creation is managed by admin. Contact your administrator.",
-    },
-    { status: 403 },
-  );
-}
-
-// The following is the original POST body, preserved as a non-exported
-// function for git-history reference during the rollback window. It will
-// be cleaned up in a follow-up PR.
-async function _POST_ORIGINAL(_req: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },
