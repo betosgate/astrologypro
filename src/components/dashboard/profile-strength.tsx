@@ -129,8 +129,15 @@ export function ProfileStrength({
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle className="text-lg">Complete Your Profile</CardTitle>
+        <Link
+          href="/dashboard/profile"
+          className="flex items-center gap-1 text-xs text-primary hover:underline"
+        >
+          Edit Profile
+          <ArrowRight className="size-3" />
+        </Link>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Progress bar */}
