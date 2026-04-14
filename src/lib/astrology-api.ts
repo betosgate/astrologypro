@@ -82,6 +82,7 @@ export async function callAstrologyApi<T = unknown>(
   body: Record<string, unknown>
 ): Promise<T> {
   const url = `${ASTROLOGY_API_BASE}/${endpoint}`;
+  console.log("url--------->>", url);
   console.log("Body--------->>", body);
 
 
@@ -113,6 +114,8 @@ export async function callAstrologyApi<T = unknown>(
     },
     body: JSON.stringify(body),
   });
+
+  console.log("res--------->>123", res);
 
   if (!res.ok) {
     const text = await res.text();

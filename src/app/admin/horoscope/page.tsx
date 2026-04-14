@@ -2154,6 +2154,13 @@ export default function AdminHoroscopePage() {
   const currentTab = TABS.find((t) => t.slug === currentSlug) ?? TABS[0];
 
   const [form, setForm] = useState<FormState>(defaultForm());
+
+  // Reset form and results when tab changes
+  useEffect(() => {
+    setForm(defaultForm());
+    setResults(null);
+    setError(null);
+  }, [currentSlug]);
   const isFormValid = (() => {
     const p1 = form.person1;
     if (!p1.dob || !p1.tob || !p1.city) return false;
