@@ -296,6 +296,7 @@ export function useShowMore() {
     promptType?: "planet" | "house" | "aspect" | "generic",
     tabSlug?: string,
     rawData?: any,
+    horarySection?: "astrological_aspect" | "summary",
   ) {
     let resolvedType = promptType ?? (aspectTitle ? "aspect" : "generic");
 
@@ -314,6 +315,73 @@ export function useShowMore() {
     setModal({ title, content: "", loading: true, aspectTitle, promptType: resolvedType, pictureUrl: null });
 
     const picturePromise = fetchPicture(resolvedType, aspectTitle ?? title, promptData);
+
+    // ─── Horary-specific Show More (calls Lambda directly) ───────────────────
+    const isHoraryTab = tabSlug === "horary_chart_v2";
+    if (isHoraryTab && rawData) {
+      try {
+        const person1 = rawData.person1;
+        const [bYear, bMonth, bDay] = (person1?.dob ?? "").split("-").map(Number);
+        const [bHour, bMin] = (person1?.tob ?? "0:0").split(":").map(Number);
+        const bLat  = person1?.city?.lat  ?? 0;
+        const bLon  = person1?.city?.lng  ?? 0;
+        const bTz   = person1?.city?.timezone?.offset_string ?? "+00:00";
+        const bCity = typeof person1?.city === "object" ? (person1.city?.label ?? "") : (person1?.city ?? "");
+        const question = rawData.question ?? areaOfInquiry ?? "";
+        const sectionCtx = horarySection === "summary" ? "summary" : "astrological_aspect";
+        const birthStr = `I was born on ${getMonthName(bMonth)} ${bDay}, ${bYear} time ${bHour}:${String(bMin ?? 0).padStart(2, "0")}, in ${bCity} ,'lat:${bLat},lon:${bLon},tzone:${bTz}'.`;
+
+        const horaryPayload = {
+          condition: {
+            system_content: "give response only in json format as a whole , nothing else and always answer as astrolger not AI BOT",
+            user_content: `${birthStr} and the qustion is '${question}'. Keeping western astrology in mind and here is  a summary of content "${currentText}" keeping this as main source info I need to know details of ${title} in ${sectionCtx} of horary astrology, and also need to know the significance and impact of ${title} in ${sectionCtx} of horary astrology in respect of the '${question}' in my life and as paragraph (this should be only focus in answer not theory of astrology on this specific aspect), you have planet , aspect and house info given in json, reposne must be in json format as {${title}:data} here data is dynamic data form bot and must be a paragraph with 3 sentences (minimum 3 paragraphs ) for ${title} in ${sectionCtx} of horary astrology make it real for me I don't need theory context in response you must add context of planet , aspect and house if any and make sure you parseable json in ai_response else recalculate the answer again. `,
+          },
+          toolname: "other",
+          json: rawData.chartJson ?? promptData,
+        };
+
+        const [aiResult, pictureResult] = await Promise.all([
+          fetchWithRetry("https://wczfs5i4xwvt6h3g4z6jgcm4ei0rsvyp.lambda-url.us-east-1.on.aws/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(horaryPayload),
+          }).then(r => r.json()).catch(() => null),
+          picturePromise,
+        ]);
+
+        let content = "";
+        if (aiResult?.ai_response) {
+          let responseStr = typeof aiResult.ai_response === "string"
+            ? aiResult.ai_response
+            : JSON.stringify(aiResult.ai_response);
+          // Strip ```json ... ``` wrapper if present
+          responseStr = responseStr.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "").trim();
+          let raw: any;
+          try {
+            raw = JSON.parse(responseStr);
+          } catch {
+            raw = responseStr;
+          }
+          if (raw && typeof raw === "object") {
+            const firstKey = Object.keys(raw)[0];
+            const val = raw[firstKey];
+            if (typeof val === "string") {
+              content = val;
+            } else if (val && typeof val === "object") {
+              content = (val as any).data ?? (val as any).interpretation ?? JSON.stringify(val);
+            }
+          } else {
+            content = String(raw ?? "");
+          }
+        }
+
+        setModal(prev => prev ? { ...prev, content, loading: false, bgClass: "interp-gradient-default", pictureUrl: pictureResult } : null);
+      } catch {
+        setModal(prev => prev ? { ...prev, content: "Failed to retrieve detailed interpretation.", loading: false, pictureUrl: null } : null);
+      }
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     try {
       let aiPayload: any;
