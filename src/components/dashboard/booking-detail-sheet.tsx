@@ -14,7 +14,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Eye, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard } from "lucide-react";
+import { Eye, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {
@@ -53,6 +53,7 @@ export function BookingDetailSheet({ booking }: BookingDetailProps) {
   const [refundReason, setRefundReason] = useState("");
   const [refunding, setRefunding] = useState(false);
   const [refunded, setRefunded] = useState(!!booking.refunded_at);
+  const [syncing, setSyncing] = useState(false);
   const [sessionNotes, setSessionNotes] = useState(booking.session_notes ?? "");
   const [savingNotes, setSavingNotes] = useState(false);
 
@@ -117,6 +118,34 @@ export function BookingDetailSheet({ booking }: BookingDetailProps) {
     booking.status === "completed" &&
     booking.amount > 0 &&
     !refunded;
+
+  const canSyncPayment =
+    booking.status === "pending" &&
+    booking.amount > 0 &&
+    !!booking.payment_intent_id;
+
+  async function handleSyncPayment() {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/stripe/sync-booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking_id: booking.id }),
+      });
+      const data = await res.json();
+      if (data.synced) {
+        toast.success(data.message ?? "Booking confirmed");
+        router.refresh();
+        setOpen(false);
+      } else {
+        toast.error(data.message ?? "Payment not yet completed");
+      }
+    } catch {
+      toast.error("Failed to sync payment status");
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -192,6 +221,18 @@ export function BookingDetailSheet({ booking }: BookingDetailProps) {
                     <p className="text-xs text-muted-foreground">Payment ID</p>
                     <p className="text-xs font-mono text-foreground/70 break-all">{booking.payment_intent_id}</p>
                   </div>
+                )}
+                {canSyncPayment && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full mt-1 gap-1.5 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10"
+                    onClick={handleSyncPayment}
+                    disabled={syncing}
+                  >
+                    {syncing ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+                    {syncing ? "Checking…" : "Sync Payment Status"}
+                  </Button>
                 )}
               </div>
             )}

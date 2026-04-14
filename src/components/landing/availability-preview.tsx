@@ -39,6 +39,7 @@ interface TimeSlot {
   availabilityTimezone?: string;
   availabilityStartTime?: string;
   availabilityEndTime?: string;
+  availabilityServiceId?: string | null;
 }
 
 interface BusyEntry {
@@ -309,15 +310,19 @@ export function AvailabilityPreview({
               )}
 
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                {timeSlots.map((slot) => (
-                  <Link
-                    key={slot.start}
-                    href={`/${username}${bookPath}?date=${selectedDate}&time=${encodeURIComponent(slot.start)}`}
-                    className="rounded-lg border border-white/8 bg-white/5 px-2 py-2 text-center text-xs font-medium text-[#f5f0e8] transition-all hover:border-[#c9a84c]/30 hover:bg-[#c9a84c]/10 hover:text-[#c9a84c]"
-                  >
-                    {formatSlotTime(slot.start)}
-                  </Link>
-                ))}
+                {timeSlots.map((slot) => {
+                  // Unscoped slots (no service linked) go to the generic /book path
+                  const slotPath = slot.availabilityServiceId == null ? "/book" : bookPath;
+                  return (
+                    <Link
+                      key={slot.start}
+                      href={`/${username}${slotPath}?date=${selectedDate}&time=${encodeURIComponent(slot.start)}`}
+                      className="rounded-lg border border-white/8 bg-white/5 px-2 py-2 text-center text-xs font-medium text-[#f5f0e8] transition-all hover:border-[#c9a84c]/30 hover:bg-[#c9a84c]/10 hover:text-[#c9a84c]"
+                    >
+                      {formatSlotTime(slot.start)}
+                    </Link>
+                  );
+                })}
               </div>
             </>
             ) : (

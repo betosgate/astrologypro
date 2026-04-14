@@ -105,6 +105,7 @@ export default function EditLessonPage() {
   const [categoryLessons, setCategoryLessons] = useState<LessonOption[]>([]);
   const [videoMode, setVideoMode] = useState<VideoMode>("youtube");
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -542,6 +543,7 @@ export default function EditLessonPage() {
     setVideoMode(mode);
     setForm((prev) => ({ ...prev, video_url: "" }));
     setUploadedFileName(null);
+    setUploadStatus(null);
   }
 
   async function handleVideoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -563,18 +565,22 @@ export default function EditLessonPage() {
     }
 
     setUploadPercent(0);
+    setUploadStatus("Preparing upload…");
     try {
       const { url } = await uploadTrainingVideo({
         file,
         onProgress: (percent) => setUploadPercent(percent),
+        onStatus: setUploadStatus,
       });
       setForm((prev) => ({ ...prev, video_url: url }));
       setUploadedFileName(file.name);
       toast.success("Video uploaded.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed. Please try again.");
+      e.target.value = "";
     } finally {
       setUploadPercent(null);
+      setUploadStatus(null);
     }
   }
 
@@ -654,7 +660,7 @@ export default function EditLessonPage() {
   }
 
   return (
-    <SectionContainer size="wide" verticalPadding="md" className="space-y-6">
+    <SectionContainer size="wide" verticalPadding="none" className="space-y-6">
       <div className="flex items-center gap-3">
         <Button asChild variant="ghost" size="sm">
           <Link href="/admin/training">← Back</Link>
@@ -833,7 +839,7 @@ export default function EditLessonPage() {
                     <div className="space-y-1">
                       <Progress value={uploadPercent} className="h-2" />
                       <p className="text-xs text-muted-foreground">
-                        Uploading… {uploadPercent}%
+                        {uploadStatus ?? "Uploading video…"} {uploadPercent}%
                       </p>
                     </div>
                   )}

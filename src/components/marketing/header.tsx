@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { SectionContainer } from "@/components/shared/section-container";
+import { DashboardReturnButton } from "@/components/marketing/dashboard-return-button";
 
 export function MarketingHeader() {
   return (
@@ -74,6 +75,8 @@ export function MarketingHeader() {
 
         {/* Right group */}
         <div className="hidden items-center gap-5 md:flex">
+          {/* Shows only when user has an active session — resolves correct dashboard */}
+          <DashboardReturnButton />
           <Link
             href="/login"
             className="text-[14px] font-bold uppercase text-white transition-colors hover:text-[#ecd396]"

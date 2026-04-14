@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AuthRedirect } from "@/components/marketing/auth-redirect";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { Hero } from "@/components/marketing/hero";
@@ -29,6 +30,7 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col">
+      <AuthRedirect />
       <MarketingHeader />
       <main className="flex-1">
         <Hero />
