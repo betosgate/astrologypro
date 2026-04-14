@@ -58,7 +58,7 @@ export function getPlanetInterpClass(planetName: string): string {
 }
 
 export function getRelationshipBgClass(itemTitle: string, tabSlug?: string, sectionKey?: string): string {
-  const isRel = tabSlug && ["romantic_forecast_report_tropical_v2", "friendship_report_tropical_v2", "business_partner_v2"].includes(tabSlug);
+  const isRel = tabSlug && ["romantic_forecast_report_tropical_v2", "friendship_report_tropical_v2", "business_partner_v2", "horary_chart_v2"].includes(tabSlug);
   if (!isRel) return "interp-gradient-default";
 
   const lower = itemTitle.toLowerCase();
