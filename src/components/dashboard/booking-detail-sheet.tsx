@@ -14,7 +14,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Eye, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw } from "lucide-react";
+import { Eye, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw, CalendarClock, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {
@@ -46,6 +46,13 @@ interface BookingDetailProps {
   };
 }
 
+// Format an ISO string into the value expected by <input type="datetime-local">
+function toDatetimeLocal(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function BookingDetailSheet({ booking }: BookingDetailProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -56,6 +63,17 @@ export function BookingDetailSheet({ booking }: BookingDetailProps) {
   const [syncing, setSyncing] = useState(false);
   const [sessionNotes, setSessionNotes] = useState(booking.session_notes ?? "");
   const [savingNotes, setSavingNotes] = useState(false);
+
+  // Reschedule state
+  const [showRescheduleForm, setShowRescheduleForm] = useState(false);
+  const [newScheduledAt, setNewScheduledAt] = useState(toDatetimeLocal(booking.scheduled_at));
+  const [rescheduling, setRescheduling] = useState(false);
+
+  // Cancel state
+  const [showCancelForm, setShowCancelForm] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [canceling, setCanceling] = useState(false);
+  const [canceled, setCanceled] = useState(booking.status === "canceled");
 
   async function handleSaveNotes() {
     setSavingNotes(true);
@@ -113,6 +131,94 @@ export function BookingDetailSheet({ booking }: BookingDetailProps) {
       setRefunding(false);
     }
   }
+
+  async function handleReschedule() {
+    if (!newScheduledAt) {
+      toast.error("Please select a new date and time");
+      return;
+    }
+    // Convert datetime-local value (local time) to ISO string
+    const isoDate = new Date(newScheduledAt).toISOString();
+    setRescheduling(true);
+    try {
+      const res = await fetch(`/api/bookings/${booking.id}/reschedule`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scheduled_at: isoDate }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Failed to reschedule booking");
+        return;
+      }
+      toast.success("Booking rescheduled successfully");
+      setShowRescheduleForm(false);
+      router.refresh();
+    } catch {
+      toast.error("Failed to reschedule booking");
+    } finally {
+      setRescheduling(false);
+    }
+  }
+
+  async function handleCancel() {
+    if (!cancelReason.trim()) {
+      toast.error("Please provide a reason for cancellation");
+      return;
+    }
+    setCanceling(true);
+    try {
+      // Auto-refund: if paid and not yet refunded, issue refund first
+      const shouldRefund =
+        !!booking.payment_intent_id &&
+        booking.amount > 0 &&
+        !refunded;
+
+      if (shouldRefund) {
+        const refundRes = await fetch("/api/stripe/refund", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            bookingId: booking.id,
+            reason: cancelReason.trim(),
+          }),
+        });
+        const refundData = await refundRes.json();
+        if (!refundRes.ok) {
+          toast.error(refundData.error ?? "Failed to process refund. Cancellation aborted.");
+          return;
+        }
+        setRefunded(true);
+      }
+
+      // Cancel the booking
+      const cancelRes = await fetch(`/api/bookings/${booking.id}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: cancelReason.trim() }),
+      });
+      const cancelData = await cancelRes.json();
+      if (!cancelRes.ok) {
+        toast.error(cancelData.error ?? "Failed to cancel booking");
+        return;
+      }
+
+      toast.success(shouldRefund ? "Booking cancelled and refund issued" : "Booking cancelled");
+      setCanceled(true);
+      setShowCancelForm(false);
+      router.refresh();
+    } catch {
+      toast.error("Failed to cancel booking");
+    } finally {
+      setCanceling(false);
+    }
+  }
+
+  const canReschedule =
+    ["pending", "confirmed"].includes(booking.status) && !canceled;
+
+  const canCancel =
+    ["pending", "confirmed", "in_progress"].includes(booking.status) && !canceled;
 
   const canRefund =
     booking.status === "completed" &&
@@ -281,6 +387,129 @@ export function BookingDetailSheet({ booking }: BookingDetailProps) {
                     "Save Notes"
                   )}
                 </Button>
+              </div>
+            )}
+
+            {/* Reschedule Action */}
+            {canReschedule && !showRescheduleForm && !showCancelForm && (
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => setShowRescheduleForm(true)}
+              >
+                <CalendarClock className="size-4" />
+                Reschedule
+              </Button>
+            )}
+
+            {canReschedule && showRescheduleForm && (
+              <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+                <h4 className="text-sm font-semibold">Reschedule Booking</h4>
+                <p className="text-xs text-muted-foreground">
+                  Select a new date and time. The client will be notified by email.
+                </p>
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-datetime">New Date & Time</Label>
+                  <input
+                    id="new-datetime"
+                    type="datetime-local"
+                    value={newScheduledAt}
+                    onChange={(e) => setNewScheduledAt(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleReschedule}
+                    disabled={rescheduling}
+                  >
+                    {rescheduling ? (
+                      <><Loader2 className="mr-1.5 size-3.5 animate-spin" />Rescheduling…</>
+                    ) : (
+                      "Confirm Reschedule"
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setShowRescheduleForm(false);
+                      setNewScheduledAt(toDatetimeLocal(booking.scheduled_at));
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Cancel Action */}
+            {canCancel && !showCancelForm && !showRescheduleForm && (
+              <Button
+                variant="outline"
+                className="w-full gap-2 border-red-500/30 text-red-500 hover:bg-red-500/10 hover:text-red-500"
+                onClick={() => setShowCancelForm(true)}
+              >
+                <XCircle className="size-4" />
+                Cancel Booking
+                {booking.payment_intent_id && booking.amount > 0 && !refunded && (
+                  <span className="ml-1 text-xs opacity-70">+ auto-refund</span>
+                )}
+              </Button>
+            )}
+
+            {canCancel && showCancelForm && (
+              <div className="space-y-3 rounded-lg border border-red-500/20 bg-red-500/5 p-4">
+                <h4 className="text-sm font-semibold text-red-500">Cancel Booking</h4>
+                {booking.payment_intent_id && booking.amount > 0 && !refunded ? (
+                  <p className="text-xs text-muted-foreground">
+                    This booking has a payment of <strong>{formatCurrency(booking.amount)}</strong>.
+                    Cancelling will automatically issue a full refund to {booking.client_name}.
+                    This action cannot be undone.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    The booking will be cancelled and the client will be notified.
+                    This action cannot be undone.
+                  </p>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="cancel-reason">Reason for cancellation</Label>
+                  <Textarea
+                    id="cancel-reason"
+                    rows={3}
+                    placeholder="Provide a reason for cancellation…"
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={handleCancel}
+                    disabled={canceling}
+                  >
+                    {canceling ? (
+                      <><Loader2 className="mr-1.5 size-3.5 animate-spin" />Processing…</>
+                    ) : (
+                      booking.payment_intent_id && booking.amount > 0 && !refunded
+                        ? "Cancel & Refund"
+                        : "Confirm Cancellation"
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setShowCancelForm(false);
+                      setCancelReason("");
+                    }}
+                  >
+                    Go Back
+                  </Button>
+                </div>
               </div>
             )}
 
