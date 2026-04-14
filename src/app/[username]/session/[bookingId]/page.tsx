@@ -1,12 +1,14 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { SessionRoom } from "@/components/session/session-room";
 import { ChimeSessionRoom } from "@/components/session/chime-session-room";
 import { formatDateTime } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Clock, User } from "lucide-react";
+import { createChimeMeeting, createChimeAttendee } from "@/lib/chime-meetings";
 
 interface PageProps {
   params: Promise<{ username: string; bookingId: string }>;
@@ -45,13 +47,51 @@ export default async function SessionPage({ params }: PageProps) {
     notFound();
   }
 
-  const videoProvider = (booking as any).video_provider ?? "daily";
+  let videoProvider = (booking as any).video_provider ?? "chime";
 
-  // Validate provider-specific requirements
-  if (videoProvider === "daily" && !booking.daily_room_url) {
-    notFound();
+  // If no Chime meeting exists yet, provision one on-demand so the page
+  // never 404s when the diviner navigates here before the button creates it.
+  if (videoProvider !== "daily" && !(booking as any).chime_meeting_id) {
+    try {
+      const admin = createAdminClient();
+      const durationMinutes =
+        ((booking.services as any)?.duration_minutes as number | undefined) ??
+        (booking.duration_minutes as number | undefined) ??
+        60;
+
+      const meeting = await createChimeMeeting(bookingId, durationMinutes, 2);
+      await createChimeAttendee(meeting.meetingId, `diviner-${booking.diviner_id}`);
+
+      await admin
+        .from("bookings")
+        .update({
+          chime_meeting_id: meeting.meetingId,
+          chime_external_meeting_id: meeting.externalMeetingId,
+          video_provider: "chime",
+        })
+        .eq("id", bookingId);
+
+      // Re-fetch updated booking so the room renders with correct meetingId
+      const { data: refreshed } = await supabase
+        .from("bookings")
+        .select(
+          "id, scheduled_at, status, duration_minutes, daily_room_url, daily_room_name, video_provider, chime_meeting_id, chime_external_meeting_id, diviner_id, client_id, base_price, questionnaire_responses, services(name, duration_minutes, overage_rate), clients(id, full_name, email, birth_date, birth_time, birth_city)"
+        )
+        .eq("id", bookingId)
+        .single();
+
+      if (refreshed) {
+        Object.assign(booking, refreshed);
+        videoProvider = "chime";
+      }
+    } catch (err) {
+      console.error("Session page: on-demand Chime provisioning failed:", err);
+      notFound();
+    }
   }
-  if (videoProvider === "chime" && !(booking as any).chime_meeting_id) {
+
+  // Daily provider still requires a room URL
+  if (videoProvider === "daily" && !booking.daily_room_url) {
     notFound();
   }
 
