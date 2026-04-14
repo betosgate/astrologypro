@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     admin
       .from("bookings")
       .select(
-        "id, scheduled_at, duration_minutes, booking_token, daily_room_url, clients(full_name, email), diviners(display_name, timezone), services(name)"
+        "id, scheduled_at, duration_minutes, booking_token, clients(full_name, email), diviners(display_name, timezone, username), services(name)"
       )
       .eq("status", "confirmed")
       .gte("scheduled_at", window24hStart)
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     admin
       .from("bookings")
       .select(
-        "id, scheduled_at, duration_minutes, booking_token, daily_room_url, clients(full_name, email), diviners(display_name, timezone), services(name)"
+        "id, scheduled_at, duration_minutes, booking_token, clients(full_name, email), diviners(display_name, timezone, username), services(name)"
       )
       .eq("status", "confirmed")
       .gte("scheduled_at", window1hStart)
@@ -50,9 +50,12 @@ export async function GET(request: NextRequest) {
     for (const b of bookings ?? []) {
       try {
         const client = b.clients as { full_name?: string; email?: string } | null;
-        const diviner = b.diviners as { display_name?: string; timezone?: string } | null;
+        const diviner = b.diviners as { display_name?: string; timezone?: string; username?: string } | null;
         const service = b.services as { name?: string } | null;
         if (!client?.email) continue;
+        const joinUrl = diviner?.username
+          ? `${appUrl}/${diviner.username}/session/${b.id}?token=${b.booking_token}`
+          : `${appUrl}/booking/${b.booking_token}`;
         await sendSessionReminder({
           to: client.email,
           name: client.full_name ?? "Client",
@@ -60,7 +63,7 @@ export async function GET(request: NextRequest) {
           serviceName: service?.name ?? "Session",
           scheduledAt: b.scheduled_at,
           timezone: diviner?.timezone ?? "America/New_York",
-          joinUrl: b.daily_room_url ?? undefined,
+          joinUrl,
           manageUrl: `${appUrl}/booking/${b.booking_token}`,
         });
         sent.push(`${label}:${b.id}`);

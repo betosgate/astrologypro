@@ -24,6 +24,7 @@ import { MIGRATION_SQL as MIG_20260413000006 } from "@/data/migrations/202604130
 import { MIGRATION_SQL as MIG_20260413000008 } from "@/data/migrations/20260413000008_services_platform_fee_percent";
 import { MIGRATION_SQL as MIG_20260413000140 } from "@/data/migrations/20260413000140_media_albums";
 import { MIGRATION_SQL as MIG_20260413000126 } from "@/data/migrations/20260413000126_training_quiz_question_progress";
+import { MIGRATION_SQL as MIG_20260414000002 } from "@/data/migrations/20260414000002_booking_session_started_at";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -256,6 +257,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds album_name to media_items plus an index for image album grouping. Supports grouped image galleries and dashboard album management without affecting existing non-image media items.",
     sortKey: "20260413000140",
     sql: MIG_20260413000140,
+  },
+  "20260414000002_booking_session_started_at": {
+    id: "20260414000002_booking_session_started_at",
+    title: "Booking session_started_at (video timer persistence)",
+    description:
+      "Adds session_started_at timestamptz to bookings. Set on first participant join and never overwritten — allows the video session timer to survive page reloads instead of restarting from zero.",
+    sortKey: "20260414000002",
+    sql: MIG_20260414000002,
   },
 };
 

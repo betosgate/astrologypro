@@ -32,6 +32,33 @@ export default async function BookingsPage() {
     .eq("owner_id", ownerId)
     .order("scheduled_at", { ascending: false });
 
+  // Linked orders per booking
+  const bookingIds = (bookings ?? [])
+    .map((b: Record<string, unknown>) => b.id as string)
+    .filter(Boolean);
+
+  let ordersByBookingId: Record<string, { id: string; amount: number; currency: string; status: string }> = {};
+
+  if (bookingIds.length > 0) {
+    const { data: linkedOrders } = await admin
+      .from("orders")
+      .select("id, booking_id, amount, currency, status")
+      .in("booking_id", bookingIds);
+
+    if (linkedOrders) {
+      for (const order of linkedOrders) {
+        if (order.booking_id) {
+          ordersByBookingId[order.booking_id] = {
+            id: order.id,
+            amount: order.amount,
+            currency: order.currency,
+            status: order.status,
+          };
+        }
+      }
+    }
+  }
+
   // Previous session data per client
   const clientPrevSessions: Record<
     string,
@@ -80,6 +107,7 @@ export default async function BookingsPage() {
       bookings={(bookings as Record<string, unknown>[]) ?? []}
       clientPrevSessions={clientPrevSessions}
       divinerUsername={diviner?.username ?? ""}
+      ordersByBookingId={ordersByBookingId}
     />
   );
 }

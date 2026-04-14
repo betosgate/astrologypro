@@ -284,11 +284,9 @@ export function BookingManageClient({ booking, bookingToken }: BookingManageClie
           <div className="px-8 pb-8 space-y-3">
 
             {/* Join Session */}
-            {joinVisible && booking.daily_room_url && (
+            {joinVisible && diviner?.username && (
               <a
-                href={booking.daily_room_url}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={`/${diviner.username}/session/${booking.id}?token=${booking.booking_token}`}
                 className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-colors"
               >
                 <Video className="size-4" />

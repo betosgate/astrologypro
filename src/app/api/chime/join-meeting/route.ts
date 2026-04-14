@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createChimeAttendee } from "@/lib/chime-meetings";
+import {
+  createChimeAttendee,
+  createChimeMeeting,
+  getChimeMeeting,
+} from "@/lib/chime-meetings";
 
 export const dynamic = "force-dynamic";
 
@@ -11,81 +15,159 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { bookingId } = await request.json();
+    const admin = createAdminClient();
+    const { bookingId, clientToken } = await request.json();
 
     if (!bookingId) {
-      return NextResponse.json(
-        { error: "Missing bookingId" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing bookingId" }, { status: 400 });
     }
 
-    const admin = createAdminClient();
+    let role: "diviner" | "client";
+    let externalUserId: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let booking: any;
 
-    // Fetch booking with Chime meeting ID
-    const { data: booking, error: bookingError } = await admin
-      .from("bookings")
-      .select("id, chime_meeting_id, diviner_id, client_id")
-      .eq("id", bookingId)
-      .single();
+    // ── Token-based access: unauthenticated client join ───────────────────────
+    if (clientToken) {
+      const { data, error } = await admin
+        .from("bookings")
+        .select("id, chime_meeting_id, diviner_id, client_id, booking_token, diviners(display_name), clients(full_name, id)")
+        .eq("id", bookingId)
+        .eq("booking_token", clientToken)
+        .single();
 
-    if (bookingError || !booking || !booking.chime_meeting_id) {
-      return NextResponse.json(
-        { error: "Booking or Chime meeting not found" },
-        { status: 404 }
-      );
+      if (error || !data) {
+        return NextResponse.json({ error: "Invalid session token" }, { status: 403 });
+      }
+
+      booking = data as any;
+      role = "client";
+
+      const clientObj = Array.isArray((booking as any).clients)
+        ? (booking as any).clients[0]
+        : (booking as any).clients;
+      externalUserId = `client-${clientObj?.id ?? (booking as any).client_id}`;
+
+    // ── Auth-based access: diviner or authenticated client ────────────────────
+    } else {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      const { data, error: bookingError } = await admin
+        .from("bookings")
+        .select("id, chime_meeting_id, diviner_id, client_id, diviners(display_name), clients(full_name, id)")
+        .eq("id", bookingId)
+        .single();
+
+      if (bookingError || !data) {
+        return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+      }
+
+      booking = data as any;
+
+      const [{ data: diviner }, { data: client }] = await Promise.all([
+        admin.from("diviners").select("id, display_name").eq("user_id", user.id).maybeSingle(),
+        admin.from("clients").select("id").eq("user_id", user.id).maybeSingle(),
+      ]);
+
+      const isDiviner = diviner && diviner.id === (booking as any).diviner_id;
+      const isClient = client && client.id === (booking as any).client_id;
+
+      if (!isDiviner && !isClient) {
+        return NextResponse.json(
+          { error: "You are not authorized for this session" },
+          { status: 403 }
+        );
+      }
+
+      role = isDiviner ? "diviner" : "client";
+      externalUserId = isDiviner
+        ? `diviner-${diviner!.id}`
+        : `client-${client!.id}`;
     }
 
-    // Verify user is either the diviner or the client for this booking
-    const { data: diviner } = await admin
-      .from("diviners")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
+    // Reuse existing meeting if it's still alive on AWS; create fresh if stale/missing
+    let activeMeetingId = booking.chime_meeting_id;
+    let meeting;
 
-    const isDiviner = diviner && diviner.id === booking.diviner_id;
-    const isClient = booking.client_id === user.id;
-
-    if (!isDiviner && !isClient) {
-      return NextResponse.json(
-        { error: "Not authorized for this booking" },
-        { status: 403 }
-      );
+    if (activeMeetingId) {
+      try {
+        meeting = await getChimeMeeting(activeMeetingId);
+      } catch {
+        // Meeting is stale/ended on AWS — will create fresh below
+        activeMeetingId = null;
+      }
     }
 
-    const role = isDiviner ? "diviner" : "client";
-    const externalUserId = isDiviner
-      ? `diviner-${diviner.id}`
-      : `client-${user.id}`;
+    if (!activeMeetingId) {
+      const fresh = await createChimeMeeting(bookingId, 60, 5);
+      activeMeetingId = fresh.meetingId;
 
-    // Create attendee
-    const attendee = await createChimeAttendee(
-      booking.chime_meeting_id,
-      externalUserId
-    );
-
-    // Store client token in video_sessions if client
-    if (isClient) {
       await admin
-        .from("video_sessions")
-        .update({ client_token: attendee.joinToken })
-        .eq("chime_meeting_id", booking.chime_meeting_id);
+        .from("bookings")
+        .update({
+          chime_meeting_id: activeMeetingId,
+          chime_external_meeting_id: fresh.externalMeetingId,
+          video_provider: "chime",
+        })
+        .eq("id", bookingId);
+
+      meeting = await getChimeMeeting(activeMeetingId);
     }
+
+    const attendee = await createChimeAttendee(activeMeetingId, externalUserId);
+
+    // Fetch + set session_started_at (column added via migration — graceful fallback if missing)
+    let sessionStartedAt: string = new Date().toISOString();
+    try {
+      const { data: sessionRow } = await admin
+        .from("bookings")
+        .select("session_started_at")
+        .eq("id", bookingId)
+        .single();
+
+      if (sessionRow?.session_started_at) {
+        sessionStartedAt = sessionRow.session_started_at;
+      } else {
+        // First join — persist the start time
+        await admin
+          .from("bookings")
+          .update({ session_started_at: sessionStartedAt })
+          .eq("id", bookingId)
+          .is("session_started_at", null);
+      }
+    } catch {
+      // Column not yet migrated — timer starts fresh; run migration to persist across reloads
+    }
+
+    // Build participant names
+    const divinerObj = Array.isArray(booking.diviners)
+      ? booking.diviners[0]
+      : booking.diviners;
+    const clientObj = Array.isArray(booking.clients)
+      ? booking.clients[0]
+      : booking.clients;
 
     return NextResponse.json({
-      meetingId: booking.chime_meeting_id,
-      attendeeId: attendee.attendeeId,
-      joinToken: attendee.joinToken,
+      meeting: {
+        MeetingId: meeting!.MeetingId,
+        MediaPlacement: meeting!.MediaPlacement,
+        MediaRegion: meeting!.MediaRegion,
+      },
+      attendee: {
+        AttendeeId: attendee.attendeeId,
+        JoinToken: attendee.joinToken,
+      },
       role,
+      sessionStartedAt,
+      participants: {
+        divinerName: (divinerObj as any)?.display_name ?? "Diviner",
+        clientName: (clientObj as any)?.full_name ?? "Client",
+      },
     });
   } catch (error) {
     console.error("Chime join meeting error:", error);
