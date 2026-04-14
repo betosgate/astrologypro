@@ -329,11 +329,11 @@
   color: #000;
 }
 
-/* Horoscope section headers — White bg, Black text */
+/* Horoscope section headers — Dark bg, White text */
 .horoscope-section-header {
-  background: #ffffff;
-  color: #000000;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #000000;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .horoscope-section-header-dark {

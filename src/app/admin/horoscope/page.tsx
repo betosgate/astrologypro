@@ -692,7 +692,7 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
 
 // ─── Aspects Section ──────────────────────────────────────────────────────────
 
-function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: any[]; planets: any[]; aiData: any; areaOfInquiry?: string }) {
+function AspectsSection({ aspects, planets, aiData, areaOfInquiry, isSolarReturn }: { aspects: any[]; planets: any[]; aiData: any; areaOfInquiry?: string; isSolarReturn?: boolean }) {
   const { modal, trigger, close } = useShowMore();
 
   if (!aspects) return null;
@@ -717,8 +717,8 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
       <AspectsLegend />
 
       <div className="horoscope-table-container">
-        <div className="horoscope-table-header">
-          <h3>Aspects</h3>
+        <div className={cn("horoscope-table-header py-3", isSolarReturn ? "bg-[#261a1a]" : "bg-black")}>
+          <h3 className="text-white">Aspects</h3>
         </div>
         <div className="horoscope-table-wrapper">
           <table className="horoscope-table">
@@ -786,7 +786,7 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry }: { aspects: 
 
 // ─── Dharma & Karma Section ───────────────────────────────────────────────────
 
-function DharmaKarmaSection({ data, rawData, areaOfInquiry }: { data: any; rawData?: any; areaOfInquiry?: string }) {
+function DharmaKarmaSection({ data, rawData, areaOfInquiry, isSolarReturn }: { data: any; rawData?: any; areaOfInquiry?: string; isSolarReturn?: boolean }) {
   const { modal, trigger, close } = useShowMore();
 
   if (!data && data !== "error") return <SectionSkeleton title="Dharma & Karma" />;
@@ -801,8 +801,8 @@ function DharmaKarmaSection({ data, rawData, areaOfInquiry }: { data: any; rawDa
       {[{ key: "dharma", label: "Dharma", text: dharma }, { key: "karma", label: "Karma", text: karma }].map(({ key, label, text }) => (
         text ? (
           <div key={key} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
-            <div className="horoscope-interp-header px-4 py-2.5 flex justify-center" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
-              <h4 className="text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>{label}</h4>
+            <div className="horoscope-interp-header px-4 py-2.5 flex justify-center bg-white" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
+              <h4 className="text-center w-full text-black font-semibold" style={{ fontFamily: "'Roboto', sans-serif" }}>{label}</h4>
             </div>
             <div className="interp-gradient-default px-4 py-3">
               <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{text}</p>
@@ -888,9 +888,6 @@ function LilithSection({ lilith, aiData, areaOfInquiry, checkDacen, onDecanClick
         {interp && (
           <div className="interp-gradient-default px-4 py-3 border-t">
             <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{interp}</p>
-            <div className="mt-3 flex justify-center">
-              <button onClick={() => trigger("Lilith", interp, lilith, areaOfInquiry, undefined, false, "planet")} className="horoscope-show-more">Show More</button>
-            </div>
           </div>
         )}
         {!aiData && <div className="px-4 py-3 border-t"><div className="h-3 bg-muted rounded w-3/4 animate-pulse" /></div>}
@@ -901,7 +898,7 @@ function LilithSection({ lilith, aiData, areaOfInquiry, checkDacen, onDecanClick
 
 // ─── Ascendant / Midheaven / Vertex Section ───────────────────────────────────
 
-function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry }: { natalData: any; aiData: any; areaOfInquiry?: string }) {
+function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry, isSolarReturn }: { natalData: any; aiData: any; areaOfInquiry?: string; isSolarReturn?: boolean }) {
   const { modal, trigger, close } = useShowMore();
 
   const keys = ["ascendant", "midheaven", "vertex"];
@@ -920,8 +917,8 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry }: { natal
   return (
     <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} relationshipEntries={modal?.relationshipEntries} bgClass={modal?.bgClass} pictureUrl={modal?.pictureUrl} />
-      <div className="horoscope-section-header px-4 py-2.5 text-center">
-        <h3 className="text-[20px] font-semibold text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 600, lineHeight: '26px' }}>Ascendant · Midheaven · Vertex</h3>
+      <div className="horoscope-section-header px-4 py-3 text-center bg-black text-white border-none">
+        <h3 className="text-[20px] font-semibold text-center w-full text-white" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 600, lineHeight: '26px' }}>Ascendant · Midheaven · Vertex</h3>
       </div>
       <div>
         {keys.map((key) => {
@@ -931,15 +928,18 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry }: { natal
             <div key={key}>
               <div className="horoscope-interp-header px-4 py-2 flex items-center gap-2" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
                 <h4 className="uppercase tracking-wider text-center" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>{key}</h4>
-                {degree && <Badge variant="outline" className="text-[10px]">{typeof degree === "object" ? `${degree.sign ?? ""} ${Number(degree.degree ?? 0).toFixed(2)}°` : String(degree)}</Badge>}
+                {degree && (
+                  <Badge variant="outline" className="text-[10px] text-black border-black/20">
+                    {typeof degree === "object"
+                      ? `${degree.sign ?? ""} ${Number(degree.degree ?? 0).toFixed(2)}°`
+                      : `${Number(degree).toFixed(2)}°`}
+                  </Badge>
+                )}
               </div>
               <div className="interp-gradient-default px-4 py-3">
-                <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{interp ?? <span className="italic" style={{ color: '#666' }}>Loading…</span>}</p>
-                {interp && (
-                  <div className="mt-3 flex justify-center">
-                    <button onClick={() => trigger(key, interp, { [key]: degree }, areaOfInquiry, undefined, false, "planet")} className="horoscope-show-more">Show More</button>
-                  </div>
-                )}
+                <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                  {interp ?? <span className="italic" style={{ color: '#666' }}>Loading…</span>}
+                </p>
               </div>
             </div>
           );
@@ -1186,7 +1186,9 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
         if (items.length === 0) return null;
         return (
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold px-1">Solar Return Planet Interpretations</h3>
+            <div className="horoscope-section-header bg-black py-4 text-center rounded-lg mb-4">
+              <h3 className="text-white text-[20px] font-semibold uppercase tracking-wide">Solar Return Planet Interpretations</h3>
+            </div>
             {items.map((p: any, i: number) => {
               const forecasts: string[] = Array.isArray(p.forecast) ? p.forecast : (p.forecast ? [String(p.forecast)] : []);
               return (
@@ -1367,7 +1369,9 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
 
         return (
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold px-1">Solar Return Planet Aspects Interpretations</h3>
+            <div className="horoscope-section-header bg-black py-4 text-center rounded-lg mb-4">
+              <h3 className="text-white text-[20px] font-semibold uppercase tracking-wide">Solar Return Planet Aspects Interpretations</h3>
+            </div>
             {groupedItems.map((a: any, i: number) => {
               const srPlanet = a.solar_return_planet ?? a.aspecting_planet ?? "";
               const nPlanet = a.natal_planet ?? a.aspected_planet ?? "";
@@ -3132,33 +3136,33 @@ export default function AdminHoroscopePage() {
                               onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
                             />
                             <div className="rounded-lg border overflow-hidden">
-                              <div className="px-4 py-2.5 horoscope-section-header flex items-center gap-2">
-                                <Home className="size-4 text-amber-600" />
-                                <h2 className="text-sm font-semibold">House Information</h2>
+                             <div className="px-4 py-3 flex items-center gap-2 bg-black text-white border-none rounded-t-lg">
+                                <Home className="size-4 text-white" />
+                                <h2 className="text-sm font-semibold text-white">House Information</h2>
                               </div>
                               <div className="p-4">
                                 <HousesSection houses={natalData.houses} planets={natalData.planets} aiData={ai.western_horoscope_houses} areaOfInquiry={form.areaOfInquiry} />
                               </div>
                             </div>
                             <div className="rounded-lg border overflow-hidden">
-                              <div className="px-4 py-2.5 horoscope-section-header flex items-center gap-2">
-                                <Sparkles className="size-4" style={{ color: '#f1f1f1' }} />
-                                <h2 className="text-sm font-semibold" style={{ color: '#f1f1f1' }}>Dharma & Karma</h2>
+                             <div className="px-4 py-3 flex items-center gap-2 bg-black text-white border-none rounded-t-lg">
+                                <Sparkles className="size-4 text-white" />
+                                <h2 className="text-sm font-semibold text-white">Dharma & Karma</h2>
                               </div>
                               <div className="p-4">
-                                <DharmaKarmaSection data={ai.dharma_karma} rawData={natalData} areaOfInquiry={form.areaOfInquiry} />
+                                <DharmaKarmaSection data={ai.dharma_karma} rawData={natalData} areaOfInquiry={form.areaOfInquiry} isSolarReturn={true} />
                               </div>
                             </div>
                             <div className="rounded-lg border overflow-hidden">
-                              <div className="px-4 py-2.5 horoscope-section-header flex items-center gap-2">
-                                <Link className="size-4 text-amber-600" />
-                                <h2 className="text-sm font-semibold">Aspects</h2>
+                             <div className="px-4 py-3 flex items-center gap-2 bg-black text-white border-none rounded-t-lg">
+                                <Link className="size-4 text-white" />
+                                <h2 className="text-sm font-semibold text-white">Aspects</h2>
                               </div>
                               <div className="p-4">
-                                <AspectsSection aspects={natalData.aspects} planets={natalData.planets} aiData={ai.western_horoscope_aspects} areaOfInquiry={form.areaOfInquiry} />
+                                <AspectsSection aspects={natalData.aspects} planets={natalData.planets} aiData={ai.western_horoscope_aspects} areaOfInquiry={form.areaOfInquiry} isSolarReturn={true} />
                               </div>
                             </div>
-                            <AscMidheavenVertexSection natalData={natalData} aiData={ai.western_horoscope_ascendant_midheaven_vertex} areaOfInquiry={form.areaOfInquiry} />
+                            <AscMidheavenVertexSection natalData={natalData} aiData={ai.western_horoscope_ascendant_midheaven_vertex} areaOfInquiry={form.areaOfInquiry} isSolarReturn={true} />
                             <LilithSection
                               lilith={natalData.lilith}
                               aiData={ai.western_horoscope_lilith}
