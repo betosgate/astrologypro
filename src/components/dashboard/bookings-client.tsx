@@ -534,6 +534,9 @@ export function BookingsClient({
                               last_session_date: prev?.lastDate ?? null,
                               session_notes: prev?.lastNotes ?? null,
                               username: divinerUsername || "admin",
+                              metadata: (booking.metadata as Record<string, unknown>) ?? null,
+                              stripe_payment_intent_id: (booking.stripe_payment_intent_id as string) ?? null,
+                              base_price: (booking.base_price as number) ?? null,
                             }}
                           />
                         </div>

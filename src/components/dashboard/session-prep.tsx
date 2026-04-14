@@ -49,6 +49,10 @@ interface BookingData {
   last_session_date: string | null;
   session_notes: string | null;
   username: string;
+  /** Booking metadata — may contain availability_description with a meeting link */
+  metadata?: Record<string, unknown> | null;
+  stripe_payment_intent_id?: string | null;
+  base_price?: number | null;
 }
 
 interface SessionPrepProps {
@@ -180,7 +184,19 @@ function PrepContent({ booking }: SessionPrepProps) {
           onClick={async () => {
             setJoiningSession(true);
             try {
-              // Check if a video session already exists for this booking
+              // 1. Check if the booking has a pre-configured meeting link
+              //    (e.g. Google Meet URL in the availability description)
+              const availDesc =
+                (booking.metadata?.availability_description as string | undefined) ?? "";
+              const meetLinkMatch = availDesc.match(
+                /https?:\/\/(meet\.google\.com|zoom\.us|teams\.microsoft\.com|whereby\.com|us\d+\.zoom\.us)\S+/i
+              );
+              if (meetLinkMatch) {
+                window.open(meetLinkMatch[0], "_blank");
+                return;
+              }
+
+              // 2. Check if a VideoSDK session already exists for this booking
               const checkRes = await fetch(
                 `/api/dashboard/video-sessions?booking_id=${booking.id}`
               );
@@ -192,7 +208,7 @@ function PrepContent({ booking }: SessionPrepProps) {
                 return;
               }
 
-              // Create a new video session linked to this booking
+              // 3. Create a new VideoSDK session
               const createRes = await fetch("/api/dashboard/video-sessions", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -212,9 +228,8 @@ function PrepContent({ booking }: SessionPrepProps) {
 
               const session = await createRes.json();
               window.open(`/dashboard/video/${session.id}`, "_blank");
-            } catch {
-              // toast would be better but keeping it simple
-              alert("Could not start video session. Please try again.");
+            } catch (e) {
+              alert(e instanceof Error ? e.message : "Could not start video session. Please try again.");
             } finally {
               setJoiningSession(false);
             }
