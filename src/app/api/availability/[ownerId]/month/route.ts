@@ -105,8 +105,15 @@ export async function GET(
           typeof record.service_id === "string" ? record.service_id : null;
 
         if (allSlots) return true;
-        // Include templates that match this service OR generic templates (no service_id)
-        if (serviceId) return !templateServiceId || templateServiceId === serviceId;
+        if (serviceId) {
+          // Prefer service-specific templates. Fall back to generics only when
+          // no templates are explicitly linked to this service.
+          const hasServiceSpecific = (templates ?? []).some(
+            (t) => (t as Record<string, unknown>).service_id === serviceId
+          );
+          if (hasServiceSpecific) return templateServiceId === serviceId;
+          return !templateServiceId;
+        }
         return !templateServiceId;
       })
       .map((template) => String((template as Record<string, unknown>).timezone ?? ""))
