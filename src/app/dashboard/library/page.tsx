@@ -86,12 +86,12 @@ interface LibraryData {
 
 type TabKey = "all" | "recordings" | "tarot" | "charts" | "astro";
 
-const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
-  { key: "all", label: "All", icon: <BookOpen className="size-4" /> },
-  { key: "recordings", label: "Recordings", icon: <Video className="size-4" /> },
-  { key: "tarot", label: "Tarot", icon: <Star className="size-4" /> },
-  { key: "charts", label: "Birth Charts", icon: <Globe className="size-4" /> },
-  { key: "astro", label: "Astro Toolkit", icon: <Sparkles className="size-4" /> },
+const ALL_TABS: { key: TabKey; label: string; icon: React.ReactNode; countKey: keyof NonNullable<LibraryData>["counts"] | null }[] = [
+  { key: "all", label: "All", icon: <BookOpen className="size-4" />, countKey: null },
+  { key: "recordings", label: "Recordings", icon: <Video className="size-4" />, countKey: "recordings" },
+  { key: "tarot", label: "Tarot", icon: <Star className="size-4" />, countKey: "tarot" },
+  { key: "charts", label: "Birth Charts", icon: <Globe className="size-4" />, countKey: "charts" },
+  { key: "astro", label: "Astro Toolkit", icon: <Sparkles className="size-4" />, countKey: "astro" },
 ];
 
 /* ---------- helpers ---------- */
@@ -170,6 +170,15 @@ export default function SessionLibraryPage() {
   }
 
   const counts = data?.counts ?? { recordings: 0, tarot: 0, charts: 0, astro: 0 };
+
+  // Only show tabs that have data (hide empty service types)
+  const visibleTabs = ALL_TABS.filter((tab) => {
+    if (tab.countKey === null) return true; // always show "All"
+    return counts[tab.countKey] > 0;
+  });
+
+  // If the active tab no longer has data, fall back to "all"
+  const effectiveTab = visibleTabs.some((t) => t.key === activeTab) ? activeTab : "all";
 
   return (
     <div className="space-y-8">
@@ -261,7 +270,7 @@ export default function SessionLibraryPage() {
           />
         </div>
         <div className="flex flex-wrap gap-2">
-          {TABS.map((tab) => (
+          {visibleTabs.map((tab) => (
             <Button
               key={tab.key}
               variant={activeTab === tab.key ? "secondary" : "ghost"}
@@ -275,6 +284,9 @@ export default function SessionLibraryPage() {
             >
               {tab.icon}
               <span className="ml-1.5">{tab.label}</span>
+              {tab.countKey && (
+                <span className="ml-1 text-[0.65rem] opacity-60">({counts[tab.countKey]})</span>
+              )}
             </Button>
           ))}
         </div>
@@ -290,8 +302,8 @@ export default function SessionLibraryPage() {
       {!loading && data && (
         <div className="space-y-6">
           {/* Recordings */}
-          {(activeTab === "all" || activeTab === "recordings") && (
-            <Section title="Recordings" icon={<Video className="size-4 text-[#c9a84c]" />} show={activeTab === "all"}>
+          {(effectiveTab === "all" || effectiveTab === "recordings") && (
+            <Section title="Recordings" icon={<Video className="size-4 text-[#c9a84c]" />} show={effectiveTab === "all"}>
               {data.recordings.length === 0 ? (
                 <EmptyState label="No recordings found" />
               ) : (
@@ -351,8 +363,8 @@ export default function SessionLibraryPage() {
           )}
 
           {/* Tarot */}
-          {(activeTab === "all" || activeTab === "tarot") && (
-            <Section title="Tarot Readings" icon={<Star className="size-4 text-[#c9a84c]" />} show={activeTab === "all"}>
+          {(effectiveTab === "all" || effectiveTab === "tarot") && (
+            <Section title="Tarot Readings" icon={<Star className="size-4 text-[#c9a84c]" />} show={effectiveTab === "all"}>
               {data.tarot.length === 0 ? (
                 <EmptyState label="No tarot readings found" />
               ) : (
@@ -391,8 +403,8 @@ export default function SessionLibraryPage() {
           )}
 
           {/* Birth Charts */}
-          {(activeTab === "all" || activeTab === "charts") && (
-            <Section title="Birth Charts" icon={<Globe className="size-4 text-[#c9a84c]" />} show={activeTab === "all"}>
+          {(effectiveTab === "all" || effectiveTab === "charts") && (
+            <Section title="Birth Charts" icon={<Globe className="size-4 text-[#c9a84c]" />} show={effectiveTab === "all"}>
               {data.charts.length === 0 ? (
                 <EmptyState label="No birth charts found" />
               ) : (
@@ -441,8 +453,8 @@ export default function SessionLibraryPage() {
           )}
 
           {/* Astro Toolkit */}
-          {(activeTab === "all" || activeTab === "astro") && (
-            <Section title="Astro Toolkit Readings" icon={<Sparkles className="size-4 text-[#c9a84c]" />} show={activeTab === "all"}>
+          {(effectiveTab === "all" || effectiveTab === "astro") && (
+            <Section title="Astro Toolkit Readings" icon={<Sparkles className="size-4 text-[#c9a84c]" />} show={effectiveTab === "all"}>
               {data.astro.length === 0 ? (
                 <EmptyState label="No astro toolkit readings found" />
               ) : (
@@ -493,7 +505,7 @@ export default function SessionLibraryPage() {
           )}
 
           {/* All tab: combined chronological */}
-          {activeTab === "all" &&
+          {effectiveTab === "all" &&
             data.recordings.length === 0 &&
             data.tarot.length === 0 &&
             data.charts.length === 0 &&
