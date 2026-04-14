@@ -109,7 +109,7 @@ export default function EditQuizPage() {
 
   if (fetching || !initialValue) {
     return (
-      <SectionContainer verticalPadding="md" className="space-y-6">
+      <SectionContainer verticalPadding="none" className="space-y-6">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold tracking-tight">Edit Quiz</h1>
         </div>
