@@ -780,6 +780,7 @@ export async function acceptUserContractRequirement(params: {
   userId: string;
   ipAddress: string | null;
   userAgent: string | null;
+  signatureName?: string | null;
 }) {
   const admin = createAdminClient();
   const { data: requirement, error: requirementError } = await admin
@@ -854,6 +855,7 @@ export async function acceptUserContractRequirement(params: {
         content_snapshot: requirement.rendered_content,
         rendered_variables: requirement.rendered_variables,
         content_hash: requirement.content_hash,
+        signer_name: params.signatureName ?? null,
       })
       .eq("id", artifact.id);
   }

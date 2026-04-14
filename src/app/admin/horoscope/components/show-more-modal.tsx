@@ -1,4 +1,5 @@
 "use client";
+import { cn } from "@/lib/utils";
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -8,7 +9,7 @@ import {
 import { Loader2, X, Maximize2, Sparkles } from "lucide-react";
 import { AstroHeaderParts, PlanetSymbol } from "./astro-icons";
 import { fetchWithRetry } from "../api";
-import { parseAspectTitle } from "../utils";
+import { parseAspectTitle, getMonthName, getRelationshipBgClass, getPlanetInterpClass } from "../utils";
 import { ASPECT_TYPE_WORDS } from "../constants";
 
 // ─── Chart Image Modal ────────────────────────────────────────────────────────
@@ -55,11 +56,13 @@ export function ChartImageModal({ src, open, onClose }: { src: string; open: boo
 
 // ─── Show More Modal ──────────────────────────────────────────────────────────
 
-export function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, promptType, planetEntries, pictureUrl }: {
+export function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, promptType, planetEntries, relationshipEntries, bgClass, pictureUrl }: {
   title: string; content: string; loading: boolean; open: boolean; onClose: () => void;
   aspectTitle?: string;
   promptType?: "planet" | "house" | "aspect" | "generic";
   planetEntries?: { planet: string; items: string[] }[];
+  relationshipEntries?: { title: string; content: string; bgClass?: string }[];
+  bgClass?: string;
   pictureUrl?: string | null;
 }) {
   const isAspect = promptType === "aspect" || !!aspectTitle;
@@ -125,10 +128,25 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
                           </div>
                         ))}
                       </div>
+                    ) : relationshipEntries && relationshipEntries.length > 0 ? (
+                      <div className="space-y-6">
+                        {relationshipEntries.map(({ title: entryTitle, content: entryContent, bgClass: entryBg }) => (
+                          <div key={entryTitle} className={cn("rounded-xl border border-black/10 p-6 space-y-3 shadow-2xl relative overflow-hidden", entryBg || "bg-slate-900/40")}>
+                            {!entryBg && <div className="absolute top-0 left-0 w-1 h-full bg-amber-500/40" />}
+                            <h4 className={cn("text-lg font-bold flex items-center gap-2", entryBg ? "text-inherit" : "gold-text")}>
+                              <Sparkles className={cn("size-4", entryBg ? "text-inherit/40" : "text-amber-500/40")} />
+                              {entryTitle}
+                            </h4>
+                            <div className="text-sm leading-relaxed whitespace-pre-wrap font-light tracking-wide italic">
+                              &quot;{entryContent}&quot;
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     ) : (
-                      <div className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap font-light tracking-wide bg-slate-900/40 p-6 rounded-2xl border border-white/5 italic relative overflow-hidden shadow-2xl">
-                        <div className="absolute top-0 left-0 w-1 h-full bg-amber-500/40" />
-                        <Sparkles className="absolute top-3 right-3 size-4 text-amber-500/20" />
+                      <div className={cn("text-sm leading-relaxed whitespace-pre-wrap font-light tracking-wide p-6 rounded-2xl border italic relative overflow-hidden shadow-2xl", bgClass || "bg-slate-900/40 border-white/5 text-foreground/90")}>
+                        {!bgClass && <div className="absolute top-0 left-0 w-1 h-full bg-amber-500/40" />}
+                        {!bgClass && <Sparkles className="absolute top-3 right-3 size-4 text-amber-500/20" />}
                         &quot;{content}&quot;
                       </div>
                     )}
@@ -183,6 +201,8 @@ export function useShowMore() {
     aspectTitle?: string;
     promptType?: "planet" | "house" | "aspect" | "generic";
     planetEntries?: { planet: string; items: string[] }[];
+    relationshipEntries?: { title: string; content: string; bgClass?: string }[];
+    bgClass?: string;
     pictureUrl?: string | null;
   } | null>(null);
 
@@ -249,6 +269,8 @@ export function useShowMore() {
     aspectTitle?: string,
     isKeyValue?: boolean,
     promptType?: "planet" | "house" | "aspect" | "generic",
+    tabSlug?: string,
+    rawData?: any,
   ) {
     const resolvedType = promptType ?? (aspectTitle ? "aspect" : "generic");
     setModal({ title, content: "", loading: true, aspectTitle, promptType: resolvedType, pictureUrl: null });
@@ -258,7 +280,32 @@ export function useShowMore() {
     try {
       let aiPayload: any;
 
-      if (resolvedType === "aspect" || aspectTitle) {
+      const isRelationshipTab = ["romantic_forecast_report_tropical_v2", "friendship_report_tropical_v2", "business_partner_v2"].includes(tabSlug || "");
+
+      if (isRelationshipTab && rawData) {
+        const p1 = rawData.person1_birth ?? rawData.mydetails ?? {};
+        const p2 = rawData.person2_birth ?? rawData.fiend_details ?? {};
+        const personaCity = typeof rawData.persona_city === "object" ? rawData.persona_city.label : (rawData.persona_city ?? "");
+        const partnerCity = typeof rawData.partner_city === "object" ? rawData.partner_city.label : (rawData.partner_city ?? "");
+        
+        const b1Str = `I was born on ${getMonthName(p1.month)} ${p1.day}, ${p1.year}, ${p1.hour}:${String(p1.min ?? 0).padStart(2, "0")} in ${personaCity} 'lat:${p1.lat},lon:${p1.lon},tzone:${p1.tzone}'.`;
+        const b2Str = `my partner was born on ${getMonthName(p2.month)} ${p2.day}, ${p2.year} ${p2.hour}:${String(p2.min ?? 0).padStart(2, "0")} at ${partnerCity} 'lat:${p2.lat},lon:${p2.lon},tzone:${p2.tzone}'.`;
+        
+        const context = tabSlug === "romantic_forecast_report_tropical_v2" ? "love" : tabSlug === "friendship_report_tropical_v2" ? "friendship" : "business partnership";
+
+        aiPayload = {
+          condition: {
+            system_content: `give response only in json format as a whole , nothing else answer as astrolger not AI BOT. Provide a deeply personalized response as if you are speaking directly to your astrology client in a one-on-one session. Use the language and tone of a trusted Western astrologer offering tailored guidance based on the client’s unique chart. Always interpret the chart using the Placidus house system as the default house_type. Avoid using generic phrases or repeated sentence structures. Each sentence should feel intentionally crafted and distinct, offering fresh insight without duplicating wording from similar interpretations.\n\nThe user has provided a specific "Area of Inquiry": "${areaOfInquiry || context}". Make this the central theme of your interpretation. While you should ground the reading in this context, also incorporate other relevant insights from the chart that support or add nuance to this primary focus. Conclude the response by explicitly summarizing how the various astrological insights tie back to the client’s stated area of inquiry.`,
+            user_content: `${b1Str} ${b2Str} Keeping western astrology in mind and here is a summary of content "${currentText}" keeping this as main source info I need to know details of ${title} in ${context} as paragraph and also need to know the significance and impact in my life you have planet , aspect and house info given in json reposne must be in json format as {${title}:data} here data is dynamic data form bot and must be a paragraph with 5 sentences (minimum 6 paragraphs ) for ${title} in ${context} make it real for me I don't need theory context in response you must add context of planet , aspect and house if any `,
+          },
+          toolname: "other",
+          json: {
+            mydetails: p1,
+            fiend_details: p2,
+            item_data: promptData,
+          },
+        };
+      } else if (resolvedType === "aspect" || aspectTitle) {
         aiPayload = {
           condition: {
             system_content: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
@@ -307,23 +354,21 @@ export function useShowMore() {
 
       let content = "";
       let planetEntries: { planet: string; items: string[] }[] = [];
+      let relationshipEntries: { title: string; content: string; bgClass?: string }[] = [];
 
       if (aiResult?.ai_response) {
         let raw: any;
         try {
-          raw = typeof aiResult.ai_response === "string" 
-            ? JSON.parse(aiResult.ai_response) 
+          raw = typeof aiResult.ai_response === "string"
+            ? JSON.parse(aiResult.ai_response)
             : aiResult.ai_response;
         } catch {
           raw = aiResult.ai_response;
         }
 
-        if (resolvedType === "planet") {
+        if (resolvedType === "planet" && !isRelationshipTab) {
           const entries: { planet: string; items: string[] }[] = [];
-          
-          // The AI might return { PlanetName: { 1: "...", 2: "..." } } or { interpretation: "..." }
           const dataToProcess = typeof raw === "object" && raw !== null ? raw : {};
-          
           for (const [key, val] of Object.entries(dataToProcess)) {
             if (key === "interpretation" || typeof val === "string") {
               content = typeof val === "string" ? val : content;
@@ -336,14 +381,53 @@ export function useShowMore() {
           }
           if (entries.length) planetEntries = entries;
           else content = raw.interpretation ?? (typeof raw === "string" ? raw : JSON.stringify(raw));
-        } else if (resolvedType === "house") {
+        } else if (resolvedType === "house" && !isRelationshipTab) {
           content = raw?.interpretations?.data ?? raw?.interpretation ?? (typeof raw === "string" ? raw : JSON.stringify(raw));
+        } else if (isRelationshipTab && typeof raw === "object" && raw !== null) {
+          const entries: { title: string; content: string }[] = [];
+          for (const [key, val] of Object.entries(raw)) {
+            let text = "";
+            if (typeof val === "string") {
+              text = val;
+            } else if (typeof val === "object" && val !== null) {
+              text = (val as any).data || (val as any).interpretation || (val as any).forecast || JSON.stringify(val);
+            }
+            if (text) {
+               const bg = getRelationshipBgClass(key, tabSlug, undefined);
+               relationshipEntries.push({ title: key, content: text, bgClass: bg });
+            }
+          }
+          if (entries.length > 0) {
+            relationshipEntries = entries;
+            const main = entries.find(e => e.title.toLowerCase().includes(title.toLowerCase())) || entries[0];
+            content = main.content;
+          } else {
+            content = typeof raw === "string" ? raw : JSON.stringify(raw);
+          }
         } else {
           content = raw?.interpretation ?? (typeof raw === "string" ? raw : JSON.stringify(raw));
         }
       }
 
-      setModal(prev => prev ? { ...prev, content, loading: false, planetEntries: planetEntries.length ? planetEntries : undefined, pictureUrl: pictureResult } : null);
+      // Calculate general bgClass for single-view fallback
+      let bgClass = "";
+      if (isRelationshipTab) {
+        bgClass = getRelationshipBgClass(title, tabSlug, undefined);
+      } else if (resolvedType === "planet") {
+        bgClass = getPlanetInterpClass(title);
+      } else if (resolvedType === "house") {
+        bgClass = "interp-gradient-default";
+      }
+
+      setModal(prev => prev ? { 
+        ...prev, 
+        content, 
+        loading: false, 
+        planetEntries: planetEntries.length ? planetEntries : undefined, 
+        relationshipEntries: relationshipEntries.length ? relationshipEntries : undefined,
+        bgClass,
+        pictureUrl: pictureResult 
+      } : null);
     } catch (err) {
       setModal(prev => prev ? { ...prev, content: "Failed to retrieve detailed interpretation.", loading: false, pictureUrl: null } : null);
     }
