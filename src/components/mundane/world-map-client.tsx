@@ -5,8 +5,8 @@ import dynamic from "next/dynamic";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Globe, Activity, Zap, MapPin } from "lucide-react";
-import { WorldMapSignalOverlay, type SignalPoint } from "./world-map-signal-overlay";
-import type { MapEntity, MapEvent, MapForecast } from "./leaflet-map";
+import { WorldMapSignalOverlay } from "./world-map-signal-overlay";
+import type { MapEntity, MapEvent, MapForecast, SignalOverlayPoint } from "./leaflet-map";
 
 // ─── Dynamic import — Leaflet cannot run during SSR ────────────────────────────
 
@@ -67,7 +67,7 @@ export function WorldMapClient({ entities, events, forecasts }: WorldMapClientPr
   );
 
   // Signal overlay state
-  const [signalPoints, setSignalPoints] = useState<SignalPoint[] | null>(null);
+  const [signalPoints, setSignalPoints] = useState<SignalOverlayPoint[] | null>(null);
 
   // Derived counts
   const visibleEntityCount = useMemo(
@@ -193,6 +193,7 @@ export function WorldMapClient({ entities, events, forecasts }: WorldMapClientPr
             showForecasts,
             severities: selectedSeverities,
           }}
+          signalPoints={signalPoints ?? undefined}
         />
       </div>
 
