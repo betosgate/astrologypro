@@ -46,3 +46,7 @@ Frontend contract flows are not enough. Protected backend routes must also valid
 - backend can resolve contract status by role
 - acceptance is recorded against the exact required contract instance
 - role-gated routes can enforce missing contracts centrally
+
+## Status
+
+Done.

@@ -1,10 +1,75 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { evaluateServiceCommerceValidation } from "@/lib/service-commerce-validation";
 
 export const dynamic = "force-dynamic";
 
 const SELECT_COLS = "*";
+
+async function loadCommerceContext(
+  admin: ReturnType<typeof createAdminClient>,
+  services: Array<Record<string, unknown>>
+) {
+  const divinerIds = Array.from(
+    new Set(
+      services
+        .map((service) =>
+          typeof service.diviner_id === "string" ? service.diviner_id : ""
+        )
+        .filter(Boolean)
+    )
+  );
+  const pricingKeys = Array.from(
+    new Set(
+      services
+        .map((service) =>
+          typeof service.pricing_item_key === "string"
+            ? service.pricing_item_key.trim()
+            : ""
+        )
+        .filter(Boolean)
+    )
+  );
+
+  const [{ data: diviners }, { data: pricingItems }] = await Promise.all([
+    divinerIds.length > 0
+      ? admin
+          .from("diviners")
+          .select("id, stripe_account_id, charges_enabled, payouts_enabled")
+          .in("id", divinerIds)
+      : Promise.resolve({ data: [] }),
+    pricingKeys.length > 0
+      ? admin
+          .from("global_pricing")
+          .select("id, item_key, is_active")
+          .in("item_key", pricingKeys)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const pricingItemIds = (pricingItems ?? []).map((item) => item.id);
+  const { data: pricingPlans } = pricingItemIds.length
+    ? await admin
+        .from("pricing_plans")
+        .select("item_id, is_active")
+        .in("item_id", pricingItemIds)
+        .eq("is_active", true)
+    : { data: [] };
+
+  const divinerMap = new Map((diviners ?? []).map((diviner) => [diviner.id, diviner]));
+  const pricingItemMap = new Map(
+    (pricingItems ?? []).map((item) => [item.item_key, item])
+  );
+  const activePlanCountByItemId = new Map<string, number>();
+  for (const plan of pricingPlans ?? []) {
+    activePlanCountByItemId.set(
+      plan.item_id,
+      (activePlanCountByItemId.get(plan.item_id) ?? 0) + 1
+    );
+  }
+
+  return { divinerMap, pricingItemMap, activePlanCountByItemId };
+}
 
 /**
  * GET /api/admin/services
@@ -35,8 +100,38 @@ export async function GET(req: NextRequest) {
     .range(from, to);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const services = (data ?? []) as Array<Record<string, unknown>>;
+  const { divinerMap, pricingItemMap, activePlanCountByItemId } =
+    await loadCommerceContext(admin, services);
 
-  return NextResponse.json({ services: data ?? [], total: count ?? 0, page, pageSize });
+  return NextResponse.json({
+    services: services.map((service) => {
+      const pricingKey =
+        typeof service.pricing_item_key === "string"
+          ? service.pricing_item_key.trim()
+          : "";
+      const pricingItem = pricingKey ? pricingItemMap.get(pricingKey) : null;
+      return {
+        ...service,
+        commerce_validation: evaluateServiceCommerceValidation(
+          service,
+          typeof service.diviner_id === "string"
+            ? divinerMap.get(service.diviner_id)
+            : null,
+          {
+            pricingItemExists: Boolean(pricingItem),
+            pricingItemActive: pricingItem?.is_active === true,
+            hasActivePlan: pricingItem
+              ? (activePlanCountByItemId.get(pricingItem.id) ?? 0) > 0
+              : false,
+          }
+        ),
+      };
+    }),
+    total: count ?? 0,
+    page,
+    pageSize,
+  });
 }
 
 /**
@@ -66,6 +161,61 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient();
   const pricing_item_key = typeof body.pricing_item_key === "string" ? body.pricing_item_key.trim() || null : null;
   const platform_fee_percent = typeof body.platform_fee_percent === "number" ? body.platform_fee_percent : null;
+  const is_active = body.is_active !== false;
+
+  const { data: diviner } = await admin
+    .from("diviners")
+    .select("id, stripe_account_id, charges_enabled, payouts_enabled")
+    .eq("id", diviner_id)
+    .maybeSingle();
+
+  if (!diviner) {
+    return NextResponse.json({ error: "Assigned diviner not found." }, { status: 422 });
+  }
+
+  let pricingItem: { id: string; is_active: boolean } | null = null;
+  if (pricing_item_key) {
+    const { data } = await admin
+      .from("global_pricing")
+      .select("id, is_active")
+      .eq("item_key", pricing_item_key)
+      .maybeSingle();
+    pricingItem = data ?? null;
+  }
+
+  let hasActivePlan = false;
+  if (pricingItem) {
+    const { count } = await admin
+      .from("pricing_plans")
+      .select("*", { count: "exact", head: true })
+      .eq("item_id", pricingItem.id)
+      .eq("is_active", true);
+    hasActivePlan = (count ?? 0) > 0;
+  }
+
+  const validation = evaluateServiceCommerceValidation(
+    {
+      slug,
+      duration_minutes,
+      base_price,
+      pricing_item_key,
+      is_active,
+      product_kind: typeof body.product_kind === "string" ? body.product_kind : "session",
+    },
+    diviner,
+    {
+      pricingItemExists: Boolean(pricingItem),
+      pricingItemActive: pricingItem?.is_active === true,
+      hasActivePlan,
+    }
+  );
+
+  if (is_active && validation.errors.length > 0) {
+    return NextResponse.json(
+      { error: validation.errors[0], validation },
+      { status: 422 }
+    );
+  }
 
   const { data, error } = await admin.from("services").insert({
     diviner_id,
@@ -78,7 +228,7 @@ export async function POST(req: NextRequest) {
     overage_rate,
     pricing_item_key,
     platform_fee_percent,
-    is_active: body.is_active !== false,
+    is_active,
     is_featured: !!body.is_featured,
     is_primary: body.is_primary !== false,
     requires_birth_data: body.requires_birth_data !== false,

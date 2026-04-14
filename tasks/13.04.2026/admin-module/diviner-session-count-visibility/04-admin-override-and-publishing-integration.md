@@ -53,3 +53,9 @@ This is important because the admin is acting on behalf of the diviner.
 - admin can override visibility with three-state control
 - override behavior is persisted and auditable
 - existing publish controls remain the higher-level authority when broader blocking applies
+
+## Status
+
+Done.
+
+Implemented in `src/app/api/admin/diviners/[id]/publishing/route.ts` and `src/app/admin/diviners/[id]/publishing-controls.tsx` with diviner preference, force-show, and force-hide states plus admin reason storage.

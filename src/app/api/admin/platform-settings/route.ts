@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logFinanceAdminAction } from "@/lib/finance-ops";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export async function GET() {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("platform_settings")
-    .select("id, ms_pm_discount_enabled, no_show_diviner_refund_percent, no_show_client_refund_percent, no_show_grace_minutes, updated_at")
+    .select("id, ms_pm_discount_enabled, no_show_diviner_refund_percent, no_show_client_refund_percent, no_show_grace_minutes, max_diviner_affiliate_share_percent, updated_at")
     .limit(1)
     .single();
 
@@ -65,11 +66,11 @@ export async function PUT(request: NextRequest) {
     no_show_diviner_refund_percent,
     no_show_client_refund_percent,
     no_show_grace_minutes,
+    max_diviner_affiliate_share_percent,
   } = body;
 
   // Build update object with only provided fields
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
   if (typeof ms_pm_discount_enabled === "boolean") {
     updates.ms_pm_discount_enabled = ms_pm_discount_enabled;
@@ -101,6 +102,15 @@ export async function PUT(request: NextRequest) {
     }
     updates.no_show_grace_minutes = no_show_grace_minutes;
   }
+  if (typeof max_diviner_affiliate_share_percent === "number") {
+    if (max_diviner_affiliate_share_percent < 0 || max_diviner_affiliate_share_percent > 100) {
+      return NextResponse.json(
+        { type: "about:blank", title: "Unprocessable Entity", status: 422, detail: "max_diviner_affiliate_share_percent must be 0-100." },
+        { status: 422 }
+      );
+    }
+    updates.max_diviner_affiliate_share_percent = max_diviner_affiliate_share_percent;
+  }
 
   if (Object.keys(updates).length <= 1) {
     return NextResponse.json(
@@ -129,7 +139,7 @@ export async function PUT(request: NextRequest) {
     .from("platform_settings")
     .update(updates)
     .eq("id", existing.id)
-    .select("id, ms_pm_discount_enabled, no_show_diviner_refund_percent, no_show_client_refund_percent, no_show_grace_minutes, updated_at")
+    .select("id, ms_pm_discount_enabled, no_show_diviner_refund_percent, no_show_client_refund_percent, no_show_grace_minutes, max_diviner_affiliate_share_percent, updated_at")
     .single();
 
   if (error) {
@@ -138,6 +148,25 @@ export async function PUT(request: NextRequest) {
       { type: "about:blank", title: "Internal Error", status: 500, detail: "Failed to update settings." },
       { status: 500 }
     );
+  }
+
+  const financeFieldNames = [
+    "max_diviner_affiliate_share_percent",
+    "no_show_diviner_refund_percent",
+    "no_show_client_refund_percent",
+    "no_show_grace_minutes",
+  ];
+  const financeUpdates = Object.fromEntries(
+    Object.entries(updates).filter(([key]) => financeFieldNames.includes(key)),
+  );
+  if (Object.keys(financeUpdates).length > 0) {
+    await logFinanceAdminAction({
+      adminUserId: adminUser.id,
+      actionType: "finance_platform_settings_updated",
+      details: {
+        updates: financeUpdates,
+      },
+    });
   }
 
   return NextResponse.json(data);

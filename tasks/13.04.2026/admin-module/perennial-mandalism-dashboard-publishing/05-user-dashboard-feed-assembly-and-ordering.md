@@ -96,3 +96,7 @@ This matters because the current repo already distinguishes public versus member
 - normalized frontend card schema
 - category rendering matrix
 - ordering and eligibility rules
+
+## Status
+
+Done

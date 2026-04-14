@@ -1,5 +1,31 @@
 # Task 04: Diviner SEO Database Fields and Admin Governance
 
+- **Status: DONE — 2026-04-13**
+- DB migration and admin UI implemented.
+
+### What was implemented
+- Created `supabase/migrations/20260413000180_diviner_seo_fields.sql` — adds to `diviners` table:
+  - Geography: `seo_city`, `seo_region`, `seo_country`, `seo_country_code`, `seo_service_area_mode`, `seo_service_areas`, `seo_is_remote_global`
+  - Authority: `seo_languages`, `seo_credentials`, `seo_awards`, `seo_years_experience`, `seo_same_as_urls`, `seo_press_mentions`
+  - Metadata overrides: `seo_title_override`, `seo_description_override`, `seo_h1_override`, `seo_primary_keyword`, `seo_secondary_keywords`, `seo_og_image_url`
+  - Review controls: `seo_show_aggregate_rating`, `seo_show_testimonials_in_schema`
+  - Validation constraints: city requires country; local mode requires city
+- TS mirror: `src/data/migrations/20260413000180_diviner_seo_fields.ts`
+- Added admin SEO management UI:
+  - `src/app/admin/diviners/[id]/diviner-seo-settings.tsx`
+  - wired into `src/app/admin/diviners/[id]/page.tsx`
+- Added admin SEO save API:
+  - `src/app/api/admin/diviners/[id]/seo/route.ts`
+- Admin can now manage:
+  - geography and service area
+  - remote-global posture
+  - languages, credentials, awards, experience
+  - sameAs and press URLs
+  - metadata overrides and OG image
+  - review/schema visibility flags
+
+---
+
 ## Goal
 
 Create the database-backed foundation required to make local and global SEO claims credible, configurable, and maintainable from admin tools.

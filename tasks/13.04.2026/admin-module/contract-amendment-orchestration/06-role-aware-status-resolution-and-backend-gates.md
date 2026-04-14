@@ -41,3 +41,7 @@ If blocked, the user should see a clear message that they must accept an updated
 
 - existing-user and future-user paths are handled differently but consistently
 - backend enforcement is centralized and not ad hoc
+
+## Status
+
+Done.

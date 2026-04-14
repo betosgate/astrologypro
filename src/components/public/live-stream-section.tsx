@@ -2,19 +2,14 @@
 
 import { useState } from "react";
 import { ExternalLink } from "lucide-react";
+import {
+  getLivePlatformEmoji,
+  getLivePlatformLabel,
+  type GovernedStreamPlatformConfig,
+  type LivePlatformKey,
+} from "@/lib/live-platform-governance";
 
-export interface StreamPlatformConfig {
-  id: string;
-  diviner_id: string;
-  platform: string;
-  display_name: string | null;
-  stream_url: string | null;
-  embed_url: string | null;
-  is_enabled: boolean;
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
-}
+export type StreamPlatformConfig = GovernedStreamPlatformConfig;
 
 interface Props {
   isLive: boolean;
@@ -26,27 +21,6 @@ interface Props {
   divinerName?: string;
   fallbackImageUrl?: string | null;
 }
-
-const PLATFORM_LABELS: Record<string, string> = {
-  youtube: "YouTube",
-  facebook: "Facebook",
-  instagram: "Instagram",
-  tiktok: "TikTok",
-  zoom: "Zoom",
-  other: "Live Stream",
-};
-
-const PLATFORM_EMOJI: Record<string, string> = {
-  youtube: "📺",
-  facebook: "👤",
-  instagram: "📷",
-  tiktok: "🎵",
-  zoom: "💻",
-  other: "🌐",
-};
-
-/** Platforms that can be reliably embedded via iframe */
-const EMBEDDABLE_PLATFORMS = new Set(["youtube", "facebook"]);
 
 function buildEmbedUrl(config: StreamPlatformConfig): string | null {
   if (config.embed_url) return config.embed_url;
@@ -75,19 +49,31 @@ function buildEmbedUrl(config: StreamPlatformConfig): string | null {
     return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(config.stream_url)}&width=720&autoplay=false&show_text=false`;
   }
 
+  if (config.platform === "twitch") {
+    const host =
+      typeof window !== "undefined" && window.location.hostname
+        ? window.location.hostname
+        : "astrologypro.com";
+    const raw = config.stream_url.trim();
+    const channelMatch = raw.match(/twitch\.tv\/([A-Za-z0-9_]+)/i);
+    const channel = channelMatch?.[1] ?? raw.replace(/^@/, "");
+    return `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&parent=${encodeURIComponent(host)}`;
+  }
+
   return null;
 }
 
 function PlatformEmbed({ config }: { config: StreamPlatformConfig }) {
   const [embedError, setEmbedError] = useState(false);
-  const platformLabel = PLATFORM_LABELS[config.platform] ?? config.platform;
+  const platformLabel = getLivePlatformLabel(config.platform, config.platform_display_name);
   const displayName = config.display_name ?? platformLabel;
+  const platformEmoji = getLivePlatformEmoji(config.platform);
 
-  if (!EMBEDDABLE_PLATFORMS.has(config.platform)) {
+  if (config.playback_mode !== "embedded_player" || !config.supports_embed) {
     // Non-embeddable platform: show a link button
     return (
       <div className="flex flex-col items-center gap-4 rounded-xl border border-white/[0.07] bg-white/[0.03] p-8 text-center">
-        <span className="text-4xl">{PLATFORM_EMOJI[config.platform] ?? "🌐"}</span>
+        <span className="text-4xl">{platformEmoji}</span>
         <div>
           <p className="font-medium text-cream">{displayName}</p>
           <p className="mt-1 text-sm text-silver/60">Live on {platformLabel}</p>
@@ -112,7 +98,7 @@ function PlatformEmbed({ config }: { config: StreamPlatformConfig }) {
   if (!embedUrl || embedError) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.03] p-8 text-center">
-        <span className="text-3xl">{PLATFORM_EMOJI[config.platform] ?? "🌐"}</span>
+        <span className="text-3xl">{platformEmoji}</span>
         <p className="text-sm text-silver/60">Stream unavailable on this platform</p>
         {config.stream_url && (
           <a
@@ -187,7 +173,6 @@ export function LiveStreamSection({
           <div className="glass-card overflow-hidden rounded-2xl">
             {fallbackImageUrl ? (
               <div className="relative h-56 w-full overflow-hidden border-b border-white/[0.06]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={fallbackImageUrl}
                   alt={divinerName ? `${divinerName} profile` : "Diviner profile"}
@@ -267,8 +252,8 @@ export function LiveStreamSection({
           {activeLiveConfigs.length > 1 && (
             <div className="flex items-center gap-1.5 rounded-lg border border-white/[0.07] bg-white/[0.03] p-1">
               {activeLiveConfigs.map((c) => {
-                const label = c.display_name ?? PLATFORM_LABELS[c.platform] ?? c.platform;
-                const emoji = PLATFORM_EMOJI[c.platform] ?? "🌐";
+                const label = c.display_name ?? getLivePlatformLabel(c.platform, c.platform_display_name);
+                const emoji = getLivePlatformEmoji(c.platform as LivePlatformKey);
                 return (
                   <button
                     key={c.platform}
@@ -301,7 +286,7 @@ export function LiveStreamSection({
             >
               Watch on{" "}
               {currentConfig.display_name ??
-                PLATFORM_LABELS[currentConfig.platform] ??
+                getLivePlatformLabel(currentConfig.platform, currentConfig.platform_display_name) ??
                 currentConfig.platform}
               <ExternalLink className="size-3" />
             </a>

@@ -147,12 +147,73 @@
 }
 
 .planet-tag-v2 .symbol {
-    color: #f59e0b; /* amber-500 */
+    color: #f59e0b;
+    /* amber-500 */
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    .horoscope-table td, .horoscope-table th {
+
+    .horoscope-table td,
+    .horoscope-table th {
         padding: 10px 12px;
     }
+}
+
+/* ─── Relationship Report (Gold & Paper Aesthetic) ─────────────────── */
+
+.horoscope-section-header {
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+.horoscope-interp-header {
+    background-color: #ffffff;
+    color: #000000;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.interp-gradient-default {
+    background: linear-gradient(166deg, #f0a023 0%, #f8d647 100%) !important;
+    color: #000000 !important;
+}
+
+.horoscope-show-more {
+    background: linear-gradient(to bottom, #5c5c5c, #000000) !important;
+    color: #ffffff !important;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+    border: 1px solid #e6e6e6;
+    border-radius: 5px;
+    padding: 8px 24px;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.horoscope-show-more:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transform: translateY(-1px);
+}
+
+.horoscope-show-more:active {
+    transform: translateY(0);
+}
+
+/* Decan Icon Accent */
+.decan-accent-glow {
+    background-color: rgba(245, 158, 11, 0.15);
+    border: 2px solid rgba(245, 158, 11, 0.5);
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+}
+
+.decan-accent-glow:hover {
+    background-color: rgba(245, 158, 11, 0.25);
+    border-color: rgba(245, 158, 11, 1);
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.5);
 }

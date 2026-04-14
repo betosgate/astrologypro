@@ -1,6 +1,6 @@
 # Task 03 - Enforce Service-Scoped Calendar-First Booking
 
-- Status: Open
+- Status: Done
 - Priority: P0
 - Owner: Booking / Full-stack
 
@@ -66,7 +66,31 @@ If the customer starts at `/{username}/book`:
 
 ## Verification Test Plan
 
-- [ ] Open a service-specific booking route and confirm availability is scoped as expected.
-- [ ] Complete a booking and confirm the saved booking references the same service shown in the UI.
-- [ ] Repeat from the generic booking route and confirm the selected primary/fallback service remains consistent end to end.
+- [x] Open a service-specific booking route and confirm availability is scoped as expected.
+- [x] Complete a booking and confirm the saved booking references the same service shown in the UI.
+- [x] Repeat from the generic booking route and confirm the selected primary/fallback service remains consistent end to end.
 
+## Completion Notes
+
+Implemented and verified in the current repo:
+
+- `src/app/[username]/book/[serviceSlug]/page.tsx`
+  - resolves one active service from DB and passes `availabilityServiceId={service.id}` into `BookingWizard`
+- `src/app/[username]/book/page.tsx`
+  - resolves a single booking service server-side and keeps that service fixed for the generic flow
+- `src/components/booking/booking-wizard.tsx`
+  - fetches availability with the resolved `serviceId`
+  - posts the same `service.id` to `/api/stripe/booking-payment`
+  - renders service-aware slot metadata and effective price
+- `src/app/api/availability/[ownerId]/route.ts`
+  - filters availability templates by `serviceId` while still allowing generic templates when appropriate
+  - returns slot metadata carrying `availabilityServiceId`
+- `src/app/api/stripe/booking-payment/route.ts`
+  - resolves the booking against the same requested `serviceId`
+  - prefers matching availability templates by `service_id` when deriving booking context
+
+Result:
+
+- service-specific booking stays bound to the chosen service
+- generic booking resolves one concrete service and uses that same service through availability and payment
+- slot selection, booking creation, and charge creation all remain anchored to one service ID

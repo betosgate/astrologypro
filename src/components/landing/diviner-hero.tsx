@@ -15,6 +15,9 @@ interface DivinerHeroProps {
   youtubeChannelId: string | null;
   facebookLiveUrl: string | null;
   completedSessions?: number;
+  completedSessionsLast7Days?: number;
+  completedSessionsLast30Days?: number;
+  showSessionCountsBlock?: boolean;
   averageRating?: number | null;
   reviewCount?: number;
   openSlotsThisWeek?: number;
@@ -34,6 +37,9 @@ export function DivinerHero({
   youtubeChannelId,
   facebookLiveUrl,
   completedSessions = 0,
+  completedSessionsLast7Days = 0,
+  completedSessionsLast30Days = 0,
+  showSessionCountsBlock = false,
   averageRating = null,
   reviewCount = 0,
   openSlotsThisWeek,
@@ -185,7 +191,7 @@ export function DivinerHero({
                   Verified
                 </span>
               )}
-              {completedSessions > 0 && (
+              {!showSessionCountsBlock && completedSessions > 0 && (
                 <span className="inline-flex items-center gap-1">
                   <Calendar className="size-3" />
                   {completedSessions} readings
@@ -238,6 +244,35 @@ export function DivinerHero({
                 </a>
               )}
             </div>
+
+            {showSessionCountsBlock && (
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-[#c9a84c]/20 bg-black/25 px-4 py-3 backdrop-blur-sm">
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-[#b8bcd0]/60">
+                    Sessions Completed
+                  </p>
+                  <p className="mt-1 text-2xl font-semibold text-[#f5f0e8]">
+                    {completedSessions.toLocaleString()}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm">
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-[#b8bcd0]/60">
+                    Last 7 Days
+                  </p>
+                  <p className="mt-1 text-2xl font-semibold text-[#f5f0e8]">
+                    {completedSessionsLast7Days.toLocaleString()}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm">
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-[#b8bcd0]/60">
+                    Last 30 Days
+                  </p>
+                  <p className="mt-1 text-2xl font-semibold text-[#f5f0e8]">
+                    {completedSessionsLast30Days.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

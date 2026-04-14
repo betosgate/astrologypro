@@ -16,15 +16,15 @@ type PricingPlanRow = {
   recurring_currency: string | null;
   recurring_interval: string | null;
   global_pricing:
-    | {
-        item_key: string;
-        item_name: string;
-      }
-    | {
-        item_key: string;
-        item_name: string;
-      }[]
-    | null;
+  | {
+    item_key: string;
+    item_name: string;
+  }
+  | {
+    item_key: string;
+    item_name: string;
+  }[]
+  | null;
 };
 
 export async function POST(request: NextRequest) {
@@ -97,8 +97,22 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const existingCustomers = await stripe.customers.list({
+      email: email,
+      limit: 1,
+    });
+
+    let customerId = existingCustomers.data[0]?.id;
+    if (!customerId) {
+      const newCustomer = await stripe.customers.create({
+        email: email,
+        metadata: { userId },
+      });
+      customerId = newCustomer.id;
+    }
+
     const session = await stripe.checkout.sessions.create({
-      customer_email: email,
+      customer: customerId,
       mode: hasRecurring ? "subscription" : "payment",
       line_items: lineItems,
       metadata: {

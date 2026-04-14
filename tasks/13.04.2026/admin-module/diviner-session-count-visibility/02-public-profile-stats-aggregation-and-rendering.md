@@ -90,3 +90,9 @@ Consider whether `src/app/api/public/diviners/route.ts` should also expose these
 - public profile shows all three counts when enabled
 - counts come from completed bookings only
 - the feature reuses the existing public stats pipeline cleanly
+
+## Status
+
+Done.
+
+Implemented in `src/app/[username]/page.tsx` with rolling 7-day and 30-day completed-booking counts, rendered in `src/components/landing/diviner-hero.tsx` when visibility resolves true.

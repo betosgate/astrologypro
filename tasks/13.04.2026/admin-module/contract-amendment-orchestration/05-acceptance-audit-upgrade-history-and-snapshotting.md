@@ -49,3 +49,7 @@ Admin should be able to inspect:
 
 - amendment acceptance is auditable as a contract upgrade
 - history is clearer than simple document-version acceptances only
+
+## Status
+
+Done.

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentLiveSession, syncDivinerLiveMirror } from "@/lib/live-sessions";
+import { isValidLivePlatformKey } from "@/lib/live-platform-governance";
 
 export const dynamic = "force-dynamic";
 
@@ -87,7 +89,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   // Fetch existing session first
   const { data: existing, error: fetchErr } = await admin
     .from("live_sessions")
-    .select("id, status")
+    .select("id, diviner_id, status")
     .eq("id", id)
     .maybeSingle();
 
@@ -128,12 +130,26 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     }
   }
 
-  const VALID_PLATFORMS = ["facebook", "youtube", "instagram", "tiktok", "zoom", "other"] as const;
   if (platform !== undefined) {
-    if (typeof platform !== "string" || !VALID_PLATFORMS.includes(platform as typeof VALID_PLATFORMS[number])) {
+    if (!isValidLivePlatformKey(platform)) {
       return NextResponse.json(
-        { type: "about:blank", title: "Validation Error", status: 422, detail: `platform must be one of: ${VALID_PLATFORMS.join(", ")}.` },
+        { type: "about:blank", title: "Validation Error", status: 422, detail: "platform must be a supported live platform." },
         { status: 422, headers: { "Content-Type": "application/problem+json" } }
+      );
+    }
+  }
+
+  if (status === "live" && existing.status !== "live") {
+    const activeSession = await getCurrentLiveSession(existing.diviner_id);
+    if (activeSession && activeSession.id !== id) {
+      return NextResponse.json(
+        {
+          type: "about:blank",
+          title: "Conflict",
+          status: 409,
+          detail: "This diviner already has an active live session. End it before starting another.",
+        },
+        { status: 409, headers: { "Content-Type": "application/problem+json" } }
       );
     }
   }
@@ -175,6 +191,12 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     );
   }
 
+  try {
+    await syncDivinerLiveMirror(existing.diviner_id);
+  } catch (syncError) {
+    console.error("[admin/live-sessions/[id]] PATCH mirror sync error", syncError);
+  }
+
   return NextResponse.json(data);
 }
 
@@ -191,6 +213,19 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   }
 
   const admin = createAdminClient();
+
+  const { data: existing } = await admin
+    .from("live_sessions")
+    .select("id, diviner_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!existing) {
+    return NextResponse.json(
+      { type: "about:blank", title: "Not Found", status: 404, detail: "Live session not found." },
+      { status: 404, headers: { "Content-Type": "application/problem+json" } }
+    );
+  }
 
   const { data, error } = await admin
     .from("live_sessions")
@@ -211,6 +246,12 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
       { type: "about:blank", title: "Not Found", status: 404, detail: "Live session not found." },
       { status: 404, headers: { "Content-Type": "application/problem+json" } }
     );
+  }
+
+  try {
+    await syncDivinerLiveMirror(existing.diviner_id);
+  } catch (syncError) {
+    console.error("[admin/live-sessions/[id]] DELETE mirror sync error", syncError);
   }
 
   return NextResponse.json(data);

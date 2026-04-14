@@ -75,6 +75,7 @@ import {
   Megaphone,
   AlertTriangle,
   Rocket,
+  Layers3,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -98,6 +99,8 @@ const NAV_GROUPS = [
       { label: "Invitations", href: "/admin/invitations", icon: Mail },
       { label: "Social Advocacy", href: "/admin/social-advocacy", icon: Share2 },
       { label: "Deleted Users", href: "/admin/users/deleted", icon: UserX },
+      { label: "Service Packages", href: "/admin/role-service-packages", icon: Layers3 },
+      { label: "Contracts", href: "/admin/contracts", icon: ScrollText },
     ],
   },
   {
@@ -163,6 +166,7 @@ const NAV_GROUPS = [
     label: "Live",
     items: [
       { label: "Live Sessions", href: "/admin/live-sessions", icon: Radio },
+      { label: "Live Platforms", href: "/admin/live-platforms", icon: Settings2 },
       { label: "Check-ins", href: "/admin/check-ins", icon: ClipboardList },
     ],
   },
@@ -179,6 +183,7 @@ const NAV_GROUPS = [
     items: [
       { label: "PM Plan Tiers", href: "/admin/pm-plan-tiers", icon: Layers },
       { label: "Broadcasts", href: "/admin/broadcasting", icon: Radio },
+      { label: "Dashboard Feed", href: "/admin/dashboard-content", icon: Megaphone },
       { label: "Calendar", href: "/admin/calendar", icon: CalendarDays },
       { label: "Holy Books", href: "/admin/holy-books", icon: BookOpen },
       { label: "Doctrine Links", href: "/admin/doctrine-links", icon: Star },
@@ -248,6 +253,7 @@ const NAV_GROUPS = [
       { label: "Provider Costs", href: "/admin/reports/provider-costs", icon: TrendingUp },
       { label: "Operations Health", href: "/admin/reports/operations", icon: AlertTriangle },
       { label: "Payouts", href: "/admin/reports/payouts", icon: CreditCard },
+      { label: "Finance Ops", href: "/admin/reports/finance-ops", icon: Settings2 },
       { label: "Vercel Deployments", href: "/admin/reports/vercel-deployments", icon: Rocket },
       { label: "Funnel", href: "/admin/reports/funnel", icon: BarChart3 },
       { label: "Diviner Traffic", href: "/admin/reports/diviner-traffic", icon: Globe },

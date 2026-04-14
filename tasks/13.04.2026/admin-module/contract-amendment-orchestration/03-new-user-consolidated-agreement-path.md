@@ -41,3 +41,7 @@ Do not replay the old amendment chain to a new user.
 
 - future signups are not burdened with historical amendment steps
 - new users sign the current agreement state for each role instead
+
+## Status
+
+Done.

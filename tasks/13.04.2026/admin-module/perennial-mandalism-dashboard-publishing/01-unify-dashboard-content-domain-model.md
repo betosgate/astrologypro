@@ -117,3 +117,7 @@ Without this split, admin ends up editing the same concept in multiple places an
 - field-level ownership matrix
 - native vs source-linked decision rules
 - migration strategy from existing `perennial_content` and `mandalism_content`
+
+## Status
+
+Done

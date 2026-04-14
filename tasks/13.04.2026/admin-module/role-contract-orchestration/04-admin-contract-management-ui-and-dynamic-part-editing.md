@@ -58,3 +58,7 @@ Admin must be able to preview:
 - admin can manage contracts from backend tools
 - dynamic fields are editable without raw-text surgery for common changes
 - previewing rendered output is easy before activation
+
+## Status
+
+Done.

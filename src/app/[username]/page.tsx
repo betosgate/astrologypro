@@ -8,7 +8,6 @@ import { getServiceImageUrl } from "@/lib/service-images";
 import { StickyNav } from "@/components/landing/sticky-nav";
 import { AvailabilityPreview } from "@/components/landing/availability-preview";
 import { ServiceTabs } from "./service-tabs";
-import { APP_URL } from "@/lib/constants";
 import { Gift, ArrowRight, ShieldAlert } from "lucide-react";
 import { PageTracker } from "@/components/landing/page-tracker";
 import { MediaGallery, type MediaItem } from "@/components/public/media-gallery";
@@ -18,8 +17,20 @@ import { PublicContentTabs } from "@/components/public/public-content-tabs";
 import { BlogSubscribeForm } from "@/app/blog/subscribe-form";
 import { CheckInForm } from "@/components/diviner/check-in-form";
 import { WeeklySubscriptionSignup } from "@/components/public/weekly-subscription-signup";
-import { isPublicSectionBlocked, normalizePublishPolicy } from "@/lib/diviner-publishing";
+import {
+  isPublicSectionBlocked,
+  normalizePublishPolicy,
+  resolvePublicSessionCountsVisibility,
+} from "@/lib/diviner-publishing";
 import { getDivinerAvatarUrl, getDivinerCoverImageUrl } from "@/lib/diviner-images";
+import {
+  buildProfileTitle,
+  buildProfileDescription,
+  buildProfileCanonical,
+  buildProfileRobots,
+  buildProfileOgImage,
+} from "@/lib/seo/diviner-profile";
+import { buildProfileSchemaGraph } from "@/lib/seo/schema-builders";
 import {
   buildPublicServicesIntro,
   filterVisiblePublicServices,
@@ -27,10 +38,18 @@ import {
   getServiceCategoryLabel,
   isTimeBasedPublicService,
 } from "@/lib/public-services";
+import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
+import { canPubliclySellService } from "@/lib/payout-readiness";
+import {
+  buildGovernedLivePlatforms,
+  mergeGovernedPlatformConfigs,
+  resolveLivePlatformsForStatus,
+} from "@/lib/live-platform-governance";
+import { getCurrentLiveSession, getNextScheduledLiveSession } from "@/lib/live-sessions";
 
 interface PageProps {
   params: Promise<{ username: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; ref?: string }>;
 }
 
 async function getDiviner(username: string) {
@@ -57,7 +76,7 @@ async function getServices(divinerId: string) {
     .order("is_featured", { ascending: false })
     .order("sort_order", { ascending: true });
 
-  return services ?? [];
+  return applyRuntimePricesToServices(supabase, services ?? []);
 }
 
 async function getTestimonials(divinerId: string) {
@@ -93,14 +112,29 @@ async function getMediaItems(divinerId: string): Promise<MediaItem[]> {
 
 async function getLivePlatforms(divinerId: string): Promise<StreamPlatformConfig[]> {
   const admin = createAdminClient();
-  const { data } = await admin
-    .from("stream_platform_configs")
-    .select("*")
-    .eq("diviner_id", divinerId)
-    .eq("is_enabled", true)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
-  return (data ?? []) as StreamPlatformConfig[];
+  const [{ data: configs }, { data: registryRows }, { data: overrideRows }] = await Promise.all([
+    admin
+      .from("stream_platform_configs")
+      .select("*")
+      .eq("diviner_id", divinerId)
+      .eq("is_enabled", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
+    admin
+      .from("live_platform_registry")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("platform_key", { ascending: true }),
+    admin
+      .from("diviner_live_platform_overrides")
+      .select("*")
+      .eq("diviner_id", divinerId),
+  ]);
+  const governedPlatforms = buildGovernedLivePlatforms(registryRows ?? [], overrideRows ?? []);
+
+  return mergeGovernedPlatformConfigs(configs ?? [], governedPlatforms, {
+    publicOnly: true,
+  }) as StreamPlatformConfig[];
 }
 
 async function getActiveGiveaway(divinerId: string): Promise<{ id: string } | null> {
@@ -154,6 +188,7 @@ async function getPolicies() {
 
 async function getDivinerStats(divinerId: string) {
   const supabase = createAdminClient();
+  const now = new Date();
 
   const formatLocalDate = (date: Date) => {
     const year = date.getFullYear();
@@ -167,6 +202,25 @@ async function getDivinerStats(divinerId: string) {
     .select("*", { count: "exact", head: true })
     .eq("diviner_id", divinerId)
     .eq("status", "completed");
+
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  const [{ count: completedSessionsLast7Days }, { count: completedSessionsLast30Days }] =
+    await Promise.all([
+      supabase
+        .from("bookings")
+        .select("*", { count: "exact", head: true })
+        .eq("diviner_id", divinerId)
+        .eq("status", "completed")
+        .gte("scheduled_at", sevenDaysAgo.toISOString()),
+      supabase
+        .from("bookings")
+        .select("*", { count: "exact", head: true })
+        .eq("diviner_id", divinerId)
+        .eq("status", "completed")
+        .gte("scheduled_at", thirtyDaysAgo.toISOString()),
+    ]);
 
   const { data: ratingData } = await supabase
     .from("testimonials")
@@ -185,7 +239,6 @@ async function getDivinerStats(divinerId: string) {
     }
   }
 
-  const now = new Date();
   const endOfWeek = new Date(now);
   endOfWeek.setDate(now.getDate() + (7 - now.getDay()));
   endOfWeek.setHours(23, 59, 59, 999);
@@ -261,6 +314,8 @@ async function getDivinerStats(divinerId: string) {
 
   return {
     completedSessions: completedSessions ?? 0,
+    completedSessionsLast7Days: completedSessionsLast7Days ?? 0,
+    completedSessionsLast30Days: completedSessionsLast30Days ?? 0,
     averageRating,
     reviewCount,
     openSlotsThisWeek: openSlots,
@@ -279,50 +334,46 @@ export async function generateMetadata({
   if (!diviner) {
     return { title: "Not Found" };
   }
+
   const publishPolicy = normalizePublishPolicy(diviner as Record<string, unknown>);
   if (publishPolicy.publicPublishBlocked) {
     return { title: "Not Found" };
   }
+
   const heroBlocked = isPublicSectionBlocked(publishPolicy, "hero");
   const bioBlocked = isPublicSectionBlocked(publishPolicy, "bio");
 
-  const title = `${diviner.display_name} - Book a Reading`;
-  const description =
-    !heroBlocked && diviner.tagline
-      ? diviner.tagline
-      : !bioBlocked && diviner.bio
-        ? diviner.bio
-        : `Book an astrology or tarot reading with ${diviner.display_name}`;
+  const title = buildProfileTitle(diviner);
+  const description = buildProfileDescription(diviner, heroBlocked, bioBlocked);
+  const canonical = buildProfileCanonical(username);
+  const robots = buildProfileRobots(diviner, !!publishPolicy.publicPublishBlocked);
+  const ogImage = buildProfileOgImage(diviner, heroBlocked);
 
-  const ogImage = heroBlocked ? null : getDivinerCoverImageUrl(diviner.cover_image_url) || getDivinerAvatarUrl(diviner.avatar_url);
   return {
     title,
     description,
+    alternates: { canonical },
+    robots,
     openGraph: {
       title,
       description,
-      url: `${APP_URL}/${username}`,
+      url: canonical,
       type: "profile",
-      ...(ogImage && {
-        images: [
-          diviner.cover_image_url
-            ? { url: getDivinerCoverImageUrl(diviner.cover_image_url), width: 1200, height: 400 }
-            : { url: getDivinerAvatarUrl(diviner.avatar_url), width: 400, height: 400 },
-        ],
-      }),
+      ...(ogImage && { images: [ogImage] }),
     },
     twitter: {
       card: ogImage ? "summary_large_image" : "summary",
       title,
       description,
-      ...(ogImage && { images: [ogImage] }),
+      ...(ogImage && { images: [ogImage.url] }),
     },
   };
 }
 
 export default async function DivinerPage({ params, searchParams }: PageProps) {
   const { username } = await params;
-  const { tab } = await searchParams;
+  const { tab, ref } = await searchParams;
+  const refParam = ref ? `?ref=${encodeURIComponent(ref)}` : "";
   const diviner = await getDiviner(username);
 
   if (!diviner) {
@@ -339,8 +390,9 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
   const mediaBlocked = isPublicSectionBlocked(publishPolicy, "media");
   const testimonialsBlocked = isPublicSectionBlocked(publishPolicy, "testimonials");
   const weeklySubscriptionBlocked = isPublicSectionBlocked(publishPolicy, "weekly_subscription");
+  const showSessionCountsBlock = resolvePublicSessionCountsVisibility(publishPolicy);
 
-  const [services, testimonials, stats, policies, mediaItems, livePlatformConfigs, activeGiveaway, weeklySubscriptionProduct] = await Promise.all([
+  const [services, testimonials, stats, policies, mediaItems, livePlatformConfigs, activeGiveaway, weeklySubscriptionProduct, currentLiveSession, nextScheduledLiveSession] = await Promise.all([
     servicesBlocked ? Promise.resolve([]) : getServices(diviner.id),
     testimonialsBlocked ? Promise.resolve([]) : getTestimonials(diviner.id),
     getDivinerStats(diviner.id),
@@ -349,20 +401,53 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
     liveBlocked ? Promise.resolve([]) : getLivePlatforms(diviner.id),
     getActiveGiveaway(diviner.id),
     weeklySubscriptionBlocked ? Promise.resolve(null) : getWeeklySubscriptionProduct(diviner.id),
+    liveBlocked ? Promise.resolve(null) : getCurrentLiveSession(diviner.id),
+    liveBlocked ? Promise.resolve(null) : getNextScheduledLiveSession(diviner.id),
   ]);
 
   const filteredMediaItems = mediaItems.filter(
     (item) => !publishPolicy.blockedMediaTypes.includes(item.type)
   );
-  const publicServices = filterVisiblePublicServices(services);
+  const effectiveLivePlatforms = resolveLivePlatformsForStatus(
+    livePlatformConfigs.map((config) => ({
+      platform_key: config.platform,
+      display_name: config.platform_display_name,
+      is_globally_enabled: true,
+      is_selectable_by_diviners: true,
+      integration_tier: config.integration_tier,
+      playback_mode: config.playback_mode,
+      supports_embed: config.supports_embed,
+      supports_chat_embed: config.supports_chat_embed,
+      supports_oauth_connection: config.supports_oauth_connection,
+      supports_event_sync: config.supports_event_sync,
+      supports_auto_live_detection: config.supports_auto_live_detection,
+      sort_order: config.sort_order,
+      admin_notes: null,
+      availability_mode: "inherit",
+      is_available_for_diviner: true,
+      is_publicly_renderable: true,
+      reason: null,
+    })),
+    currentLiveSession ? [currentLiveSession.platform] : []
+  );
+  const publicServices = filterVisiblePublicServices(services).map((service) => ({
+    ...service,
+    booking_enabled: canPubliclySellService(service, diviner),
+  }));
+  const hasUnavailablePaidServices = publicServices.some(
+    (service) => service.booking_enabled === false
+  );
+  const sellablePublicServices = publicServices.filter(
+    (service) => service.booking_enabled !== false
+  );
   const astroServices = publicServices.filter((s) => s.category === "astrology");
   const tarotServices = publicServices.filter((s) => s.category === "tarot");
   const activeTab = !bioBlocked && tab === "bio" ? "bio" : "home";
-  const highlightedService = getHighlightedPublicService(publicServices);
+  const highlightedService = getHighlightedPublicService(sellablePublicServices);
   const remainingPublicServices =
-    highlightedService && publicServices.length > 1
-      ? publicServices.filter((service) => service.id !== highlightedService.id)
-      : publicServices;
+    highlightedService && sellablePublicServices.length > 1
+      ? sellablePublicServices.filter((service) => service.id !== highlightedService.id)
+      : sellablePublicServices;
   const timeBasedServices = remainingPublicServices.filter((service) =>
     isTimeBasedPublicService(service),
   );
@@ -370,7 +455,9 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
     !isTimeBasedPublicService(service),
   );
   const primaryPublicService =
-    publicServices.find((service) => service.is_featured) ?? publicServices[0] ?? null;
+    sellablePublicServices.find((service) => service.is_featured) ??
+    sellablePublicServices[0] ??
+    null;
   const bookingPreview = servicesBlocked
     ? null
     : primaryPublicService
@@ -412,38 +499,47 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
     pullQuote = firstSentence ?? diviner.bio.slice(0, 120);
   }
 
-  // Schema.org structured data
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "LocalBusiness",
-        name: diviner.display_name,
-        description: heroBlocked ? undefined : diviner.tagline ?? (!bioBlocked ? diviner.bio : undefined) ?? undefined,
-        url: `${APP_URL}/${username}`,
-        ...(!heroBlocked && { image: getDivinerAvatarUrl(diviner.avatar_url) }),
-        priceRange:
-          publicServices.length > 0
-            ? `$${Math.min(...publicServices.map((s) => Number(s.base_price)))} - $${Math.max(...publicServices.map((s) => Number(s.base_price)))}`
-            : undefined,
-      },
-      ...publicServices.map((service) => ({
-        "@type": "Service",
-        name: service.name,
-        description: service.description,
-        provider: {
-          "@type": "Person",
-          name: diviner.display_name,
-        },
-        offers: {
-          "@type": "Offer",
-          price: Number(service.base_price),
-          priceCurrency: "USD",
-          url: `${APP_URL}/${username}/book/${service.slug}`,
-        },
-      })),
-    ],
-  };
+  const serviceDeliveryLabel = diviner.seo_is_remote_global
+    ? "Available worldwide for remote readings"
+    : diviner.seo_city && diviner.seo_country
+      ? `Serving clients from ${diviner.seo_city}, ${diviner.seo_country}`
+      : diviner.seo_region && diviner.seo_country
+        ? `Serving clients from ${diviner.seo_region}, ${diviner.seo_country}`
+        : "Available for online readings";
+  const authorityBullets = [
+    diviner.seo_years_experience
+      ? `${diviner.seo_years_experience}+ years of experience`
+      : null,
+    Array.isArray(diviner.seo_languages) && diviner.seo_languages.length > 0
+      ? `Sessions available in ${diviner.seo_languages.slice(0, 3).join(", ")}`
+      : null,
+    Array.isArray(diviner.seo_credentials) && diviner.seo_credentials.length > 0
+      ? diviner.seo_credentials[0]
+      : null,
+    stats.reviewCount > 0 && stats.averageRating
+      ? `${stats.averageRating.toFixed(1)} average rating across ${stats.reviewCount} approved reviews`
+      : null,
+    showSessionCountsBlock && stats.completedSessions > 0
+      ? `${stats.completedSessions} completed sessions on AstrologyPro`
+      : null,
+  ].filter(Boolean) as string[];
+  const fitBullets = [
+    highlightedService ? `Best entry point: ${highlightedService.name}` : null,
+    diviner.tagline ? diviner.tagline : null,
+    Array.isArray(diviner.specialties) && diviner.specialties.length > 0
+      ? `Focus areas: ${diviner.specialties.slice(0, 4).join(", ")}`
+      : null,
+    diviner.seo_is_remote_global
+      ? "Built for remote clients across time zones"
+      : "Private sessions delivered online through the platform"
+  ].filter(Boolean) as string[];
+
+  // Schema.org structured data — rich entity graph
+  const structuredData = buildProfileSchemaGraph(
+    diviner,
+    publicServices,
+    { averageRating: stats.averageRating, reviewCount: stats.reviewCount },
+  );
 
   return (
     <>
@@ -508,6 +604,9 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
         youtubeChannelId={heroBlocked ? null : diviner.youtube_channel_id ?? null}
         facebookLiveUrl={heroBlocked ? null : diviner.facebook_live_url ?? null}
         completedSessions={stats.completedSessions}
+        completedSessionsLast7Days={stats.completedSessionsLast7Days}
+        completedSessionsLast30Days={stats.completedSessionsLast30Days}
+        showSessionCountsBlock={showSessionCountsBlock}
         averageRating={stats.averageRating}
         reviewCount={stats.reviewCount}
         openSlotsThisWeek={heroOpenSlotsThisWeek}
@@ -519,20 +618,70 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
 
       {activeTab === "home" ? (
         <>
+          <section className="py-10 md:py-14">
+            <div className="mx-auto grid max-w-6xl gap-6 px-4 lg:grid-cols-[1.15fr,0.85fr]">
+              <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 md:p-8">
+                <p className="text-xs uppercase tracking-[0.24em] text-gold/70">
+                  Why Clients Book
+                </p>
+                <h2 className="mt-3 font-display text-3xl font-semibold text-cream">
+                  {serviceDeliveryLabel}
+                </h2>
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-silver/70">
+                  {pullQuote ??
+                    buildPublicServicesIntro(
+                      diviner.display_name,
+                      sellablePublicServices,
+                    )}
+                </p>
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  {fitBullets.map((bullet) => (
+                    <div
+                      key={bullet}
+                      className="rounded-2xl border border-white/8 bg-cosmos-950/40 px-4 py-3 text-sm text-cream/85"
+                    >
+                      {bullet}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-gold/15 bg-gold/[0.04] p-6 md:p-8">
+                <p className="text-xs uppercase tracking-[0.24em] text-gold/70">
+                  Trust Signals
+                </p>
+                <div className="mt-4 space-y-3">
+                  {authorityBullets.map((bullet) => (
+                    <div
+                      key={bullet}
+                      className="rounded-2xl border border-gold/10 bg-cosmos-950/45 px-4 py-3 text-sm text-cream/85"
+                    >
+                      {bullet}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+
           {!liveBlocked && (
             <LiveStreamSection
-              isLive={(diviner as Record<string, unknown>).is_live === true}
-              livePlatforms={((diviner as Record<string, unknown>).live_platforms as string[]) ?? []}
+              isLive={!!currentLiveSession}
+              livePlatforms={effectiveLivePlatforms}
               platformConfigs={livePlatformConfigs}
               fallbackContent={((diviner as Record<string, unknown>).fallback_content as string) ?? null}
-              nextLiveAt={((diviner as Record<string, unknown>).next_live_at as string) ?? null}
+              nextLiveAt={
+                currentLiveSession?.scheduled_at ??
+                nextScheduledLiveSession?.scheduled_at ??
+                (((diviner as Record<string, unknown>).next_live_at as string) ?? null)
+              }
               divinerId={diviner.id}
               divinerName={diviner.display_name}
               fallbackImageUrl={getDivinerCoverImageUrl(diviner.cover_image_url ?? getDivinerAvatarUrl(diviner.avatar_url))}
             />
           )}
 
-          {!liveBlocked && (diviner as Record<string, unknown>).is_live === true && (
+          {!liveBlocked && !!currentLiveSession && currentLiveSession.check_in_enabled && (
             <section className="py-6">
               <div className="mx-auto max-w-xl px-4">
                 <CheckInForm
@@ -611,6 +760,12 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                   {buildPublicServicesIntro(publicServices)}
                 </p>
 
+                {hasUnavailablePaidServices && (
+                  <div className="mx-auto mb-6 max-w-2xl rounded-2xl border border-amber-500/20 bg-amber-500/8 px-5 py-4 text-sm text-amber-100/85">
+                    Some paid services are temporarily unavailable while payment setup is being completed.
+                  </div>
+                )}
+
                 {highlightedService ? (
                   <div className="mb-8 rounded-3xl border border-gold/25 bg-[linear-gradient(135deg,rgba(201,168,76,0.12),rgba(8,10,18,0.7))] p-6 md:p-8">
                     <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
@@ -627,7 +782,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                         </p>
                       </div>
                       <Link
-                        href={`/${username}/book/${highlightedService.slug}`}
+                        href={`/${username}/book/${highlightedService.slug}${refParam}`}
                         className="inline-flex h-11 items-center justify-center rounded-full bg-gold px-6 text-sm font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
                       >
                         Book {highlightedService.name}
@@ -648,6 +803,8 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                           service={service}
                           username={username}
                           imageUrl={serviceImages[service.slug]}
+                          refParam={refParam}
+                          bookingEnabled={service.booking_enabled !== false}
                         />
                       ))}
                     </div>
@@ -666,6 +823,8 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                           service={service}
                           username={username}
                           imageUrl={serviceImages[service.slug]}
+                          refParam={refParam}
+                          bookingEnabled={service.booking_enabled !== false}
                         />
                       ))}
                     </div>
@@ -673,12 +832,13 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                 )}
 
                 {!highlightedService && astroServices.length > 0 && tarotServices.length > 0 && (
-                  <ServiceTabs
-                    astroServices={astroServices}
-                    tarotServices={tarotServices}
-                    username={username}
-                    serviceImages={serviceImages}
-                  />
+                    <ServiceTabs
+                      astroServices={astroServices}
+                      tarotServices={tarotServices}
+                      username={username}
+                      serviceImages={serviceImages}
+                      refParam={refParam}
+                    />
                 )}
               </div>
 

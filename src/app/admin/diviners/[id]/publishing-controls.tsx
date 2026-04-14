@@ -41,6 +41,9 @@ interface PublishingControlsProps {
     blockedPublicSections: DivinerPublicSection[];
     blockedMediaTypes: DivinerMediaType[];
     publishBlockReason: string | null;
+    showPublicSessionCounts: boolean;
+    publicSessionCountsOverride: "force_show" | "force_hide" | null;
+    publicSessionCountsOverrideReason: string | null;
   };
 }
 
@@ -56,6 +59,15 @@ export function PublishingControls({
     initialPolicy.blockedMediaTypes
   );
   const [publishBlockReason, setPublishBlockReason] = useState(initialPolicy.publishBlockReason ?? "");
+  const [showPublicSessionCounts, setShowPublicSessionCounts] = useState(
+    initialPolicy.showPublicSessionCounts
+  );
+  const [publicSessionCountsOverride, setPublicSessionCountsOverride] = useState<
+    "use_diviner_preference" | "force_show" | "force_hide"
+  >(initialPolicy.publicSessionCountsOverride ?? "use_diviner_preference");
+  const [publicSessionCountsOverrideReason, setPublicSessionCountsOverrideReason] = useState(
+    initialPolicy.publicSessionCountsOverrideReason ?? ""
+  );
   const [saving, setSaving] = useState(false);
 
   function toggleSection(section: DivinerPublicSection, checked: boolean) {
@@ -81,6 +93,12 @@ export function PublishingControls({
           blockedPublicSections,
           blockedMediaTypes,
           publishBlockReason,
+          showPublicSessionCounts,
+          publicSessionCountsOverride:
+            publicSessionCountsOverride === "use_diviner_preference"
+              ? null
+              : publicSessionCountsOverride,
+          publicSessionCountsOverrideReason,
         }),
       });
 
@@ -172,6 +190,57 @@ export function PublishingControls({
             placeholder="Optional note shown to admins and used in blocked route responses."
             disabled={saving}
           />
+        </div>
+
+        <div className="space-y-4 rounded-xl border border-white/10 p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Diviner preference for public session counts</p>
+              <p className="text-xs text-muted-foreground">
+                This is the diviner-owned default when no admin override is active.
+              </p>
+            </div>
+            <Switch
+              checked={showPublicSessionCounts}
+              onCheckedChange={setShowPublicSessionCounts}
+              disabled={saving}
+              aria-label="Show public session counts"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="public-session-counts-override">Admin override</Label>
+            <select
+              id="public-session-counts-override"
+              value={publicSessionCountsOverride}
+              onChange={(event) =>
+                setPublicSessionCountsOverride(
+                  event.target.value as "use_diviner_preference" | "force_show" | "force_hide"
+                )
+              }
+              disabled={saving || publicPublishBlocked || blockedPublicSections.includes("hero")}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="use_diviner_preference">Use diviner preference</option>
+              <option value="force_show">Force show</option>
+              <option value="force_hide">Force hide</option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              If the hero is blocked globally, this module stays hidden even when force-show is selected.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="public-session-counts-override-reason">Override reason</Label>
+            <Textarea
+              id="public-session-counts-override-reason"
+              value={publicSessionCountsOverrideReason}
+              onChange={(event) => setPublicSessionCountsOverrideReason(event.target.value)}
+              rows={3}
+              placeholder="Optional note for why this visibility override is being applied."
+              disabled={saving || publicSessionCountsOverride === "use_diviner_preference"}
+            />
+          </div>
         </div>
 
         <Button onClick={save} disabled={saving}>

@@ -19,6 +19,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Sparkles } from "lucide-react";
+import {
+  getRoleServicePackages,
+  resolveRoleServicePackage,
+} from "@/lib/role-service-packages";
 
 export const metadata = {
   title: "Services",
@@ -35,16 +39,22 @@ export default async function ServicesPage() {
 
   const { data: diviner } = await admin
     .from("diviners")
-    .select("id")
+    .select("id, service_package_code")
     .eq("user_id", user.id)
     .maybeSingle();
 
   if (!diviner) redirect("/admin");
 
+  const resolvedPackage = resolveRoleServicePackage(
+    await getRoleServicePackages(),
+    diviner.service_package_code,
+  );
+
   const { data: services } = await supabase
     .from("services")
     .select("*")
     .eq("diviner_id", diviner.id)
+    .in("category", resolvedPackage.allowedCategories)
     .order("created_at", { ascending: false });
 
   return (
@@ -55,6 +65,9 @@ export default async function ServicesPage() {
           <p className="text-muted-foreground">
             Services assigned to you by admin. Contact your administrator to
             make changes.
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Package: <span className="font-medium text-foreground">{resolvedPackage.displayName}</span>
           </p>
         </div>
         {/* Create button removed — services are now managed by admin via

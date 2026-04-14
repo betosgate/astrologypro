@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { SPECIALTIES } from "@/lib/constants";
 import { toast } from "sonner";
 import {
@@ -17,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Upload } from "lucide-react";
 import { ProfileCompletionBar } from "@/components/ui/profile-completion-bar";
@@ -33,6 +33,13 @@ interface DivinerProfile {
   credentials: string | null;
   phone: string | null;
   timezone: string | null;
+  show_public_session_counts: boolean;
+  public_session_counts_override: "force_show" | "force_hide" | null;
+  public_session_counts_override_reason: string | null;
+  service_package?: {
+    displayName: string;
+    allowedCategories: string[];
+  };
 }
 
 export default function ProfilePage() {
@@ -58,6 +65,9 @@ export default function ProfilePage() {
             credentials: data.credentials ?? null,
             phone: data.phone ?? null,
             timezone: data.timezone ?? null,
+            show_public_session_counts: data.show_public_session_counts === true,
+            public_session_counts_override: data.public_session_counts_override ?? null,
+            public_session_counts_override_reason: data.public_session_counts_override_reason ?? null,
           });
         }
       } catch {
@@ -78,23 +88,21 @@ export default function ProfilePage() {
     }
 
     setUploading(true);
-    const supabase = createClient();
-    const ext = file.name.split(".").pop();
-    const path = `avatars/${profile.id}.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("avatars")
-      .upload(path, file, { upsert: true });
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", "avatars");
 
-    if (uploadError) {
-      toast.error("Failed to upload avatar");
+    const uploadRes = await fetch("/api/upload/avatar", { method: "POST", body: formData });
+    const uploadData = await uploadRes.json();
+
+    if (!uploadRes.ok) {
+      toast.error("Failed to upload avatar: " + (uploadData.error ?? "Unknown error"));
       setUploading(false);
       return;
     }
 
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("avatars").getPublicUrl(path);
+    const publicUrl = uploadData.publicUrl;
 
     // Update avatar_url via API route so profile sync runs
     const res = await fetch("/api/dashboard/profile", {
@@ -128,6 +136,7 @@ export default function ProfilePage() {
           credentials: profile.credentials || null,
           phone: profile.phone || null,
           timezone: profile.timezone || null,
+          show_public_session_counts: profile.show_public_session_counts,
         }),
       });
 
@@ -201,6 +210,15 @@ export default function ProfilePage() {
     });
   }
 
+  const sessionCountOverrideActive =
+    profile.public_session_counts_override === "force_show" ||
+    profile.public_session_counts_override === "force_hide";
+  const sessionCountHelperText = sessionCountOverrideActive
+    ? profile.public_session_counts_override === "force_show"
+      ? "An administrator is currently forcing this block to stay visible on your public profile."
+      : "An administrator is currently forcing this block to stay hidden on your public profile."
+    : "Display your total completed sessions plus recent 7-day and 30-day activity on your public page.";
+
   return (
     <div className="space-y-6">
       <div>
@@ -264,6 +282,16 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              {profile.service_package && (
+                <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+                  Current package:{" "}
+                  <span className="font-medium text-foreground">
+                    {profile.service_package.displayName}
+                  </span>
+                  . Allowed categories:{" "}
+                  {profile.service_package.allowedCategories.join(", ")}.
+                </div>
+              )}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="display_name">Display Name</Label>
@@ -379,8 +407,37 @@ export default function ProfilePage() {
                       </Label>
                     </div>
                   ))}
+                  </div>
                 </div>
-              </div>
+                <div className="rounded-xl border border-white/10 p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="show_public_session_counts" className="text-sm font-medium">
+                        Show public session counts
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {sessionCountHelperText}
+                      </p>
+                      {profile.public_session_counts_override_reason ? (
+                        <p className="text-xs text-amber-600 dark:text-amber-400">
+                          Admin note: {profile.public_session_counts_override_reason}
+                        </p>
+                      ) : null}
+                    </div>
+                    <Switch
+                      id="show_public_session_counts"
+                      checked={profile.show_public_session_counts}
+                      onCheckedChange={(checked) =>
+                        setProfile({
+                          ...profile,
+                          show_public_session_counts: checked,
+                        })
+                      }
+                      disabled={saving || sessionCountOverrideActive}
+                      aria-label="Show public session counts"
+                    />
+                  </div>
+                </div>
               <Button onClick={handleSave} disabled={saving}>
                 {saving ? (
                   <>

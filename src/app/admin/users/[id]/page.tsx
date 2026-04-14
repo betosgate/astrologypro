@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCommunityProfileCompletion } from "@/lib/community/profile-completion";
 import {
   UserDetailClient,
   type UserDetailData,
@@ -9,6 +10,8 @@ import {
   type DivinerAffiliate,
   type ReferralEntry,
 } from "@/components/admin/user-detail-client";
+import { getRoleServicePackages } from "@/lib/role-service-packages";
+import { listSignedAgreementsForUser } from "@/lib/signed-agreements";
 
 export const metadata = { title: "User Detail — Admin" };
 
@@ -40,7 +43,7 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
       .from("diviners")
       .select(
         "id, user_id, display_name, phone, is_active, is_certified, account_status, created_at, " +
-        "username, avatar_url, charges_enabled, google_calendar_connected, onboarding_completed"
+        "username, avatar_url, charges_enabled, google_calendar_connected, onboarding_completed, service_package_code"
       )
       .eq("user_id", userId)
       .maybeSingle(),
@@ -59,13 +62,13 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
 
     admin
       .from("community_members")
-      .select("id, user_id, full_name, email, phone, membership_type, membership_status, joined_at")
+      .select("id, user_id, full_name, email, phone, membership_type, membership_status, joined_at, onboarding_completed")
       .eq("user_id", userId)
       .maybeSingle(),
 
     admin
       .from("trainees")
-      .select("id, user_id, name, email, phone, username, training_status, created_at")
+      .select("id, user_id, name, email, phone, username, training_status, created_at, service_package_code")
       .eq("user_id", userId)
       .maybeSingle(),
 
@@ -164,6 +167,7 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
   let isCertified: boolean | undefined;
   let joinedAt    = new Date().toISOString();
   let profileFields: Record<string, string | null> = {};
+  let servicePackageCode: string | null = null;
 
   if (diviner) {
     role          = "diviner";
@@ -181,6 +185,7 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
       charges_enabled:             String(diviner.charges_enabled ?? false),
       google_calendar_connected:   String(diviner.google_calendar_connected ?? false),
     };
+    servicePackageCode = (diviner.service_package_code as string) ?? null;
 
     // Fetch diviner email from auth
     const authRes = await admin.rpc("get_auth_users_by_ids", {
@@ -226,7 +231,17 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
     profileFields = {
       membership_type:   (community.membership_type as string) ?? null,
       membership_status: (community.membership_status as string) ?? null,
+      onboarding_completed: String(community.onboarding_completed ?? false),
     };
+
+    const completion = await getCommunityProfileCompletion(admin, userId);
+    if (completion) {
+      profileFields.community_profile_completion = `${completion.overall_pct}%`;
+      profileFields.community_missing_items = completion.items
+        .filter((item) => !item.completed)
+        .map((item) => item.label)
+        .join(", ") || null;
+    }
 
   } else if (trainee) {
     role      = "trainee";
@@ -242,6 +257,7 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
       username:        (trainee.username as string) ?? null,
       training_status: (trainee.training_status as string) ?? null,
     };
+    servicePackageCode = (trainee.service_package_code as string) ?? null;
 
   } else {
     notFound();
@@ -265,6 +281,11 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
   const trainingStatus = trainee
     ? (trainee.training_status as string) ?? "in_progress"
     : undefined;
+  const servicePackages =
+    role === "diviner" || role === "trainee"
+      ? await getRoleServicePackages()
+      : [];
+  const signedAgreements = await listSignedAgreementsForUser(userId);
 
   // ── Referrals (affiliate/diviner) ─────────────────────────────────────────
   let referrals: ReferralEntry[] = [];
@@ -448,6 +469,13 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
     trainingStatus,
     referrals,
     totalReferrals,
+    servicePackageCode,
+    signedAgreements,
+    servicePackages: servicePackages.map((pkg) => ({
+      package_code: pkg.package_code,
+      display_name: pkg.display_name,
+      is_active: pkg.is_active,
+    })),
   };
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,7 +28,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Loader2, Plus, Radio, RefreshCw, XCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ExternalLink, Loader2, Plus, Radio, RefreshCw, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -39,6 +41,7 @@ interface DivinerRef {
   display_name: string;
   username: string;
   avatar_url: string | null;
+  is_live?: boolean | null;
 }
 
 interface LiveSession {
@@ -55,7 +58,10 @@ interface LiveSession {
   check_in_form_subtitle: string | null;
   created_at: string;
   updated_at: string;
+  diviner_id?: string;
   check_in_count: number;
+  is_current_live_session?: boolean;
+  state_mismatch?: boolean;
   diviners: DivinerRef | DivinerRef[] | null;
 }
 
@@ -73,7 +79,7 @@ interface ApiListResponse {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const PLATFORMS = ["facebook", "youtube", "instagram", "tiktok", "zoom", "other"] as const;
+const PLATFORMS = ["facebook", "youtube", "twitch", "instagram", "tiktok", "zoom", "other"] as const;
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -498,21 +504,60 @@ export function LiveSessionsClient() {
                 const diviner = getDiviner(session);
                 const isActioning = actionLoading === session.id;
                 return (
-                  <TableRow key={session.id} style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                    <TableRow key={session.id} style={{ borderColor: "rgba(255,255,255,0.05)" }}>
                     <TableCell className="font-medium text-sm" style={{ color: "#f5f0e8" }}>
-                      {diviner?.display_name ?? "—"}
+                      <div className="space-y-1">
+                        <p>{diviner?.display_name ?? "—"}</p>
+                        {diviner?.username && (
+                          <p className="text-xs text-muted-foreground">@{diviner.username}</p>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-sm hidden sm:table-cell capitalize" style={{ color: "rgba(184,188,208,0.7)" }}>
-                      {session.platform}
+                      <div className="space-y-1">
+                        <p>{session.platform}</p>
+                        {session.platform_url ? (
+                          <Link
+                            href={session.platform_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-muted-foreground underline underline-offset-2"
+                          >
+                            Open
+                            <ExternalLink className="size-3" />
+                          </Link>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">No URL</p>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-sm hidden md:table-cell" style={{ color: "rgba(184,188,208,0.7)" }}>
-                      {session.title ?? "—"}
+                      <div className="space-y-2">
+                        <p>{session.title ?? "—"}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          <Badge variant={session.check_in_enabled ? "secondary" : "outline"}>
+                            Check-in {session.check_in_enabled ? "on" : "off"}
+                          </Badge>
+                          {session.is_current_live_session && (
+                            <Badge className="bg-green-500/20 text-green-400 hover:bg-green-500/20">
+                              Current live
+                            </Badge>
+                          )}
+                          {session.state_mismatch && (
+                            <Badge variant="destructive">Mismatch</Badge>
+                          )}
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={session.status} />
                     </TableCell>
                     <TableCell className="text-xs hidden lg:table-cell" style={{ color: "rgba(184,188,208,0.5)" }}>
-                      {formatDate(session.scheduled_at)}
+                      <div className="space-y-1">
+                        <p>Scheduled: {formatDate(session.scheduled_at)}</p>
+                        <p>Started: {formatDate(session.started_at)}</p>
+                        <p>Ended: {formatDate(session.ended_at)}</p>
+                      </div>
                     </TableCell>
                     <TableCell className="text-sm text-right" style={{ color: "rgba(184,188,208,0.7)" }}>
                       {session.check_in_count}

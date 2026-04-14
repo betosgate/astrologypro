@@ -15,6 +15,11 @@ import { ProfileCompletionBar } from "@/components/ui/profile-completion-bar";
 import { calculateProfileCompletion } from "@/lib/profile-completion";
 import { ProfileEditor } from "@/components/trainee/profile-editor";
 import {
+  getAllowedSpecialtiesForPackage,
+  getRoleServicePackages,
+  resolveRoleServicePackage,
+} from "@/lib/role-service-packages";
+import {
   GraduationCap,
   TrendingUp,
   User,
@@ -64,7 +69,7 @@ export default async function TraineeProfilePage() {
   const { data: trainee } = await supabase
       .from("trainees")
       .select(
-        "id, name, email, username, bio, specialties, phone, timezone, goals, training_status, mentor_diviner_id, graduated_at, created_at"
+        "id, name, email, username, bio, specialties, phone, timezone, goals, training_status, mentor_diviner_id, graduated_at, created_at, service_package_code"
       )
       .eq("user_id", user.id)
       .single();
@@ -125,6 +130,14 @@ export default async function TraineeProfilePage() {
     month: "long",
     year: "numeric",
   });
+  const resolvedPackage = resolveRoleServicePackage(
+    await getRoleServicePackages(),
+    trainee.service_package_code,
+  );
+  const allowedSpecialties = getAllowedSpecialtiesForPackage(
+    ALLOWED_SPECIALTIES,
+    resolvedPackage,
+  );
 
   const completion = calculateProfileCompletion([
     { key: "name", label: "Name", value: trainee.name },
@@ -161,6 +174,13 @@ export default async function TraineeProfilePage() {
           <CardTitle className="text-base">Personal Information</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+            Current package:{" "}
+            <span className="font-medium text-foreground">
+              {resolvedPackage.displayName}
+            </span>
+            . Allowed categories: {resolvedPackage.allowedCategories.join(", ")}.
+          </div>
           <ProfileEditor
             profileId={trainee.id}
             name={trainee.name}
@@ -168,7 +188,7 @@ export default async function TraineeProfilePage() {
             specialties={trainee.specialties ?? []}
             avatarUrl={avatarUrl}
             username={trainee.username}
-            allowedSpecialties={ALLOWED_SPECIALTIES}
+            allowedSpecialties={allowedSpecialties}
             phone={trainee.phone ?? null}
             timezone={trainee.timezone ?? null}
             goals={trainee.goals ?? null}

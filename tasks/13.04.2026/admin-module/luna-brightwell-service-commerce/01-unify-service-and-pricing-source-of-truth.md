@@ -1,6 +1,6 @@
 # Task 01 - Unify Service and Pricing Source of Truth
 
-- Status: Open
+- Status: Done
 - Priority: P0
 - Owner: Architecture / Backend
 
@@ -40,6 +40,17 @@ That means the platform is close to a normalized pricing model, but not yet full
 The system does not yet clearly enforce this invariant:
 
 > if a service is tied to a pricing item, both public display price and charged price must resolve from the same canonical pricing plan, not from stale copied numeric fields.
+
+## Completion Notes
+
+- Added a shared runtime pricing resolver in [src/lib/runtime-service-pricing.ts](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/lib/runtime-service-pricing.ts:1) that derives service pricing from the first active canonical plan linked by `pricing_item_key`.
+- Wired the public diviner service surfaces through that resolver in:
+  - [src/app/[username]/page.tsx](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/app/[username]/page.tsx:1)
+  - [src/app/[username]/services/page.tsx](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/app/[username]/services/page.tsx:1)
+  - [src/app/[username]/services/[slug]/page.tsx](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/app/[username]/services/[slug]/page.tsx:1)
+  - [src/app/[username]/book/page.tsx](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/app/[username]/book/page.tsx:1)
+  - [src/app/[username]/book/[serviceSlug]/page.tsx](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/app/[username]/book/[serviceSlug]/page.tsx:1)
+- Updated [src/app/api/stripe/booking-payment/route.ts](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/app/api/stripe/booking-payment/route.ts:1) so booking charges resolve through the same runtime pricing authority before payment intent creation.
 
 ## Recommended Model
 
@@ -86,4 +97,3 @@ For the first stabilization phase, one active runtime plan per service is the sa
 - [ ] Inspect a service with `pricing_item_key` and confirm the public display price matches the charged price source.
 - [ ] Inspect a legacy service without `pricing_item_key` and confirm fallback rules are explicit.
 - [ ] Confirm admin editing does not create ambiguous multi-price behavior for one public service.
-

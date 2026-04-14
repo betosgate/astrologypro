@@ -109,3 +109,48 @@ If product later wants person-specific privacy for transits, this can be narrowe
 - primary versus secondary access rules
 - same-household authorization requirements
 - future extension notes for privacy or consent controls
+
+---
+
+## Implementation — 2026-04-13
+
+### Migration
+`supabase/migrations/20260413000188_household_chart_visibility.sql`
+
+### Helper function
+**`get_household_member_id() → UUID`** (SQL, STABLE, SECURITY DEFINER)
+- Returns the `community_members.id` for the current auth user via two paths:
+  1. Primary path: `community_members.user_id = auth.uid()`
+  2. Household path: `community_family_members.user_id = auth.uid() AND invite_status = 'accepted'`
+- Used in all household-aware RLS policies to keep them DRY
+
+### RLS policy changes
+
+#### `community_family_members`
+- Dropped: `member_own_family` (FOR ALL) — replaced with four separate policies
+- Added: `household_read_family_members` (SELECT) — uses `get_household_member_id()`
+- Added: `primary_insert_family_members` (INSERT) — primary owner only
+- Added: `primary_update_family_members` (UPDATE) — primary owner only
+- Added: `primary_delete_family_members` (DELETE) — primary owner only
+
+#### `relationship_charts`
+- Dropped: `member_own_relationship_charts` (FOR ALL)
+- Added: `household_read_relationship_charts` (SELECT) — uses `get_household_member_id()`
+- Added: `primary_insert_relationship_charts`, `primary_update_relationship_charts`, `primary_delete_relationship_charts`
+
+#### `monthly_transits`
+- Dropped: `member_own_transits` (SELECT)
+- Added: `household_read_monthly_transits` (SELECT) — uses `get_household_member_id()` via family member lookup
+
+### Access matrix
+| User type | Read natal charts | Read relationship charts | Read monthly transits | Write any chart |
+|-----------|------------------|--------------------------|----------------------|-----------------|
+| Primary owner | ✅ all household | ✅ all household | ✅ all household | ✅ |
+| Accepted household user | ✅ all household | ✅ all household | ✅ all household | ❌ |
+| Pending invite (not accepted) | ❌ | ❌ | ❌ | ❌ |
+| Other households | ❌ | ❌ | ❌ | ❌ |
+
+### Future extension points
+- Per-profile privacy flags: add `is_chart_private BOOLEAN` to `community_family_members` and AND it into the household read policies
+- Adult vs child visibility: add `visible_to_household BOOLEAN` per profile
+- Consent gating: add a `household_consent_given_at` column and require it in the policy

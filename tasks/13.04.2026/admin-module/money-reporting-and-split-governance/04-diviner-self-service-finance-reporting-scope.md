@@ -1,5 +1,23 @@
 # Task 04: Diviner Self-Service Finance Reporting Scope
 
+## Status
+
+Done.
+
+Implemented with:
+- `src/app/api/dashboard/finance/route.ts`
+- `src/app/dashboard/finance/page.tsx`
+- `src/components/dashboard/sidebar.tsx`
+- `src/components/dashboard/mobile-nav.tsx`
+
+What was delivered:
+- a diviner-only finance API that resolves the authenticated user to their own `diviners` row and never accepts client-supplied diviner ids
+- finance summary cards for gross revenue, platform fees, affiliate deductions, diviner gross, diviner net, and refunds
+- monthly breakdown and recent ledger activity using `revenue_ledger_entries`
+- refund visibility scoped to the current diviner
+- payout readiness visibility for Stripe account, charges, and payouts state
+- dashboard navigation entry so the report is a first-class part of the diviner back office
+
 ## Goal
 
 Give diviners a proper finance view of their own data only, with no cross-diviner leakage.

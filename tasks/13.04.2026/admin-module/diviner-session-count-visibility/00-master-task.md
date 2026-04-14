@@ -122,3 +122,11 @@ This feature is complete only when:
 - the admin can manage or override visibility on behalf of the diviner
 - visibility precedence is deterministic and documented
 - counts are derived from the same booking truth used elsewhere
+
+## Status
+
+- `01-db-settings-and-visibility-precedence.md` — Done
+- `02-public-profile-stats-aggregation-and-rendering.md` — Done
+- `03-diviner-dashboard-control-surface.md` — Done
+- `04-admin-override-and-publishing-integration.md` — Done
+- `05-analytics-copy-governance-and-edge-cases.md` — Done

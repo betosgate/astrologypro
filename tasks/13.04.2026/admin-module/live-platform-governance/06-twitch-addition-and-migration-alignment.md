@@ -40,3 +40,9 @@ Ensure the migration path does not break existing rows for current platforms.
 
 - `twitch` is supported everywhere the product models live platforms
 - the app no longer has platform mismatch between DB, API, and UI
+
+## Status
+
+Done.
+
+Implemented with `supabase/migrations/20260413000190_live_platform_governance.sql`, shared validation updates, governed dashboard support, and Twitch embed handling in the public live section.

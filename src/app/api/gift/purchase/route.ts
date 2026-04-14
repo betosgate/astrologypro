@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import { PRICING } from "@/lib/constants";
+import { calculateMoneySplit } from "@/lib/money-split";
 
 export const dynamic = "force-dynamic";
 
@@ -94,9 +95,11 @@ export async function POST(request: NextRequest) {
 
     // Build Checkout session params — Connect transfer when available
     const amountCents = Math.round(amount * 100);
-    const platformFeeCents = Math.round(
-      amountCents * (PRICING.platformFeePercent / 100)
-    );
+    const split = calculateMoneySplit({
+      grossAmountCents: amountCents,
+      platformFeePercent: PRICING.platformFeePercent,
+      platformFeeRule: "global_platform_fee_percent",
+    });
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -136,7 +139,7 @@ export async function POST(request: NextRequest) {
       ...(diviner.stripe_account_id
         ? {
             payment_intent_data: {
-              application_fee_amount: platformFeeCents,
+              application_fee_amount: split.platformFeeCents,
               transfer_data: { destination: diviner.stripe_account_id },
             },
           }

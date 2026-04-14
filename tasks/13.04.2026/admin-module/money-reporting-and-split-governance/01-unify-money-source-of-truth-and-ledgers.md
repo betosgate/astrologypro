@@ -73,3 +73,17 @@ The finance design must support those independent states explicitly.
 - one finance ledger becomes the reporting authority
 - affiliate and refund subsystems reconcile to it
 - duplicate commission architectures are marked for consolidation
+
+## Status
+
+Done.
+
+## Completion Notes
+
+- `revenue_ledger_entries` is now the operational finance authority for reporting and reconciliation.
+- refund events now link back to the ledger via `refund_events.revenue_ledger_entry_id`.
+- ledger rows now carry payout review state and refund rollups:
+  - `settlement_status`
+  - `settlement_note`
+  - `refunded_*_amount_cents`
+- admin and diviner finance reports now read refund impact from ledger authority plus `refund_events`, not separate ad hoc booking math.

@@ -58,3 +58,7 @@ If the same base template renders differently for different roles or variable co
 - the backend can determine required contracts from a user’s role set
 - multi-role users can be required to sign more than one contract after signup
 - duplicate and equivalent contract cases are handled intentionally
+
+## Status
+
+Done.

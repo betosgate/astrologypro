@@ -261,55 +261,66 @@
   background: #0a0c10;
 }
 
-/* ─── Planet-specific interpretation gradients ────────────────────── */
+/* ─── Planet-specific interpretation gradients (Dynamic Text Color) ───── */
 .planet-interp-sun {
   background: linear-gradient(166deg, rgba(240, 160, 35, 1) 0%, rgba(248, 214, 71, 1) 100%);
-  color: #000;
+  color: #000 !important;
 }
 
 .planet-interp-moon {
   background: linear-gradient(166deg, #8c8c8c 0%, #C0C0C0 100%);
-  color: #000;
+  color: #000 !important;
 }
 
 .planet-interp-mercury {
   background: linear-gradient(166deg, #FFFF00 0%, #FFD700 100%);
-  color: #000;
+  color: #000 !important;
 }
 
 .planet-interp-venus {
   background: linear-gradient(166deg, #00FF00 0%, #32CD32 100%);
-  color: #000;
+  color: #000 !important;
 }
 
 .planet-interp-mars {
   background: linear-gradient(166deg, #FF0000 0%, #B22222 100%);
-  color: #fff;
+  color: #ffffff !important;
 }
 
 .planet-interp-jupiter {
   background: linear-gradient(166deg, #0000FF 0%, #1E90FF 100%);
-  color: #fff;
+  color: #ffffff !important;
 }
 
 .planet-interp-saturn {
   background: linear-gradient(166deg, #000000 0%, #4B4B4B 100%);
-  color: #fff;
+  color: #ffffff !important;
 }
 
 .planet-interp-uranus {
   background: linear-gradient(166deg, #00FFFF 0%, #008B8B 100%);
-  color: #000;
+  color: #000 !important;
 }
 
 .planet-interp-neptune {
   background: linear-gradient(166deg, #00008B 0%, #4169E1 100%);
-  color: #fff;
+  color: #ffffff !important;
 }
 
 .planet-interp-pluto {
   background: linear-gradient(166deg, #8B0000 0%, #CD5C5C 100%);
-  color: #fff;
+  color: #ffffff !important;
+}
+
+/* Specific Section Gradients for Romantic Forecast V2 */
+.section-timing-transits {
+  background: linear-gradient(166deg, #00008B 0%, #4169E1 100%);
+  color: #ffffff !important;
+}
+
+.section-karmic-indicators {
+  background: linear-gradient(166deg, #8B0000 0%, #CD5C5C 100%);
+  color: #ffffff !important;
 }
 
 /* Default golden-orange gradient for interpretations (non-planet sections) */
@@ -318,11 +329,17 @@
   color: #000;
 }
 
-/* Horoscope section headers — Rich Off-Black */
+/* Horoscope section headers — White bg, Black text */
 .horoscope-section-header {
-  background: #232528;
-  color: #f1f1f1;
-  border: 1px solid rgba(182, 199, 227, 0.17);
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.horoscope-section-header-dark {
+  background: #232528 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Horoscope table header */
@@ -342,14 +359,13 @@
   border-bottom: none;
 }
 
-/* Interpretation block header — white bg, dark text */
+/* Interpretation block header — Default (White bg, Black text) */
 .horoscope-interp-header {
   background: #ffffff;
-  color: #232c3c;
+  color: #000000;
   font-size: 22px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 /* Show More button — Angular spec */

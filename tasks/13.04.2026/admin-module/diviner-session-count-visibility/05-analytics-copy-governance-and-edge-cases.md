@@ -74,3 +74,9 @@ Architect the rendering component so additional trust metrics can be added witho
 - the feature has clear language and metric definitions
 - the numbers cannot be manually manipulated
 - edge cases are resolved before implementation starts
+
+## Status
+
+Done.
+
+Implemented with server-derived completed-booking counts only, consistent `Sessions` labeling in the public block, rolling windows based on request-time server timestamps, and no editable numeric inputs anywhere in dashboard or admin.

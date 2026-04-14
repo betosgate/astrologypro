@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { evaluateServiceCommerceValidation } from "@/lib/service-commerce-validation";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,38 @@ export async function GET(
     .single();
 
   if (error || !data) return NextResponse.json({ error: "Service not found." }, { status: 404 });
-  return NextResponse.json({ service: data });
+
+  const [{ data: diviner }, { data: pricingItem }] = await Promise.all([
+    admin
+      .from("diviners")
+      .select("id, stripe_account_id, charges_enabled, payouts_enabled")
+      .eq("id", data.diviner_id)
+      .maybeSingle(),
+    data.pricing_item_key
+      ? admin
+          .from("global_pricing")
+          .select("id, is_active")
+          .eq("item_key", data.pricing_item_key)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const { count: activePlanCount } = pricingItem?.id
+    ? await admin
+        .from("pricing_plans")
+        .select("*", { count: "exact", head: true })
+        .eq("item_id", pricingItem.id)
+        .eq("is_active", true)
+    : { count: 0 };
+
+  return NextResponse.json({
+    service: data,
+    validation: evaluateServiceCommerceValidation(data, diviner, {
+      pricingItemExists: Boolean(pricingItem),
+      pricingItemActive: pricingItem?.is_active === true,
+      hasActivePlan: (activePlanCount ?? 0) > 0,
+    }),
+  });
 }
 
 /**
@@ -62,6 +94,53 @@ export async function PUT(
   if (body.platform_fee_percent === null) update.platform_fee_percent = null;
 
   const admin = createAdminClient();
+  const { data: existingService } = await admin
+    .from("services")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!existingService) {
+    return NextResponse.json({ error: "Service not found." }, { status: 404 });
+  }
+
+  const candidate = { ...existingService, ...update };
+  const [{ data: diviner }, { data: pricingItem }] = await Promise.all([
+    admin
+      .from("diviners")
+      .select("id, stripe_account_id, charges_enabled, payouts_enabled")
+      .eq("id", candidate.diviner_id)
+      .maybeSingle(),
+    candidate.pricing_item_key
+      ? admin
+          .from("global_pricing")
+          .select("id, is_active")
+          .eq("item_key", candidate.pricing_item_key)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const { count: activePlanCount } = pricingItem?.id
+    ? await admin
+        .from("pricing_plans")
+        .select("*", { count: "exact", head: true })
+        .eq("item_id", pricingItem.id)
+        .eq("is_active", true)
+    : { count: 0 };
+
+  const validation = evaluateServiceCommerceValidation(candidate, diviner, {
+    pricingItemExists: Boolean(pricingItem),
+    pricingItemActive: pricingItem?.is_active === true,
+    hasActivePlan: (activePlanCount ?? 0) > 0,
+  });
+
+  if (candidate.is_active && validation.errors.length > 0) {
+    return NextResponse.json(
+      { error: validation.errors[0], validation },
+      { status: 422 }
+    );
+  }
+
   const { data, error } = await admin
     .from("services")
     .update(update)

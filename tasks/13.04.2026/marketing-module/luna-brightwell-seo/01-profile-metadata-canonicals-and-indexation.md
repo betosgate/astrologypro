@@ -1,5 +1,21 @@
 # Task 01: Profile Metadata, Canonicals, and Indexation
 
+- **Status: DONE — 2026-04-13**
+- Implemented in: `src/lib/seo/diviner-profile.ts`, `src/app/[username]/page.tsx`
+
+### What was implemented
+- Created `src/lib/seo/diviner-profile.ts` — centralised SEO composition helper with:
+  - `buildProfileTitle()` — seo_title_override → display_name + specialty → fallback
+  - `buildProfileDescription()` — seo_description_override → tagline → bio excerpt + geo suffix
+  - `buildProfileCanonical()` — always `APP_URL/{username}`, strips all query params
+  - `buildProfileRobots()` — noindex when inactive, publish-blocked, or SEO score < 50
+  - `buildProfileOgImage()` — seo_og_image_url → cover → avatar, with correct dimensions
+  - `calcSeoCompletenessScore()` — 6-point check; profiles below 50 get noindex
+- Updated `generateMetadata` in `src/app/[username]/page.tsx` to use all helpers
+- Added `alternates.canonical` and `robots` directive to profile metadata
+
+---
+
 ## Goal
 
 Make the profile page at `/{username}` a high-quality canonical ranking surface with explicit metadata rules instead of relying on partial defaults.
