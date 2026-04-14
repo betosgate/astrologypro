@@ -14,7 +14,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Eye, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw, CalendarClock, XCircle } from "lucide-react";
+import { Eye, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw, CalendarClock, XCircle, Send } from "lucide-react";
 import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {
@@ -74,6 +74,10 @@ export function BookingDetailSheet({ booking }: BookingDetailProps) {
   const [cancelReason, setCancelReason] = useState("");
   const [canceling, setCanceling] = useState(false);
   const [canceled, setCanceled] = useState(booking.status === "canceled");
+
+  // Note to client state
+  const [clientNote, setClientNote] = useState("");
+  const [sendingNote, setSendingNote] = useState(false);
 
   async function handleSaveNotes() {
     setSavingNotes(true);
@@ -211,6 +215,33 @@ export function BookingDetailSheet({ booking }: BookingDetailProps) {
       toast.error("Failed to cancel booking");
     } finally {
       setCanceling(false);
+    }
+  }
+
+  async function handleSendNote() {
+    if (!clientNote.trim()) {
+      toast.error("Please write a note before sending");
+      return;
+    }
+    setSendingNote(true);
+    try {
+      const res = await fetch(`/api/bookings/${booking.id}/send-note`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: clientNote.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Failed to send note");
+        return;
+      }
+      const sent = (data.recipients as Array<{ email: string; success: boolean }>).filter((r) => r.success);
+      toast.success(`Note sent to ${sent.length} recipient${sent.length !== 1 ? "s" : ""}`);
+      setClientNote("");
+    } catch {
+      toast.error("Failed to send note");
+    } finally {
+      setSendingNote(false);
     }
   }
 
@@ -385,6 +416,40 @@ export function BookingDetailSheet({ booking }: BookingDetailProps) {
                     </>
                   ) : (
                     "Save Notes"
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {/* Note to Client */}
+            {booking.status !== "canceled" && (
+              <div className="space-y-2 rounded-lg border bg-muted/20 p-4">
+                <Label htmlFor="client-note" className="flex items-center gap-1.5">
+                  <Send className="size-3.5" />
+                  Note to Client
+                  {booking.client_email && (
+                    <span className="ml-auto text-xs font-normal text-muted-foreground truncate max-w-[160px]">
+                      → {booking.client_email}
+                    </span>
+                  )}
+                </Label>
+                <Textarea
+                  id="client-note"
+                  rows={4}
+                  placeholder="Write a note to send to your client — session highlights, follow-up suggestions, resources, or any message…"
+                  value={clientNote}
+                  onChange={(e) => setClientNote(e.target.value)}
+                />
+                <Button
+                  size="sm"
+                  onClick={handleSendNote}
+                  disabled={sendingNote || !clientNote.trim()}
+                  className="gap-1.5"
+                >
+                  {sendingNote ? (
+                    <><Loader2 className="size-3.5 animate-spin" />Sending…</>
+                  ) : (
+                    <><Send className="size-3.5" />Send to Client</>
                   )}
                 </Button>
               </div>
