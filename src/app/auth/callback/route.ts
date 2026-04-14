@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getRoleDestination } from "@/types/user";
-import { getUserPortals } from "@/lib/user-roles";
 import { provisionNatalReadiness } from "@/lib/community/provision-natal-readiness";
-import { getInvitedRoleDestination } from "@/lib/invite-destinations";
 import { ensureInvitedRoleProvisioning } from "@/lib/invite-provisioning";
-import { getPendingContractDestination } from "@/lib/contract-orchestration";
+import { resolveLoginDestination } from "@/lib/auth/resolve-login-destination";
 
 function getClientIp(req: NextRequest): string {
   return (
@@ -110,40 +107,26 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(new URL(next, origin));
       }
 
-      // ── Admin invite: route to profile-completion page ────────────────────
+      // ── Admin invite: provision role then resolve destination ─────────────
+      const admin = createAdminClient();
       if (isInvite && metadata.invited_by_admin) {
         const role = metadata.role as string | undefined;
         if (user) {
-          const admin = createAdminClient();
           await ensureInvitedRoleProvisioning(admin, user, role);
         }
-        const dest = role ? getInvitedRoleDestination(role) : "/switch";
-        return NextResponse.redirect(new URL(dest, origin));
       }
 
+      // ── Resolve destination via hierarchy + last portal memory ────────────
       if (user?.id) {
-        const pendingContractDestination = await getPendingContractDestination(user.id).catch(
-          () => null,
-        );
-        if (pendingContractDestination) {
-          return NextResponse.redirect(new URL(pendingContractDestination, origin));
-        }
+        const isInvited = isInvite && !!metadata.invited_by_admin;
+        const destination = await resolveLoginDestination({
+          userId: user.id,
+          isAdmin: false,
+          isInvited,
+          adminClient: admin,
+        });
+        return NextResponse.redirect(new URL(destination, origin));
       }
-
-      // ── Multi-role: if user has 2+ portals, send to switch page ──────────
-      if (user?.id) {
-        const portals = await getUserPortals(supabase, user.id);
-        if (portals.length > 1) {
-          return NextResponse.redirect(new URL("/switch", origin));
-        }
-        if (portals.length === 1) {
-          return NextResponse.redirect(new URL(portals[0].href, origin));
-        }
-      }
-
-      // ── Fallback: detect destination from user role in metadata ───────────
-      const role = metadata.role as string | undefined;
-      return NextResponse.redirect(new URL(getRoleDestination(role), origin));
     }
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { MarketingHeader } from "@/components/marketing/header";
@@ -42,6 +43,18 @@ async function resolveDestination(): Promise<string> {
 
 export default function LoginPage() {
   const supabase = createClient();
+  const router = useRouter();
+
+  // If already logged in, skip the login page entirely
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session) {
+        const dest = await resolveDestination();
+        router.replace(dest);
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
