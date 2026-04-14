@@ -521,6 +521,7 @@ export function BookingsClient({
                               service_name: service?.name ?? "Unknown",
                               client_name: client?.full_name ?? "Unknown",
                               client_email: client?.email ?? "",
+                              client_id: (booking.client_id as string) ?? null,
                               birth_date: client?.birth_date ?? null,
                               birth_time: client?.birth_time ?? null,
                               birth_city: client?.birth_city ?? null,
