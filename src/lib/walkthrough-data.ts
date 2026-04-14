@@ -56,6 +56,7 @@ export interface Screen {
   label: string;
   description?: string;
   group?: string;
+  subModule?: string;
   purpose?: string;
   bullets?: string[];
 }
@@ -154,6 +155,19 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         cards: [
           { title: "Mundane Hub", description: "Global astrological governance", href: "/admin/mundane", icon: Globe, status: "live" },
           { title: "Chart Studio", description: "Advanced natal and ingress charts", href: "/admin/chart-studio", icon: Star, status: "live" },
+          { 
+            title: "Horoscope Toolkit", 
+            description: "Step-by-step reading generation", 
+            href: "/admin/horoscope", 
+            icon: Sparkles, 
+            status: "live",
+            screenshots: [
+              "admin/horoscope_nativity_blank",
+              "admin/horoscope_nativity_filled",
+              "admin/horoscope_nativity_result_1",
+              "admin/horoscope_weekly_result"
+            ]
+          },
         ],
       },
       {
@@ -196,7 +210,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       // People
       { 
         name: "users", 
-        label: "User Directory", 
+        label: "Users", 
         description: "Management of all platform accounts and profiles.", 
         group: "People",
         purpose: "The master control center for user accounts. Allows administrators to search, filter, and audit all members, diviners, and staff members.",
@@ -209,7 +223,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
       { 
         name: "diviners_v2", 
-        label: "Diviner Directory", 
+        label: "Diviners", 
         description: "Specialized view for practitioner management.", 
         group: "People",
         purpose: "A dedicated interface for managing the platform's professional diviners, their credentials, and performance.",
@@ -220,11 +234,11 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Performance metrics and review moderation"
         ]
       },
-      { name: "affiliates_v2", label: "Affiliate Partners", description: "Tracking of platform growth partners.", group: "People" },
+      { name: "affiliates_v2", label: "Affiliates", description: "Tracking of platform growth partners.", group: "People" },
       // { name: "campaigns", label: "Marketing Campaigns", description: "Governance of promotional initiatives.", group: "People" },
       { 
         name: "roles", 
-        label: "RBAC Configuration", 
+        label: "Roles", 
         description: "Modular role and permission management.", 
         group: "People",
         purpose: "Governs the security and accessibility of the platform via Role-Based Access Control (RBAC).",
@@ -242,7 +256,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       // Content
       { 
         name: "blog_posts", 
-        label: "Blog Management", 
+        label: "Blog Posts", 
         description: "Editorial workflow for platform articles.", 
         group: "Content",
         purpose: "The central nervous system for platform content. Allows admins to manage the editorial calendar, review drafts, and publish spiritual insights.",
@@ -253,14 +267,14 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Scheduled publishing and distribution logic"
         ]
       },
-      { name: "blog_analytics", label: "Blog Insights", description: "Performance tracking for editorial content.", group: "Content" },
+      { name: "blog_analytics", label: "Blog Analytics", description: "Performance tracking for editorial content.", group: "Content" },
       // { name: "blog_cta_blocks", label: "Conversion Blocks", description: "Manage CTAs injected into blog posts.", group: "Content" },
-      { name: "blog_categories_v2", label: "Editorial Taxonomies", description: "Management of blog categories and tags.", group: "Content" },
-      { name: "blog_authors_v2", label: "Author Profiles", description: "Management of guest and staff writers.", group: "Content" },
+      { name: "blog_categories_v2", label: "Blog Categories", description: "Management of blog categories and tags.", group: "Content" },
+      { name: "blog_authors_v2", label: "Blog Authors", description: "Management of guest and staff writers.", group: "Content" },
       // { name: "blog_series", label: "Content Series", description: "Grouping related articles into collections.", group: "Content" },
       { 
         name: "media_items_v2", 
-        label: "Global Asset Library", 
+        label: "Media Items", 
         description: "Centralized media and file management.", 
         group: "Content",
         purpose: "A high-performance digital asset manager for all platform imagery, video, and documents.",
@@ -276,7 +290,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       { name: "webinars_v2", label: "Webinar Hub", description: "Scheduling and management of live events.", group: "Content" },
       { 
         name: "spiritual_wisdom_v2", 
-        label: "Wisdom Library", 
+        label: "Spiritual Wisdom", 
         description: "Curation of esoteric spiritual knowledge.", 
         group: "Content",
         purpose: "The master repository for the platform's core spiritual doctrines and esoteric teachings.",
@@ -291,7 +305,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       // { name: "perennial_content", label: "Perennial Knowledge", description: "Specific content for the PM community.", group: "Content" },
 
       // Astrology
-      { name: "wheel_signs_v2", label: "Zodiac Wheel Signs", description: "Definition and config of zodiac attributes.", group: "Astrology" },
+      { name: "wheel_signs_v2", label: "Wheel Signs", description: "Definition and config of zodiac attributes.", group: "Astrology" },
       { 
         name: "mundane_dashboard", 
         label: "Mundane Hub", 
@@ -307,7 +321,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
       { 
         name: "ingress_charts_v2", 
-        label: "Ingress Engine", 
+        label: "Ingress Charts", 
         description: "Management of planetary entry charts.", 
         group: "Astrology",
         purpose: "A specialized tool for calculating the exact moment a planet enters a new sign (Ingress), used for mundane forecasting.",
@@ -318,12 +332,12 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Automated alert triggers for major entries"
         ]
       },
-      { name: "mundane_entities_v2", label: "Geo Entities", description: "Mapping of nations and locations for charts.", group: "Astrology" },
-      { name: "forecasts_v2", label: "Prophetic Forecasts", description: "Management of high-level temporal forecasts.", group: "Astrology" },
-      { name: "event_calendar_v2", label: "Celestial Calendar", description: "Scheduler for major cosmic alignments.", group: "Astrology" },
+      { name: "mundane_entities_v2", label: "Entities", description: "Mapping of nations and locations for charts.", group: "Astrology" },
+      { name: "forecasts_v2", label: "Forecasts", description: "Management of high-level temporal forecasts.", group: "Astrology" },
+      { name: "event_calendar_v2", label: "Event Calendar", description: "Scheduler for major cosmic alignments.", group: "Astrology" },
       { 
         name: "chart_studio", 
-        label: "Chart Design Studio", 
+        label: "Chart Studio", 
         description: "Advanced visualization for natal charts.", 
         group: "Astrology",
         purpose: "The creative engine for platform-wide chart aesthetics. Admins can configure how astrology charts are rendered for all users.",
@@ -336,7 +350,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
       { 
         name: "world_map", 
-        label: "Astro-Locality Map", 
+        label: "World Map", 
         description: "Global mapping of planetary strength.", 
         group: "Astrology",
         purpose: "Visualizes the geographic lines of planetary influence (Astro-Cartography) across the physical globe.",
@@ -348,12 +362,561 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       // { name: "research", label: "Astrology Research", description: "Data mining tool for historic chart patterns.", group: "Astrology" },
-      { name: "mundane_search_v2", label: "Ephemeris Search", description: "Searchable database of planetary positions.", group: "Astrology" },
+      { name: "mundane_search_v2", label: "Mundane Search", description: "Searchable database of planetary positions.", group: "Astrology" },
       // { name: "mundane_access", label: "Access Control", description: "Permissioning for premium astro data.", group: "Astrology" },
       // { name: "decan_journals", label: "Decan Wisdom", description: "Granular journals for the 36 decans.", group: "Astrology" },
       // { name: "decan_media", label: "Decan Media", description: "Visual assets for decan-based studies.", group: "Astrology" },
       // { name: "quarters", label: "Solar Quarters", description: "Governance of seasonal solar transitions.", group: "Astrology" },
-      { name: "horoscope_toolkit", label: "Horoscope Builder", description: "Tools for generating dynamic horoscopes.", group: "Astrology" },
+
+      { 
+        name: "horoscope_nativity_filled", 
+        label: "Nativity Birth Chart: Setup", 
+        description: "Enter your birth details to generate your personal astrological chart.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "A Nativity Birth Chart is a snapshot of the sky exactly when and where you were born. It reveals your personality, life path, and natural strengths. Fill in the three required fields — date, time, and place of birth — and the Generate button will activate. The more accurate your birth details, the more personal and insightful your reading will be.",
+        bullets: [
+          "📅 Date of Birth — This tells the system which planets were in which signs on the day you arrived in the world.",
+          "🕐 Time of Birth — Even a small difference in birth time changes your rising sign and house placements. Try to be as exact as possible.",
+          "📍 Place of Birth — Your birthplace sets the geographic coordinates that determine your house system and Ascendant sign.",
+          "💬 Area of Inquiry (optional) — You can type a specific life topic like Career, Love, or Spiritual Growth to focus the AI reading on what matters most to you.",
+          "✅ The Generate Reading button becomes active only after Date, Time, and Place of Birth are all filled in."
+        ]
+      },
+     
+      { 
+        name: "horoscope_nativity_result_1", 
+        label: "Nativity: Your Birth Chart Wheel", 
+        description: "See your personal astrological chart come to life.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "This is your personal birth chart — a circular map of the sky at the exact moment you were born. The wheel is divided into 12 sections (houses) and shows where every planet was positioned. Two chart versions are displayed side by side so you can cross-verify the results from two leading astrology engines for maximum accuracy.",
+        bullets: [
+          "🔵 The inner ring shows your natal planets — where each planet was the moment you were born.",
+          "🌐 Two chart wheels are shown side by side from different astrological sources for comparison.",
+          "🔗 The lines inside the wheel show how planets are connected or in tension — these are called aspects.",
+          "🏠 The 12 segments around the wheel represent the 12 houses — each governs a different area of your life."
+        ]
+      },
+      { 
+        name: "horoscope_nativity_processing_v2", 
+        label: "Nativity: Generating Your Reading", 
+        description: "Your chart is being calculated — this takes just a moment.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "After you click Generate Reading, the system gets to work! It calculates the exact position of every planet at your birth, builds your chart wheel, and then passes all the data to our AI engine which writes your personal interpretation. This usually takes a few seconds — sit tight while the universe does its work.",
+        bullets: [
+          "⚙️ The platform is calculating your planetary positions based on your exact birth data.",
+          "🤖 The AI engine is being loaded to write your personal interpretation in natural language.",
+          "🔄 Two separate astrology engines run simultaneously for double-verified accuracy.",
+          "⏳ This process takes a few seconds — your full reading will appear automatically when ready."
+        ]
+      },
+      { 
+        name: "horoscope_nativity_result_planets_v1", 
+        label: "Nativity: Planet Positions", 
+        description: "See exactly where every planet was the moment you were born.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "This table shows the exact location of every planet in your natal chart — like a precise record of the sky at your birth. For each planet, you can see which zodiac sign it was in, which life area (house) it occupied, and whether it was moving forward or in retrograde. This data is the foundation that all your chart interpretations are built upon.",
+        bullets: [
+          "🪐 Every planet is listed along with the zodiac sign it was in at your exact birth moment.",
+          "🏠 The House column shows which of the 12 life areas each planet was influencing.",
+          "↩️ Retrograde (Rx) means a planet appeared to move backward — planets in retrograde often signal internalized or reflective energy.",
+          "📐 The degree values show the precise position — even a fraction of a degree can change the reading."
+        ]
+      },
+      { 
+        name: "horoscope_nativity_result_interpret_v1", 
+        label: "Nativity: Your Sun, Moon & Mercury Readings", 
+        description: "Plain-language meanings of your most important planets.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "This section shows AI-written personal readings for your three most influential planets. Your Sun reveals who you are at your core, your Moon reflects your inner emotional world, and Mercury shows how your mind works and how you communicate. Each reading is written in clear, personal language that speaks directly to you.",
+        bullets: [
+          "☀️ Sun Reading — Your core identity, purpose, and the role you are here to play in life.",
+          "🌙 Moon Reading — Your emotional nature, what makes you feel safe, and how you process feelings.",
+          "☿ Mercury Reading — How your mind works, your communication style, and how you learn and think.",
+          "📖 Click 'Show More' on any planet to get a deeper, more personal reading."
+        ]
+      },
+      { 
+        name: "horoscope_nativity_interpret_deep_v1", 
+        label: "Nativity: Deep Reading (Sun)", 
+        description: "A detailed personal reading for your Sun placement.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "When you click 'Show More' on the Sun block, this detailed panel opens up. It gives you a story-like interpretation of exactly how your Sun sign and house placement shows up in your daily life, career, and sense of self. Everything is written in plain language — no astrology experience needed to understand it.",
+        bullets: [
+          "🏠 Which house your Sun is in, and what that house means for your daily life.",
+          "♎ Which zodiac sign your Sun is in, and the personality traits that come with it.",
+          "⚡ Whether your Sun energy is moving fast or slow — and what that means for your pace in life.",
+          "💼 Specific advice for your career and work style based on your Sun placement."
+        ]
+      },
+      { 
+        name: "horoscope_nativity_interpret_visual_v1", 
+        label: "Nativity: Picture Guide (Sun in Libra)", 
+        description: "A visual map of your key personality traits.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "This visual guide shows how your Sun sign and zodiac combination come together in one easy-to-read diagram. On the left side are the qualities of your planet, on the right are the qualities of your sign, and in the middle are the traits that emerge when they blend together. It's a quick, beautiful way to understand your core astrological nature.",
+        bullets: [
+          "☀️ Left circle: Traits that come from the Sun itself — like confidence, purpose, and leadership.",
+          "♎ Right circle: Traits from your zodiac sign — like diplomacy, fairness, and charm (for Libra).",
+          "✨ Middle overlap: The combined personality that emerges — like Justice, Equality, and Partnership.",
+          "🎨 This diagram is great for sharing with clients or saving as a personal reference."
+        ]
+      },
+      { 
+        name: "horoscope_nativity_result_interpret_v2", 
+        label: "Nativity: Your Venus, Mars & Personal Drive", 
+        description: "How you love, what motivates you, and your personal style.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "This section reveals your personal planets — the ones that shape how you relate to others, what drives your ambition, and how you express yourself in relationships and work. Venus shows how you attract love and beauty, Mars reveals your inner fire and drive, and a small triangle icon next to a planet means there is an extra layer of esoteric wisdom available (the Decan reading).",
+        bullets: [
+          "💛 Venus Reading — How you attract love, what you find beautiful, and your relationship style.",
+          "🔥 Mars Reading — Your energy levels, what motivates you, and how you go after what you want.",
+          "🔺 Triangle icon — Click this to reveal an extra layer of ancient wisdom from the Decan system.",
+          "🎨 Each planet block has its own color to make it easy to find and read quickly."
+        ]
+      },
+      { 
+        name: "horoscope_nativity_decan_detail_v1", 
+        label: "Nativity: Decan Wisdom (Mercury)", 
+        description: "Esoteric decan layers and archetypes.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "The 'Decan Wisdom' modal is triggered by clicking the specialized triangle icons. It adds a deep esoteric layer to the reading, incorporating historical, mythological, and tarot-based interpretations for each planet's position.",
+        bullets: [
+          "Tarot Minor Arcana mapping (e.g., Ten of Disks for Mercury in Virgo)",
+          "Mundane Force analysis (Asset and Wealth metrics)",
+          "Greek Daemon archetypes (e.g., Ploutos, the God of Wealth)",
+          "Decan-level governing planetary shifts (Venus influence on the 3rd Decan)"
+        ]
+      },
+      { 
+        name: "horoscope_nativity_interpret_outer_v1", 
+        label: "Nativity: AI Narratives (Outer & Social)", 
+        description: "Synthesis of destiny and professional drive.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "The final layer of the narrative engine analyzes the outer and social planets (Jupiter, Saturn, Uranus), focusing on how these greater forces shape the user's career, responsibility, and innovation.",
+        bullets: [
+          "Jupiter: Expansion of creative horizons and professional potential",
+          "Saturn: Assessment of professional responsibility and discipline",
+          "Uranus: Identification of innovative and unconventional career paths",
+          "Distinct color-coded blocks for rapid thematic recognition"
+        ]
+      },
+      { 
+        name: "horoscope_nativity_interpret_outer_v3", 
+        label: "Nativity: AI Narratives (Transpersonal & Karmic)", 
+        description: "Synthesis of subconscious and karmic evolution.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "This layer focuses on the transpersonal planets (Neptune, Pluto) and the North Node, providing deep insights into spiritual ideals, transformative life-cycles, and the primary karmic growth path.",
+        bullets: [
+          "Neptune: Identification of spiritual fulfillment and idealistic career drives",
+          "Pluto: Deep analysis of transformative relationship and partnership cycles",
+          "North Node: Roadmap for the karmic journey of growth and long-term mastery",
+          "Rich indigo, red, and gold themes for deep esoteric differentiation"
+        ]
+      },
+      { 
+        name: "horoscope_nativity_result_houses_v1", 
+        label: "Nativity: House Information", 
+        description: "Granular house system breakdown.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "The 'House Information' table provides a technical deep-dive into the mundane architecture of the chart, mapping every house cusp, degree, and planetary occupant for professional-level auditing.",
+        bullets: [
+          "Precise signs-to-house custody mapping (H1-H12)",
+          "Exact degree metrics for house cusps",
+          "Comprehensive planetary occupancy tracking",
+          "Essential technical reference for advanced house-lord synthesis"
+        ]
+      },
+      { 
+        name: "horoscope_nativity_house_interpret_v2", 
+        label: "Nativity: House Interpretations", 
+        description: "Synthesis of life areas and cusps.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "The House Interpretation module synthesizes the technical cusp data into actionable personality and life-path guidance, providing a narrative for each of the 12 mundane sectors.",
+        bullets: [
+          "Detailed cusp-sign analysis (e.g., Aries on House 1)",
+          "Personality and behavioral synthesis for specific life sectors",
+          "Pioneering and pioneering spirit highlights for House 1",
+          "Deep-dive toggles ('Show More') for comprehensive house readings"
+        ]
+      },
+      { 
+        name: "horoscope_nativity_house_visual_v3", 
+        label: "Nativity: House Visual Synthesis (Aries in H1)", 
+        description: "Esoteric picture representation of house cusps.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "The Visual Synthesis view for houses provides a 'Picture Representation' that maps the qualities of the Zodiac Sign and the House into a unified Venn-diagram, making the influence of a specific cusp instantly understandable.",
+        bullets: [
+          "Zodiacal Essence mapping (Aries: Boldness, Courage, Leadership)",
+          "Mundane House influence (1st House: Persona, Outlook, Beginnings)",
+          "Central Synthesis (Self-assertion, Motivation, Vitality, Identity)",
+          "Educational graphic for high-impact personality auditing"
+        ]
+      },
+      { 
+        name: "horoscope_nativity_interpret_dharma_karma_v1", 
+        label: "Nativity: Dharma & Karma", 
+        description: "Synthesis of soul purpose and karmic lessons.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "The final interpretative layer of the Nativity engine synthesizes complex aspect patterns and house placements into a profound analysis of the user's spiritual path (Dharma) and their core evolutionary lessons (Karma).",
+        bullets: [
+          "Dharma: Identification of creative fulfillment and soul purpose",
+          "Karma: Analysis of responsibility, discipline, and karmic challenges",
+          "Aspect Synthesis: How squares, trines, and oppositions shape the life-path",
+          "Actionable spiritual advice for introspection and healing"
+        ]
+      },
+      { 
+        name: "horoscope_nativity_result_aspects_v1", 
+        label: "Nativity: Aspect Dynamics", 
+        description: "Technical table of planetary interactions.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "The Aspects table provides a precise technical audit of the relationships between celestial bodies, using orb-intensity gauges to show which influences are most dominant in the user's life.",
+        bullets: [
+          "Orb-intensity visual gauges for impact assessment",
+          "Detailed classification of aspect types (Opposition, Trine, Square, etc.)",
+          "Minute-precise degree differential (Diff) tracking",
+          "Aspected vs. Aspecting degree metrics for professional verification"
+        ]
+      },
+      { 
+        name: "horoscope_nativity_aspect_interpret_v1", 
+        label: "Nativity: Aspect Interpretations", 
+        description: "Synthesis of planetary relationships.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "The Aspect Interpretation module translates technical degree-math into actionable psychological guidance, explaining how the dynamic tension and harmony between planets shape the user's personal and professional life.",
+        bullets: [
+          "Detailed tension analysis (e.g., Sun opposite Moon balance)",
+          "Cognitive and communication profiling (e.g., Sun conjunct Mercury)",
+          "Professional stability and discipline narratives (e.g., Sun trine Saturn)",
+          "Expansion toggles for deep-dive aspect narratives"
+        ]
+      },
+      { 
+        name: "horoscope_nativity_aspect_deep_v1", 
+        label: "Nativity: Deep Aspect Analysis (Sun/Moon)", 
+        description: "In-depth psychospiritual aspect reading.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "Expanding an aspect interpretation reveals a comprehensive modal with a profound narrative that integrates conscious goals with subconscious needs, providing a holistic roadmap for professional success.",
+        bullets: [
+          "Full-text synthesis of complex planetary tensions",
+          "Integration strategies for inner emotional well-being and outer career success",
+          "Holistic approach to balancing conscious ambitions and subconscious drives",
+          "Premium modal UI designed for deep client introspection sessions"
+        ]
+      },
+      { 
+        name: "horoscope_nativity_interpret_angles_v1", 
+        label: "Nativity: Angles & Points", 
+        description: "Synthesis of Ascendant, Midheaven, and Vertex.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "The final data view in the Nativity toolkit analyzes the chart's primary angles, defining the user's public persona, their highest professional legacy, and their fated points of interaction.",
+        bullets: [
+          "Ascendant: Analysis of outer personality and direct self-expression",
+          "Midheaven: Synthesis of professional ambition and long-term legacy",
+          "Vertex: Identification of karmic opportunities through partnership",
+          "Lilith & Other Points: Deep-dive into subconscious primal nature"
+        ]
+      },
+      { 
+        name: "horoscope_nativity_ascendant_pictorial_v1", 
+        label: "Nativity: Ascendant Deep Analysis", 
+        description: "Point-by-point pictorial breakdown.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "The 'Ascendant (Pictorial Analysis)' provides a structured deep-dive into the Luminary influences, offering a five-point synthesis of how the Sun and Moon shape the user's professional recognition and emotional security.",
+        bullets: [
+          "Five-point structured analysis for major celestial bodies",
+          "Sun-segment: Recognition and leadership in the 10th House",
+          "Moon-segment: Emotional stability and routine in the 6th House",
+          "Technical alignment of degree metrics with psychological profiles"
+        ]
+      },
+      { 
+        name: "horoscope_nativity_lilith_pictorial_v1", 
+        label: "Nativity: Lilith Deep Analysis", 
+        description: "Esoteric subconscious profiling.", 
+        group: "Horoscope Toolkit",
+        subModule: "Nativity Birth Chart",
+        purpose: "The 'Lilith (Pictorial Analysis)' provides a profound five-point synthesis of the user's secondary primal nature, focusing on how they challenge traditional norms and seek spiritual truth beyond conventional wisdom.",
+        bullets: [
+          "Five-point analysis of primal and rebellious nature",
+          "Spiritual truth-seeking and philosophical exploration in the 9th House",
+          "Direct motion analysis for outward-facing belief system challenges",
+          "Guidance for confronting and embracing darker, more innovative archetypes"
+        ]
+      },
+      { 
+        name: "horoscope_solar_setup", 
+        label: "Solar Return: Configuration", 
+        description: "Annual birthday chart setup.", 
+        group: "Horoscope Toolkit",
+        subModule: "Solar Return",
+        purpose: "Predictive tool used to forecast the themes of the upcoming year based on the Sun's return to its exact natal position.",
+        bullets: [
+          "Current location vs Birth location toggle",
+          "Year selection for historical or future returns",
+          "Precision-timed engine calculations",
+          "Interactive theme indicators for the solar year"
+        ]
+      },
+      { 
+        name: "horoscope_solar_synthesis", 
+        label: "Solar Return: Yearly Themes", 
+        description: "AI-powered annual outlook.", 
+        group: "Horoscope Toolkit",
+        subModule: "Solar Return",
+        purpose: "Visualizes the solar return chart overlaid with the natal chart to identify key growth areas for the year.",
+        bullets: [
+          "Synastry-style overlay with natal positions",
+          "Ascendant-of-the-year interpretation",
+          "House focus priority lists",
+          "AI-driven 'Monthly Milestone' forecasts"
+        ]
+      },
+      { 
+        name: "horoscope_solar_processing", 
+        label: "Solar Return: Processing", 
+        description: "Annual engine initialization.", 
+        group: "Horoscope Toolkit",
+        subModule: "Solar Return",
+        purpose: "Calculates the exact moment of the Sun's return to its natal degree and initializes the yearly theme engine.",
+        bullets: [
+          "Precision-timing of the Solar Return moment",
+          "Relocation calculation for current geographic position",
+          "Yearly theme and house ingression mapping",
+          "AI narrative engine setup for long-term forecasting"
+        ]
+      },
+      { 
+        name: "horoscope_solar_analytics", 
+        label: "Solar Return: Annual Analytics", 
+        description: "Technical breakdown of the solar year.", 
+        group: "Horoscope Toolkit",
+        subModule: "Solar Return",
+        purpose: "A deep technical view into the core metrics of the solar return year, including degree precision and house overlays.",
+        bullets: [
+          "Annual house placement vs Natal house mapping",
+          "Critical degree highlights for the year",
+          "Profected lord and yearly time-lord calculations",
+          "Intensity meters for specific solar theme areas"
+        ]
+      },
+      { 
+        name: "horoscope_weekly_setup", 
+        label: "Weekly Transits: Focus", 
+        description: "Short-term celestial tracking.", 
+        group: "Horoscope Toolkit",
+        subModule: "Weekly Transits",
+        purpose: "Dynamic transit engine that tracks current planetary movements against the user's natal signature.",
+        bullets: [
+          "7-day outlook generation",
+          "Severity/Intensity ratings for transits",
+          "In-grade vs Out-of-grade aspect filtering",
+          "Customizable notification triggers for major shifts"
+        ]
+      },
+      { 
+        name: "horoscope_weekly_processing", 
+        label: "Weekly Transits: Processing", 
+        description: "Temporal engine calculation.", 
+        group: "Horoscope Toolkit",
+        subModule: "Weekly Transits",
+        purpose: "Calculates the interaction between fast-moving personal planets and the user's natal architecture for the upcoming week.",
+        bullets: [
+          "Minute-precise transit-to-natal aspect mapping",
+          "Ingress and retrogradation cycle detection",
+          "Intensity scoring for every major celestial shift",
+          "Real-time status of the temporal synthesis engine"
+        ]
+      },
+      { 
+        name: "horoscope_weekly_result_1", 
+        label: "Weekly Transits: Synthesis", 
+        description: "Visualizing the temporal roadmap.", 
+        group: "Horoscope Toolkit",
+        subModule: "Weekly Transits",
+        purpose: "Visualizes the current week's planetary movements as a dynamic overlay on the birth chart.",
+        bullets: [
+          "Dual-wheel overlay (Natal inner / Transit outer)",
+          "Highlighting of major configuration triggers (T-Squares, Trines)",
+          "Interactive aspect lines for short-term influence",
+          "Side-by-side provider verification for high accuracy"
+        ]
+      },
+      { 
+        name: "horoscope_weekly_result_table", 
+        label: "Weekly Transits: Analytics", 
+        description: "Granular aspect timing and intensity.", 
+        group: "Horoscope Toolkit",
+        subModule: "Weekly Transits",
+        purpose: "A technical breakdown of every transit occurring this week, including exact peak times and severity ratings.",
+        bullets: [
+          "Sorted list of transits by chronological impact",
+          "Intensity ratings (1-10) for easier prioritization",
+          "Orb-based filtering for exact peak timing",
+          "Direct links to AI-narrative interpretations for each transit"
+        ]
+      },
+      { 
+        name: "horoscope_monthly_setup", 
+        label: "Monthly Transits: Lunar Return", 
+        description: "Monthly emotional & logistical cycles.", 
+        group: "Horoscope Toolkit",
+        subModule: "Monthly Transits + Lunar Return",
+        purpose: "Combines the Monthly Transit overview with the critical Lunar Return calculation for emotional grounding.",
+        bullets: [
+          "Lunar Return exact timing (Moon-to-Moon)",
+          "Monthly house-ingression tracking",
+          "Retrograde cycle intersections",
+          "Ritual timing recommendations based on monthly transits"
+        ]
+      },
+      { 
+        name: "horoscope_monthly_result", 
+        label: "Monthly Transits: Results", 
+        description: "Synthesized monthly outlook.", 
+        group: "Horoscope Toolkit",
+        subModule: "Monthly Transits + Lunar Return",
+        purpose: "Provides a monthly roadmap of celestial influences, focusing on emotional grounding and logistical milestones.",
+        bullets: [
+          "Lunar Return chart wheel and house focus",
+          "Daily mood/energy calendars based on Moon transits",
+          "Major monthly aspect highlights",
+          "AI interpretation of the lunar months theme"
+        ]
+      },
+      { 
+        name: "horoscope_romantic_setup", 
+        label: "Romantic: Synastry Setup", 
+        description: "Dual-chart relationship mapping.", 
+        group: "Horoscope Toolkit",
+        subModule: "Romantic Relationships",
+        purpose: "Calculates the dynamic interaction between two individuals to assess long-term compatibility and attraction.",
+        bullets: [
+          "Partner birth data entry with GMT preservation",
+          "Synastry vs Composite calculation methods",
+          "Attraction vs Stability metrics",
+          "AI compatibility score generation across 5 dimensions"
+        ]
+      },
+      { 
+        name: "horoscope_romantic_result_synthesis", 
+        label: "Romantic: Synastry Synthesis", 
+        description: "Dual-provider compatibility mapping.", 
+        group: "Horoscope Toolkit",
+        subModule: "Romantic Relationships",
+        purpose: "Visualizes the complex interaction between two natal charts, highlighting points of attraction, tension, and long-term viability.",
+        bullets: [
+          "Interactive dual-wheel synastry overlay",
+          "Aspect-to-aspect comparison table for the pair",
+          "Compatibility scoring across Love, Sex, and Long-term values",
+          "AI narrative on the karmic purpose of the relationship"
+        ]
+      },
+      { 
+        name: "horoscope_friendship_setup", 
+        label: "Friendship: Social Dynamics", 
+        description: "Platonic relationship analysis.", 
+        group: "Horoscope Toolkit",
+        subModule: "Friendship Relationships",
+        purpose: "Tailors the relationship engine to focus on social compatibility, communication, and shared interests.",
+        bullets: [
+          "Group dynamic modeling",
+          "Mercury-alignment focus for communication",
+          "Shared hobby/Jupiter-expansion indicators",
+          "Conflict-resolution 'Shadow Work' insights"
+        ]
+      },
+      { 
+        name: "horoscope_friendship_result", 
+        label: "Friendship: Social Synthesis", 
+        description: "Platonic bond analytics.", 
+        group: "Horoscope Toolkit",
+        subModule: "Friendship Relationships",
+        purpose: "Analyzes the intellectual and social chemistry between two individuals to foster deeper communication and shared growth.",
+        bullets: [
+          "Communication style (Mercury) compatibility profiling",
+          "Shared social interests and Jupiter alignment mapping",
+          "Boundaries and Saturn influence assessments",
+          "Team dynamic AI summaries for collaborative success"
+        ]
+      },
+      { 
+        name: "horoscope_business_setup", 
+        label: "Business: Professional Synergy", 
+        description: "Strategic partnership analysis.", 
+        group: "Horoscope Toolkit",
+        subModule: "Business Relationships",
+        purpose: "Analyzes two charts for professional effectiveness, financial synergy, and power dynamics.",
+        bullets: [
+          "Wealth-alignment indicators (2nd & 8th houses)",
+          "Authority/Saturn-boundary assessments",
+          "Project-completion velocity scores",
+          "Optimal meeting-time recommendations for the pair"
+        ]
+      },
+      { 
+        name: "horoscope_business_result", 
+        label: "Business: Professional Synergy", 
+        description: "Strategic alliance analytics.", 
+        group: "Horoscope Toolkit",
+        subModule: "Business Relationships",
+        purpose: "Evaluates the productive and financial potential of a partnership, focusing on authority and wealth-building.",
+        bullets: [
+          "Financial house (2nd/8th) interaction metrics",
+          "Authority and discipline (Saturn) compatibility",
+          "Wealth creation velocity and risk assessments",
+          "Best strategic timing for contract signing or launches"
+        ]
+      },
+      { 
+        name: "horoscope_horary_setup", 
+        label: "Horary: Momentary Answers", 
+        description: "The astrology of questions.", 
+        group: "Horoscope Toolkit",
+        subModule: "Predictive Event (Horary)",
+        purpose: "A specialized predictive tool that analyzes the chart of the exact moment a question is asked and understood.",
+        bullets: [
+          "Automatic 'Question Timestamp' capture",
+          "Cusp-of-querent vs Cusp-of-quesited logic",
+          "Strict horary validity checks (Too early/Too late)",
+          "Clear 'Yes/No' indicators with technical rationale"
+        ]
+      },
+      { 
+        name: "horoscope_horary_result", 
+        label: "Horary: Momentary Synthesis", 
+        description: "Decoding the divine answer.", 
+        group: "Horoscope Toolkit",
+        subModule: "Predictive Event (Horary)",
+        purpose: "Provides the technical and AI-derived answer to a specific question based on the astrological moment.",
+        bullets: [
+          "Momentum-based 'Yes/No' decision matrix",
+          "Critical house-ruler aspect tracking",
+          "Traditional dignity and receptivity scores",
+          "Technical rationale for every predictive judgment"
+        ]
+      },
+
 
       // Programs
       { 
@@ -430,7 +993,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         name: "my_schedule", 
         label: "Master Calendar", 
         description: "Combined view of all platform bookings.", 
-        group: "Schedule",
+        group: "My Schedule",
         purpose: "The definitive platform-wide calendar, combining student sessions, live events, and diviner availability.",
         bullets: [
           "Global cross-timezone event visualization",
@@ -439,12 +1002,12 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Filtered views for specific roles and programs"
         ]
       },
-      { name: "bookings", label: "Session Mgmt", description: "Oversight of individual user appointments.", group: "Schedule" },
+      { name: "bookings", label: "Session Mgmt", description: "Oversight of individual user appointments.", group: "My Schedule" },
       { 
         name: "availability", 
         label: "Global Availability", 
         description: "Configuring system-wide booking windows.", 
-        group: "Schedule",
+        group: "My Schedule",
         purpose: "Sets the pulse for the platform's session economy by defining when services can be booked.",
         bullets: [
           "Hierarchical availability override logic",
@@ -488,7 +1051,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       // Training
       { 
         name: "training_lessons", 
-        label: "Curriculum Builder", 
+        label: "Programs & Lessons", 
         description: "Designing lessons and courses.", 
         group: "Training",
         purpose: "The architectural tool for building spiritual training journeys and certification paths.",
@@ -499,14 +1062,14 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Course-level graduation criteria settings"
         ]
       },
-      { name: "training_analytics", label: "Learning Insights", description: "Statistical performance of courses.", group: "Training" },
-      { name: "training_settings", label: "Training Config", description: "Global settings for the graduation path.", group: "Training" },
-      { name: "class_config", label: "Classroom Mgmt", description: "Configuration of virtual training rooms.", group: "Training" },
+      { name: "training_analytics", label: "Analytics", description: "Statistical performance of courses.", group: "Training" },
+      { name: "training_settings", label: "Settings", description: "Global settings for the graduation path.", group: "Training" },
+      { name: "class_config", label: "Class Config", description: "Configuration of virtual training rooms.", group: "Training" },
 
       // Commerce
       { 
         name: "packages", 
-        label: "Product Packages", 
+        label: "Packages", 
         description: "Bundling services into commerce items.", 
         group: "Commerce",
         purpose: "Allows admins to create and manage service bundles, membership tiers, and product offerings.",
@@ -519,7 +1082,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
       { 
         name: "payments", 
-        label: "Transaction Logs", 
+        label: "Payments", 
         description: "Audit trail of all financial gateway events.", 
         group: "Commerce",
         purpose: "A secure repository for auditing every financial interaction on the platform.",
@@ -531,10 +1094,10 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       { name: "refunds", label: "Refund Management", description: "Processing and tracking payment reversals.", group: "Commerce" },
-      { name: "orders", label: "Platform Orders", description: "Full directory of all platform purchases.", group: "Commerce" },
+      { name: "orders", label: "Orders", description: "Full directory of all platform purchases.", group: "Commerce" },
       { 
         name: "reports_commerce", 
-        label: "Commerce Reports", 
+        label: "Reports", 
         description: "Financial health and revenue analytics.", 
         group: "Commerce",
         purpose: "High-level financial reporting focused on revenue growth and product performance.",
@@ -545,7 +1108,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Tax liability and payout summaries"
         ]
       },
-      { name: "activity_log", label: "System Activity", description: "Security audit trail of all admin actions.", group: "Commerce" },
+      { name: "activity_log", label: "Activity Log", description: "Security audit trail of all admin actions.", group: "Commerce" },
 
       // Email
       { 
@@ -578,14 +1141,14 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 
       // Engagement & Testimonials
       { name: "giveaways", label: "Giveaway Engine", description: "Management of community prize draws.", group: "Engagement" },
-      { name: "testimonials_list", label: "Public Reviews", description: "Moderation of user feedback and ratings.", group: "Testimonials" },
-      { name: "request_testimonial", label: "Review Requests", description: "Automated triggers for post-reading feedback.", group: "Testimonials" },
+      { name: "testimonials_list", label: "Testimonials List", description: "Moderation of user feedback and ratings.", group: "Manage Testimonial" },
+      { name: "request_testimonial", label: "Request Testimonial", description: "Automated triggers for post-reading feedback.", group: "Manage Testimonial" },
 
       // Support
       { name: "sla_dashboard", label: "SLA Dashboard", description: "Monitoring system speed and ticket response times.", group: "Support" },
       { 
         name: "tarot_cards", 
-        label: "Arcana Library", 
+        label: "Tarot Cards", 
         description: "Detailed meaning config for every card.", 
         group: "Tools",
         purpose: "The data repository for the platform's Tarot engine meanings, attributes, and esoteric symbolism.",
@@ -596,7 +1159,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Dynamic spread interpretation logic"
         ]
       },
-      { name: "rituals_list", label: "Ritual Repository", description: "Library of template spiritual practices.", group: "Tools" },
+      { name: "rituals_list", label: "Rituals", description: "Library of template spiritual practices.", group: "Tools" },
 
       // Reports
       { 
@@ -635,7 +1198,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       // Config
       { 
         name: "platform_settings", 
-        label: "Global Settings", 
+        label: "Platform Settings", 
         description: "Platform-wide branding and behavior.", 
         group: "Config",
         purpose: "The master control room for AstrologyPro's visual identity, behavior, and system-wide configurations.",
@@ -648,7 +1211,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
       { 
         name: "api_keys_config", 
-        label: "External APIs", 
+        label: "API Keys", 
         description: "Credentials for Stripe, SMTP, and Astrology API.", 
         group: "Config",
         purpose: "Manages the platform's vital integrations with third-party processing and data services.",
@@ -687,7 +1250,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     keyPages: ["CRM Overview", "Bookings", "Client Spirit Twin", "Broadcast Hub", "Billing"],
     groups: [
       {
-        groupLabel: "Schedule",
+        groupLabel: "My Schedule",
         cards: [
           { title: "Overview", description: "Daily workload summary", href: "/dashboard", icon: LayoutDashboard, status: "live" },
         ],
@@ -698,7 +1261,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         name: "overview", 
         label: "Practitioner CRM", 
         description: "Overview of today's operations.", 
-        group: "Schedule",
+        group: "My Schedule",
         purpose: "The primary command center for professional diviners to manage their daily workflow and client load.",
         bullets: [
           "Real-time overview of today's appointments",
@@ -711,7 +1274,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         name: "calendar", 
         label: "Session Calendar", 
         description: "Map of upcoming readings.", 
-        group: "Schedule",
+        group: "My Schedule",
         purpose: "A high-precision scheduling interface for managing personal availability and upcoming consultations.",
         bullets: [
           "Dynamic weekly and monthly session views",

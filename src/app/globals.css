@@ -139,13 +139,9 @@
   }
 }
 
-/* Cosmic background layers */
+/* Cosmic background layers - Simplified for Dashboard Parity */
 .cosmic-bg {
-  background:
-    radial-gradient(ellipse at 20% 50%, rgba(45, 27, 78, 0.3) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(26, 26, 78, 0.25) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 100%, rgba(74, 26, 46, 0.15) 0%, transparent 50%),
-    linear-gradient(180deg, #06080f 0%, #0a0e27 100%);
+  background: linear-gradient(180deg, #06080f 0%, #080a13 100%);
   background-attachment: fixed;
 }
 
