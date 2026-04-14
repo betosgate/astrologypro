@@ -37,6 +37,7 @@ import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { RoiBanner } from "@/components/dashboard/roi-banner";
 import { RoleUpgradeBanners } from "@/components/dashboard/role-upgrade-banners";
 import { TodaysSessions } from "@/components/dashboard/todays-sessions";
+import { PlanetaryReturns } from "@/components/dashboard/planetary-returns";
 
 export const metadata = {
   title: "Dashboard Overview",
@@ -471,6 +472,9 @@ export default async function DashboardPage() {
 
       {/* Today's Sessions Quick-Start */}
       <TodaysSessions sessions={todaysSessions} nextSessionDate={nextSessionDate} />
+
+      {/* Planetary Returns */}
+      <PlanetaryReturns divinerId={diviner.id} />
 
       {/* Profile Completion */}
       <ProfileStrength

@@ -38,8 +38,9 @@ export async function GET(req: NextRequest) {
 
   const admin = createAdminClient();
   const pattern = `%${q}%`;
+  // plainto_tsquery is safe for user input — no special chars needed
+  const tsQuery = q.trim().replace(/\s+/g, " & ");
 
-  // Run searches in parallel
   const searchTypes = typeFilter === "all"
     ? ["entity", "leader", "event", "forecast"]
     : [typeFilter];
@@ -51,17 +52,43 @@ export async function GET(req: NextRequest) {
       (async () => {
         const offset = typeFilter === "entity" ? (page - 1) * limit : 0;
         const lim = typeFilter === "entity" ? limit : 10;
-        const { data, count } = await admin
-          .from("mundane_entities_v2")
-          .select("id, name, entity_type, region, flag_emoji", { count: "exact" })
-          .ilike("name", pattern)
-          .order("name", { ascending: true })
-          .order("id", { ascending: true })
-          .range(offset, offset + lim - 1);
+
+        // Try FTS first; fall back to ILIKE if fts_vector column doesn't exist yet
+        let data: Array<{ id: string; name: string; entity_type: string; region: string | null; flag_emoji: string | null }> = [];
+        let count = 0;
+
+        try {
+          const ftsRes = await admin
+            .from("mundane_entities")
+            .select("id, name, entity_type, region, flag_emoji", { count: "exact" })
+            .textSearch("fts_vector", tsQuery, { type: "plain", config: "english" })
+            .order("name", { ascending: true })
+            .order("id", { ascending: true })
+            .range(offset, offset + lim - 1);
+
+          if (!ftsRes.error) {
+            data = (ftsRes.data ?? []) as typeof data;
+            count = ftsRes.count ?? 0;
+          } else {
+            throw ftsRes.error;
+          }
+        } catch {
+          // Fallback to ILIKE if FTS index not yet applied
+          const fallbackRes = await admin
+            .from("mundane_entities")
+            .select("id, name, entity_type, region, flag_emoji", { count: "exact" })
+            .ilike("name", pattern)
+            .order("name", { ascending: true })
+            .order("id", { ascending: true })
+            .range(offset, offset + lim - 1);
+          data = (fallbackRes.data ?? []) as typeof data;
+          count = fallbackRes.count ?? 0;
+        }
+
         return {
           type: "entity",
-          total: count ?? 0,
-          results: (data ?? []).map((e: { id: string; name: string; entity_type: string; region: string | null; flag_emoji: string | null }) => ({
+          total: count,
+          results: data.map((e) => ({
             id: e.id,
             type: "entity" as const,
             title: `${e.flag_emoji ? e.flag_emoji + " " : ""}${e.name}`,
@@ -132,22 +159,46 @@ export async function GET(req: NextRequest) {
       (async () => {
         const offset = typeFilter === "forecast" ? (page - 1) * limit : 0;
         const lim = typeFilter === "forecast" ? limit : 10;
-        const { data, count } = await admin
-          .from("mundane_forecasts")
-          .select("id, title, narrative_summary, outcome_status, confidence_level, forecast_period_start", { count: "exact" })
-          .or(`title.ilike.${pattern},narrative_summary.ilike.${pattern}`)
-          .order("forecast_period_start", { ascending: false })
-          .order("id", { ascending: false })
-          .range(offset, offset + lim - 1);
+
+        let data: Array<{ id: string; title: string; narrative_summary: string | null; outcome_status: string; confidence_level: string | null; forecast_period_start: string }> = [];
+        let count = 0;
+
+        try {
+          const ftsRes = await admin
+            .from("mundane_forecasts")
+            .select("id, title, narrative_summary, outcome_status, confidence_level, forecast_period_start", { count: "exact" })
+            .textSearch("fts_vector", tsQuery, { type: "plain", config: "english" })
+            .order("forecast_period_start", { ascending: false })
+            .order("id", { ascending: false })
+            .range(offset, offset + lim - 1);
+
+          if (!ftsRes.error) {
+            data = (ftsRes.data ?? []) as typeof data;
+            count = ftsRes.count ?? 0;
+          } else {
+            throw ftsRes.error;
+          }
+        } catch {
+          const fallbackRes = await admin
+            .from("mundane_forecasts")
+            .select("id, title, narrative_summary, outcome_status, confidence_level, forecast_period_start", { count: "exact" })
+            .or(`title.ilike.${pattern},narrative_summary.ilike.${pattern}`)
+            .order("forecast_period_start", { ascending: false })
+            .order("id", { ascending: false })
+            .range(offset, offset + lim - 1);
+          data = (fallbackRes.data ?? []) as typeof data;
+          count = fallbackRes.count ?? 0;
+        }
+
         return {
           type: "forecast",
-          total: count ?? 0,
-          results: (data ?? []).map((f: { id: string; title: string; narrative_summary: string | null; outcome_status: string; confidence_level: string | null; forecast_period_start: string }) => ({
+          total: count,
+          results: data.map((f) => ({
             id: f.id,
             type: "forecast" as const,
             title: f.title,
             snippet: `${f.outcome_status} - ${f.forecast_period_start}${f.narrative_summary ? ": " + f.narrative_summary.slice(0, 80) : ""}`,
-            href: `/admin/mundane-forecasts/${f.id}`,
+            href: `/admin/mundane/forecasts/${f.id}`,
           })),
         };
       })()
@@ -165,7 +216,6 @@ export async function GET(req: NextRequest) {
     allResults = allResults.concat(res.results);
   }
 
-  // If "all" type, just return merged (already limited per-type). If specific, results are already paginated.
   return NextResponse.json({
     results: allResults,
     counts,
