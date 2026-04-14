@@ -38,6 +38,8 @@ interface BookingPaymentBody {
   policyAcknowledgedAt?: string;
   booking_notes?: string;
   discount_token?: string;
+  /** True when the slot is from an unscoped availability (no service linked). Skips charging. */
+  freeSlot?: boolean;
 }
 
 export async function POST(request: NextRequest) {
@@ -58,6 +60,7 @@ export async function POST(request: NextRequest) {
       policyAcknowledgedAt,
       booking_notes,
       discount_token,
+      freeSlot,
     } = body;
     const questionnaireData = questionnaire ?? {};
 
@@ -508,7 +511,24 @@ export async function POST(request: NextRequest) {
       memberDiscountApplied,
     });
     const platformFee = bookingSplit.platformFeeCents / 100;
-    const shouldCharge = hasServiceAvailability && finalPrice > 0;
+    // freeSlot=true means the client selected an unscoped availability (no service_id).
+    // Verify this server-side: if the best-matched template has no service_id, honour the override.
+    const bestTemplateServiceId =
+      allTemplates && allTemplates.length > 0
+        ? ((allTemplates as Record<string, unknown>[]).find(
+            (t) => t.service_id === serviceId
+          ) ??
+            (allTemplates as Record<string, unknown>[]).find(
+              (t) =>
+                String(t.start_date ?? "") <= bookingDateStr &&
+                String(t.end_date ?? "") >= bookingDateStr
+            ) ??
+            allTemplates[0]) as Record<string, unknown> | undefined
+        : undefined;
+    const slotIsVerifiedFree =
+      freeSlot === true && (bestTemplateServiceId?.service_id == null);
+    if (slotIsVerifiedFree) finalPrice = 0;
+    const shouldCharge = hasServiceAvailability && finalPrice > 0 && !slotIsVerifiedFree;
 
     if (shouldCharge && !isDivinerPayoutReadyForPaidServices(diviner)) {
       return NextResponse.json(
@@ -541,7 +561,7 @@ export async function POST(request: NextRequest) {
         status: "pending",
         base_price: finalPrice,
         video_provider: diviner.video_provider ?? "daily",
-        questionnaire_responses: null,
+        questionnaire_responses: Object.keys(questionnaireData).length > 0 ? questionnaireData : null,
         booking_notes: booking_notes ?? null,
         metadata: {
           ...requestMetadata,

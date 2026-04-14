@@ -57,6 +57,41 @@ export function getPlanetInterpClass(planetName: string): string {
   return map[key] ?? "interp-gradient-default";
 }
 
+export function getRelationshipBgClass(itemTitle: string, tabSlug?: string, sectionKey?: string): string {
+  const isRel = tabSlug && ["romantic_forecast_report_tropical_v2", "friendship_report_tropical_v2", "business_partner_v2"].includes(tabSlug);
+  if (!isRel) return "interp-gradient-default";
+
+  const lower = itemTitle.toLowerCase();
+
+  // 1. Planet-specific detection (Highest Priority)
+  if (lower.includes("sun")) return "planet-interp-sun";
+  if (lower.includes("moon")) return "planet-interp-moon";
+  if (lower.includes("mercury")) return "planet-interp-mercury";
+  if (lower.includes("venus")) return "planet-interp-venus";
+  if (lower.includes("mars")) return "planet-interp-mars";
+  if (lower.includes("jupiter")) return "planet-interp-jupiter";
+  if (lower.includes("saturn")) return "planet-interp-saturn";
+  if (lower.includes("uranus")) return "planet-interp-uranus";
+  if (lower.includes("neptune")) return "planet-interp-neptune";
+  if (lower.includes("pluto")) return "planet-interp-pluto";
+
+  // Karmic bodies
+  if (lower.includes("node") || lower.includes("chiron")) return "section-karmic-indicators";
+
+  // 2. Elemental fallback
+  if (lower.includes("fire")) return "planet-interp-mars";
+  if (lower.includes("water")) return "planet-interp-neptune";
+  if (lower.includes("air")) return "planet-interp-mercury";
+  if (lower.includes("earth")) return "planet-interp-venus";
+
+  // 3. Section fallback
+  if (sectionKey === "timing_and_transits") return "section-timing-transits";
+  if (sectionKey === "karmic_and_soulmate_indicators") return "section-karmic-indicators";
+  if (sectionKey === "compatibility_score_or_summary") return "planet-interp-sun";
+
+  return "interp-gradient-default";
+}
+
 export function parseAspectTitle(title?: string): { p1: string; aspectType: string; p2: string } {
   if (!title) return { p1: "", aspectType: "", p2: "" };
   const parts = title.split(/\s+/);

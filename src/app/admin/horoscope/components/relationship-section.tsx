@@ -9,11 +9,13 @@ import { ShowMoreModal, useShowMore } from "./show-more-modal";
 
 import { SmartHeading } from "./astro-icons";
 import { cn } from "@/lib/utils";
+import { getRelationshipBgClass } from "../utils";
 
-export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen, onDecanClick }: {
+export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen, onDecanClick, rawData }: {
   aiMap: Record<string, any>; areaOfInquiry?: string; tabSlug: string;
   checkDacen: (p: string, s: string) => boolean;
   onDecanClick: (p: string, s: string) => void;
+  rawData?: any;
 }) {
   const { modal, trigger, close } = useShowMore();
   const isBusiness = tabSlug === "business_partner_v2";
@@ -26,50 +28,17 @@ export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen,
     const items: any[] = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
     if (!items.length) return null;
 
-    const getBgClass = (itemTitle: string) => {
-      if (!isRomantic && !isFriendship) return "interp-gradient-default";
-
-      const lower = itemTitle.toLowerCase();
-      
-      // 1. Planet-specific detection (Highest Priority)
-      if (lower.includes("sun")) return "planet-interp-sun";
-      if (lower.includes("moon")) return "planet-interp-moon";
-      if (lower.includes("mercury")) return "planet-interp-mercury";
-      if (lower.includes("venus")) return "planet-interp-venus";
-      if (lower.includes("mars")) return "planet-interp-mars";
-      if (lower.includes("jupiter")) return "planet-interp-jupiter";
-      if (lower.includes("saturn")) return "planet-interp-saturn";
-      if (lower.includes("uranus")) return "planet-interp-uranus";
-      if (lower.includes("neptune")) return "planet-interp-neptune";
-      if (lower.includes("pluto")) return "planet-interp-pluto";
-      
-      // Karmic bodies
-      if (lower.includes("node") || lower.includes("chiron")) return "section-karmic-indicators";
-
-      // 2. Elemental fallback
-      if (lower.includes("fire")) return "planet-interp-mars";
-      if (lower.includes("water")) return "planet-interp-neptune";
-      if (lower.includes("air")) return "planet-interp-mercury";
-      if (lower.includes("earth")) return "planet-interp-venus";
-
-      // 3. Section fallback
-      if (sectionKey === "timing_and_transits") return "section-timing-transits";
-      if (sectionKey === "karmic_and_soulmate_indicators") return "section-karmic-indicators";
-
-      return "interp-gradient-default";
-    };
-
     return (
       <div className="space-y-2">
         <div className="rounded-lg border overflow-hidden px-4 py-2.5 horoscope-section-header-dark flex items-center justify-center">
-          <h3 className="text-sm font-semibold text-center w-full text-[#ffffff]">
-            <SmartHeading title={title} textSize="text-[20px]" iconSize="size-7" className="text-[#ffffff]" />
+          <h3 className="text-sm font-semibold text-center w-full text-white">
+            <SmartHeading title={title} textSize="text-[20px]" iconSize="size-7" className="text-white" />
           </h3>
         </div>
 
         {items.map((item: any, i: number) => {
           const itemTitle = item.title ?? item.name;
-          const bgClass = getBgClass(itemTitle ?? "");
+          const bgClass = getRelationshipBgClass(itemTitle ?? title, tabSlug, sectionKey);
 
           return (
             <div key={i} className="rounded-lg border overflow-hidden">
@@ -117,7 +86,7 @@ export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen,
                 </div>
                 <p className="leading-relaxed">{item.data ?? item.interpretation ?? item.description}</p>
                 <div className="mt-1.5 flex justify-center border-t border-black/10 pt-2">
-                  <button onClick={() => trigger(itemTitle ?? title, item.data ?? item.interpretation ?? "", item, areaOfInquiry)} className="horoscope-show-more">Show More</button>
+                  <button onClick={() => trigger(itemTitle ?? title, item.data ?? item.interpretation ?? "", item, areaOfInquiry, undefined, false, undefined, tabSlug, rawData)} className="horoscope-show-more">Show More</button>
                 </div>
               </div>
             </div>
@@ -135,7 +104,7 @@ export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen,
 
   return (
     <div className="space-y-12">
-      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} pictureUrl={modal?.pictureUrl} />
+      <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} relationshipEntries={modal?.relationshipEntries} bgClass={modal?.bgClass} pictureUrl={modal?.pictureUrl} />
       {sections.map((s) => (
         <AiBlock key={s.key} title={s.label} sectionKey={s.key} data={aiMap[s.key]} />
       ))}

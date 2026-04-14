@@ -503,6 +503,7 @@ export function BookingsClient({
                               notes: booking.session_notes as string | null,
                               session_notes:
                                 (booking.session_notes as string) ?? null,
+                              booking_notes: (booking.booking_notes as string) ?? null,
                               client_name: client?.full_name ?? "Unknown",
                               client_email: client?.email ?? "",
                               service_name: service?.name ?? "Unknown",
@@ -534,6 +535,9 @@ export function BookingsClient({
                               last_session_date: prev?.lastDate ?? null,
                               session_notes: prev?.lastNotes ?? null,
                               username: divinerUsername || "admin",
+                              metadata: (booking.metadata as Record<string, unknown>) ?? null,
+                              stripe_payment_intent_id: (booking.stripe_payment_intent_id as string) ?? null,
+                              base_price: (booking.base_price as number) ?? null,
                             }}
                           />
                         </div>

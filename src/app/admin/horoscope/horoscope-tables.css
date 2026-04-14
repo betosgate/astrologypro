@@ -169,6 +169,13 @@
     border-radius: 8px;
 }
 
+.horoscope-section-header-dark {
+    background-color: #261a1a !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+}
+
 .horoscope-interp-header {
     background-color: #ffffff;
     color: #000000;
