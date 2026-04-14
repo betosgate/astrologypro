@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { SectionContainer } from "@/components/shared/section-container";
 
 interface EmailCaptureProps {
   /** When set, attributes the subscription to a specific diviner (newsletter attribution). */
@@ -40,8 +41,9 @@ export function EmailCapture({ divinerUsername }: EmailCaptureProps = {}) {
   }
 
   return (
-    <section className="relative px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-2xl">
+    <section className="relative">
+      <SectionContainer size="narrow" verticalPadding="lg">
+        <div className="mx-auto max-w-2xl">
         <div
           className="relative overflow-hidden rounded-2xl p-8 sm:p-12"
           style={{
@@ -120,8 +122,9 @@ export function EmailCapture({ divinerUsername }: EmailCaptureProps = {}) {
               No spam. Unsubscribe anytime.
             </p>
           </div>
+          </div>
         </div>
-      </div>
+      </SectionContainer>
     </section>
   );
 }

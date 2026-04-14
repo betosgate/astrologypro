@@ -5,6 +5,7 @@ import { PortalSwitcher } from "@/components/shared/portal-switcher";
 import Link from "next/link";
 import { PortalLogoutButton } from "@/components/portal/logout-button";
 import { RouteTracker } from "@/components/shared/route-tracker";
+import { SectionContainer } from "@/components/shared/section-container";
 
 export const metadata = {
   title: "Client Portal",
@@ -59,7 +60,7 @@ export default async function PortalLayout({
     <div className="min-h-screen bg-background">
       <RouteTracker href="/portal" />
       <header className="sticky top-0 z-40 border-b bg-background">
-        <div className="container mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+        <SectionContainer className="flex h-14 items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href="/portal" className="text-lg font-bold">
               AstrologyPro
@@ -84,7 +85,7 @@ export default async function PortalLayout({
             </Link>
             <PortalLogoutButton />
           </div>
-        </div>
+        </SectionContainer>
         <nav className="flex items-center gap-1 border-t px-4 sm:hidden">
           {navLinks.map((link) => (
             <Link
@@ -97,9 +98,9 @@ export default async function PortalLayout({
           ))}
         </nav>
       </header>
-      <main className="container mx-auto max-w-5xl p-4 py-6 lg:p-8">
+      <SectionContainer as="main" verticalPadding="md">
         {children}
-      </main>
+      </SectionContainer>
     </div>
   );
 }

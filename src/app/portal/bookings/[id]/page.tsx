@@ -17,6 +17,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { BookingActions } from "@/components/portal/booking-actions";
+import { SectionContainer } from "@/components/shared/section-container";
 
 export const dynamic = "force-dynamic";
 
@@ -128,7 +129,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
     ["pending", "confirmed", "pending_payment"].includes(b.status);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <SectionContainer verticalPadding="md" className="space-y-6">
       {/* Back link */}
       <Button asChild variant="ghost" size="sm" className="gap-2">
         <Link href="/portal/bookings">
@@ -328,6 +329,6 @@ export default async function BookingDetailPage({ params }: PageProps) {
           isUpcoming={isUpcoming}
         />
       )}
-    </div>
+    </SectionContainer>
   );
 }

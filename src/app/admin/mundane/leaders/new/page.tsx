@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { SectionContainer } from "@/components/shared/section-container";
 
 const CONFIDENCE_LEVELS = ["AA", "A", "B", "C", "X"] as const;
 
@@ -107,7 +108,7 @@ export default function AdminLeaderNewPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-xl">
+    <SectionContainer verticalPadding="none" className="space-y-6">
       <Link
         href="/admin/mundane/leaders"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -319,6 +320,6 @@ export default function AdminLeaderNewPage() {
           </Button>
         </div>
       </form>
-    </div>
+    </SectionContainer>
   );
 }

@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { SectionContainer } from "@/components/shared/section-container";
 
 type RoleOption = {
   slug: string;
@@ -92,7 +93,7 @@ export default function TrainingSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <SectionContainer verticalPadding="none" className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button asChild variant="ghost" size="sm">
@@ -225,6 +226,6 @@ export default function TrainingSettingsPage() {
           </div>
         </div>
       )}
-    </div>
+    </SectionContainer>
   );
 }

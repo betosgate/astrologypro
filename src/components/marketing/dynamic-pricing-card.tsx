@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Crown } from "lucide-react";
+import { SectionContainer } from "@/components/shared/section-container";
 
 export interface PlanData {
   plan_id: string;
@@ -166,8 +167,8 @@ interface DynamicPricingSectionProps {
 
 export function DynamicPricingSection({ item, selectedPlanId, onSelectPlan, linkMode }: DynamicPricingSectionProps) {
   return (
-    <section className="px-4 py-16 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl">
+    <section className="relative">
+      <SectionContainer verticalPadding="lg">
         <div className="mb-4 text-center">
           <h2 className="font-display text-3xl font-bold text-[#f5f0e8] sm:text-4xl">
             Choose Your <span className="gold-text">Path</span>
@@ -188,7 +189,7 @@ export function DynamicPricingSection({ item, selectedPlanId, onSelectPlan, link
             />
           ))}
         </div>
-      </div>
+      </SectionContainer>
     </section>
   );
 }
