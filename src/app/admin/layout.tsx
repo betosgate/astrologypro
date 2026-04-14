@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin-auth";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { RouteTracker } from "@/components/shared/route-tracker";
+import { SectionContainer } from "@/components/shared/section-container";
 
 export const metadata = {
   title: "Admin — AstrologyPro",
@@ -20,9 +21,9 @@ export default async function AdminLayout({
       <RouteTracker href="/admin" />
       <AdminSidebar />
       <main className="lg:pl-60">
-        <div className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
+        <SectionContainer size="wide" verticalPadding="md">
           {children}
-        </div>
+        </SectionContainer>
       </main>
     </div>
   );

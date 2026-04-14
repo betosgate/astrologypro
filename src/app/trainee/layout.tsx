@@ -8,6 +8,7 @@ import { RouteTracker } from "@/components/shared/route-tracker";
 import { MobileNav } from "@/components/community/mobile-nav";
 import { NavLink } from "@/components/shared/nav-link";
 import { PortalLogoutButton } from "@/components/portal/logout-button";
+import { SectionContainer } from "@/components/shared/section-container";
 
 export const metadata = { title: "Trainee Portal - AstrologyPro" };
 
@@ -41,7 +42,7 @@ export default async function TraineeLayout({ children }: { children: React.Reac
     <div className="min-h-screen bg-background">
       <RouteTracker href="/trainee" />
       <header className="sticky top-0 z-40 border-b bg-background">
-        <div className="container mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+        <SectionContainer className="flex h-14 items-center justify-between">
           <div className="flex items-center gap-2 md:gap-6">
             {/* Mobile hamburger — visible only below md */}
             <MobileNav
@@ -73,11 +74,11 @@ export default async function TraineeLayout({ children }: { children: React.Reac
             </Link>
             <PortalLogoutButton />
           </div>
-        </div>
+        </SectionContainer>
       </header>
-      <main className="container mx-auto max-w-5xl p-4 py-6 lg:p-8">
+      <SectionContainer as="main" verticalPadding="md">
         {children}
-      </main>
+      </SectionContainer>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { MobileNav } from "@/components/community/mobile-nav";
 import { NavLink } from "@/components/shared/nav-link";
 import { PortalLogoutButton } from "@/components/portal/logout-button";
 import { requireMysterySchoolAccess } from "@/lib/mystery-school/access";
+import { SectionContainer } from "@/components/shared/section-container";
 
 export const metadata = { title: "Mystery School - AstrologyPro" };
 
@@ -109,9 +110,9 @@ export default async function MysterySchoolLayout({ children }: { children: Reac
             </div>
           </div>
         </header>
-        <main className="container mx-auto w-full max-w-5xl p-4 py-6 lg:p-8">
+        <SectionContainer as="main" verticalPadding="lg">
           {children}
-        </main>
+        </SectionContainer>
       </div>
     </div>
   );
