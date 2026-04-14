@@ -266,10 +266,15 @@ export function BookingWizard({
   const availabilityQuery = availabilityServiceId ? `&serviceId=${availabilityServiceId}` : "";
   const purchaseConfig = getServicePurchaseConfig(service);
 
-  // Effective price: slot's linked service price takes priority over the service prop's base_price
-  const effectivePrice = selectedSlot?.servicePrice != null
-    ? selectedSlot.servicePrice
-    : Number(service.base_price ?? service.price ?? 0);
+  // Effective price: slot's linked service price takes priority over the service prop's base_price.
+  // If the slot has NO linked service (availabilityServiceId is null), it is an unscoped
+  // calendar slot — treat as free regardless of the service's base_price.
+  const slotIsUnscoped = selectedSlot != null && selectedSlot.availabilityServiceId == null;
+  const effectivePrice = slotIsUnscoped
+    ? 0
+    : selectedSlot?.servicePrice != null
+      ? selectedSlot.servicePrice
+      : Number(service.base_price ?? service.price ?? 0);
   const isFreeBooking = effectivePrice <= 0;
 
   // Prefill intake data from stored client profile when ?prefill=true
@@ -432,6 +437,8 @@ export function BookingWizard({
           questionnaire: {},
           affiliateCode,
           policyAcknowledgedAt: policyAcknowledged ? new Date().toISOString() : undefined,
+          // Signal that this slot is not linked to any service — the API will skip charging.
+          freeSlot: slotIsUnscoped ? true : undefined,
         }),
       });
       clearTimeout(timeout);
@@ -618,6 +625,7 @@ export function BookingWizard({
         <ol className="flex items-center justify-center gap-2">
           {STEPS.map((s, i) => {
             const Icon = s.icon;
+            const label = i === 2 && isFreeBooking ? "Confirm" : s.label;
             return (
               <li key={s.label} className="flex items-center gap-2">
                 <div
@@ -631,7 +639,7 @@ export function BookingWizard({
                   )}
                 >
                   <Icon className="size-4" />
-                  <span className="hidden sm:inline">{s.label}</span>
+                  <span className="hidden sm:inline">{label}</span>
                   <span className="sm:hidden">{i + 1}</span>
                 </div>
                 {i < STEPS.length - 1 && (
@@ -651,7 +659,7 @@ export function BookingWizard({
       {/* Step Content */}
       <Card>
         <CardHeader>
-          <CardTitle>{STEPS[step]?.label ?? "Booking"}</CardTitle>
+          <CardTitle>{step === 2 && isFreeBooking ? "Confirm Booking" : (STEPS[step]?.label ?? "Booking")}</CardTitle>
         </CardHeader>
         <CardContent>
           {/* Step 1: Date & Time */}
@@ -902,19 +910,28 @@ export function BookingWizard({
                 </div>
 
                 {/* Policy notice */}
-                <div className="flex items-start gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
-                  <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    By proceeding with payment, you agree that{" "}
-                    <strong className="text-foreground">50% of the payment is retained as a no-show fee</strong>{" "}
-                    if you do not attend without prior notice, and that cancellations within 24 hours are non-refundable.
-                  </p>
-                </div>
+                {isFreeBooking ? (
+                  <div className="flex items-start gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">
+                    <ShieldAlert className="mt-0.5 size-4 shrink-0 text-emerald-500" />
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      This is a <strong className="text-foreground">free appointment</strong>. No payment is required. Please be on time — out of respect for the diviner&apos;s schedule.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+                    <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      By proceeding with payment, you agree that{" "}
+                      <strong className="text-foreground">50% of the payment is retained as a no-show fee</strong>{" "}
+                      if you do not attend without prior notice, and that cancellations within 24 hours are non-refundable.
+                    </p>
+                  </div>
+                )}
               </div>
 
-              {/* Right column — Payment Form */}
+              {/* Right column — Payment Form (hidden for free/unscoped bookings) */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Payment</h3>
+                {!isFreeBooking && <h3 className="text-lg font-semibold">Payment</h3>}
 
                 {error && (
                   <div className="rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
