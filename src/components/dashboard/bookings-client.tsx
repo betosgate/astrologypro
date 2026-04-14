@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { formatDateTime } from "@/lib/format";
 import {
   Card,
@@ -89,12 +89,28 @@ export function BookingsClient({
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [liveStats, setLiveStats] = useState<{
+    sessionsThisWeek: number;
+    hoursThisWeek: number;
+    upcomingCount: number;
+    totalClients: number;
+    totalRevenue: number;
+  } | null>(null);
 
   const now = useMemo(() => new Date(), []);
 
-  // ── Computed KPIs ──────────────────────────────────────────────────────────
+  // ── Live KPI stats from API ────────────────────────────────────────────────
+  useEffect(() => {
+    fetch("/api/dashboard/bookings/stats")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.sessionsThisWeek !== undefined) setLiveStats(d);
+      })
+      .catch(() => {});
+  }, []);
 
-  const kpis = useMemo(() => {
+  // Fallback computed KPIs (used until API responds)
+  const computedKpis = useMemo(() => {
     const thisWeekStart = new Date(now);
     thisWeekStart.setDate(now.getDate() - now.getDay());
     thisWeekStart.setHours(0, 0, 0, 0);
@@ -104,7 +120,7 @@ export function BookingsClient({
     let sessionsThisWeek = 0;
     let hoursThisWeek = 0;
     let upcomingCount = 0;
-    let totalClients = new Set<string>();
+    const totalClients = new Set<string>();
     let totalRevenue = 0;
 
     for (const b of bookings) {
@@ -113,24 +129,15 @@ export function BookingsClient({
       const duration = b.duration_minutes as number;
       const clientId = b.client_id as string;
 
-      if (
-        scheduledAt >= thisWeekStart &&
-        scheduledAt < thisWeekEnd &&
-        ["pending", "confirmed", "in_progress", "completed"].includes(status)
-      ) {
+      if (scheduledAt >= thisWeekStart && scheduledAt < thisWeekEnd &&
+        ["pending", "confirmed", "in_progress", "completed"].includes(status)) {
         sessionsThisWeek++;
         hoursThisWeek += duration / 60;
       }
-
-      if (
-        scheduledAt > now &&
-        ["pending", "confirmed", "pending_payment"].includes(status)
-      ) {
+      if (scheduledAt > now && ["pending", "confirmed", "pending_payment"].includes(status)) {
         upcomingCount++;
       }
-
       if (clientId) totalClients.add(clientId);
-
       if (["confirmed", "completed"].includes(status) && (b.base_price as number) > 0) {
         totalRevenue += b.base_price as number;
       }
@@ -144,6 +151,8 @@ export function BookingsClient({
       totalRevenue,
     };
   }, [bookings, now]);
+
+  const kpis = liveStats ?? computedKpis;
 
   // ── Filtering ──────────────────────────────────────────────────────────────
 
