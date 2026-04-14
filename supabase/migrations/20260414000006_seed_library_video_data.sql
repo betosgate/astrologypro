@@ -10,12 +10,20 @@ DECLARE
   v_booking_id      UUID;
 BEGIN
 
-  -- Resolve the first active diviner (same as other seed migrations)
+  -- Resolve Cosmic Aura (test diviner). Fall back to first active diviner.
   SELECT id, user_id INTO v_diviner_id, v_diviner_user_id
     FROM diviners
    WHERE is_active = TRUE
-   ORDER BY created_at ASC
+     AND display_name = 'Cosmic Aura'
    LIMIT 1;
+
+  IF v_diviner_id IS NULL THEN
+    SELECT id, user_id INTO v_diviner_id, v_diviner_user_id
+      FROM diviners
+     WHERE is_active = TRUE
+     ORDER BY created_at ASC
+     LIMIT 1;
+  END IF;
 
   IF v_diviner_id IS NULL THEN
     RAISE NOTICE 'No active diviner found — skipping.';
