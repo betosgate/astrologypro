@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { Check, Crown } from "lucide-react";
 import { PLANS, PLAN_ORDER, type PlanId } from "@/lib/plans";
+import { SectionContainer } from "@/components/shared/section-container";
 
 export function PricingCard() {
   return (
-    <section className="relative px-4 py-10 sm:px-6 lg:px-8" id="pricing">
-      <div className="mx-auto max-w-5xl">
+    <section className="relative" id="pricing">
+      <SectionContainer verticalPadding="lg">
         <div className="grid items-start gap-6 md:grid-cols-3">
           {PLAN_ORDER.map((planId) => {
             const p = PLANS[planId];
@@ -83,7 +84,7 @@ export function PricingCard() {
             );
           })}
         </div>
-      </div>
+      </SectionContainer>
     </section>
   );
 }

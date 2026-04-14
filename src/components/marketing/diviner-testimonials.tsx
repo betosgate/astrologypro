@@ -1,4 +1,5 @@
 import { Star } from "lucide-react";
+import { SectionContainer } from "@/components/shared/section-container";
 
 const testimonials = [
   {
@@ -29,8 +30,8 @@ const testimonials = [
 
 export function DivinerTestimonials() {
   return (
-    <section className="px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl">
+    <section className="relative">
+      <SectionContainer verticalPadding="lg">
         <div className="mb-12 text-center">
           <h2 className="text-3xl font-bold sm:text-4xl">
             Loved by{" "}
@@ -83,7 +84,7 @@ export function DivinerTestimonials() {
             </div>
           ))}
         </div>
-      </div>
+      </SectionContainer>
     </section>
   );
 }
