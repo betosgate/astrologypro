@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
 
   const sp = req.nextUrl.searchParams;
   const statusFilter = sp.get("status");
+  const bookingIdFilter = sp.get("booking_id");
   const cursor = sp.get("cursor");
   const limit = Math.min(50, Math.max(1, Number(sp.get("limit") ?? "20")));
 
@@ -78,6 +79,10 @@ export async function GET(req: NextRequest) {
     VALID_STATUSES.includes(statusFilter as VideoSessionStatus)
   ) {
     query = query.eq("status", statusFilter);
+  }
+
+  if (bookingIdFilter) {
+    query = query.eq("booking_id", bookingIdFilter);
   }
 
   if (cursor) {

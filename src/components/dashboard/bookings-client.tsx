@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { formatDateTime } from "@/lib/format";
 import {
   Card,
@@ -37,6 +37,13 @@ import { formatCurrency } from "@/lib/format";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+interface LinkedOrder {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+}
+
 interface BookingsClientProps {
   bookings: Record<string, unknown>[];
   clientPrevSessions: Record<
@@ -44,6 +51,7 @@ interface BookingsClientProps {
     { count: number; lastDate: string | null; lastNotes: string | null }
   >;
   divinerUsername: string;
+  ordersByBookingId?: Record<string, LinkedOrder>;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -75,17 +83,34 @@ export function BookingsClient({
   bookings,
   clientPrevSessions,
   divinerUsername,
+  ordersByBookingId = {},
 }: BookingsClientProps) {
   const [timeView, setTimeView] = useState<"upcoming" | "past">("upcoming");
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [liveStats, setLiveStats] = useState<{
+    sessionsThisWeek: number;
+    hoursThisWeek: number;
+    upcomingCount: number;
+    totalClients: number;
+    totalRevenue: number;
+  } | null>(null);
 
   const now = useMemo(() => new Date(), []);
 
-  // ── Computed KPIs ──────────────────────────────────────────────────────────
+  // ── Live KPI stats from API ────────────────────────────────────────────────
+  useEffect(() => {
+    fetch("/api/dashboard/bookings/stats")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.sessionsThisWeek !== undefined) setLiveStats(d);
+      })
+      .catch(() => {});
+  }, []);
 
-  const kpis = useMemo(() => {
+  // Fallback computed KPIs (used until API responds)
+  const computedKpis = useMemo(() => {
     const thisWeekStart = new Date(now);
     thisWeekStart.setDate(now.getDate() - now.getDay());
     thisWeekStart.setHours(0, 0, 0, 0);
@@ -95,7 +120,7 @@ export function BookingsClient({
     let sessionsThisWeek = 0;
     let hoursThisWeek = 0;
     let upcomingCount = 0;
-    let totalClients = new Set<string>();
+    const totalClients = new Set<string>();
     let totalRevenue = 0;
 
     for (const b of bookings) {
@@ -104,24 +129,15 @@ export function BookingsClient({
       const duration = b.duration_minutes as number;
       const clientId = b.client_id as string;
 
-      if (
-        scheduledAt >= thisWeekStart &&
-        scheduledAt < thisWeekEnd &&
-        ["pending", "confirmed", "in_progress", "completed"].includes(status)
-      ) {
+      if (scheduledAt >= thisWeekStart && scheduledAt < thisWeekEnd &&
+        ["pending", "confirmed", "in_progress", "completed"].includes(status)) {
         sessionsThisWeek++;
         hoursThisWeek += duration / 60;
       }
-
-      if (
-        scheduledAt > now &&
-        ["pending", "confirmed", "pending_payment"].includes(status)
-      ) {
+      if (scheduledAt > now && ["pending", "confirmed", "pending_payment"].includes(status)) {
         upcomingCount++;
       }
-
       if (clientId) totalClients.add(clientId);
-
       if (["confirmed", "completed"].includes(status) && (b.base_price as number) > 0) {
         totalRevenue += b.base_price as number;
       }
@@ -135,6 +151,8 @@ export function BookingsClient({
       totalRevenue,
     };
   }, [bookings, now]);
+
+  const kpis = liveStats ?? computedKpis;
 
   // ── Filtering ──────────────────────────────────────────────────────────────
 
@@ -503,6 +521,7 @@ export function BookingsClient({
                               notes: booking.session_notes as string | null,
                               session_notes:
                                 (booking.session_notes as string) ?? null,
+                              booking_notes: (booking.booking_notes as string) ?? null,
                               client_name: client?.full_name ?? "Unknown",
                               client_email: client?.email ?? "",
                               service_name: service?.name ?? "Unknown",
@@ -512,6 +531,7 @@ export function BookingsClient({
                               refund_reason:
                                 (booking.refund_reason as string) ?? null,
                             }}
+                            linkedOrder={ordersByBookingId[booking.id as string] ?? null}
                           />
                           <SessionPrepSheet
                             booking={{
@@ -521,6 +541,7 @@ export function BookingsClient({
                               service_name: service?.name ?? "Unknown",
                               client_name: client?.full_name ?? "Unknown",
                               client_email: client?.email ?? "",
+                              client_id: (booking.client_id as string) ?? null,
                               birth_date: client?.birth_date ?? null,
                               birth_time: client?.birth_time ?? null,
                               birth_city: client?.birth_city ?? null,
@@ -533,6 +554,10 @@ export function BookingsClient({
                               last_session_date: prev?.lastDate ?? null,
                               session_notes: prev?.lastNotes ?? null,
                               username: divinerUsername || "admin",
+                              duration_minutes: (booking.duration_minutes as number) ?? 60,
+                              metadata: (booking.metadata as Record<string, unknown>) ?? null,
+                              stripe_payment_intent_id: (booking.stripe_payment_intent_id as string) ?? null,
+                              base_price: (booking.base_price as number) ?? null,
                             }}
                           />
                         </div>

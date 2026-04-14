@@ -28,6 +28,8 @@ import {
   Calendar,
   ClipboardList,
   Sparkles,
+  Video,
+  Loader2,
 } from "lucide-react";
 import { getSessionInsights } from "@/lib/astrology";
 
@@ -38,6 +40,7 @@ interface BookingData {
   service_name: string;
   client_name: string;
   client_email: string;
+  client_id: string | null;
   birth_date: string | null;
   birth_time: string | null;
   birth_city: string | null;
@@ -46,6 +49,10 @@ interface BookingData {
   last_session_date: string | null;
   session_notes: string | null;
   username: string;
+  duration_minutes: number;
+  metadata?: Record<string, unknown> | null;
+  stripe_payment_intent_id?: string | null;
+  base_price?: number | null;
 }
 
 interface SessionPrepProps {
@@ -104,6 +111,7 @@ function useCountdown(targetDate: string) {
 function PrepContent({ booking }: SessionPrepProps) {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [joiningSession, setJoiningSession] = useState(false);
   const timeLeft = useCountdown(booking.scheduled_at);
 
   const storageKey = `session-prep-${booking.id}`;
@@ -161,7 +169,7 @@ function PrepContent({ booking }: SessionPrepProps) {
 
   return (
     <div className="flex flex-col gap-5 p-1">
-      {/* Timer */}
+      {/* Timer + Join Session */}
       <div className="flex items-center justify-between rounded-lg bg-muted p-3">
         <div className="flex items-center gap-2 text-sm">
           <Clock className="size-4 text-muted-foreground" />
@@ -169,6 +177,48 @@ function PrepContent({ booking }: SessionPrepProps) {
         </div>
         <span className="text-sm font-semibold">{timeLeft}</span>
       </div>
+
+      {["confirmed", "in_progress", "pending"].includes(booking.status) && (
+        <Button
+          className="w-full"
+          onClick={async () => {
+            setJoiningSession(true);
+            try {
+              // Provision (or re-use) a Chime meeting for this booking,
+              // then navigate to the platform session page.
+              const res = await fetch("/api/chime/create-meeting", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  bookingId: booking.id,
+                  duration: booking.duration_minutes,
+                }),
+              });
+
+              if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(
+                  (err as { error?: string }).error ?? "Failed to create session"
+                );
+              }
+
+              window.location.href = `/${booking.username}/session/${booking.id}`;
+            } catch (e) {
+              alert(e instanceof Error ? e.message : "Could not start video session. Please try again.");
+            } finally {
+              setJoiningSession(false);
+            }
+          }}
+          disabled={joiningSession}
+        >
+          {joiningSession ? (
+            <Loader2 className="mr-2 size-4 animate-spin" />
+          ) : (
+            <Video className="mr-2 size-4" />
+          )}
+          {joiningSession ? "Starting..." : "Join Session"}
+        </Button>
+      )}
 
       {/* Client info */}
       <div className="space-y-3">
@@ -290,22 +340,22 @@ function PrepContent({ booking }: SessionPrepProps) {
                     <p className="text-xs font-medium text-muted-foreground">
                       Primary: {questionnaire.firstName || booking.client_name}
                     </p>
-                    {booking.birth_date && (
+                    {(booking.birth_date || questionnaire.birthDate) && (
                       <p className="text-xs">
                         <span className="text-muted-foreground">DOB: </span>
-                        {booking.birth_date}
+                        {booking.birth_date || questionnaire.birthDate}
                       </p>
                     )}
-                    {booking.birth_time && (
+                    {(booking.birth_time || questionnaire.birthTime) && (
                       <p className="text-xs">
                         <span className="text-muted-foreground">Time: </span>
-                        {booking.birth_time}
+                        {booking.birth_time || questionnaire.birthTime}
                       </p>
                     )}
-                    {booking.birth_city && (
+                    {(booking.birth_city || questionnaire.birthCity) && (
                       <p className="text-xs">
                         <span className="text-muted-foreground">City: </span>
-                        {booking.birth_city}
+                        {booking.birth_city || questionnaire.birthCity}
                       </p>
                     )}
                   </div>

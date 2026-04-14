@@ -1,12 +1,14 @@
 import Link from "next/link";
 import Image from "next/image";
+import { SectionContainer } from "@/components/shared/section-container";
+import { DashboardReturnButton } from "@/components/marketing/dashboard-return-button";
 
 export function MarketingHeader() {
   return (
     <header className="sticky top-0 z-50 w-full">
       {/* Nav bar with semi-transparent dark background */}
-      <div
-        className="relative mx-auto flex h-[80px] max-w-[1200px] items-center justify-between px-6"
+      <SectionContainer
+        className="relative flex h-[80px] items-center justify-between"
         style={{
           background: "linear-gradient(180deg, rgba(30,18,10,0.85) 0%, rgba(20,10,5,0.75) 100%)",
           borderBottom: "1px solid rgba(201,168,76,0.15)",
@@ -73,6 +75,8 @@ export function MarketingHeader() {
 
         {/* Right group */}
         <div className="hidden items-center gap-5 md:flex">
+          {/* Shows only when user has an active session — resolves correct dashboard */}
+          <DashboardReturnButton />
           <Link
             href="/login"
             className="text-[14px] font-bold uppercase text-white transition-colors hover:text-[#ecd396]"
@@ -100,7 +104,7 @@ export function MarketingHeader() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-      </div>
+      </SectionContainer>
     </header>
   );
 }

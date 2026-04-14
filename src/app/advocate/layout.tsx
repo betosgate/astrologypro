@@ -6,6 +6,7 @@ import Link from "next/link";
 import { RouteTracker } from "@/components/shared/route-tracker";
 import { NavLink } from "@/components/shared/nav-link";
 import { PortalLogoutButton } from "@/components/portal/logout-button";
+import { SectionContainer } from "@/components/shared/section-container";
 
 export const metadata = { title: "Advocate Portal - AstrologyPro" };
 
@@ -40,7 +41,7 @@ export default async function AdvocateLayout({ children }: { children: React.Rea
     <div className="min-h-screen bg-background">
       <RouteTracker href="/advocate" />
       <header className="sticky top-0 z-40 border-b bg-background">
-        <div className="container mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+        <SectionContainer className="flex h-14 items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href="/advocate" className="text-lg font-bold">AstrologyPro</Link>
             <span className="hidden text-sm text-muted-foreground sm:inline">Advocate Portal</span>
@@ -63,7 +64,7 @@ export default async function AdvocateLayout({ children }: { children: React.Rea
             </Link>
             <PortalLogoutButton />
           </div>
-        </div>
+        </SectionContainer>
         <nav className="flex items-center gap-1 border-t px-4 sm:hidden">
           {navLinks.slice(0, 4).map((link) => (
             <Link
@@ -76,9 +77,9 @@ export default async function AdvocateLayout({ children }: { children: React.Rea
           ))}
         </nav>
       </header>
-      <main className="container mx-auto max-w-5xl p-4 py-6 lg:p-8">
+      <SectionContainer as="main" verticalPadding="md">
         {children}
-      </main>
+      </SectionContainer>
     </div>
   );
 }

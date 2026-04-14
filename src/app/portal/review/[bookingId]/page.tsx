@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyReviewToken } from "@/lib/review-token";
 import { ReviewForm } from "./review-form";
+import { SectionContainer } from "@/components/shared/section-container";
 
 interface PageProps {
   params: Promise<{ bookingId: string }>;
@@ -56,7 +57,7 @@ export default async function ReviewPage({ params, searchParams }: PageProps) {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_80%,rgba(201,168,76,0.08)_0%,transparent_50%)]" />
       </div>
 
-      <div className="relative mx-auto max-w-lg px-4 py-16">
+      <SectionContainer size="narrow" verticalPadding="lg" className="relative">
         {/* Header */}
         <div className="mb-10 text-center">
           {diviner?.avatar_url && (
@@ -96,7 +97,7 @@ export default async function ReviewPage({ params, searchParams }: PageProps) {
             serviceName={service?.name ?? "Session"}
           />
         )}
-      </div>
+      </SectionContainer>
     </div>
   );
 }

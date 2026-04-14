@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { SectionContainer } from "@/components/shared/section-container";
 
 type EntityOption = { id: string; name: string; flag_emoji: string | null };
 
@@ -111,7 +112,7 @@ export default function AdminForecastNewPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-xl">
+    <SectionContainer verticalPadding="none" className="space-y-6">
       <Link
         href="/admin/mundane/forecasts"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -278,6 +279,6 @@ export default function AdminForecastNewPage() {
           </Button>
         </div>
       </form>
-    </div>
+    </SectionContainer>
   );
 }

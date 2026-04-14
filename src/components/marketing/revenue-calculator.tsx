@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, DollarSign, TrendingUp, Star } from "lucide-react";
+import { SectionContainer } from "@/components/shared/section-container";
 
 function useAnimatedNumber(target: number, duration = 400) {
   const [display, setDisplay] = useState(target);
@@ -57,8 +58,8 @@ export function RevenueCalculator() {
   const animatedRoi = useAnimatedNumber(roiPercentage);
 
   return (
-    <section className="relative px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-4xl">
+    <section className="relative">
+      <SectionContainer size="narrow" verticalPadding="lg">
         <div className="relative overflow-hidden rounded-3xl border border-[#c9a84c]/15 bg-gradient-to-br from-[#0d1230] via-[#0a0e27] to-[#0d1230] p-8 shadow-2xl sm:p-12">
           {/* Star decorations — gold tinted */}
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -225,7 +226,7 @@ export function RevenueCalculator() {
             </div>
           </div>
         </div>
-      </div>
+      </SectionContainer>
     </section>
   );
 }

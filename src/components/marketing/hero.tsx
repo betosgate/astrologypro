@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { SectionContainer } from "@/components/shared/section-container";
 
 const features = [
   { icon: "/images/home/HD-Video-Sessions.png", label: "HD Video Sessions", href: "/features", gold: true },
@@ -94,7 +95,7 @@ export function Hero() {
       </div>
 
       {/* ===== CONTENT ===== */}
-      <div className="relative z-10 mx-auto max-w-[1200px] px-6 pb-3 pt-6 md:pt-8">
+      <SectionContainer className="relative z-10 pb-3 pt-6 md:pt-8">
         {/* Badge */}
         <div className="mb-6 flex justify-center md:justify-start">
           <div className="inline-flex items-center gap-2 rounded-full border border-[#c9a84c]/30 bg-[#c9a84c]/10 px-4 py-1.5 text-sm text-[#e2c97e] backdrop-blur-sm">
@@ -222,7 +223,7 @@ export function Hero() {
             </Link>
           ))}
         </div>
-      </div>
+      </SectionContainer>
     </section>
   );
 }

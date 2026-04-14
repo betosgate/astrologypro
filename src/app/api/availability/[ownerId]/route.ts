@@ -107,8 +107,16 @@ export async function GET(
         typeof record.service_id === "string" ? record.service_id : null;
       if (!allSlots) {
         if (serviceId) {
-          // Include templates that match this service OR generic templates (no service_id)
-          if (templateServiceId && templateServiceId !== serviceId) return false;
+          // Prefer service-specific templates. Fall back to generics only when
+          // no templates are explicitly linked to this service.
+          const hasServiceSpecific = (templates ?? []).some(
+            (t) => (t as Record<string, unknown>).service_id === serviceId
+          );
+          if (hasServiceSpecific) {
+            if (templateServiceId !== serviceId) return false;
+          } else {
+            if (templateServiceId) return false;
+          }
         } else if (templateServiceId) {
           return false;
         }

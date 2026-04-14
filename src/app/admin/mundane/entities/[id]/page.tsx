@@ -13,7 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Pencil, Loader2, MapPin, Star, CalendarDays, BarChart2, FileText, StickyNote, BookOpen, CheckCircle2 } from "lucide-react";
+import {
+  ArrowLeft, Pencil, Loader2, MapPin, Star, CalendarDays, BarChart2,
+  FileText, StickyNote, BookOpen, CheckCircle2, Plus, Trash2, ExternalLink,
+} from "lucide-react";
 import { toast } from "sonner";
 import { MundaneNatalChart } from "@/components/admin/mundane-natal-chart";
 
@@ -48,6 +51,9 @@ type EntityChart = {
   timezone: string | null;
   is_primary: boolean;
   chart_url: string | null;
+  notes: string | null;
+  source: string | null;
+  confidence_level: string | null;
 };
 
 type MundaneEvent = {
@@ -79,9 +85,28 @@ type EditForm = {
   notes: string;
 };
 
+type AddChartForm = {
+  chart_title: string;
+  chart_type: string;
+  event_date: string;
+  event_time: string;
+  timezone: string;
+  is_primary: boolean;
+  notes: string;
+  source: string;
+  confidence_level: string;
+};
+
 const ENTITY_TYPES = [
   "country", "city", "institution", "market", "commodity", "organization", "other",
 ] as const;
+
+const CHART_TYPES = [
+  "independence", "constitution", "ingress", "lunation",
+  "eclipse", "transit", "event", "other",
+] as const;
+
+const RODDEN_RATINGS = ["AA", "A", "B", "C", "X"] as const;
 
 // entity_type badge colors
 const ENTITY_TYPE_BADGE: Record<string, string> = {
@@ -118,11 +143,34 @@ const CONFIDENCE_BADGE: Record<string, string> = {
   speculative: "bg-gray-100 text-gray-600 border-gray-200",
 };
 
+const CHART_TYPE_BADGE: Record<string, string> = {
+  independence: "bg-blue-100 text-blue-700 border-blue-200",
+  constitution: "bg-indigo-100 text-indigo-700 border-indigo-200",
+  ingress: "bg-violet-100 text-violet-700 border-violet-200",
+  lunation: "bg-sky-100 text-sky-700 border-sky-200",
+  eclipse: "bg-amber-100 text-amber-700 border-amber-200",
+  transit: "bg-teal-100 text-teal-700 border-teal-200",
+  event: "bg-green-100 text-green-700 border-green-200",
+  other: "bg-gray-100 text-gray-600 border-gray-200",
+};
+
 type DetailTab = "overview" | "chart_data" | "events" | "forecasts" | "notes";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 }
+
+const EMPTY_ADD_CHART_FORM: AddChartForm = {
+  chart_title: "",
+  chart_type: "other",
+  event_date: "",
+  event_time: "",
+  timezone: "UTC",
+  is_primary: false,
+  notes: "",
+  source: "",
+  confidence_level: "",
+};
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
@@ -149,6 +197,16 @@ export default function AdminMundaneEntityDetailPage({
   });
   const [editError, setEditError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Add Chart dialog state
+  const [addChartOpen, setAddChartOpen] = useState(false);
+  const [addChartForm, setAddChartForm] = useState<AddChartForm>(EMPTY_ADD_CHART_FORM);
+  const [addChartError, setAddChartError] = useState("");
+  const [addingChart, setAddingChart] = useState(false);
+
+  // Chart action states (keyed by chart id)
+  const [settingPrimary, setSettingPrimary] = useState<string | null>(null);
+  const [deletingChart, setDeletingChart] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -242,6 +300,99 @@ export default function AdminMundaneEntityDetailPage({
       toast.error("Network error — could not calculate chart");
     } finally {
       setCalculating(false);
+    }
+  }
+
+  function openAddChart() {
+    setAddChartForm(EMPTY_ADD_CHART_FORM);
+    setAddChartError("");
+    setAddChartOpen(true);
+  }
+
+  async function handleAddChart() {
+    if (!addChartForm.chart_title.trim()) {
+      setAddChartError("Chart title is required.");
+      return;
+    }
+    if (!addChartForm.event_date) {
+      setAddChartError("Event date is required.");
+      return;
+    }
+    setAddingChart(true);
+    setAddChartError("");
+
+    const payload = {
+      chart_title: addChartForm.chart_title.trim(),
+      chart_type: addChartForm.chart_type,
+      event_date: addChartForm.event_date,
+      event_time: addChartForm.event_time.trim() || null,
+      timezone: addChartForm.timezone.trim() || null,
+      is_primary: addChartForm.is_primary,
+      notes: addChartForm.notes.trim() || null,
+      source: addChartForm.source.trim() || null,
+      confidence_level: addChartForm.confidence_level || null,
+    };
+
+    try {
+      const res = await fetch(`/api/mundane/entities/${id}/charts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        toast.success("Chart added successfully");
+        setAddChartOpen(false);
+        load();
+      } else {
+        const json = await res.json();
+        setAddChartError(json.detail ?? json.title ?? "Failed to add chart.");
+      }
+    } catch {
+      setAddChartError("Network error — could not add chart.");
+    } finally {
+      setAddingChart(false);
+    }
+  }
+
+  async function handleSetPrimary(chartId: string) {
+    setSettingPrimary(chartId);
+    try {
+      const res = await fetch(`/api/mundane/entities/${id}/charts/${chartId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_primary: true }),
+      });
+      if (res.ok) {
+        toast.success("Primary chart updated");
+        load();
+      } else {
+        const json = await res.json();
+        toast.error(json.detail ?? json.title ?? "Failed to set primary.");
+      }
+    } catch {
+      toast.error("Network error — could not update chart.");
+    } finally {
+      setSettingPrimary(null);
+    }
+  }
+
+  async function handleDeleteChart(chartId: string) {
+    setDeletingChart(chartId);
+    try {
+      const res = await fetch(`/api/mundane/entities/${id}/charts/${chartId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        toast.success("Chart deleted");
+        load();
+      } else {
+        const json = await res.json();
+        toast.error(json.detail ?? json.title ?? "Failed to delete chart.");
+      }
+    } catch {
+      toast.error("Network error — could not delete chart.");
+    } finally {
+      setDeletingChart(null);
     }
   }
 
@@ -394,42 +545,110 @@ export default function AdminMundaneEntityDetailPage({
           {/* Natal chart visualization */}
           <MundaneNatalChart natalChartData={entity.natal_chart_data ?? null} />
 
-          {/* Associated Charts list */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold">Associated Charts</h3>
-              <Button size="sm" variant="outline" asChild>
-                <Link href={`/admin/mundane-entities/${id}`}>Manage in Registry</Link>
-              </Button>
-            </div>
-            {charts.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No charts associated yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {charts.map((c) => (
-                  <div key={c.id} className="flex items-start justify-between gap-3 rounded-lg border bg-card p-3 text-sm">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {c.is_primary && <Star className="size-3.5 text-amber-500 fill-amber-500 shrink-0" />}
-                        <span className="font-medium">{c.chart_title}</span>
-                        <Badge variant="outline" className="text-xs capitalize">{c.chart_type}</Badge>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                        <span>{formatDate(c.event_date)}</span>
-                        {c.event_time && <span>{c.event_time}</span>}
-                        {c.timezone && <span>{c.timezone}</span>}
-                        {c.chart_url && (
-                          <a href={c.chart_url} target="_blank" rel="noreferrer" className="hover:underline text-primary">
-                            View Chart
-                          </a>
+          {/* Alternative Charts panel */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Alternative Charts</CardTitle>
+                <Button size="sm" variant="outline" onClick={openAddChart}>
+                  <Plus className="mr-1.5 size-3.5" /> Add Chart
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {charts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No charts associated yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {charts.map((c) => (
+                    <div key={c.id} className="flex items-start justify-between gap-3 rounded-lg border bg-card p-3 text-sm">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {c.is_primary && (
+                            <Star className="size-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                          )}
+                          <span className="font-medium">{c.chart_title}</span>
+                          <Badge
+                            variant="outline"
+                            className={`text-xs capitalize ${CHART_TYPE_BADGE[c.chart_type] ?? ""}`}
+                          >
+                            {c.chart_type}
+                          </Badge>
+                          {c.is_primary && (
+                            <Badge variant="outline" className="text-xs bg-amber-50 text-amber-600 border-amber-200">
+                              Primary
+                            </Badge>
+                          )}
+                          {c.confidence_level && (
+                            <Badge
+                              variant="outline"
+                              className={`text-xs font-semibold ${BIRTH_CONFIDENCE_BADGE[c.confidence_level] ?? ""}`}
+                            >
+                              {c.confidence_level}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-1">
+                          <span>{formatDate(c.event_date)}</span>
+                          {c.event_time && <span>{c.event_time}</span>}
+                          {c.timezone && <span>{c.timezone}</span>}
+                          {c.source && <span>Source: {c.source}</span>}
+                        </div>
+                        {c.notes && (
+                          <p className="text-xs text-muted-foreground mt-1 italic">{c.notes}</p>
                         )}
                       </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs"
+                          asChild
+                        >
+                          <Link
+                            href={`/admin/mundane/chart-studio?entity_id=${id}&chart_id=${c.id}`}
+                            target="_blank"
+                          >
+                            <ExternalLink className="size-3 mr-1" />
+                            Studio
+                          </Link>
+                        </Button>
+                        {!c.is_primary && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                            onClick={() => handleSetPrimary(c.id)}
+                            disabled={settingPrimary === c.id}
+                          >
+                            {settingPrimary === c.id ? (
+                              <Loader2 className="size-3 animate-spin" />
+                            ) : (
+                              <Star className="size-3 mr-1" />
+                            )}
+                            Set Primary
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDeleteChart(c.id)}
+                          disabled={deletingChart === c.id}
+                        >
+                          {deletingChart === c.id ? (
+                            <Loader2 className="size-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="size-3" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
 
@@ -619,6 +838,123 @@ export default function AdminMundaneEntityDetailPage({
             <Button onClick={handleSave} disabled={saving}>
               {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Chart dialog */}
+      <Dialog open={addChartOpen} onOpenChange={setAddChartOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add Chart</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2 max-h-[70vh] overflow-y-auto pr-1">
+            <div>
+              <label className="text-sm font-medium">Chart Title *</label>
+              <Input
+                value={addChartForm.chart_title}
+                onChange={(e) => setAddChartForm((f) => ({ ...f, chart_title: e.target.value }))}
+                placeholder="e.g. US Independence Chart"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Chart Type *</label>
+              <select
+                value={addChartForm.chart_type}
+                onChange={(e) => setAddChartForm((f) => ({ ...f, chart_type: e.target.value }))}
+                className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              >
+                {CHART_TYPES.map((t) => (
+                  <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-sm font-medium">Event Date *</label>
+                <Input
+                  type="date"
+                  value={addChartForm.event_date}
+                  onChange={(e) => setAddChartForm((f) => ({ ...f, event_date: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Event Time</label>
+                <Input
+                  type="time"
+                  value={addChartForm.event_time}
+                  onChange={(e) => setAddChartForm((f) => ({ ...f, event_time: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Timezone</label>
+              <Input
+                value={addChartForm.timezone}
+                onChange={(e) => setAddChartForm((f) => ({ ...f, timezone: e.target.value }))}
+                placeholder="UTC"
+                className="mt-1"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-sm font-medium">Source</label>
+                <Input
+                  value={addChartForm.source}
+                  onChange={(e) => setAddChartForm((f) => ({ ...f, source: e.target.value }))}
+                  placeholder="e.g. Astrodatabank"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Confidence (Rodden)</label>
+                <select
+                  value={addChartForm.confidence_level}
+                  onChange={(e) => setAddChartForm((f) => ({ ...f, confidence_level: e.target.value }))}
+                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                >
+                  <option value="">— None —</option>
+                  {RODDEN_RATINGS.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Notes</label>
+              <textarea
+                value={addChartForm.notes}
+                onChange={(e) => setAddChartForm((f) => ({ ...f, notes: e.target.value }))}
+                rows={3}
+                placeholder="Optional notes about this chart..."
+                className="mt-1 flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground resize-none"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="is_primary_check"
+                checked={addChartForm.is_primary}
+                onChange={(e) => setAddChartForm((f) => ({ ...f, is_primary: e.target.checked }))}
+                className="h-4 w-4 rounded border border-input accent-amber-500"
+              />
+              <label htmlFor="is_primary_check" className="text-sm">
+                Set as primary chart for this entity
+              </label>
+            </div>
+            {addChartError && <p className="text-sm text-destructive">{addChartError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddChartOpen(false)} disabled={addingChart}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddChart} disabled={addingChart}>
+              {addingChart && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Add Chart
             </Button>
           </DialogFooter>
         </DialogContent>

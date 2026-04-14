@@ -46,12 +46,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const unauthorizedInFlightRef = useRef(false);
+  // Tracks whether a real authenticated session has been established in this
+  // browser tab. Used to avoid redirecting guest/token-based users to /login
+  // when Supabase fires SIGNED_OUT for stale/expired cookies they never used.
+  const hadSessionRef = useRef(false);
 
   const refreshSession = useCallback(async () => {
     const {
       data: { session: nextSession },
     } = await supabase.auth.getSession();
 
+    if (nextSession?.user) {
+      hadSessionRef.current = true;
+    }
     setSession(nextSession);
     setUser(nextSession?.user ?? null);
     setIsLoading(false);
@@ -70,6 +77,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         router.refresh();
         return;
       }
+
+      // Only redirect to login if the user had a real session in this tab.
+      // Token-based guests (e.g. on /{username}/session/{id}?token=...) never
+      // had a session, so a 401 should show an error rather than boot them out.
+      if (!hadSessionRef.current) return;
 
       toast.error("Your session has expired. Please log in again.");
       router.push("/login?reason=expired");
@@ -95,9 +107,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(newSession?.user ?? null);
       setIsLoading(false);
 
-      if (event === "SIGNED_OUT") {
-        router.push("/login?reason=expired");
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+        hadSessionRef.current = true;
       }
+
+      if (event === "SIGNED_OUT") {
+        // Only redirect to login if the user was actually signed in during this
+        // tab session. Guests who have stale/expired Supabase cookies will also
+        // receive SIGNED_OUT on page load — we must not redirect them away from
+        // token-based pages (e.g. /{username}/session/{id}?token=...).
+        if (hadSessionRef.current) {
+          hadSessionRef.current = false;
+          router.push("/login?reason=expired");
+        }
+      }
+
       if (
         event === "TOKEN_REFRESHED" ||
         event === "SIGNED_IN" ||

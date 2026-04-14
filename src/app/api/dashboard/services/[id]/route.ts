@@ -76,19 +76,9 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
 /**
  * PUT /api/dashboard/services/[id]
- * BLOCKED — service editing is now admin-managed via /admin/service-config.
+ * Update a service owned by the authenticated diviner.
  */
-export async function PUT(_req: NextRequest, { params: _params }: RouteParams) {
-  return NextResponse.json(
-    { type: "https://httpstatuses.com/403", title: "Forbidden", status: 403, detail: "Service editing is managed by admin. Contact your administrator." },
-    { status: 403 },
-  );
-}
-
-/**
- * @deprecated — original PUT kept for reference
- */
-async function _PUT_ORIGINAL(req: NextRequest, { params }: RouteParams) {
+export async function PUT(req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   const { user, diviner } = await resolveDiviner();
 
@@ -207,17 +197,9 @@ async function _PUT_ORIGINAL(req: NextRequest, { params }: RouteParams) {
 
 /**
  * DELETE /api/dashboard/services/[id]
- * BLOCKED — service deletion is now admin-managed.
+ * Soft-delete (deactivate) a service owned by the authenticated diviner.
  */
-export async function DELETE(_req: NextRequest, { params: _params2 }: RouteParams) {
-  return NextResponse.json(
-    { type: "https://httpstatuses.com/403", title: "Forbidden", status: 403, detail: "Service deletion is managed by admin. Contact your administrator." },
-    { status: 403 },
-  );
-}
-
-/** @deprecated — original DELETE kept for reference */
-async function _DELETE_ORIGINAL(_req: NextRequest, { params }: RouteParams) {
+export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   const { user, diviner } = await resolveDiviner();
 

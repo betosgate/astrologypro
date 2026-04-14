@@ -376,7 +376,7 @@ async function handleManualBookingCheckoutCompleted(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, booking_token, scheduled_at, duration_minutes, base_price, metadata, questionnaire_responses, diviner_id, client_id, service_id, services(id, name, slug, category, duration_minutes, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields), diviners(id, display_name), clients(id, email, full_name)"
+      "id, booking_token, scheduled_at, duration_minutes, base_price, metadata, questionnaire_responses, diviner_id, client_id, service_id, services(id, name, slug, category, duration_minutes, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields), diviners(id, display_name, username), clients(id, email, full_name)"
     )
     .eq("id", bookingId)
     .single();
@@ -399,7 +399,7 @@ async function handleManualBookingCheckoutCompleted(
     pre_checkout_fields?: unknown;
     post_checkout_fields?: unknown;
   } | null;
-  const div = (booking as Record<string, unknown>).diviners as { id: string; display_name: string } | null;
+  const div = (booking as Record<string, unknown>).diviners as { id: string; display_name: string; username?: string } | null;
   const clientRecord = (booking as Record<string, unknown>).clients as { id: string; email: string; full_name: string | null } | null;
   const meta = (booking as Record<string, unknown>).metadata as { availability_title?: string; availability_description?: string } | null;
 
@@ -422,7 +422,9 @@ async function handleManualBookingCheckoutCompleted(
   const startTime = new Date(booking.scheduled_at as string);
   const durationMins = (booking.duration_minutes as number) ?? svc.duration_minutes;
   const endTime = new Date(startTime.getTime() + durationMins * 60 * 1000);
-  const sessionLink = `${appUrl}/portal/bookings`;
+  const sessionLink = div.username
+    ? `${appUrl}/${div.username}/session/${bookingId}?token=${booking.booking_token}`
+    : `${appUrl}/booking/${booking.booking_token}`;
 
   const formattedDateTime = startTime.toLocaleString("en-US", {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
@@ -1679,7 +1681,7 @@ async function handlePaymentIntentSucceeded(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, booking_token, scheduled_at, duration_minutes, base_price, diviner_id, client_id, service_id, metadata, questionnaire_responses, services(id, name, slug, category, duration_minutes, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields), diviners(id, display_name, user_id), clients(id, email, full_name, user_id)"
+      "id, booking_token, scheduled_at, duration_minutes, base_price, diviner_id, client_id, service_id, metadata, questionnaire_responses, services(id, name, slug, category, duration_minutes, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields), diviners(id, display_name, user_id, username), clients(id, email, full_name, user_id)"
     )
     .eq("id", bookingId)
     .single();
@@ -1706,6 +1708,7 @@ async function handlePaymentIntentSucceeded(
     id: string;
     display_name: string;
     user_id: string;
+    username?: string;
   } | null;
   const clientRecord = (booking as Record<string, unknown>).clients as {
     id: string;
@@ -1823,7 +1826,9 @@ async function handlePaymentIntentSucceeded(
 
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
-  const sessionLink = `${appUrl}/session/${bookingId}`;
+  const sessionLink = div?.username
+    ? `${appUrl}/${div.username}/session/${bookingId}?token=${booking.booking_token}`
+    : `${appUrl}/booking/${booking.booking_token}`;
   const portalOrderUrl = `${appUrl}/login?redirect=${encodeURIComponent(
     `/portal/orders/${orderId}`
   )}`;

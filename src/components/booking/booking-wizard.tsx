@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { CalendarPicker } from "./calendar-picker";
 import {
   ArrowLeft,
@@ -101,12 +102,20 @@ interface BookingDetails {
   fullName: string;
   email: string;
   phone: string;
+  birthDate: string;
+  birthTime: string;
+  birthCity: string;
+  notes: string;
 }
 
 const INITIAL_DETAILS: BookingDetails = {
   fullName: "",
   email: "",
   phone: "",
+  birthDate: "",
+  birthTime: "",
+  birthCity: "",
+  notes: "",
 };
 
 function formatSlotDate(iso: string, timezone: string): string {
@@ -251,6 +260,7 @@ export function BookingWizard({
   );
   const [bookingComplete, setBookingComplete] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
+  const [bookingToken, setBookingToken] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [requiresPostPaymentIntake, setRequiresPostPaymentIntake] = useState(
@@ -266,10 +276,15 @@ export function BookingWizard({
   const availabilityQuery = availabilityServiceId ? `&serviceId=${availabilityServiceId}` : "";
   const purchaseConfig = getServicePurchaseConfig(service);
 
-  // Effective price: slot's linked service price takes priority over the service prop's base_price
-  const effectivePrice = selectedSlot?.servicePrice != null
-    ? selectedSlot.servicePrice
-    : Number(service.base_price ?? service.price ?? 0);
+  // Effective price: slot's linked service price takes priority over the service prop's base_price.
+  // If the slot has NO linked service (availabilityServiceId is null), it is an unscoped
+  // calendar slot — treat as free regardless of the service's base_price.
+  const slotIsUnscoped = selectedSlot != null && selectedSlot.availabilityServiceId == null;
+  const effectivePrice = slotIsUnscoped
+    ? 0
+    : selectedSlot?.servicePrice != null
+      ? selectedSlot.servicePrice
+      : Number(service.base_price ?? service.price ?? 0);
   const isFreeBooking = effectivePrice <= 0;
 
   // Prefill intake data from stored client profile when ?prefill=true
@@ -397,7 +412,9 @@ export function BookingWizard({
         return !!(
           selectedSlot &&
           bookingDetails.fullName.trim() &&
-          bookingDetails.email.trim()
+          bookingDetails.email.trim() &&
+          (!service.requires_birth_data || bookingDetails.birthDate) &&
+          (!service.requires_birth_city || bookingDetails.birthCity.trim())
         );
       case 2:
         return true;
@@ -429,9 +446,16 @@ export function BookingWizard({
           clientEmail: bookingDetails.email,
           clientName: bookingDetails.fullName,
           clientPhone: bookingDetails.phone || undefined,
-          questionnaire: {},
+          booking_notes: bookingDetails.notes || undefined,
+          questionnaire: {
+            ...(bookingDetails.birthDate ? { birthDate: bookingDetails.birthDate } : {}),
+            ...(bookingDetails.birthTime ? { birthTime: bookingDetails.birthTime } : {}),
+            ...(bookingDetails.birthCity ? { birthCity: bookingDetails.birthCity } : {}),
+          },
           affiliateCode,
           policyAcknowledgedAt: policyAcknowledged ? new Date().toISOString() : undefined,
+          // Signal that this slot is not linked to any service — the API will skip charging.
+          freeSlot: slotIsUnscoped ? true : undefined,
         }),
       });
       clearTimeout(timeout);
@@ -453,12 +477,18 @@ export function BookingWizard({
         if (data.bookingId) {
           setBookingId(data.bookingId);
         }
+        if (data.bookingToken) {
+          setBookingToken(data.bookingToken);
+        }
         if (data.orderId) {
           setOrderId(data.orderId);
         }
         setRequiresPostPaymentIntake(Boolean(data.requiresPostPaymentIntake));
       } else if (data.bookingId) {
         setBookingId(data.bookingId);
+        if (data.bookingToken) {
+          setBookingToken(data.bookingToken);
+        }
         if (data.orderId) {
           setOrderId(data.orderId);
         }
@@ -518,7 +548,9 @@ export function BookingWizard({
     return `data:text/calendar;charset=utf-8,${encodeURIComponent(icsContent)}`;
   }
 
-  const sessionJoinUrl = bookingId
+  const sessionJoinUrl = bookingId && bookingToken
+    ? `/${diviner.username}/session/${bookingId}?token=${bookingToken}`
+    : bookingId
     ? `/${diviner.username}/session/${bookingId}`
     : null;
   const portalOrderUrl = orderId ? `/portal/orders/${orderId}` : null;
@@ -618,6 +650,7 @@ export function BookingWizard({
         <ol className="flex items-center justify-center gap-2">
           {STEPS.map((s, i) => {
             const Icon = s.icon;
+            const label = i === 2 && isFreeBooking ? "Confirm" : s.label;
             return (
               <li key={s.label} className="flex items-center gap-2">
                 <div
@@ -631,7 +664,7 @@ export function BookingWizard({
                   )}
                 >
                   <Icon className="size-4" />
-                  <span className="hidden sm:inline">{s.label}</span>
+                  <span className="hidden sm:inline">{label}</span>
                   <span className="sm:hidden">{i + 1}</span>
                 </div>
                 {i < STEPS.length - 1 && (
@@ -651,7 +684,7 @@ export function BookingWizard({
       {/* Step Content */}
       <Card>
         <CardHeader>
-          <CardTitle>{STEPS[step]?.label ?? "Booking"}</CardTitle>
+          <CardTitle>{step === 2 && isFreeBooking ? "Confirm Booking" : (STEPS[step]?.label ?? "Booking")}</CardTitle>
         </CardHeader>
         <CardContent>
           {/* Step 1: Date & Time */}
@@ -812,6 +845,86 @@ export function BookingWizard({
                 </div>
               </div>
 
+              {/* Birth data — shown when the service requires it */}
+              {(service.requires_birth_data || service.requires_birth_time || service.requires_birth_city) && (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">Birth Information</p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="booking-birth-date">
+                        Date of Birth <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="booking-birth-date"
+                        type="date"
+                        value={bookingDetails.birthDate}
+                        onChange={(e) =>
+                          setBookingDetails((prev) => ({
+                            ...prev,
+                            birthDate: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    {service.requires_birth_time && (
+                      <div className="space-y-2">
+                        <Label htmlFor="booking-birth-time">
+                          Time of Birth <span className="text-muted-foreground text-xs">(if known)</span>
+                        </Label>
+                        <Input
+                          id="booking-birth-time"
+                          type="time"
+                          value={bookingDetails.birthTime}
+                          onChange={(e) =>
+                            setBookingDetails((prev) => ({
+                              ...prev,
+                              birthTime: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    )}
+                    {service.requires_birth_city && (
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="booking-birth-city">
+                          City of Birth <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          id="booking-birth-city"
+                          value={bookingDetails.birthCity}
+                          onChange={(e) =>
+                            setBookingDetails((prev) => ({
+                              ...prev,
+                              birthCity: e.target.value,
+                            }))
+                          }
+                          placeholder="e.g. Mumbai, India"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Notes — always shown */}
+              <div className="space-y-2">
+                <Label htmlFor="booking-notes">
+                  Notes <span className="text-muted-foreground">(optional)</span>
+                </Label>
+                <Textarea
+                  id="booking-notes"
+                  rows={3}
+                  value={bookingDetails.notes}
+                  onChange={(e) =>
+                    setBookingDetails((prev) => ({
+                      ...prev,
+                      notes: e.target.value,
+                    }))
+                  }
+                  placeholder="Anything you'd like the practitioner to know before your session…"
+                />
+              </div>
+
               {purchaseConfig.requiresPostPaymentIntake && (
                 <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-muted-foreground">
                   After payment, we&apos;ll ask only for the details needed for{" "}
@@ -902,19 +1015,28 @@ export function BookingWizard({
                 </div>
 
                 {/* Policy notice */}
-                <div className="flex items-start gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
-                  <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    By proceeding with payment, you agree that{" "}
-                    <strong className="text-foreground">50% of the payment is retained as a no-show fee</strong>{" "}
-                    if you do not attend without prior notice, and that cancellations within 24 hours are non-refundable.
-                  </p>
-                </div>
+                {isFreeBooking ? (
+                  <div className="flex items-start gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">
+                    <ShieldAlert className="mt-0.5 size-4 shrink-0 text-emerald-500" />
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      This is a <strong className="text-foreground">free appointment</strong>. No payment is required. Please be on time — out of respect for the diviner&apos;s schedule.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+                    <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      By proceeding with payment, you agree that{" "}
+                      <strong className="text-foreground">50% of the payment is retained as a no-show fee</strong>{" "}
+                      if you do not attend without prior notice, and that cancellations within 24 hours are non-refundable.
+                    </p>
+                  </div>
+                )}
               </div>
 
-              {/* Right column — Payment Form */}
+              {/* Right column — Payment Form (hidden for free/unscoped bookings) */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Payment</h3>
+                {!isFreeBooking && <h3 className="text-lg font-semibold">Payment</h3>}
 
                 {error && (
                   <div className="rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
@@ -1011,8 +1133,10 @@ export function BookingWizard({
               if (step === 1 && !canProceed()) {
                 const missing: string[] = [];
                 let firstMissingId = "";
-                if (!bookingDetails.fullName.trim()) { missing.push("Full Name"); if (!firstMissingId) firstMissingId = "fullName"; }
-                if (!bookingDetails.email.trim()) { missing.push("Email"); if (!firstMissingId) firstMissingId = "email"; }
+                if (!bookingDetails.fullName.trim()) { missing.push("Full Name"); if (!firstMissingId) firstMissingId = "booking-full-name"; }
+                if (!bookingDetails.email.trim()) { missing.push("Email"); if (!firstMissingId) firstMissingId = "booking-email"; }
+                if (service.requires_birth_data && !bookingDetails.birthDate) { missing.push("Date of Birth"); if (!firstMissingId) firstMissingId = "booking-birth-date"; }
+                if (service.requires_birth_city && !bookingDetails.birthCity.trim()) { missing.push("City of Birth"); if (!firstMissingId) firstMissingId = "booking-birth-city"; }
                 toast.error(`Please fill in: ${missing.join(", ")}`);
                 // Scroll to and focus the first missing field
                 if (firstMissingId) {

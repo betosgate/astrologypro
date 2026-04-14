@@ -70,6 +70,84 @@ All accounts are active and confirmed. Use the credentials below to log in at an
 
 ---
 
+## Dashboard QA Accounts — Fully Seeded (seed-dashboard-data.mjs)
+
+These 4 accounts are seeded with complete KPI and activity data across all dashboards.
+Re-seed anytime (idempotent): `node scripts/seed-dashboard-data.mjs`
+
+| Role | Email | Password | Portal | Display Name |
+|---|---|---|---|---|
+| Diviner | diviner.test@astrologypro.com | DivinerTest2026! | `/dashboard` | Cosmic Aura |
+| Trainee | trainee.test@astrologypro.com | TraineeTest2026! | `/trainee` | Zara Nightsky |
+| Admin | admin.test@astrologypro.com | AdminTest2026! | `/admin` | — |
+| Client | client.test@astrologypro.com | ClientTest2026! | `/portal` | Jordan Rivers |
+
+**Seeded data per account:**
+
+- **Diviner** — 6-month revenue history, 38 bookings, 7 services, 180 page views, 60 activity events, 6 testimonials (4 featured), availability Mon–Sat 9am–6pm
+- **Trainee** — 65% lesson completion, 10 quiz attempts (8 passed, avg ~78%), ~5h study time, mentor = Cosmic Aura
+- **Admin** — row in `admin_users` table; sees 5 diviners, 13+ clients, 3 trainees, 8 community members
+- **Client** — 2 past completed sessions, 2 upcoming confirmed sessions, birth data pre-filled (1992-08-14, Chicago IL)
+
+---
+
+## Multi-Role Users with Perennial Mandalism (PM) — 15 accounts
+
+All seeded by `node scripts/seed-multi-role-users.mjs`. Password: `TestUser123!`
+
+### PM + single role
+
+| Email | Roles | Display Name | Portal |
+|---|---|---|---|
+| pm.diviner@test.astrologypro.com | diviner + PM | Solaris Patel | `/dashboard` or `/community` |
+| pm.trainee@test.astrologypro.com | trainee + PM | Wren Ashby | `/trainee` or `/community` |
+| pm.client@test.astrologypro.com | client + PM | Indigo Marsh | `/portal` or `/community` |
+| pm.advocate@test.astrologypro.com | advocate + PM | Cleo Hawthorne | `/advocate` or `/community` |
+| pm.ms@test.astrologypro.com | PM + Mystery School | Dusk Mercer | `/community` |
+
+### PM + two roles
+
+| Email | Roles | Display Name | Portal |
+|---|---|---|---|
+| pm.diviner.trainee@test.astrologypro.com | diviner + trainee + PM | Lycan Voss | `/switch` |
+| pm.diviner.ms@test.astrologypro.com | diviner + PM + MS | Aether Blaine | `/switch` |
+| pm.trainee.ms@test.astrologypro.com | trainee + PM + MS | Cosima Reed | `/switch` |
+| pm.client.advocate@test.astrologypro.com | client + advocate + PM | Onyx Fairfax | `/switch` |
+| pm.diviner.client@test.astrologypro.com | diviner + client + PM | Vesper Laine | `/switch` |
+| pm.trainee.advocate@test.astrologypro.com | trainee + advocate + PM | Sage Orton | `/switch` |
+
+### PM + three roles
+
+| Email | Roles | Display Name | Portal |
+|---|---|---|---|
+| pm.diviner.trainee.ms@test.astrologypro.com | diviner + trainee + PM + MS | Zephyr Crane | `/switch` |
+| pm.diviner.advocate.ms@test.astrologypro.com | diviner + advocate + PM + MS | Nimbus Cross | `/switch` |
+| pm.client.ms@test.astrologypro.com | client + PM + MS | Selene Park | `/switch` |
+
+### All roles
+
+| Email | Roles | Display Name | Portal |
+|---|---|---|---|
+| pm.all@test.astrologypro.com | diviner + trainee + client + advocate + PM + MS | Omni Stellaris | `/switch` |
+
+---
+
+## Other Multi-Role Combos (no PM) — 7 accounts
+
+Seeded by `node scripts/seed-multi-role-users.mjs`. Password: `TestUser123!`
+
+| Email | Roles | Display Name | Portal |
+|---|---|---|---|
+| diviner.trainee@test.astrologypro.com | diviner + trainee | Sirius Kane | `/switch` |
+| diviner.advocate@test.astrologypro.com | diviner + advocate | Celeste Draven | `/switch` |
+| diviner.ms@test.astrologypro.com | diviner + Mystery School | Nox Whitmore | `/switch` |
+| trainee.ms@test.astrologypro.com | trainee + Mystery School | Aquila Frost | `/switch` |
+| trainee.advocate@test.astrologypro.com | trainee + advocate | Lyra Sutton | `/switch` |
+| client.ms@test.astrologypro.com | client + Mystery School | Vesper Nolan | `/switch` |
+| diviner.trainee.ms@test.astrologypro.com | diviner + trainee + MS | Soleil Kwan | `/switch` |
+
+---
+
 ## Multi-Role Users (14)
 
 Users with multiple roles are redirected to `/switch` on login to select their portal.
@@ -107,7 +185,9 @@ Users with multiple roles are redirected to `/switch` on login to select their p
 - Multi-role users land on `/switch` (portal switcher) after login
 - `community_members` rows use `membership_status = 'active'`
 - Diviners, advocates, and trainees have `onboarding_completed = true`
-- To re-seed (idempotent): `node scripts/seed-test-users.js`
+- To re-seed single-role users: `node scripts/seed-test-users.js`
+- To populate KPI/activity data for all roles: `node scripts/seed-role-data.mjs`
+- To populate a single role: `node scripts/seed-role-data.mjs diviner|trainee|client|advocate`
 
 ---
 

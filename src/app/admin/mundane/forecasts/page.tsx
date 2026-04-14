@@ -145,9 +145,10 @@ export default async function AdminMundaneForecastsPage({
       ) : (
         <div className="space-y-2">
           {forecasts.map((forecast) => (
-            <div
+            <Link
               key={forecast.id}
-              className="flex items-start justify-between gap-3 rounded-lg border bg-card p-3 shadow-sm"
+              href={`/admin/mundane/forecasts/${forecast.id}`}
+              className="flex items-start justify-between gap-3 rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/30 transition-colors"
             >
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{forecast.title}</p>
@@ -177,7 +178,7 @@ export default async function AdminMundaneForecastsPage({
                   {forecast.outcome_status.replace("_", " ")}
                 </Badge>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}

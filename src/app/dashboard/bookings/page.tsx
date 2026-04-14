@@ -27,10 +27,37 @@ export default async function BookingsPage() {
   const { data: bookings } = await admin
     .from("bookings")
     .select(
-      "id, scheduled_at, status, duration_minutes, base_price, stripe_payment_intent_id, session_notes, metadata, questionnaire_responses, client_id, refund_amount, refunded_at, refund_reason, services(name), clients(full_name, email, birth_date, birth_time, birth_city)"
+      "id, scheduled_at, status, duration_minutes, base_price, stripe_payment_intent_id, session_notes, booking_notes, metadata, questionnaire_responses, client_id, refund_amount, refunded_at, refund_reason, services(name), clients(full_name, email, birth_date, birth_time, birth_city)"
     )
     .eq("owner_id", ownerId)
     .order("scheduled_at", { ascending: false });
+
+  // Linked orders per booking
+  const bookingIds = (bookings ?? [])
+    .map((b: Record<string, unknown>) => b.id as string)
+    .filter(Boolean);
+
+  let ordersByBookingId: Record<string, { id: string; amount: number; currency: string; status: string }> = {};
+
+  if (bookingIds.length > 0) {
+    const { data: linkedOrders } = await admin
+      .from("orders")
+      .select("id, booking_id, amount, currency, status")
+      .in("booking_id", bookingIds);
+
+    if (linkedOrders) {
+      for (const order of linkedOrders) {
+        if (order.booking_id) {
+          ordersByBookingId[order.booking_id] = {
+            id: order.id,
+            amount: order.amount,
+            currency: order.currency,
+            status: order.status,
+          };
+        }
+      }
+    }
+  }
 
   // Previous session data per client
   const clientPrevSessions: Record<
@@ -80,6 +107,7 @@ export default async function BookingsPage() {
       bookings={(bookings as Record<string, unknown>[]) ?? []}
       clientPrevSessions={clientPrevSessions}
       divinerUsername={diviner?.username ?? ""}
+      ordersByBookingId={ordersByBookingId}
     />
   );
 }

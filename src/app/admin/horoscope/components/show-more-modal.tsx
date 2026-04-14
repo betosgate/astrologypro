@@ -1,4 +1,5 @@
 "use client";
+import { cn } from "@/lib/utils";
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -8,7 +9,7 @@ import {
 import { Loader2, X, Maximize2, Sparkles } from "lucide-react";
 import { AstroHeaderParts, PlanetSymbol } from "./astro-icons";
 import { fetchWithRetry } from "../api";
-import { parseAspectTitle } from "../utils";
+import { parseAspectTitle, getMonthName, getRelationshipBgClass, getPlanetInterpClass } from "../utils";
 import { ASPECT_TYPE_WORDS } from "../constants";
 
 // ─── Chart Image Modal ────────────────────────────────────────────────────────
@@ -55,11 +56,13 @@ export function ChartImageModal({ src, open, onClose }: { src: string; open: boo
 
 // ─── Show More Modal ──────────────────────────────────────────────────────────
 
-export function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, promptType, planetEntries, pictureUrl }: {
+export function ShowMoreModal({ title, content, loading, open, onClose, aspectTitle, promptType, planetEntries, relationshipEntries, bgClass, pictureUrl }: {
   title: string; content: string; loading: boolean; open: boolean; onClose: () => void;
   aspectTitle?: string;
   promptType?: "planet" | "house" | "aspect" | "generic";
   planetEntries?: { planet: string; items: string[] }[];
+  relationshipEntries?: { title: string; content: string; bgClass?: string }[];
+  bgClass?: string;
   pictureUrl?: string | null;
 }) {
   const isAspect = promptType === "aspect" || !!aspectTitle;
@@ -82,54 +85,69 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
             <X className="size-5 transition-transform group-hover:rotate-90" />
           </button>
 
-          <div className="px-6 py-5 border-b border-white/5 bg-slate-900/40 pr-16 shrink-0">
-            <DialogHeader>
-              {isAspect ? (
-                <div className="pb-1">
-                  <AstroHeaderParts title={aspectTitle ?? title} />
-                </div>
-              ) : (
-                <DialogTitle className="text-lg font-bold capitalize gold-text">{title.replace(/_/g, " ")} (Pictorial Analysis)</DialogTitle>
-              )}
-            </DialogHeader>
+          <div className="px-6 pt-4 pb-0 pr-2 shrink-0 flex flex-col items-center">
+            <h2 className="text-xl md:text-2xl font-bold uppercase tracking-[0.2em] gold-text text-center">
+              Deep Astrological Analysis
+            </h2>
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-950/50">
             <div className="flex flex-col gap-0 h-full">
-              <div className="p-6 shrink-0 border-b border-white/5">
+              <div className="pt-0 pb-6 px-6 shrink-0 border-b border-white/5">
                 {loading ? (
                   <div className="flex flex-col items-center gap-3 py-12 justify-center text-muted-foreground">
                     <Loader2 className="size-8 animate-spin text-amber-500 mb-2" />
                     <span className="text-sm font-medium tracking-widest uppercase opacity-70">Cosmic Retrieval...</span>
                   </div>
                 ) : (
-                  <div>
+                  <div className="max-w-4xl mx-auto">
                     {promptType === "planet" && planetEntries && planetEntries.length > 0 ? (
-                      <div className="space-y-6">
+                      <div className="space-y-4">
                         {planetEntries.map(({ planet, items }) => (
-                          <div key={planet} className="rounded-xl border border-amber-500/10 bg-amber-500/5 p-4 space-y-3 shadow-inner">
-                            <div className="flex items-center gap-3">
-                              <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                                <PlanetSymbol name={planet} />
-                              </div>
-                              <div className="h-px flex-1 bg-gradient-to-r from-amber-500/30 to-transparent" />
-                            </div>
-                            <ol className="space-y-3 list-none">
-                              {items.map((item, idx) => (
-                                <li key={idx} className="text-sm leading-relaxed text-foreground/90 flex gap-3 group">
-                                  <span className="flex-shrink-0 size-5 flex items-center justify-center rounded-full bg-amber-500/20 text-amber-500 font-bold text-[10px] border border-amber-500/30 group-hover:bg-amber-500 group-hover:text-amber-950 transition-all">{idx + 1}</span>
-                                  <span className="opacity-90 group-hover:opacity-100">{item}</span>
-                                </li>
-                              ))}
-                            </ol>
+                          <div key={planet} className="flex flex-col gap-5 items-center">
+                             <div className="bg-white px-8 py-3.5 rounded-lg shadow-xl border border-black/5 text-center" style={{ width: "-webkit-fill-available" }}>
+                               <h3 className="text-[20px] font-semibold text-black uppercase tracking-wide leading-tight">
+                                 {planet} Insights
+                               </h3>
+                             </div>
+                             <div className="w-full rounded-xl border border-black/10 bg-[#f0a023] pt-6 pb-2 px-8 space-y-4 shadow-2xl text-black">
+                                <ol className="space-y-4 list-none">
+                                  {items.map((item, idx) => (
+                                    <li key={idx} className="text-[18px] leading-relaxed flex gap-4 font-normal">
+                                      <span className="flex-shrink-0 size-6 flex items-center justify-center rounded-full bg-black/10 text-black font-bold text-xs border border-black/20">{idx + 1}</span>
+                                      <span>{item}</span>
+                                    </li>
+                                  ))}
+                                </ol>
+                             </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : relationshipEntries && relationshipEntries.length > 0 ? (
+                      <div className="space-y-4">
+                        {relationshipEntries.map(({ title: entryTitle, content: entryContent, bgClass: entryBg }) => (
+                          <div key={entryTitle} className="flex flex-col gap-5 items-center">
+                             <div className="bg-white px-8 py-3.5 rounded-lg shadow-xl border border-black/5 text-center" style={{ width: "-webkit-fill-available" }}>
+                               <h4 className="text-[20px] font-semibold text-black uppercase tracking-wide leading-tight">
+                                 {entryTitle}
+                               </h4>
+                             </div>
+                             <div className={cn("rounded-xl border border-black/10 pt-6 pb-2 px-8 shadow-2xl relative overflow-hidden text-black text-[19px] leading-[28px] font-normal", entryBg || "bg-[#f0a023]")}>
+                                {entryContent}
+                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap font-light tracking-wide bg-slate-900/40 p-6 rounded-2xl border border-white/5 italic relative overflow-hidden shadow-2xl">
-                        <div className="absolute top-0 left-0 w-1 h-full bg-amber-500/40" />
-                        <Sparkles className="absolute top-3 right-3 size-4 text-amber-500/20" />
-                        &quot;{content}&quot;
+                      <div className="flex flex-col gap-2 items-center">
+                        <div className="bg-white px-8 py-4 rounded-lg shadow-xl border border-black/5 text-center" style={{ width: "-webkit-fill-available" }}>
+                           <h2 className="text-2xl md:text-3xl font-bold text-black tracking-tight">
+                             {isAspect ? (aspectTitle ?? title) : title.replace(/_/g, " ")}
+                           </h2>
+                        </div>
+                        <div className={cn("rounded-xl border border-black/10 pt-6 pb-4 px-8 shadow-3xl text-black text-[19px] leading-[28px] font-normal relative overflow-hidden", bgClass || "bg-[#f0a023]")}>
+                          {content}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -137,7 +155,12 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
               </div>
 
               {pictureUrl && (
-                <div className="px-6 pb-6 pt-2 flex flex-col items-center justify-center bg-slate-900/20">
+                <div className="px-6 pb-6 pt-2 flex flex-col items-center justify-center bg-slate-900/20 gap-6">
+                  <div className="bg-white px-8 py-3.5 rounded-lg shadow-xl border border-black/5 text-center mt-6" style={{ width: "-webkit-fill-available" }}>
+                    <h4 className="text-[20px] font-semibold text-black uppercase tracking-wide leading-tight">
+                      Picture Representation
+                    </h4>
+                  </div>
                   <div className="relative group rounded-xl border border-amber-500/20 overflow-hidden bg-slate-950 shadow-[0_0_50px_rgba(245,158,11,0.08)] transition-all hover:border-amber-500/40 w-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={pictureUrl} alt={title} className="w-full h-auto max-h-[600px] object-contain transition-transform duration-1000 group-hover:scale-[1.05]" />
@@ -183,6 +206,8 @@ export function useShowMore() {
     aspectTitle?: string;
     promptType?: "planet" | "house" | "aspect" | "generic";
     planetEntries?: { planet: string; items: string[] }[];
+    relationshipEntries?: { title: string; content: string; bgClass?: string }[];
+    bgClass?: string;
     pictureUrl?: string | null;
   } | null>(null);
 
@@ -199,16 +224,36 @@ export function useShowMore() {
         }
       } else if (type === "planet") {
         const p = promptData?.planet ?? promptData;
-        const planet = p?.name ?? title.trim();
-        const sign = p?.sign ?? p?.Sign ?? p?.[title.toLowerCase()]?.sign ?? p?.[title.toLowerCase()]?.Sign ?? "";
+        let planet = p?.name ?? "";
+        let sign = p?.sign ?? p?.Sign ?? p?.[title.toLowerCase()]?.sign ?? p?.[title.toLowerCase()]?.Sign ?? "";
+        
+        if (!planet || !sign) {
+          const lower = title.toLowerCase();
+          const planets = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "lilith", "chiron"];
+          if (!planet) planet = planets.find(pl => lower.includes(pl)) || "";
+          if (!sign) {
+             const match = title.match(/in\s+([A-Za-z]+)/);
+             if (match) sign = match[1];
+          }
+        }
+
         if (planet && sign) {
           const capPlanet = planet.charAt(0).toUpperCase() + planet.slice(1);
           const capSign = sign.charAt(0).toUpperCase() + sign.slice(1);
           return { filename: `${capPlanet}-In-${capSign}`, foldername: "planets" };
         }
       } else if (type === "house") {
-        const houseNum = promptData?.house ?? promptData?.House ?? "";
-        const sign = promptData?.sign ?? promptData?.Sign ?? "";
+        const h = promptData?.house ?? promptData?.House ?? promptData;
+        let houseNum = h && typeof h === "object" ? (h.house || h.House || "") : (typeof h === "number" || typeof h === "string" ? h : "");
+        let sign = promptData?.sign ?? promptData?.Sign ?? "";
+
+        if (!houseNum || !sign) {
+          const matchNum = title.match(/house\s+(\d+)/i) || title.match(/(\d+)(?:st|nd|rd|th)\s+house/i);
+          if (matchNum) houseNum = matchNum[1];
+          const matchSign = title.match(/in\s+([A-Za-z]+)/);
+          if (matchSign) sign = matchSign[1];
+        }
+
         if (houseNum && sign) {
           const ordinal = String(houseNum).replace(/\D/g, "");
           const suffix = ordinal === "1" ? "st" : ordinal === "2" ? "nd" : ordinal === "3" ? "rd" : "th";
@@ -249,16 +294,124 @@ export function useShowMore() {
     aspectTitle?: string,
     isKeyValue?: boolean,
     promptType?: "planet" | "house" | "aspect" | "generic",
+    tabSlug?: string,
+    rawData?: any,
+    horarySection?: "astrological_aspect" | "summary",
   ) {
-    const resolvedType = promptType ?? (aspectTitle ? "aspect" : "generic");
+    let resolvedType = promptType ?? (aspectTitle ? "aspect" : "generic");
+
+    // Auto-detect type from title if generic
+    if (resolvedType === "generic") {
+      const lowerTitle = (aspectTitle ?? title).toLowerCase();
+      if (ASPECT_TYPE_WORDS.some(w => lowerTitle.includes(w.toLowerCase()))) {
+        resolvedType = "aspect";
+      } else if (lowerTitle.includes(" house") || lowerTitle.startsWith("house ")) {
+        resolvedType = "house";
+      } else if (["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "lilith", "chiron"].some(p => lowerTitle.includes(p))) {
+        // If it's a relationship tab, it might be a planet in sign/house
+        resolvedType = "planet";
+      }
+    }
     setModal({ title, content: "", loading: true, aspectTitle, promptType: resolvedType, pictureUrl: null });
 
     const picturePromise = fetchPicture(resolvedType, aspectTitle ?? title, promptData);
 
+    // ─── Horary-specific Show More (calls Lambda directly) ───────────────────
+    const isHoraryTab = tabSlug === "horary_chart_v2";
+    if (isHoraryTab && rawData) {
+      try {
+        const person1 = rawData.person1;
+        const [bYear, bMonth, bDay] = (person1?.dob ?? "").split("-").map(Number);
+        const [bHour, bMin] = (person1?.tob ?? "0:0").split(":").map(Number);
+        const bLat  = person1?.city?.lat  ?? 0;
+        const bLon  = person1?.city?.lng  ?? 0;
+        const bTz   = person1?.city?.timezone?.offset_string ?? "+00:00";
+        const bCity = typeof person1?.city === "object" ? (person1.city?.label ?? "") : (person1?.city ?? "");
+        const question = rawData.question ?? areaOfInquiry ?? "";
+        const sectionCtx = horarySection === "summary" ? "summary" : "astrological_aspect";
+        const birthStr = `I was born on ${getMonthName(bMonth)} ${bDay}, ${bYear} time ${bHour}:${String(bMin ?? 0).padStart(2, "0")}, in ${bCity} ,'lat:${bLat},lon:${bLon},tzone:${bTz}'.`;
+
+        const horaryPayload = {
+          condition: {
+            system_content: "give response only in json format as a whole , nothing else and always answer as astrolger not AI BOT",
+            user_content: `${birthStr} and the qustion is '${question}'. Keeping western astrology in mind and here is  a summary of content "${currentText}" keeping this as main source info I need to know details of ${title} in ${sectionCtx} of horary astrology, and also need to know the significance and impact of ${title} in ${sectionCtx} of horary astrology in respect of the '${question}' in my life and as paragraph (this should be only focus in answer not theory of astrology on this specific aspect), you have planet , aspect and house info given in json, reposne must be in json format as {${title}:data} here data is dynamic data form bot and must be a paragraph with 3 sentences (minimum 3 paragraphs ) for ${title} in ${sectionCtx} of horary astrology make it real for me I don't need theory context in response you must add context of planet , aspect and house if any and make sure you parseable json in ai_response else recalculate the answer again. `,
+          },
+          toolname: "other",
+          json: rawData.chartJson ?? promptData,
+        };
+
+        const [aiResult, pictureResult] = await Promise.all([
+          fetchWithRetry("https://wczfs5i4xwvt6h3g4z6jgcm4ei0rsvyp.lambda-url.us-east-1.on.aws/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(horaryPayload),
+          }).then(r => r.json()).catch(() => null),
+          picturePromise,
+        ]);
+
+        let content = "";
+        if (aiResult?.ai_response) {
+          let responseStr = typeof aiResult.ai_response === "string"
+            ? aiResult.ai_response
+            : JSON.stringify(aiResult.ai_response);
+          // Strip ```json ... ``` wrapper if present
+          responseStr = responseStr.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "").trim();
+          let raw: any;
+          try {
+            raw = JSON.parse(responseStr);
+          } catch {
+            raw = responseStr;
+          }
+          if (raw && typeof raw === "object") {
+            const firstKey = Object.keys(raw)[0];
+            const val = raw[firstKey];
+            if (typeof val === "string") {
+              content = val;
+            } else if (val && typeof val === "object") {
+              content = (val as any).data ?? (val as any).interpretation ?? JSON.stringify(val);
+            }
+          } else {
+            content = String(raw ?? "");
+          }
+        }
+
+        setModal(prev => prev ? { ...prev, content, loading: false, bgClass: "interp-gradient-default", pictureUrl: pictureResult } : null);
+      } catch {
+        setModal(prev => prev ? { ...prev, content: "Failed to retrieve detailed interpretation.", loading: false, pictureUrl: null } : null);
+      }
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     try {
       let aiPayload: any;
 
-      if (resolvedType === "aspect" || aspectTitle) {
+      const isRelationshipTab = ["romantic_forecast_report_tropical_v2", "friendship_report_tropical_v2", "business_partner_v2"].includes(tabSlug || "");
+
+      if (isRelationshipTab && rawData) {
+        const p1 = rawData.person1_birth ?? rawData.mydetails ?? {};
+        const p2 = rawData.person2_birth ?? rawData.fiend_details ?? {};
+        const personaCity = typeof rawData.persona_city === "object" ? rawData.persona_city.label : (rawData.persona_city ?? "");
+        const partnerCity = typeof rawData.partner_city === "object" ? rawData.partner_city.label : (rawData.partner_city ?? "");
+        
+        const b1Str = `I was born on ${getMonthName(p1.month)} ${p1.day}, ${p1.year}, ${p1.hour}:${String(p1.min ?? 0).padStart(2, "0")} in ${personaCity} 'lat:${p1.lat},lon:${p1.lon},tzone:${p1.tzone}'.`;
+        const b2Str = `my partner was born on ${getMonthName(p2.month)} ${p2.day}, ${p2.year} ${p2.hour}:${String(p2.min ?? 0).padStart(2, "0")} at ${partnerCity} 'lat:${p2.lat},lon:${p2.lon},tzone:${p2.tzone}'.`;
+        
+        const context = tabSlug === "romantic_forecast_report_tropical_v2" ? "love" : tabSlug === "friendship_report_tropical_v2" ? "friendship" : "business partnership";
+
+        aiPayload = {
+          condition: {
+            system_content: `give response only in json format as a whole , nothing else answer as astrolger not AI BOT. Provide a deeply personalized response as if you are speaking directly to your astrology client in a one-on-one session. Use the language and tone of a trusted Western astrologer offering tailored guidance based on the client’s unique chart. Always interpret the chart using the Placidus house system as the default house_type. Avoid using generic phrases or repeated sentence structures. Each sentence should feel intentionally crafted and distinct, offering fresh insight without duplicating wording from similar interpretations.\n\nThe user has provided a specific "Area of Inquiry": "${areaOfInquiry || context}". Make this the central theme of your interpretation. While you should ground the reading in this context, also incorporate other relevant insights from the chart that support or add nuance to this primary focus. Conclude the response by explicitly summarizing how the various astrological insights tie back to the client’s stated area of inquiry.`,
+            user_content: `${b1Str} ${b2Str} Keeping western astrology in mind and here is a summary of content "${currentText}" keeping this as main source info I need to know details of ${title} in ${context} as paragraph and also need to know the significance and impact in my life you have planet , aspect and house info given in json reposne must be in json format as {${title}:data} here data is dynamic data form bot and must be a paragraph with 5 sentences (minimum 6 paragraphs ) for ${title} in ${context} make it real for me I don't need theory context in response you must add context of planet , aspect and house if any `,
+          },
+          toolname: "other",
+          json: {
+            mydetails: p1,
+            fiend_details: p2,
+            item_data: promptData,
+          },
+        };
+      } else if (resolvedType === "aspect" || aspectTitle) {
         aiPayload = {
           condition: {
             system_content: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
@@ -296,6 +449,8 @@ export function useShowMore() {
         };
       }
 
+      // picturePromise is already initialized at the start of trigger
+
       const [aiResult, pictureResult] = await Promise.all([
         fetchWithRetry("/api/admin/astro/ai-interpret", {
           method: "POST",
@@ -307,23 +462,21 @@ export function useShowMore() {
 
       let content = "";
       let planetEntries: { planet: string; items: string[] }[] = [];
+      let relationshipEntries: { title: string; content: string; bgClass?: string }[] = [];
 
       if (aiResult?.ai_response) {
         let raw: any;
         try {
-          raw = typeof aiResult.ai_response === "string" 
-            ? JSON.parse(aiResult.ai_response) 
+          raw = typeof aiResult.ai_response === "string"
+            ? JSON.parse(aiResult.ai_response)
             : aiResult.ai_response;
         } catch {
           raw = aiResult.ai_response;
         }
 
-        if (resolvedType === "planet") {
+        if (resolvedType === "planet" && !isRelationshipTab) {
           const entries: { planet: string; items: string[] }[] = [];
-          
-          // The AI might return { PlanetName: { 1: "...", 2: "..." } } or { interpretation: "..." }
           const dataToProcess = typeof raw === "object" && raw !== null ? raw : {};
-          
           for (const [key, val] of Object.entries(dataToProcess)) {
             if (key === "interpretation" || typeof val === "string") {
               content = typeof val === "string" ? val : content;
@@ -336,14 +489,53 @@ export function useShowMore() {
           }
           if (entries.length) planetEntries = entries;
           else content = raw.interpretation ?? (typeof raw === "string" ? raw : JSON.stringify(raw));
-        } else if (resolvedType === "house") {
+        } else if (resolvedType === "house" && !isRelationshipTab) {
           content = raw?.interpretations?.data ?? raw?.interpretation ?? (typeof raw === "string" ? raw : JSON.stringify(raw));
+        } else if (isRelationshipTab && typeof raw === "object" && raw !== null) {
+          const entries: { title: string; content: string }[] = [];
+          for (const [key, val] of Object.entries(raw)) {
+            let text = "";
+            if (typeof val === "string") {
+              text = val;
+            } else if (typeof val === "object" && val !== null) {
+              text = (val as any).data || (val as any).interpretation || (val as any).forecast || JSON.stringify(val);
+            }
+            if (text) {
+               const bg = getRelationshipBgClass(key, tabSlug, undefined);
+               relationshipEntries.push({ title: key, content: text, bgClass: bg });
+            }
+          }
+          if (entries.length > 0) {
+            relationshipEntries = entries;
+            const main = entries.find(e => e.title.toLowerCase().includes(title.toLowerCase())) || entries[0];
+            content = main.content;
+          } else {
+            content = typeof raw === "string" ? raw : JSON.stringify(raw);
+          }
         } else {
           content = raw?.interpretation ?? (typeof raw === "string" ? raw : JSON.stringify(raw));
         }
       }
 
-      setModal(prev => prev ? { ...prev, content, loading: false, planetEntries: planetEntries.length ? planetEntries : undefined, pictureUrl: pictureResult } : null);
+      // Calculate general bgClass for single-view fallback
+      let bgClass = "";
+      if (isRelationshipTab) {
+        bgClass = getRelationshipBgClass(title, tabSlug, undefined);
+      } else if (resolvedType === "planet") {
+        bgClass = getPlanetInterpClass(title);
+      } else if (resolvedType === "house") {
+        bgClass = "interp-gradient-default";
+      }
+
+      setModal(prev => prev ? { 
+        ...prev, 
+        content, 
+        loading: false, 
+        planetEntries: planetEntries.length ? planetEntries : undefined, 
+        relationshipEntries: relationshipEntries.length ? relationshipEntries : undefined,
+        bgClass,
+        pictureUrl: pictureResult 
+      } : null);
     } catch (err) {
       setModal(prev => prev ? { ...prev, content: "Failed to retrieve detailed interpretation.", loading: false, pictureUrl: null } : null);
     }

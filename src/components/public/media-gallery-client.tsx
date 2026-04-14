@@ -1,8 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   type MediaItem,
   TYPE_LABELS,
@@ -11,8 +19,6 @@ import {
   formatDuration,
 } from "./media-gallery";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface MediaGalleryClientProps {
   items: MediaItem[];
   divinerId: string;
@@ -20,49 +26,56 @@ interface MediaGalleryClientProps {
   platformLabels: Record<string, string>;
 }
 
-// ─── Media Card ───────────────────────────────────────────────────────────────
-
 function MediaCard({
   item,
   platformLabels,
   featured = false,
+  onOpenImage,
 }: {
   item: MediaItem;
   platformLabels: Record<string, string>;
   featured?: boolean;
+  onOpenImage: (item: MediaItem) => void;
 }) {
+  const [thumbnailFailed, setThumbnailFailed] = useState(false);
   const hasThumbnail = !!item.thumbnail_url;
+  const showThumbnail = hasThumbnail && !thumbnailFailed;
+  const isImage = item.type === "image";
+  const cardClassName = `group block w-full overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.03] text-left transition-all hover:border-[#c9a84c]/30 hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a84c] ${featured ? "md:flex" : ""}`;
 
-  return (
-    <a
-      href={item.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`group block rounded-xl bg-white/[0.03] border border-white/[0.07] overflow-hidden transition-all hover:border-[#c9a84c]/30 hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a84c] ${featured ? "md:flex" : ""}`}
-      aria-label={`${TYPE_LABELS[item.type]}: ${item.title} — opens in new tab`}
-    >
-      {/* Thumbnail / gradient placeholder */}
+  const content = (
+    <>
       <div
-        className={`relative shrink-0 overflow-hidden bg-gradient-to-br ${TYPE_GRADIENT[item.type]} ${featured ? "md:w-56 md:h-auto h-48" : "h-48"}`}
+        className={`relative shrink-0 overflow-hidden bg-gradient-to-br ${TYPE_GRADIENT[item.type]} ${featured ? "h-48 md:h-auto md:w-56" : "h-48"}`}
         aria-hidden="true"
       >
-        {hasThumbnail ? (
+        {showThumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={item.thumbnail_url!}
             alt=""
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            onError={() => setThumbnailFailed(true)}
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center opacity-20">
-            <TypeIcon type={item.type} />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+            <div className="flex flex-col items-center gap-3 text-white/25">
+              <TypeIcon type={item.type} />
+              <span className="text-xs font-medium uppercase tracking-[0.2em] text-white/35">
+                {TYPE_LABELS[item.type]}
+              </span>
+            </div>
           </div>
         )}
-        {/* External link overlay */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-          <ExternalLink className="size-6 text-white" aria-hidden="true" />
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
+          {isImage ? (
+            <span className="rounded-full border border-white/20 bg-black/50 px-3 py-1 text-xs font-medium text-white">
+              View image
+            </span>
+          ) : (
+            <ExternalLink className="size-6 text-white" aria-hidden="true" />
+          )}
         </div>
-        {/* Duration badge */}
         {item.duration_seconds != null && (item.type === "video" || item.type === "audio") && (
           <span className="absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white">
             {formatDuration(item.duration_seconds)}
@@ -70,10 +83,8 @@ function MediaCard({
         )}
       </div>
 
-      {/* Content */}
-      <div className="p-4 flex flex-col gap-2">
-        {/* Type badge + platform chip */}
-        <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex flex-col gap-2 p-4">
+        <div className="flex flex-wrap items-center gap-2">
           <span
             className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${TYPE_BADGE_CLASSES[item.type]}`}
             role="status"
@@ -82,34 +93,60 @@ function MediaCard({
             {TYPE_LABELS[item.type]}
           </span>
           {item.platform && (
-            <span className="inline-flex items-center rounded-full bg-white/[0.05] border border-white/[0.08] px-2 py-0.5 text-[11px] text-white/50">
+            <span className="inline-flex items-center rounded-full border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 text-[11px] text-white/50">
               {platformLabels[item.platform] ?? item.platform}
             </span>
           )}
+          {item.album_name && (
+            <span className="inline-flex items-center rounded-full border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 text-[11px] text-white/50">
+              {item.album_name}
+            </span>
+          )}
           {item.is_featured && (
-            <span className="inline-flex items-center rounded-full bg-[#c9a84c]/15 border border-[#c9a84c]/30 px-2 py-0.5 text-[11px] text-[#c9a84c]">
+            <span className="inline-flex items-center rounded-full border border-[#c9a84c]/30 bg-[#c9a84c]/15 px-2 py-0.5 text-[11px] text-[#c9a84c]">
               Featured
             </span>
           )}
         </div>
 
-        {/* Title */}
-        <h3 className="text-sm font-semibold text-[#f5f0e8] line-clamp-2 leading-snug">
+        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[#f5f0e8]">
           {item.title}
         </h3>
 
-        {/* Description */}
         {item.description && (
-          <p className="text-xs leading-relaxed text-white/50 line-clamp-3">
+          <p className="line-clamp-3 text-xs leading-relaxed text-white/50">
             {item.description}
           </p>
         )}
       </div>
+    </>
+  );
+
+  if (isImage) {
+    return (
+      <button
+        type="button"
+        className={cardClassName}
+        onClick={() => onOpenImage(item)}
+        aria-label={`${TYPE_LABELS[item.type]}: ${item.title} — opens in lightbox`}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <a
+      href={item.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cardClassName}
+      aria-label={`${TYPE_LABELS[item.type]}: ${item.title} — opens in new tab`}
+    >
+      {content}
     </a>
   );
 }
-
-// ─── Type icon SVG shapes ─────────────────────────────────────────────────────
 
 function TypeIcon({ type }: { type: MediaItem["type"] }) {
   const size = "size-16";
@@ -147,8 +184,6 @@ function TypeIcon({ type }: { type: MediaItem["type"] }) {
   }
 }
 
-// ─── Client component ─────────────────────────────────────────────────────────
-
 const ALL_TAB = "all" as const;
 type TabValue = MediaItem["type"] | typeof ALL_TAB;
 
@@ -157,12 +192,12 @@ export function MediaGalleryClient({
   presentTypes,
   platformLabels,
 }: MediaGalleryClientProps) {
+  const [lightboxItem, setLightboxItem] = useState<MediaItem | null>(null);
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
   const activeTab = (searchParams.get("media_type") as TabValue) ?? ALL_TAB;
 
-  // Validate activeTab is one of the present types or "all"
   const validTab: TabValue =
     activeTab === ALL_TAB || presentTypes.includes(activeTab as MediaItem["type"])
       ? activeTab
@@ -191,7 +226,6 @@ export function MediaGalleryClient({
   const featuredItems = filteredItems.filter((i) => i.is_featured);
   const regularItems = filteredItems.filter((i) => !i.is_featured);
 
-  // Build tab href helper — preserves all other search params
   function tabHref(tab: TabValue): string {
     const sp = new URLSearchParams(searchParams.toString());
     sp.delete("album");
@@ -229,130 +263,169 @@ export function MediaGalleryClient({
   }));
 
   return (
-    <div className="space-y-6">
-      {/* Filter tabs */}
-      <nav
-        className="flex flex-wrap gap-2"
-        role="tablist"
-        aria-label="Filter media by type"
-      >
-        {tabs.map((tab) => {
-          const isActive = validTab === tab.value;
-          return (
-            <Link
-              key={tab.value}
-              href={tabHref(tab.value)}
-              scroll={false}
-              role="tab"
-              aria-selected={isActive}
-              className={`inline-flex items-center rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
-                isActive
-                  ? "bg-[#c9a84c]/20 text-[#c9a84c] border border-[#c9a84c]/40"
-                  : "bg-white/[0.04] text-white/50 border border-white/[0.08] hover:text-white/80 hover:bg-white/[0.08]"
-              }`}
-            >
-              {tab.label}
-            </Link>
-          );
-        })}
-      </nav>
+    <>
+      <div className="space-y-6">
+        <nav
+          className="flex flex-wrap gap-2"
+          role="tablist"
+          aria-label="Filter media by type"
+        >
+          {tabs.map((tab) => {
+            const isActive = validTab === tab.value;
+            return (
+              <Link
+                key={tab.value}
+                href={tabHref(tab.value)}
+                scroll={false}
+                role="tab"
+                aria-selected={isActive}
+                className={`inline-flex items-center rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
+                  isActive
+                    ? "border border-[#c9a84c]/40 bg-[#c9a84c]/20 text-[#c9a84c]"
+                    : "border border-white/[0.08] bg-white/[0.04] text-white/50 hover:bg-white/[0.08] hover:text-white/80"
+                }`}
+              >
+                {tab.label}
+              </Link>
+            );
+          })}
+        </nav>
 
-      {validTab === "image" && imageAlbums.length > 0 && (
-        <nav className="flex flex-wrap gap-2" aria-label="Filter images by album">
-          <Link
-            href={albumHref("all")}
-            scroll={false}
-            className={`inline-flex items-center rounded-full px-3 py-1 text-xs transition-all ${
-              validAlbum === "all"
-                ? "bg-[#c9a84c]/20 text-[#c9a84c] border border-[#c9a84c]/40"
-                : "bg-white/[0.04] text-white/50 border border-white/[0.08] hover:text-white/80"
-            }`}
-          >
-            All Albums
-          </Link>
-          {imageAlbums.map((album) => (
+        {validTab === "image" && imageAlbums.length > 0 && (
+          <nav className="flex flex-wrap gap-2" aria-label="Filter images by album">
             <Link
-              key={album}
-              href={albumHref(album)}
+              href={albumHref("all")}
               scroll={false}
               className={`inline-flex items-center rounded-full px-3 py-1 text-xs transition-all ${
-                validAlbum === album
-                  ? "bg-[#c9a84c]/20 text-[#c9a84c] border border-[#c9a84c]/40"
-                  : "bg-white/[0.04] text-white/50 border border-white/[0.08] hover:text-white/80"
+                validAlbum === "all"
+                  ? "border border-[#c9a84c]/40 bg-[#c9a84c]/20 text-[#c9a84c]"
+                  : "border border-white/[0.08] bg-white/[0.04] text-white/50 hover:text-white/80"
               }`}
             >
-              {album}
+              All Albums
             </Link>
-          ))}
-        </nav>
-      )}
-
-      {/* Featured items (larger cards) */}
-      {validTab !== "image" && featuredItems.length > 0 && (
-        <section aria-label="Featured media">
-          <div className="grid gap-5 grid-cols-1 sm:grid-cols-2">
-            {featuredItems.map((item) => (
-              <MediaCard
-                key={item.id}
-                item={item}
-                platformLabels={platformLabels}
-                featured
-              />
+            {imageAlbums.map((album) => (
+              <Link
+                key={album}
+                href={albumHref(album)}
+                scroll={false}
+                className={`inline-flex items-center rounded-full px-3 py-1 text-xs transition-all ${
+                  validAlbum === album
+                    ? "border border-[#c9a84c]/40 bg-[#c9a84c]/20 text-[#c9a84c]"
+                    : "border border-white/[0.08] bg-white/[0.04] text-white/50 hover:text-white/80"
+                }`}
+              >
+                {album}
+              </Link>
             ))}
-          </div>
-        </section>
-      )}
+          </nav>
+        )}
 
-      {/* Regular grid */}
-      {validTab !== "image" && regularItems.length > 0 && (
-        <section aria-label="Media items">
-          <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {regularItems.map((item) => (
-              <MediaCard
-                key={item.id}
-                item={item}
-                platformLabels={platformLabels}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+        {validTab !== "image" && featuredItems.length > 0 && (
+          <section aria-label="Featured media">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              {featuredItems.map((item) => (
+                <MediaCard
+                  key={item.id}
+                  item={item}
+                  platformLabels={platformLabels}
+                  featured
+                  onOpenImage={setLightboxItem}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
-      {validTab === "image" && filteredItems.length > 0 && (
-        <section aria-label="Image albums" className="space-y-8">
-          {groupedImages
-            .filter((group) => group.items.length > 0)
-            .map((group) => (
-              <div key={group.album} className="space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-lg font-semibold text-[#f5f0e8]">
-                      {group.album}
-                    </h3>
-                    <p className="text-xs text-white/45">
-                      {group.items.length} image{group.items.length === 1 ? "" : "s"}
-                    </p>
+        {validTab !== "image" && regularItems.length > 0 && (
+          <section aria-label="Media items">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {regularItems.map((item) => (
+                <MediaCard
+                  key={item.id}
+                  item={item}
+                  platformLabels={platformLabels}
+                  onOpenImage={setLightboxItem}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {validTab === "image" && filteredItems.length > 0 && (
+          <section aria-label="Image albums" className="space-y-8">
+            {groupedImages
+              .filter((group) => group.items.length > 0)
+              .map((group) => (
+                <div key={group.album} className="space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-semibold text-[#f5f0e8]">
+                        {group.album}
+                      </h3>
+                      <p className="text-xs text-white/45">
+                        {group.items.length} image{group.items.length === 1 ? "" : "s"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                    {group.items.map((item) => (
+                      <MediaCard
+                        key={item.id}
+                        item={item}
+                        platformLabels={platformLabels}
+                        onOpenImage={setLightboxItem}
+                      />
+                    ))}
                   </div>
                 </div>
-                <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                  {group.items.map((item) => (
-                    <MediaCard
-                      key={item.id}
-                      item={item}
-                      platformLabels={platformLabels}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-        </section>
-      )}
+              ))}
+          </section>
+        )}
 
-      {filteredItems.length === 0 && (
-        <p className="text-sm text-white/40 py-8 text-center">
-          No {validTab !== ALL_TAB ? TYPE_LABELS[validTab as MediaItem["type"]] : ""} media items yet.
-        </p>
-      )}
-    </div>
+        {filteredItems.length === 0 && (
+          <p className="py-8 text-center text-sm text-white/40">
+            No {validTab !== ALL_TAB ? TYPE_LABELS[validTab as MediaItem["type"]] : ""} media items yet.
+          </p>
+        )}
+      </div>
+
+      <Dialog open={lightboxItem !== null} onOpenChange={(open) => !open && setLightboxItem(null)}>
+        <DialogContent className="max-w-5xl border-white/10 bg-cosmos-950/95 p-0 text-cream shadow-2xl" showCloseButton>
+          {lightboxItem && (
+            <div className="grid gap-0 md:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="relative flex min-h-[320px] items-center justify-center bg-black">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={lightboxItem.url}
+                  alt={lightboxItem.title}
+                  className="max-h-[80vh] w-full object-contain"
+                />
+              </div>
+              <div className="flex flex-col gap-4 p-6">
+                <DialogHeader className="text-left">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${TYPE_BADGE_CLASSES[lightboxItem.type]}`}>
+                      {TYPE_LABELS[lightboxItem.type]}
+                    </span>
+                    {lightboxItem.album_name && (
+                      <span className="inline-flex items-center rounded-full border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 text-[11px] text-white/60">
+                        {lightboxItem.album_name}
+                      </span>
+                    )}
+                  </div>
+                  <DialogTitle className="text-xl text-cream">
+                    {lightboxItem.title}
+                  </DialogTitle>
+                  <DialogDescription className="text-sm leading-relaxed text-white/65">
+                    {lightboxItem.description ?? "No description provided for this image yet."}
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

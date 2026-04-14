@@ -2,6 +2,7 @@ import {
   CreateMeetingCommand,
   CreateAttendeeCommand,
   DeleteMeetingCommand,
+  GetMeetingCommand,
 } from "@aws-sdk/client-chime-sdk-meetings";
 import {
   CreateMediaCapturePipelineCommand,
@@ -35,6 +36,7 @@ export async function createChimeMeeting(
         Audio: { EchoReduction: "AVAILABLE" },
         Video: { MaxResolution: "FHD" },
         Content: { MaxResolution: "FHD" },
+        Attendee: { MaxCount: Math.max(maxParticipants, 5) },
       },
     })
   );
@@ -49,6 +51,18 @@ export async function createChimeMeeting(
     externalMeetingId,
     mediaRegion: meeting.MediaRegion ?? "us-east-1",
   };
+}
+
+export async function getChimeMeeting(meetingId: string) {
+  const client = getChimeMeetingsClient();
+  const response = await client.send(
+    new GetMeetingCommand({ MeetingId: meetingId })
+  );
+  const meeting = response.Meeting;
+  if (!meeting?.MeetingId || !meeting.MediaPlacement) {
+    throw new Error("Chime SDK: Meeting not found or missing MediaPlacement");
+  }
+  return meeting;
 }
 
 export async function createChimeAttendee(

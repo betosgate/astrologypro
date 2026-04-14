@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
+import { SectionContainer } from "@/components/shared/section-container";
 
 type Program = { id: string; name: string };
 
@@ -93,7 +94,7 @@ export default function NewCategoryPage() {
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <SectionContainer verticalPadding="none" className="space-y-6">
       <div className="flex items-center gap-3">
         <Button asChild variant="ghost" size="sm">
           <Link href="/admin/training">← Back</Link>
@@ -228,6 +229,6 @@ export default function NewCategoryPage() {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </SectionContainer>
   );
 }

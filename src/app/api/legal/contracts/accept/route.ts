@@ -23,9 +23,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = (await req.json().catch(() => null)) as { requirement_id?: string } | null;
+  const body = (await req.json().catch(() => null)) as { requirement_id?: string; signature_name?: string } | null;
   if (!body?.requirement_id) {
     return NextResponse.json({ error: "requirement_id is required" }, { status: 422 });
+  }
+  if (!body.signature_name?.trim()) {
+    return NextResponse.json({ error: "signature_name is required" }, { status: 422 });
   }
 
   try {
@@ -34,6 +37,7 @@ export async function POST(req: NextRequest) {
       userId: user.id,
       ipAddress: getClientIp(req),
       userAgent: req.headers.get("user-agent"),
+      signatureName: body.signature_name.trim(),
     });
     return NextResponse.json({ ok: true, result });
   } catch (error) {

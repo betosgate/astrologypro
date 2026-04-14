@@ -38,6 +38,8 @@ interface BookingPaymentBody {
   policyAcknowledgedAt?: string;
   booking_notes?: string;
   discount_token?: string;
+  /** True when the slot is from an unscoped availability (no service linked). Skips charging. */
+  freeSlot?: boolean;
 }
 
 export async function POST(request: NextRequest) {
@@ -58,6 +60,7 @@ export async function POST(request: NextRequest) {
       policyAcknowledgedAt,
       booking_notes,
       discount_token,
+      freeSlot,
     } = body;
     const questionnaireData = questionnaire ?? {};
 
@@ -133,13 +136,14 @@ export async function POST(request: NextRequest) {
       payouts_enabled?: boolean | null;
       display_name: string;
       video_provider?: string;
+      username?: string;
     } | null = null;
     let divinerError: { message?: string } | null = null;
 
     async function fetchDivinerById(id: string) {
       let result = await adminSupabase
         .from("diviners")
-        .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider")
+        .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider, username")
         .eq("id", id)
         .eq("is_active", true)
         .single();
@@ -147,7 +151,7 @@ export async function POST(request: NextRequest) {
       if (result.error || !result.data) {
         result = await supabase
           .from("diviners")
-          .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider")
+          .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider, username")
           .eq("id", id)
           .eq("is_active", true)
           .single();
@@ -159,7 +163,7 @@ export async function POST(request: NextRequest) {
     async function fetchDivinerByUsername(username: string) {
       let result = await adminSupabase
         .from("diviners")
-        .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider")
+        .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider, username")
         .eq("username", username)
         .eq("is_active", true)
         .single();
@@ -167,7 +171,7 @@ export async function POST(request: NextRequest) {
       if (result.error || !result.data) {
         result = await supabase
           .from("diviners")
-          .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider")
+          .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider, username")
           .eq("username", username)
           .eq("is_active", true)
           .single();
@@ -508,7 +512,24 @@ export async function POST(request: NextRequest) {
       memberDiscountApplied,
     });
     const platformFee = bookingSplit.platformFeeCents / 100;
-    const shouldCharge = hasServiceAvailability && finalPrice > 0;
+    // freeSlot=true means the client selected an unscoped availability (no service_id).
+    // Verify this server-side: if the best-matched template has no service_id, honour the override.
+    const bestTemplateServiceId =
+      allTemplates && allTemplates.length > 0
+        ? ((allTemplates as Record<string, unknown>[]).find(
+            (t) => t.service_id === serviceId
+          ) ??
+            (allTemplates as Record<string, unknown>[]).find(
+              (t) =>
+                String(t.start_date ?? "") <= bookingDateStr &&
+                String(t.end_date ?? "") >= bookingDateStr
+            ) ??
+            allTemplates[0]) as Record<string, unknown> | undefined
+        : undefined;
+    const slotIsVerifiedFree =
+      freeSlot === true && (bestTemplateServiceId?.service_id == null);
+    if (slotIsVerifiedFree) finalPrice = 0;
+    const shouldCharge = hasServiceAvailability && finalPrice > 0 && !slotIsVerifiedFree;
 
     if (shouldCharge && !isDivinerPayoutReadyForPaidServices(diviner)) {
       return NextResponse.json(
@@ -541,7 +562,7 @@ export async function POST(request: NextRequest) {
         status: "pending",
         base_price: finalPrice,
         video_provider: diviner.video_provider ?? "daily",
-        questionnaire_responses: null,
+        questionnaire_responses: Object.keys(questionnaireData).length > 0 ? questionnaireData : null,
         booking_notes: booking_notes ?? null,
         metadata: {
           ...requestMetadata,
@@ -716,7 +737,10 @@ export async function POST(request: NextRequest) {
 
       // Send confirmation emails to the booker
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
-      const portalBookingsUrl = `${appUrl}/portal/bookings`;
+      // Token-based direct join link — no login required for client
+      const portalBookingsUrl = diviner?.username
+        ? `${appUrl}/${diviner.username}/session/${booking.id}?token=${booking.booking_token}`
+        : `${appUrl}/booking/${booking.booking_token}`;
       const orderDetailUrl = `${appUrl}/login?redirect=${encodeURIComponent(
         `/portal/orders/${orderId}`
       )}`;
@@ -899,7 +923,7 @@ export async function POST(request: NextRequest) {
         divinerName: diviner.display_name,
         serviceName: service.name,
         sessionDate: sessionDateStr,
-        divinerLandingUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://astrologypro.com"}/${(diviner as Record<string, string>).slug || ""}`,
+        divinerLandingUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://astrologypro.com"}/${(diviner as any).slug || ""}`,
       }).catch((err) => console.error("Failed to send guest invite:", err));
     }
 
@@ -933,6 +957,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       clientSecret,
       bookingId: booking.id,
+      bookingToken: booking.booking_token,
       orderId,
       requiresPostPaymentIntake: purchaseConfig.requiresPostPaymentIntake,
       originalPrice: service.base_price,
