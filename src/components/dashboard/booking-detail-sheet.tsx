@@ -14,7 +14,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Eye, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw, CalendarClock, XCircle, Send } from "lucide-react";
+import { Eye, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw, CalendarClock, XCircle, Send, Receipt } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {
@@ -25,6 +26,13 @@ const statusColors: Record<string, string> = {
   "in_progress": "bg-purple-500/10 text-purple-500 border-purple-500/20",
   no_show: "bg-gray-500/10 text-gray-500 border-gray-500/20",
 };
+
+interface LinkedOrder {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+}
 
 interface BookingDetailProps {
   booking: {
@@ -44,6 +52,7 @@ interface BookingDetailProps {
     refunded_at?: string | null;
     refund_reason?: string | null;
   };
+  linkedOrder?: LinkedOrder | null;
 }
 
 // Format an ISO string into the value expected by <input type="datetime-local">
@@ -53,7 +62,7 @@ function toDatetimeLocal(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function BookingDetailSheet({ booking }: BookingDetailProps) {
+export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [showRefundForm, setShowRefundForm] = useState(false);
@@ -371,6 +380,38 @@ export function BookingDetailSheet({ booking }: BookingDetailProps) {
                     {syncing ? "Checking…" : "Sync Payment Status"}
                   </Button>
                 )}
+              </div>
+            )}
+
+            {/* Linked Order */}
+            {linkedOrder && (
+              <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Receipt className="size-3.5 text-muted-foreground" />
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Linked Order</p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold">
+                      ${Number(linkedOrder.amount).toFixed(2)} {linkedOrder.currency.toUpperCase()}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-mono">{linkedOrder.id.slice(0, 8)}…</p>
+                  </div>
+                  <span className={[
+                    "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize",
+                    linkedOrder.status === "completed" ? "border-green-500/20 bg-green-500/10 text-green-500" :
+                    linkedOrder.status === "refunded" ? "border-red-500/20 bg-red-500/10 text-red-500" :
+                    linkedOrder.status === "pending" ? "border-yellow-500/20 bg-yellow-500/10 text-yellow-500" :
+                    "border-border bg-muted text-muted-foreground"
+                  ].join(" ")}>
+                    {linkedOrder.status}
+                  </span>
+                </div>
+                <Link href="/dashboard/orders">
+                  <Button size="sm" variant="ghost" className="w-full text-xs mt-1 text-muted-foreground">
+                    View all orders →
+                  </Button>
+                </Link>
               </div>
             )}
 

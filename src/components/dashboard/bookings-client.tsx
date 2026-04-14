@@ -37,6 +37,13 @@ import { formatCurrency } from "@/lib/format";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+interface LinkedOrder {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+}
+
 interface BookingsClientProps {
   bookings: Record<string, unknown>[];
   clientPrevSessions: Record<
@@ -44,6 +51,7 @@ interface BookingsClientProps {
     { count: number; lastDate: string | null; lastNotes: string | null }
   >;
   divinerUsername: string;
+  ordersByBookingId?: Record<string, LinkedOrder>;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -75,6 +83,7 @@ export function BookingsClient({
   bookings,
   clientPrevSessions,
   divinerUsername,
+  ordersByBookingId = {},
 }: BookingsClientProps) {
   const [timeView, setTimeView] = useState<"upcoming" | "past">("upcoming");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -513,6 +522,7 @@ export function BookingsClient({
                               refund_reason:
                                 (booking.refund_reason as string) ?? null,
                             }}
+                            linkedOrder={ordersByBookingId[booking.id as string] ?? null}
                           />
                           <SessionPrepSheet
                             booking={{
