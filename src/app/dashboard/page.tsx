@@ -22,6 +22,7 @@ import {
   Sparkles,
   User,
   ExternalLink,
+  ArrowUpRight,
 } from "lucide-react";
 import { ProfileStrength } from "@/components/dashboard/profile-strength";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
@@ -283,24 +284,28 @@ export default async function DashboardPage() {
       value: formatCurrency(thisMonthRevenueTotal),
       icon: DollarSign,
       comparison: revenueComparison,
+      href: "/dashboard/reports",
     },
     {
       label: "This Month Bookings",
       value: thisMonthBookingCount,
       icon: Calendar,
       comparison: bookingComparison,
+      href: "/dashboard/bookings",
     },
     {
       label: "New Clients",
       value: thisMonthClientCount,
       icon: Users,
       comparison: clientComparison,
+      href: "/dashboard/clients",
     },
     {
       label: "Upcoming",
       value: upcomingBookings.length,
       icon: TrendingUp,
       comparison: { text: "Scheduled sessions", positive: null },
+      href: "/dashboard/bookings",
     },
   ];
 
@@ -380,15 +385,24 @@ export default async function DashboardPage() {
           const Icon = stat.icon;
           const comparison = stat.comparison;
           return (
-            <Card key={stat.label}>
+            <Card key={stat.label} className="relative group hover:border-primary/40 transition-colors">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardDescription className="text-sm font-medium">
                   {stat.label}
                 </CardDescription>
-                <Icon className="size-4 text-muted-foreground" />
+                <Link
+                  href={stat.href}
+                  className="flex items-center gap-0.5 text-muted-foreground hover:text-primary transition-colors"
+                  title={`View details`}
+                >
+                  <Icon className="size-4" />
+                  <ArrowUpRight className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
+                <Link href={stat.href} className="block">
+                  <div className="text-2xl font-bold group-hover:text-primary transition-colors">{stat.value}</div>
+                </Link>
                 <p
                   className={`flex items-center gap-1 text-xs ${
                     comparison.positive === true
@@ -414,11 +428,20 @@ export default async function DashboardPage() {
 
       {/* Revenue Chart */}
       <Card>
-        <CardHeader>
-          <CardTitle>Revenue — Last 6 Months</CardTitle>
-          <CardDescription>
-            Monthly revenue from completed sessions
-          </CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between">
+          <div>
+            <CardTitle>Revenue — Last 6 Months</CardTitle>
+            <CardDescription>
+              Monthly revenue from completed sessions
+            </CardDescription>
+          </div>
+          <Link
+            href="/dashboard/reports"
+            className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0 mt-0.5"
+          >
+            Full Report
+            <ArrowUpRight className="size-3" />
+          </Link>
         </CardHeader>
         <CardContent>
           <RevenueChart monthlyData={monthlyChartData} />
@@ -428,11 +451,20 @@ export default async function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Upcoming Bookings */}
         <Card>
-          <CardHeader>
-            <CardTitle>Upcoming Bookings</CardTitle>
-            <CardDescription>
-              Your next scheduled sessions
-            </CardDescription>
+          <CardHeader className="flex flex-row items-start justify-between">
+            <div>
+              <CardTitle>Upcoming Bookings</CardTitle>
+              <CardDescription>
+                Your next scheduled sessions
+              </CardDescription>
+            </div>
+            <Link
+              href="/dashboard/bookings"
+              className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0 mt-0.5"
+            >
+              View All
+              <ArrowUpRight className="size-3" />
+            </Link>
           </CardHeader>
           <CardContent>
             {upcomingBookings.length === 0 ? (
