@@ -952,208 +952,196 @@ export function LessonViewerClient(props: LessonViewerProps) {
             )}
           </div>
 
-          {/* Videos */}
-          {allVideos.length > 0 && (
-            <div
-              ref={videoSectionRef}
-              tabIndex={-1}
-              className="space-y-3 scroll-mt-24 outline-none"
-            >
-              {/* Tab strip if multiple videos */}
-              {allVideos.length > 1 && (
-                <div className="flex gap-1 overflow-x-auto pb-1">
-                  {allVideos.map((v, i) => (
-                    <button
-                      key={v.id}
-                      onClick={() => setActiveVideoIdx(i)}
-                      className={cn(
-                        "shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap",
-                        activeVideoIdx === i
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground hover:bg-muted/80"
-                      )}
-                    >
-                      {v.title ?? `Video ${i + 1}`}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <TriggerVideoPlayer
-                video={allVideos[activeVideoIdx]}
-                lessonId={lessonId}
-                triggers={triggers}
-                initialPosition={0}
-                onPositionUpdate={handlePositionUpdate}
-                onEnded={handleVideoEnded}
-                onPassedIdsChange={setPassedTriggerIds}
-                onLessonCompleted={() => { /* completion is manual via button */ }}
-                remediationRequest={remediationRequest}
-                onRemediationComplete={() => {
-                  remediationPlaybackActiveRef.current = false;
-                  setRemediationRequest(null);
-                  setPendingRemediationChoice(activeRemediationChoiceRef.current);
-                }}
-              />
-            </div>
-          )}
-
-          {/* Lesson content */}
-          {content && (
-            <div className="rounded-xl border bg-card p-5">
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-                {content}
-              </p>
-            </div>
-          )}
-
-          {/* Assets */}
-          {allAssets.length > 0 && (
-            <div className="rounded-xl border bg-card overflow-hidden">
-              <button
-                onClick={() => setAssetsExpanded((e) => !e)}
-                className="flex w-full items-center justify-between px-5 py-3 text-sm font-medium hover:bg-muted/40 transition-colors"
-                aria-expanded={assetsExpanded}
-              >
-                <span>Downloads & Resources ({allAssets.length})</span>
-                <ChevronRight
-                  className={cn(
-                    "size-4 text-muted-foreground transition-transform",
-                    assetsExpanded && "rotate-90"
-                  )}
-                />
-              </button>
-
+          <div className="max-h-[72vh] overflow-y-auto overscroll-contain rounded-xl border bg-card p-4 pr-3 space-y-5">
+            {allVideos.length > 0 && (
               <div
-                className={cn(
-                  "overflow-hidden transition-all duration-200",
-                  assetsExpanded ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
-                )}
+                ref={videoSectionRef}
+                tabIndex={-1}
+                className="space-y-3 scroll-mt-24 outline-none"
               >
-                <div className="border-t divide-y">
-                  {allAssets.map((asset) => (
-                    <div
-                      key={asset.id}
-                      className="flex items-center gap-3 px-5 py-3"
-                    >
-                      <AssetTypeIcon type={asset.asset_type} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {asset.title}
-                        </p>
-                        {asset.file_size_bytes != null && (
-                          <p className="text-xs text-muted-foreground">
-                            {formatBytes(asset.file_size_bytes)}
-                          </p>
+                {allVideos.length > 1 && (
+                  <div className="flex gap-1 overflow-x-auto pb-1">
+                    {allVideos.map((v, i) => (
+                      <button
+                        key={v.id}
+                        onClick={() => setActiveVideoIdx(i)}
+                        className={cn(
+                          "shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap",
+                          activeVideoIdx === i
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground hover:bg-muted/80"
                         )}
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {/* Preview button */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="gap-1.5 text-xs h-7"
-                          onClick={() => {
-                            if (asset.asset_type === "pdf") {
-                              setPdfPreview({
-                                url: asset.url,
-                                title: asset.title,
-                              });
-                            } else {
-                              window.open(asset.url, "_blank", "noopener");
-                            }
-                          }}
-                          aria-label={`Preview ${asset.title}`}
-                        >
-                          <Eye className="size-3.5" />
-                          Preview
-                        </Button>
-                        {/* Download button */}
-                        {asset.is_downloadable && (
+                      >
+                        {v.title ?? `Video ${i + 1}`}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <TriggerVideoPlayer
+                  video={allVideos[activeVideoIdx]}
+                  lessonId={lessonId}
+                  triggers={triggers}
+                  initialPosition={0}
+                  onPositionUpdate={handlePositionUpdate}
+                  onEnded={handleVideoEnded}
+                  onPassedIdsChange={setPassedTriggerIds}
+                  onLessonCompleted={() => { /* completion is manual via button */ }}
+                  remediationRequest={remediationRequest}
+                  onRemediationComplete={() => {
+                    remediationPlaybackActiveRef.current = false;
+                    setRemediationRequest(null);
+                    setPendingRemediationChoice(activeRemediationChoiceRef.current);
+                  }}
+                />
+              </div>
+            )}
+
+            {content && (
+              <div className="rounded-xl border bg-background/40 p-5">
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                  {content}
+                </p>
+              </div>
+            )}
+
+            {allAssets.length > 0 && (
+              <div className="rounded-xl border bg-background/40 overflow-hidden">
+                <button
+                  onClick={() => setAssetsExpanded((e) => !e)}
+                  className="flex w-full items-center justify-between px-5 py-3 text-sm font-medium hover:bg-muted/40 transition-colors"
+                  aria-expanded={assetsExpanded}
+                >
+                  <span>Downloads & Resources ({allAssets.length})</span>
+                  <ChevronRight
+                    className={cn(
+                      "size-4 text-muted-foreground transition-transform",
+                      assetsExpanded && "rotate-90"
+                    )}
+                  />
+                </button>
+
+                <div
+                  className={cn(
+                    "overflow-hidden transition-all duration-200",
+                    assetsExpanded ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
+                  )}
+                >
+                  <div className="border-t divide-y">
+                    {allAssets.map((asset) => (
+                      <div
+                        key={asset.id}
+                        className="flex items-center gap-3 px-5 py-3"
+                      >
+                        <AssetTypeIcon type={asset.asset_type} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {asset.title}
+                          </p>
+                          {asset.file_size_bytes != null && (
+                            <p className="text-xs text-muted-foreground">
+                              {formatBytes(asset.file_size_bytes)}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             className="gap-1.5 text-xs h-7"
-                            asChild
+                            onClick={() => {
+                              if (asset.asset_type === "pdf") {
+                                setPdfPreview({
+                                  url: asset.url,
+                                  title: asset.title,
+                                });
+                              } else {
+                                window.open(asset.url, "_blank", "noopener");
+                              }
+                            }}
+                            aria-label={`Preview ${asset.title}`}
                           >
-                            <a
-                              href={asset.url}
-                              download
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              aria-label={`Download ${asset.title}`}
-                            >
-                              <Download className="size-3.5" />
-                              Download
-                            </a>
+                            <Eye className="size-3.5" />
+                            Preview
                           </Button>
-                        )}
+                          {asset.is_downloadable && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5 text-xs h-7"
+                              asChild
+                            >
+                              <a
+                                href={asset.url}
+                                download
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={`Download ${asset.title}`}
+                              >
+                                <Download className="size-3.5" />
+                                Download
+                              </a>
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-          {/* ── Lesson quiz — inline in the main content flow ──────────── */}
-          {/* Rendered after videos + assets so the learner naturally
-              encounters it at the end of the lesson content. Shown
-              regardless of whether in-video triggers exist — triggers
-              and the standard lesson quiz are independent assessment
-              paths. See tasks/09.04.2026/training-module/training-school/
-              02-learner-experience/
-              05-show-lesson-quiz-inline-and-make-quiz-pass-required-for-
-              completion.md. */}
-          {hasQuiz && (
-            <div
-              ref={quizSectionRef}
-              tabIndex={-1}
-              className="rounded-xl border bg-card overflow-hidden scroll-mt-24 outline-none"
-            >
-              <div className="px-4 py-3 border-b flex items-center justify-between">
-                <p className="text-sm font-semibold">Lesson Quiz</p>
-                {isQuizPassed ? (
-                  <Badge className="bg-green-500/15 text-green-600 border-green-500/30 text-xs">
-                    Passed
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-xs">
-                    {quizQuestions.length} question{quizQuestions.length === 1 ? "" : "s"}
-                  </Badge>
+            )}
+
+            {hasQuiz && (
+              <div
+                ref={quizSectionRef}
+                tabIndex={-1}
+                className="rounded-xl border bg-background/40 overflow-hidden scroll-mt-24 outline-none"
+              >
+                <div className="px-4 py-3 border-b flex items-center justify-between">
+                  <p className="text-sm font-semibold">Lesson Quiz</p>
+                  {isQuizPassed ? (
+                    <Badge className="bg-green-500/15 text-green-600 border-green-500/30 text-xs">
+                      Passed
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-xs">
+                      {quizQuestions.length} question{quizQuestions.length === 1 ? "" : "s"}
+                    </Badge>
+                  )}
+                </div>
+                <div className="p-4">
+                  <LessonViewerQuiz
+                    lessonId={lessonId}
+                    questions={quizQuestions}
+                    alreadyPassed={isQuizPassed}
+                    initialProgress={quizProgress}
+                    remediationReady={remediationReady}
+                    onWrongAnswer={(remediation) => {
+                      const start = remediation.start_seconds;
+                      const until = remediation.replay_until_seconds;
+                      if (start == null || until == null || until <= start) return;
+
+                      startRemediationReplay({
+                        startSeconds: start,
+                        replayUntilSeconds: until,
+                        videoIndex: remediation.video_index ?? null,
+                      });
+                    }}
+                    onPassed={() => {
+                      setIsQuizPassed(true);
+                    }}
+                  />
+                </div>
+                {!isQuizPassed && (
+                  <div className="px-4 pb-3 -mt-1">
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <AlertCircle className="size-3 shrink-0" />
+                      You must pass this quiz to mark the lesson complete.
+                    </p>
+                  </div>
                 )}
               </div>
-              <div className="p-4">
-                <LessonViewerQuiz
-                  lessonId={lessonId}
-                  questions={quizQuestions}
-                  alreadyPassed={isQuizPassed}
-                  initialProgress={quizProgress}
-                  remediationReady={remediationReady}
-                  onWrongAnswer={(remediation) => {
-                    const start = remediation.start_seconds;
-                    const until = remediation.replay_until_seconds;
-                    if (start == null || until == null || until <= start) return;
-
-                    startRemediationReplay({
-                      startSeconds: start,
-                      replayUntilSeconds: until,
-                      videoIndex: remediation.video_index ?? null,
-                    });
-                  }}
-                   onPassed={() => {
-                    setIsQuizPassed(true);
-                  }}
-                />
-              </div>
-              {!isQuizPassed && (
-                <div className="px-4 pb-3 -mt-1">
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <AlertCircle className="size-3 shrink-0" />
-                    You must pass this quiz to mark the lesson complete.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Completion CTA lives at the bottom of the lesson flow so the
               content column keeps its full width and the right rail stays
