@@ -16,6 +16,7 @@ import {
   Clock,
 } from "lucide-react";
 import CorrelationsSection from "./CorrelationsSection";
+import { type CorrelationResult } from "./CorrelatePanel";
 
 export const dynamic = "force-dynamic";
 
@@ -43,20 +44,7 @@ type ExternalDataPoint = {
   change_percent: number | null;
 };
 
-type Correlation = {
-  id: string;
-  data_source_id: string;
-  astro_event_type: string;
-  planet: string | null;
-  sign: string | null;
-  correlation_coefficient: number | null;
-  sample_count: number | null;
-  date_range_start: string | null;
-  date_range_end: string | null;
-  significance_level: number | null;
-  notes: string | null;
-  computed_at: string;
-};
+type Correlation = CorrelationResult;
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import Anthropic from "@anthropic-ai/sdk";
+import { callMundaneAI } from "@/lib/mundane-ai";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function GET(_req: NextRequest) {
   const user = await getAdminUser();
@@ -16,7 +15,13 @@ export async function GET(_req: NextRequest) {
     );
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  // Rate limit: 20 AI weekly-brief generations per hour per user
+  const rl = await rateLimit(`mundane-ai-weekly-brief:${user.id}`, 20, 60 * 60 * 1_000);
+  if (!rl.success) {
+    return rateLimitResponse(rl, "AI brief generation limit reached. You can generate up to 20 briefs per hour.") as unknown as NextResponse;
+  }
+
+  if (!process.env.MUNDANE_AI_LAMBDA_URL) {
     return NextResponse.json(
       { type: "https://httpstatuses.com/503", title: "AI service not configured", status: 503 },
       { status: 503 }
@@ -134,25 +139,13 @@ Format your response as:
 Be concise, specific, and professionally astrological in tone.`;
 
   try {
-    const message = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-    });
-
-    const brief =
-      message.content[0]?.type === "text" ? message.content[0].text : "";
+    const result = await callMundaneAI({ prompt, aspect_type: "weekly_brief", max_tokens: 1024 });
 
     const entitiesCovered = entities.map((e) => e.name);
 
     return NextResponse.json({
-      brief,
-      generated_at: new Date().toISOString(),
+      brief: result.text,
+      generated_at: result.generated_at,
       entities_covered: entitiesCovered,
     });
   } catch (err) {

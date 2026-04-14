@@ -13,6 +13,7 @@ import {
   FlaskConical,
   Globe,
 } from "lucide-react";
+import { AiGeneratePanel } from "@/components/mundane/ai-generate-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -310,6 +311,26 @@ export default function AiBriefPage() {
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Universal AI generation panel for open-ended mundane queries */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Sparkles className="size-4 text-amber-500" />
+            Universal AI Generation
+          </CardTitle>
+          <CardDescription>
+            Ask any mundane astrology question or generate content for any subject.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AiGeneratePanel
+            subjectType="general"
+            aspectType="general"
+            placeholder="What are the key mundane themes for the coming week? Or ask any mundane astrology question..."
+          />
         </CardContent>
       </Card>
     </div>

@@ -1,24 +1,37 @@
 import {
   SearchAvailablePhoneNumbersCommand,
   CreatePhoneNumberOrderCommand,
+  GetPhoneNumberOrderCommand,
+  GetPhoneNumberCommand,
   DeletePhoneNumberCommand,
-  AssociatePhoneNumbersWithVoiceConnectorCommand,
+  CreateSipRuleCommand,
+  DeleteSipRuleCommand,
 } from "@aws-sdk/client-chime-sdk-voice";
 import { getChimeVoiceClient } from "./chime-client";
 import { createAdminClient } from "./supabase/admin";
 
-const CHIME_SMA_ID = process.env.CHIME_SMA_ID ?? "";
-
 /**
  * Provision a Chime PSTN phone number for a diviner.
+ *
+ * Steps:
+ *   1. Search for an available US local number
+ *   2. Create a phone number order
+ *   3. Poll GetPhoneNumberOrder until status = "Successful" (max 90 s)
+ *   4. Fetch the real phone number ARN via GetPhoneNumber
+ *   5. Create a SIP Rule that routes inbound calls on this number to the SMA
+ *   6. Persist phone number, real ARN, and SIP rule ID to the diviner record
+ *
  * Mirrors the Twilio provisionPhoneNumber() function in twilio-voice.ts.
  */
 export async function provisionChimePhoneNumber(
   divinerId: string
 ): Promise<{ phoneNumber: string; phoneArn: string }> {
+  const smaId = process.env.CHIME_SMA_ID;
+  if (!smaId) throw new Error("CHIME_SMA_ID env var not set");
+
   const voice = getChimeVoiceClient();
 
-  // Search for available US local numbers
+  // ── Step 1: Search for an available US local number ──────────────────────
   const searchResult = await voice.send(
     new SearchAvailablePhoneNumbersCommand({
       PhoneNumberType: "Local",
@@ -34,7 +47,7 @@ export async function provisionChimePhoneNumber(
 
   const phoneNumber = availableNumbers[0];
 
-  // Order the phone number
+  // ── Step 2: Create the phone number order ────────────────────────────────
   const orderResult = await voice.send(
     new CreatePhoneNumberOrderCommand({
       ProductType: "SipMediaApplicationDialIn",
@@ -44,22 +57,73 @@ export async function provisionChimePhoneNumber(
 
   const order = orderResult.PhoneNumberOrder;
   if (!order?.PhoneNumberOrderId) {
-    throw new Error("Failed to order Chime phone number");
+    throw new Error("Failed to create Chime phone number order");
   }
 
-  // The phone number ARN will be available once the order completes.
-  // For now, store the order ID and phone number.
-  // In production, you'd poll GetPhoneNumberOrder until status is "Successful"
-  // and then associate the number with the SMA.
-  const phoneArn = `arn:aws:chime:us-east-1:phone-number/${phoneNumber}`;
+  const orderId = order.PhoneNumberOrderId;
 
-  // Save to diviner record
+  // ── Step 3: Poll until order completes (max 90 s, 3 s intervals) ─────────
+  let orderStatus = "Processing";
+  let attempts = 0;
+  const maxAttempts = 30; // 30 × 3 s = 90 s
+
+  while (orderStatus === "Processing" && attempts < maxAttempts) {
+    await new Promise((r) => setTimeout(r, 3000));
+    const pollResult = await voice.send(
+      new GetPhoneNumberOrderCommand({ PhoneNumberOrderId: orderId })
+    );
+    orderStatus = pollResult.PhoneNumberOrder?.Status ?? "Failed";
+    attempts++;
+  }
+
+  if (orderStatus !== "Successful") {
+    throw new Error(
+      `Chime phone number order ${orderId} ended with status "${orderStatus}" after ${attempts} poll attempts`
+    );
+  }
+
+  // ── Step 4: Fetch the real phone number ARN ───────────────────────────────
+  const phoneDetails = await voice.send(
+    new GetPhoneNumberCommand({ PhoneNumberId: phoneNumber })
+  );
+  const realArn =
+    phoneDetails.PhoneNumber?.PhoneNumberArn ??
+    `arn:aws:chime:us-east-1:phone-number/${phoneNumber}`;
+
+  // ── Step 5: Create a SIP Rule to route inbound calls to the SMA ──────────
+  // In AWS Chime SDK Voice, phone numbers are associated with an SMA by
+  // creating a SIP Rule with TriggerType=ToPhoneNumber and a target pointing
+  // at the SMA. There is no direct AssociatePhoneNumbersWithSipMediaApplication
+  // command in the V2 SDK — routing is done entirely through SIP Rules.
+  const sipRuleResult = await voice.send(
+    new CreateSipRuleCommand({
+      Name: `diviner-${divinerId}-${phoneNumber}`,
+      TriggerType: "ToPhoneNumber",
+      TriggerValue: phoneNumber,
+      Disabled: false,
+      TargetApplications: [
+        {
+          SipMediaApplicationId: smaId,
+          Priority: 1,
+          AwsRegion: process.env.AWS_CHIME_REGION ?? "us-east-1",
+        },
+      ],
+    })
+  );
+
+  const sipRuleId = sipRuleResult.SipRule?.SipRuleId;
+  if (!sipRuleId) {
+    throw new Error("Failed to create SIP rule for Chime phone number");
+  }
+
+  // ── Step 6: Persist to diviner record ────────────────────────────────────
   const admin = createAdminClient();
   const { error } = await admin
     .from("diviners")
     .update({
       chime_phone_number: phoneNumber,
-      chime_sma_phone_arn: phoneArn,
+      chime_sma_phone_arn: realArn,
+      chime_sip_rule_id: sipRuleId,
       phone_provider: "chime",
     })
     .eq("id", divinerId);
@@ -68,11 +132,20 @@ export async function provisionChimePhoneNumber(
     throw new Error(`Failed to save Chime phone to diviner: ${error.message}`);
   }
 
-  return { phoneNumber, phoneArn };
+  return { phoneNumber, phoneArn: realArn };
 }
 
 /**
  * Release a Chime PSTN phone number from a diviner.
+ *
+ * Steps:
+ *   1. Fetch the diviner's stored phone number and SIP rule ID
+ *   2. Delete the SIP Rule so inbound routing is removed before the number
+ *      goes back to the pool (a number cannot be deleted while a SIP Rule
+ *      still references it in some Chime account configurations)
+ *   3. Delete the phone number
+ *   4. Clear the diviner record
+ *
  * Mirrors the Twilio releasePhoneNumber() function.
  */
 export async function releaseChimePhoneNumber(
@@ -83,7 +156,7 @@ export async function releaseChimePhoneNumber(
   // Fetch diviner's Chime phone info
   const { data: diviner } = await admin
     .from("diviners")
-    .select("chime_phone_number, chime_sma_phone_arn")
+    .select("chime_phone_number, chime_sma_phone_arn, chime_sip_rule_id")
     .eq("id", divinerId)
     .single();
 
@@ -93,6 +166,22 @@ export async function releaseChimePhoneNumber(
 
   const voice = getChimeVoiceClient();
 
+  // ── Step 2: Delete the SIP Rule ──────────────────────────────────────────
+  if (diviner.chime_sip_rule_id) {
+    try {
+      await voice.send(
+        new DeleteSipRuleCommand({ SipRuleId: diviner.chime_sip_rule_id })
+      );
+    } catch (err) {
+      // Log but continue — the rule may have been deleted manually
+      console.error(
+        `Failed to delete Chime SIP rule ${diviner.chime_sip_rule_id}:`,
+        err
+      );
+    }
+  }
+
+  // ── Step 3: Delete the phone number ──────────────────────────────────────
   try {
     await voice.send(
       new DeletePhoneNumberCommand({
@@ -104,12 +193,13 @@ export async function releaseChimePhoneNumber(
     // Continue with DB cleanup even if API fails
   }
 
-  // Clear diviner record
+  // ── Step 4: Clear diviner record ─────────────────────────────────────────
   await admin
     .from("diviners")
     .update({
       chime_phone_number: null,
       chime_sma_phone_arn: null,
+      chime_sip_rule_id: null,
     })
     .eq("id", divinerId);
 }

@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     // 1. Look up diviner by their Chime phone number
     const { data: diviner } = await admin
       .from("diviners")
-      .select("id, phone_provider")
+      .select("id, phone_provider, phone_mobile, phone_answer_mode")
       .eq("chime_phone_number", calledNumber)
       .single();
 
@@ -126,6 +126,8 @@ export async function POST(request: NextRequest) {
           action: "enqueue",
           divinerId: diviner.id,
           phoneSessionId: phoneSession?.id,
+          phone_answer_mode: diviner.phone_answer_mode ?? "both",
+          phone_mobile: diviner.phone_mobile ?? null,
         });
       }
     }

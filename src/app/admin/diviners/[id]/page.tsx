@@ -26,6 +26,8 @@ import {
   DollarSign,
   CheckCircle2,
   XCircle,
+  Phone,
+  VoicemailIcon,
 } from "lucide-react";
 import { PublishingControls } from "./publishing-controls";
 import { normalizePublishPolicy } from "@/lib/diviner-publishing";
@@ -42,6 +44,8 @@ import {
   getRoleServicePackages,
   resolveRoleServicePackage,
 } from "@/lib/role-service-packages";
+import { ChimePhoneManager } from "@/components/admin/chime-phone-manager";
+import { DivinerVoicemails } from "@/components/admin/diviner-voicemails";
 
 export const metadata = { title: "Diviner Detail — Admin" };
 
@@ -98,7 +102,7 @@ async function getDivinerDetail(divinerId: string) {
   if (error || !diviner) return null;
 
   // Fetch related data in parallel
-  const [servicesRes, bookingsRes, affiliateCountRes, orderStatsRes, emailRes, registryRes, overrideRes] =
+  const [servicesRes, bookingsRes, affiliateCountRes, orderStatsRes, emailRes, registryRes, overrideRes, voicemailsRes] =
     await Promise.all([
       admin
         .from("services")
@@ -139,6 +143,12 @@ async function getDivinerDetail(divinerId: string) {
         .from("diviner_live_platform_overrides")
         .select("*")
         .eq("diviner_id", divinerId),
+      admin
+        .from("voicemails")
+        .select("id, caller_phone, s3_key, duration_seconds, listened_at, created_at")
+        .eq("diviner_id", divinerId)
+        .order("created_at", { ascending: false })
+        .limit(50),
     ]);
 
   const services = (servicesRes.data ?? []) as Array<Record<string, unknown>>;
@@ -162,11 +172,21 @@ async function getDivinerDetail(divinerId: string) {
   const emailArr = (emailRes.data ?? []) as Array<Record<string, unknown>>;
   const email = emailArr.length > 0 ? (emailArr[0].email as string) : "";
 
+  const voicemails = (voicemailsRes.data ?? []) as Array<{
+    id: string;
+    caller_phone: string;
+    s3_key: string;
+    duration_seconds: number | null;
+    listened_at: string | null;
+    created_at: string;
+  }>;
+
   return {
     diviner,
     email,
     services,
     bookings,
+    voicemails,
     affiliateCount,
     governedLivePlatforms: buildGovernedLivePlatforms(
       registryRes.data ?? [],
@@ -196,7 +216,7 @@ export default async function AdminDivinerDetailPage({
   const result = await getDivinerDetail(id);
   if (!result) notFound();
 
-  const { diviner, email, services, bookings, affiliateCount, governedLivePlatforms, stats, servicePackage } = result;
+  const { diviner, email, services, bookings, voicemails, affiliateCount, governedLivePlatforms, stats, servicePackage } = result;
   const publishingPolicy = normalizePublishPolicy(diviner as Record<string, unknown>);
   const divinerAvatarUrl = getDivinerAvatarUrl(diviner.avatar_url as string | null | undefined);
   const seoScore = calcSeoCompletenessScore(diviner);
@@ -471,6 +491,42 @@ export default async function AdminDivinerDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Phone & Calling ──────────────────────────────────────────── */}
+      <div>
+        <h2 className="text-base font-semibold flex items-center gap-2 mb-3">
+          <Phone className="size-4 text-muted-foreground" />
+          Phone &amp; Calling
+        </h2>
+        <ChimePhoneManager
+          divinerId={diviner.id}
+          currentPhone={(diviner.chime_phone_number as string | null) ?? null}
+          chimeSmaPhoneArn={(diviner.chime_sma_phone_arn as string | null) ?? null}
+          phoneAnswerMode={
+            (diviner.phone_answer_mode as "browser" | "mobile" | "both" | null) ?? null
+          }
+          phoneMobile={(diviner.phone_mobile as string | null) ?? null}
+        />
+      </div>
+
+      {/* ── Voicemails ───────────────────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <VoicemailIcon className="size-4" />
+            Voicemails
+            <Badge variant="secondary" className="ml-1">
+              {voicemails.length}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DivinerVoicemails
+            divinerId={diviner.id}
+            initialVoicemails={voicemails}
+          />
+        </CardContent>
+      </Card>
 
       {/* ── Services List ─────────────────────────────────────────────── */}
       <Card>

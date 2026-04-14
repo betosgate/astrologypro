@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createCheckoutSession } from "@/lib/stripe/connect";
 import { sendPaymentLinkEmail } from "@/lib/email";
 import { PRICING } from "@/lib/constants";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,12 @@ export async function GET(request: NextRequest) {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Rate limit: 100 requests per minute per user for dashboard reads
+  const rl = await rateLimit(`dashboard-bookings-get:${user.id}`, 100, 60 * 1_000);
+  if (!rl.success) {
+    return rateLimitResponse(rl, "Dashboard request rate limit exceeded. Please slow down.") as unknown as NextResponse;
   }
 
   const admin = createAdminClient();

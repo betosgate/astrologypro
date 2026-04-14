@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Zap } from "lucide-react";
-import CorrelatePanel from "./CorrelatePanel";
+import CorrelatePanel, { type CorrelationResult } from "./CorrelatePanel";
 
 type DataSource = {
   id: string;
@@ -13,20 +13,7 @@ type DataSource = {
   source_type: string;
 };
 
-type Correlation = {
-  id: string;
-  data_source_id: string;
-  astro_event_type: string;
-  planet: string | null;
-  sign: string | null;
-  correlation_coefficient: number | null;
-  sample_count: number | null;
-  date_range_start: string | null;
-  date_range_end: string | null;
-  significance_level: number | null;
-  notes: string | null;
-  computed_at: string;
-};
+type Correlation = CorrelationResult;
 
 type Props = {
   sources: DataSource[];

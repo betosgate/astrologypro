@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,9 +16,16 @@ import {
 import {
   ArrowLeft, Pencil, Loader2, MapPin, Star, CalendarDays, BarChart2,
   FileText, StickyNote, BookOpen, CheckCircle2, Plus, Trash2, ExternalLink,
+  Clock, ChevronDown, ChevronUp,
 } from "lucide-react";
+import {
+  getAnnualProfection,
+  getCurrentFirdaria,
+  getFirdariaTimeline,
+} from "@/lib/time-lords";
 import { toast } from "sonner";
 import { MundaneNatalChart } from "@/components/admin/mundane-natal-chart";
+import { AiGeneratePanel } from "@/components/mundane/ai-generate-panel";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -154,7 +161,7 @@ const CHART_TYPE_BADGE: Record<string, string> = {
   other: "bg-gray-100 text-gray-600 border-gray-200",
 };
 
-type DetailTab = "overview" | "chart_data" | "events" | "forecasts" | "notes";
+type DetailTab = "overview" | "chart_data" | "events" | "forecasts" | "notes" | "time_lords";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
@@ -171,6 +178,176 @@ const EMPTY_ADD_CHART_FORM: AddChartForm = {
   source: "",
   confidence_level: "",
 };
+
+// ─── Time Lords Panel ──────────────────────────────────────────────────────────
+
+const SIGN_SYMBOL: Record<string, string> = {
+  aries: "♈", taurus: "♉", gemini: "♊", cancer: "♋",
+  leo: "♌", virgo: "♍", libra: "♎", scorpio: "♏",
+  sagittarius: "♐", capricorn: "♑", aquarius: "♒", pisces: "♓",
+};
+
+function TimeLordsPanel({ entity }: { entity: EntityDetail }) {
+  const [firdariaOpen, setFirdariaOpen] = useState(true);
+
+  const now = useMemo(() => new Date(), []);
+
+  const foundingDate = useMemo(
+    () => (entity.birth_date ? new Date(entity.birth_date) : null),
+    [entity.birth_date]
+  );
+
+  const profection = useMemo(
+    () => (foundingDate ? getAnnualProfection(foundingDate, now) : null),
+    [foundingDate, now]
+  );
+
+  const currentFirdaria = useMemo(
+    () => (foundingDate ? getCurrentFirdaria(foundingDate, now) : null),
+    [foundingDate, now]
+  );
+
+  const firdariaTimeline = useMemo(
+    () => (foundingDate ? getFirdariaTimeline(foundingDate, now, 30) : []),
+    [foundingDate, now]
+  );
+
+  // Show only next 3 future major period transitions
+  const nextThreePeriods = firdariaTimeline.slice(0, 3);
+
+  if (!foundingDate) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center text-sm text-muted-foreground">
+          <Clock className="size-8 mx-auto mb-3 text-muted-foreground/40" />
+          <p className="font-medium">No founding date available</p>
+          <p className="mt-1 text-xs">Add a birth/founding date to this entity to calculate time lords.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  function fmtDate(d: Date) {
+    return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Annual Profection */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Clock className="size-4 text-amber-500" />
+            Annual Profection
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {profection && (
+            <>
+              <div className="grid gap-3 sm:grid-cols-3 text-sm">
+                <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Activated House</p>
+                  <p className="text-2xl font-bold text-amber-700">H{profection.activatedHouse}</p>
+                </div>
+                <div className="rounded-lg bg-violet-50 border border-violet-200 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Activated Sign</p>
+                  <p className="font-semibold text-lg text-violet-700 capitalize">
+                    {SIGN_SYMBOL[profection.activatedSign] ?? ""} {profection.activatedSign}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Lord of the Year</p>
+                  <p className="font-bold text-lg text-blue-700">{profection.lordOfYear}</p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Year {profection.yearsElapsed} since founding ({fmtDate(foundingDate)}).
+                House cycles 1→12 then repeats; Aries-rising whole-sign assumption.
+              </p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Firdaria */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="size-4 text-indigo-500" />
+              Firdaria
+            </CardTitle>
+            <button
+              onClick={() => setFirdariaOpen((o) => !o)}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={firdariaOpen ? "Collapse" : "Expand"}
+            >
+              {firdariaOpen
+                ? <ChevronUp className="size-4" />
+                : <ChevronDown className="size-4" />
+              }
+            </button>
+          </div>
+        </CardHeader>
+        {firdariaOpen && (
+          <CardContent className="space-y-4">
+            {/* Current ruler */}
+            {currentFirdaria && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Current Period</p>
+                <div className="rounded-lg border bg-indigo-50 border-indigo-200 p-3">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <Badge className="bg-indigo-600 text-white text-sm px-2 py-0.5">{currentFirdaria.planet}</Badge>
+                    <span className="text-xs text-muted-foreground">major ruler</span>
+                    <span className="text-muted-foreground">·</span>
+                    <Badge variant="outline" className="text-xs border-indigo-300 text-indigo-700">{currentFirdaria.subPlanet}</Badge>
+                    <span className="text-xs text-muted-foreground">sub-ruler</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                    <div>
+                      <span className="font-medium text-foreground">Major period:</span>
+                      <br />{fmtDate(currentFirdaria.periodStart)} – {fmtDate(currentFirdaria.periodEnd)}
+                    </div>
+                    <div>
+                      <span className="font-medium text-foreground">Sub-period:</span>
+                      <br />{fmtDate(currentFirdaria.subPeriodStart)} – {fmtDate(currentFirdaria.subPeriodEnd)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Next 3 major periods */}
+            {nextThreePeriods.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Next Major Periods</p>
+                <div className="space-y-2">
+                  {nextThreePeriods.map((period, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between gap-3 rounded-lg border bg-card p-3 text-sm"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs font-semibold">{period.planet}</Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {fmtDate(period.periodStart)} – {fmtDate(period.periodEnd)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground">
+              Diurnal (solar) chart sequence: Sun 10y → Venus 8y → Mercury 13y → Moon 9y → Saturn 11y → Jupiter 12y → Mars 7y → N.Node 3y → S.Node 2y (75y cycle).
+            </p>
+          </CardContent>
+        )}
+      </Card>
+    </div>
+  );
+}
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
@@ -420,6 +597,7 @@ export default function AdminMundaneEntityDetailPage({
     { id: "chart_data", label: "Chart Data", icon: <BarChart2 className="size-3.5" /> },
     { id: "events", label: `Events${events.length > 0 ? ` (${events.length})` : ""}`, icon: <CalendarDays className="size-3.5" /> },
     { id: "forecasts", label: "Forecasts", icon: <BookOpen className="size-3.5" /> },
+    { id: "time_lords", label: "Time Lords", icon: <Clock className="size-3.5" /> },
     { id: "notes", label: "Notes", icon: <StickyNote className="size-3.5" /> },
   ];
 
@@ -735,17 +913,33 @@ export default function AdminMundaneEntityDetailPage({
         </div>
       )}
 
+      {/* Time Lords tab */}
+      {activeTab === "time_lords" && (
+        <TimeLordsPanel entity={entity} />
+      )}
+
       {/* Notes tab */}
       {activeTab === "notes" && (
-        <Card>
-          <CardContent className="pt-4">
-            {entity.notes ? (
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{entity.notes}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">No notes for this entity.</p>
-            )}
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="pt-4">
+              {entity.notes ? (
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{entity.notes}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">No notes for this entity.</p>
+              )}
+            </CardContent>
+          </Card>
+          <AiGeneratePanel
+            subjectType="entity"
+            subjectId={entity.id}
+            subjectLabel={entity.name}
+            aspectType="entity"
+            saveToField="notes"
+            saveToId={entity.id}
+            onSave={() => load()}
+          />
+        </div>
       )}
 
       {/* Edit dialog */}

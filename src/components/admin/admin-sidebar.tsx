@@ -76,6 +76,7 @@ import {
   AlertTriangle,
   Rocket,
   Layers3,
+  Timer,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -280,6 +281,7 @@ const NAV_GROUPS = [
       { label: "Pricing Management", href: "/admin/pricing", icon: CreditCard },
       { label: "Legal", href: "/admin/legal", icon: ScrollText },
       { label: "DB Migrations", href: "/admin/db/migrations", icon: Database },
+      { label: "Cron Jobs", href: "/admin/cron", icon: Timer },
     ],
   },
 ];
