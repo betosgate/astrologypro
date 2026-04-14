@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -51,4 +52,85 @@ export async function GET(req: NextRequest) {
     limit,
     hasMore: offset + limit < (count ?? 0),
   });
+}
+
+export async function POST(req: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json(
+      { type: "https://httpstatuses.com/401", title: "Unauthorized", status: 401 },
+      { status: 401 }
+    );
+  }
+
+  const body = await req.json() as {
+    full_name?: string;
+    office_title?: string;
+    country_entity_id?: string | null;
+    office_start_date?: string | null;
+    office_end_date?: string | null;
+    is_current?: boolean;
+    birth_date?: string | null;
+    birth_time?: string | null;
+    birth_location?: string | null;
+    birth_lat?: number | null;
+    birth_lon?: number | null;
+    birth_timezone?: string | null;
+    birth_data_source?: string | null;
+    birth_data_confidence?: string | null;
+    notes?: string | null;
+    tags?: string[];
+    is_public?: boolean;
+  };
+
+  if (!body.full_name?.trim()) {
+    return NextResponse.json(
+      { type: "https://httpstatuses.com/422", title: "Validation Error", status: 422, detail: "full_name is required" },
+      { status: 422 }
+    );
+  }
+
+  const VALID_CONFIDENCE = ["AA", "A", "B", "C", "X"] as const;
+  if (body.birth_data_confidence && !(VALID_CONFIDENCE as readonly string[]).includes(body.birth_data_confidence)) {
+    return NextResponse.json(
+      { type: "https://httpstatuses.com/422", title: "Validation Error", status: 422, detail: "birth_data_confidence must be AA, A, B, C, or X" },
+      { status: 422 }
+    );
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("mundane_leaders")
+    .insert({
+      full_name: body.full_name.trim(),
+      office_title: body.office_title ?? null,
+      country_entity_id: body.country_entity_id ?? null,
+      office_start_date: body.office_start_date ?? null,
+      office_end_date: body.office_end_date ?? null,
+      is_current: body.is_current ?? true,
+      birth_date: body.birth_date ?? null,
+      birth_time: body.birth_time ?? null,
+      birth_location: body.birth_location ?? null,
+      birth_lat: body.birth_lat ?? null,
+      birth_lon: body.birth_lon ?? null,
+      birth_timezone: body.birth_timezone ?? null,
+      birth_data_source: body.birth_data_source ?? null,
+      birth_data_confidence: body.birth_data_confidence ?? null,
+      notes: body.notes ?? null,
+      tags: body.tags ?? [],
+      is_public: body.is_public ?? true,
+      created_by: user.id,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json(
+      { type: "https://httpstatuses.com/500", title: "Internal Server Error", status: 500, detail: error.message },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json(data, { status: 201 });
 }

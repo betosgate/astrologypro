@@ -1828,92 +1828,134 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
   if (!data) return <SectionSkeleton title="Horary Chart Interpretation" />;
   if (data === "error") return <SectionError title="Horary Chart Interpretation" />;
 
-  // The AI response has both root-level keys AND a nested `data` key
+  // Unwrap nested `data` key returned by AI
   const inner = data?.data ?? data;
-  const rootPlanet = data?.planet;               // root level planet object
-  const astroConsiderations = data?.astrological_considerations;
-  const recommendations = data?.recommendations;
-  const alternativeTimings = data?.alternative_timings;
 
-  function ItemBlock({ title, text }: { title: string; text: string }) {
+  // Correct paths per AI response schema:
+  //   inner.astrological_aspect.aspect  = [{title, data}]
+  //   inner.astrological_aspect.planet  = [{title, data}]
+  //   inner.astrological_aspect.house   = [{title, data}]
+  //   inner.summary.answer              = [{title, data}]
+  //   inner.summary.recommendation      = [{title, data}]
+  //   inner.summary.recommendation_on_date_and_timeline = [{timeline_title, timeline_data}]
+  const astroAspect = inner?.astrological_aspect ?? {};
+  const aspectItems: any[] = Array.isArray(astroAspect?.aspect) ? astroAspect.aspect : [];
+  const planetItems: any[] = Array.isArray(astroAspect?.planet) ? astroAspect.planet : [];
+  const houseItems: any[]  = Array.isArray(astroAspect?.house)  ? astroAspect.house  : [];
+
+  const summary = inner?.summary ?? {};
+  const timelineItems: any[]    = Array.isArray(summary?.recommendation_on_date_and_timeline) ? summary.recommendation_on_date_and_timeline : [];
+  const answerItems: any[]      = Array.isArray(summary?.answer)         ? summary.answer         : [];
+  const recommendItems: any[]   = Array.isArray(summary?.recommendation) ? summary.recommendation : [];
+
+  const contentStyle: React.CSSProperties = {
+    fontFamily: "'Roboto', sans-serif",
+    fontSize: "20px",
+    fontWeight: 400,
+    lineHeight: "26px",
+    color: "#000",
+  };
+
+  // Render text that may contain <span class="timedata">…</span> HTML from the AI
+  function HtmlText({ html, className }: { html: string; className?: string }) {
+    return (
+      <p
+        className={className ?? "leading-relaxed"}
+        dangerouslySetInnerHTML={{ __html: html ?? "" }}
+      />
+    );
+  }
+
+  // A single interpretation block (header + gold-gradient body + Show More)
+  function InterpBlock({ title, text, itemObj }: { title: string; text: string; itemObj?: any }) {
     if (!text) return null;
+    const pName = title?.split(" ")[0];
     return (
       <div className="rounded-lg border overflow-hidden">
         <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center">
-          <SmartHeading title={title} textSize="text-[22px]" iconSize="size-7" className="text-black" />
+          <div className="flex items-center gap-2">
+            {pName && PLANET_IMAGES[pName] && (
+              <img src={PLANET_IMAGES[pName]} alt={pName} className="size-6 object-contain" />
+            )}
+            <SmartHeading title={title} textSize="text-[22px]" iconSize="size-7" className="text-black" />
+          </div>
         </div>
-        <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
-          <p className="leading-relaxed">{text}</p>
+        <div className="interp-gradient-default px-4 py-3 pb-8" style={contentStyle}>
+          <HtmlText html={text} />
           <div className="mt-2 flex justify-center border-t border-black/10 pt-2">
-            <button onClick={() => trigger(title, text, { title, data: text }, areaOfInquiry)} className="horoscope-show-more">Show More</button>
+            <button
+              onClick={() => trigger(title, text, itemObj ?? { title, data: text }, areaOfInquiry)}
+              className="horoscope-show-more"
+            >
+              Show More
+            </button>
           </div>
         </div>
       </div>
     );
   }
 
-  function ObjSection({ title, obj }: { title: string; obj: any }) {
-    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return null;
-    const entries = Object.entries(obj).filter(([, v]) => v && typeof v === "string");
-    if (!entries.length) return null;
+  // A group section with a dark header bar + multiple InterpBlocks below
+  function GroupSection({ sectionTitle, items }: { sectionTitle: string; items: any[] }) {
+    if (!items.length) return null;
     return (
-      <div className="space-y-2">
-        <div className="rounded-lg border overflow-hidden px-4 py-2.5 horoscope-section-header text-center">
-          <h3 className="text-sm font-semibold text-center w-full text-white">
-            <SmartHeading title={title} textSize="text-[20px]" iconSize="size-7" className="text-white" />
-          </h3>
+      <div className="rounded-lg border overflow-hidden">
+        <div className="px-4 py-2.5 horoscope-section-header text-center">
+          <h3 className="text-sm font-semibold text-white">{sectionTitle}</h3>
         </div>
-        {entries.map(([k, v]) => (
-          <div key={k} className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center border-b border-black/10">
-              <SmartHeading title={k.replace(/_/g, " ")} textSize="text-[22px]" iconSize="size-7" className="text-black" />
-            </div>
-            <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
-              <p className="leading-relaxed">{String(v)}</p>
+        <div className="divide-y space-y-0">
+          {items.map((item: any, i: number) => (
+            <div key={i} className="interp-gradient-default px-4 py-3 pb-8" style={contentStyle}>
+              {item.title && (
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  {(() => { const pn = item.title?.split(" ")[0]; return pn && PLANET_IMAGES[pn] ? <img src={PLANET_IMAGES[pn]} alt={pn} className="size-5 object-contain" /> : null; })()}
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-center">{item.title}</h4>
+                </div>
+              )}
+              <HtmlText html={item.data ?? item.text ?? String(item)} />
               <div className="mt-1.5 flex justify-center border-t border-black/10 pt-2">
-                <button onClick={() => trigger(k, String(v), obj, areaOfInquiry)} className="horoscope-show-more">Show More</button>
+                <button
+                  onClick={() => trigger(item.title, item.data ?? item.text ?? "", item, areaOfInquiry)}
+                  className="horoscope-show-more"
+                >
+                  Show More
+                </button>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     );
   }
 
-  const hasContent = inner?.recomendation_on_date_and_timeline || inner?.house || inner?.planet || inner?.summary || rootPlanet || astroConsiderations;
+  const hasContent = timelineItems.length > 0 || houseItems.length > 0 || planetItems.length > 0 || aspectItems.length > 0 || answerItems.length > 0 || recommendItems.length > 0;
 
   return (
     <div className="space-y-4">
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} relationshipEntries={modal?.relationshipEntries} bgClass={modal?.bgClass} pictureUrl={modal?.pictureUrl} />
 
-      {/* Recommendation on Date & Timeline */}
-      {inner?.recomendation_on_date_and_timeline?.data && (
-        <ItemBlock title={inner.recomendation_on_date_and_timeline.title ?? "Recommendation on Date & Timeline"} text={inner.recomendation_on_date_and_timeline.data} />
-      )}
-
-      {/* Root-level planet significators */}
-      <ObjSection title="Planet Significators" obj={rootPlanet} />
-
-      {/* Astrological Considerations */}
-      <ObjSection title="Astrological Considerations" obj={astroConsiderations} />
-
-      {/* Recommendations */}
-      <ObjSection title="Recommendations" obj={recommendations} />
-
-      {/* Alternative Timings */}
-      <ObjSection title="Alternative Timings" obj={alternativeTimings} />
-
-      {/* Summary — timeline entries */}
-      {Array.isArray(inner?.summary?.recommendation_on_date_and_timeline) && (
+      {/* ── Section 1: Recommendation on Date & Timeline ─────────────────── */}
+      {timelineItems.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Summary</h3></div>
+          <div className="px-4 py-2.5 horoscope-section-header text-center">
+            <h3 className="text-sm font-semibold text-white">Recommendation on Date &amp; Timeline</h3>
+          </div>
           <div className="divide-y">
-            {inner.summary.recommendation_on_date_and_timeline.map((s: any, i: number) => (
-              <div key={i} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
-                <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{s.timeline_title}</h4>
-                <p className="leading-relaxed">{s.timeline_data}</p>
-                <div className="mt-1.5 flex justify-center">
-                  <button onClick={() => trigger(s.timeline_title, s.timeline_data, s, areaOfInquiry)} className="horoscope-show-more">Show More</button>
+            {timelineItems.map((s: any, i: number) => (
+              <div key={i} className="interp-gradient-default px-4 py-3 pb-8" style={contentStyle}>
+                {s.timeline_title && (
+                  <h4 className="text-xs font-semibold uppercase tracking-wider mb-2 text-center w-full">
+                    {s.timeline_title}
+                  </h4>
+                )}
+                <HtmlText html={s.timeline_data ?? ""} />
+                <div className="mt-1.5 flex justify-center border-t border-black/10 pt-2">
+                  <button
+                    onClick={() => trigger(s.timeline_title, s.timeline_data, s, areaOfInquiry)}
+                    className="horoscope-show-more"
+                  >
+                    Show More
+                  </button>
                 </div>
               </div>
             ))}
@@ -1921,47 +1963,54 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
         </div>
       )}
 
-      {/* Summary — answer array */}
-      {Array.isArray(inner?.summary?.answer) && inner.summary.answer.length > 0 && (
+      {/* ── Section 2: House Analysis ─────────────────────────────────────── */}
+      <GroupSection sectionTitle="House Analysis" items={houseItems} />
+
+      {/* ── Section 3: Planetary Influence ───────────────────────────────── */}
+      <GroupSection sectionTitle="Planetary Influence" items={planetItems} />
+
+      {/* ── Section 4: Astrological Aspects ──────────────────────────────── */}
+      <GroupSection sectionTitle="Astrological Aspects" items={aspectItems} />
+
+      {/* ── Section 5a: Summary — Answer ─────────────────────────────────── */}
+      {answerItems.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Answer</h3></div>
+          <div className="px-4 py-2.5 horoscope-section-header text-center">
+            <h3 className="text-sm font-semibold text-white">Summary</h3>
+          </div>
           <div className="divide-y">
-            {inner.summary.answer.map((a: any, i: number) => (
-              <div key={i} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
-                {a.title && <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{a.title}</h4>}
-                <p className="leading-relaxed">{a.data ?? a.text ?? String(a)}</p>
+            {answerItems.map((a: any, i: number) => (
+              <div key={i} className="interp-gradient-default px-4 py-3" style={contentStyle}>
+                {a.title && (
+                  <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{a.title}</h4>
+                )}
+                <HtmlText html={a.data ?? a.text ?? String(a)} />
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Summary — recommendation array */}
-      {Array.isArray(inner?.summary?.recommendation) && inner.summary.recommendation.length > 0 && (
+      {/* ── Section 5b: Summary — Recommendations ────────────────────────── */}
+      {recommendItems.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Recommendations</h3></div>
-          <div className="divide-y">
-            {inner.summary.recommendation.map((r: any, i: number) => (
-              <div key={i} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
-                {r.title && <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{r.title}</h4>}
-                <p className="leading-relaxed">{r.data ?? r.text ?? String(r)}</p>
-              </div>
-            ))}
+          <div className="px-4 py-2.5 horoscope-section-header text-center">
+            <h3 className="text-sm font-semibold text-white">Recommendations</h3>
           </div>
-        </div>
-      )}
-
-      {/* Houses */}
-      {Array.isArray(inner?.house) && inner.house.length > 0 && (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">House Analysis</h3></div>
           <div className="divide-y">
-            {inner.house.map((h: any, i: number) => (
-              <div key={i} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
-                <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{h.title}</h4>
-                <p className="leading-relaxed">{h.data}</p>
-                <div className="mt-1.5 flex justify-center">
-                  <button onClick={() => trigger(h.title, h.data, h, areaOfInquiry)} className="horoscope-show-more">Show More</button>
+            {recommendItems.map((r: any, i: number) => (
+              <div key={i} className="interp-gradient-default px-4 py-3 pb-8" style={contentStyle}>
+                {r.title && (
+                  <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{r.title}</h4>
+                )}
+                <HtmlText html={r.data ?? r.text ?? String(r)} />
+                <div className="mt-1.5 flex justify-center border-t border-black/10 pt-2">
+                  <button
+                    onClick={() => trigger(r.title, r.data ?? r.text ?? "", r, areaOfInquiry)}
+                    className="horoscope-show-more"
+                  >
+                    Show More
+                  </button>
                 </div>
               </div>
             ))}
@@ -1969,50 +2018,15 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
         </div>
       )}
 
-      {/* Planets (inner.planet array) */}
-      {Array.isArray(inner?.planet) && inner.planet.length > 0 && (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Planet Analysis</h3></div>
-          <div className="divide-y">
-            {inner.planet.map((p: any, i: number) => {
-              const pName = p.title?.split(" ")[0];
-              return (
-                <div key={i} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
-                  <div className="flex items-center gap-2 mb-1">
-                    {pName && PLANET_IMAGES[pName] && <img src={PLANET_IMAGES[pName]} alt={pName} className="size-5 object-contain" />}
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-center w-full">{p.title}</h4>
-                  </div>
-                  <p className="leading-relaxed">{p.data}</p>
-                  <div className="mt-1.5 flex justify-center">
-                    <button onClick={() => trigger(p.title, p.data, p, areaOfInquiry)} className="horoscope-show-more">Show More</button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Astrological aspects sub-section */}
-      {inner?.astrological_aspect && typeof inner.astrological_aspect === "object" && (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 horoscope-section-header text-center"><h3 className="text-sm font-semibold text-center w-full">Astrological Aspects</h3></div>
-          <div className="divide-y">
-            {Object.entries(inner.astrological_aspect).map(([k, v]: [string, any]) => (
-              <div key={k} className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
-                <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{k.replace(/_/g, " ")}</h4>
-                <p className="leading-relaxed">{typeof v === "string" ? v : JSON.stringify(v)}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Fallback raw data */}
+      {/* Fallback raw data when nothing parsed correctly */}
       {!hasContent && (
         <details className="rounded-lg border">
-          <summary className="px-4 py-2.5 text-sm font-semibold cursor-pointer bg-muted/20 hover:bg-muted/40">Horary Chart Raw Data</summary>
-          <pre className="px-4 py-3 text-xs font-mono bg-muted/10 overflow-x-auto whitespace-pre-wrap">{JSON.stringify(data, null, 2)}</pre>
+          <summary className="px-4 py-2.5 text-sm font-semibold cursor-pointer bg-muted/20 hover:bg-muted/40">
+            Horary Chart Raw Data
+          </summary>
+          <pre className="px-4 py-3 text-xs font-mono bg-muted/10 overflow-x-auto whitespace-pre-wrap">
+            {JSON.stringify(data, null, 2)}
+          </pre>
         </details>
       )}
     </div>

@@ -10,16 +10,7 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { bookingId, role } = await request.json();
+    const { bookingId, role, clientToken } = await request.json();
 
     if (!bookingId || !role) {
       return NextResponse.json(
@@ -29,6 +20,26 @@ export async function POST(request: NextRequest) {
     }
 
     const admin = createAdminClient();
+
+    // Auth check: either token-based (guest client) or session-based (logged-in user)
+    if (!clientToken) {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    } else {
+      // Verify token matches booking (prevent arbitrary token injection)
+      const { data: tokenCheck } = await admin
+        .from("bookings")
+        .select("id")
+        .eq("id", bookingId)
+        .eq("booking_token", clientToken)
+        .single();
+      if (!tokenCheck) {
+        return NextResponse.json({ error: "Invalid session token" }, { status: 403 });
+      }
+    }
     const now = new Date().toISOString();
 
     const field =
