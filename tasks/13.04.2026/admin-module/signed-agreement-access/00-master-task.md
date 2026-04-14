@@ -69,3 +69,11 @@ This feature is complete only when:
 - download is tied to the accepted agreement snapshot
 - email delivery is logged and auditable
 - the artifact is stable even if the template changes later
+
+## Status
+
+- `01-signed-agreement-artifact-model.md` — Done
+- `02-user-self-service-view-download-and-email.md` — Done
+- `03-admin-backoffice-access-and-resend-tools.md` — Done
+- `04-pdf-download-and-rendering-standards.md` — Done
+- `05-permissions-audit-and-delivery-logging.md` — Done

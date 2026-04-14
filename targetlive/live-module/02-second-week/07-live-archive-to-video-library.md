@@ -1,6 +1,6 @@
 # Task 07 - Let Diviners Add Old Lives To Their Video Library Cleanly
 
-- Status: Open
+- Status: Done
 - Priority: P1
 - Owner: Full-stack
 
@@ -141,3 +141,9 @@ If the existing `media_items` schema should remain minimal, equivalent provenanc
 - automatic AI clipping or highlight generation
 - cross-posting to external social platforms
 - retrofitting client portal recordings into the public diviner media gallery unless explicitly productized as the same concept
+
+## Completion Notes
+
+- Added `source_type` and `source_live_session_id` provenance fields on `media_items`.
+- Added `/api/dashboard/media/live-import` so diviners can list eligible ended sessions and import one safely.
+- Added the `Add From Past Live` modal to `/dashboard/media`, including duplicate prevention and editable prefilled metadata.

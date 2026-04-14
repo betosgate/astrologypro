@@ -11,6 +11,7 @@ import {
   getAllAuthorSlugs,
 } from '@/lib/blog'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getServiceLandingTemplates } from '@/lib/service-landings'
 
 const BASE_URL = 'https://astrologypro.com'
 
@@ -64,11 +65,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date()
 
   // Fetch all data in parallel
-  const [blogPostSlugs, blogCategorySlugs, blogAuthorSlugs, divinerData] = await Promise.all([
+  const [blogPostSlugs, blogCategorySlugs, blogAuthorSlugs, divinerData, serviceTemplates] = await Promise.all([
     getAllPublishedPostSlugs(),
     getAllCategorySlugs(),
     getAllAuthorSlugs(),
     getDivinerSitemapData(),
+    getServiceLandingTemplates(),
   ])
 
   const blogPostPages: MetadataRoute.Sitemap = blogPostSlugs.map((entry) => ({
@@ -117,6 +119,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     '/blog',
     '/discover',
     '/learn',
+    '/services',
     '/tarot',
     '/tarot/spreads',
     '/guides',
@@ -224,6 +227,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }))
   )
 
+  const serviceOnlyLandingPages: MetadataRoute.Sitemap = serviceTemplates.map((service) => ({
+    url: `${BASE_URL}/services/${service.slug}`,
+    lastModified: now,
+    changeFrequency: 'weekly' as const,
+    priority: 0.8,
+  }))
+
   // NOTE: booking pages (/{username}/book/{slug}) are intentionally excluded —
   // they carry robots noindex and should not appear in the sitemap.
 
@@ -233,6 +243,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...divinerProfilePages,
     ...divinerServicesHubPages,
     ...divinerServiceDetailPages,
+    ...serviceOnlyLandingPages,
     ...zodiacPages,
     ...tarotCardPages,
     ...tarotSpreadPages,

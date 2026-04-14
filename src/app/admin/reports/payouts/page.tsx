@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,8 @@ interface Summary {
   totalPlatformFees: number;
   totalDivinerPayouts: number;
   totalAffiliateCommissions: number;
+  totalRefundAmount: number;
+  totalRefundCount: number;
   avgPlatformFeePercent: number;
 }
 
@@ -30,9 +33,15 @@ interface DivinerPayout {
   divinerName: string;
   totalRevenue: number;
   platformFee: number;
+  affiliateCommissions: number;
   payout: number;
   bookings: number;
+  refundAmount: number;
+  refundCount: number;
   stripeAccountId: string | null;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  settlementStatusCounts: Record<string, number>;
 }
 
 interface AffiliateCommission {
@@ -50,6 +59,7 @@ interface MonthlyRow {
   platformFees: number;
   divinerPayouts: number;
   affiliateCommissions: number;
+  refunds: number;
 }
 
 interface PayoutReport {
@@ -201,6 +211,21 @@ export default function PayoutsReportPage() {
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Refunds</CardTitle>
+            <Wallet className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatCurrency(summary.totalRefundAmount)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {summary.totalRefundCount} refund{summary.totalRefundCount === 1 ? "" : "s"}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Diviner Payouts Table */}
@@ -221,8 +246,11 @@ export default function PayoutsReportPage() {
                     <TableHead>Diviner</TableHead>
                     <TableHead className="text-right">Revenue</TableHead>
                     <TableHead className="text-right">Platform Fee</TableHead>
-                    <TableHead className="text-right">Net Payout</TableHead>
+                    <TableHead className="text-right">Affiliate</TableHead>
+                    <TableHead className="text-right">Net Share</TableHead>
+                    <TableHead className="text-right">Refunds</TableHead>
                     <TableHead className="text-right">Bookings</TableHead>
+                    <TableHead>Review States</TableHead>
                     <TableHead>Stripe Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -230,7 +258,9 @@ export default function PayoutsReportPage() {
                   {divinerPayouts.map((d) => (
                     <TableRow key={d.divinerId}>
                       <TableCell className="font-medium">
-                        {d.divinerName}
+                        <Link href={`/admin/diviners/${d.divinerId}`} className="hover:underline">
+                          {d.divinerName}
+                        </Link>
                       </TableCell>
                       <TableCell className="text-right">
                         {formatCurrency(d.totalRevenue)}
@@ -238,13 +268,39 @@ export default function PayoutsReportPage() {
                       <TableCell className="text-right">
                         {formatCurrency(d.platformFee)}
                       </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(d.affiliateCommissions)}
+                      </TableCell>
                       <TableCell className="text-right font-medium">
                         {formatCurrency(d.payout)}
                       </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(d.refundAmount)}
+                      </TableCell>
                       <TableCell className="text-right">{d.bookings}</TableCell>
                       <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {Object.entries(d.settlementStatusCounts).length === 0 ? (
+                            <span className="text-xs text-muted-foreground">none</span>
+                          ) : (
+                            Object.entries(d.settlementStatusCounts).map(([key, value]) => (
+                              <Badge key={key} variant="outline">
+                                {key}:{value}
+                              </Badge>
+                            ))
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         {d.stripeAccountId ? (
-                          <Badge variant="default">Connected</Badge>
+                          <div className="flex flex-wrap gap-1">
+                            <Badge variant={d.chargesEnabled ? "default" : "outline"}>
+                              {d.chargesEnabled ? "Charges" : "No Charges"}
+                            </Badge>
+                            <Badge variant={d.payoutsEnabled ? "default" : "secondary"}>
+                              {d.payoutsEnabled ? "Payouts" : "No Payouts"}
+                            </Badge>
+                          </div>
                         ) : (
                           <Badge variant="destructive">No Account</Badge>
                         )}
@@ -341,6 +397,9 @@ export default function PayoutsReportPage() {
                 const affPct = maxMonthlyRevenue
                   ? (m.affiliateCommissions / maxMonthlyRevenue) * 100
                   : 0;
+                const refundPct = maxMonthlyRevenue
+                  ? (m.refunds / maxMonthlyRevenue) * 100
+                  : 0;
 
                 return (
                   <div key={m.month} className="space-y-1">
@@ -367,9 +426,16 @@ export default function PayoutsReportPage() {
                       )}
                       {affPct > 0 && (
                         <div
-                          className="rounded-r bg-blue-500"
+                          className="bg-blue-500"
                           style={{ width: `${affPct}%` }}
                           title={`Affiliate Commissions: ${formatCurrency(m.affiliateCommissions)}`}
+                        />
+                      )}
+                      {refundPct > 0 && (
+                        <div
+                          className="rounded-r bg-rose-500"
+                          style={{ width: `${refundPct}%` }}
+                          title={`Refunds: ${formatCurrency(m.refunds)}`}
                         />
                       )}
                     </div>
@@ -390,6 +456,10 @@ export default function PayoutsReportPage() {
                 <div className="flex items-center gap-1.5">
                   <div className="size-3 rounded bg-blue-500" />
                   <span>Affiliate Commissions</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="size-3 rounded bg-rose-500" />
+                  <span>Refunds</span>
                 </div>
               </div>
             </div>

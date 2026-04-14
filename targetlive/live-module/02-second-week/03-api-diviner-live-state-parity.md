@@ -1,6 +1,6 @@
 # Task 03 - Unify Diviner Live State APIs
 
-- Status: Open
+- Status: Done
 - Priority: P1
 - Owner: Backend API
 
@@ -60,3 +60,8 @@ The current dashboard page calls `/api/dashboard/live-status-get`, but the repo 
 - [ ] Call it for a diviner with configured platforms and verify platform ordering and enabled state are returned correctly.
 - [ ] Toggle live state and confirm the next read reflects the persisted truth with no fallback reads.
 
+## Completion Notes
+
+- Added a canonical dashboard read payload through `/api/dashboard/live-status` and `/api/dashboard/live-status-get`.
+- Dashboard reads now return diviner live flags plus current and next scheduled session context in one supported contract.
+- Client-side Supabase fallback reads were removed from the dashboard page.

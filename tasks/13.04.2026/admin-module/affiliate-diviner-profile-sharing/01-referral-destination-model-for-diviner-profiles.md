@@ -23,3 +23,9 @@ It needs a richer destination model such as:
 - destination-type model
 - profile and service target rules
 - target-validation requirements
+
+## Status
+
+Done.
+
+`affiliate_referral_links.product_type` now supports `diviner_profile` and `diviner_service`, with service-target validation enforced in both dashboard link-generation APIs.

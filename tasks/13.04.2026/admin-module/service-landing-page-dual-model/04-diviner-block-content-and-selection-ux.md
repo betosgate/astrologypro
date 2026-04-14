@@ -36,3 +36,7 @@ On service-plus-diviner pages, the diviner block becomes a credibility and conve
 - diviner block component rules
 - card content standards
 - selection and conversion UX behavior
+
+## Status
+
+Done.

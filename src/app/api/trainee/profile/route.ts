@@ -3,6 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncProfileAcrossRoles } from "@/lib/profile-sync";
 import { z } from "zod";
+import {
+  getAllowedSpecialtiesForPackage,
+  getRoleServicePackages,
+  resolveRoleServicePackage,
+} from "@/lib/role-service-packages";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +58,7 @@ export async function GET() {
     admin
       .from("trainees")
       .select(
-        "id, name, email, username, bio, specialties, avatar_url, phone, timezone, goals, training_status, mentor_diviner_id, graduated_at, created_at"
+        "id, name, email, username, bio, specialties, avatar_url, phone, timezone, goals, training_status, mentor_diviner_id, graduated_at, created_at, service_package_code"
       )
       .eq("user_id", user.id)
       .single(),
@@ -67,6 +72,15 @@ export async function GET() {
   const trainee = traineeResult.data;
   const error = traineeResult.error;
   const client = clientResult.data;
+  const roleServicePackages = await getRoleServicePackages();
+  const resolvedPackage = resolveRoleServicePackage(
+    roleServicePackages,
+    trainee?.service_package_code,
+  );
+  const allowedSpecialties = getAllowedSpecialtiesForPackage(
+    ALLOWED_SPECIALTIES,
+    resolvedPackage,
+  );
 
   if (error || !trainee) {
     return NextResponse.json({ error: "Trainee not found." }, { status: 404 });
@@ -116,13 +130,14 @@ export async function GET() {
       mentor_name: mentorName,
       graduated_at: trainee.graduated_at ?? null,
       created_at: trainee.created_at,
+      service_package: resolvedPackage,
     },
     progress: {
       total_lessons: totalLessons,
       completed_lessons: completedLessons,
       overall_pct: overallPct,
     },
-    allowed_specialties: ALLOWED_SPECIALTIES,
+    allowed_specialties: allowedSpecialties,
   });
 }
 

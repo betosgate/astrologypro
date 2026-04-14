@@ -87,3 +87,11 @@ This feature set is complete only when:
 - the post-signup stepper shows service setup accordingly
 - profile surfaces reflect the same package rule
 - admin can manage and seed the mapping without hardcoded drift
+
+## Status
+
+- `01-package-capability-model-for-astro-and-tarot.md` — Done
+- `02-role-to-package-assignment-rules-for-diviner-and-trainee.md` — Done
+- `03-stepper-and-post-signup-service-selection-flow.md` — Done
+- `04-profile-surface-and-service-management-alignment.md` — Done
+- `05-admin-governance-seeding-and-migration-strategy.md` — Done

@@ -59,3 +59,7 @@ If the user leaves midway, the system should resume at the next unsigned contrac
 - contract signing becomes a first-class post-signup flow
 - missing contracts can block role activation cleanly
 - multi-role users can be guided through multiple agreements in sequence
+
+## Status
+
+Done.

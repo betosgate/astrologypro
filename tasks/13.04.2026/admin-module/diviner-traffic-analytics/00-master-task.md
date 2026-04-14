@@ -211,12 +211,12 @@ without redesigning the report.
 
 | # | File | Objective | Depends on | Status |
 |---|---|---|---|---|
-| 01 | `01-extend-page-views-schema-for-acquisition-analytics.md` | Expand `page_views` to capture geo, source, UTM, and partner attribution dimensions | — | Open |
-| 02 | `02-upgrade-public-page-tracking-payload-and-ingestion.md` | Update the tracker and route handler to stamp attribution at write time | 01 | Open |
-| 03 | `03-seed-realistic-diviner-traffic-report-data.md` | Seed realistic multi-diviner hit data covering countries, sources, and partner traffic | 01 | Open |
-| 04 | `04-build-admin-diviner-traffic-report-api.md` | Build the aggregation route for top diviners, countries, sources, and hourly traffic | 01, 02, 03 | Open |
-| 05 | `05-build-admin-diviner-traffic-report-ui.md` | Build the admin report page and sidebar entry using current admin report conventions | 04 | Open |
-| 06 | `06-analytics-governance-and-data-quality-rules.md` | Define source-of-truth rules, edge cases, and verification so the report stays trustworthy | 01, 02, 04 | Open |
+| 01 | `01-extend-page-views-schema-for-acquisition-analytics.md` | Expand `page_views` to capture geo, source, UTM, and partner attribution dimensions | — | Done |
+| 02 | `02-upgrade-public-page-tracking-payload-and-ingestion.md` | Update the tracker and route handler to stamp attribution at write time | 01 | Done |
+| 03 | `03-seed-realistic-diviner-traffic-report-data.md` | Seed realistic multi-diviner hit data covering countries, sources, and partner traffic | 01 | Done |
+| 04 | `04-build-admin-diviner-traffic-report-api.md` | Build the aggregation route for top diviners, countries, sources, and hourly traffic | 01, 02, 03 | Done |
+| 05 | `05-build-admin-diviner-traffic-report-ui.md` | Build the admin report page and sidebar entry using current admin report conventions | 04 | Done |
+| 06 | `06-analytics-governance-and-data-quality-rules.md` | Define source-of-truth rules, edge cases, and verification so the report stays trustworthy | 01, 02, 04 | Done |
 
 ---
 

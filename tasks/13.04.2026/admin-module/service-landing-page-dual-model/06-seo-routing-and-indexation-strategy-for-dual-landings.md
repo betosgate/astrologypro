@@ -28,3 +28,7 @@ The SEO model must decide:
 - route hierarchy recommendation
 - canonical and sitemap rules
 - duplicate-content prevention strategy
+
+## Status
+
+Done.

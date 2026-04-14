@@ -1,5 +1,16 @@
 # Task 07: SEO Measurement, Governance, and Rollout
 
+- **Status: DONE — 2026-04-13**
+- Implemented in:
+  - `src/lib/seo/diviner-profile.ts`
+  - `src/app/admin/diviners/[id]/page.tsx`
+
+### What was implemented
+- Added a shared SEO readiness scoring model with explicit checklist-based scoring.
+- Kept indexation governance tied to that score so low-quality profiles default to `noindex`.
+- Added admin visibility for readiness score, checklist pass/fail state, and blocking gaps directly on the diviner detail page.
+- This gives the Luna rollout a measurable readiness gate instead of relying on manual inspection only.
+
 ## Goal
 
 Ship SEO improvements safely, measure whether they work, and prevent future profile pages from regressing into thin or inconsistent search surfaces.

@@ -44,3 +44,7 @@ If PDF is pre-generated and stored:
 
 - downloaded agreements are stable and human-readable
 - PDF output reflects the signed artifact, not current template edits
+
+## Status
+
+Done

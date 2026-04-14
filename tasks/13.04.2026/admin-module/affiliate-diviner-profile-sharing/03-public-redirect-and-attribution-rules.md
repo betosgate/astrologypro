@@ -18,3 +18,9 @@ without breaking canonical public URLs.
 - redirect rules
 - attribution persistence rules
 - fallback behavior for invalid targets
+
+## Status
+
+Done.
+
+`src/app/api/ref/[slug]/route.ts` now redirects profile links to `/{username}?ref={slug}` and service links to `/{username}/services/{slug}?ref={slug}`, while preserving click tracking and falling back cleanly when a target no longer resolves.

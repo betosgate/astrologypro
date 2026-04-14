@@ -11,6 +11,7 @@ import { ensureOrderForBooking, getOrderStatusForService } from "@/lib/orders";
 import { getServicePurchaseConfig } from "@/lib/service-purchase";
 import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
 import { isDivinerPayoutReadyForPaidServices } from "@/lib/payout-readiness";
+import { calculateMoneySplit } from "@/lib/money-split";
 import {
   sendBookingConfirmation,
   sendBookingAccessInstructions,
@@ -496,8 +497,17 @@ export async function POST(request: NextRequest) {
     const effectivePlatformFeePercent = memberDiscountApplied
       ? Math.max(basePlatformFeePercent - 5, 10)
       : basePlatformFeePercent;
-    const platformFee =
-      (finalPrice * effectivePlatformFeePercent) / 100;
+    const grossAmountCents = Math.round(finalPrice * 100);
+    const bookingSplit = calculateMoneySplit({
+      grossAmountCents,
+      platformFeePercent: effectivePlatformFeePercent,
+      platformFeeRule:
+        typeof (service as Record<string, unknown>).platform_fee_percent === "number"
+          ? "service_platform_fee_percent"
+          : "global_platform_fee_percent",
+      memberDiscountApplied,
+    });
+    const platformFee = bookingSplit.platformFeeCents / 100;
     const shouldCharge = hasServiceAvailability && finalPrice > 0;
 
     if (shouldCharge && !isDivinerPayoutReadyForPaidServices(diviner)) {
@@ -571,14 +581,13 @@ export async function POST(request: NextRequest) {
     const initialOrderStatus = shouldCharge
       ? "pending_payment"
       : getOrderStatusForService(service, true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const orderId = await ensureOrderForBooking(adminSupabase as any, {
       bookingId: booking.id,
       clientId: client.id,
       divinerId: resolvedDivinerId,
       serviceId,
       service,
-      amountCents: Math.round(finalPrice * 100),
+      amountCents: grossAmountCents,
       currency: "usd",
       status: initialOrderStatus,
       paidAt: shouldCharge ? null : new Date().toISOString(),
@@ -595,12 +604,18 @@ export async function POST(request: NextRequest) {
         platformFeeAmount: platformFee,
         metadata: {
           bookingId: booking.id,
+          bookingToken: booking.booking_token,
           orderId,
           divinerId: resolvedDivinerId,
           serviceId,
           clientEmail,
-          grossAmountCents: String(Math.round(finalPrice * 100)),
-          platformFeeCents: String(Math.round(platformFee * 100)),
+          connectedAccountId: diviner.stripe_account_id ?? "",
+          grossAmountCents: String(bookingSplit.grossAmountCents),
+          platformFeeCents: String(bookingSplit.platformFeeCents),
+          divinerGrossAmountCents: String(bookingSplit.divinerGrossAmountCents),
+          splitPlatformFeePercent: String(bookingSplit.trace.platformFeePercent),
+          splitPlatformFeeRule: bookingSplit.trace.platformFeeRule,
+          splitAffiliateRule: bookingSplit.trace.affiliateRule,
           ...(affiliateCode ? { affiliateCode } : {}),
           ...(giftCode ? { giftCode } : {}),
           ...(loyaltyRuleName
@@ -618,14 +633,13 @@ export async function POST(request: NextRequest) {
         .update({ stripe_payment_intent_id: paymentIntent.id })
         .eq("id", booking.id);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await ensureOrderForBooking(adminSupabase as any, {
         bookingId: booking.id,
         clientId: client.id,
         divinerId: resolvedDivinerId,
         serviceId,
         service,
-        amountCents: Math.round(finalPrice * 100),
+        amountCents: grossAmountCents,
         currency: "usd",
         stripePaymentIntentId: paymentIntent.id,
         status: "pending_payment",

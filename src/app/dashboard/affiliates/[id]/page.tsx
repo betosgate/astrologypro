@@ -65,6 +65,14 @@ interface ReferralLink {
   created_at: string;
 }
 
+interface ServiceOption {
+  id: string;
+  name: string;
+  slug: string;
+  category: string;
+  is_active: boolean;
+}
+
 interface Commission {
   id: string;
   order_reference: string | null;
@@ -112,8 +120,13 @@ export default function DashboardAffiliateDetailPage({
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
   const [generatingLink, setGeneratingLink] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [payoutDialogOpen, setPayoutDialogOpen] = useState(false);
   const [savingPayout, setSavingPayout] = useState(false);
+  const [publicUsername, setPublicUsername] = useState("");
+  const [services, setServices] = useState<ServiceOption[]>([]);
+  const [linkType, setLinkType] = useState<"general" | "diviner_profile" | "diviner_service">("general");
+  const [selectedServiceId, setSelectedServiceId] = useState("");
 
   // Payout form
   const [payoutAmount, setPayoutAmount] = useState("");
@@ -124,36 +137,61 @@ export default function DashboardAffiliateDetailPage({
   const [selectedCommissionIds, setSelectedCommissionIds] = useState<string[]>([]);
 
   const loadData = useCallback(async () => {
-    const [affRes, linksRes, commRes, payRes] = await Promise.all([
+    const [affRes, linksRes, commRes, payRes, profileRes, servicesRes] = await Promise.all([
       fetch(`/api/dashboard/affiliates/${id}`),
       fetch(`/api/dashboard/affiliates/${id}/links`),
       fetch(`/api/dashboard/affiliates/${id}/commissions`),
       fetch(`/api/dashboard/affiliates/${id}/payouts`),
+      fetch("/api/onboarding/profile"),
+      fetch("/api/dashboard/services?active=true&limit=100"),
     ]);
 
     if (affRes.ok) setAffiliate((await affRes.json()).data);
     if (linksRes.ok) setLinks((await linksRes.json()).data ?? []);
     if (commRes.ok) setCommissions((await commRes.json()).data ?? []);
     if (payRes.ok) setPayouts((await payRes.json()).data ?? []);
+    if (profileRes.ok) {
+      const json = await profileRes.json();
+      setPublicUsername(json.diviner?.username ?? "");
+    }
+    if (servicesRes.ok) {
+      const json = await servicesRes.json();
+      setServices(json.services ?? []);
+    }
     setLoading(false);
   }, [id]);
 
   useEffect(() => {
-    loadData();
+    const timeoutId = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [loadData]);
 
   async function handleGenerateLink() {
     setGeneratingLink(true);
+    const payload =
+      linkType === "general"
+        ? {}
+        : linkType === "diviner_profile"
+          ? { product_type: "diviner_profile" }
+          : { product_type: "diviner_service", product_id: selectedServiceId };
+
     const res = await fetch(`/api/dashboard/affiliates/${id}/links`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+      body: JSON.stringify(payload),
     });
     if (res.ok) {
       toast.success("Referral link generated");
+      setLinkDialogOpen(false);
+      setLinkType("general");
+      setSelectedServiceId("");
       await loadData();
     } else {
-      toast.error("Failed to generate link");
+      const error = await res.json().catch(() => null);
+      toast.error(error?.detail ?? "Failed to generate link");
     }
     setGeneratingLink(false);
   }
@@ -221,6 +259,16 @@ export default function DashboardAffiliateDetailPage({
   const totalPaid = payouts.reduce((s, p) => s + p.amount_cents, 0);
   const pendingCommissions = commissions.filter((c) => c.status === "pending" || c.status === "approved");
   const pendingTotal = pendingCommissions.reduce((s, c) => s + c.commission_amount_cents, 0);
+  const selectedService = services.find((service) => service.id === selectedServiceId) ?? null;
+
+  function describeLinkType(type: string | null) {
+    if (type === "diviner_profile") return "Diviner profile";
+    if (type === "diviner_service") return "Diviner service";
+    if (type === "package") return "Package";
+    if (type === "session") return "Session";
+    if (type === "subscription") return "Subscription";
+    return "General";
+  }
 
   return (
     <div className="space-y-6">
@@ -286,14 +334,84 @@ export default function DashboardAffiliateDetailPage({
             <CardTitle>Referral Links</CardTitle>
             <CardDescription>{links.length} link{links.length !== 1 ? "s" : ""}</CardDescription>
           </div>
-          <Button size="sm" onClick={handleGenerateLink} disabled={generatingLink}>
-            {generatingLink ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            ) : (
+          <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+            <Button size="sm" onClick={() => setLinkDialogOpen(true)}>
               <Plus className="mr-2 size-4" />
-            )}
-            Generate Link
-          </Button>
+              Generate Link
+            </Button>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Generate Referral Link</DialogTitle>
+                <DialogDescription>
+                  Choose whether this affiliate should share your homepage flow, your public profile, or a specific service page.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="link-type">Destination Type</Label>
+                  <select
+                    id="link-type"
+                    value={linkType}
+                    onChange={(event) => {
+                      const nextType = event.target.value as "general" | "diviner_profile" | "diviner_service";
+                      setLinkType(nextType);
+                      if (nextType !== "diviner_service") setSelectedServiceId("");
+                    }}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="general">General homepage flow</option>
+                    <option value="diviner_profile">Diviner profile</option>
+                    <option value="diviner_service">Specific diviner service</option>
+                  </select>
+                </div>
+
+                {linkType === "diviner_profile" ? (
+                  <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                    Destination preview: {publicUsername ? `/${publicUsername}` : "your public profile"}
+                  </div>
+                ) : null}
+
+                {linkType === "diviner_service" ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="service-id">Service</Label>
+                    <select
+                      id="service-id"
+                      value={selectedServiceId}
+                      onChange={(event) => setSelectedServiceId(event.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Select a service</option>
+                      {services.map((service) => (
+                        <option key={service.id} value={service.id}>
+                          {service.name} ({service.category})
+                        </option>
+                      ))}
+                    </select>
+                    {selectedService ? (
+                      <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                        Destination preview: {publicUsername ? `/${publicUsername}/services/${selectedService.slug}` : selectedService.name}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+
+              <DialogFooter>
+                <Button
+                  onClick={handleGenerateLink}
+                  disabled={generatingLink || (linkType === "diviner_service" && !selectedServiceId)}
+                >
+                  {generatingLink ? (
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                  ) : (
+                    <Plus className="mr-2 size-4" />
+                  )}
+                  Generate Link
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </CardHeader>
         <CardContent>
           {links.length === 0 ? (
@@ -322,7 +440,7 @@ export default function DashboardAffiliateDetailPage({
                           {link.url}
                         </span>
                       </TableCell>
-                      <TableCell>{link.product_type ?? "General"}</TableCell>
+                      <TableCell>{describeLinkType(link.product_type)}</TableCell>
                       <TableCell>{link.clicks}</TableCell>
                       <TableCell>{link.conversions}</TableCell>
                       <TableCell>

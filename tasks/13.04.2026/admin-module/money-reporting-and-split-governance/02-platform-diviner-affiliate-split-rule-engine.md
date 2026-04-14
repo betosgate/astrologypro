@@ -1,5 +1,28 @@
 # Task 02: Platform, Diviner, and Affiliate Split Rule Engine
 
+## Status
+
+Done.
+
+Implemented with:
+- `src/lib/money-split.ts`
+- `src/app/api/stripe/booking-payment/route.ts`
+- `src/app/api/stripe/webhooks/route.ts`
+- `src/app/api/gift/purchase/route.ts`
+
+What was delivered:
+- a canonical split calculator that produces:
+  - gross amount
+  - platform fee
+  - diviner gross
+  - affiliate share
+  - diviner net
+  - platform net
+- stored split trace metadata including platform fee percent, fee rule, affiliate rule, and member-discount state
+- booking checkout now creates Stripe payment intents from the same split calculation used by ledger writes
+- booking webhook ledger writes now use the canonical split engine instead of ad hoc fee fallback logic
+- gift certificate and weekly subscription ledger writes now use the same split model for fee calculation and trace capture
+
 ## Goal
 
 Define one canonical split engine for all money flows so the platform, diviner, and affiliate shares are always computed the same way.

@@ -1,7 +1,7 @@
 # Unified Signup Flow — Broken & Not Implemented Tasks
 
 - Date: 2026-04-13
-- Status: Open
+- Status: Done
 - Priority: P0
 - Owner: Full-stack
 

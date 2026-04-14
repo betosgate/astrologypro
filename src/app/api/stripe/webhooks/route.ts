@@ -33,6 +33,7 @@ import {
   WEEKLY_SUBSCRIPTION_PLATFORM_SHARE_PERCENT,
 } from "@/lib/revenue-ledger";
 import { PRICING } from "@/lib/constants";
+import { calculateMoneySplit } from "@/lib/money-split";
 import { provisionNatalReadiness } from "@/lib/community/provision-natal-readiness";
 
 export const dynamic = "force-dynamic";
@@ -85,22 +86,25 @@ async function handleGiftCheckoutCompleted(
   }
 
   const amountCents = session.amount_total ?? Math.round(amount * 100);
-  const platformFeeCents = Math.round(
-    amountCents * (PRICING.platformFeePercent / 100)
-  );
+  const split = calculateMoneySplit({
+    grossAmountCents: amountCents,
+    platformFeePercent: PRICING.platformFeePercent,
+    platformFeeRule: "global_platform_fee_percent",
+  });
 
   await recordRevenueLedgerEntry({
     sourceType: "gift_certificate",
     sourceReference: session.id,
     divinerId: meta.diviner_id ?? null,
-    grossAmountCents: amountCents,
-    platformFeeCents,
+    grossAmountCents: split.grossAmountCents,
+    platformFeeCents: split.platformFeeCents,
     currency: session.currency ?? "usd",
     metadata: {
       code,
       purchaserEmail: meta.purchaser_email ?? null,
       recipientEmail: meta.recipient_email ?? null,
       divinerUsername: meta.diviner_username ?? null,
+      splitTrace: split.trace,
     },
   });
 
@@ -1162,6 +1166,14 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     const affiliateCommissionCents =
       await getAffiliateCommissionTotalForOrderRef(orderRef);
 
+    const subscriptionSplit = calculateMoneySplit({
+      grossAmountCents: invoice.amount_paid,
+      platformFeePercent: WEEKLY_SUBSCRIPTION_PLATFORM_SHARE_PERCENT,
+      affiliateCommissionCents,
+      platformFeeRule: "weekly_subscription_platform_share_percent",
+      affiliateRule: affiliateCode ? "affiliate_commission_rule" : "no_affiliate_share",
+    });
+
     await recordRevenueLedgerEntry({
       sourceType: "weekly_subscription_invoice",
       sourceReference: invoice.id,
@@ -1169,16 +1181,14 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
       divinerId: weeklySubscription.diviner_id,
       clientId: weeklySubscription.client_id,
       productId: weeklySubscription.product_id,
-      grossAmountCents: invoice.amount_paid,
-      platformFeeCents: Math.round(
-        invoice.amount_paid *
-          (WEEKLY_SUBSCRIPTION_PLATFORM_SHARE_PERCENT / 100),
-      ),
-      affiliateCommissionCents,
+      grossAmountCents: subscriptionSplit.grossAmountCents,
+      platformFeeCents: subscriptionSplit.platformFeeCents,
+      affiliateCommissionCents: subscriptionSplit.affiliateCommissionCents,
       currency: invoice.currency,
       metadata: {
         stripeInvoiceId: invoice.id,
         stripeSubscriptionId: subscriptionId,
+        splitTrace: subscriptionSplit.trace,
       },
     });
   }
@@ -1740,6 +1750,22 @@ async function handlePaymentIntentSucceeded(
   const affiliateCommissionCents =
     await getAffiliateCommissionTotalForOrderRef(orderReference);
 
+  const bookingSplit = calculateMoneySplit({
+    grossAmountCents:
+      Number(paymentIntent.metadata?.grossAmountCents ?? paymentIntent.amount) ||
+      paymentIntent.amount,
+    platformFeePercent:
+      Number(paymentIntent.metadata?.splitPlatformFeePercent ?? NaN) ||
+      PRICING.platformFeePercent,
+    affiliateCommissionCents,
+    platformFeeRule:
+      paymentIntent.metadata?.splitPlatformFeeRule ?? "payment_intent_platform_fee",
+    affiliateRule:
+      paymentIntent.metadata?.splitAffiliateRule ??
+      (affiliateCode ? "affiliate_commission_rule" : "no_affiliate_share"),
+    memberDiscountApplied: paymentIntent.metadata?.memberDiscount === "5%",
+  });
+
   await recordRevenueLedgerEntry({
     sourceType: "booking",
     sourceReference: orderReference,
@@ -1747,18 +1773,15 @@ async function handlePaymentIntentSucceeded(
     divinerId: div.id,
     clientId: clientRecord?.id ?? ((booking as Record<string, unknown>).client_id as string),
     productId: svc.id,
-    grossAmountCents:
-      Number(paymentIntent.metadata?.grossAmountCents ?? paymentIntent.amount) ||
-      paymentIntent.amount,
-    platformFeeCents:
-      Number(paymentIntent.metadata?.platformFeeCents ?? paymentIntent.application_fee_amount ?? 0) ||
-      0,
-    affiliateCommissionCents,
+    grossAmountCents: bookingSplit.grossAmountCents,
+    platformFeeCents: bookingSplit.platformFeeCents,
+    affiliateCommissionCents: bookingSplit.affiliateCommissionCents,
     currency: paymentIntent.currency,
     metadata: {
       stripePaymentIntentId: paymentIntent.id,
       bookingId,
       orderId,
+      splitTrace: bookingSplit.trace,
     },
   });
 

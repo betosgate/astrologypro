@@ -71,3 +71,12 @@ This system is complete only when:
 - existing users can be forced to accept those amendments on next login
 - new users are routed to the newer agreement path without a separate amendment step
 - the contract history clearly shows that the user upgraded from prior terms via amendment acceptance
+
+## Status
+
+- `01-contract-lineage-base-vs-amendment-model.md` — Done
+- `02-existing-user-amendment-rollout-and-next-login-enforcement.md` — Done
+- `03-new-user-consolidated-agreement-path.md` — Done
+- `04-admin-amendment-management-for-one-or-multiple-roles.md` — Done
+- `05-acceptance-audit-upgrade-history-and-snapshotting.md` — Done
+- `06-role-aware-status-resolution-and-backend-gates.md` — Done

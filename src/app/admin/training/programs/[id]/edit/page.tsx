@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
+import { SectionContainer } from "@/components/shared/section-container";
 import { TrainingNotes } from "@/components/admin/training-notes";
 
 type Role = { id: string; role_name: string; slug: string; description: string };
@@ -165,7 +166,7 @@ export default function EditProgramPage() {
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <SectionContainer verticalPadding="md" className="space-y-6">
       <div className="flex items-center gap-3">
         <Button asChild variant="ghost" size="sm">
           <Link href="/admin/training">← Back</Link>
@@ -317,6 +318,6 @@ export default function EditProgramPage() {
       </Card>
 
       <TrainingNotes entityType="program" entityId={id} />
-    </div>
+    </SectionContainer>
   );
 }

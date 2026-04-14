@@ -55,3 +55,11 @@ This feature set is complete only when:
 - attribution survives the redirect into the public profile or service flow
 - affiliate sharing works for both profile-level and service-level destinations where permitted
 - reporting can distinguish profile-share traffic from other affiliate traffic
+
+## Status
+
+- `01-referral-destination-model-for-diviner-profiles.md` — Done
+- `02-affiliate-link-generation-for-profile-and-service-sharing.md` — Done
+- `03-public-redirect-and-attribution-rules.md` — Done
+- `04-affiliate-dashboard-share-tools-and-ux.md` — Done
+- `05-reporting-governance-and-canonical-url-rules.md` — Done

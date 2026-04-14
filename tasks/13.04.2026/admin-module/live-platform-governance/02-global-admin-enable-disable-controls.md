@@ -64,3 +64,9 @@ Possible routes:
 - admin can enable or disable each platform globally
 - global policy immediately constrains dashboard configuration and public rendering
 - admins have a proper control surface instead of code-only changes
+
+## Status
+
+Done.
+
+Implemented with `src/app/api/admin/live-platforms/route.ts`, `src/app/admin/live-platforms/page.tsx`, and the admin sidebar entry for `/admin/live-platforms`.

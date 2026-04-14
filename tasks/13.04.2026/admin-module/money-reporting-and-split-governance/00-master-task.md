@@ -135,3 +135,13 @@ This finance program is complete only when:
 - refunds, payouts, affiliate commissions, and platform fees all reconcile to the same ledger model
 - affiliate share is explicitly modeled as coming out of the diviner’s side
 - the admin-configurable maximum affiliate share is enforced everywhere
+
+## Status
+
+- `01-unify-money-source-of-truth-and-ledgers.md` — Done
+- `02-platform-diviner-affiliate-split-rule-engine.md` — Done
+- `03-admin-gold-standard-payin-payout-refund-reporting.md` — Done
+- `04-diviner-self-service-finance-reporting-scope.md` — Done
+- `05-refund-governance-and-ledger-reconciliation.md` — Done
+- `06-affiliate-share-cap-and-config-governance.md` — Done
+- `07-permissions-auditability-and-finance-ops-controls.md` — Done

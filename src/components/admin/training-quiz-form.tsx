@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Pencil, Plus, Trash2 } from "lucide-react";
+import { SectionContainer } from "@/components/shared/section-container";
 
 export interface TrainingQuizLessonOption {
   id: string;
@@ -234,7 +235,7 @@ export function TrainingQuizForm({
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <SectionContainer size="wide" verticalPadding="md" className="space-y-6">
       <div className="flex items-center gap-3">
         <Button asChild variant="ghost" size="sm">
           <Link href={cancelHref}>← Back</Link>
@@ -586,6 +587,6 @@ export function TrainingQuizForm({
           </form>
         </CardContent>
       </Card>
-    </div>
+    </SectionContainer>
   );
 }

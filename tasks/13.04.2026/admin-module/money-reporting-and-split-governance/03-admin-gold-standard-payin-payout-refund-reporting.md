@@ -1,5 +1,25 @@
 # Task 03: Admin Gold-Standard Pay-In, Payout, and Refund Reporting
 
+## Status
+
+Done.
+
+Implemented with:
+- `src/app/api/admin/reports/payouts/route.ts`
+- `src/app/admin/reports/payouts/page.tsx`
+- `src/app/api/admin/refunds/route.ts`
+- `src/app/admin/refunds/page.tsx`
+- `src/lib/refund-events.ts`
+- `supabase/migrations/20260413000199_refund_events.sql`
+
+What was delivered:
+- admin payout reporting now reads reconciled gross, platform fee, affiliate deductions, and diviner net from `revenue_ledger_entries`
+- platform-wide payout table now includes every diviner, Stripe readiness state, affiliate deductions, and refund totals
+- monthly admin breakdown now includes refunds alongside revenue, platform fees, diviner net, and affiliate commissions
+- refund reporting now shows ledger impact columns for platform fee, affiliate share, and diviner net
+- refund operations now create dedicated `refund_events` records for auditability
+- admin drilldown links from the payout table now route into the diviner admin detail page
+
 ## Goal
 
 Give admin a complete finance command view across all diviners, with reconciled reporting for money in, money out, and money reversed.

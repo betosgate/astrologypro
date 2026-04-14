@@ -50,3 +50,7 @@ Any emailed agreement should use the same snapshot and same artifact source as t
 
 - signed-agreement access is based on accepted snapshot data
 - later document edits do not alter the signed artifact shown to the user
+
+## Status
+
+Done

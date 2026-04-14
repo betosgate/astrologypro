@@ -72,3 +72,7 @@ That avoids later disputes when the underlying template changes.
 - contracts can contain placeholders safely
 - dynamic variables are structured and manageable
 - rendered contracts can be snapshotted and audited
+
+## Status
+
+Done.

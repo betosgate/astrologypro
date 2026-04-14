@@ -55,3 +55,9 @@ If admin disables a platform globally or for the diviner:
 
 - public live section renders from platform capability policy
 - link-out/manual platforms no longer need special-case hacks spread through the component
+
+## Status
+
+Done.
+
+Implemented in `src/app/[username]/page.tsx` and `src/components/public/live-stream-section.tsx` using governed playback mode and embed capability fields.

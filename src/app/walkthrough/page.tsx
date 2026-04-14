@@ -65,57 +65,58 @@ function RolePanel({
   const categoryCount = role.featureAreas.length;
 
   return (
-    <article className="h-full">
-      <div className="h-full rounded-3xl border border-white/12 bg-[radial-gradient(circle_at_20%_0%,rgba(72,52,135,0.12),transparent_40%),linear-gradient(180deg,rgba(11,13,30,0.94),rgba(9,11,24,0.98))] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-        <div className="min-w-0">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/14 bg-[#0e1736]/85 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#f4f7ff]">
-            <role.icon className="size-3.5 text-[#f5f0e8]" strokeWidth={1.9} />
-            {role.tagline}
-          </div>
+    <Link href={`/walkthrough/${role.slug}`} className="block h-full group outline-none">
+      <article className="h-full transition-transform duration-300 hover:-translate-y-1">
+        <div className="h-full rounded-3xl border border-white/12 bg-[radial-gradient(circle_at_20%_0%,rgba(72,52,135,0.12),transparent_40%),linear-gradient(180deg,rgba(11,13,30,0.94),rgba(9,11,24,0.98))] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition-all duration-300 group-hover:border-white/20 group-hover:bg-[radial-gradient(circle_at_20%_0%,rgba(72,52,135,0.18),transparent_40%)] group-hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/14 bg-[#0e1736]/85 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#f4f7ff]">
+              <role.icon className="size-3.5 text-[#f5f0e8]" strokeWidth={1.9} />
+              {role.tagline}
+            </div>
 
-          <div className="mt-4 inline-flex max-w-full rounded-2xl bg-[linear-gradient(180deg,#f9d86d_0%,#d79d31_100%)] px-3.5 py-2 shadow-[0_10px_22px_rgba(211,154,52,0.24)]">
-            <p className="truncate text-xl font-semibold leading-none text-[#101114] sm:text-2xl">
-              {role.role}
+            <div className="mt-4 inline-flex max-w-full rounded-2xl bg-[linear-gradient(180deg,#f9d86d_0%,#d79d31_100%)] px-3.5 py-2 shadow-[0_10px_22px_rgba(211,154,52,0.24)]">
+              <p className="truncate text-xl font-semibold leading-none text-[#101114] sm:text-2xl">
+                {role.role}
+              </p>
+            </div>
+
+            <p className="mt-4 line-clamp-3 text-base leading-7 text-[#b8bcd0]/82">
+              {role.roleDescription}
             </p>
           </div>
 
-          <p className="mt-4 line-clamp-3 text-base leading-7 text-[#b8bcd0]/82">
-            {role.roleDescription}
-          </p>
+          <div className="mt-6 grid grid-cols-3 gap-3">
+            <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-center">
+              <p className="text-2xl font-semibold text-[#f5f0e8]">{featureCount}</p>
+              <p className="mt-1 text-[9px] font-semibold uppercase leading-tight text-[#9ea5c0]">
+                Features
+              </p>
+            </div>
+            <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-center">
+              <p className="text-2xl font-semibold text-[#f5f0e8]">{screenshotCount}</p>
+              <p className="mt-1 text-[9px] font-semibold uppercase leading-tight text-[#9ea5c0]">
+                Screenshots
+              </p>
+            </div>
+            <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-center">
+              <p className="text-2xl font-semibold text-[#f5f0e8]">{categoryCount}</p>
+              <p className="mt-1 text-[9px] font-semibold uppercase leading-tight text-[#9ea5c0]">
+                Categories
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <div
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[#20c997] transition group-hover:text-[#4ee3bf]"
+            >
+              View walkthrough
+              <ArrowRight className="size-4" />
+            </div>
+          </div>
         </div>
-
-        <div className="mt-6 grid grid-cols-3 gap-3">
-          <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-center">
-            <p className="text-2xl font-semibold text-[#f5f0e8]">{featureCount}</p>
-            <p className="mt-1 text-[9px] font-semibold uppercase leading-tight text-[#9ea5c0]">
-              Features
-            </p>
-          </div>
-          <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-center">
-            <p className="text-2xl font-semibold text-[#f5f0e8]">{screenshotCount}</p>
-            <p className="mt-1 text-[9px] font-semibold uppercase leading-tight text-[#9ea5c0]">
-              Screenshots
-            </p>
-          </div>
-          <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-center">
-            <p className="text-2xl font-semibold text-[#f5f0e8]">{categoryCount}</p>
-            <p className="mt-1 text-[9px] font-semibold uppercase leading-tight text-[#9ea5c0]">
-              Categories
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-6 flex justify-end">
-          <Link
-            href={`/walkthrough/${role.slug}`}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-[#20c997] transition hover:text-[#4ee3bf]"
-          >
-            View walkthrough
-            <ArrowRight className="size-4" />
-          </Link>
-        </div>
-      </div>
-    </article>
+      </article>
+    </Link>
   );
 }
 
@@ -134,7 +135,7 @@ export default function WalkthroughIndex() {
       <main className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute left-1/2 top-0 h-[26rem] w-[80rem] -translate-x-1/2 bg-[radial-gradient(circle_at_center,rgba(201,168,76,0.09),transparent_58%)]" />
-          <div className="absolute inset-x-0 top-24 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
         </div>
 
         <div className="relative mx-auto max-w-[1240px] px-4 pb-20 pt-10 sm:px-6 lg:px-8 lg:pb-28">
@@ -194,7 +195,7 @@ export default function WalkthroughIndex() {
             </div>
           </section>
 
-          <section className="border-t border-white/8 pt-16 sm:pt-20">
+          <section className="pt-16 sm:pt-20">
             <SectionLead
               eyebrow="Shared Surface Area"
               title="Additional pages"
@@ -234,7 +235,7 @@ export default function WalkthroughIndex() {
             </div>
           </section>
 
-          <section className="border-t border-white/8 pt-16 sm:pt-20">
+          <section className="pt-16 sm:pt-20">
             <SectionLead
               eyebrow="Access Matrix"
               title="Role access at a glance"
@@ -287,7 +288,7 @@ export default function WalkthroughIndex() {
             </div>
           </section>
 
-          <section className="mt-16 border-t border-white/8 pt-12 text-center">
+          <section className="mt-16 pt-12 text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#c9a84c]/20 bg-[#c9a84c]/8 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#f5d382]">
               <Star className="size-3.5" />
               Review complete surface area

@@ -33,3 +33,7 @@ Show diviners offering the service with profile cards, expertise, and CTA into p
 - diviner-selection flow
 - availability-first and profile-first variants
 - handoff rules into booking
+
+## Status
+
+Done.

@@ -32,3 +32,7 @@ The migration strategy must define whether they map by:
 - admin control-surface requirements
 - seed strategy
 - existing-user migration rules
+
+## Status
+
+Done.

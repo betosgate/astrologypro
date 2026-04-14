@@ -25,3 +25,7 @@ When a landing page is already tied to a specific diviner:
 - no-selector rule for diviner-tied pages
 - direct booking flow requirements
 - diviner emphasis content rules
+
+## Status
+
+Done.

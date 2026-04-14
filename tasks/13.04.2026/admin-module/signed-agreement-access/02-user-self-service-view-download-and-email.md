@@ -56,3 +56,7 @@ A user must only be able to access agreements they themselves accepted.
 
 - users can list, open, download, and self-email their own signed agreements
 - users cannot access another user’s agreements
+
+## Status
+
+Done

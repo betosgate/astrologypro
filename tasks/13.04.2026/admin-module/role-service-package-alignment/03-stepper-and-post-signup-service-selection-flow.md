@@ -26,3 +26,7 @@ That creates drift between:
 - stepper branching rules
 - service-selection step requirements
 - copy rules by package type
+
+## Status
+
+Done.

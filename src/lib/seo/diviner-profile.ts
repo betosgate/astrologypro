@@ -41,24 +41,64 @@ export type PublishPolicy = {
 
 // ── SEO completeness score ───────────────────────────────────────────────────
 
+export type SeoReadinessCheck = {
+  key:
+    | "display_name"
+    | "bio"
+    | "tagline"
+    | "specialties"
+    | "avatar"
+    | "cover_image";
+  label: string;
+  passed: boolean;
+};
+
 /**
  * Returns a completeness score 0–100 for the profile's SEO readiness.
  * Profiles below MIN_INDEXABLE_SCORE will receive a robots noindex directive.
  */
 export function calcSeoCompletenessScore(diviner: DivinerSeoFields): number {
-  const checks: boolean[] = [
-    !!diviner.display_name,
-    !!(diviner.bio && diviner.bio.length >= 80),
-    !!(diviner.tagline && diviner.tagline.length >= 20),
-    !!(diviner.specialties && diviner.specialties.length > 0),
-    !!diviner.avatar_url,
-    !!diviner.cover_image_url,
-  ];
-  const passed = checks.filter(Boolean).length;
+  const checks = getSeoReadinessChecks(diviner);
+  const passed = checks.filter((check) => check.passed).length;
   return Math.round((passed / checks.length) * 100);
 }
 
 export const MIN_INDEXABLE_SCORE = 50; // must pass at least 3 of 6 checks
+
+export function getSeoReadinessChecks(diviner: DivinerSeoFields): SeoReadinessCheck[] {
+  return [
+    {
+      key: "display_name",
+      label: "Display name present",
+      passed: !!diviner.display_name,
+    },
+    {
+      key: "bio",
+      label: "Bio has at least 80 characters",
+      passed: !!(diviner.bio && diviner.bio.length >= 80),
+    },
+    {
+      key: "tagline",
+      label: "Tagline has at least 20 characters",
+      passed: !!(diviner.tagline && diviner.tagline.length >= 20),
+    },
+    {
+      key: "specialties",
+      label: "At least one specialty is listed",
+      passed: !!(diviner.specialties && diviner.specialties.length > 0),
+    },
+    {
+      key: "avatar",
+      label: "Avatar image is set",
+      passed: !!diviner.avatar_url,
+    },
+    {
+      key: "cover_image",
+      label: "Cover image is set",
+      passed: !!diviner.cover_image_url,
+    },
+  ];
+}
 
 // ── Title composition ────────────────────────────────────────────────────────
 

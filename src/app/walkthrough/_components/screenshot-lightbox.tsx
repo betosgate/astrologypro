@@ -22,8 +22,16 @@ import {
   X,
   Zap,
   ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Plus,
+  Minus,
+  Info,
+  CheckCircle2,
+  ChevronUp,
   type LucideIcon,
 } from "lucide-react";
+import { type Screen } from "@/lib/walkthrough-data";
 import { type Screen } from "@/lib/walkthrough-data";
 
 type Props = {
@@ -77,24 +85,72 @@ const GROUP_DESCRIPTIONS: Record<string, string> = {
 export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Props) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [activeGroup, setActiveGroup] = useState(screens[0]?.group || "Features");
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const open = openIndex !== null;
   const current = openIndex !== null ? screens[openIndex] : null;
 
-  const close = useCallback(() => setOpenIndex(null), []);
+  const close = useCallback(() => {
+    setOpenIndex(null);
+    setScale(1);
+    setOffset({ x: 0, y: 0 });
+  }, []);
+
+  const resetZoom = useCallback(() => {
+    setScale(1);
+    setOffset({ x: 0, y: 0 });
+  }, []);
+
   const prev = useCallback(() => {
     setOpenIndex((value) => {
       if (value === null) return null;
+      resetZoom();
       return value > 0 ? value - 1 : screens.length - 1;
     });
-  }, [screens.length]);
+  }, [screens.length, resetZoom]);
+
   const next = useCallback(() => {
     setOpenIndex((value) => {
       if (value === null) return null;
+      resetZoom();
       return value < screens.length - 1 ? value + 1 : 0;
     });
-  }, [screens.length]);
+  }, [screens.length, resetZoom]);
+
+  const handleZoom = (delta: number) => {
+    setScale(prev => {
+      const newScale = Math.min(Math.max(prev + delta, 1), 4);
+      if (newScale === 1) setOffset({ x: 0, y: 0 });
+      return newScale;
+    });
+  };
+
+  // Panning logic
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (scale <= 1) return;
+    setIsDragging(true);
+    setStartPos({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || scale <= 1) return;
+    const newX = e.clientX - startPos.x;
+    const newY = e.clientY - startPos.y;
+    
+    // Boundary check logic could be added here, but simple pan for now
+    setOffset({ x: newX, y: newY });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -129,6 +185,16 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
     sectionRefs.current.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
   }, []);
+  
+  // Scroll to Top visibility listener
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+    
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const groups = useMemo(() => {
     const grouped: Array<{ name: string; screens: Screen[] }> = [];
@@ -153,6 +219,10 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
     setActiveGroup(groupName);
   };
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <>
       <div className="-mx-2 mb-6 overflow-x-auto px-2 lg:hidden">
@@ -165,6 +235,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
               <button
                 key={group.name}
                 onClick={() => scrollToGroup(group.name)}
+                title={`Scroll to ${group.name}`}
                 className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${
                   isActive
                     ? "border border-cyan-400/30 bg-cyan-400/12 text-cyan-300"
@@ -194,6 +265,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                 <li key={group.name}>
                   <button
                     onClick={() => scrollToGroup(group.name)}
+                    title={`View ${group.name} modules`}
                     className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs transition ${
                       isActive
                         ? "border border-cyan-400/20 bg-cyan-400/10 text-cyan-300"
@@ -250,7 +322,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                       <button
                         key={screen.name}
                         onClick={() => setOpenIndex(globalIndex)}
-                        className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(13,18,33,0.98),rgba(8,10,19,0.98))] text-left shadow-[0_16px_38px_rgba(0,0,0,0.28)] transition-all duration-300 hover:-translate-y-1 hover:border-cyan-400/30 hover:shadow-[0_22px_50px_rgba(0,0,0,0.36)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/40"
+                        className="group flex flex-col cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(13,18,33,0.98),rgba(8,10,19,0.98))] text-left shadow-[0_16px_38px_rgba(0,0,0,0.28)] transition-all duration-300 hover:-translate-y-1 hover:border-cyan-400/30 hover:shadow-[0_22px_50px_rgba(0,0,0,0.36)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/40"
                       >
                         <div className="relative aspect-video overflow-hidden border-b border-white/10 bg-[#07111f]">
                           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,10,20,0.08),rgba(5,10,20,0.55))]" />
@@ -271,18 +343,30 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                           </div>
                         </div>
 
-                        <div className="px-4 py-4">
+                        <div className="px-5 py-5">
                           <div className="flex items-center justify-between gap-2">
-                            <p className="truncate text-sm font-semibold text-[#f5f0e8] transition-colors group-hover:text-cyan-300">
+                            <p className="truncate text-sm font-bold text-[#f5f0e8] transition-colors group-hover:text-cyan-300">
                               {screen.label}
                             </p>
-                            <ZoomIn className="size-3.5 shrink-0 text-[#8e9ab7] transition-colors group-hover:text-cyan-300/80" />
+                            <div className="flex items-center gap-1.5 opacity-50 transition-opacity group-hover:opacity-100">
+                               {screen.purpose && <Info className="size-3 text-cyan-400" title="Operational Purpose" />}
+                               <ZoomIn className="size-3.5 shrink-0 text-[#8e9ab7] transition-colors group-hover:text-cyan-300/80" title="Expand View" />
+                            </div>
                           </div>
                           {screen.description ? (
-                            <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-[#b8bcd0]/72">
+                            <p className="mt-2 text-xs font-medium leading-relaxed text-[#b8bcd0]/60">
                               {screen.description}
                             </p>
                           ) : null}
+                          
+                          {screen.purpose && (
+                            <div className="mt-4 flex items-start gap-2 rounded-xl border border-white/5 bg-white/[0.02] p-2.5 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                              <div className="mt-0.5 size-1 shrink-0 rounded-full bg-cyan-400" />
+                              <p className="line-clamp-2 text-[10px] leading-relaxed text-[#b8bcd0]/80">
+                                {screen.purpose}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </button>
                     );
@@ -293,6 +377,16 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
           })}
         </div>
       </div>
+
+      <button
+        onClick={scrollToTop}
+        className={`fixed bottom-8 right-8 z-40 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border border-amber-500/20 bg-black/60 text-amber-500 backdrop-blur-md transition-all duration-300 hover:scale-110 hover:bg-amber-500 hover:text-black hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] ${
+          showScrollTop ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-10 opacity-0"
+        }`}
+        title="Scroll to Top"
+      >
+        <ChevronUp className="size-6" />
+      </button>
 
       {open && current ? (
         <div className="fixed inset-0 z-50 flex flex-col" role="dialog" aria-modal="true">
@@ -313,52 +407,143 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
 
             <button
               onClick={close}
-              className="rounded-full p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+              title="Close Walkthrough (Esc)"
+              className="rounded-full cursor-pointer p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
               aria-label="Close"
             >
               <X className="size-5" />
             </button>
           </div>
 
-          <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-4 pb-4">
-            <button
-              onClick={prev}
-              className="absolute left-2 z-20 rounded-full bg-black/60 p-2.5 text-white/70 backdrop-blur-sm transition-all hover:bg-black/80 hover:text-white sm:left-4"
-              aria-label="Previous"
+          <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-6 px-4 pb-4 lg:flex-row lg:px-8">
+            <div 
+              className="relative flex-1 flex items-center justify-center overflow-hidden cursor-default"
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              ref={containerRef}
             >
-              <ChevronLeft className="size-5" />
-            </button>
+              <button
+                onClick={prev}
+                title="Previous Screen (Left Arrow)"
+                className="absolute left-2 z-20 cursor-pointer rounded-full bg-black/60 p-2.5 text-white/70 backdrop-blur-sm transition-all hover:bg-white hover:text-black sm:left-4"
+                aria-label="Previous"
+              >
+                <ChevronLeft className="size-5" />
+              </button>
 
-            <div className="relative mx-auto h-full w-full max-w-6xl">
-              <Image
-                src={`/walkthrough/screenshots/${roleSlug}/${current.name}.png`}
-                alt={`${roleTitle} - ${current.label}`}
-                fill
-                className="object-contain"
-                sizes="100vw"
-                priority
-              />
+              <div 
+                className={`relative h-full w-full max-w-5xl transition-transform duration-200 ease-out select-none ${isDragging ? "transition-none" : ""}`}
+                style={{
+                  transform: `scale(${scale}) translate(${offset.x / scale}px, ${offset.y / scale}px)`,
+                  cursor: scale > 1 ? (isDragging ? "grabbing" : "grab") : "default",
+                }}
+              >
+                <Image
+                  src={`/walkthrough/screenshots/${roleSlug}/${current.name}.png`}
+                  alt={`${roleTitle} - ${current.label}`}
+                  fill
+                  className="object-contain"
+                  sizes="100vw"
+                  priority
+                  draggable={false}
+                />
+              </div>
+
+              <button
+                onClick={next}
+                title="Next Screen (Right Arrow)"
+                className="absolute right-2 z-20 cursor-pointer rounded-full bg-black/60 p-2.5 text-white/70 backdrop-blur-sm transition-all hover:bg-white hover:text-black sm:right-4"
+                aria-label="Next"
+              >
+                <ChevronRight className="size-5" />
+              </button>
+
+              {/* Bottom Zoom Controls */}
+              <div className="absolute bottom-6 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-black/60 p-1 backdrop-blur-md">
+                <button
+                  onClick={() => handleZoom(-0.5)}
+                  disabled={scale <= 1}
+                  className="rounded-full cursor-pointer p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-30"
+                  title="Zoom Out"
+                >
+                  <Minus className="size-4" />
+                </button>
+                <div className="min-w-14 text-center text-[10px] font-bold text-white/80">
+                  {Math.round(scale * 100)}%
+                </div>
+                <button
+                  onClick={() => handleZoom(0.5)}
+                  disabled={scale >= 4}
+                  className="rounded-full cursor-pointer p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-30"
+                  title="Zoom In"
+                >
+                  <Plus className="size-4" />
+                </button>
+                <div className="mx-1 h-4 w-px bg-white/10" />
+                <button
+                  onClick={resetZoom}
+                  disabled={scale === 1 && offset.x === 0 && offset.y === 0}
+                  className="rounded-full cursor-pointer p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-30"
+                  title="Reset Zoom"
+                >
+                  <RotateCcw className="size-4" />
+                </button>
+              </div>
             </div>
 
-            <button
-              onClick={next}
-              className="absolute right-2 z-20 rounded-full bg-black/60 p-2.5 text-white/70 backdrop-blur-sm transition-all hover:bg-black/80 hover:text-white sm:right-4"
-              aria-label="Next"
-            >
-              <ChevronRight className="size-5" />
-            </button>
+            {/* Information Panel */}
+            <div className="w-full shrink-0 overflow-y-auto rounded-[2rem] border border-white/10 bg-[#0d121f]/60 p-6 backdrop-blur-xl lg:w-80 xl:w-96">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-400/80">
+                <Info className="size-3" />
+                Screen Context
+              </div>
+              
+              <h3 className="mt-4 text-xl font-bold text-white">
+                {current.label}
+              </h3>
+              
+              <div className="mt-6 flex flex-col gap-6">
+                <div>
+                  <h4 className="text-[11px] font-bold uppercase tracking-widest text-white/40">The Purpose</h4>
+                  <p className="mt-2 text-sm leading-relaxed text-[#b8bcd0]/80">
+                    {current.purpose || current.description || "The purpose of this screen is to provide specialized administrative controls for AstrologyPro's governance system."}
+                  </p>
+                </div>
+
+                {current.bullets && current.bullets.length > 0 && (
+                  <div>
+                    <h4 className="text-[11px] font-bold uppercase tracking-widest text-white/40">Key Capabilities</h4>
+                    <div className="mt-3 space-y-2.5">
+                      {current.bullets.map((bullet) => (
+                        <div key={bullet} className="flex items-start gap-2.5 text-xs font-medium leading-relaxed text-[#b8bcd0]/70">
+                          <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-cyan-500/50" />
+                          <span>{bullet}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="rounded-2xl bg-white/[0.03] p-4 text-[10px] text-white/30 italic">
+                  Tip: Use Arrow keys to navigate through the {roleTitle} portal modules.
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="relative z-10 px-4 pb-3 sm:px-6">
-            <div className="flex gap-1.5 overflow-x-auto py-1">
+          <div className="relative z-10 px-4 pb-4 sm:px-6">
+            <div className="flex gap-1.5 overflow-x-auto py-2">
               {screens.map((screen, index) => (
                 <button
                   key={screen.name}
                   onClick={() => setOpenIndex(index)}
-                  className={`relative h-14 w-24 shrink-0 overflow-hidden rounded-md border-2 transition-all ${
+                  title={screen.label}
+                  className={`relative cursor-pointer h-14 w-24 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${
                     index === openIndex
-                      ? "border-cyan-300 opacity-100 scale-105 shadow-[0_0_15px_rgba(103,232,249,0.4)]"
-                      : "border-transparent opacity-50 hover:opacity-80"
+                      ? "border-cyan-400 opacity-100 scale-105 shadow-[0_0_15px_rgba(34,211,238,0.4)]"
+                      : "border-transparent opacity-40 hover:opacity-70"
                   }`}
                 >
                   <Image

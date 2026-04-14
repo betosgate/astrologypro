@@ -1,6 +1,6 @@
 # Task 04 - Align Admin Session Lifecycle With Public Live State
 
-- Status: Open
+- Status: Done
 - Priority: P1
 - Owner: Backend API
 
@@ -51,3 +51,8 @@ Admin APIs already manage `live_sessions`, but the public site and dashboard als
 - [ ] End the session and confirm both public surfaces stop presenting live-only actions.
 - [ ] Cancel a scheduled session and confirm it does not appear as active anywhere.
 
+## Completion Notes
+
+- Admin live-session mutations now synchronize the mirrored diviner live flags after create, update, and cancel flows.
+- Session activation rejects a second concurrent live session for the same diviner.
+- Dashboard live toggles now start or end a `live_sessions` record instead of mutating diviner flags independently.
