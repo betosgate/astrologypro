@@ -224,3 +224,17 @@
     border-color: rgba(245, 158, 11, 1);
     box-shadow: 0 0 30px rgba(245, 158, 11, 0.5);
 }
+
+/* ── Horary date highlights ──────────────────────────────────────────────── */
+/* AI formats auspicious dates as <span class="timedata">date</span>         */
+.timedata {
+    display: inline-block;
+    background: linear-gradient(135deg, #f0a023 0%, #f8d647 100%);
+    color: #000 !important;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-size: 0.95em;
+    box-shadow: 0 1px 4px rgba(240, 160, 35, 0.45);
+    white-space: nowrap;
+}

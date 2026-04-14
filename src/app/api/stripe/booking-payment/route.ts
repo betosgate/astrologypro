@@ -957,6 +957,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       clientSecret,
       bookingId: booking.id,
+      bookingToken: booking.booking_token,
       orderId,
       requiresPostPaymentIntake: purchaseConfig.requiresPostPaymentIntake,
       originalPrice: service.base_price,

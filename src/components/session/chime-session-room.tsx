@@ -85,6 +85,8 @@ export function ChimeSessionRoom({
   const [consentGiven, setConsentGiven] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
+  // Client sees a waiting room until the diviner joins; diviners are always "present" for themselves
+  const [isDivinerPresent, setIsDivinerPresent] = useState(role === "diviner");
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -246,6 +248,11 @@ export function ChimeSessionRoom({
             const name = resolveAttendeeName(externalUserId ?? attendeeId);
             const isLocal = attendeeId === meetingData.attendee.AttendeeId;
 
+            // Lift the waiting-room overlay the moment the diviner appears
+            if (externalUserId?.startsWith("diviner-")) {
+              setIsDivinerPresent(present);
+            }
+
             if (present) {
               if (!seenAttendees.has(attendeeId)) {
                 seenAttendees.add(attendeeId);
@@ -365,13 +372,15 @@ export function ChimeSessionRoom({
     setSessionEnded(true);
     if (timerRef.current) clearInterval(timerRef.current);
 
-    // Stop Chime meeting session
+    // Stop Chime meeting session and release all media devices.
+    // Order matters: stop inputs first so the OS camera/mic indicator turns off,
+    // then stop the local tile, then disconnect from Chime.
     if (meetingSessionRef.current) {
-      try {
-        meetingSessionRef.current.audioVideo.stop();
-      } catch {
-        // Cleanup errors are non-critical
-      }
+      try { await meetingSessionRef.current.audioVideo.stopVideoInput(); } catch { /* non-critical */ }
+      try { await meetingSessionRef.current.audioVideo.stopAudioInput(); } catch { /* non-critical */ }
+      try { meetingSessionRef.current.audioVideo.stopLocalVideoTile(); } catch { /* non-critical */ }
+      try { meetingSessionRef.current.audioVideo.stop(); } catch { /* non-critical */ }
+      meetingSessionRef.current = null;
     }
 
     try {
@@ -468,7 +477,7 @@ export function ChimeSessionRoom({
                 fetch("/api/chime/participant-joined", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ bookingId, role }),
+                  body: JSON.stringify({ bookingId, role, clientToken }),
                 }).catch(() => {});
               }}
             >
@@ -607,7 +616,50 @@ export function ChimeSessionRoom({
 
   // Active session
   return (
-    <div className="flex h-[calc(100vh-2rem)] gap-0 overflow-hidden rounded-xl border border-border bg-background">
+    <div className="relative flex h-[calc(100vh-2rem)] gap-0 overflow-hidden rounded-xl border border-border bg-background">
+
+      {/* ── Waiting for diviner overlay (client only) ────────────────────────
+          Rendered as an absolute layer so audio/video elements stay mounted
+          and Chime bindings stay valid. Disappears the moment the diviner's
+          attendee presence event fires — no refresh required.              */}
+      {role === "client" && !isDivinerPresent && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-background/97 p-6 text-center backdrop-blur-sm">
+          {/* Pulsing avatar rings */}
+          <div className="relative mx-auto h-28 w-28">
+            <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
+            <div
+              className="absolute inset-3 animate-ping rounded-full bg-primary/15"
+              style={{ animationDelay: "0.45s" }}
+            />
+            <div className="relative flex h-full w-full items-center justify-center rounded-full border border-primary/30 bg-primary/10">
+              <User className="h-10 w-10 text-primary" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold gold-text">
+              Waiting for {divinerName}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {chimeSdkReady
+                ? "You're connected. The session will start automatically when your diviner joins."
+                : "Connecting to session…"}
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-primary/20 bg-primary/5 px-6 py-4 text-sm">
+            <p className="font-medium text-primary">{serviceName}</p>
+            <p className="mt-1 text-muted-foreground">
+              {scheduledDuration} min &middot; ${basePrice.toFixed(2)}
+            </p>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            This page updates automatically — no need to refresh.
+          </p>
+        </div>
+      )}
+
       {/* Main video area */}
       <div className="flex flex-1 flex-col">
         {/* Top bar */}

@@ -260,6 +260,7 @@ export function BookingWizard({
   );
   const [bookingComplete, setBookingComplete] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
+  const [bookingToken, setBookingToken] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [requiresPostPaymentIntake, setRequiresPostPaymentIntake] = useState(
@@ -476,12 +477,18 @@ export function BookingWizard({
         if (data.bookingId) {
           setBookingId(data.bookingId);
         }
+        if (data.bookingToken) {
+          setBookingToken(data.bookingToken);
+        }
         if (data.orderId) {
           setOrderId(data.orderId);
         }
         setRequiresPostPaymentIntake(Boolean(data.requiresPostPaymentIntake));
       } else if (data.bookingId) {
         setBookingId(data.bookingId);
+        if (data.bookingToken) {
+          setBookingToken(data.bookingToken);
+        }
         if (data.orderId) {
           setOrderId(data.orderId);
         }
@@ -541,7 +548,9 @@ export function BookingWizard({
     return `data:text/calendar;charset=utf-8,${encodeURIComponent(icsContent)}`;
   }
 
-  const sessionJoinUrl = bookingId
+  const sessionJoinUrl = bookingId && bookingToken
+    ? `/${diviner.username}/session/${bookingId}?token=${bookingToken}`
+    : bookingId
     ? `/${diviner.username}/session/${bookingId}`
     : null;
   const portalOrderUrl = orderId ? `/portal/orders/${orderId}` : null;
