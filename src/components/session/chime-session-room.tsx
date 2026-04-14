@@ -47,6 +47,8 @@ interface ChimeSessionRoomProps {
   basePrice: number;
   overageRate: number;
   username: string;
+  /** Secure token for unauthenticated client access — passed to join-meeting API */
+  clientToken?: string;
   questionnaire?: {
     focusQuestion?: string;
     lifeArea?: string;
@@ -72,6 +74,7 @@ export function ChimeSessionRoom({
   basePrice,
   overageRate,
   username,
+  clientToken,
   questionnaire,
   clientBirthData,
 }: ChimeSessionRoomProps) {
@@ -95,10 +98,16 @@ export function ChimeSessionRoom({
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
-  const [chimeSdkLoaded, setChimeSdkLoaded] = useState(false);
+  const [chimeSdkReady, setChimeSdkReady] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<
+    { id: string; name: string; isLocal: boolean }[]
+  >([]);
+  const [joinNotification, setJoinNotification] = useState<string | null>(null);
+  const initLockRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<Date | null>(null);
+  const participantMapRef = useRef<Map<string, string>>(new Map());
 
   // Detect mobile viewport
   useEffect(() => {
@@ -112,10 +121,10 @@ export function ChimeSessionRoom({
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Timer logic
+  // Timer logic — uses startTimeRef which is set from the server's
+  // session_started_at value (persists across reloads)
   useEffect(() => {
-    if (sessionStarted && !sessionEnded) {
-      startTimeRef.current = new Date();
+    if (sessionStarted && !sessionEnded && startTimeRef.current) {
       timerRef.current = setInterval(() => {
         if (!startTimeRef.current) return;
         const elapsed = Math.floor(
@@ -131,27 +140,30 @@ export function ChimeSessionRoom({
   }, [sessionStarted, sessionEnded]);
 
   // Initialize Chime SDK meeting session
+  // Initialize Chime SDK — uses a ref lock to survive StrictMode/HMR
   useEffect(() => {
-    if (!consentGiven || chimeSdkLoaded) return;
+    if (!consentGiven) return;
 
-    let cancelled = false;
+    // Prevent double-init from StrictMode or HMR
+    if (initLockRef.current) return;
+    initLockRef.current = true;
+
+    let stopped = false;
 
     async function initChime() {
       try {
-        // Dynamic import of Chime SDK (client-side only)
         const ChimeSDK = await import("amazon-chime-sdk-js");
-        if (cancelled) return;
 
         const logger = new ChimeSDK.ConsoleLogger(
           "AstroPro",
           ChimeSDK.LogLevel.WARN
         );
 
-        // Fetch meeting info from the API to get the full Meeting object
+        // Fetch fresh meeting + attendee from API
         const meetingResponse = await fetch("/api/chime/join-meeting", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ bookingId }),
+          body: JSON.stringify({ bookingId, clientToken }),
         });
 
         if (!meetingResponse.ok) {
@@ -159,23 +171,21 @@ export function ChimeSessionRoom({
         }
 
         const meetingData = await meetingResponse.json();
-        if (cancelled) return;
 
-        // Create meeting session configuration
+        // Set timer from server-persisted start time (survives reloads)
+        startTimeRef.current = new Date(meetingData.sessionStartedAt);
+        setSessionStarted(true);
+
+        // Store participant names for display
+        if (meetingData.participants) {
+          participantMapRef.current.set("diviner", meetingData.participants.divinerName);
+          participantMapRef.current.set("client", meetingData.participants.clientName);
+        }
+
+        // Build session configuration from real AWS response
         const configuration = new ChimeSDK.MeetingSessionConfiguration(
-          {
-            MeetingId: meetingId,
-            MediaPlacement: {
-              AudioHostUrl: `wss://meeting.chime.aws/${meetingId}`,
-              AudioFallbackUrl: `wss://haxrp.m2.ue1.app.chime.aws:443/calls/${meetingId}`,
-              SignalingUrl: `wss://signal.m2.ue1.app.chime.aws/${meetingId}`,
-              TurnControlUrl: `https://2713.cell.us-east-1.meetings.chime.aws/v2/turn_sessions`,
-            },
-          },
-          {
-            AttendeeId: meetingData.attendeeId ?? attendeeId,
-            JoinToken: meetingData.joinToken ?? joinToken,
-          }
+          meetingData.meeting,
+          meetingData.attendee
         );
 
         const deviceController =
@@ -188,31 +198,87 @@ export function ChimeSessionRoom({
 
         meetingSessionRef.current = meetingSession;
 
-        // Set up audio
+        // 1. Bind audio output
         const audioElement = audioRef.current;
         if (audioElement) {
           await meetingSession.audioVideo.bindAudioElement(audioElement);
         }
 
-        // Select default devices
-        const audioInputDevices =
-          await meetingSession.audioVideo.listAudioInputDevices();
-        if (audioInputDevices.length > 0) {
-          await meetingSession.audioVideo.startAudioInput(
-            audioInputDevices[0].deviceId
-          );
+        // 2. Select input devices BEFORE start()
+        try {
+          const audioInputs =
+            await meetingSession.audioVideo.listAudioInputDevices();
+          if (audioInputs.length > 0) {
+            await meetingSession.audioVideo.startAudioInput(
+              audioInputs[0].deviceId
+            );
+          }
+        } catch (e) {
+          console.warn("Chime: audio input setup skipped:", e);
         }
 
-        const videoInputDevices =
-          await meetingSession.audioVideo.listVideoInputDevices();
-        if (videoInputDevices.length > 0) {
-          await meetingSession.audioVideo.startVideoInput(
-            videoInputDevices[0].deviceId
-          );
+        try {
+          const videoInputs =
+            await meetingSession.audioVideo.listVideoInputDevices();
+          if (videoInputs.length > 0) {
+            await meetingSession.audioVideo.startVideoInput(
+              videoInputs[0].deviceId
+            );
+          }
+        } catch (e) {
+          console.warn("Chime: video input setup skipped:", e);
         }
 
-        // Subscribe to video tile updates
-        const observer: any = {
+        // Helper to resolve attendee name from externalUserId
+        const resolveAttendeeName = (externalUserId: string): string => {
+          if (externalUserId.startsWith("diviner-"))
+            return participantMapRef.current.get("diviner") ?? divinerName;
+          if (externalUserId.startsWith("client-"))
+            return participantMapRef.current.get("client") ?? clientName;
+          return "Participant";
+        };
+
+        // 3. Register observer BEFORE start()
+        const seenAttendees = new Set<string>();
+
+        meetingSession.audioVideo.realtimeSubscribeToAttendeeIdPresence(
+          (attendeeId: string, present: boolean, externalUserId?: string) => {
+            const name = resolveAttendeeName(externalUserId ?? attendeeId);
+            const isLocal = attendeeId === meetingData.attendee.AttendeeId;
+
+            if (present) {
+              if (!seenAttendees.has(attendeeId)) {
+                seenAttendees.add(attendeeId);
+                setParticipants((prev) => {
+                  if (prev.some((p) => p.id === attendeeId)) return prev;
+                  return [...prev, { id: attendeeId, name, isLocal }];
+                });
+                if (!isLocal) {
+                  setJoinNotification(`${name} joined the session`);
+                  setTimeout(() => setJoinNotification(null), 4000);
+                }
+              }
+            } else {
+              seenAttendees.delete(attendeeId);
+              setParticipants((prev) => prev.filter((p) => p.id !== attendeeId));
+            }
+          }
+        );
+
+        meetingSession.audioVideo.addObserver({
+          audioVideoDidStart: () => {
+            meetingSession.audioVideo.startLocalVideoTile();
+            setChimeSdkReady(true);
+          },
+          audioVideoDidStop: (status: any) => {
+            const code = status?.statusCode?.();
+            console.log("Chime session stopped, status code:", code);
+            if (!stopped && code !== 1) {
+              setConnectionError(
+                "Session disconnected. Please click Retry to reconnect."
+              );
+            }
+          },
           videoTileDidUpdate: (tileState: any) => {
             if (!tileState.boundAttendeeId || !videoContainerRef.current)
               return;
@@ -227,14 +293,16 @@ export function ChimeSessionRoom({
               videoEl.id = `chime-video-${tileId}`;
               videoEl.autoplay = true;
               videoEl.playsInline = true;
-              videoEl.className =
-                "h-full w-full object-cover rounded-lg";
+              videoEl.style.width = "100%";
+              videoEl.style.height = "100%";
+              videoEl.style.objectFit = "cover";
 
-              // Local video gets a smaller overlay
               if (tileState.localTile) {
                 videoEl.className =
                   "absolute bottom-4 right-4 h-32 w-44 rounded-lg border-2 border-primary/40 object-cover shadow-lg z-10";
                 videoEl.muted = true;
+              } else {
+                videoEl.className = "h-full w-full object-cover rounded-lg";
               }
 
               videoContainerRef.current?.appendChild(videoEl);
@@ -243,24 +311,18 @@ export function ChimeSessionRoom({
             meetingSession.audioVideo.bindVideoElement(tileId, videoEl);
           },
           videoTileWasRemoved: (tileId: number) => {
-            const videoEl = document.getElementById(
-              `chime-video-${tileId}`
-            );
+            const videoEl = document.getElementById(`chime-video-${tileId}`);
             if (videoEl) videoEl.remove();
           },
-        };
+        } as any);
 
-        meetingSession.audioVideo.addObserver(observer);
-
-        // Start the meeting
+        // 4. Start
         meetingSession.audioVideo.start();
-        meetingSession.audioVideo.startLocalVideoTile();
-
-        setChimeSdkLoaded(true);
       } catch (err) {
         console.error("Failed to initialize Chime SDK:", err);
+        initLockRef.current = false;
         setConnectionError(
-          err instanceof Error ? err.message : "Failed to connect to meeting"
+          err instanceof Error ? err.message : "Failed to connect"
         );
       }
     }
@@ -268,16 +330,12 @@ export function ChimeSessionRoom({
     initChime();
 
     return () => {
-      cancelled = true;
-      if (meetingSessionRef.current) {
-        try {
-          meetingSessionRef.current.audioVideo.stop();
-        } catch {
-          // Cleanup errors are non-critical
-        }
-      }
+      stopped = true;
+      // Do NOT stop the session here — StrictMode/HMR cleanup
+      // would kill a perfectly good session. The session lives
+      // until the user clicks End Session or navigates away.
     };
-  }, [consentGiven, chimeSdkLoaded, bookingId, meetingId, attendeeId, joinToken]);
+  }, [consentGiven, bookingId]);
 
   const isOvertime = elapsedMinutes >= scheduledDuration;
   const overtimeMinutes = isOvertime ? elapsedMinutes - scheduledDuration : 0;
@@ -405,7 +463,7 @@ export function ChimeSessionRoom({
               className="w-full bg-primary hover:bg-primary/80 text-primary-foreground"
               onClick={() => {
                 setConsentGiven(true);
-                setSessionStarted(true);
+                // sessionStarted is set after API returns sessionStartedAt
                 // Record join for no-show tracking (fire-and-forget)
                 fetch("/api/chime/participant-joined", {
                   method: "POST",
@@ -439,7 +497,8 @@ export function ChimeSessionRoom({
               className="bg-primary hover:bg-primary/80 text-primary-foreground"
               onClick={() => {
                 setConnectionError(null);
-                setChimeSdkLoaded(false);
+                initLockRef.current = false;
+                setChimeSdkReady(false);
               }}
             >
               Retry Connection
@@ -570,6 +629,13 @@ export function ChimeSessionRoom({
             >
               Chime
             </Badge>
+            <Badge
+              variant="outline"
+              className="gap-1 border-primary/20 text-xs"
+            >
+              <User className="h-3 w-3" />
+              {participants.length}
+            </Badge>
           </div>
 
           {/* Timer */}
@@ -609,8 +675,18 @@ export function ChimeSessionRoom({
           {/* Hidden audio element for Chime audio */}
           <audio ref={audioRef} autoPlay playsInline className="hidden" />
 
+          {/* Join notification */}
+          {joinNotification && (
+            <div className="absolute left-1/2 top-4 z-20 -translate-x-1/2 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex items-center gap-2 rounded-full bg-primary/90 px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg">
+                <User className="h-4 w-4" />
+                {joinNotification}
+              </div>
+            </div>
+          )}
+
           {/* Loading state */}
-          {!chimeSdkLoaded && (
+          {!chimeSdkReady && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
                 <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
