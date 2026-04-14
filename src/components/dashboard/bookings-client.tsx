@@ -418,7 +418,7 @@ export function BookingsClient({
                   const status = booking.status as string;
 
                   const basePrice = (booking.base_price as number) ?? 0;
-                  const paymentIntentId = booking.payment_intent_id as string | null;
+                  const paymentIntentId = booking.stripe_payment_intent_id as string | null;
                   const refundedAt = booking.refunded_at as string | null;
                   const paymentBadge = (() => {
                     if (refundedAt) return { label: "Refunded", cls: "bg-red-500/10 text-red-500 border-red-500/20" };

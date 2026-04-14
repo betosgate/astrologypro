@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/activity-log";
+import { createFinanceOperationNote, logFinanceAdminAction } from "@/lib/finance-ops";
 
 export const dynamic = "force-dynamic";
 
@@ -118,6 +119,26 @@ export async function POST(
       adjustment_id: adjustment.id,
       adjustment_type,
       amount_cents,
+      reason: reason.trim(),
+    },
+  });
+
+  await createFinanceOperationNote({
+    createdByUserId: user.id,
+    noteType: "manual_adjustment",
+    note: `Affiliate commission adjustment ${adjustment_type} for commission ${commissionId}: ${amount_cents} cents. ${reason.trim()}`,
+    status: "resolved",
+  });
+
+  await logFinanceAdminAction({
+    adminUserId: user.id,
+    targetUserId: commission.affiliate_id,
+    actionType: "finance_affiliate_commission_adjusted",
+    details: {
+      commissionId,
+      adjustmentId: adjustment.id,
+      adjustmentType: adjustment_type,
+      amountCents: amount_cents,
       reason: reason.trim(),
     },
   });

@@ -8,11 +8,38 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Eye, Users, ArrowUpRight, TrendingUp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Eye, Users, ArrowUpRight, TrendingUp, Activity, CalendarCheck2, MessageSquareQuote, Rss } from "lucide-react";
 
 export const metadata = {
   title: "Analytics - Dashboard",
 };
+
+type DivinerActivityRow = {
+  id: string;
+  activity_type: string;
+  path: string | null;
+  traffic_source: string | null;
+  created_at: string;
+  metadata: Record<string, unknown> | null;
+};
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  page_view: "Page View",
+  booking_checkout_started: "Booking Started",
+  weekly_subscription_checkout_started: "Subscription Started",
+  check_in_submitted: "Check-In Submitted",
+  testimonial_submitted: "Testimonial Submitted",
+};
+
+function formatActivityTime(iso: string) {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 export default async function AnalyticsPage() {
   const supabase = await createClient();
@@ -60,6 +87,8 @@ export default async function AnalyticsPage() {
     topReferrers,
     dailyViews,
     monthBookings,
+    activitySummaryResult,
+    recentActivityResult,
   ] = await Promise.all([
     // Today views
     supabase
@@ -106,6 +135,18 @@ export default async function AnalyticsPage() {
       .select("*", { count: "exact", head: true })
       .eq("diviner_id", diviner.id)
       .gte("created_at", monthStart),
+    admin
+      .from("diviner_activity_events")
+      .select("activity_type")
+      .eq("diviner_id", diviner.id)
+      .gte("created_at", thirtyDaysAgo.toISOString()),
+    admin
+      .from("diviner_activity_events")
+      .select("id, activity_type, path, traffic_source, created_at, metadata")
+      .eq("diviner_id", diviner.id)
+      .gte("created_at", thirtyDaysAgo.toISOString())
+      .order("created_at", { ascending: false })
+      .limit(20),
   ]);
 
   const todayCount = todayViews.count ?? 0;
@@ -158,8 +199,14 @@ export default async function AnalyticsPage() {
 
   // Conversion rate
   const bookingCount = monthBookings.count ?? 0;
-  const conversionRate =
-    monthCount > 0 ? ((bookingCount / monthCount) * 100).toFixed(1) : "0.0";
+  const activitySummaryRows = (activitySummaryResult.data ?? []) as Array<{ activity_type: string }>;
+  const recentActivity = (recentActivityResult.data ?? []) as DivinerActivityRow[];
+  const engagementEvents = activitySummaryRows.filter((event) => event.activity_type !== "page_view");
+  const engagementCount = engagementEvents.length;
+  const bookingStartCount = activitySummaryRows.filter((event) => event.activity_type === "booking_checkout_started").length;
+  const checkInCount = activitySummaryRows.filter((event) => event.activity_type === "check_in_submitted").length;
+  const testimonialCount = activitySummaryRows.filter((event) => event.activity_type === "testimonial_submitted").length;
+  const subscriptionStartCount = activitySummaryRows.filter((event) => event.activity_type === "weekly_subscription_checkout_started").length;
 
   return (
     <div className="space-y-8">
@@ -210,16 +257,62 @@ export default async function AnalyticsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Conversion Rate
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Engagements</CardTitle>
+            <Activity className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{engagementCount}</div>
+            <p className="text-xs text-muted-foreground">
+              booking starts, check-ins, testimonials, subscriptions
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Booking Starts</CardTitle>
             <TrendingUp className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{conversionRate}%</div>
+            <div className="text-2xl font-bold">{bookingStartCount}</div>
             <p className="text-xs text-muted-foreground">
-              {bookingCount} bookings / {monthCount} views
+              {bookingCount} bookings completed this month
             </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Check-Ins</CardTitle>
+            <CalendarCheck2 className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{checkInCount}</div>
+            <p className="text-xs text-muted-foreground">last 30 days</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Testimonials</CardTitle>
+            <MessageSquareQuote className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{testimonialCount}</div>
+            <p className="text-xs text-muted-foreground">submitted in the last 30 days</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Subscription Starts</CardTitle>
+            <Rss className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{subscriptionStartCount}</div>
+            <p className="text-xs text-muted-foreground">weekly subscription checkout starts</p>
           </CardContent>
         </Card>
       </div>
@@ -236,10 +329,6 @@ export default async function AnalyticsPage() {
           <div className="flex items-end gap-[3px]" style={{ height: 160 }}>
             {chartData.map(([date, count]) => {
               const heightPercent = (count / maxViews) * 100;
-              const dayLabel = new Date(date + "T12:00:00").toLocaleDateString(
-                "en-US",
-                { weekday: "narrow" }
-              );
               return (
                 <div
                   key={date}
@@ -271,36 +360,80 @@ export default async function AnalyticsPage() {
       </Card>
 
       {/* Top referrers */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ArrowUpRight className="size-4" />
-            Top Referrers
-          </CardTitle>
-          <CardDescription>Where your visitors come from</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {sortedReferrers.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              No referrer data yet. Share your page link to see traffic sources.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {sortedReferrers.map(([source, count]) => (
-                <div
-                  key={source}
-                  className="flex items-center justify-between"
-                >
-                  <span className="truncate text-sm">{source}</span>
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {count} visit{count !== 1 ? "s" : ""}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ArrowUpRight className="size-4" />
+              Top Referrers
+            </CardTitle>
+            <CardDescription>Where your visitors come from</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {sortedReferrers.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                No referrer data yet. Share your page link to see traffic sources.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {sortedReferrers.map(([source, count]) => (
+                  <div
+                    key={source}
+                    className="flex items-center justify-between"
+                  >
+                    <span className="truncate text-sm">{source}</span>
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {count} visit{count !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="size-4" />
+              Recent Activity
+            </CardTitle>
+            <CardDescription>Latest public interactions on your diviner pages</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recentActivity.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                No tracked activity yet.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {recentActivity.map((event) => (
+                  <div key={event.id} className="flex items-start justify-between gap-4 rounded-lg border border-border/60 p-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                          {ACTIVITY_LABELS[event.activity_type] ?? event.activity_type}
+                        </span>
+                        {event.traffic_source ? (
+                          <Badge variant="outline" className="text-[10px] uppercase">
+                            {event.traffic_source.replace(/_/g, " ")}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {event.path ?? "/"}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {formatActivityTime(event.created_at)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

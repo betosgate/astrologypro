@@ -6,6 +6,11 @@ import {
   normalizePublishPolicy,
   publishBlockMessage,
 } from "@/lib/diviner-publishing";
+import {
+  buildGovernedLivePlatforms,
+  isValidLivePlatformKey,
+  mergeGovernedPlatformConfigs,
+} from "@/lib/live-platform-governance";
 
 export const dynamic = "force-dynamic";
 
@@ -31,33 +36,37 @@ export async function GET() {
   }
 
   const admin = createAdminClient();
-  const { data, error } = await admin
+  const [{ data: data, error }, { data: registryRows }, { data: overrideRows }] = await Promise.all([
+    admin
     .from("stream_platform_configs")
     .select("*")
     .eq("diviner_id", diviner.id)
     .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true }),
+    admin
+      .from("live_platform_registry")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("platform_key", { ascending: true }),
+    admin
+      .from("diviner_live_platform_overrides")
+      .select("*")
+      .eq("diviner_id", diviner.id),
+  ]);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ platforms: data });
-}
+  const governedPlatforms = buildGovernedLivePlatforms(registryRows ?? [], overrideRows ?? []);
+  const filteredConfigs = mergeGovernedPlatformConfigs(data ?? [], governedPlatforms, {
+    divinerAvailableOnly: true,
+  });
 
-const VALID_PLATFORMS = [
-  "youtube",
-  "facebook",
-  "instagram",
-  "tiktok",
-  "zoom",
-  "other",
-] as const;
-
-type ValidPlatform = (typeof VALID_PLATFORMS)[number];
-
-function isValidPlatform(value: unknown): value is ValidPlatform {
-  return typeof value === "string" && (VALID_PLATFORMS as readonly string[]).includes(value);
+  return NextResponse.json({
+    platforms: filteredConfigs,
+    availablePlatforms: governedPlatforms,
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -87,10 +96,10 @@ export async function POST(req: NextRequest) {
 
   const { platform, stream_url, embed_url, display_name, is_enabled, sort_order } = body;
 
-  if (!isValidPlatform(platform)) {
+  if (!isValidLivePlatformKey(platform)) {
     return NextResponse.json(
       {
-        error: "Invalid platform. Must be one of: youtube, facebook, instagram, tiktok, zoom, other",
+        error: "Invalid platform.",
       },
       { status: 422 }
     );
@@ -104,6 +113,27 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createAdminClient();
+  const [{ data: registryRows }, { data: overrideRows }] = await Promise.all([
+    admin
+      .from("live_platform_registry")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("platform_key", { ascending: true }),
+    admin
+      .from("diviner_live_platform_overrides")
+      .select("*")
+      .eq("diviner_id", diviner.id),
+  ]);
+  const governedPlatforms = buildGovernedLivePlatforms(registryRows ?? [], overrideRows ?? []);
+  const requestedPlatform = governedPlatforms.find((item) => item.platform_key === platform);
+
+  if (!requestedPlatform || !requestedPlatform.is_available_for_diviner) {
+    return NextResponse.json(
+      { error: "This live platform is not available for your account." },
+      { status: 403 }
+    );
+  }
+
   const { data, error } = await admin
     .from("stream_platform_configs")
     .upsert(

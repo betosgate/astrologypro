@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
@@ -27,6 +27,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Loader2, User, Sparkles, Star } from "lucide-react";
 import { toast } from "sonner";
+import {
+  getAllowedSpecialtiesForPackage,
+  resolveRoleServicePackage,
+  type RoleServicePackageRow,
+} from "@/lib/role-service-packages";
 
 const SPECIALTIES = [
   "Astrology",
@@ -56,8 +61,10 @@ const TIMEZONES = [
 const STEP_ICONS = [User, Sparkles, Star] as const;
 const STEP_LABELS = ["About You", "Specialties & Interests", "Birth Data"] as const;
 
-export default function TraineeProfilePage() {
+function TraineeProfileContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isInvited = searchParams.get("invited") === "true";
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -71,6 +78,9 @@ export default function TraineeProfilePage() {
 
   // Step 2
   const [specialties, setSpecialties] = useState<string[]>([]);
+  const [allowedSpecialties, setAllowedSpecialties] =
+    useState<string[]>([...SPECIALTIES]);
+  const [packageLabel, setPackageLabel] = useState<string>("Astrology + Tarot");
   const [goals, setGoals] = useState("");
 
   // Step 3
@@ -88,11 +98,57 @@ export default function TraineeProfilePage() {
       }
       supabase
         .from("trainees")
-        .select("name")
+        .select("name, service_package_code")
         .eq("user_id", data.user.id)
         .single()
         .then(({ data: trainee }) => {
           if (trainee?.name) setDisplayName(trainee.name);
+          const pkgCode =
+            typeof trainee?.service_package_code === "string"
+              ? trainee.service_package_code
+              : "both";
+          const resolvedPackage = resolveRoleServicePackage(
+            [
+              {
+                package_code: "both",
+                display_name: "Astrology + Tarot",
+                description: null,
+                allows_astrology: true,
+                allows_tarot: true,
+                applies_to_roles: ["diviner", "trainee"],
+                default_for_roles: ["diviner", "trainee"],
+                is_active: true,
+                sort_order: 10,
+              },
+              {
+                package_code: "astrology_only",
+                display_name: "Astrology Only",
+                description: null,
+                allows_astrology: true,
+                allows_tarot: false,
+                applies_to_roles: ["diviner", "trainee"],
+                default_for_roles: [],
+                is_active: true,
+                sort_order: 20,
+              },
+              {
+                package_code: "tarot_only",
+                display_name: "Tarot Only",
+                description: null,
+                allows_astrology: false,
+                allows_tarot: true,
+                applies_to_roles: ["diviner", "trainee"],
+                default_for_roles: [],
+                is_active: true,
+                sort_order: 30,
+              },
+            ] as RoleServicePackageRow[],
+            pkgCode,
+          );
+          setPackageLabel(resolvedPackage.displayName);
+          setAllowedSpecialties(
+            getAllowedSpecialtiesForPackage(SPECIALTIES, resolvedPackage),
+          );
           setInitialLoading(false);
         });
     });
@@ -171,6 +227,11 @@ export default function TraineeProfilePage() {
             <h1 className="mb-2 text-center text-2xl font-bold tracking-tight">
               Complete Your Profile
             </h1>
+            {isInvited ? (
+              <p className="mb-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2 text-center text-sm text-muted-foreground">
+                Your account was invited by admin. Complete the standard trainee setup before trainee portal access is unlocked.
+              </p>
+            ) : null}
             <p className="mb-6 text-center text-sm text-muted-foreground">
               Step {step} of 3 &mdash; {STEP_LABELS[step - 1]}
             </p>
@@ -291,10 +352,14 @@ export default function TraineeProfilePage() {
               {/* ─── Step 2: Specialties & Interests ─── */}
               {step === 2 && (
                 <div className="space-y-6">
+                  <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+                    Current package:{" "}
+                    <span className="font-medium text-foreground">{packageLabel}</span>
+                  </div>
                   <div className="space-y-3">
                     <Label>Specialties / Areas of Interest</Label>
                     <div className="flex flex-wrap gap-2">
-                      {SPECIALTIES.map((s) => {
+                      {allowedSpecialties.map((s) => {
                         const selected = specialties.includes(s);
                         return (
                           <label key={s} className="cursor-pointer">
@@ -426,5 +491,23 @@ export default function TraineeProfilePage() {
       </main>
       <MarketingFooter />
     </div>
+  );
+}
+
+export default function TraineeProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen flex-col bg-[#070b14]">
+          <MarketingHeader />
+          <main className="flex flex-1 items-center justify-center">
+            <Loader2 className="size-8 animate-spin text-primary" />
+          </main>
+          <MarketingFooter />
+        </div>
+      }
+    >
+      <TraineeProfileContent />
+    </Suspense>
   );
 }

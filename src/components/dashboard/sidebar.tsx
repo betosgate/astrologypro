@@ -23,6 +23,7 @@ import {
   Mail,
   ClipboardList,
   CreditCard,
+  Wallet,
   Video,
   LifeBuoy,
   Globe,
@@ -95,6 +96,7 @@ const navItems: NavItem[] = [
   { label: "Follow-ups", href: "/dashboard/follow-ups", icon: Mail },
   { label: "Intake Builder", href: "/dashboard/intake-builder", icon: ClipboardList },
   { label: "Billing", href: "/dashboard/billing", icon: CreditCard },
+  { label: "Finance", href: "/dashboard/finance", icon: Wallet },
   { label: "Support", href: "/dashboard/support", icon: LifeBuoy },
   { label: "Profile", href: "/dashboard/profile", icon: User },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
@@ -314,7 +316,6 @@ export function Sidebar({ diviner }: SidebarProps) {
                     isActive={isItemActive(item)}
                     isExpanded={expandedMenus.has(item.label)}
                     onToggle={() => toggleMenu(item.label)}
-                    pathname={pathname}
                     isActiveCheck={isActive}
                   />
                 </div>
@@ -379,7 +380,6 @@ export function Sidebar({ diviner }: SidebarProps) {
               isActive={isItemActive(item)}
               isExpanded={expandedMenus.has(item.label)}
               onToggle={() => toggleMenu(item.label)}
-              pathname={pathname}
               isActiveCheck={isActive}
             />
           ))}

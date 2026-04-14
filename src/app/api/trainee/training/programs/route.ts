@@ -111,13 +111,13 @@ export async function GET() {
   const { data: lessons, error: lessonError } =
     categoryIds.length > 0
       ? await admin
-          .from("training_lessons")
-          .select(
-            "id, category_id, title, priority, is_active, previous_lesson_id"
-          )
-          .in("category_id", categoryIds)
-          .eq("is_active", true)
-          .order("priority", { ascending: true })
+        .from("training_lessons")
+        .select(
+          "id, category_id, title, priority, is_active, previous_lesson_id"
+        )
+        .in("category_id", categoryIds)
+        .eq("is_active", true)
+        .order("priority", { ascending: true })
       : { data: [], error: null };
 
   if (lessonError) {
@@ -140,86 +140,86 @@ export async function GET() {
     // Lesson-level completion flags (for per-lesson "completed" boolean)
     lessonIds.length > 0
       ? admin
-          .from("lesson_completions")
-          .select("lesson_id")
-          .eq("user_id", user.id)
-          .in("lesson_id", lessonIds)
+        .from("lesson_completions")
+        .select("lesson_id")
+        .eq("user_id", user.id)
+        .in("lesson_id", lessonIds)
       : Promise.resolve({ data: [] as { lesson_id: string }[], error: null }),
 
     // Quiz pass/fail per lesson (latest attempt, ordered descending)
     lessonIds.length > 0
       ? admin
-          .from("quiz_attempts")
-          .select("lesson_id, passed")
-          .eq("user_id", user.id)
-          .in("lesson_id", lessonIds)
-          .order("attempted_at", { ascending: false })
+        .from("quiz_attempts")
+        .select("lesson_id, passed")
+        .eq("user_id", user.id)
+        .in("lesson_id", lessonIds)
+        .order("attempted_at", { ascending: false })
       : Promise.resolve(
-          { data: [] as { lesson_id: string; passed: boolean }[], error: null }
-        ),
+        { data: [] as { lesson_id: string; passed: boolean }[], error: null }
+      ),
 
     // Category-level completion flags
     categoryIds.length > 0
       ? admin
-          .from("category_completions")
-          .select("category_id")
-          .eq("user_id", user.id)
-          .in("category_id", categoryIds)
+        .from("category_completions")
+        .select("category_id")
+        .eq("user_id", user.id)
+        .in("category_id", categoryIds)
       : Promise.resolve(
-          { data: [] as { category_id: string }[], error: null }
-        ),
+        { data: [] as { category_id: string }[], error: null }
+      ),
 
     // Batch: all program-level progress cache rows for this user
     programIds.length > 0
       ? admin
-          .from("user_program_progress")
-          .select(
-            "program_id, total_lessons, completed_lessons, total_categories, completed_categories, progress_pct, started_at, last_activity_at, completed_at, next_lesson_id, next_lesson_title, next_category_id, next_category_name"
-          )
-          .eq("user_id", user.id)
-          .in("program_id", programIds)
+        .from("user_program_progress")
+        .select(
+          "program_id, total_lessons, completed_lessons, total_categories, completed_categories, progress_pct, started_at, last_activity_at, completed_at, next_lesson_id, next_lesson_title, next_category_id, next_category_name"
+        )
+        .eq("user_id", user.id)
+        .in("program_id", programIds)
       : Promise.resolve({
-          data: [] as {
-            program_id: string;
-            total_lessons: number;
-            completed_lessons: number;
-            total_categories: number;
-            completed_categories: number;
-            progress_pct: number;
-            started_at: string | null;
-            last_activity_at: string | null;
-            completed_at: string | null;
-            next_lesson_id: string | null;
-            next_lesson_title: string | null;
-            next_category_id: string | null;
-            next_category_name: string | null;
-          }[],
-          error: null,
-        }),
+        data: [] as {
+          program_id: string;
+          total_lessons: number;
+          completed_lessons: number;
+          total_categories: number;
+          completed_categories: number;
+          progress_pct: number;
+          started_at: string | null;
+          last_activity_at: string | null;
+          completed_at: string | null;
+          next_lesson_id: string | null;
+          next_lesson_title: string | null;
+          next_category_id: string | null;
+          next_category_name: string | null;
+        }[],
+        error: null,
+      }),
 
     // Batch: all category-level progress cache rows for this user
     categoryIds.length > 0
       ? admin
-          .from("user_category_progress")
-          .select(
-            "category_id, total_lessons, completed_lessons, progress_pct, started_at, last_activity_at, completed_at, next_lesson_id, next_lesson_title"
-          )
-          .eq("user_id", user.id)
-          .in("category_id", categoryIds)
+        .from("user_category_progress")
+        .select(
+          "category_id, total_lessons, completed_lessons, progress_pct, started_at, last_activity_at, completed_at, next_lesson_id, next_lesson_title"
+        )
+        .eq("user_id", user.id)
+        .in("category_id", categoryIds)
       : Promise.resolve({
-          data: [] as {
-            category_id: string;
-            total_lessons: number;
-            completed_lessons: number;
-            progress_pct: number;
-            started_at: string | null;
-            last_activity_at: string | null;
-            completed_at: string | null;
-            next_lesson_id: string | null;
-            next_lesson_title: string | null;
-          }[],
-          error: null,
-        }),
+        data: [] as {
+          category_id: string;
+          total_lessons: number;
+          completed_lessons: number;
+          progress_pct: number;
+          started_at: string | null;
+          last_activity_at: string | null;
+          completed_at: string | null;
+          next_lesson_id: string | null;
+          next_lesson_title: string | null;
+        }[],
+        error: null,
+      }),
 
     // Batch: lessons that are in progress — started but not completed. Used
     // by the program workspace (Module 02) to light up the Ongoing status
@@ -228,16 +228,16 @@ export async function GET() {
     // populated lesson.in_progress.
     lessonIds.length > 0
       ? admin
-          .from("lesson_progress")
-          .select("lesson_id")
-          .eq("user_id", user.id)
-          .not("started_at", "is", null)
-          .is("completed_at", null)
-          .in("lesson_id", lessonIds)
+        .from("lesson_progress")
+        .select("lesson_id")
+        .eq("user_id", user.id)
+        .not("started_at", "is", null)
+        .is("completed_at", null)
+        .in("lesson_id", lessonIds)
       : Promise.resolve({
-          data: [] as { lesson_id: string }[],
-          error: null,
-        }),
+        data: [] as { lesson_id: string }[],
+        error: null,
+      }),
   ]);
 
   // ── 5b. Fetch global sequential lock setting ─────────────────────────────

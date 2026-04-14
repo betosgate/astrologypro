@@ -3,6 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRoleDestination } from "@/types/user";
 import { getUserPortals } from "@/lib/user-roles";
+import { provisionNatalReadiness } from "@/lib/community/provision-natal-readiness";
+import { getInvitedRoleDestination } from "@/lib/invite-destinations";
+import { ensureInvitedRoleProvisioning } from "@/lib/invite-provisioning";
+import { getPendingContractDestination } from "@/lib/contract-orchestration";
 
 function getClientIp(req: NextRequest): string {
   return (
@@ -28,16 +32,6 @@ async function logLogin(userId: string, req: NextRequest, method = "magic_link")
     // non-blocking
   }
 }
-
-// Destination for admin-invited users who need to complete their profile
-const INVITE_DESTINATIONS: Record<string, string> = {
-  social_advo: "/join/advocate?invited=true",
-  trainee: "/join/trainee?invited=true",
-  diviner: "/onboarding",
-  client: "/portal",
-  perennial_mandalism: "/community",
-  mystery_school: "/mystery-school",
-};
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -69,13 +63,45 @@ export async function GET(request: NextRequest) {
           .maybeSingle();
 
         if (!existing) {
-          await admin.from("community_members").insert({
-            user_id: user.id,
-            email: user.email,
-            full_name: metadata.full_name ?? metadata.name ?? null,
-            membership_type: pendingMembership,
-            membership_status: "active",
-          });
+          const { data: newMember } = await admin
+            .from("community_members")
+            .insert({
+              user_id: user.id,
+              email: user.email,
+              full_name: metadata.full_name ?? metadata.name ?? null,
+              membership_type: pendingMembership,
+              membership_status: "active",
+            })
+            .select("id")
+            .single();
+
+          // Task 08: auto-provision natal readiness for PM members on first login
+          if (newMember?.id && pendingMembership === "perennial_mandalism") {
+            provisionNatalReadiness({
+              admin,
+              communityMemberId: newMember.id,
+              birthData: {
+                fullName: (metadata.full_name ?? metadata.name ?? null) as string | null,
+                dateOfBirth: (metadata.date_of_birth ?? null) as string | null,
+                birthTime: (metadata.birth_time ?? null) as string | null,
+                birthCity: (metadata.birth_city ?? null) as string | null,
+                birthCountry: (metadata.birth_country ?? null) as string | null,
+              },
+            }); // fire-and-forget — non-blocking
+          }
+        } else if (existing && pendingMembership === "perennial_mandalism") {
+          // Existing PM member logging in — ensure natal readiness is provisioned
+          provisionNatalReadiness({
+            admin,
+            communityMemberId: existing.id,
+            birthData: {
+              fullName: (metadata.full_name ?? metadata.name ?? null) as string | null,
+              dateOfBirth: (metadata.date_of_birth ?? null) as string | null,
+              birthTime: (metadata.birth_time ?? null) as string | null,
+              birthCity: (metadata.birth_city ?? null) as string | null,
+              birthCountry: (metadata.birth_country ?? null) as string | null,
+            },
+          }); // fire-and-forget
         }
       }
 
@@ -87,8 +113,21 @@ export async function GET(request: NextRequest) {
       // ── Admin invite: route to profile-completion page ────────────────────
       if (isInvite && metadata.invited_by_admin) {
         const role = metadata.role as string | undefined;
-        const dest = role ? (INVITE_DESTINATIONS[role] ?? getRoleDestination(role)) : "/switch";
+        if (user) {
+          const admin = createAdminClient();
+          await ensureInvitedRoleProvisioning(admin, user, role);
+        }
+        const dest = role ? getInvitedRoleDestination(role) : "/switch";
         return NextResponse.redirect(new URL(dest, origin));
+      }
+
+      if (user?.id) {
+        const pendingContractDestination = await getPendingContractDestination(user.id).catch(
+          () => null,
+        );
+        if (pendingContractDestination) {
+          return NextResponse.redirect(new URL(pendingContractDestination, origin));
+        }
       }
 
       // ── Multi-role: if user has 2+ portals, send to switch page ──────────

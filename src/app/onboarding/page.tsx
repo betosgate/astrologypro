@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +51,10 @@ import {
   Search,
 } from "lucide-react";
 import { DAYS_OF_WEEK } from "@/lib/constants";
+import {
+  type ResolvedRoleServicePackage,
+  filterCategoriesByPackage,
+} from "@/lib/role-service-packages";
 
 // ─── Timezone data ────────────────────────────────────────────────────────────
 const TIMEZONES: { zone: string; label: string }[] = [
@@ -442,8 +446,10 @@ interface SelectedService {
 
 type WeeklySchedule = Record<number, number[]>;
 
-export default function OnboardingPage() {
+function OnboardingContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isInvited = searchParams.get("invited") === "true";
   const supabase = createClient();
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -486,6 +492,8 @@ export default function OnboardingPage() {
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>(
     []
   );
+  const [servicePackage, setServicePackage] =
+    useState<ResolvedRoleServicePackage | null>(null);
 
   // Step 3: Stripe Connect
   const [connectComplete, setConnectComplete] = useState(false);
@@ -516,19 +524,20 @@ export default function OnboardingPage() {
       setUserId(user.id);
       setUsername(user.user_metadata?.username ?? "");
 
-      // Load existing onboarding progress — query by user_id, not id
-      const { data: diviner } = await supabase
-        .from("diviners")
-        .select("id, onboarding_step, display_name, bio, tagline, avatar_url, cover_image_url, stripe_account_id, timezone, specialties, phone, youtube_channel_id, facebook_live_url")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      // Load diviner record via server API (admin client, bypasses RLS).
+      // Creates the diviner record if it doesn't exist yet.
+      const profileRes = await fetch("/api/onboarding/profile");
+      const profileData = profileRes.ok ? await profileRes.json() : null;
+      const diviner = profileData?.diviner ?? null;
+      const resolvedServicePackage =
+        (profileData?.servicePackage as ResolvedRoleServicePackage | null) ?? null;
+      setServicePackage(resolvedServicePackage);
 
       if (diviner) {
         setDivinerId(diviner.id);
         if (diviner.onboarding_step) {
           setCurrentStep(diviner.onboarding_step);
         }
-        // Pre-populate display_name from signup name if not yet set in DB
         if (diviner.display_name) {
           setDisplayName(diviner.display_name);
         } else if (user.user_metadata?.name) {
@@ -555,7 +564,11 @@ export default function OnboardingPage() {
         .order("name");
 
       if (templates) {
-        setServiceTemplates(templates);
+        setServiceTemplates(
+          resolvedServicePackage
+            ? filterCategoriesByPackage(templates, resolvedServicePackage)
+            : templates,
+        );
       }
 
       // Load existing selected services — use diviner.id, not user.id
@@ -593,6 +606,16 @@ export default function OnboardingPage() {
     init();
   }, [router, supabase]);
 
+  useEffect(() => {
+    if (
+      servicePackage &&
+      bioSpecialty !== "both" &&
+      !servicePackage.allowedCategories.includes(bioSpecialty as "astrology" | "tarot")
+    ) {
+      setBioSpecialty(servicePackage.allowedCategories[0] ?? "astrology");
+    }
+  }, [bioSpecialty, servicePackage]);
+
   // Check for connect_complete in URL params
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -617,13 +640,13 @@ export default function OnboardingPage() {
 
   const saveStep = useCallback(
     async (step: number) => {
-      if (!divinerId) return;
-      await supabase
-        .from("diviners")
-        .update({ onboarding_step: step })
-        .eq("id", divinerId);
+      await fetch("/api/onboarding/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ onboarding_step: step }),
+      });
     },
-    [divinerId, supabase]
+    []
   );
 
   async function handleGenerateBio() {
@@ -679,50 +702,43 @@ export default function OnboardingPage() {
       let avatarUrl = avatarPreview;
 
       if (avatarFile) {
-        const fileExt = avatarFile.name.split(".").pop();
-        const filePath = `avatars/${userId}.${fileExt}`;
+        const formData = new FormData();
+        formData.append("file", avatarFile);
+        formData.append("folder", "avatars");
 
-        const { error: uploadError } = await supabase.storage
-          .from("avatars")
-          .upload(filePath, avatarFile, { upsert: true });
+        const res = await fetch("/api/upload/avatar", { method: "POST", body: formData });
+        const data = await res.json();
 
-        if (uploadError) {
-          setError("Failed to upload avatar: " + uploadError.message);
+        if (!res.ok) {
+          setError("Failed to upload avatar: " + (data.error ?? "Unknown error"));
           return;
         }
 
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("avatars").getPublicUrl(filePath);
-
-        avatarUrl = publicUrl;
+        avatarUrl = data.publicUrl;
       }
 
       let coverUrl = coverImagePreview;
 
       if (coverImageFile) {
-        const fileExt = coverImageFile.name.split(".").pop();
-        const filePath = `covers/${userId}.${fileExt}`;
+        const formData = new FormData();
+        formData.append("file", coverImageFile);
+        formData.append("folder", "covers");
 
-        const { error: uploadError } = await supabase.storage
-          .from("avatars")
-          .upload(filePath, coverImageFile, { upsert: true });
+        const res = await fetch("/api/upload/avatar", { method: "POST", body: formData });
+        const data = await res.json();
 
-        if (uploadError) {
-          setError("Failed to upload cover image: " + uploadError.message);
+        if (!res.ok) {
+          setError("Failed to upload cover image: " + (data.error ?? "Unknown error"));
           return;
         }
 
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("avatars").getPublicUrl(filePath);
-
-        coverUrl = publicUrl;
+        coverUrl = data.publicUrl;
       }
 
-      const { error: updateError } = await supabase
-        .from("diviners")
-        .update({
+      const updateRes = await fetch("/api/onboarding/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           display_name: displayName,
           bio,
           tagline,
@@ -733,15 +749,18 @@ export default function OnboardingPage() {
           phone: phone || null,
           youtube_channel_id: youtubeChannelId || null,
           facebook_live_url: facebookLiveUrl || null,
-        })
-        .eq("id", divinerId);
+          onboarding_step: 2,
+        }),
+      });
 
-      if (updateError) {
-        setError(updateError.message);
+      if (!updateRes.ok) {
+        const errData = await updateRes.json();
+        setError(errData.error ?? "Failed to save profile");
         return;
       }
 
-      await saveStep(2);
+      const { divinerId: returnedId } = await updateRes.json();
+      if (returnedId && !divinerId) setDivinerId(returnedId);
       setCurrentStep(2);
     } catch {
       setError("Failed to save profile. Please try again.");
@@ -1029,6 +1048,12 @@ export default function OnboardingPage() {
             </div>
           )}
 
+          {isInvited && (
+            <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+              Your account was created by an admin. Complete the standard diviner onboarding flow here before dashboard access is unlocked.
+            </div>
+          )}
+
           {/* Step 1: Profile */}
           {currentStep === 1 && (
             <Card>
@@ -1217,9 +1242,18 @@ export default function OnboardingPage() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="astrology">Astrology</SelectItem>
-                                <SelectItem value="tarot">Tarot Reading</SelectItem>
-                                <SelectItem value="both">Both Astrology &amp; Tarot</SelectItem>
+                                {(!servicePackage ||
+                                  servicePackage.allowedCategories.includes("astrology")) && (
+                                  <SelectItem value="astrology">Astrology</SelectItem>
+                                )}
+                                {(!servicePackage ||
+                                  servicePackage.allowedCategories.includes("tarot")) && (
+                                  <SelectItem value="tarot">Tarot Reading</SelectItem>
+                                )}
+                                {(!servicePackage ||
+                                  servicePackage.allowedCategories.length === 2) && (
+                                  <SelectItem value="both">Both Astrology &amp; Tarot</SelectItem>
+                                )}
                               </SelectContent>
                             </Select>
                           </div>
@@ -1361,6 +1395,16 @@ export default function OnboardingPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {servicePackage && (
+                  <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+                    Package:{" "}
+                    <span className="font-medium text-foreground">
+                      {servicePackage.displayName}
+                    </span>
+                    . You can currently configure{" "}
+                    {servicePackage.allowedCategories.join(" and ")} services only.
+                  </div>
+                )}
                 {serviceTemplates.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     Loading service templates...
@@ -1753,5 +1797,20 @@ export default function OnboardingPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen flex-col items-center justify-center bg-[#070b14]">
+          <Loader2 className="size-8 animate-spin text-primary" />
+          <p className="mt-4 text-sm text-zinc-400">Loading onboarding portal...</p>
+        </div>
+      }
+    >
+      <OnboardingContent />
+    </Suspense>
   );
 }

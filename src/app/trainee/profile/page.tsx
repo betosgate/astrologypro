@@ -11,7 +11,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CircularProgress } from "@/components/ui/circular-progress";
+import { ProfileCompletionBar } from "@/components/ui/profile-completion-bar";
+import { calculateProfileCompletion } from "@/lib/profile-completion";
 import { ProfileEditor } from "@/components/trainee/profile-editor";
+import {
+  getAllowedSpecialtiesForPackage,
+  getRoleServicePackages,
+  resolveRoleServicePackage,
+} from "@/lib/role-service-packages";
 import {
   GraduationCap,
   TrendingUp,
@@ -62,7 +69,7 @@ export default async function TraineeProfilePage() {
   const { data: trainee } = await supabase
       .from("trainees")
       .select(
-        "id, name, email, username, bio, specialties, phone, timezone, goals, training_status, mentor_diviner_id, graduated_at, created_at"
+        "id, name, email, username, bio, specialties, phone, timezone, goals, training_status, mentor_diviner_id, graduated_at, created_at, service_package_code"
       )
       .eq("user_id", user.id)
       .single();
@@ -123,6 +130,26 @@ export default async function TraineeProfilePage() {
     month: "long",
     year: "numeric",
   });
+  const resolvedPackage = resolveRoleServicePackage(
+    await getRoleServicePackages(),
+    trainee.service_package_code,
+  );
+  const allowedSpecialties = getAllowedSpecialtiesForPackage(
+    ALLOWED_SPECIALTIES,
+    resolvedPackage,
+  );
+
+  const completion = calculateProfileCompletion([
+    { key: "name", label: "Name", value: trainee.name },
+    { key: "email", label: "Email", value: trainee.email },
+    { key: "phone", label: "Phone", value: trainee.phone },
+    { key: "timezone", label: "Timezone", value: trainee.timezone },
+    { key: "bio", label: "Bio", value: trainee.bio },
+    { key: "avatar_url", label: "Profile Photo", value: avatarUrl },
+    { key: "birth_date", label: "Date of Birth", value: clientProfile?.birth_date },
+    { key: "birth_time", label: "Birth Time", value: clientProfile?.birth_time },
+    { key: "birth_city", label: "Birth City", value: clientProfile?.birth_city },
+  ]);
 
   return (
     <div className="space-y-8">
@@ -134,12 +161,26 @@ export default async function TraineeProfilePage() {
         </p>
       </div>
 
+      <ProfileCompletionBar
+        percentage={completion.percentage}
+        missingFields={completion.missingFields}
+        completedCount={completion.completedCount}
+        totalCount={completion.totalCount}
+      />
+
       {/* ── Profile Editor (client component) ── */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Personal Information</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+            Current package:{" "}
+            <span className="font-medium text-foreground">
+              {resolvedPackage.displayName}
+            </span>
+            . Allowed categories: {resolvedPackage.allowedCategories.join(", ")}.
+          </div>
           <ProfileEditor
             profileId={trainee.id}
             name={trainee.name}
@@ -147,7 +188,7 @@ export default async function TraineeProfilePage() {
             specialties={trainee.specialties ?? []}
             avatarUrl={avatarUrl}
             username={trainee.username}
-            allowedSpecialties={ALLOWED_SPECIALTIES}
+            allowedSpecialties={allowedSpecialties}
             phone={trainee.phone ?? null}
             timezone={trainee.timezone ?? null}
             goals={trainee.goals ?? null}

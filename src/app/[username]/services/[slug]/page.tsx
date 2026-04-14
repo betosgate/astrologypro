@@ -22,6 +22,10 @@ import { APP_URL } from "@/lib/constants";
 import { getDivinerAvatarUrl, getDivinerCoverImageUrl } from "@/lib/diviner-images";
 import { PageTracker } from "@/components/landing/page-tracker";
 import { RefLinkPreserver } from "./ref-link-preserver";
+import { filterVisiblePublicServices, getServiceCategoryLabel } from "@/lib/public-services";
+import { buildServiceDetailSchemaGraph } from "@/lib/seo/schema-builders";
+import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
+import { canPubliclySellService } from "@/lib/payout-readiness";
 
 interface PageProps {
   params: Promise<{ username: string; slug: string }>;
@@ -51,8 +55,13 @@ async function getService(divinerId: string, slug: string) {
     .eq("diviner_id", divinerId)
     .eq("slug", slug)
     .eq("is_active", true)
-    .single();
-  return data;
+    .maybeSingle();
+  if (!data || filterVisiblePublicServices([data]).length === 0) {
+    return null;
+  }
+
+  const [service] = await applyRuntimePricesToServices(supabase, [data]);
+  return service ?? null;
 }
 
 async function getTestimonials(divinerId: string, limit = 3) {
@@ -100,13 +109,17 @@ export async function generateMetadata({
 
   const ogImage = getDivinerCoverImageUrl(diviner.cover_image_url || diviner.avatar_url);
 
+  const canonical = `${APP_URL}/${username}/services/${slug}`;
+
   return {
     title,
     description,
+    alternates: { canonical },
+    robots: { index: true, follow: true },
     openGraph: {
       title,
       description,
-      url: `${APP_URL}/${username}/services/${slug}`,
+      url: canonical,
       type: "website",
       ...(ogImage && {
         images: [{ url: ogImage, width: 1200, height: 630 }],
@@ -142,7 +155,7 @@ function GoldStars({ rating, size = "md" }: { rating: number; size?: "sm" | "md"
 }
 
 function CategoryBadge({ category }: { category: string }) {
-  const label = category === "astrology" ? "Astrology" : category === "tarot" ? "Tarot" : category;
+  const label = getServiceCategoryLabel(category);
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/25 bg-gold/5 px-3 py-0.5 text-xs font-medium capitalize text-gold/90">
       <Sparkles className="size-3" />
@@ -178,8 +191,46 @@ export default async function ServiceDetailPage({
   const profileUrl = `/${username}${refParam}`;
   const serviceImageUrl = getServiceImageUrl(service.slug);
   const requiresBirthData = service.category === "astrology" || !!(service as Record<string, unknown>).requires_birth_data;
+  const bookingEnabled = canPubliclySellService(service, diviner);
 
   const divinerAvatarUrl = getDivinerAvatarUrl(diviner.avatar_url);
+  const locationLine = diviner.seo_is_remote_global
+    ? "Available for remote readings worldwide"
+    : diviner.seo_city && diviner.seo_country
+      ? `Based in ${diviner.seo_city}, ${diviner.seo_country}`
+      : diviner.seo_region && diviner.seo_country
+        ? `Serving ${diviner.seo_region}, ${diviner.seo_country}`
+        : "Delivered online through AstrologyPro";
+  const serviceForBullets =
+    service.category === "astrology"
+      ? [
+          "Clients who want clarity around timing, patterns, and big life transitions",
+          "People preparing for a major decision, relationship shift, or career pivot",
+          "Returning astrology clients who want a guided chart walkthrough instead of a generic report",
+        ]
+      : service.category === "tarot"
+        ? [
+            "Clients who need direct guidance on a specific question or crossroads",
+            "People looking for intuitive reflection with clear next-step advice",
+            "Returning clients who want a focused reading rather than a general session",
+          ]
+        : [
+            "Clients who want tailored spiritual guidance in a live session",
+            "People who value direct interpretation over self-serve content",
+            "Anyone wanting a guided conversation with clear next steps",
+          ];
+  const proofBullets = [
+    locationLine,
+    bookingCount > 0
+      ? `${bookingCount} booked session${bookingCount === 1 ? "" : "s"} for this service`
+      : null,
+    Array.isArray(diviner.seo_languages) && diviner.seo_languages.length > 0
+      ? `Sessions available in ${diviner.seo_languages.slice(0, 3).join(", ")}`
+      : null,
+    diviner.seo_years_experience
+      ? `${diviner.seo_years_experience}+ years of experience`
+      : null,
+  ].filter(Boolean) as string[];
 
   // Category-specific included bullets
   const includedBullets =
@@ -228,25 +279,17 @@ export default async function ServiceDetailPage({
     },
   ];
 
-  // Schema.org structured data
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@type": "Service",
-    name: service.name,
-    description: service.description,
-    provider: {
-      "@type": "Person",
-      name: diviner.display_name,
-      url: `${APP_URL}/${username}`,
-      ...(diviner.avatar_url && { image: diviner.avatar_url }),
-    },
-    offers: {
-      "@type": "Offer",
-      price: Number(service.base_price),
-      priceCurrency: "USD",
-      url: `${APP_URL}/${username}/services/${service.slug}`,
-    },
-  };
+  // Schema.org structured data — rich entity graph with breadcrumbs
+  const structuredData = buildServiceDetailSchemaGraph(
+    diviner,
+    service,
+    [
+      { name: "Home", url: `${APP_URL}` },
+      { name: diviner.display_name, url: `${APP_URL}/${username}` },
+      { name: "Services", url: `${APP_URL}/${username}/services` },
+      { name: service.name, url: `${APP_URL}/${username}/services/${service.slug}` },
+    ],
+  );
 
   return (
     <>
@@ -275,12 +318,18 @@ export default async function ServiceDetailPage({
             <ChevronRight className="size-3 text-silver/40" />
             <span className="text-silver/40 truncate max-w-[140px]">{service.name}</span>
           </div>
-          <Link
-            href={bookUrl}
-            className="rounded-full bg-gold px-4 py-1.5 text-xs font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
-          >
-            Book Now
-          </Link>
+          {bookingEnabled ? (
+            <Link
+              href={bookUrl}
+              className="rounded-full bg-gold px-4 py-1.5 text-xs font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
+            >
+              Book Now
+            </Link>
+          ) : (
+            <span className="rounded-full border border-white/10 px-4 py-1.5 text-xs font-semibold text-silver/45">
+              Booking unavailable
+            </span>
+          )}
         </div>
       </nav>
 
@@ -303,6 +352,12 @@ export default async function ServiceDetailPage({
                 <p className="mt-4 text-base leading-relaxed text-silver/70 md:text-lg">
                   {service.description}
                 </p>
+              )}
+
+              {!bookingEnabled && (
+                <div className="mt-5 max-w-xl rounded-2xl border border-amber-500/20 bg-amber-500/8 px-4 py-3 text-sm text-amber-100/85">
+                  This paid service is temporarily unavailable while payment setup is being completed.
+                </div>
               )}
 
               {/* Diviner attribution */}
@@ -352,13 +407,19 @@ export default async function ServiceDetailPage({
 
               {/* Primary CTA */}
               <div className="mt-8">
-                <Link
-                  href={bookUrl}
-                  className="inline-flex h-12 items-center gap-2 rounded-lg bg-gold px-8 text-sm font-semibold text-cosmos-900 shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-gold-light hover:shadow-[0_0_30px_rgba(201,168,76,0.4)]"
-                >
-                  Book This Reading
-                  <ArrowRight className="size-4" />
-                </Link>
+                {bookingEnabled ? (
+                  <Link
+                    href={bookUrl}
+                    className="inline-flex h-12 items-center gap-2 rounded-lg bg-gold px-8 text-sm font-semibold text-cosmos-900 shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-gold-light hover:shadow-[0_0_30px_rgba(201,168,76,0.4)]"
+                  >
+                    Book This Reading
+                    <ArrowRight className="size-4" />
+                  </Link>
+                ) : (
+                  <span className="inline-flex h-12 items-center rounded-lg border border-white/10 px-8 text-sm font-semibold text-silver/45">
+                    Booking temporarily unavailable
+                  </span>
+                )}
               </div>
             </div>
 
@@ -462,6 +523,47 @@ export default async function ServiceDetailPage({
                 </p>
               </div>
             )}
+          </div>
+        </div>
+
+        <div className="cosmic-divider mx-auto mt-12 max-w-6xl md:mt-16" />
+      </section>
+
+      <section className="py-12 md:py-16">
+        <div className="mx-auto grid max-w-5xl gap-6 px-4 lg:grid-cols-[1.05fr,0.95fr]">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 md:p-8">
+            <p className="text-xs uppercase tracking-[0.24em] text-gold/70">
+              Who This Reading Is For
+            </p>
+            <h2 className="mt-3 font-display text-3xl font-semibold text-cream">
+              A clearer fit for the right client
+            </h2>
+            <div className="mt-5 space-y-3">
+              {serviceForBullets.map((bullet) => (
+                <div
+                  key={bullet}
+                  className="rounded-2xl border border-white/8 bg-cosmos-950/40 px-4 py-3 text-sm text-cream/85"
+                >
+                  {bullet}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-gold/15 bg-gold/[0.04] p-6 md:p-8">
+            <p className="text-xs uppercase tracking-[0.24em] text-gold/70">
+              Why Book Here
+            </p>
+            <div className="mt-5 space-y-3">
+              {proofBullets.map((bullet) => (
+                <div
+                  key={bullet}
+                  className="rounded-2xl border border-gold/10 bg-cosmos-950/45 px-4 py-3 text-sm text-cream/85"
+                >
+                  {bullet}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -680,19 +782,25 @@ export default async function ServiceDetailPage({
             {service.duration_minutes}-minute session with {diviner.display_name}
             {" "}&mdash; {formatCurrency(Number(service.base_price))}
           </p>
-          <Link
-            href={bookUrl}
-            className="inline-flex h-12 items-center gap-2 rounded-lg bg-gold px-8 text-sm font-semibold text-cosmos-900 shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-gold-light hover:shadow-[0_0_30px_rgba(201,168,76,0.4)]"
-          >
-            Book This Reading
-            <ArrowRight className="size-4" />
-          </Link>
+          {bookingEnabled ? (
+            <Link
+              href={bookUrl}
+              className="inline-flex h-12 items-center gap-2 rounded-lg bg-gold px-8 text-sm font-semibold text-cosmos-900 shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-gold-light hover:shadow-[0_0_30px_rgba(201,168,76,0.4)]"
+            >
+              Book This Reading
+              <ArrowRight className="size-4" />
+            </Link>
+          ) : (
+            <span className="inline-flex h-12 items-center rounded-lg border border-white/10 px-8 text-sm font-semibold text-silver/45">
+              Booking temporarily unavailable
+            </span>
+          )}
         </div>
       </section>
 
       {/* ===== STICKY PRICING BAR (desktop: right sidebar; mobile: bottom bar) ===== */}
       <Suspense fallback={null}>
-        <RefLinkPreserver bookUrl={bookUrl}>
+        <RefLinkPreserver bookUrl={bookingEnabled ? bookUrl : profileUrl}>
           <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-cosmos-900/95 px-4 py-3 backdrop-blur-xl md:hidden">
             <div className="mx-auto flex max-w-lg items-center justify-between">
               <div>
@@ -701,12 +809,18 @@ export default async function ServiceDetailPage({
                   {formatCurrency(Number(service.base_price))} &middot; {service.duration_minutes} min
                 </p>
               </div>
-              <Link
-                href={bookUrl}
-                className="rounded-lg bg-gold px-5 py-2.5 text-sm font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
-              >
-                Book Now
-              </Link>
+              {bookingEnabled ? (
+                <Link
+                  href={bookUrl}
+                  className="rounded-lg bg-gold px-5 py-2.5 text-sm font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
+                >
+                  Book Now
+                </Link>
+              ) : (
+                <span className="rounded-lg border border-white/10 px-5 py-2.5 text-sm font-semibold text-silver/45">
+                  Unavailable
+                </span>
+              )}
             </div>
             <div className="mt-2 flex items-center justify-center gap-1.5 text-[10px] text-silver/40">
               <Shield className="size-3" />

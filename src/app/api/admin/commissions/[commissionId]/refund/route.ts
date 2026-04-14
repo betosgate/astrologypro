@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createFinanceOperationNote, logFinanceAdminAction } from "@/lib/finance-ops";
 
 export const dynamic = "force-dynamic";
 
@@ -133,6 +134,26 @@ export async function POST(
       { status: 500 }
     );
   }
+
+  await createFinanceOperationNote({
+    createdByUserId: user.id,
+    orderReference: null,
+    noteType: "manual_adjustment",
+    note: `Affiliate commission refund processed for commission ${commissionId}: ${refund_amount_cents} cents`,
+    status: "resolved",
+  });
+
+  await logFinanceAdminAction({
+    adminUserId: user.id,
+    targetUserId: commission.affiliate_id,
+    actionType: "finance_affiliate_commission_refunded",
+    details: {
+      commissionId,
+      refundAmountCents: refund_amount_cents,
+      totalRefundedCents: Number(data.refund_amount_cents),
+      newStatus,
+    },
+  });
 
   return NextResponse.json({
     commission_id: commissionId,

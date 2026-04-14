@@ -4,6 +4,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
+const ALLOWED_PRODUCT_TYPES = new Set([
+  "package",
+  "session",
+  "subscription",
+  "diviner_profile",
+  "diviner_service",
+]);
+
 // GET /api/dashboard/affiliate-commission/links
 // Returns all referral links across all affiliates belonging to the authenticated diviner.
 // Query params: affiliate_id?, is_active?, limit?, cursor?
@@ -144,6 +152,56 @@ export async function POST(request: Request) {
     );
   }
 
+  const normalizedProductType =
+    typeof product_type === "string" && product_type.trim()
+      ? product_type.trim()
+      : null;
+
+  if (normalizedProductType && !ALLOWED_PRODUCT_TYPES.has(normalizedProductType)) {
+    return NextResponse.json(
+      {
+        type: "https://httpstatuses.io/422",
+        title: "Validation error",
+        status: 422,
+        detail: "Unsupported referral destination type.",
+      },
+      { status: 422 }
+    );
+  }
+
+  if (normalizedProductType === "diviner_service") {
+    if (typeof product_id !== "string" || product_id.trim() === "") {
+      return NextResponse.json(
+        {
+          type: "https://httpstatuses.io/422",
+          title: "Validation error",
+          status: 422,
+          detail: "product_id is required for diviner_service links.",
+        },
+        { status: 422 }
+      );
+    }
+
+    const { data: service } = await admin
+      .from("services")
+      .select("id")
+      .eq("id", product_id.trim())
+      .eq("diviner_id", diviner.id)
+      .maybeSingle();
+
+    if (!service) {
+      return NextResponse.json(
+        {
+          type: "https://httpstatuses.io/404",
+          title: "Service not found",
+          status: 404,
+          detail: "The selected service does not belong to this diviner.",
+        },
+        { status: 404 }
+      );
+    }
+  }
+
   // Generate a unique slug: {affiliateId prefix}-{timestamp}-{random}
   const slug = `${affiliate_id.slice(0, 8)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -154,7 +212,7 @@ export async function POST(request: Request) {
     is_active: true,
   };
   if (typeof product_id === "string" && product_id.trim()) insertPayload.product_id = product_id.trim();
-  if (typeof product_type === "string" && product_type.trim()) insertPayload.product_type = product_type.trim();
+  if (normalizedProductType) insertPayload.product_type = normalizedProductType;
 
   const { data, error } = await admin
     .from("affiliate_referral_links")

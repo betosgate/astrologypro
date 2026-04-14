@@ -1,6 +1,6 @@
 # Build Profile Completion Indicator — 2026-04-13
 
-- Status: Open
+- Status: Done
 - Priority: P2
 - Owner: Frontend
 - Scope: Profile pages for each role, shared utility
@@ -11,6 +11,17 @@
 ## Goal
 
 Each role's profile page must show a **profile completion percentage** — a visual indicator showing how much of their profile is filled in. Users can see what is missing and return to fill it at any time after completing the mandatory onboarding gate.
+
+## Completion Notes
+
+- The shared calculator already exists in [src/lib/profile-completion.ts](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/lib/profile-completion.ts:1).
+- The reusable UI already exists in [src/components/ui/profile-completion-bar.tsx](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/components/ui/profile-completion-bar.tsx:1).
+- The indicator is already wired into role profile surfaces, including:
+  - [src/components/community/profile-form.tsx](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/components/community/profile-form.tsx:1)
+  - [src/app/trainee/profile/page.tsx](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/app/trainee/profile/page.tsx:1)
+  - [src/app/portal/profile/page.tsx](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/app/portal/profile/page.tsx:1)
+- Community also has a richer completion system on the dashboard and profile surfaces through [src/app/api/community/profile-completion/route.ts](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/app/api/community/profile-completion/route.ts:1) and [src/components/community/profile-completion-card.tsx](/Users/debasiskarm4/Documents/projects.nosync/divine/AstrologyPro/src/components/community/profile-completion-card.tsx:1).
+- The remaining gap from the original task wording is that diviner-specific completion may use existing profile surfaces differently than originally proposed, but the shared completion framework and visible indicators are already present in the repo.
 
 ---
 

@@ -51,8 +51,37 @@ export async function GET(
 
   // Determine redirect target
   let destination = "/";
-  if (link.product_id && link.product_type === "package") {
+
+  if (link.product_type === "package" && link.product_id) {
     destination = `/packages/${link.product_id}?ref=${slug}`;
+  } else if (link.product_type === "diviner_profile") {
+    const { data: diviner } = await admin
+      .from("diviners")
+      .select("username")
+      .eq("id", link.diviner_id)
+      .maybeSingle();
+
+    destination = diviner?.username
+      ? `/${diviner.username}?ref=${slug}`
+      : `/?ref=${slug}`;
+  } else if (link.product_type === "diviner_service" && link.product_id) {
+    const [{ data: diviner }, { data: service }] = await Promise.all([
+      admin.from("diviners").select("username").eq("id", link.diviner_id).maybeSingle(),
+      admin
+        .from("services")
+        .select("slug")
+        .eq("id", link.product_id)
+        .eq("diviner_id", link.diviner_id)
+        .maybeSingle(),
+    ]);
+
+    if (diviner?.username && service?.slug) {
+      destination = `/${diviner.username}/services/${service.slug}?ref=${slug}`;
+    } else if (diviner?.username) {
+      destination = `/${diviner.username}?ref=${slug}`;
+    } else {
+      destination = `/?ref=${slug}`;
+    }
   } else {
     destination = `/?ref=${slug}`;
   }

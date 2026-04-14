@@ -10,17 +10,67 @@ import {
   getAllCategorySlugs,
   getAllAuthorSlugs,
 } from '@/lib/blog'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getServiceLandingTemplates } from '@/lib/service-landings'
 
 const BASE_URL = 'https://astrologypro.com'
+
+// ── Fetch all indexable diviner profiles with their active services ──────────
+async function getDivinerSitemapData() {
+  const admin = createAdminClient()
+
+  const { data: diviners } = await admin
+    .from('diviners')
+    .select('username, updated_at')
+    .eq('is_active', true)
+    .order('username', { ascending: true })
+
+  if (!diviners || diviners.length === 0) return []
+
+  // Fetch services for all active diviners in one query
+  const usernames = diviners.map((d) => d.username)
+  const { data: services } = await admin
+    .from('services')
+    .select('slug, diviner_id, updated_at, diviners!inner(username)')
+    .eq('is_active', true)
+    .in('diviners.username', usernames)
+
+  type ServiceRow = {
+    slug: string
+    diviner_id: string
+    updated_at: string | null
+    diviners: { username: string } | { username: string }[]
+  }
+
+  const servicesByUsername: Record<string, ServiceRow[]> = {}
+  for (const svc of (services ?? []) as ServiceRow[]) {
+    const divinerData = Array.isArray(svc.diviners) ? svc.diviners[0] : svc.diviners
+    const uname = divinerData?.username
+    if (!uname) continue
+    if (!servicesByUsername[uname]) servicesByUsername[uname] = []
+    servicesByUsername[uname].push(svc)
+  }
+
+  return diviners.map((d) => ({
+    username: d.username,
+    updatedAt: d.updated_at ? new Date(d.updated_at) : null,
+    services: (servicesByUsername[d.username] ?? []).map((s) => ({
+      slug: s.slug,
+      updatedAt: s.updated_at ? new Date(s.updated_at) : null,
+    })),
+  }))
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date()
 
-  // Blog dynamic pages — fetched from DB
-  const [blogPostSlugs, blogCategorySlugs, blogAuthorSlugs] = await Promise.all([
+  // Fetch all data in parallel
+  const [blogPostSlugs, blogCategorySlugs, blogAuthorSlugs, divinerData, serviceTemplates] = await Promise.all([
     getAllPublishedPostSlugs(),
     getAllCategorySlugs(),
     getAllAuthorSlugs(),
+    getDivinerSitemapData(),
+    getServiceLandingTemplates(),
   ])
 
   const blogPostPages: MetadataRoute.Sitemap = blogPostSlugs.map((entry) => ({
@@ -69,6 +119,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     '/blog',
     '/discover',
     '/learn',
+    '/services',
     '/tarot',
     '/tarot/spreads',
     '/guides',
@@ -148,9 +199,51 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }))
 
+  // ── Diviner profile pages ──────────────────────────────────────────────────
+  const divinerProfilePages: MetadataRoute.Sitemap = divinerData.map((d) => ({
+    url: `${BASE_URL}/${d.username}`,
+    lastModified: d.updatedAt ?? now,
+    changeFrequency: 'weekly' as const,
+    priority: 0.9,
+  }))
+
+  // ── Diviner services hub pages ─────────────────────────────────────────────
+  const divinerServicesHubPages: MetadataRoute.Sitemap = divinerData
+    .filter((d) => d.services.length > 0)
+    .map((d) => ({
+      url: `${BASE_URL}/${d.username}/services`,
+      lastModified: d.updatedAt ?? now,
+      changeFrequency: 'weekly' as const,
+      priority: 0.8,
+    }))
+
+  // ── Diviner service detail pages (primary organic ranking targets) ─────────
+  const divinerServiceDetailPages: MetadataRoute.Sitemap = divinerData.flatMap((d) =>
+    d.services.map((svc) => ({
+      url: `${BASE_URL}/${d.username}/services/${svc.slug}`,
+      lastModified: svc.updatedAt ?? d.updatedAt ?? now,
+      changeFrequency: 'weekly' as const,
+      priority: 0.8,
+    }))
+  )
+
+  const serviceOnlyLandingPages: MetadataRoute.Sitemap = serviceTemplates.map((service) => ({
+    url: `${BASE_URL}/services/${service.slug}`,
+    lastModified: now,
+    changeFrequency: 'weekly' as const,
+    priority: 0.8,
+  }))
+
+  // NOTE: booking pages (/{username}/book/{slug}) are intentionally excluded —
+  // they carry robots noindex and should not appear in the sitemap.
+
   return [
     ...marketingPages,
     ...hubPages,
+    ...divinerProfilePages,
+    ...divinerServicesHubPages,
+    ...divinerServiceDetailPages,
+    ...serviceOnlyLandingPages,
     ...zodiacPages,
     ...tarotCardPages,
     ...tarotSpreadPages,
