@@ -1819,8 +1819,8 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
 
 // ─── Horary Section ───────────────────────────────────────────────────────────
 
-function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
-  data: any; areaOfInquiry?: string;
+function HorarySection({ data, areaOfInquiry, rawData, checkDacen, onDecanClick }: {
+  data: any; areaOfInquiry?: string; rawData?: any;
   checkDacen: (p: string, s: string) => boolean;
   onDecanClick: (p: string, s: string) => void;
 }) {
@@ -1915,7 +1915,7 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
               <HtmlText html={item.data ?? item.text ?? String(item)} />
               <div className="mt-1.5 flex justify-center border-t border-black/10 pt-2">
                 <button
-                  onClick={() => trigger(item.title, item.data ?? item.text ?? "", item, areaOfInquiry)}
+                  onClick={() => trigger(item.title, item.data ?? item.text ?? "", item, areaOfInquiry, undefined, undefined, undefined, "horary_chart_v2", rawData, "astrological_aspect")}
                   className="horoscope-show-more"
                 >
                   Show More
@@ -1951,7 +1951,7 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
                 <HtmlText html={s.timeline_data ?? ""} />
                 <div className="mt-1.5 flex justify-center border-t border-black/10 pt-2">
                   <button
-                    onClick={() => trigger(s.timeline_title, s.timeline_data, s, areaOfInquiry)}
+                    onClick={() => trigger(s.timeline_title, s.timeline_data, s, areaOfInquiry, undefined, undefined, undefined, "horary_chart_v2", rawData, "summary")}
                     className="horoscope-show-more"
                   >
                     Show More
@@ -2006,7 +2006,7 @@ function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
                 <HtmlText html={r.data ?? r.text ?? String(r)} />
                 <div className="mt-1.5 flex justify-center border-t border-black/10 pt-2">
                   <button
-                    onClick={() => trigger(r.title, r.data ?? r.text ?? "", r, areaOfInquiry)}
+                    onClick={() => trigger(r.title, r.data ?? r.text ?? "", r, areaOfInquiry, undefined, undefined, undefined, "horary_chart_v2", rawData, "summary")}
                     className="horoscope-show-more"
                   >
                     Show More
@@ -3122,6 +3122,11 @@ export default function AdminHoroscopePage() {
                       <HorarySection
                         data={ai.horary_chart_question}
                         areaOfInquiry={form.areaOfInquiry}
+                        rawData={{
+                          person1: form.person1,
+                          question: form.question,
+                          chartJson: results?.horary_chart_data,
+                        }}
                         checkDacen={checkDacen}
                         onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
                       />
