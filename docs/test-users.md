@@ -185,7 +185,9 @@ Users with multiple roles are redirected to `/switch` on login to select their p
 - Multi-role users land on `/switch` (portal switcher) after login
 - `community_members` rows use `membership_status = 'active'`
 - Diviners, advocates, and trainees have `onboarding_completed = true`
-- To re-seed (idempotent): `node scripts/seed-test-users.js`
+- To re-seed single-role users: `node scripts/seed-test-users.js`
+- To populate KPI/activity data for all roles: `node scripts/seed-role-data.mjs`
+- To populate a single role: `node scripts/seed-role-data.mjs diviner|trainee|client|advocate`
 
 ---
 
