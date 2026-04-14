@@ -412,9 +412,21 @@ export function ChimeSessionRoom({
       meetingSessionRef.current.audioVideo.stopContentShare();
     } else {
       try {
-        await meetingSessionRef.current.audioVideo.startContentShareFromScreenCapture();
+        // Use getDisplayMedia directly so we can pass selfBrowserSurface: 'exclude'.
+        // This removes the current tab from the Chrome picker entirely, which is the
+        // industry-standard fix (Chrome 107+) for the infinite-mirror problem.
+        // We then hand the stream to Chime's startContentShare() instead of letting
+        // the SDK call getDisplayMedia itself.
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { frameRate: { ideal: 30 } },
+          audio: false,
+          // @ts-expect-error — selfBrowserSurface is a Chrome 107+ constraint not yet in TS types
+          selfBrowserSurface: "exclude",
+        });
+        await meetingSessionRef.current.audioVideo.startContentShare(stream);
       } catch {
-        // User dismissed the picker or browser denied permission — no-op
+        // User dismissed the picker, browser denied permission, or
+        // selfBrowserSurface is unsupported — no-op
       }
     }
   }, [isScreenSharing]);
@@ -823,16 +835,42 @@ export function ChimeSessionRoom({
 
             /* ── PRESENTATION MODE: screen share active ─────────────────── */
             if (contentTile) {
+              // When YOU are the sharer (contentTile.isLocal === true), do NOT render
+              // the screen-capture video — it would show the page inside itself,
+              // creating an infinite mirror loop. Show a "presenting" placeholder instead.
+              // The remote participant has isLocal === false so they still see the real video.
+              const isLocalShare = contentTile.isLocal;
+
               return (
                 <div className="absolute inset-0 flex">
                   {/* Screen share — main panel */}
                   <div className="flex min-w-0 flex-1 items-center justify-center bg-black">
-                    <video
-                      ref={videoRef(contentTile.tileId)}
-                      autoPlay
-                      playsInline
-                      className="max-h-full max-w-full object-contain"
-                    />
+                    {isLocalShare ? (
+                      <div className="flex flex-col items-center gap-4 text-center">
+                        <div className="flex h-20 w-20 items-center justify-center rounded-full border border-primary/30 bg-primary/10">
+                          <Monitor className="h-9 w-9 text-primary" />
+                        </div>
+                        <p className="text-base font-semibold text-white">
+                          You are presenting your screen
+                        </p>
+                        <p className="text-sm text-zinc-400">
+                          Others can see your screen. Stop sharing to return to the meeting view.
+                        </p>
+                        <button
+                          onClick={handleToggleScreenShare}
+                          className="mt-2 rounded-lg border border-destructive/50 bg-destructive/20 px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/30 transition-colors"
+                        >
+                          Stop Sharing
+                        </button>
+                      </div>
+                    ) : (
+                      <video
+                        ref={videoRef(contentTile.tileId)}
+                        autoPlay
+                        playsInline
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    )}
                   </div>
 
                   {/* Camera strip — right panel */}
