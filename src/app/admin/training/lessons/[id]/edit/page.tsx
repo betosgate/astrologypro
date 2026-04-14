@@ -15,6 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import { SectionContainer } from "@/components/shared/section-container";
 import { TrainingNotes } from "@/components/admin/training-notes";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { uploadTrainingVideo } from "@/lib/training/upload-video";
 
 // ---- types for sub-resource sections ----
@@ -71,6 +72,13 @@ interface LessonOption {
 
 type VideoMode = "youtube" | "url" | "upload";
 
+type ConfirmationState = {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  onConfirm: () => Promise<void>;
+};
+
 function detectVideoMode(url: string | null): VideoMode {
   if (!url) return "youtube";
   if (url.includes("youtube.com") || url.includes("youtu.be")) return "youtube";
@@ -107,6 +115,8 @@ export default function EditLessonPage() {
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<ConfirmationState | null>(null);
+  const [confirmationLoading, setConfirmationLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
@@ -272,6 +282,17 @@ export default function EditLessonPage() {
     loadQuestions();
   }, [loadVideos, loadAssets, loadQuestions]);
 
+  async function handleConfirmAction() {
+    if (!confirmation) return;
+    setConfirmationLoading(true);
+    try {
+      await confirmation.onConfirm();
+      setConfirmation(null);
+    } finally {
+      setConfirmationLoading(false);
+    }
+  }
+
   // ---- video handlers ----
   async function handleAddVideo(e: React.FormEvent) {
     e.preventDefault();
@@ -311,7 +332,6 @@ export default function EditLessonPage() {
   }
 
   async function handleDeleteVideo(videoId: string) {
-    if (!confirm("Delete this video?")) return;
     try {
       const res = await fetch(
         `/api/admin/training/lessons/${id}/videos?video_id=${videoId}`,
@@ -379,7 +399,6 @@ export default function EditLessonPage() {
   }
 
   async function handleDeleteAsset(assetId: string) {
-    if (!confirm("Delete this asset?")) return;
     try {
       const res = await fetch(
         `/api/admin/training/lessons/${id}/assets?asset_id=${assetId}`,
@@ -479,7 +498,6 @@ export default function EditLessonPage() {
   }
 
   async function handleDeleteQuestion(questionId: string) {
-    if (!confirm("Delete this question?")) return;
     try {
       const res = await fetch(
         `/api/admin/training/quiz/${id}?question_id=${questionId}`,
@@ -630,8 +648,6 @@ export default function EditLessonPage() {
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this lesson? Associated quizzes will also be deleted.")) return;
-
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/training/lessons/${id}`, {
@@ -661,6 +677,18 @@ export default function EditLessonPage() {
 
   return (
     <SectionContainer size="wide" verticalPadding="none" className="space-y-6">
+      <ConfirmDialog
+        open={confirmation != null}
+        title={confirmation?.title ?? ""}
+        description={confirmation?.description ?? ""}
+        confirmLabel={confirmation?.confirmLabel ?? "Delete"}
+        loading={confirmationLoading}
+        onOpenChange={(open) => {
+          if (!open && !confirmationLoading) setConfirmation(null);
+        }}
+        onConfirm={handleConfirmAction}
+      />
+
       <div className="flex items-center gap-3">
         <Button asChild variant="ghost" size="sm">
           <Link href="/admin/training">← Back</Link>
@@ -969,7 +997,15 @@ export default function EditLessonPage() {
                 type="button"
                 variant="destructive"
                 size="sm"
-                onClick={handleDelete}
+                onClick={() =>
+                  setConfirmation({
+                    title: "Delete lesson?",
+                    description:
+                      "This lesson and its associated quiz data will be deleted. This action cannot be undone.",
+                    confirmLabel: "Delete lesson",
+                    onConfirm: handleDelete,
+                  })
+                }
                 disabled={loading}
               >
                 Delete
@@ -1021,7 +1057,15 @@ export default function EditLessonPage() {
                       type="button"
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleDeleteVideo(v.id)}
+                      onClick={() =>
+                        setConfirmation({
+                          title: "Delete video?",
+                          description:
+                            "This video will be removed from the lesson. This action cannot be undone.",
+                          confirmLabel: "Delete video",
+                          onConfirm: () => handleDeleteVideo(v.id),
+                        })
+                      }
                       className="shrink-0"
                     >
                       Delete
@@ -1151,7 +1195,15 @@ export default function EditLessonPage() {
                       type="button"
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleDeleteAsset(a.id)}
+                      onClick={() =>
+                        setConfirmation({
+                          title: "Delete asset?",
+                          description:
+                            "This resource will be removed from the lesson. This action cannot be undone.",
+                          confirmLabel: "Delete asset",
+                          onConfirm: () => handleDeleteAsset(a.id),
+                        })
+                      }
                       className="shrink-0"
                     >
                       Delete
@@ -1297,7 +1349,15 @@ export default function EditLessonPage() {
                         type="button"
                         variant="destructive"
                         size="sm"
-                        onClick={() => handleDeleteQuestion(q.id)}
+                        onClick={() =>
+                          setConfirmation({
+                            title: "Delete question?",
+                            description:
+                              "This quiz question will be removed from the lesson. This action cannot be undone.",
+                            confirmLabel: "Delete question",
+                            onConfirm: () => handleDeleteQuestion(q.id),
+                          })
+                        }
                         className="shrink-0"
                       >
                         Delete
