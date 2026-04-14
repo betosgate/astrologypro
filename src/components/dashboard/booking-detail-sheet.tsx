@@ -301,7 +301,7 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
           <span className="sr-only">View details</span>
         </Button>
       </SheetTrigger>
-      <SheetContent>
+      <SheetContent className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Booking Details</SheetTitle>
         </SheetHeader>
