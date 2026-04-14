@@ -8,6 +8,7 @@ import {
   type TrainingQuizFormValue,
   type TrainingQuizLessonOption,
 } from "@/components/admin/training-quiz-form";
+import { SectionContainer } from "@/components/shared/section-container";
 
 type ApiQuestion = {
   question: string;
@@ -108,14 +109,14 @@ export default function EditQuizPage() {
 
   if (fetching || !initialValue) {
     return (
-      <div className="mx-auto max-w-2xl space-y-6">
+      <SectionContainer verticalPadding="md" className="space-y-6">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold tracking-tight">Edit Quiz</h1>
         </div>
         <div className="rounded-lg border px-4 py-12 text-center text-sm text-muted-foreground">
           Loading quiz…
         </div>
-      </div>
+      </SectionContainer>
     );
   }
 

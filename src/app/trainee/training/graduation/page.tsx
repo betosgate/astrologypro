@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { CertificateCopyButton } from "@/components/trainee/certificate-copy-button";
+import { SectionContainer } from "@/components/shared/section-container";
 
 export const dynamic = "force-dynamic";
 
@@ -70,7 +71,7 @@ export default async function TrainingGraduationPage() {
 
   if (!isGraduated) {
     return (
-      <div className="max-w-xl mx-auto space-y-6">
+      <SectionContainer size="narrow" verticalPadding="md" className="space-y-6">
         <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <Link href="/trainee/training" className="hover:text-foreground transition-colors">
             Training
@@ -99,12 +100,12 @@ export default async function TrainingGraduationPage() {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </SectionContainer>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <SectionContainer verticalPadding="md" className="space-y-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
         <Link href="/trainee/training" className="hover:text-foreground transition-colors">
@@ -228,6 +229,6 @@ export default async function TrainingGraduationPage() {
           Back to Training
         </Link>
       </Button>
-    </div>
+    </SectionContainer>
   );
 }

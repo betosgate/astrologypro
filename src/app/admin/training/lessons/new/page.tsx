@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import { uploadTrainingVideo } from "@/lib/training/upload-video";
+import { SectionContainer } from "@/components/shared/section-container";
 
 interface Category {
   id: string;
@@ -225,7 +226,7 @@ export default function NewLessonPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <SectionContainer size="wide" verticalPadding="md" className="space-y-6">
       <div className="flex items-center gap-3">
         <Button asChild variant="ghost" size="sm">
           <Link href="/admin/training">← Back</Link>
@@ -499,6 +500,6 @@ export default function NewLessonPage() {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </SectionContainer>
   );
 }

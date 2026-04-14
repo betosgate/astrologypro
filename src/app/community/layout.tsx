@@ -10,6 +10,7 @@ import { NavLink } from "@/components/shared/nav-link";
 import { NavDropdown } from "@/components/shared/nav-dropdown";
 import { PortalLogoutButton } from "@/components/portal/logout-button";
 import { OnboardingGuard } from "@/components/community/onboarding-guard";
+import { SectionContainer } from "@/components/shared/section-container";
 
 export const metadata = { title: "Community - AstrologyPro" };
 
@@ -46,9 +47,9 @@ export default async function CommunityLayout({ children }: { children: React.Re
             </div>
           </div>
         </header>
-        <main className="container mx-auto w-full max-w-2xl p-4 py-6 lg:p-8">
+        <SectionContainer as="main" size="narrow" verticalPadding="lg">
           <OnboardingGuard>{children}</OnboardingGuard>
-        </main>
+        </SectionContainer>
       </div>
     );
   }
@@ -152,9 +153,9 @@ export default async function CommunityLayout({ children }: { children: React.Re
             </div>
           </div>
         </header>
-        <main className="container mx-auto w-full max-w-5xl p-4 py-6 lg:p-8">
+        <SectionContainer as="main" verticalPadding="lg">
           {children}
-        </main>
+        </SectionContainer>
       </div>
     </div>
   );
