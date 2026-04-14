@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import type { UserContractRequirement } from "@/lib/contract-orchestration";
 
@@ -105,6 +107,7 @@ export function PendingContractsClient({
   const router = useRouter();
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const [signatureName, setSignatureName] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const current = requirements[0];
@@ -127,7 +130,7 @@ export function PendingContractsClient({
       const res = await fetch("/api/legal/contracts/accept", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requirement_id: requirementId }),
+        body: JSON.stringify({ requirement_id: requirementId, signature_name: signatureName.trim() }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
@@ -183,6 +186,25 @@ export function PendingContractsClient({
             />
           </div>
 
+          {hasScrolledToBottom && (
+            <div className="space-y-2">
+              <Label htmlFor="signature-name" className="text-sm font-medium">
+                Type your full name to sign
+              </Label>
+              <Input
+                id="signature-name"
+                value={signatureName}
+                onChange={(e) => setSignatureName(e.target.value)}
+                placeholder="Your full legal name"
+                className="font-serif text-base tracking-wide"
+                autoComplete="name"
+              />
+              <p className="text-xs text-muted-foreground">
+                By typing your name and clicking &ldquo;I Accept&rdquo;, you are providing your electronic signature.
+              </p>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
               {hasScrolledToBottom
@@ -192,7 +214,7 @@ export function PendingContractsClient({
             <Button
               size="lg"
               onClick={() => acceptRequirement(current.id)}
-              disabled={!hasScrolledToBottom || submittingId === current.id}
+              disabled={!hasScrolledToBottom || !signatureName.trim() || submittingId === current.id}
             >
               {submittingId === current.id ? "Accepting..." : "I Accept and Continue"}
             </Button>
