@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { stripe } from "@/lib/stripe/client";
+import { stripe, getOrCreateStripeCustomer } from "@/lib/stripe/client";
 import { APP_URL } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -236,21 +236,10 @@ export async function POST(request: NextRequest) {
       ? `${APP_URL}/mystery-school/checkout/cancel`
       : `${APP_URL}/community/upgrade`;
 
-    // Stripe Accounts V2 requires an existing customer object in test mode.
-    // Look up by email or create one so checkout works in both test and live.
-    const existingCustomers = await stripe.customers.list({
-      email: user.email!,
-      limit: 1,
-    });
-    const customer =
-      existingCustomers.data[0] ??
-      (await stripe.customers.create({
-        email: user.email!,
-        metadata: { supabase_user_id: user.id },
-      }));
+    const customerId = await getOrCreateStripeCustomer(user.email!, { supabase_user_id: user.id });
 
     const session = await stripe.checkout.sessions.create({
-      customer: customer.id,
+      customer: customerId,
       mode: "subscription",
       line_items: lineItems,
       metadata,

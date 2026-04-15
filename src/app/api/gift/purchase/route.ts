@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { stripe } from "@/lib/stripe/client";
+import { stripe, getOrCreateStripeCustomer } from "@/lib/stripe/client";
 import { PRICING } from "@/lib/constants";
 import { calculateMoneySplit } from "@/lib/money-split";
 
@@ -101,9 +101,11 @@ export async function POST(request: NextRequest) {
       platformFeeRule: "global_platform_fee_percent",
     });
 
+    const customerId = await getOrCreateStripeCustomer(purchaserEmail);
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      customer_email: purchaserEmail,
+      customer: customerId,
       line_items: [
         {
           price_data: {
