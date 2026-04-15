@@ -176,22 +176,22 @@ export async function PlanetaryReturns({ divinerId }: PlanetaryReturnsProps) {
 
   return (
     <Card className="border-sky-500/20 shadow-[0_0_15px_-3px_rgba(14,165,233,0.08)]">
-      <CardHeader className="flex flex-row items-center justify-between pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Orbit className="size-5 text-sky-500" />
+      <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4">
+        <CardTitle className="flex items-center gap-1.5 text-sm">
+          <Orbit className="size-4 text-sky-500" />
           Planetary Returns — Next 30 Days
         </CardTitle>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-[10px] text-muted-foreground">
           {returns.length} event{returns.length !== 1 ? "s" : ""}
         </span>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-4 pb-4 pt-0">
         {returns.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">
             No planetary returns in the next 30 days.
           </p>
         ) : (
-          <div className="space-y-2">
+          <div className="divide-y divide-border/40">
             {returns.map((evt, idx) => {
               const color = planetColor(evt.planet);
               const label =
@@ -202,38 +202,34 @@ export async function PlanetaryReturns({ divinerId }: PlanetaryReturnsProps) {
               return (
                 <div
                   key={`${evt.clientId}-${evt.planet}-${idx}`}
-                  className="flex items-center justify-between gap-3 rounded-lg border p-3"
+                  className="flex items-center justify-between gap-2 py-2 first:pt-0 last:pb-0"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Badge
-                      variant="outline"
-                      className={`shrink-0 text-base font-normal leading-none px-2 py-1 ${badgeClasses(color)}`}
-                    >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`shrink-0 text-sm w-5 text-center ${
+                      color === "amber" ? "text-amber-500" :
+                      color === "orange" ? "text-orange-500" :
+                      color === "red" ? "text-red-500" : "text-sky-500"
+                    }`}>
                       {evt.symbol}
-                    </Badge>
+                    </span>
                     <div className="min-w-0">
                       <Link
                         href={`/dashboard/clients/${evt.clientId}`}
-                        className="truncate text-sm font-medium hover:underline hover:text-primary"
+                        className="text-xs font-medium hover:underline hover:text-primary truncate block"
                       >
                         {evt.clientName}
                       </Link>
-                      <p className="text-xs text-muted-foreground">{label}</p>
+                      <p className="text-[10px] text-muted-foreground leading-tight">{label}</p>
                     </div>
                   </div>
                   <div className="shrink-0 text-right">
                     {evt.daysUntil === 0 ? (
-                      <span className="text-xs font-semibold text-amber-500">
-                        Today!
-                      </span>
+                      <span className="text-[10px] font-semibold text-amber-500">Today!</span>
                     ) : (
-                      <span className="text-xs text-muted-foreground tabular-nums">
-                        in {evt.daysUntil}d
+                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                        {formatReturnDate(evt.returnDate)} · <span className="font-medium">{evt.daysUntil}d</span>
                       </span>
                     )}
-                    <p className="text-xs text-muted-foreground">
-                      {formatReturnDate(evt.returnDate)}
-                    </p>
                   </div>
                 </div>
               );
