@@ -178,11 +178,19 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           { title: "Payments", description: "Gateway tracking and payouts", href: "/admin/payments", icon: CreditCard, status: "live" },
         ],
       },
+      {
+        groupLabel: "Growth & Advocacy",
+        cards: [
+          { title: "Social Advocacy", description: "Manage advocate program and leaderboard", href: "/admin/advocacy", icon: TrendingUp, status: "live" },
+          { title: "Campaign Detail", description: "Create and configure referral campaigns", href: "/admin/campaigns", icon: Zap, status: "live" },
+          { title: "Live Monitor", description: "Real-time view of all active broadcasts", href: "/admin/live-monitor", icon: Radio, status: "live" },
+        ],
+      },
     ],
     screens: [
       // Overview
-      { 
-        name: "overview", 
+      {
+        name: "overview",
         label: "Executive Analytics", 
         description: "Global KPIs and platform health overview.", 
         group: "Overview",
@@ -1783,6 +1791,78 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
 
+      // Training — Certificate Config
+      {
+        name: "certificate_config",
+        label: "Certificate Config",
+        description: "Configure every detail that appears on the graduation certificates the platform issues to trainees. Set the school name, program names, designation titles, and the Head Master's name and signature that will be printed on every certificate.",
+        group: "Training",
+        purpose: "Controls the content and authority of every graduation certificate issued by the school.",
+        bullets: [
+          "School name — the official institution name printed at the top of every certificate",
+          "Head Master name — the name that appears in the 'Signed by' field with authority to issue certificates",
+          "Designation title — the qualification title printed below the graduate's name (e.g. 'Certified Divine Practitioner')",
+          "Program list — which training programs are listed on the certificate as completed",
+          "Certificate template — choose the visual layout and seal design for the issued PDF",
+          "Preview certificate — generate a sample certificate showing exactly how it will look before going live",
+          "Certificate code format — set the prefix and format for the unique verification codes printed on each certificate"
+        ]
+      },
+
+      // People — Campaigns Detail
+      {
+        name: "campaigns_detail",
+        label: "Campaign Detail",
+        description: "Create and configure a marketing campaign for social advocates. Set the campaign name, target product, UTM tracking parameters, commission rates, and duration — then generate unique trackable links for your advocates to share.",
+        group: "People",
+        purpose: "Turns the platform's referral program into a targeted, trackable marketing campaign.",
+        bullets: [
+          "Campaign name and goal — set a descriptive name and define the primary objective (sign-ups, bookings, memberships)",
+          "Target product — which service or membership this campaign promotes (PM Individual, PM Family, Mystery School, etc.)",
+          "UTM parameters — configure utm_source, utm_medium, and utm_campaign values for analytics tracking in Google Analytics or similar tools",
+          "Commission structure — set the commission rate for this campaign (flat fee or percentage of sale)",
+          "Campaign duration — start date and end date; commissions only apply to referrals within this window",
+          "Unique tracking links — the platform generates a campaign-specific URL for each advocate to share",
+          "Performance preview — see real-time referral counts and commission totals as the campaign runs"
+        ]
+      },
+
+      // Live — Live Sessions Monitor
+      {
+        name: "live_sessions_monitor",
+        label: "Live Sessions Monitor",
+        description: "A real-time view of every diviner currently broadcasting live on the platform. See which platform they are using, when they went live, and an estimated viewer count — all updating in real time.",
+        group: "Live",
+        purpose: "Gives administrators instant visibility into all active live broadcasts across the platform.",
+        bullets: [
+          "Active broadcasts list — every diviner currently live, sorted by start time",
+          "Platform column — which broadcast technology is in use (Chime, YouTube embed, VideoSDK, etc.)",
+          "Live duration — how long the current broadcast has been running",
+          "Estimated viewer count — number of members watching at this moment",
+          "Session type — individual reading, group broadcast, or community event",
+          "Intervene — send a platform notification or flag a session for moderation if needed",
+          "Auto-refresh — the list updates every 30 seconds to reflect the current state of all active sessions"
+        ]
+      },
+
+      // People — Social Advocacy Overview
+      {
+        name: "social_advocacy",
+        label: "Social Advocacy Overview",
+        description: "The top-level management panel for the entire social advocate program. View the performance leaderboard, manage advocate accounts, configure global commission settings, and see the health of the referral channel at a glance.",
+        group: "People",
+        purpose: "The command center for the platform's social advocate and referral partner program.",
+        bullets: [
+          "Advocate leaderboard — ranked list of all advocates by referral count and commission earned this period",
+          "Program health — total referrals, total commissions paid, and channel conversion rate for the current month",
+          "Global commission rate — the platform-wide default commission percentage paid for each referral type",
+          "Activate or deactivate advocates — toggle an advocate's status without deleting their account or history",
+          "Invite new advocates — send an invitation to a user to join the advocate program",
+          "Commission overrides — set custom rates for specific top-performing advocates outside the global default",
+          "Fraud flags — any accounts flagged for suspicious referral activity (self-referral attempts, click farming, etc.)"
+        ]
+      },
+
       // Walkthrough
       {
         name: "walkthrough_detailed",
@@ -1848,6 +1928,8 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           { title: "Campaigns", description: "Run affiliate and referral campaigns", href: "/dashboard/campaigns", icon: Zap, status: "live" },
           { title: "Gift Certificates", description: "Issue and track gift vouchers", href: "/dashboard/gift-certificates", icon: Gift, status: "live" },
           { title: "Testimonials", description: "Manage public client reviews", href: "/dashboard/testimonials", icon: Star, status: "live" },
+          { title: "Client Reviews", description: "All post-session reviews and ratings", href: "/dashboard/reviews", icon: MessageSquare, status: "live" },
+          { title: "Community Presence", description: "Manage your discover page visibility", href: "/dashboard/community-presence", icon: Globe, status: "live" },
         ],
       },
       {
@@ -2260,6 +2342,54 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "End session — end the call cleanly, which triggers the automated follow-up and review request for the client"
         ]
       },
+      {
+        name: "earnings-analytics",
+        label: "Earnings & Analytics",
+        description: "Your personal revenue and growth dashboard. See monthly income charts, booking trend lines, client retention rates, and a breakdown of which services earn you the most. The numbers that tell the story of your practice.",
+        group: "Finance & Reports",
+        purpose: "Gives diviners data-driven insight into the financial health and growth trajectory of their practice.",
+        bullets: [
+          "Monthly revenue chart — a bar or line chart showing your earnings each month for the past 12 months",
+          "Booking trend — how your session volume is changing week over week and month over month",
+          "Client retention rate — what percentage of clients have booked with you more than once",
+          "Top services by revenue — which of your offered services generates the most income, ranked",
+          "Average session value — your typical earnings per booking, useful for pricing strategy decisions",
+          "New clients this month — how many first-time clients booked you in the current period",
+          "Date range filter — zoom in on any custom period to compare performance or investigate a slow month"
+        ]
+      },
+      {
+        name: "client-reviews",
+        label: "Client Reviews",
+        description: "See every post-session review your clients have left for you. View your overall rating, read individual reviews, spot trends in feedback, and respond publicly to show clients you are listening.",
+        group: "Marketing & Growth",
+        purpose: "Your reputation management center — where client feedback becomes visible, actionable, and answerable.",
+        bullets: [
+          "Overall star rating — your current average across all published reviews, shown prominently",
+          "All reviews list — every submitted review in chronological order with star rating, client name, and session date",
+          "Review text — the full written comment the client submitted, unedited",
+          "Respond to a review — write a public reply that appears below the review on your profile page",
+          "Pending reviews — reviews awaiting platform moderation before going live",
+          "Rating distribution chart — a visual breakdown of how many 5-star, 4-star, 3-star reviews you have received",
+          "Flag a review — report a review that is inaccurate, abusive, or violates platform policy"
+        ]
+      },
+      {
+        name: "community-presence",
+        label: "Community Presence",
+        description: "Manage how you appear to the broader AstrologyPro community and the public discover page. Update your bio, set your visible specialties, and configure the pricing teaser that potential clients see before booking.",
+        group: "Marketing & Growth",
+        purpose: "Controls your discoverability and first impression on AstrologyPro's public-facing practitioner directory.",
+        bullets: [
+          "Discovery page visibility — toggle whether your profile appears in the public diviner search results",
+          "Bio editor — update the written introduction clients read when they land on your public profile",
+          "Specialty tags — choose up to 5 specialties that appear on your profile card in search results (e.g. Natal Chart, Tarot, Relationship, Mundane)",
+          "Pricing teaser — set a 'starting from $X' price shown on your search card to help clients gauge fit before clicking",
+          "Profile completeness score — a checklist showing which profile fields are missing and how filling them improves your search ranking",
+          "Featured status — if eligible, request to be featured in the platform's highlighted practitioners section",
+          "Social links — add or update your Instagram, YouTube, and personal website links shown on your public profile"
+        ]
+      },
     ],
   },
   {
@@ -2301,6 +2431,8 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           { title: "Sunday Service", description: "Live and archived weekly broadcasts", href: "/community/sunday-service", icon: Radio, status: "live" },
           { title: "Events", description: "Workshops, ceremonies, and community gatherings", href: "/community/events", icon: CalendarDays, status: "live" },
           { title: "Rituals", description: "Guided sacred practices for each season", href: "/community/rituals", icon: Sparkles, status: "live" },
+          { title: "Practice Tracker", description: "Log daily rituals and view streaks", href: "/community/practice-tracker", icon: Activity, status: "live" },
+          { title: "Community Chat", description: "Member discussion board and weekly threads", href: "/community/chat", icon: MessageSquare, status: "live" },
         ],
       },
       {
@@ -2309,6 +2441,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           { title: "Library", description: "Spiritual articles, videos, and reference materials", href: "/community/library", icon: BookOpen, status: "live" },
           { title: "Training", description: "Structured courses and lesson curriculum", href: "/community/training", icon: GraduationCap, status: "live" },
           { title: "Tarot", description: "Tarot card meanings and readings", href: "/community/tarot", icon: Layers, status: "live" },
+          { title: "Doctrine Library", description: "Holy books, doctrine docs, and study guides", href: "/community/doctrine", icon: ScrollText, status: "live" },
         ],
       },
       {
@@ -2557,6 +2690,70 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Upgrade plan — switch from Individual to Family plan to add more members",
           "Billing history — a record of past charges and receipts",
           "Cancel membership — option to cancel your subscription (access continues until the end of the billing period)"
+        ]
+      },
+      {
+        name: "family-circle",
+        label: "Family Circle",
+        description: "Add and manage family member accounts under your family membership plan. Each family member gets their own profile, birth data, and natal chart — all managed from one place under your subscription.",
+        group: "My Membership",
+        purpose: "Extends your membership benefits to the people closest to you under a single shared Family plan.",
+        bullets: [
+          "Family member list — all profiles currently added under your Family plan",
+          "Add a member — enter a family member's name, birth date, time, and location to create their profile",
+          "Individual natal charts — each family member has their own birth chart generated from their birth data",
+          "Member account access — optionally invite a family member to log in with their own credentials to access their own profile",
+          "Compatibility overview — see a quick synastry summary of how each family member's chart relates to yours",
+          "Plan seat limit — the Family plan supports up to 4 members; the page shows how many seats remain",
+          "Remove a member — remove a family member profile if they no longer need access under your plan"
+        ]
+      },
+      {
+        name: "doctrine-library",
+        label: "Doctrine & Study Library",
+        description: "Access the school's official holy books, doctrine documents, and curated study guides. This is the doctrinal foundation of the Perennial Mandalism tradition — sacred texts selected and uploaded by the administration for all members to read and study.",
+        group: "Learning & Wisdom",
+        purpose: "The doctrinal reference library for the Perennial Mandalism tradition — foundational texts every member studies.",
+        bullets: [
+          "Holy books — digitally accessible sacred texts central to the Perennial Mandalism tradition",
+          "Doctrine documents — official written doctrines, teachings, and position papers from the school",
+          "Study guides — structured reading guides that walk you through key doctrinal concepts with commentary",
+          "Download for offline reading — save any document as a PDF for reading away from the platform",
+          "Search by keyword — find specific passages, topics, or references across all library documents",
+          "New additions — recently uploaded texts and documents appear highlighted at the top of the library",
+          "Member-only content — all content here is exclusive to Perennial Mandalism members; not publicly visible"
+        ]
+      },
+      {
+        name: "rituals-tracker",
+        label: "Rituals & Practice Tracker",
+        description: "Log your daily spiritual practices and sacred rituals. Track which rituals you have completed, view your practice streaks, and build a permanent record of your spiritual devotion over time.",
+        group: "Community & Worship",
+        purpose: "Turns your private daily spiritual practice into a visible, trackable journey of growth and consistency.",
+        bullets: [
+          "Daily practice log — record which rituals, meditations, or practices you completed today",
+          "Ritual completion streaks — see how many consecutive days you have maintained a daily practice",
+          "Practice history — a calendar view showing which days had logged practices and which did not",
+          "Available rituals — browse all rituals available to log, organized by planetary cycle and season",
+          "Custom practices — add your own personal practices to track beyond the provided ritual library",
+          "Streak milestones — the platform acknowledges significant streaks (7 days, 30 days, 100 days) with recognition",
+          "Practitioner view — your assigned practitioner can see your practice log summary to inform their guidance"
+        ]
+      },
+      {
+        name: "community-chat",
+        label: "Community Discussion",
+        description: "Connect with other Perennial Mandalism members in the school's private message board. Post questions, share reflections, join weekly discussion threads, and engage with your spiritual community between Sunday services.",
+        group: "Community & Worship",
+        purpose: "A members-only discussion space that keeps the community spiritually connected between live events.",
+        bullets: [
+          "Discussion threads — organized conversations by topic: planetary wisdom, rituals, personal reflection, doctrine, and Q&A",
+          "Post and reply — write a new post or respond to another member's question or reflection",
+          "Weekly discussion thread — the school posts a weekly guided discussion question or theme each Monday",
+          "Direct messages — send a private message to any fellow PM member directly",
+          "Pin announcements — administrators and school leaders can pin important messages to the top of the board",
+          "Search threads — find past discussions before asking a question that may have already been answered",
+          "Moderation — the community is privately moderated to ensure respectful, spiritually focused discussion"
         ]
       },
     ],
@@ -2881,13 +3078,16 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         groupLabel: "Referrals & Earnings",
         cards: [
           { title: "Referrals", description: "Every person you have referred and their status", href: "/advocate/referrals", icon: Users, status: "live" },
+          { title: "Referrals Detail", description: "Individual referral journeys and landing data", href: "/advocate/referrals-detail", icon: ListChecks, status: "live" },
           { title: "Earnings", description: "Commissions paid, pending, and upcoming", href: "/advocate/earnings", icon: CreditCard, status: "live" },
+          { title: "Payout History", description: "All completed payouts with receipts", href: "/advocate/payout-history", icon: History, status: "live" },
         ],
       },
       {
         groupLabel: "Tools & Content",
         cards: [
           { title: "Campaigns", description: "Active campaigns you can join for extra earnings", href: "/advocate/campaigns", icon: Zap, status: "live" },
+          { title: "Content Library", description: "Admin-curated social media templates and assets", href: "/advocate/content-library", icon: Image, status: "live" },
           { title: "Marketing Content", description: "Ready-made assets and copy for promotion", href: "/advocate/content", icon: Image, status: "live" },
           { title: "Profile", description: "Your advocate profile and contact info", href: "/advocate/profile", icon: User, status: "live" },
         ],
@@ -3036,6 +3236,54 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Password and security — change your login credentials",
           "Referral link — your unique advocate referral link, always accessible from your profile",
           "Contact your account manager — link to reach your platform contact if you have questions or issues"
+        ]
+      },
+      {
+        name: "referrals-detail",
+        label: "Referrals Detail",
+        description: "A granular breakdown of every individual referral — not just a count, but the full story of each referral. See exactly which page they landed on, which diviner or product they explored, their booking or sign-up status, and the commission earned per referral.",
+        group: "Referrals & Earnings",
+        purpose: "The most detailed view of your referral program — individual-level insight into every person you sent to the platform.",
+        bullets: [
+          "Referral entry view — each referral shown as an individual record with name (privacy-masked), date, and source",
+          "Landing page — which page of AstrologyPro the referred visitor first arrived on (e.g. /discover, a diviner's profile, /join)",
+          "Diviner interaction — if they clicked through to or booked a specific diviner, that diviner is shown",
+          "Booking status — whether the referred person has booked a session, joined a plan, or only browsed",
+          "Commission per referral — the specific amount this individual referral generated for you",
+          "Status timeline — a visual track of this referral's journey (clicked link → registered → purchased → commission earned)",
+          "Filter by status — view only referrals who converted, only those still browsing, or only those who earned commission"
+        ]
+      },
+      {
+        name: "content-library",
+        label: "Content Library",
+        description: "A curated collection of ready-made promotional assets created by the platform's admin team specifically for advocates. Grab social media templates, captions, images, and post ideas to promote AstrologyPro on Instagram, TikTok, and Facebook without designing anything yourself.",
+        group: "Tools & Content",
+        purpose: "Equips advocates with professional, on-brand promotional materials so they can promote the platform effectively without design skills.",
+        bullets: [
+          "Social media templates — pre-designed image templates sized for Instagram posts, Stories, Facebook, and TikTok",
+          "Caption library — ready-to-use written captions with your referral link placeholder that you simply copy and post",
+          "Platform highlights — graphics and copy highlighting specific features like Sunday Service, natal charts, or practitioner profiles",
+          "Campaign-specific assets — when a campaign is running, dedicated creative materials are added for that promotion",
+          "Download or copy — download any graphic as a high-resolution image or copy caption text with one click",
+          "Organized by channel — content is grouped by platform (Instagram, Facebook, TikTok, email) for quick retrieval",
+          "Updated regularly — the admin team adds new materials before major promotions, seasonal events, and new platform features"
+        ]
+      },
+      {
+        name: "payout-history",
+        label: "Payout History",
+        description: "A complete log of every commission payment that has been transferred to your bank or payment account. See exact amounts, dates, payment method, and download a receipt for any past payout.",
+        group: "Referrals & Earnings",
+        purpose: "Your official payment record — the definitive proof of every commission transferred to you from the platform.",
+        bullets: [
+          "All payouts listed — every payment sent to your account, sorted by most recent first",
+          "Payout date — the exact date each transfer was processed",
+          "Amount — the gross commission amount transferred in each payout",
+          "Payment method — which bank account, PayPal, or payment method received the transfer",
+          "Payout status — successful, pending, or failed (failed payouts include an explanation and retry option)",
+          "Download receipt — generate and download a formal PDF receipt for any individual payout for your tax records",
+          "Annual summary — a year-in-review summary showing total commissions received in a calendar year for tax filing"
         ]
       },
     ],
@@ -3253,6 +3501,8 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         cards: [
           { title: "Dashboard", description: "Your session overview and upcoming readings", href: "/portal", icon: LayoutDashboard, status: "live" },
           { title: "My Bookings", description: "All your sessions — upcoming and past", href: "/portal/bookings", icon: CalendarDays, status: "live" },
+          { title: "Booking History", description: "Full session archive with rebook shortcut", href: "/portal/booking-history", icon: History, status: "live" },
+          { title: "Saved Diviners", description: "Your favourite practitioners for quick rebooking", href: "/portal/favorites", icon: Heart, status: "live" },
         ],
       },
       {
@@ -3260,6 +3510,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         cards: [
           { title: "Order History", description: "Every purchase and transaction", href: "/portal/orders", icon: ShoppingBag, status: "live" },
           { title: "Subscriptions", description: "Active recurring reading plans", href: "/portal/subscriptions", icon: RefreshCcw, status: "live" },
+          { title: "Gift a Reading", description: "Purchase and send readings as gifts", href: "/portal/gift-cards", icon: Gift, status: "live" },
         ],
       },
       {
@@ -3451,6 +3702,54 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "No download required — the session runs fully in your browser with no software to install",
           "Recording notice — if the diviner is recording the session, you are notified with a visible indicator",
           "Leave session — a button to cleanly end your side of the call when the reading is complete"
+        ]
+      },
+      {
+        name: "booking-history",
+        label: "Booking History",
+        description: "Your complete history of every session you have ever booked on AstrologyPro — past readings, upcoming appointments, and cancelled sessions. Find any reading instantly, access session notes your diviner left, download a PDF summary, or quickly rebook the same practitioner.",
+        group: "My Sessions",
+        purpose: "A permanent, searchable record of your entire reading history and the fastest way to rebook a diviner you loved.",
+        bullets: [
+          "Full session history — every booking ever made, sorted from most recent to oldest",
+          "Upcoming appointments — confirmed future sessions with a countdown and a join button when the time comes",
+          "Past session summary — date, diviner name, service type, duration, and completion status for each past reading",
+          "Session notes — any written notes or insights your diviner shared after completing your reading",
+          "PDF download — export a session summary as a PDF for your personal records or to share with someone",
+          "Rebook shortcut — a one-click button on any past session to go directly to that diviner's booking page and schedule again",
+          "Cancelled sessions — past cancellations are visible with the reason given and whether a refund was processed"
+        ]
+      },
+      {
+        name: "favorites",
+        label: "Saved Diviners",
+        description: "Your personal list of diviners you have saved or marked as a favourite. Keep track of practitioners you love, easily check their current availability, and rebook them without searching the directory again.",
+        group: "My Sessions",
+        purpose: "Your personal shortlist of trusted practitioners — so rebooking a diviner you love takes seconds, not minutes.",
+        bullets: [
+          "Saved practitioners — all diviners you have hearted or bookmarked, shown with their photo, name, and specialty",
+          "Availability status — a live indicator showing whether your saved diviner is currently accepting bookings",
+          "Quick book button — jump straight to their booking page from your favourites list without going through the directory",
+          "Last booked — see when you last had a session with each saved practitioner",
+          "Rating reminder — the diviner's current overall star rating is shown so you can compare before rebooking",
+          "Remove from favourites — un-save a diviner if you no longer want them in your shortlist",
+          "Add during discovery — you can save any diviner you see in the search results or on their profile with a single heart click"
+        ]
+      },
+      {
+        name: "gift-cards",
+        label: "Gift a Reading",
+        description: "Purchase and send a reading as a gift for someone you care about. Choose a practitioner, select a service, and the platform delivers a personalized gift certificate to the recipient by email. You can also see a history of gift cards you have sent and check if they have been redeemed.",
+        group: "Finance",
+        purpose: "Share the gift of a spiritual reading with a friend, partner, or family member — with a fully personalized digital gift certificate.",
+        bullets: [
+          "Choose a diviner — select a specific practitioner whose reading you want to gift, or leave the choice to the recipient",
+          "Select a service — pick which type of reading to gift (natal chart, tarot, transit check-in, etc.) and the session duration",
+          "Personalize the message — write a personal note that appears on the gift certificate delivered to the recipient",
+          "Recipient email — enter the recipient's email address and the platform sends the certificate immediately or on a future date",
+          "Gift certificate value — the certificate holds the monetary value of the chosen session; the recipient books directly",
+          "Sent gift history — a log of all gift certificates you have sent with their redemption status (sent, opened, redeemed)",
+          "Received gifts — if someone has gifted you a reading, it appears here ready to use for booking"
         ]
       },
     ],

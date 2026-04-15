@@ -283,7 +283,7 @@ export default async function TraineeDashboardPage() {
     : "Unassigned";
 
   const recentCompletions: LessonCompletion[] =
-    (recentCompletionsResult.data as LessonCompletion[] | null) ?? [];
+    (recentCompletionsResult.data as unknown as LessonCompletion[] | null) ?? [];
 
   const quizAttempts: QuizAttempt[] =
     (quizStatsResult.data as QuizAttempt[] | null) ?? [];
