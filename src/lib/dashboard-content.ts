@@ -311,7 +311,7 @@ export async function createDashboardContentItem(
 ) {
   const validated = validateDashboardContentPayload(payload);
   if (!validated.ok) {
-    throw new Error(validated.error);
+    throw new Error((validated as { ok: false; error: string }).error);
   }
 
   const admin = createAdminClient();
@@ -340,7 +340,7 @@ export async function updateDashboardContentItem(
 ) {
   const validated = validateDashboardContentPayload(payload);
   if (!validated.ok) {
-    throw new Error(validated.error);
+    throw new Error((validated as { ok: false; error: string }).error);
   }
 
   const admin = createAdminClient();

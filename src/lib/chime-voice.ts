@@ -86,8 +86,9 @@ export async function provisionChimePhoneNumber(
   const phoneDetails = await voice.send(
     new GetPhoneNumberCommand({ PhoneNumberId: phoneNumber })
   );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const realArn =
-    phoneDetails.PhoneNumber?.PhoneNumberArn ??
+    (phoneDetails.PhoneNumber as any)?.PhoneNumberArn as string | undefined ??
     `arn:aws:chime:us-east-1:phone-number/${phoneNumber}`;
 
   // ── Step 5: Create a SIP Rule to route inbound calls to the SMA ──────────

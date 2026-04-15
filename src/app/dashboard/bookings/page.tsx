@@ -85,7 +85,7 @@ export default async function BookingsPage() {
     ...b,
     clients: clientMap[b.client_id as string] ?? null,
     services: serviceMap[b.service_id as string] ?? null,
-  }));
+  })) as Array<Record<string, unknown>>;
 
   // Linked orders
   const bookingIds = bookings.map((b) => b.id as string).filter(Boolean);
