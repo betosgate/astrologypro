@@ -4,7 +4,7 @@
 export const MIGRATION_SQL = `-- ============================================================================
 -- Seed global_pricing items and pricing_plans for:
 --   1. Perennial Mandalism (Community) — 3 plans (Individual, Couple, Family)
---   2. Mystery School — 3 plans (Enrollment, Monthly, Monthly PM Discount)
+--   2. Mystery School — 2 plans (Monthly, Monthly PM Discount) each with one-time enrollment built in
 --
 -- Existing: professional_divination_course (already seeded in 000112)
 --
@@ -105,41 +105,23 @@ ON CONFLICT (plan_id) DO NOTHING;
 -- 3. Mystery School plans
 -- -------------------------------------------------------
 
-INSERT INTO pricing_plans (plan_id, item_id, display_name, amount, mrp, stripe_price_id, currency, description, sort_order, custom_fields)
-SELECT
-  'plan_mystery_enrollment',
-  gp.id,
-  'Enrollment (One-Time)',
-  149.99,
-  199.99,
-  'price_1TJOXjBcRXKECv5fQ4dz7W4z',
-  'USD',
-  'One-time enrollment fee for Mystery School — grants lifetime access to foundational content.',
-  1,
-  '[
-    {"label": "Type", "value": "One-Time Payment", "slug": "type"},
-    {"label": "Access", "value": "Lifetime Foundation", "slug": "access"},
-    {"label": "Live Classes", "value": "Included", "slug": "live_classes"},
-    {"label": "Exclusive Content", "value": "Foundational Library", "slug": "exclusive_content"},
-    {"label": "Certificate", "value": "Upon Completion", "slug": "certificate"}
-  ]'::jsonb
-FROM global_pricing gp
-WHERE gp.item_key = 'mystery_school'
-ON CONFLICT (plan_id) DO NOTHING;
+-- NOTE: No separate enrollment plan — one-time fee is configured as
+-- onetime_amount on each monthly plan via the admin pricing UI.
 
 INSERT INTO pricing_plans (plan_id, item_id, display_name, amount, mrp, stripe_price_id, currency, description, sort_order, custom_fields)
 SELECT
   'plan_mystery_monthly',
   gp.id,
   'Monthly Subscription',
-  49.99,
-  69.99,
+  27.00,
+  97.00,
   'price_1TJryQBcRXKECv5fs770puzb',
   'USD',
-  'Ongoing monthly access to all Mystery School content, live sessions, and advanced teachings.',
-  2,
+  'Ongoing monthly access to all Mystery School content, live sessions, and advanced teachings. Includes $97 one-time enrollment fee.',
+  1,
   '[
     {"label": "Type", "value": "Recurring Monthly", "slug": "type"},
+    {"label": "Enrollment", "value": "$97 One-Time", "slug": "enrollment"},
     {"label": "Access", "value": "Full Library", "slug": "access"},
     {"label": "Live Classes", "value": "Unlimited", "slug": "live_classes"},
     {"label": "Exclusive Content", "value": "All Advanced Modules", "slug": "exclusive_content"},
@@ -154,19 +136,20 @@ SELECT
   'plan_mystery_monthly_pm_discount',
   gp.id,
   'Monthly (PM Member Discount)',
-  34.99,
+  17.03,
   49.99,
   'price_1TJZCPBcRXKECv5fhwdSCyXL',
   'USD',
-  'Discounted monthly rate for existing Perennial Mandalism members.',
-  3,
+  'Discounted monthly rate for existing Perennial Mandalism members. Includes $97 one-time enrollment fee.',
+  2,
   '[
     {"label": "Type", "value": "Recurring Monthly", "slug": "type"},
+    {"label": "Enrollment", "value": "$97 One-Time", "slug": "enrollment"},
     {"label": "Eligibility", "value": "PM Members Only", "slug": "eligibility"},
     {"label": "Access", "value": "Full Library", "slug": "access"},
     {"label": "Live Classes", "value": "Unlimited", "slug": "live_classes"},
     {"label": "Exclusive Content", "value": "All Advanced Modules", "slug": "exclusive_content"},
-    {"label": "Savings", "value": "Save 30% with PM membership", "slug": "savings"}
+    {"label": "Savings", "value": "Save 37% with PM membership", "slug": "savings"}
   ]'::jsonb
 FROM global_pricing gp
 WHERE gp.item_key = 'mystery_school'

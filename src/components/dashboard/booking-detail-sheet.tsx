@@ -14,7 +14,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Eye, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw, CalendarClock, XCircle, Send, Receipt, Video, Clock, Share2, Download, FileText } from "lucide-react";
+import { ClipboardList, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw, CalendarClock, XCircle, Send, Receipt, Video, Clock, Share2, Download, FileText, Copy } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -47,10 +47,22 @@ interface BookingDetailProps {
     session_notes?: string | null;
     client_name: string;
     client_email: string;
+    client_id?: string | null;
     service_name: string;
     refund_amount?: number | null;
     refunded_at?: string | null;
     refund_reason?: string | null;
+    // Prep / session fields
+    birth_date?: string | null;
+    birth_time?: string | null;
+    birth_city?: string | null;
+    questionnaire_responses?: Record<string, string | undefined> | null;
+    username?: string;
+    previous_session_count?: number;
+    last_session_date?: string | null;
+    metadata?: Record<string, unknown> | null;
+    stripe_payment_intent_id?: string | null;
+    base_price?: number | null;
   };
   linkedOrder?: LinkedOrder | null;
 }
@@ -93,6 +105,7 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
   const [refunding, setRefunding] = useState(false);
   const [refunded, setRefunded] = useState(!!booking.refunded_at);
   const [syncing, setSyncing] = useState(false);
+  const [syncingRecording, setSyncingRecording] = useState(false);
   const [sessionNotes, setSessionNotes] = useState(booking.session_notes ?? "");
   const [savingNotes, setSavingNotes] = useState(false);
 
@@ -316,12 +329,38 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
     }
   }
 
+  async function handleSyncRecording() {
+    setSyncingRecording(true);
+    try {
+      const res = await fetch("/api/admin/sync-recording", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: booking.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Failed to sync recording");
+        return;
+      }
+      if (!data.synced) {
+        toast.error(data.message ?? "No recording files found in S3 yet");
+        return;
+      }
+      toast.success("Recording synced — reloading details");
+      setSessionDetails(null); // force refetch
+    } catch {
+      toast.error("Failed to sync recording");
+    } finally {
+      setSyncingRecording(false);
+    }
+  }
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <Eye className="size-4" />
-          <span className="sr-only">View details</span>
+        <Button variant="outline" size="sm">
+          <ClipboardList className="mr-1.5 size-3.5" />
+          Details
         </Button>
       </SheetTrigger>
       <SheetContent className="overflow-y-auto">
@@ -329,6 +368,109 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
           <SheetTitle>Booking Details</SheetTitle>
         </SheetHeader>
         <div className="flex flex-col gap-5 p-4">
+
+          {/* ── Session Details + Recording (COMPLETED — shown first) ──── */}
+          {booking.status === "completed" && (
+            loadingSession ? (
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/20 p-4">
+                <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Loading session details…</p>
+              </div>
+            ) : sessionDetails?.chime_meeting_id ? (
+              <>
+                <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Video className="size-3.5 text-muted-foreground" />
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Session Details</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Provider</p>
+                      <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary capitalize">
+                        {sessionDetails.video_provider ?? "chime"}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Actual Duration</p>
+                      <p className="font-medium">{sessionDetails.actual_duration_minutes ?? booking.duration} min</p>
+                    </div>
+                    {sessionDetails.total_amount != null && sessionDetails.total_amount > 0 && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Total Charged</p>
+                        <p className="font-semibold">{formatCurrency(sessionDetails.total_amount / 100)}</p>
+                      </div>
+                    )}
+                    {sessionDetails.actual_duration_minutes != null && sessionDetails.actual_duration_minutes > booking.duration && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Overage</p>
+                        <p className="font-medium text-amber-500">+{sessionDetails.actual_duration_minutes - booking.duration} min</p>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Meeting ID</p>
+                    <p className="text-xs font-mono text-foreground/60 break-all">{sessionDetails.chime_meeting_id}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-3">
+                  <div className="flex items-center gap-1.5">
+                    <Video className="size-3.5 text-muted-foreground" />
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Recording</p>
+                  </div>
+                  {sessionDetails.recording_url ? (
+                    <>
+                      <div className="rounded-lg overflow-hidden border border-border bg-black" style={{ aspectRatio: "16/9" }}>
+                        <video src={sessionDetails.recording_url} controls preload="metadata" className="w-full h-full" />
+                      </div>
+                      <a href={sessionDetails.recording_url} download target="_blank" rel="noopener noreferrer">
+                        <Button size="sm" variant="outline" className="w-full gap-2">
+                          <Download className="size-3.5" />Download Recording
+                        </Button>
+                      </a>
+                      {sessionDetails.recording_share_id && (
+                        <Button size="sm" variant="ghost" className="w-full gap-2 text-xs text-muted-foreground"
+                          onClick={() => {
+                            navigator.clipboard.writeText(`${window.location.origin}/session/${sessionDetails!.recording_share_id}/recording`);
+                            toast.success("Share link copied");
+                          }}>
+                          <Share2 className="size-3.5" />Copy Client Share Link
+                        </Button>
+                      )}
+                    </>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">No recording available yet. Recordings are processed after the session ends.</p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full gap-2"
+                        disabled={syncingRecording}
+                        onClick={handleSyncRecording}
+                      >
+                        {syncingRecording ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+                        {syncingRecording ? "Syncing…" : "Sync Recording from S3"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="size-3.5 text-muted-foreground" />
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Transcript</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">No transcript saved. Full transcript persistence coming soon.</p>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-lg border border-dashed border-border bg-muted/10 p-4 text-center">
+                <Video className="mx-auto size-6 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">No session data found.</p>
+                <p className="text-xs text-muted-foreground mt-1">This session may not have used the Chime video provider.</p>
+              </div>
+            )
+          )}
 
           {/* ── Info block ────────────────────────────────────────────── */}
           <div className="space-y-3">
@@ -357,6 +499,73 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
               </div>
             </div>
           </div>
+
+          {/* ── Join Session (upcoming/in-progress only) ─────────────── */}
+          {["confirmed", "in_progress", "pending"].includes(booking.status) && booking.username && (
+            <Button
+              className="w-full"
+              onClick={() => {
+                window.location.href = `/${booking.username}/session/${booking.id}`;
+              }}
+            >
+              <Video className="mr-2 size-4" />
+              Join Session
+            </Button>
+          )}
+
+          {/* ── Birth Data ────────────────────────────────────────────── */}
+          {(booking.birth_date || booking.birth_time || booking.birth_city) && (
+            <div className="rounded-lg border bg-muted/20 p-3 space-y-1">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">Birth Data</p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-mono">
+                  {[booking.birth_date, booking.birth_time, booking.birth_city].filter(Boolean).join(" | ")}
+                </p>
+                <Button variant="ghost" size="icon" className="size-6"
+                  onClick={() => {
+                    navigator.clipboard.writeText([booking.birth_date, booking.birth_time, booking.birth_city].filter(Boolean).join(" | "));
+                    toast.success("Copied");
+                  }}>
+                  <Copy className="size-3" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Previous Sessions ─────────────────────────────────────── */}
+          {(booking.previous_session_count ?? 0) > 0 && (
+            <div className="rounded-lg border bg-muted/20 p-3 space-y-1 text-sm">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">History</p>
+              <p>
+                {booking.previous_session_count} previous session{(booking.previous_session_count ?? 0) > 1 ? "s" : ""}
+                {booking.last_session_date && (
+                  <span className="text-muted-foreground"> · Last: {formatDateTime(booking.last_session_date)}</span>
+                )}
+              </p>
+            </div>
+          )}
+
+          {/* ── Questionnaire ─────────────────────────────────────────── */}
+          {booking.questionnaire_responses && (() => {
+            const q = booking.questionnaire_responses!;
+            const items = [
+              q.focusQuestion && { label: "Focus Question", value: q.focusQuestion },
+              q.lifeArea && { label: "Life Area", value: q.lifeArea },
+              q.additionalNotes && { label: "Client Notes", value: q.additionalNotes },
+            ].filter(Boolean) as { label: string; value: string }[];
+            if (!items.length) return null;
+            return (
+              <div className="space-y-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Intake</p>
+                {items.map(({ label, value }) => (
+                  <div key={label} className="rounded-md bg-muted p-2.5">
+                    <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
+                    <p className="text-sm">{value}</p>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
 
           {/* ── PRIMARY ACTIONS (always visible at top) ───────────────── */}
           {(canReschedule || canCancel || canRefund) && !showRescheduleForm && !showCancelForm && !showRefundForm && (
@@ -568,124 +777,6 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
             </div>
           )}
 
-          {/* ── Session Details + Recording + Transcript (lazy-loaded) ── */}
-          {booking.status === "completed" && (
-            loadingSession ? (
-              <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/20 p-4">
-                <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Loading session details…</p>
-              </div>
-            ) : sessionDetails?.chime_meeting_id ? (
-              <>
-                {/* Session Details */}
-                <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Video className="size-3.5 text-muted-foreground" />
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Session Details</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Provider</p>
-                      <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary capitalize">
-                        {sessionDetails.video_provider ?? "chime"}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Booked Duration</p>
-                      <p className="text-sm font-medium">{booking.duration} min</p>
-                    </div>
-                    {sessionDetails.actual_duration_minutes != null && (
-                      <div>
-                        <p className="text-xs text-muted-foreground">Actual Duration</p>
-                        <p className="text-sm font-medium">{sessionDetails.actual_duration_minutes} min</p>
-                      </div>
-                    )}
-                    {sessionDetails.actual_duration_minutes != null &&
-                      sessionDetails.actual_duration_minutes > booking.duration && (
-                      <div>
-                        <p className="text-xs text-muted-foreground">Overage</p>
-                        <p className="text-sm font-medium text-amber-500">
-                          +{sessionDetails.actual_duration_minutes - booking.duration} min
-                          {sessionDetails.overage_amount ? ` (${formatCurrency(sessionDetails.overage_amount / 100)})` : ""}
-                        </p>
-                      </div>
-                    )}
-                    {sessionDetails.total_amount != null && sessionDetails.total_amount > 0 && (
-                      <div>
-                        <p className="text-xs text-muted-foreground">Total Charged</p>
-                        <p className="text-sm font-semibold">{formatCurrency(sessionDetails.total_amount / 100)}</p>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Meeting ID</p>
-                    <p className="text-xs font-mono text-foreground/60 break-all">{sessionDetails.chime_meeting_id}</p>
-                  </div>
-                </div>
-
-                {/* Recording */}
-                <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-3">
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="size-3.5 text-muted-foreground" />
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Recording</p>
-                  </div>
-                  {sessionDetails.recording_url ? (
-                    <>
-                      <div className="rounded-lg overflow-hidden border border-border bg-black" style={{ aspectRatio: "16/9" }}>
-                        <video src={sessionDetails.recording_url} controls preload="metadata" className="w-full h-full" />
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        {sessionDetails.recording_share_id && (
-                          <Link href={`/session/${sessionDetails.recording_share_id}/recording`} target="_blank" className="w-full">
-                            <Button size="sm" variant="outline" className="w-full gap-2">
-                              <Share2 className="size-3.5" />Open Share Page
-                            </Button>
-                          </Link>
-                        )}
-                        <a href={sessionDetails.recording_url} download target="_blank" rel="noopener noreferrer" className="w-full">
-                          <Button size="sm" variant="outline" className="w-full gap-2">
-                            <Download className="size-3.5" />Download Recording
-                          </Button>
-                        </a>
-                        {sessionDetails.recording_share_id && (
-                          <Button size="sm" variant="ghost" className="w-full gap-2 text-xs text-muted-foreground"
-                            onClick={() => {
-                              navigator.clipboard.writeText(`${window.location.origin}/session/${sessionDetails.recording_share_id}/recording`);
-                              toast.success("Share link copied to clipboard");
-                            }}>
-                            <Share2 className="size-3.5" />Copy Client Share Link
-                          </Button>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/10 p-4">
-                      <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                      <div>
-                        <p className="text-sm font-medium">Processing recording…</p>
-                        <p className="text-xs text-muted-foreground">Usually ready within 5–10 minutes after the session ends.</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Transcript */}
-                <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
-                  <div className="flex items-center gap-1.5">
-                    <FileText className="size-3.5 text-muted-foreground" />
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Transcript</p>
-                  </div>
-                  <div className="flex items-start gap-2 rounded-lg border border-dashed border-border bg-muted/10 p-4">
-                    <FileText className="size-4 text-muted-foreground mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium">No transcript saved</p>
-                      <p className="text-xs text-muted-foreground">Live captions are available during the session. Full transcript persistence coming soon.</p>
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : null
-          )}
 
           {/* ── Note to Client ────────────────────────────────────────── */}
           {booking.status !== "canceled" && (

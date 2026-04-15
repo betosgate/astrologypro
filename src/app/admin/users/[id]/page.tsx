@@ -150,7 +150,7 @@ async function getUserDetail(userId: string): Promise<UserDetailData> {
 
   // Resolve which profile row matched
   // Cast through unknown to avoid Supabase's GenericStringError union
-  const diviner   = divinerRes.data as Record<string, unknown> | null;
+  const diviner   = divinerRes.data as unknown as Record<string, unknown> | null;
   const client    = clientRes.data as Record<string, unknown> | null;
   const advocate  = advocateRes.data as Record<string, unknown> | null;
   const community = communityRes.data as Record<string, unknown> | null;

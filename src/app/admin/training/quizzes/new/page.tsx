@@ -70,7 +70,6 @@ export default function NewQuizPage() {
       initialValue={{
         title: "",
         lesson_id: lessons[0]?.id ?? "",
-        pass_score: 70,
         is_active: true,
         questions: [],
       }}

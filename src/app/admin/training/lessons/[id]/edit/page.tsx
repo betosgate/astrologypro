@@ -16,7 +16,14 @@ import Link from "next/link";
 import { SectionContainer } from "@/components/shared/section-container";
 import { TrainingNotes } from "@/components/admin/training-notes";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { uploadTrainingVideo } from "@/lib/training/upload-video";
+import {
+  uploadTrainingPdf,
+  uploadTrainingVideo,
+} from "@/lib/training/upload-video";
+import {
+  getDurationMinsFromFile,
+  getDurationMinsFromUrl,
+} from "@/lib/training/video-duration";
 
 // ---- types for sub-resource sections ----
 
@@ -71,6 +78,7 @@ interface LessonOption {
 }
 
 type VideoMode = "youtube" | "url" | "upload";
+type PdfMode = "url" | "upload";
 
 type ConfirmationState = {
   title: string;
@@ -83,6 +91,14 @@ function detectVideoMode(url: string | null): VideoMode {
   if (!url) return "youtube";
   if (url.includes("youtube.com") || url.includes("youtu.be")) return "youtube";
   if (url.includes("storage/v1/object/public/training-videos") || url.includes("supabase.co/storage")) return "upload";
+  return "url";
+}
+
+function detectPdfMode(url: string | null): PdfMode {
+  if (!url) return "url";
+  if (url.includes("storage/v1/object/public/all-frontend-assets") || url.includes("supabase.co/storage")) {
+    return "upload";
+  }
   return "url";
 }
 
@@ -118,6 +134,11 @@ export default function EditLessonPage() {
   const [confirmation, setConfirmation] = useState<ConfirmationState | null>(null);
   const [confirmationLoading, setConfirmationLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pdfMode, setPdfMode] = useState<PdfMode>("url");
+  const [pdfUploadPercent, setPdfUploadPercent] = useState<number | null>(null);
+  const [pdfUploadStatus, setPdfUploadStatus] = useState<string | null>(null);
+  const [uploadedPdfFileName, setUploadedPdfFileName] = useState<string | null>(null);
+  const pdfFileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     title: "",
@@ -199,6 +220,7 @@ export default function EditLessonPage() {
 
         const l = lessonData.lesson;
         setVideoMode(detectVideoMode(l.video_url));
+        setPdfMode(detectPdfMode(l.pdf_url));
         setForm({
           title: l.title ?? "",
           description: l.description ?? "",
@@ -329,6 +351,24 @@ export default function EditLessonPage() {
     } finally {
       setVideoSaving(false);
     }
+  }
+
+  async function handleMainVideoUrlBlur(url: string) {
+    const durationMins = await getDurationMinsFromUrl(url);
+    if (durationMins == null) return;
+    setForm((prev) => ({
+      ...prev,
+      duration_mins: String(durationMins),
+    }));
+  }
+
+  async function handleLessonVideoUrlBlur(url: string) {
+    const durationMins = await getDurationMinsFromUrl(url);
+    if (durationMins == null) return;
+    setVideoForm((prev) => ({
+      ...prev,
+      duration_mins: String(durationMins),
+    }));
   }
 
   async function handleDeleteVideo(videoId: string) {
@@ -564,6 +604,17 @@ export default function EditLessonPage() {
     setUploadStatus(null);
   }
 
+  function handlePdfModeChange(mode: PdfMode) {
+    setPdfMode(mode);
+    setForm((prev) => ({ ...prev, pdf_url: "" }));
+    setUploadedPdfFileName(null);
+    setPdfUploadStatus(null);
+    setPdfUploadPercent(null);
+    if (pdfFileInputRef.current) {
+      pdfFileInputRef.current.value = "";
+    }
+  }
+
   async function handleVideoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -585,12 +636,18 @@ export default function EditLessonPage() {
     setUploadPercent(0);
     setUploadStatus("Preparing upload…");
     try {
+      const durationMins = await getDurationMinsFromFile(file);
       const { url } = await uploadTrainingVideo({
         file,
         onProgress: (percent) => setUploadPercent(percent),
         onStatus: setUploadStatus,
       });
-      setForm((prev) => ({ ...prev, video_url: url }));
+      setForm((prev) => ({
+        ...prev,
+        video_url: url,
+        duration_mins:
+          durationMins != null ? String(durationMins) : prev.duration_mins,
+      }));
       setUploadedFileName(file.name);
       toast.success("Video uploaded.");
     } catch (err) {
@@ -599,6 +656,43 @@ export default function EditLessonPage() {
     } finally {
       setUploadPercent(null);
       setUploadStatus(null);
+    }
+  }
+
+  async function handlePdfFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const MAX_MB = 50;
+    if (file.size > MAX_MB * 1024 * 1024) {
+      toast.error(`PDF must be under ${MAX_MB} MB.`);
+      e.target.value = "";
+      return;
+    }
+
+    if (file.type !== "application/pdf") {
+      toast.error("Only PDF files are allowed.");
+      e.target.value = "";
+      return;
+    }
+
+    setPdfUploadPercent(0);
+    setPdfUploadStatus("Preparing upload…");
+    try {
+      const { url } = await uploadTrainingPdf({
+        file,
+        onProgress: (percent) => setPdfUploadPercent(percent),
+        onStatus: setPdfUploadStatus,
+      });
+      setForm((prev) => ({ ...prev, pdf_url: url }));
+      setUploadedPdfFileName(file.name);
+      toast.success("PDF uploaded.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed. Please try again.");
+      e.target.value = "";
+    } finally {
+      setPdfUploadPercent(null);
+      setPdfUploadStatus(null);
     }
   }
 
@@ -820,7 +914,7 @@ export default function EditLessonPage() {
                     placeholder="https://www.youtube.com/watch?v=..."
                   />
                   <p className="text-xs text-muted-foreground">
-                    Paste a YouTube watch URL. The ID will be normalised automatically.
+                    Paste a YouTube watch URL. The ID will be normalised automatically. Duration stays manual for YouTube videos.
                   </p>
                 </div>
               )}
@@ -833,6 +927,7 @@ export default function EditLessonPage() {
                   onChange={(e) =>
                     setForm((prev) => ({ ...prev, video_url: e.target.value }))
                   }
+                  onBlur={(e) => void handleMainVideoUrlBlur(e.target.value)}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   placeholder="https://example.com/video.mp4"
                 />
@@ -902,20 +997,72 @@ export default function EditLessonPage() {
               )}
             </div>
 
-            {/* PDF URL */}
+            {/* PDF */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium" htmlFor="pdf_url">
-                PDF URL
-              </label>
-              <input
-                id="pdf_url"
-                name="pdf_url"
-                type="url"
-                value={form.pdf_url}
-                onChange={handleChange}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="https://..."
-              />
+              <label className="text-sm font-medium">PDF</label>
+              <div className="flex rounded-lg border bg-muted/30 p-1">
+                {(["url", "upload"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => handlePdfModeChange(mode)}
+                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${
+                      pdfMode === mode
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {mode === "url" ? "PDF URL" : "Upload PDF"}
+                  </button>
+                ))}
+              </div>
+
+              {pdfMode === "url" && (
+                <input
+                  id="pdf_url"
+                  name="pdf_url"
+                  type="url"
+                  value={form.pdf_url}
+                  onChange={handleChange}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  placeholder="https://..."
+                />
+              )}
+
+              {pdfMode === "upload" && (
+                <div className="space-y-2">
+                  <input
+                    ref={pdfFileInputRef}
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handlePdfFileChange}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1 file:text-xs file:font-medium file:text-primary-foreground"
+                    disabled={pdfUploadPercent !== null}
+                  />
+                  {pdfUploadPercent !== null && (
+                    <div className="space-y-1">
+                      <Progress value={pdfUploadPercent} className="h-2" />
+                      <p className="text-xs text-muted-foreground">
+                        {pdfUploadStatus ?? "Uploading PDF…"} {pdfUploadPercent}%
+                      </p>
+                    </div>
+                  )}
+                  {uploadedPdfFileName && pdfUploadPercent === null && (
+                    <p className="text-xs text-green-600">
+                      Uploaded: {uploadedPdfFileName}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    PDF only · max 50 MB
+                  </p>
+                </div>
+              )}
+
+              {form.pdf_url && (
+                <p className="text-xs text-muted-foreground break-all">
+                  Resource: {form.pdf_url}
+                </p>
+              )}
             </div>
 
             {/* Content */}
@@ -948,7 +1095,7 @@ export default function EditLessonPage() {
                   value={form.duration_mins}
                   onChange={handleChange}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                  placeholder="e.g. 30"
+                  placeholder="Auto-populated when video metadata is available"
                 />
               </div>
 
@@ -1100,6 +1247,7 @@ export default function EditLessonPage() {
                   type="url"
                   value={videoForm.video_url}
                   onChange={(e) => setVideoForm((p) => ({ ...p, video_url: e.target.value }))}
+                  onBlur={(e) => void handleLessonVideoUrlBlur(e.target.value)}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   placeholder="https://..."
                 />
@@ -1116,7 +1264,7 @@ export default function EditLessonPage() {
                     value={videoForm.duration_mins}
                     onChange={(e) => setVideoForm((p) => ({ ...p, duration_mins: e.target.value }))}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                    placeholder="e.g. 15"
+                    placeholder="Auto-populated when video metadata is available"
                   />
                 </div>
                 <div className="space-y-1.5">

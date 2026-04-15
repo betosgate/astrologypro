@@ -41,17 +41,21 @@ export async function GET(request: NextRequest) {
   const s3 = getS3Client();
 
   // Find bookings that need recording URL synced.
-  // Only look at sessions that ended at least 5 min ago — Chime needs time
-  // to finalize the pipeline and flush files to S3.
+  // Two cases:
+  //   1. confirmed_at is set (both parties joined) — standard flow
+  //   2. status = 'completed' — session ended even if participant webhook missed
+  // In both cases require at least 5 min to have passed so Chime can finalize.
   const cutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
   const { data: bookings, error } = await admin
     .from("bookings")
-    .select("id, chime_meeting_id, confirmed_at")
+    .select("id, chime_meeting_id, confirmed_at, updated_at")
     .not("chime_meeting_id", "is", null)
     .is("recording_url", null)
-    .not("confirmed_at", "is", null)
-    .lt("confirmed_at", cutoff)
+    .or(
+      `and(confirmed_at.not.is.null,confirmed_at.lt.${cutoff}),` +
+      `and(status.eq.completed,updated_at.lt.${cutoff})`
+    )
     .limit(20);
 
   if (error) {

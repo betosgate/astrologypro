@@ -813,12 +813,13 @@ async function handleWeeklySubscriptionCheckoutCompleted(
     clientUserId = existingClient?.user_id ?? null;
 
     if (!clientUserId) {
-      const { data: authList } = await supabase.auth.admin.listUsers({
+      const { data: authListData } = await supabase.auth.admin.listUsers({
         page: 1,
         perPage: 1000,
       });
+      const authListUsers = (authListData?.users ?? []) as Array<{ id: string; email?: string }>;
       clientUserId =
-        authList?.users?.find((user) => user.email === email)?.id ?? null;
+        authListUsers.find((user) => user.email === email)?.id ?? null;
     }
   } else {
     clientUserId = createdUser.user.id;

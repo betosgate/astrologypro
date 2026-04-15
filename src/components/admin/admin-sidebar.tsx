@@ -182,7 +182,6 @@ const NAV_GROUPS = [
   {
     label: "Community",
     items: [
-      { label: "PM Plan Tiers", href: "/admin/pm-plan-tiers", icon: Layers },
       { label: "Broadcasts", href: "/admin/broadcasting", icon: Radio },
       { label: "Dashboard Feed", href: "/admin/dashboard-content", icon: Megaphone },
       { label: "Calendar", href: "/admin/calendar", icon: CalendarDays },
@@ -196,7 +195,8 @@ const NAV_GROUPS = [
       { label: "Programs & Lessons", href: "/admin/training", icon: GraduationCap, exact: true },
       { label: "Analytics", href: "/admin/training/analytics", icon: TrendingUp },
       { label: "Settings", href: "/admin/training/settings", icon: Settings2 },
-      { label: "Class Config", href: "/admin/class-config", icon: LayoutDashboard },
+      // { label: "Class Config", href: "/admin/class-config", icon: LayoutDashboard },
+      { label: "Certificate Config", href: "/admin/certificate-config", icon: GraduationCap },
     ],
   },
   {

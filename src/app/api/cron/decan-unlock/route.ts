@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
         .eq("decan_id", decan.id)
         .maybeSingle();
 
-      const progress = rawProgress as {
+      const progress = rawProgress as unknown as {
         id: string;
         status: string;
         ritual_done: boolean;

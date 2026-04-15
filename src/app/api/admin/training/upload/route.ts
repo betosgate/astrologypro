@@ -17,28 +17,59 @@ export const maxDuration = 300;
 /**
  * POST /api/admin/training/upload
  *
- * Server-mediated admin video upload for training lessons. The client
+ * Server-mediated admin file upload for training lessons. The client
  * sends the file as multipart/form-data; this route uploads it to
  * Supabase Storage using the admin (service-role) client which bypasses
  * RLS — fixing the "new row violates row-level security policy" error
- * that occurs when the browser client tries to write directly to the
- * `training-videos` bucket.
+ * that occurs when the browser client tries to write directly to storage.
  *
- * Body: multipart/form-data with a `file` field
+ * Body: multipart/form-data with a `file` field and optional `kind`
+ * field (`video` | `pdf`).
  * Response (200): { url: string }  — the public URL of the uploaded file
  * Errors: 401, 400, 413, 500
  */
 
-const BUCKET = "training-videos";
-const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB
+const VIDEO_BUCKET = "training-videos";
+const PDF_BUCKET = "all-frontend-assets";
+const VIDEO_MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB
+const PDF_MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
 
-const ALLOWED_TYPES = new Set([
+const VIDEO_TYPES = new Set([
   "video/mp4",
   "video/webm",
   "video/ogg",
   "video/quicktime",
   "video/x-msvideo",
 ]);
+
+const PDF_TYPES = new Set(["application/pdf"]);
+
+function getUploadConfig(kind: string | null) {
+  if (kind === "pdf") {
+    return {
+      bucket: PDF_BUCKET,
+      maxFileSize: PDF_MAX_FILE_SIZE,
+      allowedTypes: PDF_TYPES,
+      acceptedLabel: "PDF",
+      storagePrefix: "training/pdfs",
+      oversizedMessage:
+        "This PDF is larger than the current 50 MB document upload limit. Please upload a smaller file.",
+      bucketLimitMessage:
+        "This PDF was rejected by the storage bucket size limit. Increase the all-frontend-assets bucket limit if larger training documents need to be supported.",
+    };
+  }
+
+  return {
+    bucket: VIDEO_BUCKET,
+    maxFileSize: VIDEO_MAX_FILE_SIZE,
+    allowedTypes: VIDEO_TYPES,
+    acceptedLabel: "MP4, WebM, OGG, MOV, AVI",
+    storagePrefix: "lessons",
+    oversizedMessage: `File size exceeds the ${VIDEO_MAX_FILE_SIZE / (1024 * 1024)} MB limit.`,
+    bucketLimitMessage:
+      "The file was rejected by the storage bucket's file_size_limit. Run migration 20260410000001 from Admin → DB Migrations to increase the bucket limit to 500 MB.",
+  };
+}
 
 export async function POST(req: NextRequest) {
   const user = await getAdminUser();
@@ -64,26 +95,29 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!ALLOWED_TYPES.has(file.type)) {
+  const kind = typeof formData.get("kind") === "string" ? String(formData.get("kind")) : null;
+  const config = getUploadConfig(kind);
+
+  if (!config.allowedTypes.has(file.type)) {
     return NextResponse.json(
       {
-        error: `File type '${file.type}' is not allowed. Accepted: MP4, WebM, OGG, MOV, AVI.`,
+        error: `File type '${file.type}' is not allowed. Accepted: ${config.acceptedLabel}.`,
       },
       { status: 400 },
     );
   }
 
-  if (file.size > MAX_FILE_SIZE) {
+  if (file.size > config.maxFileSize) {
     return NextResponse.json(
       {
-        error: `File size (${(file.size / (1024 * 1024)).toFixed(1)} MB) exceeds the ${MAX_FILE_SIZE / (1024 * 1024)} MB limit.`,
+        error: config.oversizedMessage,
       },
       { status: 413 },
     );
   }
 
-  const ext = file.name.split(".").pop() ?? "mp4";
-  const storagePath = `lessons/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const ext = file.name.split(".").pop() ?? (kind === "pdf" ? "pdf" : "mp4");
+  const storagePath = `${config.storagePrefix}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
   const admin = createAdminClient();
 
@@ -92,7 +126,7 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const { error: uploadError } = await admin.storage
-    .from(BUCKET)
+    .from(config.bucket)
     .upload(storagePath, buffer, {
       contentType: file.type,
       cacheControl: "3600",
@@ -111,9 +145,7 @@ export async function POST(req: NextRequest) {
     if (isBucketSizeError) {
       return NextResponse.json(
         {
-          error:
-            `The file (${(file.size / (1024 * 1024)).toFixed(1)} MB) was rejected by the storage bucket's file_size_limit. ` +
-            `Run migration 20260410000001 from Admin → DB Migrations to increase the bucket limit to 500 MB.`,
+          error: config.bucketLimitMessage,
         },
         { status: 413 },
       );
@@ -126,7 +158,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { data: publicData } = admin.storage
-    .from(BUCKET)
+    .from(config.bucket)
     .getPublicUrl(storagePath);
 
   return NextResponse.json({ url: publicData.publicUrl });

@@ -139,7 +139,7 @@ The user has provided a specific "Area of Inquiry": "${areaOfInquiry || "career"
       key: "davison_relationship", 
       system: davisonSystem, 
       user: davisonUser, 
-      json: isBusinessTab ? { mydetails: data.natal_chart_data, fiend_details: data.natal_chart_data_p2 } : selfPartnerJson 
+      json: (isBusinessTab ? { mydetails: data.natal_chart_data, fiend_details: data.natal_chart_data_p2 } : selfPartnerJson) as unknown[]
     });
     prompts.push({ key: "major_aspects_and_connections", system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our davison relation ship chart of this partnership${suffix}`, json: selfPartnerJson });
     prompts.push({ key: "compatibility_score_or_summary", system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate compatibility score or summery of this partnership${suffix}`, json: selfPartnerJson });

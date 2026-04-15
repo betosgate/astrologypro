@@ -178,11 +178,19 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           { title: "Payments", description: "Gateway tracking and payouts", href: "/admin/payments", icon: CreditCard, status: "live" },
         ],
       },
+      {
+        groupLabel: "Growth & Advocacy",
+        cards: [
+          { title: "Social Advocacy", description: "Manage advocate program and leaderboard", href: "/admin/advocacy", icon: TrendingUp, status: "live" },
+          { title: "Campaign Detail", description: "Create and configure referral campaigns", href: "/admin/campaigns", icon: Zap, status: "live" },
+          { title: "Live Monitor", description: "Real-time view of all active broadcasts", href: "/admin/live-monitor", icon: Radio, status: "live" },
+        ],
+      },
     ],
     screens: [
       // Overview
-      { 
-        name: "overview", 
+      {
+        name: "overview",
         label: "Executive Analytics", 
         description: "Global KPIs and platform health overview.", 
         group: "Overview",
@@ -235,7 +243,22 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Performance metrics and review moderation"
         ]
       },
-      { name: "affiliates_v2", label: "Affiliates", description: "Tracking of platform growth partners.", group: "People" },
+      {
+        name: "affiliates_v2",
+        label: "Affiliates",
+        description: "Central management panel for all social advocates and affiliate partners on the platform. See their performance, commission earnings, and referral activity in one admin view.",
+        group: "People",
+        purpose: "The Affiliates panel is where administrators manage everyone who has been granted a Social Advocate role on the platform. These are people who earn commissions by referring new members. Admins can see how many referrals each advocate has made, how much they have earned, whether their account is active, and review any commission disputes. It is the oversight layer above the individual advocate's own dashboard.",
+        bullets: [
+          "All advocates listed — complete list of every social advocate account, active or inactive",
+          "Referral count per advocate — how many successful sign-ups each partner has driven",
+          "Commission earned — total lifetime and current-period commissions per advocate",
+          "Payout status — which advocates have pending payouts, which have been paid",
+          "Activate or deactivate — toggle an advocate account on or off without deleting it",
+          "View individual dashboard — jump to any advocate's personal dashboard as an admin",
+          "Commission rate override — set a custom commission rate for specific high-performing partners"
+        ]
+      },
       // { name: "campaigns", label: "Marketing Campaigns", description: "Governance of promotional initiatives.", group: "People" },
       { 
         name: "roles", 
@@ -268,10 +291,54 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Scheduled publishing and distribution logic"
         ]
       },
-      { name: "blog_analytics", label: "Blog Analytics", description: "Performance tracking for editorial content.", group: "Content" },
-      // { name: "blog_cta_blocks", label: "Conversion Blocks", description: "Manage CTAs injected into blog posts.", group: "Content" },
-      { name: "blog_categories_v2", label: "Blog Categories", description: "Management of blog categories and tags.", group: "Content" },
-      { name: "blog_authors_v2", label: "Blog Authors", description: "Management of guest and staff writers.", group: "Content" },
+      {
+        name: "blog_analytics",
+        label: "Blog Analytics",
+        description: "Performance data for every published article — page views, reading time, top articles, and traffic sources. Use this to understand which content resonates with your audience.",
+        group: "Content",
+        purpose: "Blog analytics shows admins the real-world impact of every piece of content published on the platform. Instead of guessing what readers want, this page gives concrete data — which articles get the most traffic, how long people read before leaving, which categories attract the most engagement, and where readers are coming from. Use it to guide editorial decisions and double down on content that converts.",
+        bullets: [
+          "Top articles by views — a ranked list of the highest-traffic posts in any date range",
+          "Average reading time — how long visitors spend on each article before leaving",
+          "Traffic sources — where readers are coming from (search, social media, direct, referral)",
+          "Category performance — which content categories (astrology, tarot, rituals, etc.) get the most engagement",
+          "New vs returning readers — how many visitors are first-time vs repeat content consumers",
+          "Date range filter — compare this month vs last month or any custom period",
+          "Export data — download analytics as CSV for external reporting or trend analysis"
+        ]
+      },
+      {
+        name: "blog_categories_v2",
+        label: "Blog Categories",
+        description: "Create and manage the category system that organizes all blog posts. Categories help readers navigate to topics they care about and improve search engine visibility.",
+        group: "Content",
+        purpose: "Categories are the navigation backbone of the blog. When a reader wants to find all articles about astrology or tarot, they browse by category. This page lets admins create new categories, rename existing ones, set descriptions, and decide which categories appear in the top navigation. Good category management makes the blog more discoverable and keeps content organized as it grows.",
+        bullets: [
+          "All categories listed — see every category with post count and visibility status",
+          "Create new category — add a name, slug (URL-friendly name), and description",
+          "Edit or rename — update category names without breaking existing posts",
+          "Category slug — the URL path used in links (e.g. /blog/category/astrology)",
+          "Set visibility — choose which categories appear in public navigation menus",
+          "Post count — see how many articles are currently assigned to each category",
+          "Sort order — control the order categories appear in navigation and sidebars"
+        ]
+      },
+      {
+        name: "blog_authors_v2",
+        label: "Blog Authors",
+        description: "Manage the writer profiles for all blog contributors. Authors get their own bio page and their name appears on every article they write, building personal credibility with readers.",
+        group: "Content",
+        purpose: "Every blog post is attributed to an author. Author profiles include a photo, short bio, specialties, and a link to all their published articles. This page lets admins create and manage author records — whether for internal staff writers, guest contributors, or the diviners who publish their own insights. Strong author profiles build trust with readers and help with SEO.",
+        bullets: [
+          "All authors listed — every registered contributor with photo, name, and post count",
+          "Create new author — add a name, profile photo, short bio, and specialties",
+          "Link to user account — optionally connect an author profile to a real platform user account",
+          "Author page URL — each author gets a public page showing all their published articles",
+          "Edit or archive — update author details or deactivate an author without deleting their posts",
+          "Guest contributors — create author profiles for external writers who do not have platform accounts",
+          "SEO fields — add a meta description for the author's public page to improve search rankings"
+        ]
+      },
       // { name: "blog_series", label: "Content Series", description: "Grouping related articles into collections.", group: "Content" },
       { 
         name: "media_items_v2", 
@@ -287,8 +354,38 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       // { name: "videos", label: "Video Library", description: "Management of platform video content.", group: "Content" },
-      { name: "video_sessions", label: "Recorded Sessions", description: "Repository of archived video readings.", group: "Content" },
-      { name: "webinars_v2", label: "Webinar Hub", description: "Scheduling and management of live events.", group: "Content" },
+      {
+        name: "video_sessions",
+        label: "Recorded Sessions",
+        description: "The platform-wide archive of all recorded video readings and live sessions. Admins can browse, search, moderate, and manage access to every session recording stored on the platform.",
+        group: "Content",
+        purpose: "When a diviner records a session, or when a live broadcast is captured, the recording is stored here. This gives admins visibility over all recorded content — useful for quality assurance, compliance, storage management, and helping users find their recordings. Admins can search by diviner, client, date, or session type, and can revoke access to a recording if needed.",
+        bullets: [
+          "All recordings in one place — every saved video session from all diviners, sorted by date",
+          "Search and filter — find recordings by diviner name, client, date, or session type",
+          "Playback controls — watch any recording directly from the admin panel for moderation",
+          "Access management — revoke or restore a client's access to a specific recording",
+          "Storage tracking — see the total storage used by recordings and per-diviner breakdowns",
+          "Delete recordings — permanently remove recordings that should not be kept",
+          "Download option — save specific recordings for compliance or dispute resolution"
+        ]
+      },
+      {
+        name: "webinars_v2",
+        label: "Webinar Hub",
+        description: "Schedule, manage, and archive platform webinars and live events. Control registration, assign hosts, set capacity limits, and send promotional notifications to members.",
+        group: "Content",
+        purpose: "Webinars are scheduled live events — broader than a one-on-one reading but different from Sunday Service. They might be educational workshops, Q&A sessions with diviners, seasonal astrological reviews, or special community events. This hub lets admins plan upcoming webinars, assign hosts, manage registrations, and archive past events. It is the backstage control room for everything live and scheduled.",
+        bullets: [
+          "Upcoming webinars — all scheduled future events with date, host, topic, and registration count",
+          "Create a new webinar — set title, description, date, time, host diviner, and capacity limit",
+          "Registration management — see who has registered and send pre-event reminders",
+          "Capacity control — set a maximum number of attendees and show a waitlist when full",
+          "Send notifications — push email or platform alerts to registered members before the event",
+          "Past webinar archive — recordings and materials from all completed events",
+          "Analytics — attendance rate, average watch time, and engagement metrics per event"
+        ]
+      },
       { 
         name: "spiritual_wisdom_v2", 
         label: "Spiritual Wisdom", 
@@ -306,7 +403,22 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       // { name: "perennial_content", label: "Perennial Knowledge", description: "Specific content for the PM community.", group: "Content" },
 
       // Astrology
-      { name: "wheel_signs_v2", label: "Wheel Signs", description: "Definition and config of zodiac attributes.", group: "Astrology" },
+      {
+        name: "wheel_signs_v2",
+        label: "Wheel Signs",
+        description: "Configure the zodiac sign definitions used across all chart tools. Control glyph symbols, element and modality assignments, ruling planets, keywords, and the descriptions that appear in every chart reading on the platform.",
+        group: "Astrology",
+        purpose: "The Wheel Signs configuration is the foundational data layer for all astrology on the platform. Every chart tool — from natal charts to transit reports — reads from this table to display correct zodiac sign information. Admins can update the descriptions shown to users for each of the 12 signs, adjust ruling planet assignments, or change display keywords. This affects how the entire platform represents astrological sign data.",
+        bullets: [
+          "All 12 zodiac signs — complete list with symbol, element, modality, and ruling planet",
+          "Edit sign descriptions — update the text shown to users when a planet falls in a specific sign",
+          "Symbol and glyph settings — control which Unicode or SVG symbol represents each sign in charts",
+          "Element assignment — Fire, Earth, Air, Water designation for each sign",
+          "Modality — Cardinal, Fixed, or Mutable classification for each sign",
+          "Ruling planet — which planet traditionally governs each sign",
+          "Keywords — short descriptive tags used in AI readings and chart summaries"
+        ]
+      },
       { 
         name: "mundane_dashboard", 
         label: "Mundane Hub", 
@@ -333,9 +445,54 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Automated alert triggers for major entries"
         ]
       },
-      { name: "mundane_entities_v2", label: "Entities", description: "Mapping of nations and locations for charts.", group: "Astrology" },
-      { name: "forecasts_v2", label: "Forecasts", description: "Management of high-level temporal forecasts.", group: "Astrology" },
-      { name: "event_calendar_v2", label: "Event Calendar", description: "Scheduler for major cosmic alignments.", group: "Astrology" },
+      {
+        name: "mundane_entities_v2",
+        label: "Mundane Entities",
+        description: "The database of nations, cities, companies, and notable figures used in mundane astrology charts. Each entity has a natal chart calculated from its founding date and location, used to track how planetary transits affect it.",
+        group: "Astrology",
+        purpose: "Mundane astrology requires reference charts for real-world entities — countries, governments, major cities, corporations, and historical figures. This page manages that database. When a new country or entity needs to be added (for example, a newly formed nation or an important organization), admins add it here with its founding date, time, and location. The platform then automatically generates its natal chart for use in mundane transit analysis.",
+        bullets: [
+          "All entities listed — every country, city, organization, and notable figure in the mundane database",
+          "Add new entity — enter the name, founding date, time, location, and category",
+          "Auto-generated natal chart — the platform calculates the entity's chart from its founding data",
+          "Categories — entities are organized by type (nation, city, corporation, historical figure, celestial body)",
+          "Transit overlay — see which current planetary transits are affecting a specific entity",
+          "Edit or archive — update entity details or retire outdated records",
+          "Search — find any entity instantly by name, country, or category"
+        ]
+      },
+      {
+        name: "forecasts_v2",
+        label: "Forecasts",
+        description: "Create and publish astrological forecasts for specific time periods — weekly, monthly, or annual outlooks covering planetary themes, major transits, and collective guidance.",
+        group: "Astrology",
+        purpose: "Forecasts are curated astrological outlooks written by the admin team or AI-assisted and published to members. A monthly forecast might cover the major planetary themes for that month — like a Mercury retrograde, a full moon in a specific sign, or a major outer planet transit. These forecasts are displayed to members on the platform as expert guidance for the period ahead.",
+        bullets: [
+          "All forecasts listed — published and draft forecasts organized by date and period",
+          "Create a forecast — write or paste a forecast for a specific week, month, or season",
+          "Rich text editor — format forecasts with headings, bullet points, and embedded charts",
+          "AI-assisted drafting — use the platform's AI to generate a draft forecast based on the period's transits",
+          "Publish or schedule — make a forecast live immediately or schedule it to publish on a specific date",
+          "Member visibility — control whether a forecast is visible to all users or only specific member tiers",
+          "Archive — past forecasts are saved and searchable for historical reference"
+        ]
+      },
+      {
+        name: "event_calendar_v2",
+        label: "Event Calendar",
+        description: "The master calendar of major astrological events — eclipses, ingresses, retrogrades, full moons, and planetary stations. Used to populate the cosmic calendar visible across the entire platform.",
+        group: "Astrology",
+        purpose: "This is the admin-side source of truth for all significant astrological dates on the platform. Every eclipse, planetary retrograde, new and full moon, seasonal ingress, and major conjunction is listed here. When members see a 'Cosmic Calendar' on their dashboard, the data comes from this table. Admins can add custom events, edit automatically calculated ones, and attach notes or rituals to specific dates.",
+        bullets: [
+          "All celestial events — eclipses, retrogrades, ingresses, full moons, new moons, stations, conjunctions",
+          "Auto-populated — the platform's astrology engine automatically populates known events from ephemeris data",
+          "Add custom events — create platform-specific events like school ceremonies or special broadcasts",
+          "Attach content — link a ritual, forecast, or webinar to a specific celestial event",
+          "Date filtering — browse events by month, quarter, or custom date range",
+          "Visibility control — choose whether an event appears publicly or only to specific member tiers",
+          "Export calendar — download the event list as iCal or CSV for external calendar integration"
+        ]
+      },
       { 
         name: "chart_studio", 
         label: "Chart Studio", 
@@ -363,7 +520,22 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       // { name: "research", label: "Astrology Research", description: "Data mining tool for historic chart patterns.", group: "Astrology" },
-      { name: "mundane_search_v2", label: "Mundane Search", description: "Searchable database of planetary positions.", group: "Astrology" },
+      {
+        name: "mundane_search_v2",
+        label: "Mundane Search",
+        description: "A powerful search tool for querying the platform's ephemeris database — find planetary positions for any date, time, and location in history. Used for research, chart verification, and historical pattern analysis.",
+        group: "Astrology",
+        purpose: "The Mundane Search is like a planetary position lookup engine. If you want to know exactly where every planet was on a specific date — say, the day a country was founded, the date of a historical event, or a client's birth date — you enter that date here and get the complete planetary positions. It is an essential research tool for mundane astrologers and administrators who need to verify or cross-reference astrological data.",
+        bullets: [
+          "Date and time input — enter any date and time to retrieve planetary positions for that moment",
+          "Location input — set a geographic location for house-system calculations",
+          "Full planet table — returns Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto, and Nodes",
+          "House positions — calculate house cusps for the given date and location",
+          "Retrograde status — see which planets were retrograde on that date",
+          "Historical depth — search dates going back centuries for mundane research",
+          "Export results — save the planetary data as a table for use in reports or chart tools"
+        ]
+      },
       // { name: "mundane_access", label: "Access Control", description: "Permissioning for premium astro data.", group: "Astrology" },
       // { name: "decan_journals", label: "Decan Wisdom", description: "Granular journals for the 36 decans.", group: "Astrology" },
       // { name: "decan_media", label: "Decan Media", description: "Visual assets for decan-based studies.", group: "Astrology" },
@@ -1006,8 +1178,38 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Academic history and lesson completion logs"
         ]
       },
-      { name: "ms_decans", label: "MS Decan Studies", description: "School-specific decan curriculum config.", group: "Programs" },
-      { name: "ms_journals", label: "Student Journals", description: "Review of student esoteric practice logs.", group: "Programs" },
+      {
+        name: "ms_decans",
+        label: "MS Decan Studies",
+        description: "Configure and manage the decan-by-decan curriculum that sits at the heart of the Mystery School program. Each of the 36 decans has its own content, unlock timing, and associated ritual or journal requirement.",
+        group: "Programs",
+        purpose: "The decan system is the academic backbone of the Mystery School. Students progress through all 36 decans in sequence, unlocking each one after the previous is completed. This admin panel lets the team configure what content, ritual, and journal requirement belongs to each decan, when a decan is available to unlock, and what the passing criteria are. It is the curriculum management layer that powers the entire Mystery School learning journey.",
+        bullets: [
+          "All 36 decans listed — each with unlock status, associated content, and ritual requirement",
+          "Content assignment — attach readings, videos, and sacred texts to each decan study",
+          "Unlock timing — set whether a decan unlocks on a calendar date, after previous decan completion, or manually",
+          "Journal requirement — configure whether students must submit a journal entry to complete the decan",
+          "Ritual requirement — attach a specific ritual that must be performed and marked complete",
+          "Passing criteria — define what counts as completion for each decan study",
+          "Student progress view — see which students are at which decan and who is behind"
+        ]
+      },
+      {
+        name: "ms_journals",
+        label: "Student Journals",
+        description: "Review and manage the private journal entries that Mystery School students submit as part of their decan studies. Each decan may require a written reflection before the student can progress.",
+        group: "Programs",
+        purpose: "Journaling is a core part of the Mystery School experience. After studying a decan, students are often asked to write a personal reflection — what they learned, how the energy of that decan relates to their life, or a record of a ritual they performed. Mentors and admins can read these journals to track student depth of engagement, provide feedback, and decide whether to approve progression to the next decan. This page surfaces all submitted journals with student name, decan, and submission date.",
+        bullets: [
+          "All journals listed — every submitted entry with student name, decan number, and date",
+          "Read in full — open and read any journal entry to review the student's reflection",
+          "Approve or request revision — mark a journal as approved (allows decan completion) or ask the student to revise",
+          "Mentor feedback — add a private comment or response visible only to the student",
+          "Filter by status — view journals that are pending review, approved, or needs revision",
+          "Filter by student — see all journals for one specific student to track their journey",
+          "Filter by decan — see all journals submitted for a specific decan across all students"
+        ]
+      },
       { 
         name: "mandalism", 
         label: "Perennial Mandalism", 
@@ -1049,7 +1251,22 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Immediate moderator intervention controls"
         ]
       },
-      { name: "check_ins", label: "System Check-ins", description: "Monitoring practitioner platform presence.", group: "Live" },
+      {
+        name: "check_ins",
+        label: "Practitioner Check-ins",
+        description: "Real-time visibility into which diviners are currently active on the platform — online status, last login, active session count, and response time metrics. Used for quality monitoring and support escalation.",
+        group: "Live",
+        purpose: "Check-ins gives admins a live pulse on practitioner presence. If a client reports their diviner was late or unresponsive, this is where admins verify the diviner's activity log. It also helps identify diviners who have not logged in for an extended period, those who are online but have unfilled booking slots, and any who are in an active session right now.",
+        bullets: [
+          "Online status — which diviners are currently logged in and active on the platform",
+          "Last seen — timestamp of each diviner's most recent platform activity",
+          "Active session indicator — whether a diviner is currently in a live reading session",
+          "Booking availability — whether an online diviner has open slots for new bookings",
+          "Response time metric — average time to accept or respond to booking requests",
+          "Inactivity alerts — flag diviners who have not checked in for 7+ days",
+          "Manual check-in log — history of all check-in events with timestamps for audit purposes"
+        ]
+      },
       { 
         name: "my_schedule", 
         label: "Master Calendar", 
@@ -1063,7 +1280,22 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Filtered views for specific roles and programs"
         ]
       },
-      { name: "bookings", label: "Session Mgmt", description: "Oversight of individual user appointments.", group: "My Schedule" },
+      {
+        name: "bookings",
+        label: "Session Management",
+        description: "Admin-level oversight of all bookings across the entire platform — every appointment made between any client and any diviner. Search, filter, inspect, and intervene on any booking from this central view.",
+        group: "My Schedule",
+        purpose: "The Session Management panel gives admins full visibility over every booking on the platform — past, present, and future. This is the control center for resolving booking disputes, investigating no-shows, processing manual cancellations, and generating session-level reports. Unlike a diviner's own Schedule page which shows only their appointments, this shows everything platform-wide.",
+        bullets: [
+          "All bookings platform-wide — every session between every client and diviner, all in one list",
+          "Search by client, diviner, date, or service — find any specific booking instantly",
+          "Status breakdown — confirmed, pending, completed, cancelled, no-show, and rescheduled",
+          "Session detail view — full metadata including payment amount, notes, birth data, and recording link",
+          "Admin cancellation — cancel a session on behalf of either party and trigger automatic notifications",
+          "Rescheduling override — move a session to a new time with admin authority",
+          "Export to CSV — download booking data for reporting, accounting, or dispute resolution"
+        ]
+      },
       { 
         name: "availability", 
         label: "Global Availability", 
@@ -1079,9 +1311,54 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
 
       // Community
-      { name: "pm_plan_tiers", label: "Plan Configuration", description: "Management of community payment tiers.", group: "Community" },
-      { name: "broadcasts", label: "System Broadcasts", description: "Pushing messages to the entire community.", group: "Community" },
-      { name: "calendar", label: "Community Events", description: "Shared calendar for public gatherings.", group: "Community" },
+      {
+        name: "pm_plan_tiers",
+        label: "PM Plan Configuration",
+        description: "Manage the subscription tiers for the Perennial Mandalism community — Individual ($19.95/mo) and Family ($34.95/mo). Set prices, update feature lists, and control what each plan includes.",
+        group: "Community",
+        purpose: "The PM Plan Configuration page is where admins control the two Perennial Mandalism membership plans. The Individual plan is designed for a single member; the Family plan allows up to four family members under one subscription. When prices or features change, this page is where those updates are made. Changes here immediately affect what the checkout and plan management pages show to prospective and existing members.",
+        bullets: [
+          "Individual Plan — name, price, description, and feature list for the single-member tier ($19.95/mo)",
+          "Family Plan — same settings for the family tier ($34.95/mo) with family member seat count",
+          "Edit pricing — update the monthly price for either plan (propagates to Stripe product configuration)",
+          "Feature list editor — add, edit, or remove bullet points shown on the membership comparison page",
+          "Plan status — activate or deactivate a plan from public view without deleting it",
+          "Billing interval — monthly, quarterly, or annual billing cycle configuration per plan",
+          "Stripe product link — connects each plan to the corresponding Stripe product for payment processing"
+        ]
+      },
+      {
+        name: "broadcasts",
+        label: "Community Broadcasts",
+        description: "Create and manage community-wide announcements and live broadcast events that appear on the PM member dashboard. Broadcasts can be live video, pre-recorded, or text announcements visible to all members.",
+        group: "Community",
+        purpose: "Broadcasts are admin-created events that appear for all Perennial Mandalism members on their dashboard. They come in several types: a live stream happening right now, an upcoming event with an RSVP button, an on-demand replay of a past broadcast, or a text announcement. Admins create broadcasts here, set the type and timing, and members see them surfaced on their community hub. This is the main communication channel from the school to its members.",
+        bullets: [
+          "Create a broadcast — choose type (live, upcoming, on-demand, announcement), add title, description, and media",
+          "Broadcast types — Live Now (streaming), Upcoming (with countdown), On Demand (replay), Announcement (text)",
+          "Schedule timing — set a go-live date and time for upcoming broadcasts",
+          "Video embed — paste a YouTube, Vimeo, or direct stream URL for video broadcasts",
+          "Visibility — broadcast to all members or target specific plan tiers",
+          "RSVP tracking — for upcoming events, see how many members have registered interest",
+          "Archive or remove — move old broadcasts to archive or delete them when no longer relevant"
+        ]
+      },
+      {
+        name: "calendar",
+        label: "Community Events Calendar",
+        description: "Create and manage events that appear on the Perennial Mandalism members' Events and Sessions pages. Admins add events here and PM members see them in their calendar, RSVP, and receive reminders.",
+        group: "Community",
+        purpose: "This is the admin-side tool for publishing events to the PM community calendar. When an admin creates an event here — a ceremony, workshop, Sunday service session, or community gathering — it automatically appears on the Events and Sessions pages for all PM members. Members can see the event, read the description, and RSVP. The admin controls the date, time, title, description, and who the event is visible to.",
+        bullets: [
+          "Create a new event — set title, description, date, start time, end time, and event type",
+          "Event types — Sunday Service, Ceremony, Workshop, Webinar, Community Gathering, Private Session",
+          "Member visibility — share the event with all PM members or specific plan tiers only",
+          "RSVP management — see which members have confirmed attendance for an event",
+          "Recurring events — set events to repeat weekly (e.g. Sunday Service happens every Sunday)",
+          "Send reminders — trigger notification emails to registered members before the event",
+          "Archive past events — completed events move to archive automatically after their end time"
+        ]
+      },
       { 
         name: "holy_books", 
         label: "Sacred Texts Hub", 
@@ -1123,9 +1400,54 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Course-level graduation criteria settings"
         ]
       },
-      { name: "training_analytics", label: "Analytics", description: "Statistical performance of courses.", group: "Training" },
-      { name: "training_settings", label: "Settings", description: "Global settings for the graduation path.", group: "Training" },
-      { name: "class_config", label: "Class Config", description: "Configuration of virtual training rooms.", group: "Training" },
+      {
+        name: "training_analytics",
+        label: "Training Analytics",
+        description: "Performance metrics for the entire training curriculum — how many trainees are enrolled, completion rates per lesson and category, quiz pass rates, average scores, and time-to-graduation trends.",
+        group: "Training",
+        purpose: "Training Analytics answers the question: is the curriculum actually working? Admins can see which lessons are being completed quickly (indicating engagement) and which are being skipped or abandoned (indicating a problem). Quiz pass rates reveal which topics students struggle with. Drop-off charts show where students stop engaging. These insights help the team improve the curriculum and support struggling trainees.",
+        bullets: [
+          "Enrollment overview — total trainees enrolled, active, graduated, and inactive",
+          "Completion rate by lesson — which lessons have high completion vs high abandonment",
+          "Quiz performance — average scores and pass rates per quiz and per lesson",
+          "Category completion rates — how far through each curriculum category the average trainee is",
+          "Time-to-graduation trend — how long it takes trainees to complete the full program",
+          "Top performers — trainees with highest scores and fastest completion",
+          "At-risk students — trainees who have not engaged in the past 14+ days"
+        ]
+      },
+      {
+        name: "training_settings",
+        label: "Training Settings",
+        description: "Global configuration for the trainee program — passing score thresholds, quiz attempt limits, certificate criteria, graduation requirements, and curriculum-wide rules.",
+        group: "Training",
+        purpose: "Training Settings is where the rules of the training program live. What score does a trainee need to pass a quiz? How many attempts do they get? What percentage of the curriculum must be completed before a certificate is issued? All of these policies are configured here and apply platform-wide to every trainee. Changes here immediately affect what all trainees experience in the program.",
+        bullets: [
+          "Passing score threshold — the minimum percentage score required to pass any quiz (e.g. 70%)",
+          "Quiz attempt limit — how many times a trainee can retake a quiz before being locked out",
+          "Certificate criteria — the completion percentage required to unlock the graduation certificate",
+          "Lesson locking — whether lessons must be completed in sequence or can be accessed freely",
+          "Session booking rules — whether trainees must complete specific lessons before booking mentor sessions",
+          "Email notifications — when and what emails are sent to trainees on milestones (quiz passed, lesson completed, etc.)",
+          "Graduation approval — whether graduation requires admin or mentor sign-off, or is automatic"
+        ]
+      },
+      {
+        name: "class_config",
+        label: "Class Configuration",
+        description: "Configure the virtual training room settings — video provider, room capacity, recording rules, and the default setup for every live training session held on the platform.",
+        group: "Training",
+        purpose: "When trainees attend live mentor sessions or group training classes, they enter a virtual room. This configuration controls how those rooms behave — which video technology powers them, how many people can join, whether sessions are recorded by default, and what the room layout looks like. Think of this as the AV settings for every classroom on the platform.",
+        bullets: [
+          "Video provider — which technology powers the virtual rooms (Chime, WebRTC, VideoSDK)",
+          "Room capacity — maximum number of participants allowed in a single class session",
+          "Auto-recording — whether all training sessions are recorded by default",
+          "Recording retention — how long recordings are stored before automatic deletion",
+          "Room naming convention — how virtual rooms are labelled (by trainee name, session ID, etc.)",
+          "Waiting room — whether participants wait in a lobby until the mentor starts the session",
+          "Chat and Q&A settings — whether in-session text chat and Q&A features are enabled"
+        ]
+      },
 
       // Commerce
       { 
@@ -1154,8 +1476,38 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Exportable data for accounting reconciliation"
         ]
       },
-      { name: "refunds", label: "Refund Management", description: "Processing and tracking payment reversals.", group: "Commerce" },
-      { name: "orders", label: "Orders", description: "Full directory of all platform purchases.", group: "Commerce" },
+      {
+        name: "refunds",
+        label: "Refund Management",
+        description: "Review and process all refund requests on the platform. See every refund claim, its status, the original transaction, and the reason given — then approve or reject with a single action.",
+        group: "Commerce",
+        purpose: "Refunds happen when a client requests money back — for a cancelled session, a technical issue, or a dispute with a diviner. This page gives admins a complete view of every refund request across the platform. For each refund, admins can see the original order, the client's reason, the amount requested, and the current status. Approved refunds are sent back to Stripe automatically; rejected ones trigger a notification to the client.",
+        bullets: [
+          "All refund requests — every open, approved, and rejected refund claim on the platform",
+          "Original order link — jump to the purchase that is being refunded to see full context",
+          "Refund reason — the client's stated reason for requesting a refund",
+          "Amount requested — whether the client wants a full or partial refund",
+          "Approve refund — confirm the refund, triggering an automatic reversal through Stripe",
+          "Reject refund — decline the request and send the client a notification with an explanation",
+          "Refund status history — full audit trail of who approved or rejected each refund and when"
+        ]
+      },
+      {
+        name: "orders",
+        label: "Orders",
+        description: "The complete platform-wide purchase log. Every booking, subscription, package, and product purchase made by any user on any diviner's profile is captured here. The master financial record for the entire platform.",
+        group: "Commerce",
+        purpose: "The Orders page is the admin view of every financial transaction on the platform — not just your own, but everyone's. If a client books a diviner, that order is here. If someone subscribes to a membership, that order is here. Admins use this for customer support (looking up a specific transaction), financial auditing (verifying revenue), and issue resolution (finding a missing payment or duplicate charge).",
+        bullets: [
+          "All orders platform-wide — every purchase from every user across every diviner",
+          "Filter by date, user, diviner, or product — narrow down to exactly what you are looking for",
+          "Order status — paid, pending, refunded, disputed, or failed",
+          "Stripe payment ID — the payment processor reference for each transaction",
+          "Net amount — the amount after platform fees, useful for calculating diviner payouts",
+          "Export to CSV — download the full order history for accounting or tax filing",
+          "Order detail view — click any order to see the full breakdown, metadata, and associated session"
+        ]
+      },
       { 
         name: "reports_commerce", 
         label: "Reports", 
@@ -1250,11 +1602,86 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Batch payout processing reconciliation"
         ]
       },
-      { name: "report_payouts", label: "Payout History", description: "Log of successfully processed transfers.", group: "Reports" },
-      { name: "report_funnel", label: "Conversion Funnel", description: "Tracking visitor-to-member journey.", group: "Reports" },
-      { name: "report_readings", label: "Reading Quality", description: "Metrics on session ratings and output.", group: "Reports" },
-      { name: "report_affiliates", label: "Affiliate ROI", description: "Performance of external traffic sources.", group: "Reports" },
-      { name: "report_campaigns", label: "Campaign ROI", description: "Financial results of marketing spends.", group: "Reports" },
+      {
+        name: "report_payouts",
+        label: "Payout History",
+        description: "A complete audit log of every bank transfer made to every diviner on the platform. See transfer dates, amounts, bank accounts, and any failed or returned transfers.",
+        group: "Reports",
+        purpose: "Payout History is the financial reconciliation tool for the entire platform. Every time a diviner gets paid — their earnings transferred from Stripe to their personal bank account — that transfer is recorded here. Admins use this for financial audits, resolving 'I did not receive my payout' support tickets, and confirming year-end financial totals. Each entry shows the diviner, amount, net after fees, transfer date, and Stripe transfer ID.",
+        bullets: [
+          "All payouts listed — every transfer to every diviner, sorted by most recent first",
+          "Diviner filter — view all payouts for one specific diviner to investigate a dispute",
+          "Date range filter — see all payouts processed in a given week, month, or quarter",
+          "Transfer status — successful, pending, failed, or returned",
+          "Gross vs net amount — what the diviner earned before and after platform fees",
+          "Stripe transfer ID — the unique reference for each transfer used for bank reconciliation",
+          "Export to CSV — download payout history for accounting and tax documentation"
+        ]
+      },
+      {
+        name: "report_funnel",
+        label: "Conversion Funnel",
+        description: "The visitor-to-member journey visualized as a funnel — how many people visit the platform, how many register, how many book a session, and how many become recurring members.",
+        group: "Reports",
+        purpose: "The Conversion Funnel shows where people drop off on the path from first discovering AstrologyPro to becoming a paying, active member. A healthy funnel has high conversion at every step. A big drop-off at 'visited profile but did not book' tells you the booking flow might have friction. A big drop-off at 'registered but never booked' tells you the onboarding experience needs work. This report is the foundation for any platform growth strategy.",
+        bullets: [
+          "Funnel stages — Visitor → Registration → First Booking → Repeat Booking → Subscription",
+          "Volume at each stage — how many users are at each step in any given period",
+          "Drop-off percentage — what percentage of users leave at each transition point",
+          "Time-to-convert — how long it takes the average user to move from registration to first booking",
+          "Traffic source funnel — whether paid vs organic vs referral traffic converts differently",
+          "Role-specific funnel — see conversion paths separately for clients, diviners, and PM members",
+          "Date range comparison — compare funnel performance month-over-month or period-over-period"
+        ]
+      },
+      {
+        name: "report_readings",
+        label: "Reading Quality",
+        description: "Quality metrics for every reading session on the platform — average star ratings per diviner, session completion rates, client satisfaction trends, and review volume over time.",
+        group: "Reports",
+        purpose: "Reading Quality is the customer experience report for the platform. It aggregates client reviews and session outcomes to answer: are clients getting value from their readings? Which diviners consistently receive 5-star reviews? Are there any diviners with a pattern of poor ratings that may need mentoring or intervention? This report protects platform quality and helps identify both top performers and areas of concern.",
+        bullets: [
+          "Average rating by diviner — each diviner's star rating average, sortable by highest and lowest",
+          "Rating distribution — how many 1, 2, 3, 4, and 5-star reviews exist across all sessions",
+          "Session completion rate — what percentage of sessions complete without cancellation or issue",
+          "Review volume trend — how many reviews are being submitted per week or month",
+          "No-show and late rate — which diviners have patterns of missed or delayed sessions",
+          "Client retention by diviner — how often clients rebook with the same diviner",
+          "Flagged reviews — any reviews that have been reported or contain policy violations"
+        ]
+      },
+      {
+        name: "report_affiliates",
+        label: "Affiliate ROI",
+        description: "Performance report for the entire social advocate program — total referrals, conversion rate, commissions paid, and which advocates are driving the most value for the platform.",
+        group: "Reports",
+        purpose: "The Affiliate ROI report helps admins evaluate whether the referral program is delivering value. It shows the total number of sign-ups driven by advocates, how many converted to paying members, the total commission paid out, and the net revenue generated from advocate-referred members. It also ranks individual advocates by performance so the team can identify who deserves recognition or a higher commission rate.",
+        bullets: [
+          "Program totals — total referrals, paid sign-ups, commissions paid, and net revenue from affiliate channel",
+          "Top advocates — ranked list of advocates by referral volume and revenue generated",
+          "Conversion rate — percentage of affiliate-referred visitors who became paying members",
+          "Commission paid vs revenue generated — the ROI calculation showing whether the program is profitable",
+          "Monthly trends — how the affiliate channel has grown or declined over time",
+          "By campaign — if campaigns were running, break down performance by each campaign",
+          "Individual advocate report — drill into any single advocate's full performance history"
+        ]
+      },
+      {
+        name: "report_campaigns",
+        label: "Campaign ROI",
+        description: "Financial performance of every marketing campaign run on the platform — how much was spent promoting the campaign, how many conversions resulted, and the net return on investment.",
+        group: "Reports",
+        purpose: "The Campaign ROI report measures the effectiveness of every marketing initiative. Whether the campaign was a referral incentive, a limited-time discount, or a paid promotion, this report shows how many new members it brought in and whether the cost was justified. Admins use this to decide which campaigns to run again and which to discontinue.",
+        bullets: [
+          "All campaigns listed — every past and current campaign with status, duration, and type",
+          "Referrals generated — how many sign-ups were attributed to each campaign",
+          "Conversion rate — what percentage of campaign-driven visitors became paying members",
+          "Revenue attributed — total revenue from members who signed up through the campaign",
+          "Commission or promotion cost — total cost of the campaign (commissions paid or discounts given)",
+          "Net ROI — revenue minus cost, showing whether each campaign returned a profit",
+          "Date comparison — compare a campaign's first month vs subsequent months for decay analysis"
+        ]
+      },
 
       // Config
       { 
@@ -1283,14 +1710,176 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Cloud storage and CDN integration settings"
         ]
       },
-      { name: "astro_system_settings", label: "Astro Engine Config", description: "House systems and calculation preferences.", group: "Config" },
-      { name: "calendar_config_detailed", label: "Calendar Layouts", description: "Formatting for booking and transit calendars.", group: "Config" },
-      { name: "pricing_management", label: "Pricing Matrix", description: "Complex pricing logic for tiers and services.", group: "Config" },
-      { name: "legal_config", label: "Legal Docs", description: "Terms, Privacy Policy, and EULA management.", group: "Config" },
-      { name: "db_migrations", label: "DB Schema Health", description: "Monitoring system state and migrations.", group: "Config" },
+      {
+        name: "astro_system_settings",
+        label: "Astrology Engine Config",
+        description: "Configure the astrology calculation engine — select the house system (Placidus, Whole Sign, Equal, Koch, etc.), set the default calculation engine (Swiss Ephemeris, Astro.com API), and adjust precision settings for all chart types.",
+        group: "Config",
+        purpose: "The astrology engine is the mathematical core of the platform. This configuration controls how planetary positions are calculated and how charts are generated. The most important setting is the house system — different traditions use different mathematical methods for dividing the sky into 12 houses, and this choice dramatically affects chart interpretation. Admins set the platform default here, though diviners can override it for their own charts.",
+        bullets: [
+          "House system selection — choose the default house system: Placidus (most common Western), Whole Sign (ancient traditional), Equal, Koch, Porphyry, or Regiomontanus",
+          "Calculation engine — which ephemeris data source powers the engine (Swiss Ephemeris is the gold standard)",
+          "Ayanamsa setting — for Vedic (sidereal) astrology, set which ayanamsa correction to apply",
+          "Aspect orbs — configure the default orb (degree tolerance) for each aspect type",
+          "Point inclusion — which chart points to include by default (Lilith, Chiron, Vertex, Part of Fortune, etc.)",
+          "Chart wheel direction — counterclockwise (Western) or clockwise (Vedic) orientation",
+          "Precision decimals — how many decimal places to show for degrees and minutes in chart data"
+        ]
+      },
+      {
+        name: "calendar_config_detailed",
+        label: "Calendar Layouts",
+        description: "Configure how booking and event calendars are displayed across the platform — time slot intervals, working hours display, week start day, calendar colors, and the default view (day, week, or month).",
+        group: "Config",
+        purpose: "The calendar configuration controls the visual and functional behavior of every calendar on the platform — the diviner's session calendar, the client's booking calendar, and the community events calendar. These settings create a consistent, professional scheduling experience. For example, setting slot intervals to 15 minutes means booking time slots appear in 15-minute increments rather than 30 or 60.",
+        bullets: [
+          "Slot interval — how granular the booking time slots appear (15, 30, 45, or 60 minutes)",
+          "Working hours display — the default time range shown in calendar views (e.g. 8am to 10pm)",
+          "Week start day — whether the calendar week starts on Sunday or Monday",
+          "Default view — whether calendars open in day, week, or month view by default",
+          "Event color scheme — color coding for different event types (sessions, broadcasts, ceremonies, etc.)",
+          "Timezone handling — how the platform normalizes and displays times across different user timezones",
+          "Holiday calendar — mark platform-wide non-working days that block all booking slots"
+        ]
+      },
+      {
+        name: "pricing_management",
+        label: "Pricing Matrix",
+        description: "Configure the platform's global pricing rules — service fee percentages, payout schedules, currency settings, tax rates by region, and override pricing for specific diviners or packages.",
+        group: "Config",
+        purpose: "The Pricing Matrix is the financial configuration layer of the platform. It controls what percentage the platform takes from each transaction, how currency conversion works for international diviners, how tax collection is handled by region, and whether any special pricing rules apply for specific diviners or membership tiers. This is a sensitive, high-impact configuration — changes here immediately affect the financial model for everyone on the platform.",
+        bullets: [
+          "Platform fee percentage — the cut the platform takes from every diviner transaction (e.g. 20%)",
+          "Payout schedule — how often earnings are transferred to diviners (weekly, bi-weekly, monthly)",
+          "Supported currencies — which currencies are accepted for payments (USD, GBP, EUR, AUD, etc.)",
+          "Tax settings — whether tax is collected on services in specific jurisdictions, and at what rate",
+          "Per-diviner overrides — custom platform fees for specific diviners (e.g. top performers get a better rate)",
+          "Minimum payout threshold — the minimum balance a diviner must accumulate before a transfer is triggered",
+          "Refund fee policy — whether the platform fee is returned to the diviner when a refund is issued"
+        ]
+      },
+      {
+        name: "legal_config",
+        label: "Legal Documents",
+        description: "Manage the platform's legal framework — Terms of Service, Privacy Policy, EULA, diviner contracts, and community membership agreements. Update text, set version numbers, and trigger re-acceptance flows when terms change.",
+        group: "Config",
+        purpose: "All legal documents that govern the platform are managed here. When the Terms of Service is updated, admins upload the new version and can trigger a re-acceptance flow — forcing all users to review and accept the new terms before accessing the platform again. Each document has a version history so past versions can be reviewed for compliance purposes. This ensures the platform is always operating with current, agreed-upon legal terms.",
+        bullets: [
+          "Terms of Service — the main platform usage agreement, with version control and update history",
+          "Privacy Policy — how user data is collected, used, and protected",
+          "Diviner Agreement — the contract diviners must accept when joining the platform",
+          "Community Agreement — the rules and terms for Perennial Mandalism members",
+          "Version management — each update creates a new version with a timestamp and change notes",
+          "Re-acceptance trigger — force all users (or specific role groups) to re-accept updated terms",
+          "Acceptance audit — see which users have accepted which version of each document"
+        ]
+      },
+      {
+        name: "db_migrations",
+        label: "Database Health",
+        description: "Monitor the database schema status — which migrations have been applied, the current schema version, table sizes, any pending migrations, and system-level database health indicators.",
+        group: "Config",
+        purpose: "Database Health is a technical admin tool that shows the state of the platform's database schema. Migrations are incremental changes to the database structure (adding a column, creating a table, changing a data type) — each one is tracked here. This page helps the technical team verify that all schema changes have been applied correctly to the production database, identify any pending migrations, and check for performance issues like overly large tables or missing indexes.",
+        bullets: [
+          "Applied migrations — list of all schema changes that have been successfully applied with timestamps",
+          "Pending migrations — any schema changes waiting to be applied",
+          "Schema version — the current database version number",
+          "Table sizes — which tables are largest, useful for storage planning and performance monitoring",
+          "Last applied — timestamp and description of the most recent schema change",
+          "Migration status — success, failed, or in progress for each recorded migration",
+          "Manual execution — option to trigger a pending migration from this interface (restricted to super-admins)"
+        ]
+      },
+
+      // Training — Certificate Config
+      {
+        name: "certificate_config",
+        label: "Certificate Config",
+        description: "Configure every detail that appears on the graduation certificates the platform issues to trainees. Set the school name, program names, designation titles, and the Head Master's name and signature that will be printed on every certificate.",
+        group: "Training",
+        purpose: "Controls the content and authority of every graduation certificate issued by the school.",
+        bullets: [
+          "School name — the official institution name printed at the top of every certificate",
+          "Head Master name — the name that appears in the 'Signed by' field with authority to issue certificates",
+          "Designation title — the qualification title printed below the graduate's name (e.g. 'Certified Divine Practitioner')",
+          "Program list — which training programs are listed on the certificate as completed",
+          "Certificate template — choose the visual layout and seal design for the issued PDF",
+          "Preview certificate — generate a sample certificate showing exactly how it will look before going live",
+          "Certificate code format — set the prefix and format for the unique verification codes printed on each certificate"
+        ]
+      },
+
+      // People — Campaigns Detail
+      {
+        name: "campaigns_detail",
+        label: "Campaign Detail",
+        description: "Create and configure a marketing campaign for social advocates. Set the campaign name, target product, UTM tracking parameters, commission rates, and duration — then generate unique trackable links for your advocates to share.",
+        group: "People",
+        purpose: "Turns the platform's referral program into a targeted, trackable marketing campaign.",
+        bullets: [
+          "Campaign name and goal — set a descriptive name and define the primary objective (sign-ups, bookings, memberships)",
+          "Target product — which service or membership this campaign promotes (PM Individual, PM Family, Mystery School, etc.)",
+          "UTM parameters — configure utm_source, utm_medium, and utm_campaign values for analytics tracking in Google Analytics or similar tools",
+          "Commission structure — set the commission rate for this campaign (flat fee or percentage of sale)",
+          "Campaign duration — start date and end date; commissions only apply to referrals within this window",
+          "Unique tracking links — the platform generates a campaign-specific URL for each advocate to share",
+          "Performance preview — see real-time referral counts and commission totals as the campaign runs"
+        ]
+      },
+
+      // Live — Live Sessions Monitor
+      {
+        name: "live_sessions_monitor",
+        label: "Live Sessions Monitor",
+        description: "A real-time view of every diviner currently broadcasting live on the platform. See which platform they are using, when they went live, and an estimated viewer count — all updating in real time.",
+        group: "Live",
+        purpose: "Gives administrators instant visibility into all active live broadcasts across the platform.",
+        bullets: [
+          "Active broadcasts list — every diviner currently live, sorted by start time",
+          "Platform column — which broadcast technology is in use (Chime, YouTube embed, VideoSDK, etc.)",
+          "Live duration — how long the current broadcast has been running",
+          "Estimated viewer count — number of members watching at this moment",
+          "Session type — individual reading, group broadcast, or community event",
+          "Intervene — send a platform notification or flag a session for moderation if needed",
+          "Auto-refresh — the list updates every 30 seconds to reflect the current state of all active sessions"
+        ]
+      },
+
+      // People — Social Advocacy Overview
+      {
+        name: "social_advocacy",
+        label: "Social Advocacy Overview",
+        description: "The top-level management panel for the entire social advocate program. View the performance leaderboard, manage advocate accounts, configure global commission settings, and see the health of the referral channel at a glance.",
+        group: "People",
+        purpose: "The command center for the platform's social advocate and referral partner program.",
+        bullets: [
+          "Advocate leaderboard — ranked list of all advocates by referral count and commission earned this period",
+          "Program health — total referrals, total commissions paid, and channel conversion rate for the current month",
+          "Global commission rate — the platform-wide default commission percentage paid for each referral type",
+          "Activate or deactivate advocates — toggle an advocate's status without deleting their account or history",
+          "Invite new advocates — send an invitation to a user to join the advocate program",
+          "Commission overrides — set custom rates for specific top-performing advocates outside the global default",
+          "Fraud flags — any accounts flagged for suspicious referral activity (self-referral attempts, click farming, etc.)"
+        ]
+      },
 
       // Walkthrough
-      { name: "walkthrough_detailed", label: "Walkthrough Hub", description: "Self-referential config for this guide.", group: "Tools" },
+      {
+        name: "walkthrough_detailed",
+        label: "Walkthrough Hub",
+        description: "The interactive guide you are reading right now. Admins can configure which screens are included in the walkthrough, update descriptions, add screenshots, and control which roles see which sections of the guide.",
+        group: "Tools",
+        purpose: "The Walkthrough Hub is a self-referential configuration panel — it manages the platform's own guided tour system. Every role on the platform (Diviner, PM Member, Trainee, Client, Affiliate) has a curated set of walkthrough screens explaining their portal. Admins can add new screens, update descriptions, attach screenshots, and rearrange the order. This allows the team to keep the onboarding guide up to date as the platform evolves without needing a code deploy.",
+        bullets: [
+          "Screen library — all documented screens for every role, searchable and filterable",
+          "Add a screen — create a new walkthrough entry with name, label, description, purpose, and bullets",
+          "Attach screenshots — upload or link screenshots that appear alongside a screen's description",
+          "Role targeting — control which role sees which screens in their walkthrough",
+          "Drag-and-drop ordering — rearrange the sequence screens appear in the walkthrough flow",
+          "Publish or draft — keep an entry in draft mode while editing, publish when ready",
+          "Preview mode — see exactly how a screen entry looks from the member's perspective before publishing"
+        ]
+      },
     ],
   },
   {
@@ -1339,6 +1928,8 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           { title: "Campaigns", description: "Run affiliate and referral campaigns", href: "/dashboard/campaigns", icon: Zap, status: "live" },
           { title: "Gift Certificates", description: "Issue and track gift vouchers", href: "/dashboard/gift-certificates", icon: Gift, status: "live" },
           { title: "Testimonials", description: "Manage public client reviews", href: "/dashboard/testimonials", icon: Star, status: "live" },
+          { title: "Client Reviews", description: "All post-session reviews and ratings", href: "/dashboard/reviews", icon: MessageSquare, status: "live" },
+          { title: "Community Presence", description: "Manage your discover page visibility", href: "/dashboard/community-presence", icon: Globe, status: "live" },
         ],
       },
       {
@@ -1719,6 +2310,86 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Public availability indicator — shows clients whether you are currently accepting bookings"
         ]
       },
+      {
+        name: "bookings",
+        label: "My Bookings",
+        description: "A full list view of every session booked through your profile — upcoming, completed, and cancelled. The master administrative record of all client appointments for your practice.",
+        group: "My Practice",
+        purpose: "While your Schedule shows a calendar view, Bookings gives you the complete flat list of all appointments with full metadata — client name, service, duration, payment status, and session notes. This is useful for administrative review, handling payment questions, and maintaining your practice records. You can also take actions from here such as adding post-session notes, sending a follow-up, or viewing the intake form a client submitted.",
+        bullets: [
+          "All bookings list — every session in one flat list, sortable by date, client, service, or status",
+          "Status filter — view only upcoming, completed, cancelled, or no-show sessions separately",
+          "Session detail — click any booking to see the full client profile, intake form responses, and payment details",
+          "Add session notes — write private or client-visible notes immediately after completing a session",
+          "Join a session — when a booked session is starting, a join video room button appears on the entry",
+          "Payment status — see which sessions have been paid, which are pending, and which had a refund",
+          "Mark no-show — flag a session where the client did not attend, which initiates the platform's no-show policy"
+        ]
+      },
+      {
+        name: "session-room",
+        label: "Live Session Room",
+        description: "The secure video room where one-on-one readings take place. A professional consultation environment with HD video, chart sharing tools, in-session notes, and recording controls.",
+        group: "Engagement",
+        purpose: "The Session Room is where the actual work of a diviner happens — the live reading. When you and your client both join a booked session, you enter a private, secure video room. You can see each other on camera, share your screen to display natal charts or transit data, use the in-session chat to share links, and record the session so the client has a replay. The room is distraction-free and professionally designed for spiritual consultation.",
+        bullets: [
+          "HD video — high-definition, low-latency two-way video between you and your client",
+          "Screen share — share your screen or a specific window to show charts, transit data, or tarot spreads",
+          "In-session chat — send text messages, links, or chart URLs to your client during the session",
+          "Recording toggle — start or stop recording; the client is notified automatically when recording begins",
+          "Session timer — an elapsed time display so both parties are aware of the session length",
+          "Client sidebar — a private panel showing the client's birth data and your pre-session notes, only visible to you",
+          "End session — end the call cleanly, which triggers the automated follow-up and review request for the client"
+        ]
+      },
+      {
+        name: "earnings-analytics",
+        label: "Earnings & Analytics",
+        description: "Your personal revenue and growth dashboard. See monthly income charts, booking trend lines, client retention rates, and a breakdown of which services earn you the most. The numbers that tell the story of your practice.",
+        group: "Finance & Reports",
+        purpose: "Gives diviners data-driven insight into the financial health and growth trajectory of their practice.",
+        bullets: [
+          "Monthly revenue chart — a bar or line chart showing your earnings each month for the past 12 months",
+          "Booking trend — how your session volume is changing week over week and month over month",
+          "Client retention rate — what percentage of clients have booked with you more than once",
+          "Top services by revenue — which of your offered services generates the most income, ranked",
+          "Average session value — your typical earnings per booking, useful for pricing strategy decisions",
+          "New clients this month — how many first-time clients booked you in the current period",
+          "Date range filter — zoom in on any custom period to compare performance or investigate a slow month"
+        ]
+      },
+      {
+        name: "client-reviews",
+        label: "Client Reviews",
+        description: "See every post-session review your clients have left for you. View your overall rating, read individual reviews, spot trends in feedback, and respond publicly to show clients you are listening.",
+        group: "Marketing & Growth",
+        purpose: "Your reputation management center — where client feedback becomes visible, actionable, and answerable.",
+        bullets: [
+          "Overall star rating — your current average across all published reviews, shown prominently",
+          "All reviews list — every submitted review in chronological order with star rating, client name, and session date",
+          "Review text — the full written comment the client submitted, unedited",
+          "Respond to a review — write a public reply that appears below the review on your profile page",
+          "Pending reviews — reviews awaiting platform moderation before going live",
+          "Rating distribution chart — a visual breakdown of how many 5-star, 4-star, 3-star reviews you have received",
+          "Flag a review — report a review that is inaccurate, abusive, or violates platform policy"
+        ]
+      },
+      {
+        name: "community-presence",
+        label: "Community Presence",
+        description: "Manage how you appear to the broader AstrologyPro community and the public discover page. Update your bio, set your visible specialties, and configure the pricing teaser that potential clients see before booking.",
+        group: "Marketing & Growth",
+        purpose: "Controls your discoverability and first impression on AstrologyPro's public-facing practitioner directory.",
+        bullets: [
+          "Discovery page visibility — toggle whether your profile appears in the public diviner search results",
+          "Bio editor — update the written introduction clients read when they land on your public profile",
+          "Specialty tags — choose up to 5 specialties that appear on your profile card in search results (e.g. Natal Chart, Tarot, Relationship, Mundane)",
+          "Pricing teaser — set a 'starting from $X' price shown on your search card to help clients gauge fit before clicking",
+          "Profile completeness score — a checklist showing which profile fields are missing and how filling them improves your search ranking",
+          "Featured status — if eligible, request to be featured in the platform's highlighted practitioners section",
+          "Social links — add or update your Instagram, YouTube, and personal website links shown on your public profile"
+        ]
+      },
     ],
   },
   {
@@ -1760,6 +2431,8 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           { title: "Sunday Service", description: "Live and archived weekly broadcasts", href: "/community/sunday-service", icon: Radio, status: "live" },
           { title: "Events", description: "Workshops, ceremonies, and community gatherings", href: "/community/events", icon: CalendarDays, status: "live" },
           { title: "Rituals", description: "Guided sacred practices for each season", href: "/community/rituals", icon: Sparkles, status: "live" },
+          { title: "Practice Tracker", description: "Log daily rituals and view streaks", href: "/community/practice-tracker", icon: Activity, status: "live" },
+          { title: "Community Chat", description: "Member discussion board and weekly threads", href: "/community/chat", icon: MessageSquare, status: "live" },
         ],
       },
       {
@@ -1768,6 +2441,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           { title: "Library", description: "Spiritual articles, videos, and reference materials", href: "/community/library", icon: BookOpen, status: "live" },
           { title: "Training", description: "Structured courses and lesson curriculum", href: "/community/training", icon: GraduationCap, status: "live" },
           { title: "Tarot", description: "Tarot card meanings and readings", href: "/community/tarot", icon: Layers, status: "live" },
+          { title: "Doctrine Library", description: "Holy books, doctrine docs, and study guides", href: "/community/doctrine", icon: ScrollText, status: "live" },
         ],
       },
       {
@@ -2018,83 +2692,352 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Cancel membership — option to cancel your subscription (access continues until the end of the billing period)"
         ]
       },
+      {
+        name: "family-circle",
+        label: "Family Circle",
+        description: "Add and manage family member accounts under your family membership plan. Each family member gets their own profile, birth data, and natal chart — all managed from one place under your subscription.",
+        group: "My Membership",
+        purpose: "Extends your membership benefits to the people closest to you under a single shared Family plan.",
+        bullets: [
+          "Family member list — all profiles currently added under your Family plan",
+          "Add a member — enter a family member's name, birth date, time, and location to create their profile",
+          "Individual natal charts — each family member has their own birth chart generated from their birth data",
+          "Member account access — optionally invite a family member to log in with their own credentials to access their own profile",
+          "Compatibility overview — see a quick synastry summary of how each family member's chart relates to yours",
+          "Plan seat limit — the Family plan supports up to 4 members; the page shows how many seats remain",
+          "Remove a member — remove a family member profile if they no longer need access under your plan"
+        ]
+      },
+      {
+        name: "doctrine-library",
+        label: "Doctrine & Study Library",
+        description: "Access the school's official holy books, doctrine documents, and curated study guides. This is the doctrinal foundation of the Perennial Mandalism tradition — sacred texts selected and uploaded by the administration for all members to read and study.",
+        group: "Learning & Wisdom",
+        purpose: "The doctrinal reference library for the Perennial Mandalism tradition — foundational texts every member studies.",
+        bullets: [
+          "Holy books — digitally accessible sacred texts central to the Perennial Mandalism tradition",
+          "Doctrine documents — official written doctrines, teachings, and position papers from the school",
+          "Study guides — structured reading guides that walk you through key doctrinal concepts with commentary",
+          "Download for offline reading — save any document as a PDF for reading away from the platform",
+          "Search by keyword — find specific passages, topics, or references across all library documents",
+          "New additions — recently uploaded texts and documents appear highlighted at the top of the library",
+          "Member-only content — all content here is exclusive to Perennial Mandalism members; not publicly visible"
+        ]
+      },
+      {
+        name: "rituals-tracker",
+        label: "Rituals & Practice Tracker",
+        description: "Log your daily spiritual practices and sacred rituals. Track which rituals you have completed, view your practice streaks, and build a permanent record of your spiritual devotion over time.",
+        group: "Community & Worship",
+        purpose: "Turns your private daily spiritual practice into a visible, trackable journey of growth and consistency.",
+        bullets: [
+          "Daily practice log — record which rituals, meditations, or practices you completed today",
+          "Ritual completion streaks — see how many consecutive days you have maintained a daily practice",
+          "Practice history — a calendar view showing which days had logged practices and which did not",
+          "Available rituals — browse all rituals available to log, organized by planetary cycle and season",
+          "Custom practices — add your own personal practices to track beyond the provided ritual library",
+          "Streak milestones — the platform acknowledges significant streaks (7 days, 30 days, 100 days) with recognition",
+          "Practitioner view — your assigned practitioner can see your practice log summary to inform their guidance"
+        ]
+      },
+      {
+        name: "community-chat",
+        label: "Community Discussion",
+        description: "Connect with other Perennial Mandalism members in the school's private message board. Post questions, share reflections, join weekly discussion threads, and engage with your spiritual community between Sunday services.",
+        group: "Community & Worship",
+        purpose: "A members-only discussion space that keeps the community spiritually connected between live events.",
+        bullets: [
+          "Discussion threads — organized conversations by topic: planetary wisdom, rituals, personal reflection, doctrine, and Q&A",
+          "Post and reply — write a new post or respond to another member's question or reflection",
+          "Weekly discussion thread — the school posts a weekly guided discussion question or theme each Monday",
+          "Direct messages — send a private message to any fellow PM member directly",
+          "Pin announcements — administrators and school leaders can pin important messages to the top of the board",
+          "Search threads — find past discussions before asking a question that may have already been answered",
+          "Moderation — the community is privately moderated to ensure respectful, spiritually focused discussion"
+        ]
+      },
     ],
   },
   {
     role: "Mystery School",
     slug: "mystery-school",
-    tagline: "Esoteric curriculum and decan mastery",
+    tagline: "Enrollment, foundation training, decan mastery, and graduation",
     roleDescription:
-      "A privileged path for serious practitioners. Dive deep into the decan systems, sacred ritual frameworks, and advanced astrology curriculum.",
+      "The Mystery School is the deepest level of study at AstrologyPro — a structured initiatory programme lasting five quarters (15 months). Students begin by choosing one of four seasonal entry points aligned to astronomical equinox/solstice dates: Spring (~March 20), Summer (~June 21), Autumn (~September 22), or Winter (~December 21). The first quarter (Q1) is the 12-week Foundation Training — a sequential curriculum with weekly audio introductions from Beto, reading material, and task checklists. After completing Foundation Q1, the student enters the year-long decan cycle: 36 decans, one for each 10-degree segment of the zodiac wheel (3 per sign × 12 signs = 36). Each decan has a time-based window tied to its astronomical dates — it opens, stays active for approximately 10 days, then closes. During the active window, the student must complete three requirements: (1) perform a step-by-step guided ritual with invocations, gates, and affirmations; (2) submit a scrying journal recording a tarot card draw and spiritual experience; (3) submit a mundane impact journal reflecting on how the decan's energy appeared in relationships, work, and perception. If the student does not finish within the active window, a 2-day grace period begins. If they still do not finish, the decan is marked as 'missed' — the student must wait for a retry window the following year (or 5 years later for Q4 decans). Graduation requires all 12 foundation weeks complete, all 36 decans completed, and zero unresolved missed decans. Upon graduation, the student receives the title of Priest or Priestess of the Mystery School and gains access to the post-graduation Ritual Builder for designing custom rituals. The Mystery School operates on a separate subscription from Perennial Mandalism (PM) — a user can hold both simultaneously. PM members receive a discounted monthly rate if the admin toggle is enabled. Pricing is dynamic and admin-managed via the pricing_plans table.",
     icon: Eye,
     gradient: "from-violet-500/20 to-purple-600/10",
-    featureAreas: ["Curriculum", "Decan Studies", "Ritual Mastery"],
+    featureAreas: ["Enrollment", "Foundation Training", "Decans", "Rituals", "Journals", "Training Lessons", "Graduation", "Ritual Builder", "Subscription", "Portal Switching"],
     capabilities: [
-      "Navigate the 36 decans grid",
-      "Progress through structured curriculum",
-      "Build custom ritual sequences",
-      "Track graduation progress",
+      "Enroll via a 4-step wizard: view pricing, choose an entry quarter, review, then pay via Stripe Checkout",
+      "Complete a 12-week Foundation Training quarter with weekly audio introductions, reading, and task checklists",
+      "Navigate all 36 decans in a colour-coded grid with live countdown timers and status indicators",
+      "Open each decan's study page to view ruling planet, sign, tarot card reference, and description",
+      "Complete three requirements per decan: perform the ritual, submit the scrying journal, submit the mundane journal",
+      "Run step-through rituals with a guided interface — invocations, gates, instructions, affirmations, and closings",
+      "Browse training categories and complete individual lessons with video, text content, and PDF downloads",
+      "Track graduation eligibility: 12 foundation weeks + 36 decans + zero unexcused misses",
+      "After graduation, design custom rituals in the post-graduation Ritual Builder",
+      "Manage your subscription via Stripe Billing Portal directly from the dashboard",
+      "Switch between PM Community and Mystery School portals using the header Portal Switcher",
+      "Discover Mystery School from the PM Community dashboard with upgrade CTAs and subscription status cards",
     ],
-    keyPages: ["Decans Grid", "Training Center", "Ritual Builder", "Graduation"],
+    keyPages: ["PM Dashboard CTA", "Enrollment", "Checkout Success", "Login Redirect", "Portal Switcher", "Decans Dashboard", "Decan Detail", "Ritual Runner", "Foundation Training", "Training Category", "Lesson View", "Graduation", "Ritual Builder"],
     groups: [
       {
-        groupLabel: "Mastery",
+        groupLabel: "Discovery & Access",
         cards: [
-          { title: "Decans Grid", description: "36 decans overview", href: "/mystery-school", icon: Eye, status: "live" },
+          { title: "PM Dashboard CTA", description: "Mystery School upgrade cards on the Perennial Mandalism community dashboard", href: "/community", icon: Heart, status: "live" },
+          { title: "Login Redirect", description: "Auto-redirect to /mystery-school for active MS users after login", href: "/login", icon: Zap, status: "live" },
+          { title: "Portal Switcher", description: "Header links to switch between PM Community and Mystery School portals", href: "/mystery-school", icon: Layers, status: "live" },
+        ],
+      },
+      {
+        groupLabel: "Enrollment & Checkout",
+        cards: [
+          { title: "Enrollment Flow", description: "4-step signup: overview, quarter selection, review, Stripe payment", href: "/join/mystery-school", icon: Star, status: "live" },
+          { title: "Checkout Success", description: "Post-payment finalization with polling and redirect", href: "/join/mystery-school/checkout/success", icon: Zap, status: "live" },
+          { title: "Checkout Cancel", description: "Friendly cancellation page with return options", href: "/join/mystery-school/checkout/cancel", icon: Eye, status: "live" },
+        ],
+      },
+      {
+        groupLabel: "Dashboard & Decans",
+        cards: [
+          { title: "Decans Dashboard", description: "36-decan grid, current decan hero, subscription info, progress bar", href: "/mystery-school", icon: Eye, status: "live" },
+          { title: "Decan Detail", description: "Individual decan study with ritual, scrying journal, and mundane journal", href: "/mystery-school/decans/[id]", icon: Star, status: "live" },
+          { title: "Ritual Runner", description: "Step-by-step guided ritual execution with timed reading", href: "/mystery-school/decans/[id]/ritual", icon: Flame, status: "live" },
+        ],
+      },
+      {
+        groupLabel: "Training & Graduation",
+        cards: [
+          { title: "Foundation Training", description: "12-week Q1 foundation with audio, tasks, and sequential unlock", href: "/mystery-school/training", icon: BookOpen, status: "live" },
+          { title: "Training Category", description: "Module listing with lessons, durations, and video indicators", href: "/mystery-school/training/[categoryId]", icon: Layers, status: "live" },
+          { title: "Lesson View", description: "Individual lesson with video, content, and PDF downloads", href: "/mystery-school/training/[categoryId]/[lessonId]", icon: ScrollText, status: "live" },
+          { title: "Graduation", description: "Progress checklist, eligibility tracking, and certificate display", href: "/mystery-school/training/graduation", icon: GraduationCap, status: "live" },
+          { title: "Ritual Builder", description: "Post-graduation tool for designing custom ritual sequences", href: "/mystery-school/training/ritual-builder", icon: Sparkles, status: "live" },
         ],
       },
     ],
     screens: [
-      { 
-        name: "decans", 
-        label: "Decans Grid", 
-        description: "Visual map of the 36 decans.", 
-        group: "Mastery",
-        purpose: "A comprehensive esoteric dashboard visualizing the Egyptian decan system and their corresponding spiritual hierarchies.",
+      {
+        name: "pm-dashboard-cta",
+        label: "PM Dashboard — Mystery School CTA",
+        description: "The Perennial Mandalism (PM) community dashboard at /community includes two Mystery School promotional sections. The Mystery School is a separate, deeper programme that PM members can upgrade to while keeping their PM membership. Both subscriptions run independently — purchasing Mystery School does NOT cancel Perennial Mandalism. PM members who also hold an active MS subscription get the discounted monthly rate ($17.03/month instead of $27/month) if the admin has enabled the ms_pm_discount_enabled toggle in platform_settings.",
+        group: "Discovery & Access",
+        purpose: "PM members discover the Mystery School through their existing community dashboard. Two sections appear: (1) A compact card near the top of the dashboard showing MS status — if the user has active MS access, it shows 'Mystery School access is active' with renewal date and an 'Open Mystery School' button; if cancelled/paused, it shows a 'Rejoin Mystery School' button; if never enrolled, it shows 'Deepen your practice with the Mystery School curriculum' with an 'Upgrade to Mystery School' button. (2) A larger promotional section lower on the page with a purple gradient card titled 'The Mystery School Awaits You', describing the programme as a sacred gateway with seasonal cohort entries. For users who already have MS access, this section instead shows their 5 subscription info cards (Status, Enrolled date, Billing amount, Next Renewal date, Cohort quarter/year) with 'Open Mystery School' and 'Manage Subscription' buttons. The dual-entitlement model means the PM dashboard always shows MS status because the user might have both — they are two parallel memberships, not an upgrade that replaces PM. All enroll links use /mystery-school/enroll which proxy.ts silently rewrites to /join/mystery-school.",
         bullets: [
-          "Interactive 36-decan mastery grid interface",
-          "Detailed decan mythology and correspondences",
-          "Temporal decan-hour tracking and ritual timing",
-          "Student-level decan mastery progress visualization"
+          "Compact CTA card: appears for all PM members, shows MS status (active/paused/cancelled/not enrolled) with contextual button text",
+          "Active MS users: 'Mystery School access is active' with renewal date, 'Open Mystery School' button linking to /mystery-school",
+          "Inactive/paused users: 'Rejoin Mystery School' button linking to /mystery-school/enroll",
+          "New users: 'Upgrade to Mystery School' with tagline about deepening practice — this is NOT an upgrade that replaces PM, it is a separate parallel subscription",
+          "Full promotional section: purple gradient card with 'The Mystery School Awaits You' heading, 'Sacred Gateway — Next Seasonal Cohort Open' subtitle, cohort info, gradient 'Enter the Sacred Gateway' CTA",
+          "Active users in promo section: 5 subscription info cards (Status, Enrolled, Billing, Renewal, Cohort) + 'Open Mystery School' button + 'Manage Subscription' button opening Stripe Billing Portal in new tab",
+          "Dual entitlement: PM and MS run side by side — the PM dashboard always shows MS status because the user may hold both memberships simultaneously"
         ]
       },
-      { 
-        name: "center", 
-        label: "Training Center", 
-        description: "Learning management.", 
-        group: "Curriculum",
-        purpose: "The central hub for students to manage their advancement through the platform's esoteric curriculum.",
+      {
+        name: "login-redirect",
+        label: "Login Redirect",
+        description: "After login (magic link or password), the system automatically routes Mystery School users to /mystery-school. No manual portal selection is needed. The redirect is transparent — the user signs in and immediately lands on their dashboard. Because Mystery School and Perennial Mandalism are parallel memberships, a user may qualify for both portals. The system resolves this by checking saved portal preferences first (which portal did they last visit?), then falling back to a role hierarchy where Mystery School outranks Perennial Mandalism.",
+        group: "Discovery & Access",
+        purpose: "The login redirect logic in resolve-login-destination.ts runs after every authentication. It follows a priority chain: (1) Pending legal contracts — the user must sign any outstanding contracts before entering any portal; (2) Admin shortcut — admin users go to /admin; (3) Saved last_portal_url — if the user has a user_portal_preferences record with a trusted portal URL, they return to wherever they were last (this is how dual PM+MS users seamlessly return to the right dashboard); (4) Role hierarchy fallback — on first login with no saved preference, the system checks all role tables in parallel and picks the highest-priority role: diviner > trainee > social_advo > mystery_school > perennial_mandalism > client. For Mystery School specifically, the check queries mystery_school_students and validates: (a) status is 'active', OR status is 'cancelled' with access_expires_at still in the future; (b) billing fields are present — stripe_subscription_id is set, one_time_fee_paid is true, and one_time_fee_amount is a number. If both conditions pass, the user qualifies for /mystery-school. If they also have an active PM membership, MS wins in the hierarchy (it is higher priority). After the first visit, the system saves their last portal URL, so subsequent logins return them to whichever portal they last used.",
         bullets: [
-          "Curriculum-level progress tracking and analytics",
-          "Lesson repository with status and grading logs",
-          "Mentor feedback and review communication panel",
-          "Self-paced learning path and milestone roadmap"
+          "Role hierarchy: diviner > trainee > social_advo > mystery_school > perennial_mandalism > client — MS outranks PM when both are active",
+          "MS billing validation: stripe_subscription_id must be set, one_time_fee_paid must be true, one_time_fee_amount must be a number — all three required",
+          "Cancelled with access: status = 'cancelled' still qualifies if access_expires_at is a future date (paid-through period)",
+          "Saved preference: user_portal_preferences.last_portal_url checked before hierarchy — lets dual users return to whichever dashboard they used last",
+          "Dual entitlement example: a user with both active PM and active MS lands on their last-visited portal, or /mystery-school if no preference saved (MS > PM in hierarchy)",
+          "Pending contracts: legal gate always checked first — user must sign any outstanding contracts before entering any portal",
+          "Onboarding gates: some roles (diviner, trainee, advocate, PM) have onboarding checks — MS does not have an onboarding step, so users go directly to the dashboard"
         ]
       },
-      { 
-        name: "lesson", 
-        label: "Lesson View", 
-        description: "Structured lesson content.", 
-        group: "Curriculum",
-        purpose: "An immersive learning environment for absorbing specific spiritual doctrines and technical esoteric training.",
+      {
+        name: "portal-switcher",
+        label: "Portal Switcher",
+        description: "A header component visible on desktop that shows links to all other portals the user has access to. Allows one-click switching between PM Community and Mystery School dashboards.",
+        group: "Discovery & Access",
+        purpose: "The PortalSwitcher component appears in the top-right header area of every portal layout (including the Mystery School layout). It calls getUserPortals() which queries all role tables in parallel — diviners, clients, social_advocates, community_members (active PM), mystery_school_students (active or cancelled-with-access). Each qualifying role produces a portal entry with a label and href. The switcher filters out the current portal and renders the remaining ones as compact text links separated by a pipe character. For a dual PM+MS user, the Mystery School layout header shows a 'Community' link, and the PM community layout header shows a 'Mystery School' link. The component is hidden on mobile (sm:flex) — mobile navigation handles portal access separately via the MobileNav hamburger menu.",
         bullets: [
-          "Multimedia-rich lesson delivery (Text, Video, PDF)",
-          "Integrated student note-taking and journaling",
-          "Knowledge-check quizzes and examination modules",
-          "Discussion board integration for specific lessons"
+          "Placement: right side of the portal header, desktop only (hidden on mobile via sm:flex)",
+          "Data source: getUserPortals() queries diviners, clients, social_advocates, community_members, mystery_school_students in parallel",
+          "MS portal shown when: mystery_school_students row exists with active status + valid billing, or cancelled with future access_expires_at",
+          "PM portal shown when: community_members row exists with membership_type = 'perennial_mandalism' and membership_status = 'active'",
+          "Rendering: compact text links with hover highlight, separated by a pipe divider",
+          "Dual user example: MS layout header shows 'Community' link; PM layout header shows 'Mystery School' link",
+          "Mobile alternative: MobileNav hamburger menu includes portal navigation items"
         ]
       },
-      { 
-        name: "builder", 
-        label: "Ritual Builder", 
-        description: "Drag-and-drop ritual designer.", 
-        group: "Mastery",
-        purpose: "A sophisticated technical tool that allows students to construct their own astrological and spiritual ritual sequences.",
+      {
+        name: "enrollment",
+        label: "Enrollment Flow",
+        description: "A 4-step enrollment wizard at /join/mystery-school that guides new students from overview to Stripe payment. The Mystery School is a 5-quarter (15-month) programme. Students choose one of four seasonal entry points — Spring (March equinox), Summer (June solstice), Autumn (September equinox), or Winter (December solstice). The first quarter is Foundation Training (12 weeks of structured study), followed by the 36-decan year-long practice cycle. Pricing is fetched dynamically from the admin pricing database (pricing_plans table) — not hardcoded. Active Perennial Mandalism (PM) members receive a discounted monthly rate if the admin has enabled the ms_pm_discount_enabled toggle.",
+        group: "Enrollment & Checkout",
+        purpose: "This is the entry point for all new Mystery School students. The flow walks the user through four sequential steps. Step 1 (Overview) presents four programme features — Foundation Training (12 weeks of structured weekly study with audio from Beto), 36-Decan Year-Long Practice (working through all 36 zodiac decans with rituals and journals), Ritual Performer (step-through ritual interface per decan), and Priest/Priestess Graduation (complete all 36 decans to earn the title). Pricing badges show the one-time enrollment fee and monthly subscription, loaded from /api/pricing/mystery_school (plan_mystery_monthly and plan_mystery_monthly_pm_discount rows in pricing_plans table). If the user is an active PM member AND the admin toggle ms_pm_discount_enabled is true, a discount notice shows the reduced monthly rate. Step 2 (Quarter Selection) displays the next 4 upcoming seasonal entry dates computed from hardcoded astronomical equinox/solstice dates (2026–2030). Each quarter card shows the emoji (🌱/☀️/🍂/❄️), the season name and year, the exact astronomical date (e.g. 'March 20, 2026'), and when Week 1 begins (7 days after the turning point). Step 3 (Review & Confirm) shows a summary card with the selected cohort, one-time fee, monthly cost, PM discount line (savings amount shown as a negative), and the effective monthly cost. A commitment checkbox must be checked: 'By continuing I agree to the 5-quarter commitment.' The 5-quarter structure is: Q1 Foundation (12 weeks) + Q2-Q5 Decan Year (36 decans across 4 quarters following the zodiac calendar). Step 4 (Payment) shows the final summary and an 'Enroll in Mystery School' button. Clicking it calls POST /api/community/checkout which reads the stripe_price_id for the recurring subscription from pricing_plans (plan_mystery_monthly or plan_mystery_monthly_pm_discount), creates an ad-hoc Stripe Price for the one-time enrollment fee using stripe.prices.create() with the amount and currency from the same table, and creates a Stripe Checkout session in subscription mode with both line items. The user is redirected to Stripe to complete payment.",
         bullets: [
-          "Drag-and-drop ritual component architecture",
-          "Astrological timing engine for precise rituals",
-          "Ritual sequence validation and error checking",
-          "Personalized ritual template export and sharing"
+          "Step 1 — Overview: hero with 4 programme features (Foundation Training, 36-Decan Practice, Ritual Performer, Graduation), pricing loaded from /api/pricing/mystery_school, PM discount notice shown conditionally",
+          "Step 2 — Quarter Selection: 4 upcoming entry quarters (Spring equinox ~Mar 20, Summer solstice ~Jun 21, Autumn equinox ~Sep 22, Winter solstice ~Dec 21), each showing astronomical date and Week 1 start (7 days after equinox/solstice)",
+          "Step 3 — Review & Confirm: summary with cohort, one-time fee, monthly cost, PM discount savings, effective monthly total, and 5-quarter commitment checkbox",
+          "Step 4 — Payment: 'Enroll in Mystery School' button → POST /api/community/checkout → Stripe Checkout redirect",
+          "Pricing source: plan_mystery_monthly and plan_mystery_monthly_pm_discount rows in pricing_plans table — admin controls amounts via /admin/pricing",
+          "PM discount logic: user must have active PM membership (community_members.membership_status = 'active') AND admin toggle ms_pm_discount_enabled must be true in platform_settings",
+          "Stripe checkout: recurring charge uses saved stripe_price_id from DB, one-time fee uses ad-hoc stripe.prices.create() with amount/currency from DB",
+          "5-quarter commitment: Q1 = Foundation (12 weeks), Q2–Q5 = 36 decans following the zodiac calendar year"
+        ]
+      },
+      {
+        name: "checkout-success",
+        label: "Checkout Success",
+        description: "The post-payment landing page at /join/mystery-school/checkout/success that finalizes the enrollment by polling the server until the Stripe webhook provisions access.",
+        group: "Enrollment & Checkout",
+        purpose: "After Stripe redirects back with a session_id, this page automatically polls POST /api/mystery-school/checkout/finalize up to 8 times with 1.2-second intervals. It handles four states: (1) Loading — spinner with 'Finalizing Your Enrollment' while polling; (2) Success — green checkmark with 'Enrollment Confirmed', then auto-redirect to /mystery-school dashboard after 900ms; (3) Unauthorized — prompts user to sign in with a link back to login; (4) Failed — error message with 'Try Again' reload button and link back to enrollment. If no session_id is present in the URL, the page immediately shows the failed state.",
+        bullets: [
+          "Auto-polling: POST /api/mystery-school/checkout/finalize called up to 8 times, 1.2s apart",
+          "Loading state: spinning loader with 'One Moment While We Open The Gates' heading",
+          "Success state: green checkmark, 'Enrollment Confirmed' badge, auto-redirect to dashboard",
+          "Unauthorized state: triangle alert icon, sign-in prompt with redirect back to this page after login",
+          "Failed state: red alert icon, error message, 'Try Again' button and 'Back to Enrollment' link",
+          "Stripe badge: shows 'Stripe Payment Verified Server-Side' during loading"
+        ]
+      },
+      {
+        name: "checkout-cancel",
+        label: "Checkout Cancel",
+        description: "A friendly cancellation page at /join/mystery-school/checkout/cancel shown when the user exits Stripe Checkout without completing payment.",
+        group: "Enrollment & Checkout",
+        purpose: "Reassures the user that nothing was charged and their spot remains open. Provides two clear actions: 'Return to Enrollment' to restart the flow, and 'Back to Community' to exit entirely. The heading reads 'Checkout Was Not Completed' with the message 'No problem. Your enrollment has not been finalized, and you can return whenever you are ready to continue.'",
+        bullets: [
+          "Heading: 'Checkout Was Not Completed' with 'Your Place Is Still Open' card title",
+          "Two CTA buttons: 'Return to Enrollment' (primary) and 'Back to Community' (outline)",
+          "No payment was processed — the page confirms this clearly"
+        ]
+      },
+      {
+        name: "decans",
+        label: "Decans Dashboard",
+        description: "The main Mystery School dashboard at /mystery-school. A 'decan' is a 10-degree segment of the zodiac — there are 3 decans per zodiac sign (e.g. Aries I, II, III) and 12 signs, making 36 decans total. Each decan is ruled by a planet (Sun, Moon, Mercury, Venus, Mars, Jupiter, or Saturn) and is associated with a Minor Arcana tarot card. Decans are NOT unlocked sequentially by the student — they are TIME-BASED. Each decan has a fixed astronomical date window tied to the degrees of the zodiac it occupies (e.g. Aries I covers March 21–30). When the calendar reaches that window, the decan becomes 'active' for all students. The student has approximately 10 days to complete all three requirements before the window closes. After the window closes, a 2-day grace period allows late completion. After grace ends, the decan is marked 'missed'.",
+        group: "Dashboard & Decans",
+        purpose: "This is the student's home screen after enrolling. It fetches all data from GET /api/mystery-school/decans. The hero header uses a gold-on-dark design with a 'Mystery School' badge. If the student has completed all 12 foundation weeks, a green 'Foundation Complete' badge appears. The title reads 'Your Decan Journey' with progress text (e.g. 'Decan 5 of 36 · 4 completed') and a yellow gradient progress bar showing completion percentage. Below the hero, five subscription info cards display: (1) Status — active, cancelled, or 'Cancelled · Access Active' if access_expires_at is in the future; (2) Enrolled — the date the student enrolled; (3) Billing — monthly subscription amount fetched live from Stripe (e.g. '$27.00/month'), plus the one-time enrollment fee amount if applicable; (4) Next Renewal / Access Until — next billing date for active subscribers, or access expiry for cancelled; (5) Cohort — the entry quarter and year (e.g. 'Spring 2026'). A 'Manage Subscription' button opens the Stripe Billing Portal in a new browser tab via POST /api/mystery-school/billing-portal, where the user can update payment method, view invoices, cancel, or pause. The current decan section shows a hero card ONLY if a decan is currently in its active window. The card displays: the planet glyph (☉ ☽ ☿ ♀ ♂ ♃ ♄), decan name, zodiac sign with colour coding, tarot card reference (clickable link to /community/tarot), active window dates (e.g. 'Active Mar 21 – Mar 30'), a LIVE countdown timer updating every 60 seconds (e.g. '5d 12h remaining'), and three completion pips: Ritual ✓/○, Scry ✓/○, Journal ✓/○. Clicking the card navigates to the decan detail page. Below that, up to 3 upcoming/preview decans show as smaller cards — preview decans (within 7-day pre-window) are clickable, upcoming ones are not. The 36-decan compact grid is the core visual — grouped by zodiac sign (Aries, Taurus, … Pisces), 3 cells per sign. Each cell shows: a status icon (🔒 locked, ○ upcoming, 👁 preview, ⚡ active, G grace, ✓ completed, ⚠ missed), the decan number, and the sign abbreviation. Colour coding: amber border for active, green for completed, red for missed, orange for grace, purple for preview, dimmed for locked. The page auto-refreshes data on tab focus, page show, and visibility change events — so returning to the tab always shows current state.",
+        bullets: [
+          "Gold-themed hero header with 'Mystery School' badge, foundation complete badge (if applicable), progress text and percentage bar",
+          "Five subscription info cards: Status, Enrolled date, Billing (amount/month from DB), Next Renewal / Access Until, Cohort quarter",
+          "Manage Subscription button: opens Stripe Billing Portal in new tab via POST /api/mystery-school/billing-portal",
+          "Current decan hero card: planet glyph, decan name, sign, tarot card link, active window dates, live countdown timer (updates every 60s), completion pips (Ritual ✓/○, Scry ✓/○, Journal ✓/○), 'Continue Work' link",
+          "Upcoming section: next 3 decans with upcoming/preview status, smaller cards with lock icon and unlock date",
+          "36-decan compact grid: grouped by zodiac sign, 3 cells per sign, each cell shows decan number, sign abbreviation, and status icon with colour coding (amber=active, green=completed, red=missed, orange=grace, purple=preview, dimmed=locked)",
+          "Status legend at bottom: Active, Grace, Preview, Upcoming, Completed, Missed, Locked with matching icons",
+          "Auto-refresh: data reloads on pageshow, focus, and visibility change events"
+        ]
+      },
+      {
+        name: "decan-detail",
+        label: "Decan Detail Page",
+        description: "The individual decan study page at /mystery-school/decans/[id]. Each decan represents a 10-degree segment of the zodiac — for example, 'Aries I' covers degrees 0–10 of Aries. The decan is ruled by a planet (e.g. Mars for Aries I) and associated with a specific Minor Arcana tarot card (e.g. Two of Wands). The student must complete THREE requirements during the decan's active window to mark it done: (1) Ritual — a step-through guided ceremony; (2) Scrying Journal — a tarot card draw and spiritual experience reflection; (3) Mundane Impact Journal — how the decan's energy manifested in daily life across three areas (relationships, business/work, perception). The decan lifecycle is: locked → preview (7 days before window opens) → active (window open, ~10 days) → grace (2 days after window close) → completed OR missed.",
+        group: "Dashboard & Decans",
+        purpose: "When a student clicks on an unlocked decan in the grid, this page opens. It fetches from GET /api/mystery-school/decan/[id] and displays everything about this decan. The header shows the planet glyph (☉☽☿♀♂♃♄), the decan title (e.g. 'Decan 1 — Aries I'), the decan name if set, the zodiac sign with colour coding, and a clickable tarot card reference linking to /community/tarot. If the decan has artwork, it displays as a large image. The description text explains the decan's esoteric meaning. Status banners appear based on the decan's lifecycle state: ACTIVE — green banner with live countdown timer showing days/hours/minutes until window_close (updates every 60 seconds), with the active date range; GRACE — orange banner warning that the action window closed on [date] and the student has until [grace_close] to complete, with a live countdown to grace end; MISSED — red banner indicating the decan was missed, with retry information if a retry window has been assigned (retry windows are set by the daily cron — typically the same dates the following year, or 5 years later for Q4 decans in months 10–12); ADMIN EXCUSED — if an admin has excused the missed decan, shows the excuse reason and date instead of the missed warning; LOCKED — muted banner for decans whose window has not yet opened. The three completion sections each have distinct forms: (1) RITUAL — if not started, shows a 'Begin Ritual' button linking to /mystery-school/decans/[id]/ritual (the step-through ritual runner). If a ritual execution exists but is incomplete, shows 'Resume Ritual' with a play icon. If completed, shows a green 'Completed' badge with the completion date. (2) SCRYING JOURNAL — the assigned tarot card for this decan is displayed (e.g. 'Two of Wands'). The student enters an optional alternate card they drew, then writes their spiritual experience in a text area with a 200-character minimum (a live character counter shows progress). After submission, the form becomes read-only showing the submitted text and date. The scrying practice involves gazing into a reflective surface and recording spiritual visions, symbols, or impressions received — the tarot card serves as a focal point for the decan's energy. (3) MUNDANE IMPACT JOURNAL — three separate text areas for: Relationships (how did this decan's energy affect your relationships?), Business/Work (how did it manifest in your professional life?), and Shifts in Perception (what changed in how you see the world?). Each requires 100 characters minimum with a live counter. After submission, the form becomes read-only. All three requirements must be completed to mark the decan as 'completed'. Once all three pips show ✓, the student_decan_progress status changes to 'completed' and the decan cell in the grid turns green.",
+        bullets: [
+          "Decan header: planet glyph, title, decan name, sign with colour coding, tarot card reference link to /community/tarot",
+          "Artwork display: decan illustration via next/image if artwork_url is set",
+          "Description: full decan text content",
+          "Status banners: Active (green, with live countdown), Grace (orange, shows grace deadline), Missed (red, with admin excused info), Locked (muted)",
+          "Ritual section: 'Begin Ritual' button → /mystery-school/decans/[id]/ritual, or green 'Completed' badge with date, or 'Retry Ritual' if execution exists but not complete",
+          "Scrying Journal section: assigned tarot card display, alternate card input, experience text area (200 char min), character counter, submit button, or read-only submitted view with date",
+          "Mundane Impact Journal section: three text areas — Relationships, Business/Work, Shifts in Perception (100 char min each), submit button, or read-only submitted view",
+          "Retry window: if decan was missed but has a retry window assigned, shows retry dates and allows completion",
+          "Admin excuse: if admin_excused is true, shows excuse reason and excused date instead of missed warning"
+        ]
+      },
+      {
+        name: "ritual",
+        label: "Ritual Runner",
+        description: "A step-by-step guided ritual execution interface at /mystery-school/decans/[id]/ritual. Each decan has a pre-built ritual consisting of ordered steps of different types: Invocation (calling upon planetary or spiritual forces), Gate (a threshold or transition point in the ritual), Instruction (guidance on what to do physically or mentally), Affirmation (a statement to speak aloud or internalize), and Closing (sealing and completing the ritual). The ritual is the active, experiential requirement of each decan — where the student moves from intellectual study to lived spiritual practice. The student performs each step in their own physical space while following the on-screen guidance.",
+        group: "Dashboard & Decans",
+        purpose: "This is the immersive ritual experience page. It fetches the ritual steps from GET /api/mystery-school/decan/[id]/ritual and displays them one at a time. The page enforces a deliberate, meditative pace — each step has a mandatory 3-second reading period (STEP_READ_DELAY_MS = 3000) before the 'Continue' button becomes active, ensuring the student actually reads and reflects rather than clicking through. The page has three states: (1) NOT STARTED — shows a preview list of all steps as dimmed rows with lock icons. Each row shows the step number and type label (Invocation, Gate, Instruction, Affirmation, or Closing) but the content is hidden until the ritual begins. The step count is displayed (e.g. 'This ritual contains 7 steps'). A 'Begin Ritual' button calls POST /api/mystery-school/decan/[id]/ritual/start which creates a ritual_execution record on the server. (2) IN PROGRESS — the UI focuses entirely on the current step. A progress bar at the top shows percentage complete, and a row of breadcrumb dots below it shows each step as green (done), primary colour (current), or muted (pending). The current step appears in a highlighted card with its step type as a badge (e.g. 'Invocation') and the full step content below as pre-wrapped text. The 'Continue to Next Step' button is initially disabled with the text 'Read the step above…' and a gentle message 'Take a moment to read and reflect before continuing.' After 3 seconds, the button activates. Clicking it calls POST /api/mystery-school/decan/[id]/ritual/step with the next step_index. On the final step, the button reads 'Complete Ritual' instead. (3) COMPLETE — a green checkmark icon, 'Ritual Complete' heading, the completion date and time, total steps summary, and a 'Return to Decan' button. Progress is persisted server-side in the ritual_execution table — if the student navigates away mid-ritual and returns later, they resume at exactly the step where they left off.",
+        bullets: [
+          "Not started state: preview list of all ritual steps (dimmed, locked), step type labels, 'Begin Ritual' button",
+          "In progress state: progress bar with percentage, breadcrumb dots (green=done, primary=current, muted=pending), current step card with step type badge and content",
+          "3-second read timer: 'Continue' button disabled with 'Read the step above...' text until 3 seconds pass",
+          "Step types: Invocation, Gate, Instruction, Affirmation, Closing — each labelled in a badge above the content",
+          "Advance: POST /api/mystery-school/decan/[id]/ritual/step with step_index, returns updated state",
+          "Complete state: green checkmark, 'Ritual Complete' heading, completion date/time, total steps summary, 'Return to Decan' button",
+          "Resume support: if the student navigates away mid-ritual, returning loads the execution state and resumes at the current step",
+          "Back link: 'Back to Decan' link always visible at the top"
+        ]
+      },
+      {
+        name: "center",
+        label: "Foundation Training",
+        description: "The 12-week Foundation Training page at /mystery-school/training. Foundation is Q1 (the first quarter) of the 5-quarter Mystery School programme. It must be completed BEFORE the student can participate in the 36-decan year-long cycle (Q2–Q5). Foundation weeks begin 7 days after the student's chosen equinox/solstice entry date. Each week is structured with: an audio introduction recorded by Beto (the programme leader), written description/reading material, and a task checklist. Weeks unlock sequentially — you must complete all tasks in Week 1 before Week 2 opens. The 12 weeks cover the foundational esoteric teachings that prepare the student for decan work: planetary principles, elemental theory, sacred geometry, divination basics, ritual theory, and the cosmological framework of the 36-decan system.",
+        group: "Training & Graduation",
+        purpose: "This is the structured Q1 curriculum. It fetches from GET /api/mystery-school/foundation and displays all 12 weeks as expandable cards. A gold-themed hero header shows the 'Mystery School — Foundation Q1' badge with a flame icon, 'Foundation Training' title, the student's entry quarter (e.g. 'Quarter: Spring'), current week counter (e.g. 'Week 4 of 12'), and a yellow progress bar with completion percentage. When all 12 weeks are done, a green message appears: 'Foundation complete — your decan year is unlocked.' Each week card shows: the week number, the title (e.g. 'Planetary Principles'), a 'Done' badge if completed, a lock icon if not yet unlocked (previous week not finished), and an expand/collapse chevron button. When expanded, the card reveals three sections: (1) Audio Player — Beto's weekly introduction with his photo displayed beside the audio player; (2) Week Description — the full reading material in prose text; (3) Task Checklist — each task has a checkbox, title, and optional description. Tasks are completed one at a time by clicking the checkbox, which calls POST /api/mystery-school/foundation/complete-task with the week_number and task_id. The UI uses optimistic updates — checking a task immediately marks it done in the UI before the server responds, showing a green CheckSquare icon and a completion date. In-progress weeks show an inline progress bar and count (e.g. '3 of 5 tasks complete'). When all tasks in a week are done, the next week's lock automatically opens and its card becomes expandable. If no foundation weeks have been published yet (admin has not added content), an empty state card appears: 'Your journey begins when you enroll — Foundation content is being prepared. Check back soon.' with a book icon. The foundation week curriculum content (title, description, audio_url, tasks) is managed by admin in the mystery_school_foundation_weeks table and is published via the admin Mystery School management pages.",
+        bullets: [
+          "Gold hero header: 'Mystery School — Foundation Q1' badge, 'Foundation Training' title, entry quarter, week counter, progress bar with percentage",
+          "Foundation complete badge: green 'Foundation complete — your decan year is unlocked' message when all 12 weeks done",
+          "Week cards: sequential list, each with week number, title, completion badge, lock/unlock icon, expand button",
+          "Expanded card: audio player with Beto's photo, week description text, task checklist with checkboxes",
+          "Task completion: click checkbox → POST /api/mystery-school/foundation/complete-task, optimistic UI update, completion date shown",
+          "Sequential unlock: next week unlocks only when all tasks in the current week are complete",
+          "Progress indicators: inline task count (e.g. '3 of 5 tasks complete') and thin progress bar per week card",
+          "Empty state: 'Your journey begins when you enroll' message with book icon if no weeks published yet"
+        ]
+      },
+      {
+        name: "training-category",
+        label: "Training Category",
+        description: "A server-rendered module listing page at /mystery-school/training/[categoryId]. Beyond the 12-week Foundation Training, the Mystery School has an organized academic curriculum — a series of training categories (modules) covering esoteric topics. Categories and their lessons are managed by admin via the training_categories and training_lessons tables. Each category groups related lessons into a thematic unit. This page lists all published lessons in a given category.",
+        group: "Training & Graduation",
+        purpose: "When a student navigates into a specific training category (module), this page loads. It is a server-rendered page that fetches the category details from training_categories and all active lessons from training_lessons in parallel, both filtered by is_active = true. The page header shows a 'Back to Training' breadcrumb link with a ChevronLeft icon, the category name as an h1 heading, and the category description below. Each lesson appears as a card in a vertical list showing: a numbered circle (1, 2, 3...) based on priority order, the lesson title in bold, the lesson description in muted text, a PlayCircle icon in primary colour if the lesson has a video_url (indicating video content is available), a duration badge (e.g. '15 min') with a Clock icon if duration_mins is set, and a 'View Lesson' button linking to /mystery-school/training/[categoryId]/[lessonId]. If the category has no published lessons, an empty state card reads 'No lessons published in this module yet.' Access is guarded by requireMysterySchoolAccess() — non-MS users are redirected to /mystery-school/enroll (which proxy.ts rewrites to /join/mystery-school).",
+        bullets: [
+          "Breadcrumb: 'Back to Training' link with ChevronLeft icon at top",
+          "Category header: category name as h1 heading, category description below",
+          "Lesson cards: numbered list, each card shows lesson title, description, video icon (if video_url exists), duration badge (if duration_mins set)",
+          "View Lesson button: links to /mystery-school/training/[categoryId]/[lessonId]",
+          "Empty state: 'No lessons published in this module yet' card if no active lessons",
+          "Access guard: requireMysterySchoolAccess() check, redirects to /mystery-school/enroll if unauthorized"
+        ]
+      },
+      {
+        name: "lesson",
+        label: "Lesson View",
+        description: "A server-rendered individual lesson page at /mystery-school/training/[categoryId]/[lessonId]. This is the focused learning environment for a single lesson within the Mystery School curriculum. Lessons can include video content (embedded from external providers), written text material, and downloadable PDF reference documents. Lessons are part of the broader training curriculum that supplements the core Foundation + Decan programme.",
+        group: "Training & Graduation",
+        purpose: "This is the immersive, distraction-free reading and learning space for a single lesson. It fetches the lesson from training_lessons and its parent category from training_categories in parallel, both using the admin Supabase client. The page layout is clean and focused: a breadcrumb at the top links back to the parent category page showing the category name with a ChevronLeft icon. The lesson title appears as an h1 heading, with the description and a duration badge (e.g. '15 min' with a Clock icon) below. The lesson content is presented in up to three card sections: (1) VIDEO — if the lesson has a video_url, an iframe embed appears in a 16:9 aspect ratio wrapper (aspect-video class) inside a card. The iframe has full permissions for autoplay, clipboard-write, encrypted-media, gyroscope, picture-in-picture, and fullscreen. The video URL is set by admin and typically points to a hosted video provider. (2) LESSON CONTENT — if the lesson has text content, it renders in a prose-styled card using whitespace-pre-wrap formatting to preserve line breaks and paragraph structure from the admin-entered content. (3) SUPPLEMENTAL MATERIAL — if the lesson has a pdf_url, a card with a FileText icon shows a 'Download PDF' button that opens the PDF in a new browser tab. At the bottom, a 'Back to Module' button returns to the category listing. If the lesson ID is invalid or the lesson is inactive (is_active = false), the page returns a 404 via Next.js notFound(). Access is guarded by requireMysterySchoolAccess() — non-MS users are redirected to enrollment.",
+        bullets: [
+          "Breadcrumb: links back to parent category page with category name, ChevronLeft icon",
+          "Lesson header: title as h1, description text, duration badge with Clock icon",
+          "Video section: iframe embed in 16:9 aspect ratio card, full autoplay/clipboard/gyroscope/picture-in-picture permissions, fullscreen enabled",
+          "Content section: lesson text rendered in prose styling with whitespace-pre-wrap, wrapped in a card",
+          "PDF download: 'Download PDF' button opens pdf_url in new tab, shown only if pdf_url is set, with FileText icon",
+          "Back navigation: 'Back to Module' button at bottom returns to category listing",
+          "Access guard: requireMysterySchoolAccess() check, 404 via notFound() if lesson not found or inactive"
+        ]
+      },
+      {
+        name: "graduation",
+        label: "Graduation Page",
+        description: "The graduation tracking and certificate page at /mystery-school/training/graduation. Graduation is the culmination of the 5-quarter Mystery School programme. To graduate, a student must satisfy ALL THREE requirements: (1) Complete all 12 Foundation Q1 weeks (each week's tasks fully done, week_completed_at set); (2) Complete all 36 decans (every decan's status = 'completed', meaning ritual_done + scry_done + journal_done); (3) Have ZERO unresolved missed decans (any decan with status = 'missed' must have admin_excused = true, or the student must complete it during a retry window). When all three conditions are met, graduation is processed automatically by a server-side cron job within 24 hours — it sets training_status = 'graduated', graduated_at timestamp, and sends a congratulation email. The graduated student receives the title of 'Priest or Priestess of the Mystery School'.",
+        group: "Training & Graduation",
+        purpose: "This server-rendered page checks the student's graduation status by querying student_foundation_progress (counting rows where week_completed_at is not null), student_decan_progress (counting rows with status = 'completed'), and student_decan_progress (counting rows with status = 'missed' and admin_excused = false). It shows one of two views. FOR STUDENTS WHO HAVE NOT GRADUATED: A gold hero header with 'Graduation' title and a combined progress bar that weights foundation at 50% and decans at 50% (e.g. 6/12 foundation + 18/36 decans = 50% overall). A 'Your Progress' card shows three checklist items with green checkmarks or empty circles: (1) Foundation Q1 — 'X of 12 weeks' with a Complete/X badge; (2) 36 Decans — 'X of 36 completed' with a badge; (3) Unresolved missed decans — only shown if count > 0, in red with 'Contact your admin to resolve'. If all three requirements are satisfied, a green message reads: 'All requirements met — graduation will be processed automatically within 24 hours.' This auto-processing is handled by the graduation cron (processGraduation function) which checks eligibility, sets graduated_at, and sends the email. A 'Remaining Requirements' card lists specific blockers (e.g. 'Foundation Q1 not yet complete', '14 decan(s) remaining', '2 unresolved missed decan(s)'). Navigation shortcuts link to Foundation Training (/mystery-school/training) and Decan Training (/mystery-school). A locked teaser card previews the Post-Graduation Ritual Builder with a lock icon and description: 'Unlocks when you graduate — design personal rituals using the full component library.' FOR GRADUATED STUDENTS: A certificate-style card with a golden star icon, the title 'Priest / Priestess of the Mystery School', completion stats (36 Decans Complete, 12 Foundation Weeks), the graduation date formatted as month/day/year, and a share section with the graduation page URL and a 'Share on X' button linking to Twitter intent with pre-filled text. Below the certificate, a CTA card for the now-unlocked Ritual Builder with 'Access Your Ritual Builder' button linking to /mystery-school/training/ritual-builder.",
+        bullets: [
+          "Not graduated view: gold hero header with progress bar, 'Your Progress' card with Foundation/Decans/Missed checklist, remaining requirements list, navigation shortcuts to training pages, locked Ritual Builder teaser",
+          "Graduated view: certificate card with golden star icon, 'Priest / Priestess of the Mystery School' title, 36 decans + 12 weeks stats, graduation date, share URL and 'Share on X' button",
+          "Post-grad CTA: 'Post-Graduation Ritual Builder' card with link to /mystery-school/training/ritual-builder (locked before graduation, active after)",
+          "Graduation eligibility: 12/12 foundation weeks + 36/36 decans completed + 0 unexcused missed decans",
+          "Auto-graduation message: 'will be processed automatically within 24 hours' when all requirements met"
+        ]
+      },
+      {
+        name: "builder",
+        label: "Ritual Builder",
+        description: "A post-graduation creative tool at /mystery-school/training/ritual-builder for designing custom ritual sequences. This tool is the reward and the practical application of everything learned in the Mystery School — it represents the transition from following pre-built rituals (during the decan year) to CREATING your own. Available only to graduated students (graduated_at is not null). Non-graduated students see a locked teaser. The builder provides a library of ritual building blocks drawn from the entire Mystery School tradition: planetary invocations for all 7 classical planets, sign invocations for all 12 zodiac signs, decan invocations for all 36 decans, grand invocations (opening ceremonies), opening gates (threshold transitions), closing prayers, and free-form custom steps. The student assembles these into ordered sequences to create personalized ceremonies for any occasion — personal transits, seasonal rites, decan workings, or free-form spiritual practice.",
+        group: "Training & Graduation",
+        purpose: "This is the advanced ritual design tool unlocked after graduation. It checks whether graduated_at is not null — if the student has not graduated, the entire page shows a locked teaser card with a Lock icon and the text 'Unlocks when you graduate — design personal rituals using the full component library: planetary invocations, decan workings, seasonal rites, and custom steps.' For graduated students, the builder provides a structured creative environment with three sections: (1) COMPONENT LIBRARY — organized by category: Grand Invocations (ceremonial openings), Opening Gates (threshold crossings), Planetary Invocations (one for each of the 7 classical planets: Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn, plus Uranus, Neptune, Pluto — 10 total), Sign Invocations (one for each of the 12 zodiac signs: Aries through Pisces), Decan Invocations (one for each of the 36 decans, numbered 1–36), Closing Prayers (ritual endings), and Custom Steps (free-text steps the student writes themselves). Each component can be clicked to add it to the ritual canvas. (2) RITUAL CANVAS — the main area showing the ordered list of selected components. Each item has up/down arrow buttons (ChevronUp/ChevronDown) for reordering and a trash button (Trash2) for removal. There is no drag-and-drop — the interface uses simple button-based reordering with no external dependencies. (3) SAVE FORM — fields for ritual name (required), ritual type selector (Free Form, Personal Transit, Seasonal, or Decan Custom), tags, notes (textarea), and a share toggle. Saving calls POST /api/mystery-school/ritual-builder which stores the ritual in the database. A PERSONAL LIBRARY TAB shows all previously saved rituals in a list, with load, duplicate, and delete actions per ritual. Loading a saved ritual populates the canvas with its components for editing.",
+        bullets: [
+          "Component library: categorized ritual building blocks — Grand Invocations, Opening Gates, Planetary (10 planets), Sign (12 signs), Decan (36 decans), Closings, Custom steps",
+          "Ritual canvas: ordered list of selected components, up/down buttons for reordering, trash button to remove",
+          "Save form: ritual name, type selector (Free Form / Personal Transit / Seasonal / Decan Custom), tags, notes, share toggle",
+          "Personal library tab: list of saved rituals with load, duplicate, and delete actions",
+          "Locked state: non-graduated students see a locked teaser card explaining the feature unlocks after graduation",
+          "No external dependencies: uses up/down arrow buttons instead of drag-and-drop"
         ]
       },
     ],
@@ -2133,13 +3076,16 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         groupLabel: "Referrals & Earnings",
         cards: [
           { title: "Referrals", description: "Every person you have referred and their status", href: "/advocate/referrals", icon: Users, status: "live" },
+          { title: "Referrals Detail", description: "Individual referral journeys and landing data", href: "/advocate/referrals-detail", icon: ListChecks, status: "live" },
           { title: "Earnings", description: "Commissions paid, pending, and upcoming", href: "/advocate/earnings", icon: CreditCard, status: "live" },
+          { title: "Payout History", description: "All completed payouts with receipts", href: "/advocate/payout-history", icon: History, status: "live" },
         ],
       },
       {
         groupLabel: "Tools & Content",
         cards: [
           { title: "Campaigns", description: "Active campaigns you can join for extra earnings", href: "/advocate/campaigns", icon: Zap, status: "live" },
+          { title: "Content Library", description: "Admin-curated social media templates and assets", href: "/advocate/content-library", icon: Image, status: "live" },
           { title: "Marketing Content", description: "Ready-made assets and copy for promotion", href: "/advocate/content", icon: Image, status: "live" },
           { title: "Profile", description: "Your advocate profile and contact info", href: "/advocate/profile", icon: User, status: "live" },
         ],
@@ -2290,6 +3236,54 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Contact your account manager — link to reach your platform contact if you have questions or issues"
         ]
       },
+      {
+        name: "referrals-detail",
+        label: "Referrals Detail",
+        description: "A granular breakdown of every individual referral — not just a count, but the full story of each referral. See exactly which page they landed on, which diviner or product they explored, their booking or sign-up status, and the commission earned per referral.",
+        group: "Referrals & Earnings",
+        purpose: "The most detailed view of your referral program — individual-level insight into every person you sent to the platform.",
+        bullets: [
+          "Referral entry view — each referral shown as an individual record with name (privacy-masked), date, and source",
+          "Landing page — which page of AstrologyPro the referred visitor first arrived on (e.g. /discover, a diviner's profile, /join)",
+          "Diviner interaction — if they clicked through to or booked a specific diviner, that diviner is shown",
+          "Booking status — whether the referred person has booked a session, joined a plan, or only browsed",
+          "Commission per referral — the specific amount this individual referral generated for you",
+          "Status timeline — a visual track of this referral's journey (clicked link → registered → purchased → commission earned)",
+          "Filter by status — view only referrals who converted, only those still browsing, or only those who earned commission"
+        ]
+      },
+      {
+        name: "content-library",
+        label: "Content Library",
+        description: "A curated collection of ready-made promotional assets created by the platform's admin team specifically for advocates. Grab social media templates, captions, images, and post ideas to promote AstrologyPro on Instagram, TikTok, and Facebook without designing anything yourself.",
+        group: "Tools & Content",
+        purpose: "Equips advocates with professional, on-brand promotional materials so they can promote the platform effectively without design skills.",
+        bullets: [
+          "Social media templates — pre-designed image templates sized for Instagram posts, Stories, Facebook, and TikTok",
+          "Caption library — ready-to-use written captions with your referral link placeholder that you simply copy and post",
+          "Platform highlights — graphics and copy highlighting specific features like Sunday Service, natal charts, or practitioner profiles",
+          "Campaign-specific assets — when a campaign is running, dedicated creative materials are added for that promotion",
+          "Download or copy — download any graphic as a high-resolution image or copy caption text with one click",
+          "Organized by channel — content is grouped by platform (Instagram, Facebook, TikTok, email) for quick retrieval",
+          "Updated regularly — the admin team adds new materials before major promotions, seasonal events, and new platform features"
+        ]
+      },
+      {
+        name: "payout-history",
+        label: "Payout History",
+        description: "A complete log of every commission payment that has been transferred to your bank or payment account. See exact amounts, dates, payment method, and download a receipt for any past payout.",
+        group: "Referrals & Earnings",
+        purpose: "Your official payment record — the definitive proof of every commission transferred to you from the platform.",
+        bullets: [
+          "All payouts listed — every payment sent to your account, sorted by most recent first",
+          "Payout date — the exact date each transfer was processed",
+          "Amount — the gross commission amount transferred in each payout",
+          "Payment method — which bank account, PayPal, or payment method received the transfer",
+          "Payout status — successful, pending, or failed (failed payouts include an explanation and retry option)",
+          "Download receipt — generate and download a formal PDF receipt for any individual payout for your tax records",
+          "Annual summary — a year-in-review summary showing total commissions received in a calendar year for tax filing"
+        ]
+      },
     ],
   },
   {
@@ -2414,16 +3408,67 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
+        name: "lesson-view",
+        label: "Lesson Reading View",
+        description: "The focused lesson reading environment. When you open a specific lesson, this is what you see — the full lesson content rendered cleanly with all media, attachments, and a quiz at the bottom if required.",
+        group: "Training",
+        purpose: "This is where actual learning happens in the Trainee Academy. When you click on a lesson title from the Training Programs page, you enter this immersive reading view. The lesson content is displayed without distractions — just text, images, and embedded video. After reading, you scroll to the bottom to find any attached downloads and the optional or required quiz. The lesson is automatically marked as started the moment you open it, and marked complete when you pass the quiz or confirm you have finished.",
+        bullets: [
+          "Lesson content — the full written teaching with headings, images, and structured paragraphs",
+          "Embedded video — some lessons include an instructional video embedded directly in the lesson body",
+          "Downloadable attachments — PDF guides, reference sheets, and supplemental documents listed at the bottom",
+          "In-lesson quiz — a quiz appears at the end of lessons that have one; must be passed to mark the lesson complete",
+          "Lesson navigation — previous and next lesson buttons to move through the curriculum without going back to the list",
+          "Completion status — the lesson header shows a green checkmark once it is fully complete",
+          "Progress auto-save — if you close the page mid-lesson, your position is saved and you can resume later"
+        ]
+      },
+      {
+        name: "quiz-taking",
+        label: "Quiz in Progress",
+        description: "The quiz experience inside a lesson. Questions are presented one by one; you select your answer and submit. After all questions are answered, your score and pass/fail result appear immediately.",
+        group: "Assessment",
+        purpose: "Quizzes are the assessment mechanism of the Trainee Academy. After completing a lesson's reading material, you may be presented with a quiz to test your understanding before the lesson is marked complete. This page is the quiz interface — each question appears with multiple-choice answers, and you select what you believe is correct before moving to the next question. At the end, your score is calculated instantly and you either pass (lesson marked complete) or fail (you can retake after a short waiting period).",
+        bullets: [
+          "Question display — one question at a time, with 4 multiple-choice options to choose from",
+          "Question counter — shows which question you are on and how many remain (e.g. Question 3 of 10)",
+          "Select and confirm — click an answer option and a confirm button to lock in your response",
+          "No going back — once an answer is confirmed, you move to the next question without changing",
+          "Immediate results — after the last question, your score appears instantly with a pass or fail result",
+          "Score breakdown — see which questions you got right and wrong, with the correct answer shown for each",
+          "Retake if failed — if you do not pass, a retake button appears after a waiting period (set by training settings)"
+        ]
+      },
+      {
+        name: "mentor-session",
+        label: "Mentor Practice Session",
+        description: "A live video practice session with your assigned mentor diviner. These sessions are for guided learning, chart practice, feedback on readings, and one-on-one support for your training progress.",
+        group: "Sessions",
+        purpose: "Mentor sessions are the personalized coaching component of the Trainee Academy. Your mentor is an experienced diviner assigned to guide your development. Unlike a reading (where the client seeks guidance), a mentor session is about your growth as a practitioner — your mentor might observe you reading a chart and give feedback, answer your curriculum questions, help you interpret difficult placements, or give you practice readings to work through. These sessions are essential for developing real-world divination skills.",
+        bullets: [
+          "Video room — a secure, private HD video call between you and your assigned mentor",
+          "Practice chart sharing — your mentor can share natal charts on screen for you to practice interpreting",
+          "Session focus — each session should have a topic or focus area agreed before the call (e.g. House Interpretations, Aspect Analysis)",
+          "Mentor feedback — your mentor provides real-time feedback on your interpretations and technique",
+          "Session notes — after the session, your mentor may share written notes in your trainee profile",
+          "Session recording — if both parties agree, the session can be recorded for later review",
+          "Booking link — return to the Sessions page to book your next mentor session"
+        ]
+      },
+      {
         name: "graduation",
         label: "Graduation Certificate",
-        description: "Digital certificate issued on completing all curriculum requirements.",
+        description: "Your official digital certificate from the School of Our Divine Infinite Being, issued automatically when you complete all 15 training programs. A professional, printable credential confirming your qualification as a trained diviner.",
         group: "Certification",
-        purpose: "A shareable digital certificate confirming full curriculum completion, issued with a unique code and graduation date.",
+        purpose: "Graduation is the culmination of your Trainee Academy journey. When you have completed every required lesson across all 15 training programs and passed all associated quizzes, the platform automatically generates your Graduation Certificate. This is a formal, printable document bearing the school's name and seal, your full name, your graduation date, and a unique verification code. You can download it as a PDF, share a digital link, and it can be verified by anyone using the code.",
         bullets: [
-          "Unique certificate code (e.g. CERT-BUKQOM-2026)",
-          "Graduation date and trainee full name",
-          "Sharable link and downloadable PDF",
-          "Verification page for employers and clients"
+          "Certificate preview — a beautifully designed certificate showing your name, the school name, and graduation date",
+          "School seal — the official seal of the School of Our Divine Infinite Being appears on the certificate",
+          "Unique certificate code — a verification code (e.g. CERT-BUKQOM-2026) printed on the certificate",
+          "All 15 programs listed — every training program you completed is enumerated on the certificate",
+          "Head Master acknowledgment — signed by Eddie Paredes as Head Master of the school",
+          "Download as PDF — save a high-resolution, print-ready PDF version of your certificate",
+          "Verification link — a public URL anyone can visit to verify the certificate is authentic and issued by the school"
         ]
       },
     ],
@@ -2454,6 +3499,8 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         cards: [
           { title: "Dashboard", description: "Your session overview and upcoming readings", href: "/portal", icon: LayoutDashboard, status: "live" },
           { title: "My Bookings", description: "All your sessions — upcoming and past", href: "/portal/bookings", icon: CalendarDays, status: "live" },
+          { title: "Booking History", description: "Full session archive with rebook shortcut", href: "/portal/booking-history", icon: History, status: "live" },
+          { title: "Saved Diviners", description: "Your favourite practitioners for quick rebooking", href: "/portal/favorites", icon: Heart, status: "live" },
         ],
       },
       {
@@ -2461,6 +3508,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         cards: [
           { title: "Order History", description: "Every purchase and transaction", href: "/portal/orders", icon: ShoppingBag, status: "live" },
           { title: "Subscriptions", description: "Active recurring reading plans", href: "/portal/subscriptions", icon: RefreshCcw, status: "live" },
+          { title: "Gift a Reading", description: "Purchase and send readings as gifts", href: "/portal/gift-cards", icon: Gift, status: "live" },
         ],
       },
       {
@@ -2606,6 +3654,102 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Notification preferences — control which emails and alerts you receive from the platform"
         ]
       },
+      {
+        name: "discover",
+        label: "Find a Diviner",
+        description: "Browse and search the full directory of professional diviners available on AstrologyPro. Filter by specialty, language, price, availability, and rating to find the right reader for your needs.",
+        group: "My Sessions",
+        purpose: "If you want to book a reading but are not sure which diviner to choose, the Discover page is where you start. It shows every diviner who is currently accepting bookings, with their photo, specialty, rating, and price range. You can narrow down by what you need — for example, 'I want a natal chart reading under $100 from someone who also does tarot' — and the filters will show you the matching practitioners. From any profile you can read their bio, see their reviews, and click to book.",
+        bullets: [
+          "Full practitioner directory — all active diviners accepting bookings, displayed as cards with photo and rating",
+          "Filter by specialty — narrow to specific reading types: natal chart, tarot, relationship, transit, mundane, etc.",
+          "Filter by price range — set a minimum and maximum price to match your budget",
+          "Filter by availability — see only diviners who have open slots in the next 7 days or today",
+          "Sort by rating — see highest-rated practitioners first for a confidence-boosting choice",
+          "Practitioner profile preview — hover or click a card to see a quick summary of the diviner's bio and reviews",
+          "Book directly — from the search results, click to go straight to a diviner's booking page"
+        ]
+      },
+      {
+        name: "diviner-profile",
+        label: "Diviner Public Profile",
+        description: "The full public profile page for a specific diviner. Read their bio, see their services and prices, browse client reviews, check availability, and book a session — all from one page.",
+        group: "My Sessions",
+        purpose: "Before booking a reading, most clients want to learn about the diviner. The Diviner Profile page is that information hub. You can read the practitioner's bio and background, see their full list of services with descriptions and prices, read reviews from other clients, watch a video introduction if they have one, and check their real-time availability calendar. The book button at the top opens the booking flow.",
+        bullets: [
+          "Bio and background — the diviner's personal story, training, tradition, and approach to readings",
+          "Services menu — all offered reading types with descriptions, duration, and price",
+          "Client reviews — verified testimonials from past clients with star ratings and dates",
+          "Video introduction — a short video where the diviner introduces themselves (if uploaded)",
+          "Specialties and traditions — the astrological, tarot, or spiritual systems this diviner works with",
+          "Real-time availability — click a service to see open time slots and pick one to book",
+          "Contact — some diviners enable a message button for pre-booking questions"
+        ]
+      },
+      {
+        name: "video-session",
+        label: "Video Session Room",
+        description: "The client-side view of the live video reading. A clean, private room where you connect with your diviner face-to-face over HD video for your booked session.",
+        group: "My Sessions",
+        purpose: "When it is time for your session, you join the video room from your Bookings page. This is what you see when you enter — a full-screen video call with your diviner in a private, secure room. There are no distractions, no strangers, and no external software to download. The session happens right in your browser. You can see and hear your diviner clearly, use the in-session chat if you want to share something in text, and at the end both parties leave the room and the session is marked complete.",
+        bullets: [
+          "HD video call — crystal-clear video and audio between you and your diviner",
+          "Private room — only you and your booked diviner can enter; the room is not shared with anyone else",
+          "In-session chat — a text chat panel on the side for typing questions, receiving links, or sharing notes",
+          "Session timer — a visible display showing how much time has elapsed in the session",
+          "No download required — the session runs fully in your browser with no software to install",
+          "Recording notice — if the diviner is recording the session, you are notified with a visible indicator",
+          "Leave session — a button to cleanly end your side of the call when the reading is complete"
+        ]
+      },
+      {
+        name: "booking-history",
+        label: "Booking History",
+        description: "Your complete history of every session you have ever booked on AstrologyPro — past readings, upcoming appointments, and cancelled sessions. Find any reading instantly, access session notes your diviner left, download a PDF summary, or quickly rebook the same practitioner.",
+        group: "My Sessions",
+        purpose: "A permanent, searchable record of your entire reading history and the fastest way to rebook a diviner you loved.",
+        bullets: [
+          "Full session history — every booking ever made, sorted from most recent to oldest",
+          "Upcoming appointments — confirmed future sessions with a countdown and a join button when the time comes",
+          "Past session summary — date, diviner name, service type, duration, and completion status for each past reading",
+          "Session notes — any written notes or insights your diviner shared after completing your reading",
+          "PDF download — export a session summary as a PDF for your personal records or to share with someone",
+          "Rebook shortcut — a one-click button on any past session to go directly to that diviner's booking page and schedule again",
+          "Cancelled sessions — past cancellations are visible with the reason given and whether a refund was processed"
+        ]
+      },
+      {
+        name: "favorites",
+        label: "Saved Diviners",
+        description: "Your personal list of diviners you have saved or marked as a favourite. Keep track of practitioners you love, easily check their current availability, and rebook them without searching the directory again.",
+        group: "My Sessions",
+        purpose: "Your personal shortlist of trusted practitioners — so rebooking a diviner you love takes seconds, not minutes.",
+        bullets: [
+          "Saved practitioners — all diviners you have hearted or bookmarked, shown with their photo, name, and specialty",
+          "Availability status — a live indicator showing whether your saved diviner is currently accepting bookings",
+          "Quick book button — jump straight to their booking page from your favourites list without going through the directory",
+          "Last booked — see when you last had a session with each saved practitioner",
+          "Rating reminder — the diviner's current overall star rating is shown so you can compare before rebooking",
+          "Remove from favourites — un-save a diviner if you no longer want them in your shortlist",
+          "Add during discovery — you can save any diviner you see in the search results or on their profile with a single heart click"
+        ]
+      },
+      {
+        name: "gift-cards",
+        label: "Gift a Reading",
+        description: "Purchase and send a reading as a gift for someone you care about. Choose a practitioner, select a service, and the platform delivers a personalized gift certificate to the recipient by email. You can also see a history of gift cards you have sent and check if they have been redeemed.",
+        group: "Finance",
+        purpose: "Share the gift of a spiritual reading with a friend, partner, or family member — with a fully personalized digital gift certificate.",
+        bullets: [
+          "Choose a diviner — select a specific practitioner whose reading you want to gift, or leave the choice to the recipient",
+          "Select a service — pick which type of reading to gift (natal chart, tarot, transit check-in, etc.) and the session duration",
+          "Personalize the message — write a personal note that appears on the gift certificate delivered to the recipient",
+          "Recipient email — enter the recipient's email address and the platform sends the certificate immediately or on a future date",
+          "Gift certificate value — the certificate holds the monetary value of the chosen session; the recipient books directly",
+          "Sent gift history — a log of all gift certificates you have sent with their redemption status (sent, opened, redeemed)",
+          "Received gifts — if someone has gifted you a reading, it appears here ready to use for booking"
+        ]
+      },
     ],
   },
   {
@@ -2701,15 +3845,66 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
       { 
         name: "join", 
-        label: "Registration Hub", 
-        description: "Membership tier selection.", 
+        label: "Registration Hub",
+        description: "The membership selection page where visitors choose how to join AstrologyPro — as a client, a Perennial Mandalism member, a Mystery School student, or a diviner. Each path has a clear description and an enrollment button.",
         group: "Onboarding",
-        purpose: "A purpose-built page for selecting membership tiers and initiating the spiritual onboarding process.",
+        purpose: "The Join page is the entry point for anyone who decides to become part of AstrologyPro. It presents each available membership path clearly so visitors can choose what fits them. A client can sign up to book readings. A community member can join the Perennial Mandalism program. A diviner can apply to offer readings. Each option shows what is included and leads into that role's onboarding flow.",
         bullets: [
-          "Clear plan comparison and feature matrix",
-          "One-click enrollment in Perennial Mandalism",
-          "Specialized Family and Couple plan options",
-          "Integrated student-to-school conversion paths"
+          "Role selection — clearly presented options for Client, Community Member, Diviner, and Trainee",
+          "What is included — each path shows a bullet list of what the membership includes",
+          "Price clarity — Perennial Mandalism plans show their prices ($19.95/mo Individual, $34.95/mo Family)",
+          "Get started button — clicking any option takes the visitor to registration and onboarding for that role",
+          "Already a member login — a visible link to the login page for returning members",
+          "School overview — brief description of the School of Our Divine Infinite Being for new visitors",
+          "No commitment framing — wording designed to reduce friction and encourage enrollment"
+        ]
+      },
+      {
+        name: "about",
+        label: "About the School",
+        description: "The public-facing About page for AstrologyPro and the School of Our Divine Infinite Being. Introduces the school's philosophy, the Head Master, the teaching tradition, and what makes this platform different from other astrology resources.",
+        group: "Marketing",
+        purpose: "Before someone joins a spiritual school, they want to know who is teaching and why this school exists. The About page tells that story. It introduces Eddie Paredes as the Head Master, explains the tradition the school operates in (the 36 decans system, esoteric Western astrology, sacred ritual practice), and describes what a student or community member can expect from the experience. It builds trust and emotional connection with prospective members.",
+        bullets: [
+          "School mission — the purpose and philosophy behind the School of Our Divine Infinite Being",
+          "Head Master bio — Eddie Paredes' background, lineage, and teaching philosophy",
+          "The tradition — an overview of the esoteric and astrological tradition the school teaches",
+          "Community values — what the Perennial Mandalism community stands for and how members are expected to engage",
+          "The 15 programs — a brief overview of the training curriculum and what graduates receive",
+          "Contact and social links — how to reach the school and follow its channels",
+          "Call to action — a prominent invitation to join the school or book a reading"
+        ]
+      },
+      {
+        name: "pricing",
+        label: "Pricing & Plans",
+        description: "A dedicated pricing page comparing all available memberships and services on AstrologyPro — Perennial Mandalism plans, Mystery School enrollment, and how client readings are priced.",
+        group: "Marketing",
+        purpose: "Transparent pricing is a key conversion factor — visitors who cannot easily find pricing often leave without joining. This page answers the question 'how much does this cost?' clearly for every offering. It compares the Individual and Family PM plans side by side, explains how the Mystery School subscription works, and helps potential clients understand that reading prices vary by diviner (with links to the discovery page to find options in their price range).",
+        bullets: [
+          "Perennial Mandalism plans — Individual ($19.95/mo) and Family ($34.95/mo) compared side by side",
+          "Plan features comparison — what each plan includes, what is different between them",
+          "Mystery School pricing — how the school subscription works and what is included",
+          "Diviner reading prices — an explanation that reading prices are set by each individual diviner",
+          "Diviner price range — a general guide to what readings typically cost on the platform",
+          "No hidden fees — clarity on what is and is not included in each tier",
+          "FAQ section — answers to common pricing questions (Can I cancel? Is there a free trial? etc.)"
+        ]
+      },
+      {
+        name: "testimonials",
+        label: "Platform Testimonials",
+        description: "A curated public wall of testimonials and success stories from clients, PM members, Mystery School graduates, and diviners who have experienced the platform. Builds trust for new visitors.",
+        group: "Marketing",
+        purpose: "Social proof is one of the most powerful conversion tools for a spiritual platform. Seeing real people share genuine experiences creates trust in a way that marketing copy cannot. The Testimonials page collects the best reviews and stories from across the platform — clients who had breakthrough readings, trainees who graduated and found their practice, PM members who describe how the community changed their spiritual life. New visitors read these before deciding to join.",
+        bullets: [
+          "Client testimonials — reviews from people who have had readings and found them transformative",
+          "PM member stories — experiences from Perennial Mandalism community members",
+          "Graduate testimonials — reflections from trainees who completed the academy and received their certificate",
+          "Diviner success stories — practitioners who built their practice through the platform",
+          "Star ratings — each testimonial includes the star rating given by the reviewer",
+          "Verified badge — testimonials from verified accounts are marked as confirmed by the platform",
+          "Filter by role — visitors can filter testimonials to see only those relevant to their interest"
         ]
       },
     ],
