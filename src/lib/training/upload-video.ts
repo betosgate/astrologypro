@@ -1,5 +1,5 @@
 /**
- * Upload a video file to /api/admin/training/upload with real-time
+ * Upload a training file to /api/admin/training/upload with real-time
  * progress tracking via XMLHttpRequest.
  *
  * `fetch()` does not expose upload progress events, so we fall back to
@@ -10,8 +10,11 @@ export interface UploadVideoResult {
   url: string;
 }
 
+export type TrainingUploadKind = "video" | "pdf";
+
 export interface UploadVideoOptions {
   file: File;
+  kind?: TrainingUploadKind;
   /** Called with a value between 0 and 100 as bytes are sent. */
   onProgress?: (percent: number) => void;
   /** Called when the upload phase changes. */
@@ -20,7 +23,11 @@ export interface UploadVideoOptions {
   signal?: AbortSignal;
 }
 
-function friendlyUploadError(status: number, responseText: string) {
+function friendlyUploadError(
+  status: number,
+  responseText: string,
+  kind: TrainingUploadKind,
+) {
   let serverMessage = "";
   try {
     const body = JSON.parse(responseText);
@@ -36,7 +43,9 @@ function friendlyUploadError(status: number, responseText: string) {
     serverMessage.includes("exceeded the maximum allowed size");
 
   if (isStorageLimit) {
-    return "This video is larger than the current storage upload limit. Please upload a smaller or compressed video, or ask an admin to increase the training video storage limit.";
+    return kind === "pdf"
+      ? "This PDF is larger than the current document upload limit. Please upload a smaller file, or ask an admin to increase the document storage limit."
+      : "This video is larger than the current storage upload limit. Please upload a smaller or compressed video, or ask an admin to increase the training video storage limit.";
   }
 
   if (serverMessage.trim()) {
@@ -46,14 +55,17 @@ function friendlyUploadError(status: number, responseText: string) {
   return `Upload failed (HTTP ${status}). Please try again.`;
 }
 
-export function uploadTrainingVideo({
+function uploadTrainingFile({
   file,
+  kind = "video",
   onProgress,
   onStatus,
   signal,
 }: UploadVideoOptions): Promise<UploadVideoResult> {
   return new Promise<UploadVideoResult>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    const processingLabel = kind === "pdf" ? "Processing PDF…" : "Processing video…";
+    const completeLabel = kind === "pdf" ? "PDF upload complete." : "Upload complete.";
     onProgress?.(0);
     onStatus?.("Preparing upload…");
 
@@ -69,7 +81,7 @@ export function uploadTrainingVideo({
 
     xhr.upload.addEventListener("load", () => {
       onProgress?.(95);
-      onStatus?.("Processing video…");
+      onStatus?.(processingLabel);
     });
 
     // --- completion ---
@@ -78,13 +90,13 @@ export function uploadTrainingVideo({
         try {
           const json = JSON.parse(xhr.responseText);
           onProgress?.(100);
-          onStatus?.("Upload complete.");
+          onStatus?.(completeLabel);
           resolve({ url: json.url });
         } catch {
           reject(new Error("Invalid JSON response from upload endpoint."));
         }
       } else {
-        reject(new Error(friendlyUploadError(xhr.status, xhr.responseText)));
+        reject(new Error(friendlyUploadError(xhr.status, xhr.responseText, kind)));
       }
     });
 
@@ -117,8 +129,17 @@ export function uploadTrainingVideo({
 
     const body = new FormData();
     body.append("file", file);
+    body.append("kind", kind);
 
     xhr.open("POST", "/api/admin/training/upload");
     xhr.send(body);
   });
+}
+
+export function uploadTrainingVideo(options: UploadVideoOptions) {
+  return uploadTrainingFile({ ...options, kind: "video" });
+}
+
+export function uploadTrainingPdf(options: UploadVideoOptions) {
+  return uploadTrainingFile({ ...options, kind: "pdf" });
 }
