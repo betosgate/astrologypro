@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
 // ── GET /api/admin/certificate-config ─────────────────────────────────────────
 export async function GET() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ status: 401, title: "Unauthorized" }, { status: 401 });
-
-  // Verify admin
-  const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
-  if (!profile?.is_admin) return NextResponse.json({ status: 403, title: "Forbidden" }, { status: 403 });
+  const user = await getAdminUser();
+  if (!user) return NextResponse.json({ status: 403, title: "Forbidden" }, { status: 403 });
 
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -30,12 +25,8 @@ export async function GET() {
 
 // ── PUT /api/admin/certificate-config ─────────────────────────────────────────
 export async function PUT(req: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ status: 401, title: "Unauthorized" }, { status: 401 });
-
-  const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
-  if (!profile?.is_admin) return NextResponse.json({ status: 403, title: "Forbidden" }, { status: 403 });
+  const user = await getAdminUser();
+  if (!user) return NextResponse.json({ status: 403, title: "Forbidden" }, { status: 403 });
 
   let body: Record<string, unknown>;
   try {
