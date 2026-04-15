@@ -95,23 +95,23 @@ export interface WalkthroughSection {
 // ─── Slug map ───────────────────────────────────────────────────────────────
 
 export const ROLE_SLUGS: Record<string, string> = {
-  admin: "Admin Back Office",
-  diviner: "Diviner Dashboard",
-  community: "Community Member",
+  admin: "Administration Suite",
+  diviner: "Diviner Studio",
+  community: "Perennial Mandalism",
   "mystery-school": "Mystery School",
-  social_advo: "Social Advocate",
-  trainee: "Trainee",
-  customer: "Customer Portal",
-  public: "Public / Visitor",
+  social_advo: "Affiliate Partner",
+  trainee: "Trainee Academy",
+  customer: "Client Portal",
+  public: "Public Experience",
 };
 
 // ─── Section definitions ────────────────────────────────────────────────────
 
 export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   {
-    role: "Admin Back Office",
+    role: "Administration Suite",
     slug: "admin",
-    tagline: "Global governance and system intelligence",
+    tagline: "Platform governance and system intelligence",
     roleDescription:
       "Full oversight for platform owners. Govern users, commerce, astrology engines, and training programs across the entire ecosystem with granular control.",
     icon: Shield,
@@ -1233,11 +1233,11 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ],
   },
   {
-    role: "Diviner Dashboard",
+    role: "Diviner Studio",
     slug: "diviner",
-    tagline: "Clinical espiritual and business operations",
+    tagline: "Spiritual practice and business operations",
     roleDescription:
-      "Manage every aspect of your spiritual business — from clients to marketing and streams.",
+      "A full-featured workspace for practitioners — manage clients, services, calendar, media, and revenue in one place.",
     icon: Star,
     gradient: "from-amber-500/20 to-yellow-600/10",
     featureAreas: ["Scheduling", "CRM", "Business Operations", "Engagement"],
@@ -1325,11 +1325,11 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ],
   },
   {
-    role: "Community Member",
+    role: "Perennial Mandalism",
     slug: "community",
-    tagline: "Interactive astrology and spiritual community",
+    tagline: "Astrology tools and sacred community access",
     roleDescription:
-      "Access powerful astrology tools, weekly live gatherings, and a library of spiritual wisdom for Perennial Mandalism members.",
+      "A dedicated membership experience — access live gatherings, powerful astrology tools, and a curated library of spiritual wisdom.",
     icon: Heart,
     gradient: "from-pink-500/20 to-rose-600/10",
     featureAreas: ["Astrology Tools", "Community Hub", "Spiritual Content"],
@@ -1419,9 +1419,9 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   {
     role: "Mystery School",
     slug: "mystery-school",
-    tagline: "Advanced esoteric training and decan studies",
+    tagline: "Esoteric curriculum and decan mastery",
     roleDescription:
-      "A privileged path for serious practitioners. Dive deep into decan systems and master ritual building.",
+      "A privileged path for serious practitioners. Dive deep into the decan systems, sacred ritual frameworks, and advanced astrology curriculum.",
     icon: Eye,
     gradient: "from-violet-500/20 to-purple-600/10",
     featureAreas: ["Curriculum", "Decan Studies", "Ritual Mastery"],
@@ -1496,11 +1496,11 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ],
   },
   {
-    role: "Social Advocate",
+    role: "Affiliate Partner",
     slug: "social_advo",
-    tagline: "Affiliate growth and referral rewards",
+    tagline: "Community growth and referral partnerships",
     roleDescription:
-      "For partners focusing on community growth. Track referrals and manage affiliate links.",
+      "Purpose-built for growth partners. Track referral performance, manage affiliate links, and monitor commission earnings in real time.",
     icon: Sparkles,
     gradient: "from-blue-500/20 to-indigo-600/10",
     featureAreas: ["Growth", "Referrals", "Earnings"],
@@ -1548,11 +1548,11 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ],
   },
   {
-    role: "Trainee",
+    role: "Trainee Academy",
     slug: "trainee",
-    tagline: "Apprenticeship and skill development",
+    tagline: "Structured apprenticeship and divine arts mastery",
     roleDescription:
-      "Master divine arts through structured lessons and mentor-assigned modules.",
+      "A guided learning environment for aspiring practitioners — structured lessons, mentor feedback, quizzes, and certification tracks.",
     icon: GraduationCap,
     gradient: "from-amber-500/20 to-orange-600/10",
     featureAreas: ["Training", "Mentorship", "Milestones"],
@@ -1600,11 +1600,11 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ],
   },
   {
-    role: "Customer Portal",
+    role: "Client Portal",
     slug: "customer",
-    tagline: "Personal spiritual management and history",
+    tagline: "Personal readings and spiritual journey",
     roleDescription:
-      "A dedicated area for clients to manage their spiritual journey, track reading history, and interact with practitioners.",
+      "A clean, personal workspace for clients — book sessions, review reading history, explore services, and connect with their chosen diviner.",
     icon: User,
     gradient: "from-emerald-500/20 to-green-600/10",
     featureAreas: ["Dashboard", "Orders", "Bookings", "Account"],
@@ -1679,11 +1679,11 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ],
   },
   {
-    role: "Public / Visitor",
+    role: "Public Experience",
     slug: "public",
-    tagline: "First impressions and platform discovery",
+    tagline: "Platform discovery and visitor onboarding",
     roleDescription:
-      "Unauthenticated pages designed to convert visitors into community members or clients through discovery and education.",
+      "The first impression of AstrologyPro — marketing pages, practitioner discovery, and conversion flows designed to welcome and convert new visitors.",
     icon: Globe,
     gradient: "from-sky-500/20 to-blue-600/10",
     featureAreas: ["Discovery", "Marketing", "Knowledge", "Onboarding"],
