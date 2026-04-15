@@ -33,38 +33,59 @@ export async function provisionChimePhoneNumber(
   const voice = getChimeVoiceClient();
 
   // ── Step 1: Search for an available US number ────────────────────────────
-  // AWS Chime requires AreaCode or State for Local searches.
-  // Try Local first, fall back to TollFree if none available.
+  // AWS Chime SDK Voice requires specific parameters per phone number type:
+  //   - Local:    AreaCode (3-digit US) OR (State + optional City)
+  //   - TollFree: TollFreePrefix (e.g. "800", "888", "877", "866", "855", "844", "833")
+  // Omitting these causes BadRequestException: "required search parameters are empty".
   let availableNumbers: string[] = [];
+
+  // Validate area code — must be 3-digit US area code
+  const sanitizedAreaCode = (areaCode || "212").replace(/\D/g, "");
+  if (sanitizedAreaCode.length !== 3) {
+    throw new Error(
+      `Invalid area code "${areaCode}". Must be a 3-digit US area code (e.g. "212", "310", "415").`
+    );
+  }
 
   // Try Local first
   try {
+    console.log(`[Chime] Searching Local numbers with AreaCode=${sanitizedAreaCode}...`);
     const localResult = await voice.send(
       new SearchAvailablePhoneNumbersCommand({
         PhoneNumberType: "Local",
         Country: "US",
-        AreaCode: areaCode || "212",
+        AreaCode: sanitizedAreaCode,
         MaxResults: 1,
       })
     );
     availableNumbers = localResult.E164PhoneNumbers ?? [];
+    console.log(`[Chime] Local search returned ${availableNumbers.length} numbers`);
   } catch (err) {
     console.warn("[Chime] Local number search failed, trying TollFree:", err);
   }
 
-  // Fall back to TollFree
+  // Fall back to TollFree — requires TollFreePrefix
+  const TOLL_FREE_PREFIXES = ["800", "888", "877", "866", "855", "844", "833"];
   if (availableNumbers.length === 0) {
-    try {
-      const tollFreeResult = await voice.send(
-        new SearchAvailablePhoneNumbersCommand({
-          PhoneNumberType: "TollFree",
-          Country: "US",
-          MaxResults: 1,
-        })
-      );
-      availableNumbers = tollFreeResult.E164PhoneNumbers ?? [];
-    } catch (err) {
-      console.warn("[Chime] TollFree number search also failed:", err);
+    for (const prefix of TOLL_FREE_PREFIXES) {
+      try {
+        console.log(`[Chime] Searching TollFree numbers with prefix=${prefix}...`);
+        const tollFreeResult = await voice.send(
+          new SearchAvailablePhoneNumbersCommand({
+            PhoneNumberType: "TollFree",
+            Country: "US",
+            TollFreePrefix: prefix,
+            MaxResults: 1,
+          })
+        );
+        availableNumbers = tollFreeResult.E164PhoneNumbers ?? [];
+        if (availableNumbers.length > 0) {
+          console.log(`[Chime] TollFree search (${prefix}) returned ${availableNumbers.length} numbers`);
+          break;
+        }
+      } catch (err) {
+        console.warn(`[Chime] TollFree search (${prefix}) failed:`, err);
+      }
     }
   }
 
@@ -129,7 +150,7 @@ export async function provisionChimePhoneNumber(
   // command in the V2 SDK — routing is done entirely through SIP Rules.
   const sipRuleResult = await voice.send(
     new CreateSipRuleCommand({
-      Name: `diviner-${divinerId}-${phoneNumber}`,
+      Name: `diviner-${divinerId}-${phoneNumber.replace(/[^a-zA-Z0-9 _.-]/g, "")}`,
       TriggerType: "ToPhoneNumber",
       TriggerValue: phoneNumber,
       Disabled: false,
