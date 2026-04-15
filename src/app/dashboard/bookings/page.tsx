@@ -6,6 +6,14 @@ import { BookingsClient } from "@/components/dashboard/bookings-client";
 export const metadata = { title: "Bookings" };
 export const dynamic = "force-dynamic";
 
+// Columns guaranteed to be in the initial schema
+const SAFE_SELECT =
+  "id, scheduled_at, status, duration_minutes, base_price, stripe_payment_intent_id, session_notes, questionnaire_responses, client_id, service_id";
+
+// Full select including columns added by later migrations
+const FULL_SELECT =
+  "id, scheduled_at, status, duration_minutes, base_price, stripe_payment_intent_id, session_notes, booking_notes, metadata, questionnaire_responses, client_id, service_id, refund_amount, refunded_at, refund_reason";
+
 export default async function BookingsPage() {
   const supabase = await createClient();
   const admin = createAdminClient();
@@ -23,20 +31,64 @@ export default async function BookingsPage() {
 
   const ownerId = diviner?.id || user.id;
 
-  // Fetch ALL bookings (no server-side pagination — client handles it)
-  const { data: bookings } = await admin
+  // Try full select first; fall back to safe minimal columns if any column is missing
+  let bookingRows: Record<string, unknown>[] = [];
+
+  const { data: fullData, error: fullError } = await admin
     .from("bookings")
-    .select(
-      "id, scheduled_at, status, duration_minutes, base_price, stripe_payment_intent_id, session_notes, booking_notes, metadata, questionnaire_responses, client_id, refund_amount, refunded_at, refund_reason, services(name), clients(full_name, email, birth_date, birth_time, birth_city)"
-    )
+    .select(FULL_SELECT)
     .eq("owner_id", ownerId)
     .order("scheduled_at", { ascending: false });
 
-  // Linked orders per booking
-  const bookingIds = (bookings ?? [])
-    .map((b: Record<string, unknown>) => b.id as string)
-    .filter(Boolean);
+  if (fullError) {
+    console.warn("[bookings/page] full select failed, falling back:", fullError.message);
+    const { data: safeData, error: safeError } = await admin
+      .from("bookings")
+      .select(SAFE_SELECT)
+      .eq("owner_id", ownerId)
+      .order("scheduled_at", { ascending: false });
 
+    if (safeError) {
+      console.error("[bookings/page] safe select also failed:", safeError.message);
+    }
+    bookingRows = (safeData as Record<string, unknown>[]) ?? [];
+  } else {
+    bookingRows = (fullData as Record<string, unknown>[]) ?? [];
+  }
+
+  console.log(`[bookings/page] ${bookingRows.length} bookings for owner ${ownerId}`);
+
+  // Fetch client and service data separately (avoids join failures)
+  const clientIds = [...new Set(bookingRows.map((b) => b.client_id as string).filter(Boolean))];
+  const serviceIds = [...new Set(bookingRows.map((b) => b.service_id as string).filter(Boolean))];
+
+  const [clientsResult, servicesResult] = await Promise.all([
+    clientIds.length > 0
+      ? admin.from("clients").select("id, full_name, email, birth_date, birth_time, birth_city").in("id", clientIds)
+      : Promise.resolve({ data: [] as any[] }),
+    serviceIds.length > 0
+      ? admin.from("services").select("id, name").in("id", serviceIds)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+
+  const clientMap: Record<string, Record<string, unknown>> = {};
+  for (const c of (clientsResult.data ?? [])) {
+    clientMap[c.id] = c;
+  }
+  const serviceMap: Record<string, Record<string, unknown>> = {};
+  for (const s of (servicesResult.data ?? [])) {
+    serviceMap[s.id] = s;
+  }
+
+  // Merge into shape BookingsClient expects
+  const bookings = bookingRows.map((b) => ({
+    ...b,
+    clients: clientMap[b.client_id as string] ?? null,
+    services: serviceMap[b.service_id as string] ?? null,
+  }));
+
+  // Linked orders
+  const bookingIds = bookings.map((b) => b.id as string).filter(Boolean);
   let ordersByBookingId: Record<string, { id: string; amount: number; currency: string; status: string }> = {};
 
   if (bookingIds.length > 0) {
@@ -45,35 +97,25 @@ export default async function BookingsPage() {
       .select("id, booking_id, amount, currency, status")
       .in("booking_id", bookingIds);
 
-    if (linkedOrders) {
-      for (const order of linkedOrders) {
-        if (order.booking_id) {
-          ordersByBookingId[order.booking_id] = {
-            id: order.id,
-            amount: order.amount,
-            currency: order.currency,
-            status: order.status,
-          };
-        }
+    for (const order of (linkedOrders ?? [])) {
+      if (order.booking_id) {
+        ordersByBookingId[order.booking_id] = {
+          id: order.id,
+          amount: order.amount,
+          currency: order.currency,
+          status: order.status,
+        };
       }
     }
   }
 
-  // Previous session data per client
-  const clientPrevSessions: Record<
-    string,
-    { count: number; lastDate: string | null; lastNotes: string | null }
-  > = {};
-
+  // Previous session data per upcoming client
+  const clientPrevSessions: Record<string, { count: number; lastDate: string | null; lastNotes: string | null }> = {};
   const upcomingClientIds = [
     ...new Set(
-      (bookings ?? [])
-        .filter(
-          (b: Record<string, unknown>) =>
-            (b.status === "pending" || b.status === "confirmed") &&
-            new Date(b.scheduled_at as string) > new Date()
-        )
-        .map((b: Record<string, unknown>) => b.client_id as string)
+      bookings
+        .filter((b) => (b.status === "pending" || b.status === "confirmed") && new Date(b.scheduled_at as string) > new Date())
+        .map((b) => b.client_id as string)
         .filter(Boolean)
     ),
   ];
@@ -87,24 +129,18 @@ export default async function BookingsPage() {
       .in("client_id", upcomingClientIds)
       .order("scheduled_at", { ascending: false });
 
-    if (prevSessions) {
-      for (const session of prevSessions) {
-        if (!session.client_id) continue;
-        if (!clientPrevSessions[session.client_id]) {
-          clientPrevSessions[session.client_id] = {
-            count: 0,
-            lastDate: session.scheduled_at,
-            lastNotes: session.notes,
-          };
-        }
-        clientPrevSessions[session.client_id].count++;
+    for (const session of (prevSessions ?? [])) {
+      if (!session.client_id) continue;
+      if (!clientPrevSessions[session.client_id]) {
+        clientPrevSessions[session.client_id] = { count: 0, lastDate: session.scheduled_at, lastNotes: session.notes };
       }
+      clientPrevSessions[session.client_id].count++;
     }
   }
 
   return (
     <BookingsClient
-      bookings={(bookings as Record<string, unknown>[]) ?? []}
+      bookings={bookings}
       clientPrevSessions={clientPrevSessions}
       divinerUsername={diviner?.username ?? ""}
       ordersByBookingId={ordersByBookingId}
