@@ -169,9 +169,10 @@ export default async function AdminMundaneLeadersPage({
               : null;
 
             return (
-              <div
+              <Link
                 key={leader.id}
-                className="flex items-start justify-between gap-3 rounded-lg border bg-card p-3 shadow-sm"
+                href={`/admin/mundane/leaders/${leader.id}`}
+                className="flex items-start justify-between gap-3 rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/30 transition-colors"
               >
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{leader.full_name}</p>
@@ -212,7 +213,7 @@ export default async function AdminMundaneLeadersPage({
                     {leader.is_current ? "Current" : "Former"}
                   </Badge>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

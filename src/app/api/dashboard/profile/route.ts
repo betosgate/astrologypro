@@ -20,7 +20,7 @@ const ALLOWED_SPECIALTIES = new Set<string>(SPECIALTIES);
 
 // ── Columns returned by GET ─────────────────────────────────────────────
 const PROFILE_SELECT =
-  "id, display_name, username, bio, tagline, specialties, avatar_url, credentials, phone, timezone, show_public_session_counts, public_session_counts_override, public_session_counts_override_reason, service_package_code";
+  "id, display_name, username, bio, tagline, specialties, avatar_url, cover_image_url, credentials, phone, timezone, youtube_channel_id, facebook_live_url, show_public_session_counts, public_session_counts_override, public_session_counts_override_reason, service_package_code";
 
 // ── GET /api/dashboard/profile ──────────────────────────────────────────
 export async function GET() {
@@ -155,6 +155,33 @@ export async function PATCH(req: NextRequest) {
       : null;
   }
 
+  // cover_image_url — string
+  if (body.cover_image_url !== undefined) {
+    updates.cover_image_url = body.cover_image_url
+      ? String(body.cover_image_url)
+      : null;
+  }
+
+  // youtube_channel_id — string, max 30 chars
+  if (body.youtube_channel_id !== undefined) {
+    const ytId = String(body.youtube_channel_id ?? "").trim();
+    if (ytId.length > 30) {
+      errors.push("youtube_channel_id must be 30 characters or fewer");
+    } else {
+      updates.youtube_channel_id = ytId || null;
+    }
+  }
+
+  // facebook_live_url — string URL
+  if (body.facebook_live_url !== undefined) {
+    const fbUrl = String(body.facebook_live_url ?? "").trim();
+    if (fbUrl && !fbUrl.startsWith("http")) {
+      errors.push("facebook_live_url must be a valid URL");
+    } else {
+      updates.facebook_live_url = fbUrl || null;
+    }
+  }
+
   // Return validation errors
   if (errors.length > 0) {
     return NextResponse.json({ errors }, { status: 422 });
@@ -181,6 +208,9 @@ export async function PATCH(req: NextRequest) {
     body.tagline !== undefined ||
     body.specialties !== undefined ||
     body.avatar_url !== undefined ||
+    body.cover_image_url !== undefined ||
+    body.youtube_channel_id !== undefined ||
+    body.facebook_live_url !== undefined ||
     body.credentials !== undefined;
   const touchesBioFields = body.bio !== undefined;
 

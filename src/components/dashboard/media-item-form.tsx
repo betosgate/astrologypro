@@ -17,6 +17,8 @@ import {
   Link2,
   Music,
   Video,
+  Upload,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -26,12 +28,29 @@ type MediaType = "video" | "audio" | "image" | "article" | "link";
 
 const TYPES: { value: MediaType; label: string; icon: React.ElementType; description: string }[] =
   [
-    { value: "video", label: "Video", icon: Video, description: "YouTube, Vimeo, etc." },
-    { value: "audio", label: "Audio", icon: Music, description: "Podcast or recording" },
+    { value: "video", label: "Video", icon: Video, description: "Upload MP4 or link" },
+    { value: "audio", label: "Audio", icon: Music, description: "Upload MP3 or link" },
     { value: "image", label: "Image", icon: ImageIcon, description: "Photo gallery image" },
-    { value: "article", label: "Article", icon: FileText, description: "Blog post or essay" },
+    { value: "article", label: "Article", icon: FileText, description: "Upload PDF or link" },
     { value: "link", label: "Link", icon: Link2, description: "Any external link" },
   ];
+
+const MAX_FILE_SIZE_MB = 100;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+const FILE_ACCEPT: Partial<Record<MediaType, string>> = {
+  video:   "video/mp4,video/webm,video/quicktime,video/x-msvideo",
+  audio:   "audio/mpeg,audio/wav,audio/mp4,audio/ogg,audio/aac,audio/x-m4a",
+  image:   "image/jpeg,image/png,image/webp,image/gif",
+  article: "application/pdf",
+};
+
+const UPLOAD_FOLDER: Partial<Record<MediaType, string>> = {
+  video:   "media-video",
+  audio:   "media-audio",
+  image:   "media-gallery",
+  article: "media-articles",
+};
 
 type InitialItem = {
   id: string;
@@ -73,6 +92,7 @@ export function MediaItemForm({
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [title, setTitle] = useState(initialItem?.title ?? "");
   const [mediaType, setMediaType] = useState<MediaType>(initialItem?.type ?? "image");
   const [url, setUrl] = useState(initialItem?.url ?? "");
@@ -84,7 +104,9 @@ export function MediaItemForm({
   const [files, setFiles] = useState<File[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const isImage = mediaType === "image";
+  const isImage    = mediaType === "image";
+  const isUploadable = mediaType === "image" || mediaType === "audio" || mediaType === "video" || mediaType === "article";
+
   const remainingImageSlots = useMemo(() => {
     if (mode === "edit" && initialItem?.type === "image") {
       return Math.max(0, MAX_MEDIA_IMAGES - currentImageCount);
@@ -95,10 +117,17 @@ export function MediaItemForm({
   function validate(): boolean {
     const errs: Record<string, string> = {};
 
+    // Title required unless bulk image upload
     if (!isImage || files.length <= 1) {
       if (!title.trim() && !(isImage && files.length > 0)) {
         errs.title = "Title is required.";
       }
+    }
+
+    // File size check
+    const oversized = files.find((f) => f.size > MAX_FILE_SIZE_BYTES);
+    if (oversized) {
+      errs.files = `"${oversized.name}" exceeds the ${MAX_FILE_SIZE_MB} MB limit.`;
     }
 
     if (isImage) {
@@ -107,6 +136,11 @@ export function MediaItemForm({
       }
       if (files.length > remainingImageSlots) {
         errs.files = `You can add ${remainingImageSlots} more image${remainingImageSlots === 1 ? "" : "s"} before reaching the ${MAX_MEDIA_IMAGES}-image limit.`;
+      }
+    } else if (isUploadable) {
+      // audio / video / article: URL required only if no file selected
+      if (files.length === 0 && !url.trim()) {
+        errs.url = "Upload a file or provide a URL.";
       }
     } else if (!url.trim()) {
       errs.url = "URL is required.";
@@ -132,10 +166,13 @@ export function MediaItemForm({
     return Object.keys(errs).length === 0;
   }
 
-  async function uploadImageFile(file: File, index: number): Promise<string> {
+  async function uploadFile(file: File, index: number, type: MediaType): Promise<string> {
     const supabase = createClient();
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `media-gallery/${divinerId}/${Date.now()}-${index}-${sanitizeFileName(file.name || `image.${ext}`)}`;
+    const folder = UPLOAD_FOLDER[type] ?? "media-gallery";
+    const ext = file.name.split(".").pop() ?? "bin";
+    const path = `${folder}/${divinerId}/${Date.now()}-${index}-${sanitizeFileName(file.name || `file.${ext}`)}`;
+
+    setUploadStatus(`Uploading ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)…`);
 
     const { error: uploadError } = await supabase.storage
       .from("all-frontend-assets")
@@ -144,6 +181,7 @@ export function MediaItemForm({
     if (uploadError) throw uploadError;
 
     const { data } = supabase.storage.from("all-frontend-assets").getPublicUrl(path);
+    setUploadStatus(null);
     return data.publicUrl;
   }
 
@@ -168,8 +206,9 @@ export function MediaItemForm({
     try {
       if (mode === "create") {
         if (isImage && files.length > 0) {
+          // Bulk image upload
           for (const [index, file] of files.entries()) {
-            const publicUrl = await uploadImageFile(file, index);
+            const publicUrl = await uploadFile(file, index, "image");
             const derivedTitle =
               files.length === 1 && title.trim()
                 ? title.trim()
@@ -193,7 +232,21 @@ export function MediaItemForm({
               ? "Image added."
               : `${files.length} images added to your gallery.`
           );
+        } else if (isUploadable && !isImage && files.length === 1) {
+          // Single file upload for audio / video / article (PDF)
+          const publicUrl = await uploadFile(files[0], 0, mediaType);
+          await createMediaItem({
+            title: title.trim() || deriveTitleFromFilename(files[0].name),
+            media_type: mediaType,
+            url: publicUrl,
+            thumbnail_url: thumbnailUrl.trim() || undefined,
+            description: description.trim() || undefined,
+            featured,
+            is_active: isActive,
+          });
+          toast.success("Media item added.");
         } else {
+          // URL-only submission
           await createMediaItem({
             title: title.trim(),
             media_type: mediaType,
@@ -213,10 +266,10 @@ export function MediaItemForm({
         let nextUrl = url.trim();
         let nextThumbnailUrl = thumbnailUrl.trim();
 
-        if (isImage && files.length === 1) {
-          const publicUrl = await uploadImageFile(files[0], 0);
+        if (isUploadable && files.length === 1) {
+          const publicUrl = await uploadFile(files[0], 0, mediaType);
           nextUrl = publicUrl;
-          nextThumbnailUrl = publicUrl;
+          if (isImage) nextThumbnailUrl = publicUrl;
         }
 
         const res = await fetch(`/api/dashboard/media/${initialItem.id}`, {
@@ -364,63 +417,153 @@ export function MediaItemForm({
             <CardTitle className="text-base">Source</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {isImage && (
+
+            {/* ── File upload — image / audio / video / article ── */}
+            {isUploadable && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="imageFiles">Upload image files</Label>
-                  <span className="text-xs text-muted-foreground">
-                    {remainingImageSlots} / {MAX_MEDIA_IMAGES} slots available
-                  </span>
+                  <Label htmlFor="mediaFile">
+                    {isImage ? "Upload image files" : `Upload ${mediaType} file`}
+                  </Label>
+                  {isImage ? (
+                    <span className="text-xs text-muted-foreground">
+                      {remainingImageSlots} / {MAX_MEDIA_IMAGES} slots available
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      Max {MAX_FILE_SIZE_MB} MB
+                    </span>
+                  )}
                 </div>
+
+                {/* Drop zone / file picker */}
+                {files.length > 0 ? (
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Upload className="size-4 shrink-0 text-primary" />
+                      <div className="min-w-0">
+                        {files.map((f) => (
+                          <p key={f.name} className="text-xs font-medium truncate">
+                            {f.name}
+                            <span className="text-muted-foreground font-normal ml-1.5">
+                              ({(f.size / 1024 / 1024).toFixed(1)} MB)
+                            </span>
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFiles([]);
+                        if (fileRef.current) fileRef.current.value = "";
+                      }}
+                      className="shrink-0 text-muted-foreground hover:text-destructive"
+                      aria-label="Remove file"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label
+                    htmlFor="mediaFile"
+                    className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30 px-4 py-6 text-center hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                  >
+                    <Upload className="size-6 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Click to browse</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {mediaType === "video"   && "MP4, WebM, MOV — up to 100 MB"}
+                        {mediaType === "audio"   && "MP3, WAV, M4A, OGG — up to 100 MB"}
+                        {mediaType === "image"   && "JPEG, PNG, WebP, GIF — up to 100 MB"}
+                        {mediaType === "article" && "PDF — up to 100 MB"}
+                      </p>
+                    </div>
+                  </label>
+                )}
+
                 <Input
                   ref={fileRef}
-                  id="imageFiles"
+                  id="mediaFile"
                   type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  multiple={mode === "create"}
-                  onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+                  className="sr-only"
+                  accept={FILE_ACCEPT[mediaType]}
+                  multiple={isImage && mode === "create"}
+                  onChange={(e) => {
+                    const selected = Array.from(e.target.files ?? []);
+                    setFiles(selected);
+                    // Auto-fill title from filename for non-image types
+                    if (!isImage && selected.length === 1 && !title.trim()) {
+                      setTitle(deriveTitleFromFilename(selected[0].name));
+                    }
+                    // Clear URL when file is chosen (non-image)
+                    if (!isImage && selected.length > 0) setUrl("");
+                  }}
                 />
-                {files.length > 0 && (
+
+                {errors.files && <p className="text-sm text-destructive">{errors.files}</p>}
+
+                {uploadStatus && (
+                  <div className="flex items-center gap-2 rounded-md bg-primary/5 border border-primary/20 px-3 py-2 text-xs text-primary">
+                    <Upload className="size-3 animate-pulse" />
+                    {uploadStatus}
+                  </div>
+                )}
+
+                {isUploadable && !isImage && (
                   <p className="text-xs text-muted-foreground">
-                    {files.length} file{files.length === 1 ? "" : "s"} selected
+                    Or leave the file picker empty and enter a URL below (e.g. Spotify, SoundCloud, YouTube, external PDF link).
                   </p>
                 )}
-                {errors.files && <p className="text-sm text-destructive">{errors.files}</p>}
-                <p className="text-xs text-muted-foreground">
-                  For images, you can upload directly. If no file is selected, the image URL below will be used.
-                </p>
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="url">{isImage ? "Image URL" : "URL *"}</Label>
-              <Input
-                id="url"
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://..."
-                aria-invalid={!!errors.url}
-              />
-              {errors.url && <p className="text-sm text-destructive">{errors.url}</p>}
-            </div>
+            {/* URL field — hidden for non-image if file selected */}
+            {(mediaType === "link" || (!isImage && files.length === 0) || (isImage && files.length === 0)) && (
+              <div className="space-y-2">
+                <Label htmlFor="url">
+                  {isImage ? "Image URL" : mediaType === "link" ? "URL *" : "URL"}
+                  {isUploadable && !isImage && files.length === 0 ? " *" : ""}
+                </Label>
+                <Input
+                  id="url"
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder={
+                    mediaType === "audio"   ? "https://open.spotify.com/... or https://soundcloud.com/..." :
+                    mediaType === "video"   ? "https://www.youtube.com/... or https://vimeo.com/..." :
+                    mediaType === "article" ? "https://your-blog.com/post or PDF URL..." :
+                    "https://..."
+                  }
+                  aria-invalid={!!errors.url}
+                />
+                {errors.url && <p className="text-sm text-destructive">{errors.url}</p>}
+              </div>
+            )}
 
-            <div className="space-y-2">
-              <Label htmlFor="thumbnailUrl">
-                Thumbnail URL {isImage ? "(optional)" : ""}
-              </Label>
-              <Input
-                id="thumbnailUrl"
-                type="url"
-                value={thumbnailUrl}
-                onChange={(e) => setThumbnailUrl(e.target.value)}
-                placeholder="https://..."
-                aria-invalid={!!errors.thumbnailUrl}
-              />
-              {errors.thumbnailUrl && (
-                <p className="text-sm text-destructive">{errors.thumbnailUrl}</p>
-              )}
-            </div>
+            {/* Thumbnail URL — for video / audio / article only (images auto-generate) */}
+            {!isImage && (
+              <div className="space-y-2">
+                <Label htmlFor="thumbnailUrl">Thumbnail URL (optional)</Label>
+                <Input
+                  id="thumbnailUrl"
+                  type="url"
+                  value={thumbnailUrl}
+                  onChange={(e) => setThumbnailUrl(e.target.value)}
+                  placeholder={
+                    mediaType === "video" ? "https://img.youtube.com/vi/{VIDEO_ID}/maxresdefault.jpg" : "https://..."
+                  }
+                  aria-invalid={!!errors.thumbnailUrl}
+                />
+                {errors.thumbnailUrl && (
+                  <p className="text-sm text-destructive">{errors.thumbnailUrl}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Shown as a preview card. For YouTube videos, use the auto-generated thumbnail URL above.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

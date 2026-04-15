@@ -201,48 +201,55 @@ Wrap all dates like:
 
 ---
 
-## 5. Visual Aesthetics (Premium Theme)
+## 6. Visual Style & Color Mapping (CRITICAL)
 
-### Typography
+To achieve the "Premium Gold & Paper" aesthetic, follow these exact color and styling rules for each section.
 
-* Use:
+### 1. The "Gold & Paper" Base Block
+Used for: **Summary, Recommendation, Timeline, and Houses** (if no specific planet is mentioned).
 
-  * `Roboto`
-  * `Inter`
+*   **Header:**
+    *   Background: `#ffffff`
+    *   Text Color: `#232c3c`
+    *   Font: `Roboto`, 40px, Semi-bold
+    *   Border: `1px solid rgba(182, 199, 227, 0.17)` (Bottom)
+*   **Content Area:**
+    *   Background Gradient: `linear-gradient(166deg, rgba(240, 160, 35, 1) 0%, rgba(248, 214, 71, 1) 100%)`
+    *   Text Color: `black`
+    *   Font Size: `20px`
+    *   Line Height: `26px`
+    *   Padding: `40px`
 
----
+### 2. Planet-Specific Interpretation Blocks
+When a section title mentions a specific planet, use the following unique color mappings:
 
-### Gradients
+| Planet | Background Gradient (166deg) | Text Color |
+| :--- | :--- | :--- |
+| **Sun** | `rgba(240, 160, 35, 1)` to `rgba(248, 214, 71, 1)` | Black |
+| **Moon** | `#8c8c8c` to `#C0C0C0` | Black |
+| **Mercury** | `#FFFF00` to `#FFD700` | Black |
+| **Venus** | `#00FF00` to `#32CD32` | Black |
+| **Mars** | `#FF0000` to `#B22222` | White |
+| **Jupiter** | `#0000FF` to `#1E90FF` | White |
+| **Saturn** | `#000000` to `#4B4B4B` | White |
+| **Uranus** | `#00FFFF` to `#008B8B` | Black |
+| **Neptune** | `#00008B` to `#4169E1` | White |
+| **Pluto** | `#8B0000` to `#CD5C5C` | White |
 
-* Gold → Yellow for content
-* Orange → Red for floating buttons
+### 3. Date Highlights (`.timedata`)
+Any date or time period mentioned in the text must be wrapped in a span with these styles:
+*   **Background:** `linear-gradient(135deg, #f0a023 0%, #f8d647 100%)`
+*   **Text Color:** `#000` (Bold)
+*   **Border Radius:** `4px`
+*   **Padding:** `1px 7px`
+*   **Box Shadow:** `0 1px 4px rgba(240, 160, 35, 0.45)`
 
----
-
-### Animations
-
-* Subtle micro-interactions:
-
-  * Button hover
-  * Loading states
-  * Progress indicators
-
----
-
-## 6. Floating Action Buttons
-
+### 4. Floating Action Buttons
 Position: Bottom-right (stacked)
-
-### Buttons
-
-* **Scroll to Top**
-* **View Natal Chart**
-* **Share Result**
-
-### Behavior
-
-* Smooth animations
-* Share button includes loading spinner
+*   **Gradient:** `linear-gradient(#f0a023, #f8d647)` (Standard Orange/Gold)
+*   **Border:** `1px solid #ff7f00`
+*   **Text Shadow:** `1px 1px 1px #874403`
+*   **Box Shadow:** `-4px -2px 9px #6c81a3, 3px 5px 13px #161b21` (Neumorphic look)
 
 ---
 

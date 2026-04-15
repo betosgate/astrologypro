@@ -107,7 +107,6 @@ const navItems: NavItem[] = [
     children: [
       { label: "Marketing Hub", href: "/dashboard/marketing", icon: Megaphone },
       { label: "Campaigns", href: "/dashboard/campaigns", icon: Target },
-      { label: "Campaign Reports", href: "/dashboard/campaigns/reports", icon: BarChart2 },
       { label: "Affiliates", href: "/dashboard/affiliates", icon: Users2 },
       { label: "Giveaways", href: "/dashboard/giveaways", icon: Trophy },
       { label: "Follow-ups", href: "/dashboard/follow-ups", icon: Mail },

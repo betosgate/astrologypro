@@ -85,6 +85,8 @@ export function ChimeSessionRoom({
   const [consentGiven, setConsentGiven] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
+  // Client sees a waiting room until the diviner joins; diviners are always "present" for themselves
+  const [isDivinerPresent, setIsDivinerPresent] = useState(role === "diviner");
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -96,6 +98,7 @@ export function ChimeSessionRoom({
   const [chatInput, setChatInput] = useState("");
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [chimeSdkReady, setChimeSdkReady] = useState(false);
@@ -103,11 +106,13 @@ export function ChimeSessionRoom({
   const [participants, setParticipants] = useState<
     { id: string; name: string; isLocal: boolean }[]
   >([]);
-  const [joinNotification, setJoinNotification] = useState<string | null>(null);
   const initLockRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<Date | null>(null);
   const participantMapRef = useRef<Map<string, string>>(new Map());
+  // React-managed tile list — drives the video layout instead of raw DOM manipulation
+  const [tiles, setTiles] = useState<{ tileId: number; isLocal: boolean; isContent: boolean }[]>([]);
+  const videoElemRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
 
   // Detect mobile viewport
   useEffect(() => {
@@ -138,6 +143,18 @@ export function ChimeSessionRoom({
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [sessionStarted, sessionEnded]);
+
+  // Bind each tracked tile to its <video> element whenever tiles list changes
+  useEffect(() => {
+    tiles.forEach(({ tileId }) => {
+      const el = videoElemRefs.current.get(tileId);
+      if (el && meetingSessionRef.current) {
+        try {
+          meetingSessionRef.current.audioVideo.bindVideoElement(tileId, el);
+        } catch { /* non-critical */ }
+      }
+    });
+  }, [tiles]);
 
   // Initialize Chime SDK meeting session
   // Initialize Chime SDK — uses a ref lock to survive StrictMode/HMR
@@ -238,13 +255,20 @@ export function ChimeSessionRoom({
           return "Participant";
         };
 
-        // 3. Register observer BEFORE start()
+        // 3. Register observers BEFORE start()
         const seenAttendees = new Set<string>();
 
         meetingSession.audioVideo.realtimeSubscribeToAttendeeIdPresence(
           (attendeeId: string, present: boolean, externalUserId?: string) => {
-            const name = resolveAttendeeName(externalUserId ?? attendeeId);
             const isLocal = attendeeId === meetingData.attendee.AttendeeId;
+            // externalUserId can be undefined for remote attendees in some SDK versions,
+            // so we use a dual check: explicit prefix OR any non-local attendee (1-on-1)
+            const isDiviner =
+              externalUserId?.startsWith("diviner-") ||
+              (!isLocal && role === "client");
+            if (isDiviner) setIsDivinerPresent(present);
+
+            const name = resolveAttendeeName(externalUserId ?? attendeeId);
 
             if (present) {
               if (!seenAttendees.has(attendeeId)) {
@@ -254,14 +278,46 @@ export function ChimeSessionRoom({
                   return [...prev, { id: attendeeId, name, isLocal }];
                 });
                 if (!isLocal) {
-                  setJoinNotification(`${name} joined the session`);
-                  setTimeout(() => setJoinNotification(null), 4000);
+                  toast.success(`${name} joined the session`, {
+                    duration: 4000,
+                    icon: "👤",
+                  });
                 }
               }
             } else {
               seenAttendees.delete(attendeeId);
               setParticipants((prev) => prev.filter((p) => p.id !== attendeeId));
+              if (!isLocal) {
+                toast.info(`${name} left the session`, { duration: 3000 });
+              }
             }
+          }
+        );
+
+        // Chat data messaging — receive messages from the other participant
+        meetingSession.audioVideo.realtimeSubscribeToReceiveDataMessage(
+          "chat",
+          (dataMessage: any) => {
+            const senderExternalId: string =
+              dataMessage.senderExternalUserId ?? "";
+            const from =
+              resolveAttendeeName(senderExternalId) || "Participant";
+            const text =
+              typeof dataMessage.data === "string"
+                ? dataMessage.data
+                : new TextDecoder().decode(dataMessage.data as Uint8Array);
+            if (!text.trim()) return;
+            setChatMessages((prev) => [
+              ...prev,
+              {
+                from,
+                text,
+                time: new Date().toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              },
+            ]);
           }
         );
 
@@ -280,40 +336,29 @@ export function ChimeSessionRoom({
             }
           },
           videoTileDidUpdate: (tileState: any) => {
-            if (!tileState.boundAttendeeId || !videoContainerRef.current)
-              return;
-
-            const tileId = tileState.tileId;
-            let videoEl = document.getElementById(
-              `chime-video-${tileId}`
-            ) as HTMLVideoElement | null;
-
-            if (!videoEl) {
-              videoEl = document.createElement("video");
-              videoEl.id = `chime-video-${tileId}`;
-              videoEl.autoplay = true;
-              videoEl.playsInline = true;
-              videoEl.style.width = "100%";
-              videoEl.style.height = "100%";
-              videoEl.style.objectFit = "cover";
-
-              if (tileState.localTile) {
-                videoEl.className =
-                  "absolute bottom-4 right-4 h-32 w-44 rounded-lg border-2 border-primary/40 object-cover shadow-lg z-10";
-                videoEl.muted = true;
-              } else {
-                videoEl.className = "h-full w-full object-cover rounded-lg";
-              }
-
-              videoContainerRef.current?.appendChild(videoEl);
-            }
-
-            meetingSession.audioVideo.bindVideoElement(tileId, videoEl);
+            if (!tileState.boundAttendeeId) return;
+            setTiles((prev) => {
+              if (prev.some((t) => t.tileId === tileState.tileId)) return prev;
+              return [
+                ...prev,
+                {
+                  tileId: tileState.tileId,
+                  isLocal: Boolean(tileState.localTile),
+                  isContent: Boolean(tileState.isContent),
+                },
+              ];
+            });
           },
           videoTileWasRemoved: (tileId: number) => {
-            const videoEl = document.getElementById(`chime-video-${tileId}`);
-            if (videoEl) videoEl.remove();
+            videoElemRefs.current.delete(tileId);
+            setTiles((prev) => prev.filter((t) => t.tileId !== tileId));
           },
+        } as any);
+
+        // Content share observer
+        meetingSession.audioVideo.addContentShareObserver({
+          contentShareDidStart: () => setIsScreenSharing(true),
+          contentShareDidStop: () => setIsScreenSharing(false),
         } as any);
 
         // 4. Start
@@ -361,17 +406,44 @@ export function ChimeSessionRoom({
     setIsVideoOff(!isVideoOff);
   }, [isVideoOff]);
 
+  const handleToggleScreenShare = useCallback(async () => {
+    if (!meetingSessionRef.current) return;
+    if (isScreenSharing) {
+      meetingSessionRef.current.audioVideo.stopContentShare();
+    } else {
+      try {
+        // Use getDisplayMedia directly so we can pass selfBrowserSurface: 'exclude'.
+        // This removes the current tab from the Chrome picker entirely, which is the
+        // industry-standard fix (Chrome 107+) for the infinite-mirror problem.
+        // We then hand the stream to Chime's startContentShare() instead of letting
+        // the SDK call getDisplayMedia itself.
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { frameRate: { ideal: 30 } },
+          audio: false,
+          // @ts-expect-error — selfBrowserSurface is a Chrome 107+ constraint not yet in TS types
+          selfBrowserSurface: "exclude",
+        });
+        await meetingSessionRef.current.audioVideo.startContentShare(stream);
+      } catch {
+        // User dismissed the picker, browser denied permission, or
+        // selfBrowserSurface is unsupported — no-op
+      }
+    }
+  }, [isScreenSharing]);
+
   const handleEndSession = useCallback(async () => {
     setSessionEnded(true);
     if (timerRef.current) clearInterval(timerRef.current);
 
-    // Stop Chime meeting session
+    // Stop Chime meeting session and release all media devices.
+    // Order matters: stop inputs first so the OS camera/mic indicator turns off,
+    // then stop the local tile, then disconnect from Chime.
     if (meetingSessionRef.current) {
-      try {
-        meetingSessionRef.current.audioVideo.stop();
-      } catch {
-        // Cleanup errors are non-critical
-      }
+      try { await meetingSessionRef.current.audioVideo.stopVideoInput(); } catch { /* non-critical */ }
+      try { await meetingSessionRef.current.audioVideo.stopAudioInput(); } catch { /* non-critical */ }
+      try { meetingSessionRef.current.audioVideo.stopLocalVideoTile(); } catch { /* non-critical */ }
+      try { meetingSessionRef.current.audioVideo.stop(); } catch { /* non-critical */ }
+      meetingSessionRef.current = null;
     }
 
     try {
@@ -391,24 +463,14 @@ export function ChimeSessionRoom({
   }, [bookingId, elapsedMinutes, sessionNotes]);
 
   const handleSendChat = () => {
-    if (!chatInput.trim()) return;
-    // Chime SDK has a data messaging API for in-meeting chat
-    if (meetingSessionRef.current) {
-      try {
-        meetingSessionRef.current.audioVideo.realtimeSendDataMessage(
-          "chat",
-          chatInput,
-          1000
-        );
-      } catch {
-        // Fallback: local-only chat
-      }
-    }
+    const text = chatInput.trim();
+    if (!text) return;
+    // Optimistically add to local chat (echo)
     setChatMessages((prev) => [
       ...prev,
       {
         from: role === "diviner" ? divinerName : clientName,
-        text: chatInput,
+        text,
         time: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
@@ -416,6 +478,18 @@ export function ChimeSessionRoom({
       },
     ]);
     setChatInput("");
+    // Send to remote participant via Chime data messaging
+    if (meetingSessionRef.current) {
+      try {
+        meetingSessionRef.current.audioVideo.realtimeSendDataMessage(
+          "chat",
+          text,
+          10_000 // 10 s lifetime — long enough for brief disconnects
+        );
+      } catch (err) {
+        console.warn("Chime chat send failed:", err);
+      }
+    }
   };
 
   const formatTime = (min: number, sec: number) =>
@@ -468,7 +542,7 @@ export function ChimeSessionRoom({
                 fetch("/api/chime/participant-joined", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ bookingId, role }),
+                  body: JSON.stringify({ bookingId, role, clientToken }),
                 }).catch(() => {});
               }}
             >
@@ -607,7 +681,50 @@ export function ChimeSessionRoom({
 
   // Active session
   return (
-    <div className="flex h-[calc(100vh-2rem)] gap-0 overflow-hidden rounded-xl border border-border bg-background">
+    <div className="relative flex h-[calc(100vh-2rem)] gap-0 overflow-hidden rounded-xl border border-border bg-background">
+
+      {/* ── Waiting for diviner overlay (client only) ────────────────────────
+          Rendered as an absolute layer so audio/video elements stay mounted
+          and Chime bindings stay valid. Disappears the moment the diviner's
+          attendee presence event fires — no refresh required.              */}
+      {role === "client" && !isDivinerPresent && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-background/97 p-6 text-center backdrop-blur-sm">
+          {/* Pulsing avatar rings */}
+          <div className="relative mx-auto h-28 w-28">
+            <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
+            <div
+              className="absolute inset-3 animate-ping rounded-full bg-primary/15"
+              style={{ animationDelay: "0.45s" }}
+            />
+            <div className="relative flex h-full w-full items-center justify-center rounded-full border border-primary/30 bg-primary/10">
+              <User className="h-10 w-10 text-primary" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold gold-text">
+              Waiting for {divinerName}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {chimeSdkReady
+                ? "You're connected. The session will start automatically when your diviner joins."
+                : "Connecting to session…"}
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-primary/20 bg-primary/5 px-6 py-4 text-sm">
+            <p className="font-medium text-primary">{serviceName}</p>
+            <p className="mt-1 text-muted-foreground">
+              {scheduledDuration} min &middot; ${basePrice.toFixed(2)}
+            </p>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            This page updates automatically — no need to refresh.
+          </p>
+        </div>
+      )}
+
       {/* Main video area */}
       <div className="flex flex-1 flex-col">
         {/* Top bar */}
@@ -670,49 +787,238 @@ export function ChimeSessionRoom({
           </div>
         </div>
 
-        {/* Video area — Chime SDK renders video elements here */}
-        <div className="relative flex-1 bg-black" ref={videoContainerRef}>
-          {/* Hidden audio element for Chime audio */}
+        {/* Video area */}
+        <div className="relative flex-1 overflow-hidden bg-zinc-950" ref={videoContainerRef}>
+          {/* Audio element — always mounted so Chime keeps audio bound */}
           <audio ref={audioRef} autoPlay playsInline className="hidden" />
 
-          {/* Join notification */}
-          {joinNotification && (
-            <div className="absolute left-1/2 top-4 z-20 -translate-x-1/2 animate-in fade-in slide-in-from-top-2 duration-300">
-              <div className="flex items-center gap-2 rounded-full bg-primary/90 px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg">
-                <User className="h-4 w-4" />
-                {joinNotification}
-              </div>
-            </div>
-          )}
-
-          {/* Loading state */}
+          {/* Connecting overlay */}
           {!chimeSdkReady && (
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-zinc-950">
               <div className="text-center">
                 <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                <p className="mt-3 text-sm text-muted-foreground">
-                  Connecting to session...
-                </p>
+                <p className="mt-3 text-sm text-muted-foreground">Connecting…</p>
               </div>
             </div>
           )}
 
-          {/* Overtime warning overlay */}
+          {/* Overtime badge */}
           {isOvertime && (
-            <div className="absolute left-2 top-2 flex items-center gap-1.5 rounded-full bg-amber-500/90 px-3 py-1.5 text-xs font-medium text-black shadow-lg md:left-4 md:top-4 md:gap-2 md:px-4 md:py-2 md:text-sm">
-              <AlertTriangle className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              Overtime: +{overtimeMinutes} min ($
-              {(overtimeMinutes * overageRate).toFixed(2)}/min)
+            <div className="absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-amber-500/90 px-3 py-1.5 text-xs font-semibold text-black shadow-lg">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              +{overtimeMinutes} min overtime (${(overtimeMinutes * overageRate).toFixed(2)}/min)
             </div>
           )}
 
-          {/* Mobile floating buttons */}
+          {/* ── VIDEO LAYOUT ──────────────────────────────────────────────── */}
+          {(() => {
+            const contentTile = tiles.find((t) => t.isContent);
+            const localTile   = tiles.find((t) => t.isLocal && !t.isContent);
+            const remoteTiles = tiles.filter((t) => !t.isLocal && !t.isContent);
+            const remoteName  = role === "diviner" ? clientName : divinerName;
+
+            /** Callback-ref: mount → add to map & bind; unmount → remove */
+            const videoRef = (tileId: number, muted = false) =>
+              (el: HTMLVideoElement | null) => {
+                if (el) {
+                  el.muted = muted;
+                  videoElemRefs.current.set(tileId, el);
+                  if (meetingSessionRef.current) {
+                    try {
+                      meetingSessionRef.current.audioVideo.bindVideoElement(tileId, el);
+                    } catch { /* non-critical */ }
+                  }
+                } else {
+                  videoElemRefs.current.delete(tileId);
+                }
+              };
+
+            /* ── PRESENTATION MODE: screen share active ─────────────────── */
+            if (contentTile) {
+              // When YOU are the sharer (contentTile.isLocal === true), do NOT render
+              // the screen-capture video — it would show the page inside itself,
+              // creating an infinite mirror loop. Show a "presenting" placeholder instead.
+              // The remote participant has isLocal === false so they still see the real video.
+              const isLocalShare = contentTile.isLocal;
+
+              return (
+                <div className="absolute inset-0 flex">
+                  {/* Screen share — main panel */}
+                  <div className="flex min-w-0 flex-1 items-center justify-center bg-black">
+                    {isLocalShare ? (
+                      <div className="flex flex-col items-center gap-4 text-center">
+                        <div className="flex h-20 w-20 items-center justify-center rounded-full border border-primary/30 bg-primary/10">
+                          <Monitor className="h-9 w-9 text-primary" />
+                        </div>
+                        <p className="text-base font-semibold text-white">
+                          You are presenting your screen
+                        </p>
+                        <p className="text-sm text-zinc-400">
+                          Others can see your screen. Stop sharing to return to the meeting view.
+                        </p>
+                        <button
+                          onClick={handleToggleScreenShare}
+                          className="mt-2 rounded-lg border border-destructive/50 bg-destructive/20 px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/30 transition-colors"
+                        >
+                          Stop Sharing
+                        </button>
+                      </div>
+                    ) : (
+                      <video
+                        ref={videoRef(contentTile.tileId)}
+                        autoPlay
+                        playsInline
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    )}
+                  </div>
+
+                  {/* Camera strip — right panel */}
+                  <div className="flex w-44 flex-shrink-0 flex-col gap-1 overflow-y-auto bg-zinc-900 p-1">
+                    {remoteTiles.map((tile) => (
+                      <div
+                        key={tile.tileId}
+                        className="relative overflow-hidden rounded-lg bg-zinc-800"
+                        style={{ aspectRatio: "16/9" }}
+                      >
+                        <video
+                          ref={videoRef(tile.tileId)}
+                          autoPlay
+                          playsInline
+                          className="h-full w-full object-cover"
+                        />
+                        <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                          {remoteName}
+                        </span>
+                      </div>
+                    ))}
+                    {localTile && (
+                      <div
+                        className="relative overflow-hidden rounded-lg bg-zinc-800"
+                        style={{ aspectRatio: "16/9" }}
+                      >
+                        <video
+                          ref={videoRef(localTile.tileId, true)}
+                          autoPlay
+                          playsInline
+                          className="h-full w-full object-cover"
+                        />
+                        <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                          You
+                        </span>
+                      </div>
+                    )}
+                    {/* Placeholder when camera is off */}
+                    {remoteTiles.length === 0 && (
+                      <div
+                        className="flex items-center justify-center rounded-lg bg-zinc-800"
+                        style={{ aspectRatio: "16/9" }}
+                      >
+                        <User className="h-8 w-8 text-zinc-500" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
+            /* ── GALLERY MODE: no screen share ──────────────────────────── */
+
+            // Only local camera on — show self full-screen, remote as small placeholder
+            if (remoteTiles.length === 0 && localTile) {
+              return (
+                <>
+                  <video
+                    ref={videoRef(localTile.tileId, true)}
+                    autoPlay
+                    playsInline
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <span className="absolute bottom-4 left-4 z-[2] rounded bg-black/60 px-2 py-1 text-xs font-medium text-white">
+                    You
+                  </span>
+                  {/* Remote camera-off pill — top-right */}
+                  <div className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-xl border border-zinc-600/50 bg-zinc-800/90 px-3 py-2">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700">
+                      <User className="h-4 w-4 text-zinc-400" />
+                    </div>
+                    <span className="text-xs text-zinc-300">{remoteName}</span>
+                    <span className="text-[10px] text-zinc-500">Camera off</span>
+                  </div>
+                </>
+              );
+            }
+
+            return (
+              <>
+                {/* Remote participant — fills entire area */}
+                {remoteTiles.map((tile) => (
+                  <video
+                    key={tile.tileId}
+                    ref={videoRef(tile.tileId)}
+                    autoPlay
+                    playsInline
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                ))}
+
+                {/* Both cameras off / still connecting */}
+                {remoteTiles.length === 0 && !localTile && chimeSdkReady && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-zinc-900">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-700">
+                      <User className="h-10 w-10 text-zinc-400" />
+                    </div>
+                    <p className="text-sm font-medium text-zinc-300">{remoteName}</p>
+                    <p className="text-xs text-zinc-500">Camera off or connecting…</p>
+                  </div>
+                )}
+
+                {/* Remote name label */}
+                {remoteTiles.length > 0 && (
+                  <span className="absolute bottom-4 left-4 z-[2] rounded bg-black/60 px-2 py-1 text-xs font-medium text-white">
+                    {remoteName}
+                  </span>
+                )}
+
+                {/* Self-view PIP — bottom-right (only when remote is also visible) */}
+                {localTile && remoteTiles.length > 0 && (
+                  <div
+                    className="absolute bottom-4 right-4 z-10 w-40 overflow-hidden rounded-xl border-2 border-primary/50 shadow-2xl"
+                    style={{ aspectRatio: "16/9" }}
+                  >
+                    <video
+                      ref={videoRef(localTile.tileId, true)}
+                      autoPlay
+                      playsInline
+                      className="h-full w-full object-cover"
+                    />
+                    <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                      You
+                    </span>
+                  </div>
+                )}
+
+                {/* Remote camera off — pill indicator when only remote video is missing */}
+                {localTile && remoteTiles.length === 0 && chimeSdkReady && (
+                  <div className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-xl border border-zinc-600/50 bg-zinc-800/90 px-3 py-2">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700">
+                      <User className="h-4 w-4 text-zinc-400" />
+                    </div>
+                    <span className="text-xs text-zinc-300">{remoteName}</span>
+                    <span className="text-[10px] text-zinc-500">Camera off</span>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+
+          {/* Mobile quick-access buttons */}
           {isMobile && (
-            <div className="absolute bottom-3 right-3 flex flex-col gap-2">
+            <div className="absolute bottom-3 right-3 z-20 flex flex-col gap-2">
               <Button
                 variant="secondary"
                 size="icon"
-                className="h-10 w-10 rounded-full shadow-lg bg-card border border-primary/20"
+                className="h-10 w-10 rounded-full border border-primary/20 bg-card shadow-lg"
                 onClick={() => setShowSidebar(!showSidebar)}
               >
                 <FileText className="h-4 w-4" />
@@ -720,7 +1026,7 @@ export function ChimeSessionRoom({
               <Button
                 variant="secondary"
                 size="icon"
-                className="h-10 w-10 rounded-full shadow-lg bg-card border border-primary/20"
+                className="h-10 w-10 rounded-full border border-primary/20 bg-card shadow-lg"
                 onClick={() => setMobileChatOpen(true)}
               >
                 <MessageSquare className="h-4 w-4" />
@@ -754,6 +1060,15 @@ export function ChimeSessionRoom({
             ) : (
               <Video className="h-4 w-4" />
             )}
+          </Button>
+          <Button
+            variant={isScreenSharing ? "secondary" : "outline"}
+            size="icon"
+            className={isScreenSharing ? "border-primary/60 bg-primary/20" : "border-primary/30"}
+            onClick={handleToggleScreenShare}
+            title={isScreenSharing ? "Stop sharing" : "Share screen"}
+          >
+            <Monitor className="h-4 w-4" />
           </Button>
           {role === "diviner" && (
             <Button

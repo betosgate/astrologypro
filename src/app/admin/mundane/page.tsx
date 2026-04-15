@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Globe, Plus, Building2, CalendarDays, ArrowRight, Loader2, UserRound, BookOpen, CheckCircle2, FlaskConical, Search } from "lucide-react";
+import { Globe, Plus, Building2, CalendarDays, ArrowRight, Loader2, UserRound, BookOpen, CheckCircle2, FlaskConical, Search, Bell, Sparkles, Users, BarChart2, TrendingUp, History, Import, FileText, Map, Zap, Clock, RefreshCw, GitCompare, Sun, BookMarked } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -265,6 +265,17 @@ export default function AdminMundanePage() {
           </Link>
         </Card>
         <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/timeline">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <Clock className="size-4 text-violet-500" />
+                <span className="font-medium text-sm">Predictive Timeline</span>
+              </div>
+              <p className="text-xs text-muted-foreground">12-month forward view of astro events grouped by month, with optional natal hit indicators.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
           <Link href="/admin/mundane/research">
             <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
               <div className="flex items-center gap-2">
@@ -283,6 +294,193 @@ export default function AdminMundanePage() {
                 <span className="font-medium text-sm">Mundane Search</span>
               </div>
               <p className="text-xs text-muted-foreground">Search across all entities, leaders, events, and forecasts.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/alerts">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <Bell className="size-4 text-amber-500" />
+                <span className="font-medium text-sm">Alert Center</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Notifications and watchlist alert rules for mundane signals.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/workspaces">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <Users className="size-4 text-indigo-500" />
+                <span className="font-medium text-sm">Workspaces</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Collaborative team workspaces for mundane research with RBAC.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/ai-brief">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="size-4 text-violet-500" />
+                <span className="font-medium text-sm">AI Brief</span>
+              </div>
+              <p className="text-xs text-muted-foreground">AI-generated weekly brief and research project summaries.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/watchlist">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <Zap className="size-4 text-yellow-500" />
+                <span className="font-medium text-sm">Watchlist</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Watched entities with priority signals and notes.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/chart-studio">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <Globe className="size-4 text-violet-600" />
+                <span className="font-medium text-sm">Chart Studio</span>
+              </div>
+              <p className="text-xs text-muted-foreground">SVG natal wheel, dignities, bi-wheel, export, and snapshots.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/world-map">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <Map className="size-4 text-sky-500" />
+                <span className="font-medium text-sm">World Map</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Global signal overlay with stress scores per entity.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/scoring">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <BarChart2 className="size-4 text-rose-500" />
+                <span className="font-medium text-sm">Scoring Engine</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Entity stress scores with configurable weighting models.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/reports">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <FileText className="size-4 text-indigo-500" />
+                <span className="font-medium text-sm">Report Builder</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Publish monthly digests, eclipse reports, and briefings.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/backtesting">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="size-4 text-green-600" />
+                <span className="font-medium text-sm">Backtesting</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Test forecast accuracy against historical event data.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/historical-analogs">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <History className="size-4 text-amber-600" />
+                <span className="font-medium text-sm">Historical Analogs</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Find historical periods matching today&apos;s sky configuration.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/market-intelligence">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="size-4 text-emerald-500" />
+                <span className="font-medium text-sm">Market Intelligence</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Correlate astrological cycles with markets and agriculture.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/cycles">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="size-4 text-violet-500" />
+                <span className="font-medium text-sm">Cycles</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Major planetary cycle phases — Saturn-Pluto, Jupiter-Saturn, and more.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/imports">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <Import className="size-4 text-gray-500" />
+                <span className="font-medium text-sm">Import Data</span>
+              </div>
+              <p className="text-xs text-muted-foreground">CSV import for events, entities, leaders, and forecasts.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/subscriptions">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <Users className="size-4 text-teal-500" />
+                <span className="font-medium text-sm">Subscriptions</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Manage client subscribers and access to published reports.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/entities/compare">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <GitCompare className="size-4 text-violet-500" />
+                <span className="font-medium text-sm">Compare Entities</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Synastry aspects and composite midpoints between two entity charts.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/eclipses">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <Sun className="size-4 text-amber-500" />
+                <span className="font-medium text-sm">Eclipse Catalog</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Solar and lunar eclipses 2024–2028 with Saros series and zodiac degrees.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/library">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <BookMarked className="size-4 text-indigo-500" />
+                <span className="font-medium text-sm">Library</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Country rulerships, planet-commodity maps, sign-industry tables, ingress reference.</p>
             </CardContent>
           </Link>
         </Card>

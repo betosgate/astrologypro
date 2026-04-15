@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ChimeQuotasBanner } from "@/components/admin/chime-quotas-banner";
 import {
   Table,
   TableBody,
@@ -160,6 +161,9 @@ export default async function AdminDivinersPage({
 
   return (
     <div className="space-y-6">
+      {/* ── Chime quotas notice ──────────────────────────────────────────────── */}
+      <ChimeQuotasBanner />
+
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>

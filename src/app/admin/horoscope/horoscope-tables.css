@@ -224,3 +224,41 @@
     border-color: rgba(245, 158, 11, 1);
     box-shadow: 0 0 30px rgba(245, 158, 11, 0.5);
 }
+
+/* ── Horary date highlights ──────────────────────────────────────────────── */
+/* AI formats auspicious dates as <span class="timedata">date</span>         */
+.timedata {
+    display: inline-block;
+    /* Removed background highlight as requested */
+    color: inherit !important;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.timedata-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    background: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+    border: 1px solid rgba(0,0,0,0.15);
+    margin-left: 6px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    vertical-align: middle;
+}
+
+.timedata-btn:hover {
+    transform: scale(1.15) rotate(30deg);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+    background: #fffafa;
+}
+
+.timedata-btn svg {
+    width: 15px;
+    height: 15px;
+    stroke: #e11d48; /* Crimson / Red-600 */
+}
