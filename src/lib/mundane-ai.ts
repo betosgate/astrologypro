@@ -31,6 +31,10 @@ export interface MundaneAIRequest {
   max_tokens?: number;
   /** Override the resolved cache version. */
   cache_version?: string;
+  /** Skip the knowledge base lookup. Defaults to false. Set true to go straight to OpenAI. */
+  skip_kb?: boolean;
+  /** Minimum confidence score to accept the response. Defaults to 0.25. Set 0 to always accept. */
+  confidence_threshold?: number;
 }
 
 export interface MundaneAIResponse {
@@ -73,9 +77,9 @@ export async function callMundaneAI(req: MundaneAIRequest): Promise<MundaneAIRes
         "Be specific, concise, and evidence-based",
       ],
     },
-    skip_kb: false,
+    skip_kb: req.skip_kb ?? false,
     structured_validate_fallback: true,
-    confidence_threshold: 0.25,
+    confidence_threshold: req.confidence_threshold ?? 0.25,
     max_tokens: req.max_tokens ?? 1000,
     cache_version: cacheVersion,
     cache_nonce: crypto.randomUUID(),
