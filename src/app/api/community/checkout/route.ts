@@ -239,7 +239,8 @@ export async function POST(request: NextRequest) {
         .eq("user_id", user.id)
         .eq("membership_type", "perennial_mandalism")
         .maybeSingle();
-      if (existingMember?.onboarding_completed) {
+      if (existingMember) {
+        // Returning member — skip onboarding, go to polling success page
         pmSuccessUrl = `${APP_URL}/join/community/resubscribe/success`;
       }
     }
