@@ -12,7 +12,7 @@
  *  4. First visit → pick highest portal by role hierarchy, gate on onboarding
  *
  * Role hierarchy (highest → lowest):
- *  admin > diviner > trainee > social_advo > mystery_school > perennial_mandalism > client
+ *  admin > diviner > trainee > social_advo > perennial_mandalism > mystery_school > client
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -74,6 +74,21 @@ const ROLE_HIERARCHY: Array<{
     },
   },
   {
+    role: "perennial_mandalism",
+    check: (d) =>
+      !!d.community &&
+      d.community.membership_type === "perennial_mandalism" &&
+      d.community.membership_status === "active",
+    destination: (d, isInvited) => {
+      if (!d.community?.onboarding_completed) {
+        return isInvited
+          ? getInvitedRoleDestination("perennial_mandalism")
+          : "/community/onboarding";
+      }
+      return "/community";
+    },
+  },
+  {
     role: "mystery_school",
     check: (d) => {
       if (!d.mysteryStudent) return false;
@@ -91,24 +106,19 @@ const ROLE_HIERARCHY: Array<{
       isInvited ? getInvitedRoleDestination("mystery_school") : "/mystery-school",
   },
   {
-    role: "perennial_mandalism",
-    check: (d) =>
-      !!d.community &&
-      d.community.membership_type === "perennial_mandalism" &&
-      d.community.membership_status === "active",
-    destination: (d, isInvited) => {
-      if (!d.community?.onboarding_completed) {
-        return isInvited
-          ? getInvitedRoleDestination("perennial_mandalism")
-          : "/community/onboarding";
-      }
-      return "/community";
-    },
-  },
-  {
     role: "client",
     check: (d) => !!d.client,
     destination: () => "/portal",
+  },
+  {
+    // Cancelled/inactive PM members who have no other qualifying role.
+    // Sends them to the resubscribe page so they can reactivate.
+    role: "perennial_mandalism_cancelled",
+    check: (d) =>
+      !!d.community &&
+      d.community.membership_type === "perennial_mandalism" &&
+      d.community.membership_status !== "active",
+    destination: () => "/join/community/resubscribe",
   },
 ];
 
@@ -202,7 +212,7 @@ export async function resolveLoginDestination({
         .from("community_members")
         .select("id, membership_type, membership_status, onboarding_completed")
         .eq("user_id", userId)
-        .eq("membership_status", "active")
+        .eq("membership_type", "perennial_mandalism")
         .maybeSingle()
         .then((r) => r.data),
       adminClient

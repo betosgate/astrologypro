@@ -33,8 +33,8 @@ export default async function CommunitySessionsPage() {
     .eq("user_id", user.id)
     .single();
 
-  if (!member) redirect("/join/community");
-  if (member.membership_status !== "active") redirect("/join/community?status=inactive");
+  if (!member) redirect("/get-started");
+  if (member.membership_status !== "active") redirect("/join/community/resubscribe");
 
   const isMysterySchool = member.membership_type === "mystery_school";
 
