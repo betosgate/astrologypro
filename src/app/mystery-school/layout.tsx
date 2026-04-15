@@ -10,6 +10,7 @@ import { NavLink } from "@/components/shared/nav-link";
 import { PortalLogoutButton } from "@/components/portal/logout-button";
 import { requireMysterySchoolAccess } from "@/lib/mystery-school/access";
 import { SectionContainer } from "@/components/shared/section-container";
+import { SubscriptionExpiredView } from "@/components/shared/subscription-expired-view";
 
 export const metadata = { title: "Mystery School - AstrologyPro" };
 
@@ -19,7 +20,50 @@ export default async function MysterySchoolLayout({ children }: { children: Reac
   if (!user) redirect("/login");
 
   const result = await requireMysterySchoolAccess();
-  if (!result) redirect("/mystery-school/enroll");
+
+  if (!result) {
+    // Distinguish expired/cancelled students (who had access before) from
+    // genuinely new users who have never enrolled.
+    const { data: expiredStudent } = await supabase
+      .from("mystery_school_students")
+      .select("id, status, access_expires_at, stripe_subscription_id, cancelled_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const wasEnrolled =
+      expiredStudent &&
+      (expiredStudent.status === "cancelled" ||
+        expiredStudent.status === "paused" ||
+        expiredStudent.status === "expired");
+
+    if (wasEnrolled) {
+      return (
+        <div className="min-h-screen bg-background">
+          <header className="sticky top-0 z-20 border-b bg-background">
+            <div className="flex h-14 items-center justify-between px-4">
+              <Link href="/mystery-school" className="text-lg font-bold">AstrologyPro</Link>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Mystery School</span>
+                <PortalLogoutButton />
+              </div>
+            </div>
+          </header>
+          <SubscriptionExpiredView
+            portalName="Mystery School"
+            portalEmoji="⭐"
+            membershipStatus={expiredStudent.status}
+            billingPortalEndpoint="/api/mystery-school/billing-portal"
+            hasStripeSubscription={!!expiredStudent.stripe_subscription_id}
+            resubscribeHref="/join/community"
+            accessEndedAt={expiredStudent.access_expires_at ?? expiredStudent.cancelled_at}
+          />
+        </div>
+      );
+    }
+
+    // Never enrolled — send to the join/enrollment page
+    redirect("/join/community");
+  }
 
   const { data: member } = await supabase
     .from("community_members")
