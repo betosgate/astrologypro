@@ -63,7 +63,8 @@ export default async function ServicesPage() {
       </div>
 
       <ServicesClient
-        services={services ?? []}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        services={(services ?? []) as any}
         resolvedPackage={resolvedPackage}
       />
     </div>

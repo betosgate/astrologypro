@@ -222,12 +222,14 @@ export async function resolveLoginDestination({
     client: client as PortalCheckData["client"],
   };
 
-  for (const entry of ROLE_HIERARCHY) {
-    if (entry.check(checkData)) {
-      return entry.destination(checkData, isInvited);
-    }
-  }
+  // Pick the highest-priority role by the hierarchy order.
+  // /switch is a manual navigation page only — never an automatic login destination.
+  // Priority: onboarding gate first, then highest portal by role hierarchy.
+  const qualifiedEntries = ROLE_HIERARCHY.filter((entry) =>
+    entry.check(checkData)
+  );
 
-  // Ultimate fallback
-  return "/portal";
+  if (qualifiedEntries.length === 0) return "/portal";
+
+  return qualifiedEntries[0].destination(checkData, isInvited);
 }

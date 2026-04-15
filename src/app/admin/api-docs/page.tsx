@@ -29,7 +29,6 @@ export default function ApiDocsPage() {
         dom_id: "#swagger-ui",
         presets: [
           SwaggerUIBundle.presets.apis,
-          // @ts-expect-error — SwaggerUIBundle.SwaggerUIStandalonePreset is available
           SwaggerUIBundle.SwaggerUIStandalonePreset,
         ],
         layout: "BaseLayout",

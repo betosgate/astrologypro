@@ -320,11 +320,12 @@ export async function POST(request: NextRequest) {
       // Fallback: user exists in auth but has never booked before (no client
       // record yet). Look them up directly via the auth admin API.
       if (!clientAuthUserId) {
-        const { data: authList } = await adminSupabase.auth.admin.listUsers({
+        const { data: authListData } = await adminSupabase.auth.admin.listUsers({
           page: 1,
           perPage: 1000,
         });
-        const authUser = authList?.users?.find((u) => u.email === clientEmail);
+        const authListUsers = (authListData?.users ?? []) as Array<{ id: string; email?: string }>;
+        const authUser = authListUsers.find((u) => u.email === clientEmail);
         clientAuthUserId = authUser?.id;
       }
     } else {

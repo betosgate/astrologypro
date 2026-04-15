@@ -35,13 +35,8 @@ ALTER TABLE global_pricing
 -- 3. Migrate existing data
 -- -------------------------------------------------------
 
--- All plans: copy amount → onetime_amount, currency → onetime_currency
-UPDATE pricing_plans
-SET onetime_amount = amount,
-    onetime_currency = currency
-WHERE onetime_amount IS NULL AND amount IS NOT NULL;
-
--- Plans with stripe_price_id: also set recurring fields
+-- Subscription plans (with stripe_price_id): copy amount → recurring fields only.
+-- onetime_amount is admin-managed — never auto-populated from the legacy amount column.
 UPDATE pricing_plans
 SET recurring_amount = amount,
     recurring_currency = currency

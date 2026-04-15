@@ -44,15 +44,14 @@ export function DashboardReturnButton() {
     <button
       type="button"
       onClick={() => router.push(destination)}
-      title="Back to Dashboard"
-      className="group flex items-center gap-2 rounded-sm px-4 py-2 text-[13px] font-bold uppercase tracking-wide transition-all"
+      title="My Dashboard"
+      className="flex size-9 items-center justify-center rounded-sm transition-all hover:brightness-110"
       style={{
         background: "linear-gradient(180deg, #f8d275 0%, #cd912f 100%)",
         color: "#1a0f00",
       }}
     >
-      <LayoutDashboard className="h-4 w-4" />
-      <span className="hidden sm:inline">My Dashboard</span>
+      <LayoutDashboard className="size-[18px]" />
     </button>
   );
 }

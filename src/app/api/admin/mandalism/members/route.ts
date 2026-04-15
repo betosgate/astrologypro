@@ -159,9 +159,10 @@ export async function POST(req: NextRequest) {
         authError.message.includes("already been registered") ||
         authError.message.includes("already exists")
       ) {
-        const { data: existingUsers } =
+        const { data: existingListData } =
           await admin.auth.admin.listUsers();
-        const existing = existingUsers?.users?.find(
+        const existingAuthUsers = (existingListData?.users ?? []) as Array<{ id: string; email?: string }>;
+        const existing = existingAuthUsers.find(
           (u) => u.email?.toLowerCase() === email.trim().toLowerCase()
         );
         if (existing) {
