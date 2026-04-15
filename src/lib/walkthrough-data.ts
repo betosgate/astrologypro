@@ -1880,6 +1880,571 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Preview mode — see exactly how a screen entry looks from the member's perspective before publishing"
         ]
       },
+
+      // ── Mundane Astrology (extended) ─────────────────────────────────────
+      {
+        name: "admin_mundane_leaders",
+        label: "World Leaders Registry",
+        description: "A searchable directory of world leaders and notable persons tracked in mundane astrology — current and historical.",
+        group: "Mundane Astrology",
+        purpose: "Maintains a biographical and astrological record of key political and cultural figures whose charts are used in mundane research and forecasting.",
+        bullets: [
+          "Filter by current / former leader status",
+          "Birth date, birth location, and Astrodatabank confidence rating (AA–X) per record",
+          "Linked to country entity — one click navigates to the entity's full mundane profile",
+          "Add / edit leader with natal chart data entry fields"
+        ]
+      },
+      {
+        name: "admin_mundane_leader_detail",
+        label: "Leader Detail — Natal Profile",
+        description: "Full profile for a single world leader: natal chart, time-lord analysis (Profection, Firdaria), linked events, and admin notes.",
+        group: "Mundane Astrology",
+        purpose: "The deepest view in the leader registry — combines biographical data with astrological time-lord calculations to support event correlation research.",
+        bullets: [
+          "Natal wheel chart generated from stored birth data",
+          "Annual profection table showing current activated house and sign lord",
+          "Firdaria timeline — major and minor lord periods mapped to a scrollable chart",
+          "Linked mundane events where this leader is a key actor"
+        ]
+      },
+      {
+        name: "admin_mundane_backtesting",
+        label: "Backtesting Engine",
+        description: "Test astrological hypotheses against historical data — enter a planetary configuration and see when it recurred across recorded history.",
+        group: "Mundane Astrology",
+        purpose: "Allows researchers to validate predictive models by comparing current transits against historical analogues with documented outcomes.",
+        bullets: [
+          "Input any planet-sign-house combination and search historical occurrence dates",
+          "Returns a ranked list of closest analogues with correlation scores",
+          "Click any result to open the historical analogue detail with event log",
+          "Export results as CSV for external research use"
+        ]
+      },
+      {
+        name: "admin_mundane_backtesting_detail",
+        label: "Backtesting Result Detail",
+        description: "Detailed view of a single backtesting run — the analogue date, planetary snapshot, correlated events, and confidence score breakdown.",
+        group: "Mundane Astrology",
+        purpose: "Gives researchers a granular look at how closely a historical period mirrors current transits and what documented events occurred.",
+        bullets: [
+          "Side-by-side planetary position comparison: current vs. historical",
+          "Correlation score components: orb tolerance, exact aspects, midpoints",
+          "Timeline of events that occurred within the analogue window",
+          "Admin notes field for attaching commentary and research findings"
+        ]
+      },
+      {
+        name: "admin_mundane_timeline",
+        label: "Event Timeline",
+        description: "A chronological view of all mundane events, forecasts, and chart activations — filterable by entity, event type, and date range.",
+        group: "Mundane Astrology",
+        purpose: "Provides a unified time-ordered view of everything tracked in the mundane system so researchers can spot patterns and gaps.",
+        bullets: [
+          "Swimlane view: events grouped by entity in a horizontal timeline",
+          "Filter by event type (political, economic, natural disaster, military)",
+          "Click any event bar to open the full mundane event record",
+          "Export filtered timeline as PDF or PNG for presentations"
+        ]
+      },
+      {
+        name: "admin_mundane_alerts",
+        label: "Mundane Alerts",
+        description: "Automated alert system that fires when a significant planetary configuration (eclipse, ingress, major aspect) enters orb.",
+        group: "Mundane Astrology",
+        purpose: "Ensures the research team never misses a critical astrological event by surfacing actionable alerts before the window opens.",
+        bullets: [
+          "Pending alerts ranked by significance score",
+          "Each alert shows the exact date, planet, aspect, and affected entities",
+          "Snooze or dismiss alerts with a logged reason",
+          "Configure alert thresholds: orb tolerance and minimum significance score"
+        ]
+      },
+      {
+        name: "admin_mundane_cycles",
+        label: "Planetary Cycles Tracker",
+        description: "Monitor long-term planetary cycles — Jupiter-Saturn conjunctions, Pluto ingresses, nodal returns — across a configurable time horizon.",
+        group: "Mundane Astrology",
+        purpose: "Tracks the macro backdrop of mundane astrology so that shorter-term research is contextualised within larger civilisational cycles.",
+        bullets: [
+          "Cycle list: all active and upcoming cycles with exact dates and current phase",
+          "Phase bar: visual arc showing how far through the cycle the world currently sits",
+          "Historical events overlaid on each cycle for research correlation",
+          "Subscribe to a cycle to receive alerts when phase milestones are reached"
+        ]
+      },
+      {
+        name: "admin_mundane_eclipses",
+        label: "Eclipse Tracker",
+        description: "Full catalogue of upcoming solar and lunar eclipses with shadow path, chart data, and entity exposure analysis.",
+        group: "Mundane Astrology",
+        purpose: "Eclipses are primary mundane triggers — this page ensures every eclipse is logged, geocoded, and linked to the entities it most directly activates.",
+        bullets: [
+          "Eclipse list with type (total/partial/annular), path countries, and saros series",
+          "Entity exposure: which tracked countries and cities fall in the shadow path",
+          "Natal-chart sensitivity: which tracked leader charts have planets near the eclipse degree",
+          "Click any eclipse to open the full chart and generate a mundane interpretation"
+        ]
+      },
+      {
+        name: "admin_mundane_scoring",
+        label: "Mundane Significance Scoring",
+        description: "Rule-based engine that assigns a significance score (0–100) to any date based on active transits, eclipses, ingresses, and station events.",
+        group: "Mundane Astrology",
+        purpose: "Provides an objective ranking of which dates carry the highest astrological charge — useful for allocating research attention and scheduling client reports.",
+        bullets: [
+          "Calendar heatmap: dates colour-coded by significance score",
+          "Score breakdown panel: which factors contribute to each date's total",
+          "Adjust weighting rules for each transit type to customise the model",
+          "Export a 12-month significance calendar as CSV or PDF"
+        ]
+      },
+      {
+        name: "admin_mundane_ai_brief",
+        label: "AI Mundane Brief",
+        description: "AI-generated weekly intelligence brief synthesising current transits, active cycles, and upcoming eclipses into a plain-language narrative.",
+        group: "Mundane Astrology",
+        purpose: "Reduces the research overhead for the team by automating the first draft of a weekly mundane briefing — editors refine and publish.",
+        bullets: [
+          "Auto-generates on Monday mornings using the Lambda AI router",
+          "Sections: global weather, regional hotspots, key leader activations, market notes",
+          "Edit inline before publishing to the member-facing mundane dashboard",
+          "Version history — compare this week's draft to previous briefs"
+        ]
+      },
+      {
+        name: "admin_mundane_market_intelligence",
+        label: "Market Intelligence",
+        description: "Correlate planetary transits with asset price movements — charts, commodity prices, and index performance mapped against astrological events.",
+        group: "Mundane Astrology",
+        purpose: "Supports the platform's financial astrology offering by giving researchers the data they need to validate and publish market-oriented forecasts.",
+        bullets: [
+          "Asset selector: choose from tracked indices, commodities, and FX pairs",
+          "Overlay transits: add any planet-aspect event to the price chart as a vertical marker",
+          "Correlation matrix: auto-calculate r-values between aspect dates and price changes",
+          "Save correlation studies to the research library for later citation"
+        ]
+      },
+      {
+        name: "admin_mundane_workspaces",
+        label: "Research Workspaces",
+        description: "Saved research sessions — a workspace bundles a set of entities, date ranges, transits, and notes into a persistent named project.",
+        group: "Mundane Astrology",
+        purpose: "Allows researchers to organise long-running projects without losing context — each workspace is its own persistent analytical environment.",
+        bullets: [
+          "Workspace list with last-opened date, entity count, and collaborator avatars",
+          "Create a new workspace from a template (election, disaster, financial crisis)",
+          "Add entities, events, chart screenshots, and notes within the workspace",
+          "Share a workspace with another admin or export to PDF for client delivery"
+        ]
+      },
+      {
+        name: "admin_mundane_historical_analogs",
+        label: "Historical Analogues Library",
+        description: "A curated database of past mundane events with full planetary snapshots — the source material for backtesting and AI brief generation.",
+        group: "Mundane Astrology",
+        purpose: "Provides the ground-truth dataset for the backtesting engine and AI brief — well-documented historical events make the predictions more defensible.",
+        bullets: [
+          "Search by event type, date, entity, or planet involved",
+          "Each record: event description, exact date, planetary snapshot at time, outcome notes",
+          "Admin-verified records marked with a trust badge; unverified shown in amber",
+          "Import events from a CSV template or add individually"
+        ]
+      },
+      {
+        name: "admin_mundane_library",
+        label: "Mundane Research Library",
+        description: "Centralised repository for all saved mundane research: reports, chart screenshots, AI briefs, and published forecasts.",
+        group: "Mundane Astrology",
+        purpose: "Ensures that research doesn't live in individual researchers' inboxes — everything is searchable, tagged, and attributable.",
+        bullets: [
+          "Filter by document type (report, brief, chart, forecast) and date",
+          "Tag documents by entity, planet, or event for cross-referenced retrieval",
+          "Published documents are visible to members in the PM portal mundane section",
+          "Version history on each document — restore any prior version"
+        ]
+      },
+      {
+        name: "admin_mundane_watchlist",
+        label: "Entity Watchlist",
+        description: "A curated short-list of entities under active monitoring — admins pin the most astrologically activated entities here for daily attention.",
+        group: "Mundane Astrology",
+        purpose: "Surfaces the highest-priority entities without requiring a full search each day — the watchlist is the researcher's morning dashboard.",
+        bullets: [
+          "Pin any entity from the registry to the watchlist in one click",
+          "Each pinned entity shows current transit highlights and next alert date",
+          "Custom note per entity: private research memo visible only to admins",
+          "Watchlist is shared across the admin team — everyone sees the same priority list"
+        ]
+      },
+      {
+        name: "admin_mundane_imports",
+        label: "Data Imports",
+        description: "Bulk import mundane entities, events, or leaders from structured CSV or JSON files — useful for onboarding new research datasets.",
+        group: "Mundane Astrology",
+        purpose: "Allows the research team to ingest large datasets (e.g., a complete election database or a century of documented crises) without manual entry.",
+        bullets: [
+          "Download the import template for each record type (entity, event, leader)",
+          "Validation report shows errors and warnings before committing the import",
+          "Import history log: who imported what, when, and how many records were created",
+          "Rollback button: undo the last import if errors are discovered post-commit"
+        ]
+      },
+      {
+        name: "admin_mundane_subscriptions",
+        label: "Mundane Report Subscriptions",
+        description: "Manage which members receive the weekly AI mundane brief by email — subscription list, unsubscribes, and delivery status.",
+        group: "Mundane Astrology",
+        purpose: "Controls the distribution of published mundane research to member inboxes — separate from the platform notification system.",
+        bullets: [
+          "Subscriber list with email, subscription date, open rate, and last delivery",
+          "Add members manually or enable auto-enrolment for all active PM members",
+          "Unsubscribe log: reason captured when a member opts out",
+          "Test delivery: send the latest brief to a single email address for QA"
+        ]
+      },
+
+      // ── Mystery School Admin (extended) ──────────────────────────────────
+      {
+        name: "admin_ms_student_detail",
+        label: "Student Detail Page",
+        description: "Full record for a single Mystery School student — subscription status, decan progress grid, foundation week completion, and admin actions.",
+        group: "Mystery School",
+        purpose: "The most granular admin view of a student — gives support staff and programme directors complete context for handling queries or exceptions.",
+        bullets: [
+          "Subscription status: active/cancelled, one-time fee paid, next billing date",
+          "36-decan progress grid: coloured status per decan (completed/active/missed/excused)",
+          "Foundation week completion: 12 weeks with per-task breakdown",
+          "Admin actions: excuse a missed decan, override status, add internal note"
+        ]
+      },
+      {
+        name: "admin_ms_decan_detail",
+        label: "Decan Detail — Admin View",
+        description: "Admin perspective on a single decan record: decan description, active student cohort, completion rates, and content management.",
+        group: "Mystery School",
+        purpose: "Allows admins to monitor how students are engaging with each decan and update the decan's instructional content without a code deploy.",
+        bullets: [
+          "Decan metadata: sign, ruling planet, tarot card reference, artwork URL",
+          "Cohort view: how many students are active/completed/missed on this decan right now",
+          "Content editor: update the preview text, ritual instructions, and scrying prompt",
+          "Window configuration: set or override window open, close, and grace dates for this decan"
+        ]
+      },
+      {
+        name: "admin_ms_graduation_queue",
+        label: "Graduation Queue",
+        description: "Students who have completed all 36 decans and 12 foundation weeks — awaiting final admin review and certificate generation.",
+        group: "Mystery School",
+        purpose: "Provides a clear workflow for approving graduations — admins verify completion, confirm no unexcused misses, then trigger the certificate.",
+        bullets: [
+          "Queue sorted by completion date — longest-waiting graduates shown first",
+          "One-click eligibility check: flags unexcused misses or incomplete foundation weeks",
+          "Generate certificate button: sends the Priest/Priestess certificate email and updates the student record",
+          "Graduation log: complete history of all graduates with certificate generation date"
+        ]
+      },
+      {
+        name: "admin_ms_excuse_workflow",
+        label: "Decan Excuse Workflow",
+        description: "Review and approve student requests to excuse a missed decan — see the reason, the decan details, and approve or reject with a note.",
+        group: "Mystery School",
+        purpose: "Maintains programme integrity while allowing compassionate exceptions for students with documented unavoidable circumstances.",
+        bullets: [
+          "Pending excuse requests with student name, decan number, missed date, and stated reason",
+          "Approve: marks the decan as admin-excused so it no longer blocks graduation",
+          "Reject: sends the student a rejection notification with the admin's note",
+          "Excuse history: all decisions audited with timestamp and admin username"
+        ]
+      },
+      {
+        name: "admin_ms_foundation_weeks",
+        label: "Foundation Week Manager",
+        description: "Edit the content of each of the 12 foundation weeks — title, description, audio recording URL, Beto photo, and per-week task list.",
+        group: "Mystery School",
+        purpose: "Allows the curriculum team to update foundation content without engineering involvement — new audio drops, task revisions, and week descriptions.",
+        bullets: [
+          "12 week cards in week-number order, each expandable for editing",
+          "Audio URL field: paste the direct media URL for the week's Beto teaching",
+          "Task editor: add, remove, or reorder tasks within each week",
+          "Published / draft toggle: keep a week in draft while content is being finalised"
+        ]
+      },
+
+      // ── Governance & Users (extended) ────────────────────────────────────
+      {
+        name: "admin_diviner_detail",
+        label: "Diviner Profile — Admin View",
+        description: "Full admin view of a single diviner: contact info, services, revenue history, booking stats, active subscriptions, and suspension controls.",
+        group: "Governance",
+        purpose: "Support staff use this page to resolve diviner queries, audit their account activity, and manage any compliance or quality issues.",
+        bullets: [
+          "Lifetime revenue, booking count, and average rating pulled in real-time",
+          "Service list with per-service pricing and active/inactive status",
+          "Recent bookings table with session type, client name, and completion status",
+          "Admin controls: suspend account, reset password, add internal compliance note"
+        ]
+      },
+      {
+        name: "admin_client_detail",
+        label: "Client Profile — Admin View",
+        description: "Full admin view of a single client account — birth data, session history, active subscriptions, and support notes.",
+        group: "Governance",
+        purpose: "Gives support staff complete context on a client before responding to a query or escalation — no need to switch between systems.",
+        bullets: [
+          "Birth data on file: date, time, city, and chart generation history",
+          "Session history: all completed and upcoming bookings with diviner names",
+          "Subscription status: active PM/MS memberships, payment method, next billing date",
+          "Support notes: internal timeline of all admin actions taken on this account"
+        ]
+      },
+      {
+        name: "admin_trainee_detail",
+        label: "Trainee Profile — Admin View",
+        description: "Full admin view of a trainee: mentor assignment, program enrolment, lesson completion, quiz scores, and training status.",
+        group: "Governance",
+        purpose: "Training managers use this to monitor individual trainee progress and intervene when a trainee falls behind or needs re-assignment.",
+        bullets: [
+          "Current training status: active / graduated / on-hold",
+          "Mentor assignment with last session date",
+          "Program completion bars for all enrolled programs",
+          "Quiz score history and average — flag if score drops below threshold"
+        ]
+      },
+      {
+        name: "admin_user_audit_log",
+        label: "User Audit Log",
+        description: "Complete timestamped log of all admin actions taken on a specific user account — who did what and when.",
+        group: "Governance",
+        purpose: "Provides accountability and a paper trail for every administrative change — essential for compliance and dispute resolution.",
+        bullets: [
+          "Chronological action log: login events, role changes, subscription modifications, notes added",
+          "Admin actor shown for every entry — no anonymous changes",
+          "Filter by action type (auth, billing, role, content, support)",
+          "Export to CSV for legal or compliance reporting"
+        ]
+      },
+      {
+        name: "admin_bulk_actions",
+        label: "Bulk Actions Console",
+        description: "Perform the same operation on multiple users at once — bulk suspend, bulk email, bulk role assignment, or bulk export.",
+        group: "Governance",
+        purpose: "Saves hours of repetitive individual account management — a single bulk action can process hundreds of users in seconds.",
+        bullets: [
+          "Filter and select users by role, status, join date, or tag",
+          "Available bulk actions: send email, assign role, suspend, export CSV, add tag",
+          "Confirmation modal shows exact count and action before executing",
+          "Bulk action log: every bulk operation recorded with actor, timestamp, and affected users"
+        ]
+      },
+      {
+        name: "admin_feature_flags",
+        label: "Feature Flags",
+        description: "Toggle platform features on or off by role, user group, or percentage rollout — without a code deploy.",
+        group: "Config",
+        purpose: "Gives the product team safe gradual rollouts and instant kill-switches for any feature — essential for managing risk in production.",
+        bullets: [
+          "Feature list with current state (enabled/disabled) and rollout percentage",
+          "Target by role: enable a feature only for Diviners, or only for PM Members",
+          "User overrides: force a feature on or off for a specific user (for QA testing)",
+          "Change log: every flag toggle recorded with actor and reason"
+        ]
+      },
+      {
+        name: "admin_webhook_logs",
+        label: "Webhook Logs",
+        description: "Real-time log of all incoming Stripe, VideoSDK, and third-party webhook events — status, payload, retry count, and processing result.",
+        group: "Config",
+        purpose: "The first place to look when a payment, session, or integration event is not reflected correctly in the platform — full payload visibility.",
+        bullets: [
+          "Webhook log with event type, source, received-at timestamp, and HTTP response code",
+          "Payload viewer: expand any event to see the full JSON body",
+          "Failed events highlighted in red with error message and retry count",
+          "Manual retry button: re-process any failed webhook immediately"
+        ]
+      },
+      {
+        name: "admin_system_health",
+        label: "System Health Dashboard",
+        description: "Live overview of platform health — API response times, error rate, active sessions, database query performance, and third-party status.",
+        group: "Config",
+        purpose: "Provides the engineering and ops team with an always-on health view so issues are caught before members report them.",
+        bullets: [
+          "Four golden signals: latency P95, error rate %, active sessions, DB saturation",
+          "Stripe, VideoSDK, and AWS Chime status widgets (live heartbeat checks)",
+          "Alert history: last 24 hours of triggered monitoring alerts",
+          "Link to full OpenTelemetry dashboard (Grafana / Datadog) for deep-dive"
+        ]
+      },
+      {
+        name: "admin_email_templates",
+        label: "Email Template Library",
+        description: "All transactional and marketing email templates — view, preview, and edit HTML/text content for any system-generated email.",
+        group: "Config",
+        purpose: "Allows content and ops teams to update email copy, branding, and CTAs without engineering involvement.",
+        bullets: [
+          "Template list: grouped by trigger (booking confirmation, subscription renewal, graduation, etc.)",
+          "Live preview: see the rendered HTML email in a web frame with test variable substitution",
+          "Edit HTML and plain-text versions side by side",
+          "Send test email to any address before saving changes"
+        ]
+      },
+      {
+        name: "admin_scheduled_tasks",
+        label: "Scheduled Task Manager",
+        description: "View and control all cron jobs and scheduled tasks running on the platform — mundane alerts, decan window opens, email digests, and more.",
+        group: "Config",
+        purpose: "Gives ops full visibility and control over automated background processes — catch stuck jobs, trigger manual runs, and audit run history.",
+        bullets: [
+          "Task list with name, cron expression, last run time, and last run status",
+          "Run now button: trigger any scheduled task immediately for testing or backfill",
+          "Failure alerts: tasks that errored in the last 24 hours highlighted with error detail",
+          "Disable / enable toggle: pause any task without deleting the schedule"
+        ]
+      },
+      {
+        name: "admin_session_recordings",
+        label: "Session Recordings Library",
+        description: "Admin-side library of recorded video and phone sessions stored in S3 — searchable by diviner, client, date, and session type.",
+        group: "Governance",
+        purpose: "Required for quality control, dispute resolution, and compliance — admins can retrieve any recorded session on demand.",
+        bullets: [
+          "Search by diviner name, client name, session date, or session ID",
+          "Play back video recordings directly in the portal with timestamp navigation",
+          "Download or delete any recording (with logged deletion reason)",
+          "Retention policy indicator: how many days remain before auto-deletion"
+        ]
+      },
+      {
+        name: "admin_chime_infrastructure",
+        label: "Chime Infrastructure Status",
+        description: "Live status of the AWS Chime SIP Media Application — active calls, pipeline health, and SMA configuration for phone readings.",
+        group: "Config",
+        purpose: "Gives ops visibility into the telephony layer so call failures can be diagnosed without opening the AWS console.",
+        bullets: [
+          "Active call count: live count of ongoing phone readings routed through Chime SMA",
+          "SMA health check: last heartbeat, last error, and PSTN gateway status",
+          "DID inventory: all E.164 numbers provisioned for inbound calling",
+          "Lambda ARN and version displayed for quick reference during incidents"
+        ]
+      },
+      {
+        name: "admin_pm_member_detail",
+        label: "PM Member Detail — Admin View",
+        description: "Full admin view of a Perennial Mandalism member: subscription, family members, plan tier, billing history, and portal activity.",
+        group: "Governance",
+        purpose: "Support staff use this to answer member billing queries, verify plan entitlements, and make exceptions (e.g., manual tier adjustments).",
+        bullets: [
+          "Membership status, tier, and next billing date",
+          "Family member list with relationship, age group, and date of birth",
+          "Stripe subscription ID and link to the customer's Stripe dashboard page",
+          "Activity summary: last login, last session attended, resources accessed this month"
+        ]
+      },
+      {
+        name: "admin_pm_plan_tiers",
+        label: "Plan Tier Configuration",
+        description: "Edit the Perennial Mandalism plan tiers — name, base price, included member count, extra member price, and max total members.",
+        group: "Config",
+        purpose: "Allows ops to adjust pricing and tier structure without a code deploy — critical for promotional pricing and plan restructuring.",
+        bullets: [
+          "Tier list with current price and member limits at a glance",
+          "Edit tier: inline form for all pricing fields with change preview",
+          "Active / inactive toggle: retire a tier without deleting it",
+          "Stripe product ID linkage: each tier maps to a Stripe Price object"
+        ]
+      },
+      {
+        name: "admin_commission_payouts",
+        label: "Commission Payout Manager",
+        description: "Manage pending and historical commission payouts to social advocates and affiliates — approve, hold, or release batch payouts.",
+        group: "Commerce",
+        purpose: "Prevents payout errors by requiring manual approval before funds transfer — gives finance a checkpoint on every commission batch.",
+        bullets: [
+          "Pending payouts list: advocate name, amount owed, referral count, and period",
+          "Approve selected: sends the payout via Stripe payouts to the linked bank account",
+          "Hold: flag a payout for review with a reason — advocate notified",
+          "Export: generate a payout batch report for accounting reconciliation"
+        ]
+      },
+      {
+        name: "admin_giveaway_detail",
+        label: "Giveaway Detail Page",
+        description: "Full view of a single giveaway campaign: entry rules, participants, draw configuration, winner selection, and notification history.",
+        group: "Commerce",
+        purpose: "Manages the full giveaway lifecycle — from entry configuration through randomised winner selection and prize notification.",
+        bullets: [
+          "Giveaway status: draft / active / ended / winner-selected",
+          "Participant list with entry date, entry method, and qualification status",
+          "Winner draw: configure the algorithm (random, weighted by entries, admin pick)",
+          "Notify winner: sends the prize email with redemption instructions"
+        ]
+      },
+      {
+        name: "admin_testimonial_detail",
+        label: "Testimonial Detail — Moderation View",
+        description: "Single testimonial review screen: full text, star rating, client identity, attached session, and moderation actions.",
+        group: "Governance",
+        purpose: "Gives moderators full context on a testimonial before approving or rejecting — links back to the actual session record for verification.",
+        bullets: [
+          "Full testimonial text with client name (or anonymous flag) and star rating",
+          "Linked booking record: verify the session actually happened before approving",
+          "Approve: publishes the testimonial on the diviner's public profile",
+          "Reject with reason: sends a notification to the client explaining the decision"
+        ]
+      },
+      {
+        name: "admin_report_engagement",
+        label: "Engagement Report",
+        description: "Platform-wide engagement metrics — daily active users, feature adoption rates, content consumption, and session-to-booking conversion.",
+        group: "Reports",
+        purpose: "Measures how deeply members are using the platform beyond just paying — engagement is the lead indicator of retention and upsell.",
+        bullets: [
+          "DAU/MAU ratio — the stickiness metric that shows how often active users return",
+          "Feature adoption heatmap: which pages and tools are used most across each role",
+          "Content consumption: most-watched videos, most-read articles, most-completed rituals",
+          "Conversion funnel: member acquisition → first session → second session rates"
+        ]
+      },
+      {
+        name: "admin_report_churn",
+        label: "Churn & Retention Report",
+        description: "Monthly cohort analysis of subscription churn — which cohorts have the highest dropout, at what tenure month, and correlated factors.",
+        group: "Reports",
+        purpose: "Identifies at-risk member segments before they cancel so the team can intervene with outreach or feature improvements.",
+        bullets: [
+          "Cohort retention grid: signup month on the Y axis, tenure month on the X axis",
+          "Churn reasons captured at cancellation: price, inactivity, life changes, product",
+          "At-risk segment: members in month 3–4 of tenure (historically highest dropout point)",
+          "Revenue impact of churn: estimated MRR lost if current cohort churn rates persist"
+        ]
+      },
+      {
+        name: "admin_report_nps",
+        label: "NPS & Satisfaction Report",
+        description: "Net Promoter Score trends from post-session surveys, testimonial star ratings, and platform satisfaction polls.",
+        group: "Reports",
+        purpose: "Tracks the platform's reputation from the member perspective — NPS is the leading indicator of word-of-mouth growth.",
+        bullets: [
+          "Overall NPS score with 30/90/365-day trend sparklines",
+          "NPS by role: Diviners vs PM Members vs Clients — different satisfaction drivers",
+          "Verbatim response browser: read unfiltered member comments with sentiment tag",
+          "Alert if NPS drops more than 10 points month-over-month"
+        ]
+      },
+      {
+        name: "admin_ai_content_moderation",
+        label: "AI Content Moderation Queue",
+        description: "AI-flagged content items (testimonials, journal entries, community posts) awaiting human review before appearing on the platform.",
+        group: "Governance",
+        purpose: "First line of defence for content safety — AI catches obvious violations at scale, human moderators handle edge cases in the queue.",
+        bullets: [
+          "Flagged items list with content type, AI confidence score, and flag reason",
+          "Side-by-side view: flagged content on the left, AI explanation on the right",
+          "Approve: clears the flag and publishes the content",
+          "Reject and notify: removes the content and sends a policy violation notice to the author"
+        ]
+      },
     ],
   },
   {

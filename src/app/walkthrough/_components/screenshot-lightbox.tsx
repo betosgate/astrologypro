@@ -81,6 +81,8 @@ const GROUP_ICONS: Record<string, LucideIcon> = {
   Profile: Users,
   Training: GraduationCap,
   Overview: LayoutDashboard,
+  "Mundane Astrology": Globe,
+  "Mystery School": GraduationCap,
 };
 
 const GROUP_DESCRIPTIONS: Record<string, string> = {
@@ -117,6 +119,8 @@ const GROUP_DESCRIPTIONS: Record<string, string> = {
   Mentorship: "Mentor-trainee interactions and feedback exchange.",
   Profile: "Personal profile management and public-facing data.",
   Overview: "High-level summary and at-a-glance metrics.",
+  "Mundane Astrology": "Global astrological research tools — entities, leaders, eclipses, cycles, and AI-generated intelligence briefs.",
+  "Mystery School": "Student management, decan oversight, graduation queue, and foundation curriculum configuration.",
 };
 
 export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Props) {
