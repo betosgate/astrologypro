@@ -92,27 +92,34 @@ export async function POST(request: NextRequest) {
       );
       pipelineId = recording.pipelineId;
       pipelineArn = recording.pipelineArn;
+      if (pipelineArn) {
+        console.log(`[create-meeting] Recording pipeline started: id=${pipelineId} arn=${pipelineArn}`);
+      } else {
+        console.warn("[create-meeting] startChimeRecording returned empty pipelineArn — recording disabled (bucket not configured?)");
+      }
     } catch (err) {
-      console.error("Failed to start Chime recording:", err);
+      console.error("[create-meeting] Failed to start Chime recording:", err);
       // Non-blocking — session can proceed without recording
     }
 
     // Update booking with Chime meeting details + pipeline ARN
     // (pipeline ARN is needed to trigger concatenation when session ends)
+    const baseUpdate: Record<string, unknown> = {
+      chime_meeting_id: meeting.meetingId,
+      chime_external_meeting_id: meeting.externalMeetingId,
+      video_provider: "chime",
+      status: "confirmed",
+    };
+    if (pipelineArn) baseUpdate.chime_pipeline_id = pipelineArn;
+
     const { error: updateError } = await admin
       .from("bookings")
-      .update({
-        chime_meeting_id: meeting.meetingId,
-        chime_external_meeting_id: meeting.externalMeetingId,
-        video_provider: "chime",
-        status: "confirmed",
-        ...(pipelineArn ? { chime_pipeline_id: pipelineArn } : {}),
-      })
+      .update(baseUpdate)
       .eq("id", bookingId);
 
     if (updateError) {
       console.error(
-        "Failed to update booking with Chime meeting info:",
+        "[create-meeting] Failed to update booking with Chime meeting info:",
         updateError
       );
     }

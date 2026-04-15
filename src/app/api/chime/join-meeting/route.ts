@@ -5,6 +5,7 @@ import {
   createChimeAttendee,
   createChimeMeeting,
   getChimeMeeting,
+  listChimeAttendees,
 } from "@/lib/chime-meetings";
 
 export const dynamic = "force-dynamic";
@@ -144,6 +145,24 @@ export async function POST(request: NextRequest) {
       // Column not yet migrated — timer starts fresh; run migration to persist across reloads
     }
 
+    // Check if a diviner attendee is already in the Chime meeting.
+    // This lets the client skip the waiting room immediately instead of
+    // relying on the presence callback replaying (which can be unreliable).
+    let divinerPresent = role === "diviner"; // diviner is always "present" to themselves
+    if (role === "client") {
+      try {
+        const existingAttendees = await listChimeAttendees(activeMeetingId!);
+        divinerPresent = existingAttendees.some(
+          (a) =>
+            a.externalUserId.startsWith("diviner-") &&
+            a.attendeeId !== attendee.attendeeId
+        );
+      } catch {
+        // If the AWS call fails, fall back to false — client will see the
+        // waiting room but the SDK presence callback will still clear it.
+      }
+    }
+
     // Build participant names
     const divinerObj = Array.isArray(booking.diviners)
       ? booking.diviners[0]
@@ -164,6 +183,7 @@ export async function POST(request: NextRequest) {
       },
       role,
       sessionStartedAt,
+      divinerPresent,
       participants: {
         divinerName: (divinerObj as any)?.display_name ?? "Diviner",
         clientName: (clientObj as any)?.full_name ?? "Client",

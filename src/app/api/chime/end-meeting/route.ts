@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
       Math.round((booking.base_price ?? 0) * 100) + overageAmount;
 
     // Update booking to completed
+    // NOTE: completed_at column does not exist on bookings table — omit it.
     const { error: updateError } = await admin
       .from("bookings")
       .update({
@@ -124,7 +125,6 @@ export async function POST(request: NextRequest) {
         actual_duration_minutes: Math.round(actualDurationMinutes),
         overage_amount: overageAmount,
         total_amount: totalAmount,
-        completed_at: new Date().toISOString(),
       })
       .eq("id", bookingId);
 
