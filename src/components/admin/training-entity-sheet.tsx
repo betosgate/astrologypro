@@ -218,16 +218,20 @@ export function TrainingEntitySheet({
               value="notes"
               className="flex-1 overflow-y-auto px-5 py-4"
             >
-              {/* Reuses the existing TrainingNotes client which talks to
-                  /api/admin/training/notes. Quiz support requires the
-                  20260408000116 migration to widen the entity_type CHECK.
-                  Notes count changes propagate up to the parent table so
-                  the count column stays in sync without a full refetch. */}
-              <TrainingNotes
-                entityType={entityType}
-                entityId={row.id}
-                onCountChange={(n) => onNotesCountChange?.(row.id, n)}
-              />
+              {tab === "notes" ? (
+                <>
+                  {/* Reuses the existing TrainingNotes client which talks to
+                      /api/admin/training/notes. Quiz support requires the
+                      20260408000116 migration to widen the entity_type CHECK.
+                      Notes count changes propagate up to the parent table so
+                      the count column stays in sync without a full refetch. */}
+                  <TrainingNotes
+                    entityType={entityType}
+                    entityId={row.id}
+                    onCountChange={(n) => onNotesCountChange?.(row.id, n)}
+                  />
+                </>
+              ) : null}
             </TabsContent>
           </Tabs>
 

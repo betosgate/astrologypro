@@ -25,6 +25,7 @@ import { MIGRATION_SQL as MIG_20260413000008 } from "@/data/migrations/202604130
 import { MIGRATION_SQL as MIG_20260413000140 } from "@/data/migrations/20260413000140_media_albums";
 import { MIGRATION_SQL as MIG_20260413000126 } from "@/data/migrations/20260413000126_training_quiz_question_progress";
 import { MIGRATION_SQL as MIG_20260414000002 } from "@/data/migrations/20260414000002_booking_session_started_at";
+import { MIGRATION_SQL as MIG_20260414000026 } from "@/data/migrations/20260414000026_chime_sip_rule_id";
 import { MIGRATION_SQL as MIG_20260415000001 } from "@/data/migrations/20260415000001_chime_pipeline_id";
 
 /**
@@ -266,6 +267,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds session_started_at timestamptz to bookings. Set on first participant join and never overwritten — allows the video session timer to survive page reloads instead of restarting from zero.",
     sortKey: "20260414000002",
     sql: MIG_20260414000002,
+  },
+  "20260414000026_chime_sip_rule_id": {
+    id: "20260414000026_chime_sip_rule_id",
+    title: "Chime SIP Rule ID on diviners",
+    description:
+      "Adds chime_sip_rule_id TEXT column to diviners. Stores the SIP Rule ID created when a Chime PSTN phone number is provisioned — needed to delete the rule on number release. Additive only, IF NOT EXISTS.",
+    sortKey: "20260414000026",
+    sql: MIG_20260414000026,
   },
   "20260415000001_chime_pipeline_id": {
     id: "20260415000001_chime_pipeline_id",

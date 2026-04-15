@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
     // Start recording (non-blocking if bucket not configured)
     let pipelineId = "";
     let pipelineArn = "";
+    let recordingError = "";
     try {
       const recording = await startChimeRecording(
         meeting.meetingId,
@@ -95,11 +96,14 @@ export async function POST(request: NextRequest) {
       if (pipelineArn) {
         console.log(`[create-meeting] Recording pipeline started: id=${pipelineId} arn=${pipelineArn}`);
       } else {
-        console.warn("[create-meeting] startChimeRecording returned empty pipelineArn — recording disabled (bucket not configured?)");
+        recordingError = "startChimeRecording returned empty pipelineArn";
+        console.warn("[create-meeting]", recordingError);
       }
-    } catch (err) {
-      console.error("[create-meeting] Failed to start Chime recording:", err);
-      // Non-blocking — session can proceed without recording
+    } catch (err: unknown) {
+      const name = (err as { name?: string }).name ?? "Error";
+      const msg = err instanceof Error ? err.message : String(err);
+      recordingError = `${name}: ${msg}`;
+      console.error("[create-meeting] Failed to start Chime recording:", recordingError);
     }
 
     // Update booking with Chime meeting details + pipeline ARN
@@ -189,6 +193,7 @@ export async function POST(request: NextRequest) {
       joinToken: divinerAttendee.joinToken,
       mediaRegion: meeting.mediaRegion,
       pipelineId,
+      recordingError: recordingError || null,
     });
   } catch (error) {
     console.error("Chime create meeting error:", error);

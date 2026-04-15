@@ -53,8 +53,11 @@ const GROUP_ICONS: Record<string, LucideIcon> = {
   Config: Settings2,
   Curriculum: GraduationCap,
   Dashboard: LayoutDashboard,
+  "Dashboard & Decans": Eye,
   Discovery: Search,
+  "Discovery & Access": Search,
   Engagement: Sparkles,
+  "Enrollment & Checkout": ShoppingBag,
   Features: Layers,
   Governance: Shield,
   "Horoscope Toolkit": Sparkles,
@@ -65,7 +68,21 @@ const GROUP_ICONS: Record<string, LucideIcon> = {
   "Manage Testimonial": MessageSquare,
   Support: MessageSquare,
   Tools: Settings2,
+  "Training & Graduation": GraduationCap,
   Reports: BarChart3,
+  "My Sessions": CalendarDays,
+  "My Sessions & Bookings": CalendarDays,
+  Performance: BarChart3,
+  Progress: GraduationCap,
+  Resources: Layers,
+  Settings: Settings2,
+  Account: Settings2,
+  Mentorship: Users,
+  Profile: Users,
+  Training: GraduationCap,
+  Overview: LayoutDashboard,
+  "Mundane Astrology": Globe,
+  "Mystery School": GraduationCap,
 };
 
 const GROUP_DESCRIPTIONS: Record<string, string> = {
@@ -77,9 +94,12 @@ const GROUP_DESCRIPTIONS: Record<string, string> = {
   Config: "Platform settings, legal controls, and audit surfaces.",
   Curriculum: "Training journeys, structured lessons, and progression.",
   Dashboard: "Primary role-aware command centers.",
+  "Dashboard & Decans": "The 36-decan journey dashboard, individual decan study pages, and guided ritual execution.",
   "Manage Testimonial": "Moderation of user feedback and public ratings.",
   Discovery: "Search, browse, and booking paths for visitors.",
+  "Discovery & Access": "How users find, access, and switch to the Mystery School portal.",
   Engagement: "Live experiences, streaming, and participation loops.",
+  "Enrollment & Checkout": "Multi-step signup wizard, Stripe payment, and post-checkout finalization.",
   Features: "Additional feature pages in this role experience.",
   Governance: "Oversight, user management, and system controls.",
   Marketing: "Public brand surfaces and campaign-oriented pages.",
@@ -88,6 +108,19 @@ const GROUP_DESCRIPTIONS: Record<string, string> = {
   "My Schedule": "Availability, sessions, and calendar operations.",
   Services: "Orders, bookings, subscriptions, and account activity.",
   Training: "Mentor-assigned learning and trainee milestones.",
+  "Training & Graduation": "Foundation Q1 curriculum, lesson modules, graduation eligibility, and post-grad ritual builder.",
+  "My Sessions": "Upcoming and past sessions, booking history, and session details.",
+  "My Sessions & Bookings": "Session scheduling, booking management, and history.",
+  Performance: "Metrics, analytics, and performance tracking.",
+  Progress: "Milestones, badges, and learning progression.",
+  Resources: "Downloadable materials, media, and reference content.",
+  Settings: "Account preferences, notifications, and personalisation.",
+  Account: "Subscription, billing, and account management.",
+  Mentorship: "Mentor-trainee interactions and feedback exchange.",
+  Profile: "Personal profile management and public-facing data.",
+  Overview: "High-level summary and at-a-glance metrics.",
+  "Mundane Astrology": "Global astrological research tools — entities, leaders, eclipses, cycles, and AI-generated intelligence briefs.",
+  "Mystery School": "Student management, decan oversight, graduation queue, and foundation curriculum configuration.",
 };
 
 export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Props) {
@@ -103,6 +136,10 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
   const [expandedSubModules, setExpandedSubModules] = useState<Set<string>>(new Set());
   const [activeScreen, setActiveScreen] = useState<string | null>(null);
   const [activeSubModule, setActiveSubModule] = useState<string | null>(null);
+  // Track screenshots that 404 so we can render a "coming soon" placeholder
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const markFailed = (name: string) =>
+    setFailedImages((prev) => new Set([...prev, name]));
 
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
   const subModuleRefs = useRef<Map<string, HTMLElement>>(new Map());
@@ -565,6 +602,13 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                                 )}
                               >
                                 <div className="relative aspect-video overflow-hidden border-b border-white/10 bg-[#07111f]">
+                                  {failedImages.has(screen.name) ? (
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center px-4">
+                                      <span className="text-2xl opacity-30">📷</span>
+                                      <p className="text-[10px] font-medium text-white/30 leading-tight">Screenshot coming soon</p>
+                                      <p className="text-[9px] text-white/20">{screen.label}</p>
+                                    </div>
+                                  ) : (
                                   <Image
                                     src={`/walkthrough/screenshots/${roleSlug}/${screen.name}.png`}
                                     alt={`${roleTitle} - ${screen.label}`}
@@ -572,7 +616,9 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                                     className="object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
                                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                     loading={globalIndex < 6 ? "eager" : "lazy"}
+                                    onError={() => markFailed(screen.name)}
                                   />
+                                  )}
                                   <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-all duration-200 group-hover:bg-black/40">
                                     <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/70 px-3 py-1.5 text-xs font-medium text-white opacity-0 backdrop-blur-sm transition-opacity duration-200 group-hover:opacity-100">
                                       <Expand className="size-3.5" />
@@ -690,6 +736,13 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                   cursor: scale > 1 ? (isDragging ? "grabbing" : "grab") : "default",
                 }}
               >
+                {failedImages.has(current.name) ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-8">
+                    <span className="text-5xl opacity-20">📷</span>
+                    <p className="text-sm font-medium text-white/40">Screenshot coming soon</p>
+                    <p className="text-xs text-white/25">{current.label}</p>
+                  </div>
+                ) : (
                 <Image
                   src={`/walkthrough/screenshots/${roleSlug}/${current.name}.png`}
                   alt={`${roleTitle} - ${current.label}`}
@@ -699,7 +752,9 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                   quality={95}
                   priority
                   draggable={false}
+                  onError={() => markFailed(current.name)}
                 />
+                )}
               </div>
 
               <button
@@ -796,6 +851,11 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                       : "border-transparent opacity-40 hover:opacity-70"
                     }`}
                 >
+                  {failedImages.has(screen.name) ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-[#07111f]">
+                      <span className="text-lg opacity-20">📷</span>
+                    </div>
+                  ) : (
                   <Image
                     src={`/walkthrough/screenshots/${roleSlug}/${screen.name}.png`}
                     alt={screen.label}
@@ -803,7 +863,9 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                     className="object-cover object-top"
                     sizes="80px"
                     loading="lazy"
+                    onError={() => markFailed(screen.name)}
                   />
+                  )}
                 </button>
               ))}
             </div>
