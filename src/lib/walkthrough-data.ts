@@ -47,6 +47,7 @@ import {
   Lock,
   Activity,
   type LucideIcon,
+  TrendingUp,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
