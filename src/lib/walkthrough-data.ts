@@ -369,6 +369,9 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       // { name: "decan_media", label: "Decan Media", description: "Visual assets for decan-based studies.", group: "Astrology" },
       // { name: "quarters", label: "Solar Quarters", description: "Governance of seasonal solar transitions.", group: "Astrology" },
 
+
+// ---------------Nativity Birth Chart---------------//
+
 {
   name: "horoscope_nativity_filled",
   label: "Nativity Birth Chart: Setup & Generation",
@@ -396,20 +399,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
      
-      // { 
-      //   name: "horoscope_nativity_result_1", 
-      //   label: "Nativity: Your Birth Chart Wheel", 
-      //   description: "See your personal astrological chart come to life.", 
-      //   group: "Horoscope Toolkit",
-      //   subModule: "Nativity Birth Chart",
-      //   purpose: "This is your personal birth chart — a circular map of the sky at the exact moment you were born. The wheel is divided into 12 sections (houses) and shows where every planet was positioned. Two chart versions are displayed side by side so you can cross-verify the results from two leading astrology engines for maximum accuracy.",
-      //   bullets: [
-      //     "🔵 The inner ring shows your natal planets — where each planet was the moment you were born.",
-      //     "🌐 Two chart wheels are shown side by side from different astrological sources for comparison.",
-      //     "🔗 The lines inside the wheel show how planets are connected or in tension — these are called aspects.",
-      //     "🏠 The 12 segments around the wheel represent the 12 houses — each governs a different area of your life."
-      //   ]
-      // },
+     
       { 
         name: "horoscope_nativity_processing_v2", 
         label: "Nativity: Generating Your Reading", 
@@ -521,34 +511,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "📚 Advanced Layer — Helps astrologers understand subtle differences between similar placements by adding a refined, symbolic, and historical perspective."
   ]
 },
-      // { 
-      //   name: "horoscope_nativity_interpret_outer_v1", 
-      //   label: "Nativity: AI Narratives (Outer & Social)", 
-      //   description: "Synthesis of destiny and professional drive.", 
-      //   group: "Horoscope Toolkit",
-      //   subModule: "Nativity Birth Chart",
-      //   purpose: "The final layer of the narrative engine analyzes the outer and social planets (Jupiter, Saturn, Uranus), focusing on how these greater forces shape the user's career, responsibility, and innovation.",
-      //   bullets: [
-      //     "Jupiter: Expansion of creative horizons and professional potential",
-      //     "Saturn: Assessment of professional responsibility and discipline",
-      //     "Uranus: Identification of innovative and unconventional career paths",
-      //     "Distinct color-coded blocks for rapid thematic recognition"
-      //   ]
-      // },
-      // { 
-      //   name: "horoscope_nativity_interpret_outer_v3", 
-      //   label: "Nativity: AI Narratives (Transpersonal & Karmic)", 
-      //   description: "Synthesis of subconscious and karmic evolution.", 
-      //   group: "Horoscope Toolkit",
-      //   subModule: "Nativity Birth Chart",
-      //   purpose: "This layer focuses on the transpersonal planets (Neptune, Pluto) and the North Node, providing deep insights into spiritual ideals, transformative life-cycles, and the primary karmic growth path.",
-      //   bullets: [
-      //     "Neptune: Identification of spiritual fulfillment and idealistic career drives",
-      //     "Pluto: Deep analysis of transformative relationship and partnership cycles",
-      //     "North Node: Roadmap for the karmic journey of growth and long-term mastery",
-      //     "Rich indigo, red, and gold themes for deep esoteric differentiation"
-      //   ]
-      // },
+    
      {
   name: "horoscope_nativity_result_houses_v1",
   label: "Nativity: House Information",
@@ -1202,90 +1165,270 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 // ---------weekly transits----------//
-      { 
-        name: "horoscope_weekly_setup", 
-        label: "Weekly Transits: Focus", 
-        description: "Short-term celestial tracking.", 
-        group: "Horoscope Toolkit",
-        subModule: "Weekly Transits",
-        purpose: "Dynamic transit engine that tracks current planetary movements against the user's natal signature.",
-        bullets: [
-          "7-day outlook generation",
-          "Severity/Intensity ratings for transits",
-          "In-grade vs Out-of-grade aspect filtering",
-          "Customizable notification triggers for major shifts"
-        ]
-      },
-      { 
-        name: "horoscope_weekly_processing", 
-        label: "Weekly Transits: Processing", 
-        description: "Temporal engine calculation.", 
-        group: "Horoscope Toolkit",
-        subModule: "Weekly Transits",
-        purpose: "Calculates the interaction between fast-moving personal planets and the user's natal architecture for the upcoming week.",
-        bullets: [
-          "Minute-precise transit-to-natal aspect mapping",
-          "Ingress and retrogradation cycle detection",
-          "Intensity scoring for every major celestial shift",
-          "Real-time status of the temporal synthesis engine"
-        ]
-      },
-      { 
-        name: "horoscope_weekly_result_1", 
-        label: "Weekly Transits: Synthesis", 
-        description: "Visualizing the temporal roadmap.", 
-        group: "Horoscope Toolkit",
-        subModule: "Weekly Transits",
-        purpose: "Visualizes the current week's planetary movements as a dynamic overlay on the birth chart.",
-        bullets: [
-          "Dual-wheel overlay (Natal inner / Transit outer)",
-          "Highlighting of major configuration triggers (T-Squares, Trines)",
-          "Interactive aspect lines for short-term influence",
-          "Side-by-side provider verification for high accuracy"
-        ]
-      },
-      { 
-        name: "horoscope_weekly_result_table", 
-        label: "Weekly Transits: Analytics", 
-        description: "Granular aspect timing and intensity.", 
-        group: "Horoscope Toolkit",
-        subModule: "Weekly Transits",
-        purpose: "A technical breakdown of every transit occurring this week, including exact peak times and severity ratings.",
-        bullets: [
-          "Sorted list of transits by chronological impact",
-          "Intensity ratings (1-10) for easier prioritization",
-          "Orb-based filtering for exact peak timing",
-          "Direct links to AI-narrative interpretations for each transit"
-        ]
-      },
-      { 
-        name: "horoscope_monthly_setup", 
-        label: "Monthly Transits: Lunar Return", 
-        description: "Monthly emotional & logistical cycles.", 
-        group: "Horoscope Toolkit",
-        subModule: "Monthly Transits + Lunar Return",
-        purpose: "Combines the Monthly Transit overview with the critical Lunar Return calculation for emotional grounding.",
-        bullets: [
-          "Lunar Return exact timing (Moon-to-Moon)",
-          "Monthly house-ingression tracking",
-          "Retrograde cycle intersections",
-          "Ritual timing recommendations based on monthly transits"
-        ]
-      },
-      { 
-        name: "horoscope_monthly_result", 
-        label: "Monthly Transits: Results", 
-        description: "Synthesized monthly outlook.", 
-        group: "Horoscope Toolkit",
-        subModule: "Monthly Transits + Lunar Return",
-        purpose: "Provides a monthly roadmap of celestial influences, focusing on emotional grounding and logistical milestones.",
-        bullets: [
-          "Lunar Return chart wheel and house focus",
-          "Daily mood/energy calendars based on Moon transits",
-          "Major monthly aspect highlights",
-          "AI interpretation of the lunar months theme"
-        ]
-      },
+
+{
+  "name": "horoscope_weekly_entry_setup",
+  "label": "Weekly Transits: Entry & Generation Setup",
+  "description": "Enter birth details to generate the full weekly transit reading in 6 screens.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Weekly Transits",
+  "purpose": "This is the first entry point of the Weekly Transits module. The user enters date of birth, time of birth, and place of birth so the system can calculate the natal chart as the base astrological reference. After the required fields are filled, the Generate Reading button becomes enabled. Once the user clicks Generate Reading, the platform starts building the weekly transit response screen by screen. It creates the natal chart, calculates the selected week's transit positions, compares transit planets with natal planets, and then generates the weekly chart view, transit relation table, transit interpretation cards, deep natal planet analysis, and deeper transit event analysis. This setup is important because all weekly transit readings depend on accurate birth data. If the time or place is wrong, houses, angles, and transit activations may change, which can affect the astrologer's interpretation.",
+  "bullets": [
+    "📅 Step 1 — Birth Data Entry: The user enters date of birth, time of birth, and place of birth. The user may also select a specific week and optionally add an area of inquiry.",
+    "✅ Step 2 — Generate Reading Activation: After the required birth details are filled correctly, the Generate Reading button becomes enabled and starts the weekly transit calculation.",
+    "📊 Step 3 — Weekly Chart View: The system generates the natal chart, weekly transit chart, and overlay chart so astrologers can visually compare birth positions with current weekly planetary movement.",
+    "📋 Step 4 — Weekly Transit Relation Table: The platform creates a table showing the date, transit planet, aspect type, and natal planet being activated during the selected week.",
+    "💬 Step 5 — Weekly Transit Interpretations: Important weekly transit aspects are converted into short readable interpretation cards so astrologers can quickly understand the meaning of each active influence.",
+    "🧠 Step 6 — Deep Weekly Analysis: The system provides deeper analysis of important natal planet activations and major transit events for more detailed astrological understanding."
+  ]
+},
+   {
+  "name": "horoscope_weekly_chart",
+  "label": "Weekly Transits: Weekly Chart View",
+  "description": "A weekly transit chart generated from the user's date of birth, time of birth, and place of birth, showing how current planetary movements interact with the natal chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Weekly Transits",
+  "purpose": "This chart is created after the user enters date of birth, time of birth, and place of birth. The system first generates the natal birth chart from these birth details. Then it calculates the current or selected week's transit positions and compares them against the natal planetary positions, houses, and angles. The result is a weekly transit chart that helps astrologers understand how short-term planetary movement is influencing the user's core personality, emotions, decisions, communication, relationships, work life, and timing of events during that specific week. This chart is useful because it gives a quick weekly astrological map of active energies, current pressures, helpful opportunities, and important transit triggers.",
+  "bullets": [
+    "📅 Birth Data Based Calculation — Uses the user's date of birth, time of birth, and place of birth to create the natal chart as the base reference.",
+    "🪐 Weekly Transit Generation — Calculates the planetary positions for the selected week or the current week if no date is selected.",
+    "🔗 Natal + Transit Comparison — Compares moving weekly planets with natal planets, natal houses, and key chart angles.",
+    "📊 Weekly Chart Display — Shows the natal chart, transit chart, and overlay chart so astrologers can visually study the weekly interaction.",
+    "⚡ Transit Activation Insight — Helps identify which natal planets and life areas are being activated during the week.",
+    "🏠 House Trigger Analysis — Shows which houses are receiving transit pressure or support, such as career, relationships, finances, health, or communication.",
+    "📐 Aspect Pattern Mapping — Reveals short-term aspects formed between transiting planets and natal planets, highlighting tension, ease, opportunity, or change.",
+    "💬 Weekly Interpretation Support — Serves as the visual foundation for generating weekly transit interpretations and AI narrative guidance.",
+    "🎯 Timing Usefulness — Helps astrologers track when a week is better for action, reflection, communication, decision-making, or emotional care.",
+    "🔭 Astrologer-Friendly Wheel View — Presents the weekly transit wheel in a clear visual format for quick short-term forecasting and structured weekly reading."
+  ]
+},
+
+
+ {
+  "name": "horoscope_weekly_relation",
+  "label": "Weekly Transits: Transit Relation Table",
+  "description": "A structured weekly table showing how transit planets form aspects with natal planets on specific dates.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Weekly Transits",
+  "purpose": "This table is generated after the user enters date of birth, time of birth, and place of birth. The system first creates the natal birth chart from these birth details. Then it calculates the moving planetary positions for the selected week and compares those transiting planets with the natal planets in the birth chart. Whenever an important aspect is formed during that week, the system adds it to this table with the date, transit planet, aspect type, and natal planet. This table helps astrologers quickly understand which short-term planetary activations are happening during the week, when they become active, and which natal energies are being triggered. It is especially useful for identifying important weekly timing, emotional pressure points, communication windows, relationship developments, and action periods.",
+  "bullets": [
+    "📅 Date Column — Shows the exact day in the selected week when the transit aspect becomes active or most relevant.",
+    "🪐 Transit Planet Column — Shows the moving planet of the week, such as Mars, Venus, Mercury, Uranus, or Saturn, creating the temporary influence.",
+    "🔗 Aspect Column — Shows the relationship formed between the transit planet and the natal planet, such as Opposition, Sextile, Trine, Conjunction, or Square.",
+    "🌌 Natal Planet Column — Shows the natal birth-chart planet receiving the weekly transit influence, such as the Sun, Moon, Mercury, Venus, Pluto, or Saturn.",
+    "📍 Birth Data Based Calculation — Uses the user's date of birth, time of birth, and place of birth to calculate the natal chart accurately before comparing weekly transit movement.",
+    "🗓 Weekly Transit Tracking — Calculates planetary motion day by day for the selected week and detects important aspect contacts with natal planets.",
+    "⚡ Timing Insight — Helps astrologers see not only what influence is happening, but also exactly when during the week it becomes important.",
+    "🧠 Interpretation Value — Makes it easier to understand how weekly events may affect confidence, emotions, communication, relationships, work, and personal decisions.",
+    "📊 Quick Weekly Forecast Tool — Gives a fast astrologer-friendly summary of the strongest transit-to-natal interactions for the week.",
+    "🎯 Practical Use — Useful for weekly planning, client guidance, short-term forecasting, identifying pressure days, and spotting supportive opportunity windows."
+  ]
+},
+{
+  "name": "horoscope_weekly_transit_interpretations",
+  "label": "Weekly Transits: Transit Interpretations",
+  "description": "Short weekly interpretation cards showing how current transit planets affect natal planets on specific dates.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Weekly Transits",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system creates the natal birth chart. Then the platform calculates the transit positions for the selected week and compares them with the natal planets. When an important weekly aspect is formed, the system creates an interpretation card for that transit event. Each card explains the transit planet, the aspect type, the natal planet being activated, the exact weekly date, and the practical meaning of that temporary influence. This helps astrologers quickly understand what kind of weekly energy is active, how it may affect the user's emotions, actions, decisions, relationships, and personal development, and why that transit matters during the week.",
+  "bullets": [
+    "📅 Date-Based Weekly Reading — Each card is tied to a specific day in the selected week when the transit becomes active or strongest.",
+    "🪐 Transit Planet Meaning — Shows the moving planet creating the temporary weekly influence, such as Mars, Venus, Mercury, Saturn, or Uranus.",
+    "🌌 Natal Planet Activation — Shows which natal planet is receiving the transit influence, such as the Sun, Moon, Venus, Pluto, or Mercury.",
+    "🔗 Aspect Interpretation — Explains the aspect type, such as Opposition, Trine, Sextile, Conjunction, or Square, and how that aspect behaves.",
+    "💬 Short Narrative Format — Each card presents a readable weekly message in simple language so astrologers can scan the week quickly.",
+    "⚖️ Opportunity and Challenge Insight — The interpretation highlights whether the transit brings pressure, harmony, motivation, emotional intensity, or growth potential.",
+    "🎯 Real-Life Weekly Meaning — Helps explain practical weekly effects in areas like confidence, relationships, communication, emotional reactions, work, and decision-making.",
+    "📖 Show More Support — Each card can include a Show More action to open a deeper explanation of that transit event.",
+    "📍 Birth Data Based Generation — The reading is based on the user's date of birth, time of birth, and place of birth because the natal chart must be accurate before weekly transit comparison can happen.",
+    "🔄 Weekly Transit-to-Natal Comparison — The system continuously compares the weekly moving planets against natal planets to detect important short-term activations.",
+    "🧠 Astrologer-Friendly Use — This format helps astrologers quickly identify the meaning of each major weekly transit without manually interpreting every aspect.",
+    "🚀 Practical Use — Useful for weekly forecasting, client guidance, planning important days, tracking emotional or relationship shifts, and understanding the strongest transit messages of the week."
+  ]
+},
+    {
+  "name": "horoscope_weekly_planet_deep_analysis",
+  "label": "Weekly Transits: Deep Planet Analysis",
+  "description": "A deeper weekly reading of key natal planets, showing how their sign, house, speed, and current transit activation shape the week's experiences.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Weekly Transits",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system creates the natal birth chart as the base reference. Then the platform calculates the current or selected week's transit movements and identifies which natal planets are most active during that week. This deep analysis screen gives astrologers a focused interpretation of one natal planet at a time, such as the Sun or Moon, by combining its natal sign, natal house, degree, speed, and the weekly transit pressure or support affecting it. It helps explain how core identity, emotions, motivation, confidence, and life direction are being influenced during the week in a more detailed and astrologer-friendly format.",
+  "bullets": [
+    "☀ Birth Data Based Generation — Uses the user's date of birth, time of birth, and place of birth to calculate the natal chart before any weekly transit reading is created.",
+    "🪐 Natal Planet Focus — This screen highlights one major natal planet at a time, such as the Sun, Moon, Mercury, Venus, or Mars, for deeper weekly analysis.",
+    "🏠 House Meaning Layer — Explains which natal house the planet occupies and which life area it naturally controls, such as career, home, identity, relationships, or communication.",
+    "♈ Sign Meaning Layer — Explains how the natal zodiac sign shapes the planet's expression, such as Leo giving confidence and visibility or Taurus giving stability and emotional grounding.",
+    "📐 Degree Precision Insight — Uses the natal degree of the planet to support exact interpretation and advanced astrological reading.",
+    "⚡ Speed Interpretation — Includes planetary speed to explain whether the natal energy acts steadily, slowly, strongly, or with reflective timing.",
+    "🔗 Weekly Transit Activation — Connects the natal planet to current weekly transits to show why that planet becomes important during the selected week.",
+    "🧠 Deep Bullet Reading Format — Presents the interpretation as separate insight points so astrologers can read the weekly influence more clearly and systematically.",
+    "🌙 Sun and Moon Priority — Especially useful for understanding weekly activation of the Sun for identity, confidence, leadership, and purpose, and the Moon for emotions, habits, comfort, and inner security.",
+    "💬 Astrologer-Friendly Clarity — Converts technical natal and transit data into simple but meaningful weekly observations for consultation and analysis.",
+    "📊 Practical Weekly Use — Helps astrologers identify where the user may feel driven, emotionally sensitive, professionally focused, or internally challenged during the week.",
+    "🚀 Why This Section Is Useful — It gives a more focused weekly reading of core planets, allowing astrologers to understand not just what transit is happening, but which natal part of the person is being activated most deeply."
+  ]
+},
+
+{
+  "name": "horoscope_weekly_transit_cards",
+  "label": "Weekly Transits: Transit Event Cards",
+  "description": "Short weekly transit cards that explain how moving planets affect natal planets on specific dates during the selected week.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Weekly Transits",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system creates the natal birth chart as the base reference. Then the platform calculates the planetary movements for the selected week and compares those moving transit planets with the natal planets. When an important weekly aspect is formed, the system creates a separate card for that event. Each card shows the transit planet, the aspect type, the natal planet being activated, the exact weekly date, and a short interpretation of what that transit means in practical life. This helps astrologers quickly understand which weekly influences are strongest, what kind of pressure or support is active, and how the user's emotions, actions, relationships, and decisions may be affected during that week.",
+  "bullets": [
+    "📅 Date-Based Transit Event — Each card is tied to a specific day of the selected week when the transit becomes exact or most active.",
+    "🪐 Transit Planet Focus — Shows the moving planet creating the weekly influence, such as Saturn, Venus, Mars, Mercury, or Uranus.",
+    "🌌 Natal Planet Activation — Shows which natal planet is being triggered, such as the Moon, Sun, Mercury, Venus, or Pluto.",
+    "🔗 Aspect Meaning — Explains the relationship between the transit planet and natal planet, such as Conjunction, Trine, Sextile, Opposition, or Square.",
+    "💬 Short Interpretation Card — Gives a brief and readable explanation of the transit so astrologers can scan the weekly meaning quickly.",
+    "⚖️ Support vs Challenge Insight — Helps identify whether the transit brings harmony, maturity, pressure, emotional intensity, clarity, or growth.",
+    "🧠 Psychological Reading — Shows how the transit may influence inner feelings, reactions, emotional needs, communication style, or motivation during the week.",
+    "🎯 Real-Life Weekly Meaning — Connects the transit to practical experiences such as relationships, work, self-care, decision-making, emotional boundaries, or social interaction.",
+    "📖 Show More Support — Each card can open a deeper explanation for astrologers who want a more detailed transit reading.",
+    "📍 Birth Data Based Generation — The cards are based on the user's date of birth, time of birth, and place of birth because accurate natal chart calculation is required before weekly transit comparison can happen.",
+    "🔄 Weekly Transit Comparison Engine — The system continuously compares weekly moving planets against natal planets to detect important short-term activations.",
+    "🚀 Practical Use — Useful for weekly forecasting, client guidance, planning important days, understanding emotional shifts, and identifying the strongest transit messages of the week."
+  ]
+},
+
+
+// ----------Monthly Transits--------------//
+
+{
+  "name": "horoscope_monthly_entry_setup",
+  "label": "Monthly Transits + Lunar Return: Entry & Generation Setup",
+  "description": "Enter birth details to generate the full monthly transit and lunar return reading in 6 screens.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Monthly Transits",
+  "purpose": "This is the first entry point of the Monthly Transits + Lunar Return module. The user enters date of birth, time of birth, and place of birth so the system can calculate the natal chart as the base astrological reference. After the required fields are filled, the Generate Reading button becomes enabled. Once the user clicks Generate Reading, the platform starts building the monthly response screen by screen. It creates the natal chart, calculates the selected month's transit positions, computes the Lunar Return chart, compares transit planets with natal planets, and then generates the monthly chart view, future transit relation table, monthly transit interpretation cards, deep monthly transit analysis, and deeper event-based readings. This setup is important because all monthly transit and lunar return readings depend on accurate birth data. If the time or place is wrong, houses, angles, lunar return timing, and monthly transit activations may change, which can affect the astrologer's interpretation.",
+  "bullets": [
+    "📅 Step 1 — Birth Data Entry: The user enters date of birth, time of birth, and place of birth. The user may also select a specific month and optionally add an area of inquiry.",
+    "✅ Step 2 — Generate Reading Activation: After the required birth details are filled correctly, the Generate Reading button becomes enabled and starts the monthly transit and lunar return calculation.",
+    "📊 Step 3 — Monthly Chart View: The system generates the natal chart, monthly transit chart, lunar return chart, and overlay chart so astrologers can visually compare birth positions with monthly planetary movement.",
+    "📋 Step 4 — Monthly Transit Relation Table: The platform creates a table showing the date, natal planet, aspect type, and transit planet being activated during the selected month.",
+    "💬 Step 5 — Monthly Transit Interpretations: Important monthly transit aspects are converted into short readable interpretation cards so astrologers can quickly understand the meaning of each active influence.",
+    "🧠 Step 6 — Deep Monthly Analysis: The system provides deeper analysis of important monthly transit events, lunar return influence, and major natal activations for more detailed astrological understanding."
+  ]
+},
+
+{
+  "name": "horoscope_monthly_chart",
+  "label": "Monthly Transits + Lunar Return: Chart View",
+  "description": "A combined monthly transit and lunar return chart generated from the user's birth details, showing how monthly planetary movement interacts with the natal chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Monthly Transits",
+  "purpose": "This chart is generated after the user enters date of birth, time of birth, and place of birth. The system first creates the natal birth chart from these birth details. Then it calculates the monthly transit positions for the selected month and also computes the Lunar Return chart for the moment the Moon returns to its natal position. These charts are then displayed together as natal chart, transit chart, and overlay chart so astrologers can visually study how the monthly moving planets and lunar cycle are interacting with the user's natal planets, houses, and angles. This view is useful because it gives a clear monthly astrological picture of emotional trends, short-term activation, opportunities, pressure points, and timing patterns across the month.",
+  "bullets": [
+    "📅 Birth Data Based Chart Creation — Uses the user's date of birth, time of birth, and place of birth to generate the natal chart as the base reference.",
+    "🪐 Monthly Transit Calculation — Calculates the positions of the moving planets for the selected month to track ongoing monthly influences.",
+    "🌙 Lunar Return Calculation — Calculates the exact moment when the Moon returns to its natal position, creating the Lunar Return chart for emotional and short-cycle monthly analysis.",
+    "🔗 Natal + Monthly Comparison — Compares monthly transit planets and lunar return placements with natal planets, natal houses, and key chart angles.",
+    "📊 Multi-Chart Display — Shows the natal wheel chart, monthly transit chart, and overlay chart so astrologers can visually compare all important monthly layers.",
+    "⚡ Monthly Activation Insight — Helps identify which natal planets and points are receiving the strongest monthly activation.",
+    "🏠 House Focus Tracking — Shows which houses and life areas, such as career, relationships, home, health, travel, or finances, are emphasized during the month.",
+    "📐 Aspect Pattern Visibility — Makes it easier to visually study monthly aspect patterns between natal planets, transits, and lunar return positions.",
+    "🌌 Emotional Timing Support — The lunar return layer adds extra insight into emotional cycles, inner reactions, and short-term personal focus within the month.",
+    "💬 Interpretation Foundation — This chart serves as the visual base for monthly transit relation tables, interpretation cards, deep monthly analysis, and lunar return insights.",
+    "🎯 Forecasting Use — Helps astrologers identify supportive days, tense periods, emotional peaks, and important monthly turning points more clearly.",
+    "🔭 Astrologer-Friendly Wheel View — Presents the monthly transit and lunar return wheel charts in a clear visual format for structured monthly forecasting and interpretation."
+  ]
+},
+      {
+  "name": "horoscope_monthly_relation",
+  "label": "Monthly Transits: Future Transit Relation Table",
+  "description": "A monthly transit table showing how future moving planets form aspects with natal planets and key natal points on specific dates.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Monthly Transits",
+  "purpose": "This table is generated after the user enters date of birth, time of birth, and place of birth. The system first creates the natal birth chart from these birth details, including natal planets, house cusps, angles, and important chart points such as the Ascendant. Then it calculates the planetary positions for the selected future month and compares each moving transit planet with the natal chart. Whenever a meaningful aspect forms during that month, the system adds it to this table with the exact date, natal planet or natal point being activated, the aspect type, and the transit planet creating the influence. This table is very useful for astrologers because it shows the timing of important monthly activations, helps identify supportive and challenging periods, and gives a clear overview of which natal energies will be triggered throughout the month. It is especially helpful for forecasting emotional shifts, action periods, career pressure, relationship developments, communication windows, and longer monthly patterns.",
+  "bullets": [
+    "📅 How It Is Generated — Uses the user's date of birth, time of birth, and place of birth to calculate the natal chart first, then calculates future transit positions for the selected month and compares them with natal planets and natal points.",
+    "🧭 Why This Table Is Used — It helps astrologers quickly see which days in the month are important, which natal planets are activated, and what kind of astrological influence is building, peaking, or passing.",
+    "📆 Date Header Meaning — Shows the exact calendar day when the transit aspect becomes exact or strongest in the selected month.",
+    "🌌 Natal Planet Header Meaning — Shows the natal planet or natal point receiving the transit influence, such as Sun, Moon, Mars, Pluto, Saturn, Uranus, or Ascendant.",
+    "🔗 Type Header Meaning — Shows the aspect type formed between the transit planet and the natal planet, such as Conjunction, Opposition, Square, Trine, or Sextile.",
+    "🪐 Transit Planet Header Meaning — Shows the moving planet creating the monthly influence, such as Jupiter, Mars, Mercury, Venus, Saturn, Uranus, or Pluto.",
+    "☀ Natal Planet Importance — The natal planet represents the person's core birth-chart energy, so this column tells astrologers which part of the person's life and psychology is being triggered.",
+    "⚡ Transit Planet Importance — The transit planet shows the temporary monthly force or event-energy acting on the natal chart, revealing what kind of pressure, support, or change is taking place.",
+    "⚖ Aspect Type Importance — The aspect type helps astrologers judge whether the influence is easy, tense, demanding, activating, supportive, or transformative.",
+    "🎯 Monthly Timing Use — This table is ideal for tracking important days for decisions, conversations, relationships, emotional processing, travel, work action, or caution.",
+    "🏠 Natal Activation Value — Even though the table directly shows planets and points, each activation also indirectly affects the natal house and life area connected to that natal placement.",
+    "🧠 Interpretation Support — The table serves as the technical base for monthly transit interpretations, event cards, deeper monthly analysis, and astrologer-friendly forecasting.",
+    "📊 Forecasting Advantage — It gives a quick structured overview of the strongest monthly planetary contacts without forcing the astrologer to manually calculate every transit.",
+    "🔮 Professional Use — Useful for monthly planning, client sessions, predictive astrology, identifying pressure periods, spotting supportive windows, and understanding the overall flow of the coming month."
+  ]
+},
+
+{
+  "name": "horoscope_monthly_transit_interpretations",
+  "label": "Monthly Transits: Transit Interpretation Cards",
+  "description": "Readable monthly transit cards showing how future moving planets activate natal planets on important dates.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Monthly Transits",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth. The system first creates the natal birth chart from those birth details. Then it calculates the moving planetary positions for the selected future month and compares them with the natal planets and key natal points. Whenever an important monthly aspect becomes exact or strong, the platform creates an interpretation card for that event. Each card explains which transit planet is active, which natal planet is being triggered, the aspect type, the exact date, and the practical meaning of that monthly influence. This helps astrologers quickly understand the major themes, pressure points, opportunities, emotional shifts, and growth patterns likely to appear during the month.",
+  "bullets": [
+    "📅 Birth Data Based Generation — Uses the user's date of birth, time of birth, and place of birth to calculate the natal chart before any monthly transit reading is created.",
+    "🪐 Transit Planet Meaning — Shows the moving planet creating the monthly influence, such as Jupiter, Mars, Mercury, Venus, Saturn, Uranus, or Pluto.",
+    "🌌 Natal Planet Meaning — Shows the natal planet receiving the transit influence, such as the Sun, Moon, Mars, Mercury, Venus, Saturn, or Pluto.",
+    "🔗 Aspect Meaning — Explains the relationship between the transit planet and natal planet, such as Square, Opposition, Conjunction, Trine, or Sextile.",
+    "📆 Exact Monthly Timing — Each card is linked to a specific date in the selected month so astrologers can identify when the transit becomes strongest.",
+    "💬 Readable Card Format — Converts technical monthly transit data into short, clear interpretation cards that are easier to scan than a raw aspect table.",
+    "⚖️ Opportunity and Challenge Insight — Helps show whether the monthly transit brings tension, motivation, emotional pressure, support, harmony, maturity, or transformation.",
+    "🎯 Real-Life Monthly Meaning — Connects the transit to practical life areas such as confidence, relationships, communication, emotional reactions, career action, conflict management, and personal growth.",
+    "📖 Show More Support — Each monthly transit card can include a Show More action so astrologers can open a deeper explanation of that specific transit event.",
+    "🧠 Forecasting Use — Useful for identifying important monthly dates for action, caution, reflection, communication, relationship work, and emotional processing.",
+    "📊 Interpretation Layer Purpose — This card section is the readable interpretation layer built on top of the monthly transit relation table and chart calculations.",
+    "🔮 Astrologer-Friendly Value — Helps astrologers quickly understand the strongest monthly transit messages without manually interpreting every aspect from scratch."
+  ]
+},
+
+{
+  "name": "horoscope_monthly_transit_deep_analysis",
+  "label": "Monthly Transits: Deep Astrological Analysis",
+  "description": "A detailed monthly interpretation screen for a specific future transit event, opened after the user clicks Show More.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Monthly Transits",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system creates the natal birth chart as the base reference. Then it calculates the future transit positions for the selected month and compares them with natal planets and key natal points. When an important monthly aspect becomes active, such as Jupiter square natal Mars, the platform first shows a short interpretation card. If the user clicks Show More, this deep analysis screen opens and gives a fuller explanation of that transit event. It helps astrologers understand not only the aspect itself, but also the psychological pressure, practical life effects, growth lesson, and best way to handle the transit during the month.",
+  "bullets": [
+    "📅 Monthly Transit Event Focus — This screen explains one specific transit event in detail for the selected month, such as Jupiter square Mars or Mars opposite Sun.",
+    "🪐 Transit Planet Meaning — Shows the moving planet creating the influence and explains what kind of temporary monthly force it brings.",
+    "🌌 Natal Planet Meaning — Shows the natal planet receiving the transit and explains which core personality function or life energy is being activated.",
+    "🔗 Aspect Type Meaning — Explains how the aspect behaves, such as Square creating tension and challenge, Opposition creating balance pressure, Conjunction creating intensity, Trine creating ease, or Sextile creating opportunity.",
+    "📍 Birth Data Based Generation — The reading is based on the user's date of birth, time of birth, and place of birth because the natal chart must be accurate before monthly transit comparison can be interpreted correctly.",
+    "🧠 Psychological Insight — Gives a deeper reading of the inner emotional, mental, and motivational patterns activated by the transit.",
+    "🎯 Practical Life Meaning — Explains how the transit may affect real monthly experiences such as action, confidence, conflict, relationships, work decisions, pressure, or growth.",
+    "⚖️ Challenge and Opportunity Balance — Helps astrologers see both the difficult side of the transit and the constructive way to work with it.",
+    "📖 Expanded Interpretation Layer — This screen is the long-form explanation that appears after the short transit card summary.",
+    "🔮 Forecasting Value — Useful for understanding the deeper monthly lesson, timing, and developmental meaning behind a strong transit event.",
+    "💬 Astrologer-Friendly Reading — Converts technical transit data into a fuller interpretation that is easier to explain during client consultation.",
+    "🚀 Practical Use — Useful for monthly forecasting, client guidance, decision timing, emotional preparation, and deeper transit study."
+  ]
+},
+
+{
+  "name": "horoscope_monthly_transit_cards",
+  "label": "Monthly Transits: Transit Event Cards",
+  "description": "Short monthly transit cards showing how future moving planets activate natal planets on important dates during the selected month.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Monthly Transits",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system creates the natal birth chart as the base reference. Then it calculates the future transit positions for the selected month and compares those moving planets with the natal planets and important natal points. When a strong or meaningful monthly aspect is found, the platform creates a separate transit event card for that date. Each card explains the transit planet, the natal planet being activated, the aspect type, the exact monthly date, and the practical meaning of that influence. This helps astrologers quickly understand which monthly events are most important, which energies are supportive or challenging, and how the user's emotions, creativity, confidence, relationships, motivation, and personal growth may be influenced during the month.",
+  "bullets": [
+    "📅 Date-Based Monthly Event — Each card is linked to a specific date in the selected month when the transit becomes exact or strongest.",
+    "🪐 Transit Planet Focus — Shows the moving planet creating the monthly influence, such as Venus, Jupiter, Mars, Mercury, Saturn, or Uranus.",
+    "🌌 Natal Planet Activation — Shows which natal planet is being triggered, such as the Sun, Moon, Mars, Mercury, Venus, Pluto, or Ascendant.",
+    "🔗 Aspect Meaning — Explains the relationship between the transit planet and natal planet, such as Trine, Square, Opposition, Conjunction, or Sextile.",
+    "💬 Short Interpretation Card — Gives a brief and readable monthly explanation so astrologers can scan the main transit message quickly.",
+    "⚖️ Support vs Challenge Insight — Helps identify whether the transit brings harmony, ease, pressure, emotional intensity, optimism, maturity, or transformation.",
+    "🎯 Real-Life Monthly Meaning — Connects the transit to practical experiences such as relationships, confidence, creativity, communication, conflict management, emotional healing, and personal development.",
+    "📖 Show More Support — Each monthly transit card can open a deeper analysis screen for astrologers who want a fuller explanation of that specific transit event.",
+    "📍 Birth Data Based Generation — The cards are based on the user's date of birth, time of birth, and place of birth because accurate natal chart calculation is required before monthly transit comparison can happen.",
+    "🔄 Monthly Transit Comparison Engine — The system compares future monthly moving planets against natal planets and natal points to detect the strongest short-term activations.",
+    "🧠 Astrologer-Friendly Use — This format helps astrologers quickly identify the meaning of each major monthly transit without manually interpreting every aspect from the relation table.",
+    "🚀 Practical Use — Useful for monthly forecasting, client guidance, planning important dates, understanding emotional or relationship shifts, and identifying the strongest transit messages of the month."
+  ]
+},
+
+      // ---------------Romantic: Synastry Setup---------------//
       { 
         name: "horoscope_romantic_setup", 
         label: "Romantic: Synastry Setup", 
