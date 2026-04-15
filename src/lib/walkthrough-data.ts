@@ -3226,6 +3226,78 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "No external dependencies: uses up/down arrow buttons instead of drag-and-drop"
         ]
       },
+      {
+        name: "ms-dashboard",
+        label: "Mystery School Dashboard",
+        description: "Your home screen after login as a Mystery School student — current decan status, foundation week progress, and upcoming decan windows.",
+        group: "Overview",
+        purpose: "Provides the student an at-a-glance summary of where they are in the curriculum and what is active right now.",
+        bullets: [
+          "Active decan card showing current window open/close dates",
+          "Foundation quarter progress with weeks completed out of 12",
+          "Quick-links to this week's foundation audio and ritual"
+        ]
+      },
+      {
+        name: "ms-subscription",
+        label: "Subscription & Billing",
+        description: "Manage your Mystery School subscription — view billing date, plan amount, and cancel or resume access.",
+        group: "Account",
+        purpose: "Full transparency on what you pay and when, with self-serve cancel and resume controls.",
+        bullets: [
+          "Monthly subscription amount and next billing date",
+          "One-time initiation fee receipt for your records",
+          "Cancel subscription with retained access until period end"
+        ]
+      },
+      {
+        name: "ms-settings",
+        label: "MS Account Settings",
+        description: "Update your display name, timezone, and notification preferences for Mystery School content.",
+        group: "Account",
+        purpose: "Personalise your experience so decan window reminders fire at the right local time.",
+        bullets: [
+          "Timezone picker so window open/close times display correctly",
+          "Email notification toggle for decan preview and grace period alerts",
+          "Display name shown on your graduation certificate"
+        ]
+      },
+      {
+        name: "ms-foundation-audio",
+        label: "Foundation Week Audio Player",
+        description: "Each of the 12 foundation weeks includes an audio teaching by Beto — listen directly in the portal.",
+        group: "Training",
+        purpose: "Guided audio instruction makes the curriculum accessible without requiring a video setup.",
+        bullets: [
+          "Embedded audio player with playback speed control",
+          "Beto photo card displayed alongside the audio for context",
+          "Progress saved — resume from where you left off on any device"
+        ]
+      },
+      {
+        name: "ms-decan-grid",
+        label: "36 Decan Mastery Grid",
+        description: "The full 36-decan grid showing which decans you have completed, which are active now, and which are upcoming.",
+        group: "Training",
+        purpose: "A birds-eye view of the entire year's curriculum mapped to zodiac sign and ruling planet.",
+        bullets: [
+          "36 cards arranged by zodiac order — green for complete, amber for active, grey for upcoming",
+          "Click any active or completed decan to view its detail page",
+          "Your completion count shown prominently above the grid"
+        ]
+      },
+      {
+        name: "ms-journal",
+        label: "Decan Journal",
+        description: "After completing the ritual and scrying session, record your personal observations and insights in the structured journal.",
+        group: "Training",
+        purpose: "Journalling is required as the final step of each decan completion and becomes part of your permanent record.",
+        bullets: [
+          "Prompted fields: themes observed, entities encountered, insights received",
+          "Private entry — only visible to you and assigned admin",
+          "Once submitted, marks the decan as fully complete"
+        ]
+      },
     ],
   },
   {
@@ -3470,6 +3542,78 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Annual summary — a year-in-review summary showing total commissions received in a calendar year for tax filing"
         ]
       },
+      {
+        name: "advocate-link-generator",
+        label: "Referral Link Generator",
+        description: "Create custom referral links for specific diviners, services, or campaigns with UTM tracking built in.",
+        group: "Tools",
+        purpose: "Generate targeted deep-links so you can promote individual readings rather than just the home page.",
+        bullets: [
+          "Pick any diviner or service to link directly to their booking page",
+          "Auto-appended referral code so every click is tracked to your account",
+          "Copy link with one click or share directly to social"
+        ]
+      },
+      {
+        name: "advocate-social-toolkit",
+        label: "Social Media Toolkit",
+        description: "Ready-to-post images, captions, and hashtag sets provided by the platform for your social promotion.",
+        group: "Tools",
+        purpose: "Reduces the effort of content creation so advocates can post quality material consistently.",
+        bullets: [
+          "Brand-approved image assets sized for Instagram, Facebook, and X",
+          "Caption templates with placeholder fields for personalisation",
+          "Best-posting-time guidance per platform"
+        ]
+      },
+      {
+        name: "advocate-tier-progress",
+        label: "Tier & Milestone Progress",
+        description: "Track your progress toward the next commission tier — how many referrals and what revenue is needed to unlock a higher rate.",
+        group: "Performance",
+        purpose: "Motivates advocates to reach the next tier by making progress visible and specific.",
+        bullets: [
+          "Current tier badge and percentage progress to next tier",
+          "Projected earnings if you maintain your current monthly pace",
+          "Milestone history — when you unlocked each tier in the past"
+        ]
+      },
+      {
+        name: "advocate-notifications",
+        label: "Notifications",
+        description: "New commission earned, payout processed, campaign started, or tier upgrade — all alerts in one feed.",
+        group: "Settings",
+        purpose: "Keeps advocates informed of earning events without having to check the dashboard constantly.",
+        bullets: [
+          "Real-time commission earned alerts with session and amount details",
+          "Payout processed notifications with bank transfer reference",
+          "New campaign launched alert with commission rate and end date"
+        ]
+      },
+      {
+        name: "advocate-settings",
+        label: "Advocate Settings",
+        description: "Manage your payout method, contact email, and notification preferences.",
+        group: "Settings",
+        purpose: "Control how and when you receive your commissions and how the platform contacts you.",
+        bullets: [
+          "Payout method — bank transfer or PayPal linked account",
+          "Minimum payout threshold configuration",
+          "Email and push notification toggle per event type"
+        ]
+      },
+      {
+        name: "advocate-leaderboard",
+        label: "Advocate Leaderboard",
+        description: "See where you rank among all social advocates by referral volume and commission earned this month.",
+        group: "Performance",
+        purpose: "Healthy competition drives performance — top advocates are spotlighted and may receive bonus incentives.",
+        bullets: [
+          "Top 10 advocates by referrals and by earnings (anonymised beyond top 3)",
+          "Your rank badge shown prominently at the top of your dashboard",
+          "Monthly leaderboard resets on the 1st of each month"
+        ]
+      },
     ],
   },
   {
@@ -3655,6 +3799,90 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Head Master acknowledgment — signed by Eddie Paredes as Head Master of the school",
           "Download as PDF — save a high-resolution, print-ready PDF version of your certificate",
           "Verification link — a public URL anyone can visit to verify the certificate is authentic and issued by the school"
+        ]
+      },
+      {
+        name: "trainee-profile",
+        label: "Trainee Profile",
+        description: "Your public trainee profile — mentors and admins can view your bio, specialities, and training history.",
+        group: "Settings",
+        purpose: "Manage how you appear to mentors and platform admins during your apprenticeship.",
+        bullets: [
+          "Editable bio, display name, and profile photo",
+          "Visible specialties and astrological interests",
+          "Training history summary available to mentors"
+        ]
+      },
+      {
+        name: "trainee-notifications",
+        label: "Notifications Centre",
+        description: "Lesson drops, mentor messages, quiz results, and milestone alerts all delivered here.",
+        group: "Settings",
+        purpose: "Consolidated inbox so no training event is missed.",
+        bullets: [
+          "Lesson availability alerts when new content drops",
+          "Mentor message notifications",
+          "Badge and milestone earned alerts"
+        ]
+      },
+      {
+        name: "trainee-mentor-chat",
+        label: "Mentor Chat",
+        description: "Direct message thread with your assigned mentor — ask questions and receive feedback between live sessions.",
+        group: "Mentorship",
+        purpose: "Asynchronous support channel between formal scheduled sessions.",
+        bullets: [
+          "Message history with timestamps and read receipts",
+          "Attach chart screenshots or files for mentor review",
+          "Pinned messages for key instructions from mentor"
+        ]
+      },
+      {
+        name: "trainee-schedule",
+        label: "Training Schedule",
+        description: "Calendar view of upcoming lessons, quizzes, and scheduled mentor sessions for the next 30 days.",
+        group: "Training",
+        purpose: "Visual weekly planner for managing your apprenticeship workload.",
+        bullets: [
+          "Week-at-a-glance calendar with lesson blocks colour-coded by program",
+          "Click any block to jump directly to the lesson or session",
+          "Upcoming quiz deadlines highlighted in amber"
+        ]
+      },
+      {
+        name: "trainee-bookmarks",
+        label: "Bookmarked Lessons",
+        description: "A curated list of lessons you have bookmarked for reference during readings and revision.",
+        group: "Resources",
+        purpose: "Quick-access library of content you have flagged for return visits.",
+        bullets: [
+          "Star any lesson to add it here instantly",
+          "Grouped by program for easy retrieval",
+          "Search bookmarks by keyword"
+        ]
+      },
+      {
+        name: "trainee-badge-wall",
+        label: "Badge Wall",
+        description: "Every milestone badge you have earned — quiz streaks, lesson completions, on-time attendance, and special honours.",
+        group: "Progress",
+        purpose: "Gamified recognition system that motivates consistent training engagement.",
+        bullets: [
+          "Earned badges displayed with the date achieved",
+          "Locked future badges shown as silhouettes — see what is coming next",
+          "Share your badge wall link to social or community"
+        ]
+      },
+      {
+        name: "trainee-settings",
+        label: "Trainee Settings",
+        description: "Account and notification preferences specific to your trainee portal.",
+        group: "Settings",
+        purpose: "Customise your training experience — email digests, session reminders, and timezone.",
+        bullets: [
+          "Set your preferred timezone for session scheduling",
+          "Choose weekly vs. daily email digest frequency",
+          "Enable or disable mentor activity notifications"
         ]
       },
     ],
@@ -3934,6 +4162,78 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Gift certificate value — the certificate holds the monetary value of the chosen session; the recipient books directly",
           "Sent gift history — a log of all gift certificates you have sent with their redemption status (sent, opened, redeemed)",
           "Received gifts — if someone has gifted you a reading, it appears here ready to use for booking"
+        ]
+      },
+      {
+        name: "client-chart",
+        label: "My Natal Chart",
+        description: "Your personal natal chart generated from your saved birth data — view planetary positions, aspect grid, and AI interpretation.",
+        group: "Astrology",
+        purpose: "Gives clients a permanent, shareable natal chart tied to their AstrologyPro profile for use in readings.",
+        bullets: [
+          "Full wheel chart with glyph annotations for all 10 planets",
+          "Aspect grid showing major and minor aspects at a glance",
+          "AI-generated interpretation summary for each house and planet placement"
+        ]
+      },
+      {
+        name: "client-birth-data",
+        label: "Birth Data Settings",
+        description: "Manage the birth time, date, and city saved to your profile — used for chart generation and diviner readings.",
+        group: "Profile",
+        purpose: "Accurate birth data is essential for precise readings — this page lets you update it any time.",
+        bullets: [
+          "City search with timezone auto-detection",
+          "Rectified time toggle if exact birth time is unknown",
+          "Changes propagate to all future chart requests"
+        ]
+      },
+      {
+        name: "client-notifications",
+        label: "Notifications",
+        description: "Session reminders, diviner messages, new reading availability, and platform announcements.",
+        group: "Settings",
+        purpose: "Keeps clients informed of everything happening in their AstrologyPro account.",
+        bullets: [
+          "24-hour and 1-hour session reminder notifications",
+          "Diviner reply notifications when a message is sent",
+          "Platform event and new offering announcements"
+        ]
+      },
+      {
+        name: "client-session-notes",
+        label: "Session Notes",
+        description: "View notes left by your diviner after each completed reading — a personal record of what was covered.",
+        group: "My Sessions",
+        purpose: "Post-session notes help clients retain key insights and track themes across multiple readings.",
+        bullets: [
+          "Notes organised by session date and diviner name",
+          "Downloadable as PDF for your personal records",
+          "Private — only visible to you and the reading diviner"
+        ]
+      },
+      {
+        name: "client-settings",
+        label: "Account Settings",
+        description: "Manage your contact email, password, notification preferences, and communication opt-ins.",
+        group: "Settings",
+        purpose: "Full account self-service so clients never need support for routine changes.",
+        bullets: [
+          "Email address and password update with verification",
+          "Newsletter and promotional email opt-in controls",
+          "Account deletion request — triggers a 30-day grace before data removal"
+        ]
+      },
+      {
+        name: "client-astrology-home",
+        label: "Astrology Hub",
+        description: "Your personal astrology centre — daily transit overview, current planetary weather, and your chart highlights for today.",
+        group: "Astrology",
+        purpose: "Provides personalised daily astrological context so clients feel the value of the platform every day, not just on reading days.",
+        bullets: [
+          "Today's planetary positions overlaid on your natal chart",
+          "Transit description in plain language — no jargon",
+          "Upcoming high-impact transit alerts for the next 7 days"
         ]
       },
     ],
