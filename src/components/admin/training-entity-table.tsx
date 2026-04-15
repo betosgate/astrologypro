@@ -140,6 +140,19 @@ function entityLabel(type: TrainingEntityType): string {
   }
 }
 
+function entityNoun(type: TrainingEntityType, count: number) {
+  switch (type) {
+    case "program":
+      return count === 1 ? "program" : "programs";
+    case "category":
+      return count === 1 ? "category" : "categories";
+    case "lesson":
+      return count === 1 ? "lesson" : "lessons";
+    case "quiz":
+      return count === 1 ? "quiz" : "quizzes";
+  }
+}
+
 const ENTITY_API_PATH: Record<TrainingEntityType, string> = {
   program: "programs",
   category: "categories",
@@ -169,6 +182,7 @@ export function TrainingEntityTable<
   } = props;
 
   const label = entityLabel(config.entityType);
+  const pluralLabel = entityNoun(config.entityType, 2);
 
   // Server-driven mode: sorting, pagination, and filtering happen on the
   // server. The table receives pre-sorted, pre-paged rows from the parent.
@@ -387,12 +401,12 @@ export function TrainingEntityTable<
         const d = body.deleted ?? 0;
         const skipped = Array.isArray(body.skipped) ? body.skipped.length : 0;
         toast.success(
-          `Deleted ${d} ${label.toLowerCase()}${d === 1 ? "" : "s"}.${skipped ? ` ${skipped} blocked by related data.` : ""}`,
+          `Deleted ${d} ${entityNoun(config.entityType, d)}.${skipped ? ` ${skipped} blocked by related data.` : ""}`,
         );
       } else {
         const n = body.updated ?? 0;
         toast.success(
-          `${action === "activate" ? "Activated" : "Deactivated"} ${n} ${label.toLowerCase()}${n === 1 ? "" : "s"}.`,
+          `${action === "activate" ? "Activated" : "Deactivated"} ${n} ${entityNoun(config.entityType, n)}.`,
         );
       }
       setSelectedIds(new Set());
@@ -432,7 +446,7 @@ export function TrainingEntityTable<
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast.success(
-        `Exported ${selectedIds.size} ${label.toLowerCase()}${selectedIds.size === 1 ? "" : "s"}.`,
+        `Exported ${selectedIds.size} ${entityNoun(config.entityType, selectedIds.size)}.`,
       );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Export failed.");
@@ -509,8 +523,7 @@ export function TrainingEntityTable<
         <div>
           <CardTitle>{config.title}</CardTitle>
           <CardDescription>
-            {filteredCount} {label.toLowerCase()}
-            {filteredCount === 1 ? "" : "s"}
+            {filteredCount} {entityNoun(config.entityType, filteredCount)}
             {filtersActive ? ` (of ${rawCount})` : ""}
           </CardDescription>
         </div>
@@ -539,8 +552,7 @@ export function TrainingEntityTable<
         {selectedIds.size > 0 && (
           <div className="sticky top-2 z-10 flex flex-wrap items-center gap-2 rounded-lg border bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
             <span className="text-sm font-medium">
-              {selectedIds.size} {label.toLowerCase()}
-              {selectedIds.size === 1 ? "" : "s"} selected
+              {selectedIds.size} {entityNoun(config.entityType, selectedIds.size)} selected
             </span>
             <div className="flex flex-wrap items-center gap-2 ml-auto">
               <Button
@@ -582,7 +594,7 @@ export function TrainingEntityTable<
                 onClick={() => {
                   if (
                     confirm(
-                      `Delete ${selectedIds.size} ${label.toLowerCase()}${selectedIds.size === 1 ? "" : "s"}? This cannot be undone.`,
+                      `Delete ${selectedIds.size} ${entityNoun(config.entityType, selectedIds.size)}? This cannot be undone.`,
                     )
                   ) {
                     runBulk("delete");
@@ -618,7 +630,7 @@ export function TrainingEntityTable<
                   <th className="pl-3 pr-2 py-2 w-8">
                     <input
                       type="checkbox"
-                      aria-label={`Select all ${label.toLowerCase()}s on this page`}
+                      aria-label={`Select all ${pluralLabel} on this page`}
                       ref={selectAllRef}
                       checked={allOnPageSelected}
                       onChange={toggleSelectAll}
