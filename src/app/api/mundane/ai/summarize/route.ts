@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import Anthropic from "@anthropic-ai/sdk";
+import { callMundaneAI } from "@/lib/mundane-ai";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
-
-// Server-only: ANTHROPIC_API_KEY is never exposed to the client
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(req: NextRequest) {
   const user = await getAdminUser();
@@ -15,6 +13,12 @@ export async function POST(req: NextRequest) {
       { type: "https://httpstatuses.com/401", title: "Unauthorized", status: 401 },
       { status: 401 }
     );
+  }
+
+  // Rate limit: 20 AI summarize calls per hour per user (each call hits Anthropic API)
+  const rl = await rateLimit(`mundane-ai-summarize:${user.id}`, 20, 60 * 60 * 1_000);
+  if (!rl.success) {
+    return rateLimitResponse(rl, "AI summarization limit reached. You can run up to 20 summaries per hour.") as unknown as NextResponse;
   }
 
   let body: {
@@ -47,7 +51,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.MUNDANE_AI_LAMBDA_URL) {
     return NextResponse.json(
       { type: "https://httpstatuses.com/503", title: "AI service not configured", status: 503 },
       { status: 503 }
@@ -147,24 +151,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  try {
-    const message = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
-      max_tokens: 512,
-      messages: [
-        {
-          role: "user",
-          content: `You are a mundane astrology research assistant. Summarize the following research notes in 3-5 bullet points, focusing on key astrological patterns and their predicted mundane effects:\n\n${subjectLabel}\n\n${contentToSummarize}`,
-        },
-      ],
-    });
+  const prompt = `You are a mundane astrology research assistant. Summarize the following research notes in 3-5 bullet points, focusing on key astrological patterns and their predicted mundane effects:\n\n${subjectLabel}\n\n${contentToSummarize}`;
 
-    const summary =
-      message.content[0]?.type === "text" ? message.content[0].text : "";
+  try {
+    const result = await callMundaneAI({ prompt, aspect_type: "general", max_tokens: 512 });
 
     return NextResponse.json({
-      summary,
-      generated_at: new Date().toISOString(),
+      summary: result.text,
+      generated_at: result.generated_at,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown AI error";

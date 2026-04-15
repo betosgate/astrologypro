@@ -43,7 +43,7 @@ export default async function RoleWalkthroughPage({
   const totalGroups = new Set(section.screens.map(s => s.group)).size;
 
   return (
-    <div className="cosmic-bg noise-overlay min-h-screen">
+    <div className="cosmic-bg min-h-screen">
       <div className="mx-auto max-w-7xl px-6 py-12 relative z-10">
       {/* Breadcrumbs */}
       <nav className="mb-10 flex items-center gap-2 text-xs font-medium text-muted-foreground">

@@ -1,0 +1,1961 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AstrologyPro API",
+    "version": "1.0.0",
+    "description": "BFF (Backend For Frontend) API for the AstrologyPro Next.js portal. All endpoints are Next.js Route Handlers in the `app` directory. Authentication uses Supabase cookie-based sessions. Admin endpoints additionally require an admin role check via `getAdminUser()`."
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "AstrologyPro API"
+    }
+  ],
+  "security": [
+    { "cookieAuth": [] }
+  ],
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sb-wyluvclvtvwptsvvtgkv-auth-token",
+        "description": "Supabase session cookie. Obtained after sign-in via Supabase Auth. Admin endpoints additionally verify an admin role via the `admin_users` table."
+      }
+    },
+    "schemas": {
+      "ProblemDetails": {
+        "type": "object",
+        "description": "RFC 9457 Problem Details error shape used across all endpoints.",
+        "required": ["type", "title", "status"],
+        "properties": {
+          "type": { "type": "string", "format": "uri", "example": "https://httpstatus.es/422" },
+          "title": { "type": "string", "example": "Validation Error" },
+          "status": { "type": "integer", "example": 422 },
+          "detail": { "type": "string", "example": "subject must be at least 5 characters." }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "total": { "type": "integer" },
+          "page": { "type": "integer" },
+          "limit": { "type": "integer" },
+          "pages": { "type": "integer" }
+        }
+      },
+      "SupportTicket": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "ticket_number": { "type": "string", "example": "TKT-00123" },
+          "type": {
+            "type": "string",
+            "enum": ["support", "job", "incident", "escalation", "complaint", "refund", "payout", "bug", "moderation"]
+          },
+          "category": { "type": "string" },
+          "subcategory": { "type": "string", "nullable": true },
+          "subject": { "type": "string" },
+          "description": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["open", "in_progress", "waiting_requester", "waiting_internal", "escalated", "resolved", "closed", "cancelled"]
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["low", "normal", "high", "urgent", "critical"]
+          },
+          "requester_user_id": { "type": "string", "format": "uuid" },
+          "requester_email": { "type": "string", "nullable": true },
+          "requester_name": { "type": "string", "nullable": true },
+          "requester_role": { "type": "string", "nullable": true },
+          "assigned_to": { "type": "string", "format": "uuid", "nullable": true },
+          "assigned_team": { "type": "string", "nullable": true },
+          "queue_id": { "type": "string", "format": "uuid", "nullable": true },
+          "resolution": { "type": "string", "nullable": true },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "sla_due_at": { "type": "string", "format": "date-time", "nullable": true },
+          "sla_breached": { "type": "boolean" },
+          "first_response_at": { "type": "string", "format": "date-time", "nullable": true },
+          "resolved_at": { "type": "string", "format": "date-time", "nullable": true },
+          "closed_at": { "type": "string", "format": "date-time", "nullable": true },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "TicketMessage": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "ticket_id": { "type": "string", "format": "uuid" },
+          "author_user_id": { "type": "string", "format": "uuid" },
+          "author_name": { "type": "string" },
+          "author_role": { "type": "string", "enum": ["customer", "staff", "system"] },
+          "body": { "type": "string" },
+          "is_internal": { "type": "boolean" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "TicketHistoryEntry": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "ticket_id": { "type": "string", "format": "uuid" },
+          "actor_user_id": { "type": "string", "format": "uuid" },
+          "event_type": { "type": "string" },
+          "old_value": { "type": "string", "nullable": true },
+          "new_value": { "type": "string", "nullable": true },
+          "note": { "type": "string", "nullable": true },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "MundaneEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "entity_type": {
+            "type": "string",
+            "enum": ["country", "city", "institution", "market", "commodity", "organization", "other"]
+          },
+          "region": { "type": "string", "nullable": true },
+          "flag_emoji": { "type": "string", "nullable": true },
+          "latitude": { "type": "number", "nullable": true },
+          "longitude": { "type": "number", "nullable": true },
+          "timezone": { "type": "string", "nullable": true },
+          "notes": { "type": "string", "nullable": true },
+          "is_active": { "type": "boolean" },
+          "chart_count": { "type": "integer" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "MundaneForecast": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "entity_id": { "type": "string", "format": "uuid", "nullable": true },
+          "forecast_type": {
+            "type": "string",
+            "enum": ["political", "economic", "weather", "social", "market", "general"]
+          },
+          "forecast_period_start": { "type": "string", "format": "date" },
+          "forecast_period_end": { "type": "string", "format": "date" },
+          "content": { "type": "string" },
+          "signal_strength": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "critical"],
+            "nullable": true
+          },
+          "is_published": { "type": "boolean" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Campaign": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "diviner_id": { "type": "string", "format": "uuid", "nullable": true },
+          "diviner_name": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "active", "paused", "ended", "expired"]
+          },
+          "start_date": { "type": "string", "format": "date" },
+          "end_date": { "type": "string", "format": "date", "nullable": true },
+          "commission_type": { "type": "string", "nullable": true },
+          "commission_value": { "type": "number", "nullable": true },
+          "budget_cap_cents": { "type": "integer", "nullable": true },
+          "spent_cents": { "type": "integer" },
+          "target_product_type": { "type": "string", "nullable": true },
+          "utm_source": { "type": "string", "nullable": true },
+          "utm_medium": { "type": "string", "nullable": true },
+          "utm_campaign": { "type": "string", "nullable": true },
+          "affiliates_count": { "type": "integer" },
+          "conversions_count": { "type": "integer" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "LedgerEntry": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "sourceType": { "type": "string" },
+          "sourceReference": { "type": "string", "nullable": true },
+          "divinerId": { "type": "string", "format": "uuid" },
+          "divinerName": { "type": "string" },
+          "divinerUsername": { "type": "string", "nullable": true },
+          "grossAmount": { "type": "number", "description": "In dollars" },
+          "platformFee": { "type": "number" },
+          "affiliateCommission": { "type": "number" },
+          "divinerNet": { "type": "number" },
+          "refundedGrossAmount": { "type": "number" },
+          "refundedAffiliateCommission": { "type": "number" },
+          "refundedDivinerNet": { "type": "number" },
+          "settlementStatus": {
+            "type": "string",
+            "enum": ["pending", "approved", "paid", "disputed", "cancelled"]
+          },
+          "settlementNote": { "type": "string", "nullable": true },
+          "recognizedAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "latestNote": { "type": "object", "nullable": true },
+          "notesCount": { "type": "integer" }
+        }
+      },
+      "Booking": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "scheduled_at": { "type": "string", "format": "date-time" },
+          "duration_minutes": { "type": "integer" },
+          "base_price": { "type": "number" },
+          "total_amount": { "type": "number" },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "pending_payment", "confirmed", "in_progress", "completed", "cancelled", "no_show"]
+          },
+          "stripe_payment_intent_id": { "type": "string", "nullable": true },
+          "stripe_payment_status": { "type": "string", "nullable": true },
+          "cancellation_reason": { "type": "string", "nullable": true },
+          "canceled_at": { "type": "string", "format": "date-time", "nullable": true },
+          "created_at": { "type": "string", "format": "date-time" },
+          "diviners": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "display_name": { "type": "string" },
+              "username": { "type": "string" }
+            }
+          },
+          "clients": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "full_name": { "type": "string" },
+              "email": { "type": "string" }
+            }
+          },
+          "services": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "duration_minutes": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Authentication required.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ProblemDetails" },
+            "example": { "type": "https://httpstatus.es/401", "title": "Unauthorized", "status": 401, "detail": "You must be logged in." }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Authenticated but insufficient permissions.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ProblemDetails" },
+            "example": { "type": "https://httpstatus.es/403", "title": "Forbidden", "status": 403, "detail": "Admin access required." }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ProblemDetails" },
+            "example": { "type": "https://httpstatus.es/404", "title": "Not Found", "status": 404, "detail": "Ticket not found." }
+          }
+        }
+      },
+      "UnprocessableEntity": {
+        "description": "Validation failure.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ProblemDetails" }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Rate limit exceeded.",
+        "headers": {
+          "Retry-After": { "schema": { "type": "integer" }, "description": "Seconds until the rate limit resets." }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ProblemDetails" }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "PageParam": {
+        "name": "page",
+        "in": "query",
+        "schema": { "type": "integer", "minimum": 1, "default": 1 }
+      },
+      "LimitParam": {
+        "name": "limit",
+        "in": "query",
+        "schema": { "type": "integer", "minimum": 1, "maximum": 200, "default": 20 }
+      },
+      "PeriodParam": {
+        "name": "period",
+        "in": "query",
+        "description": "Time window for aggregation.",
+        "schema": { "type": "string", "enum": ["30d", "90d", "1y", "all"], "default": "90d" }
+      }
+    }
+  },
+  "tags": [
+    { "name": "Auth", "description": "Authentication and session management" },
+    { "name": "Dashboard", "description": "Diviner dashboard — finance, bookings, campaigns, services" },
+    { "name": "Support", "description": "Customer-facing support ticket portal" },
+    { "name": "Admin — Tickets", "description": "Admin support ticket management" },
+    { "name": "Admin — Finance", "description": "Admin revenue ledger and finance operations" },
+    { "name": "Admin — Bookings", "description": "Admin booking management and reporting" },
+    { "name": "Admin — Reports", "description": "Platform-wide analytical reports" },
+    { "name": "Admin — Mundane", "description": "Mundane astrology entities, forecasts, events, and scoring" },
+    { "name": "Admin — Campaigns", "description": "Affiliate campaign management and reports" },
+    { "name": "Admin — Users", "description": "User management — list, update, lock, impersonate" },
+    { "name": "Admin — Blog", "description": "Blog post and author management" },
+    { "name": "Admin — Training", "description": "Diviner training programs, lessons, quizzes, analytics" },
+    { "name": "Mundane", "description": "Mundane astrology — entities, forecasts, events, market intelligence (community-facing)" },
+    { "name": "Bookings", "description": "Booking lifecycle — cancel, reschedule, ICS, notes" },
+    { "name": "Community", "description": "Perennial Mandalism community — nativity charts, events, rituals" },
+    { "name": "Stripe", "description": "Stripe payment integration — checkout, webhooks, Connect" },
+    { "name": "Chime", "description": "AWS Chime SDK video and voice session management" },
+    { "name": "Notifications", "description": "In-app notification inbox" },
+    { "name": "Advocate", "description": "Social advocacy affiliate portal" },
+    { "name": "Marketing", "description": "Public marketing content and newsletter subscribe" },
+    { "name": "Cron", "description": "Internal scheduled job endpoints (Vercel Cron, CRON_SECRET protected)" }
+  ],
+  "paths": {
+    "/auth/me": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Get current user",
+        "description": "Returns the authenticated user's ID and email from the Supabase session.",
+        "operationId": "getAuthMe",
+        "responses": {
+          "200": {
+            "description": "Current user identity.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string", "format": "uuid" },
+                    "email": { "type": "string", "format": "email", "nullable": true }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/auth/me-portals": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Get current user with portal roles",
+        "description": "Returns the authenticated user enriched with their portal role flags (is_admin, is_diviner, is_community_member, etc.).",
+        "operationId": "getAuthMePortals",
+        "responses": {
+          "200": {
+            "description": "User with portal role information.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string", "format": "uuid" },
+                    "email": { "type": "string", "format": "email" },
+                    "is_admin": { "type": "boolean" },
+                    "is_diviner": { "type": "boolean" },
+                    "is_community_member": { "type": "boolean" },
+                    "is_trainee": { "type": "boolean" },
+                    "last_portal": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/auth/is-admin": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Check admin status",
+        "description": "Returns whether the current session user has admin privileges.",
+        "operationId": "getAuthIsAdmin",
+        "responses": {
+          "200": {
+            "description": "Admin flag.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isAdmin": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Change password",
+        "description": "Changes the authenticated user's password. Requires the current password for verification.",
+        "operationId": "postAuthChangePassword",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["current_password", "new_password"],
+                "properties": {
+                  "current_password": { "type": "string", "minLength": 8 },
+                  "new_password": { "type": "string", "minLength": 8 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password changed.",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" } } } } }
+          },
+          "400": { "description": "Invalid JSON." },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "422": { "$ref": "#/components/responses/UnprocessableEntity" }
+        }
+      }
+    },
+    "/dashboard/finance": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Diviner finance overview",
+        "description": "Returns a comprehensive finance dashboard for the authenticated diviner: revenue summary, monthly breakdown, refunds, top clients, pending payout, and projections.",
+        "operationId": "getDashboardFinance",
+        "parameters": [
+          { "$ref": "#/components/parameters/PeriodParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Finance dashboard payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "diviner": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "displayName": { "type": "string" },
+                        "stripeAccountId": { "type": "string", "nullable": true },
+                        "chargesEnabled": { "type": "boolean" },
+                        "payoutsEnabled": { "type": "boolean" }
+                      }
+                    },
+                    "summary": {
+                      "type": "object",
+                      "properties": {
+                        "grossRevenue": { "type": "number" },
+                        "platformFees": { "type": "number" },
+                        "affiliateCommissions": { "type": "number" },
+                        "divinerNet": { "type": "number" },
+                        "grossRevenueAfterRefunds": { "type": "number" },
+                        "divinerNetAfterRefunds": { "type": "number" },
+                        "refundsTotal": { "type": "number" },
+                        "refundsCount": { "type": "integer" },
+                        "eventsCount": { "type": "integer" }
+                      }
+                    },
+                    "monthly": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "month": { "type": "string", "example": "2024-03" },
+                          "grossRevenue": { "type": "number" },
+                          "divinerNet": { "type": "number" },
+                          "affiliateCommissions": { "type": "number" },
+                          "grossRevenueAfterRefunds": { "type": "number" }
+                        }
+                      }
+                    },
+                    "refunds": { "type": "array", "items": { "type": "object" } },
+                    "recentActivity": { "type": "array", "items": { "type": "object" } },
+                    "insights": {
+                      "type": "object",
+                      "properties": {
+                        "avgSessionValue": { "type": "number" },
+                        "clientLtv": { "type": "number" },
+                        "refundRate": { "type": "number" },
+                        "taxReserve": { "type": "number" },
+                        "taxReservePercent": { "type": "number" },
+                        "pendingPayout": { "type": "number" },
+                        "monthlyGoal": { "type": "number" },
+                        "projectedMonthRevenue": { "type": "number" },
+                        "revenueBySourceType": { "type": "array", "items": { "type": "object" } },
+                        "topClients": { "type": "array", "items": { "type": "object" } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/UnprocessableEntity" }
+        }
+      }
+    },
+    "/dashboard/bookings/stats": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Diviner booking KPI stats",
+        "description": "Returns live KPI counts for the diviner's bookings dashboard: sessions this week, hours, upcoming count, total clients, and total revenue.",
+        "operationId": "getDashboardBookingStats",
+        "responses": {
+          "200": {
+            "description": "Booking KPIs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sessionsThisWeek": { "type": "integer" },
+                    "hoursThisWeek": { "type": "number" },
+                    "upcomingCount": { "type": "integer" },
+                    "totalClients": { "type": "integer" },
+                    "totalRevenue": { "type": "number" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/dashboard/bookings": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "List diviner bookings",
+        "description": "Paginated list of bookings for the authenticated diviner with optional status and date filters.",
+        "operationId": "getDashboardBookings",
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "confirmed", "completed", "cancelled", "no_show", "all"] } },
+          { "name": "from", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "to", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated booking list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/Pagination" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "bookings": { "type": "array", "items": { "$ref": "#/components/schemas/Booking" } }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/dashboard/campaigns": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "List diviner campaigns",
+        "description": "Returns affiliate campaigns owned by the authenticated diviner with cursor-based pagination.",
+        "operationId": "getDashboardCampaigns",
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 50 } },
+          { "name": "cursor", "in": "query", "description": "Cursor for next page (last campaign ID from previous response).", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Campaign list with cursor pagination.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Campaign" } },
+                    "nextCursor": { "type": "string", "nullable": true },
+                    "hasMore": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/support/tickets": {
+      "get": {
+        "tags": ["Support"],
+        "summary": "List own support tickets",
+        "description": "Returns the authenticated user's own support tickets, paginated. Scoped to the requester's user ID — cannot view other users' tickets.",
+        "operationId": "getSupportTickets",
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["open", "in_progress", "waiting_requester", "resolved", "closed", "all"] } },
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated ticket list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/Pagination" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "tickets": { "type": "array", "items": { "$ref": "#/components/schemas/SupportTicket" } }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Support"],
+        "summary": "Create support ticket",
+        "description": "Creates a new support ticket on behalf of the authenticated user. A DB trigger auto-populates `ticket_number`.",
+        "operationId": "postSupportTicket",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["category", "subject", "description"],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["support", "job", "incident", "escalation", "complaint", "refund", "payout", "bug", "moderation"],
+                    "default": "support"
+                  },
+                  "category": { "type": "string" },
+                  "subcategory": { "type": "string" },
+                  "subject": { "type": "string", "minLength": 5 },
+                  "description": { "type": "string", "minLength": 10 },
+                  "priority": { "type": "string", "enum": ["low", "normal", "high", "urgent", "critical"], "default": "normal" },
+                  "related_entity_type": {
+                    "type": "string",
+                    "enum": ["order", "booking", "session", "course", "payout", "natal_chart", "monthly_transit", "relationship_chart"]
+                  },
+                  "related_entity_id": { "type": "string", "maxLength": 255 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ticket created.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SupportTicket" } } }
+          },
+          "400": { "description": "Invalid JSON." },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "422": { "$ref": "#/components/responses/UnprocessableEntity" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/support/tickets/{id}": {
+      "get": {
+        "tags": ["Support"],
+        "summary": "Get own support ticket",
+        "description": "Returns a single support ticket with its public message thread. Object-level authorization enforced — users can only view their own tickets.",
+        "operationId": "getSupportTicket",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket with messages.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ticket": { "$ref": "#/components/schemas/SupportTicket" },
+                    "messages": { "type": "array", "items": { "$ref": "#/components/schemas/TicketMessage" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/support/tickets/{id}/messages": {
+      "post": {
+        "tags": ["Support"],
+        "summary": "Reply to support ticket",
+        "description": "Appends a public message to the support ticket thread from the authenticated user. Only ticket owner can post.",
+        "operationId": "postSupportTicketMessage",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["body"],
+                "properties": {
+                  "body": { "type": "string", "minLength": 1 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Message added.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TicketMessage" } } }
+          },
+          "400": { "description": "Invalid JSON." },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/UnprocessableEntity" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/support/tickets/{id}/csat": {
+      "post": {
+        "tags": ["Support"],
+        "summary": "Submit CSAT rating",
+        "description": "Allows a ticket requester to submit a Customer Satisfaction (CSAT) rating after a ticket is resolved.",
+        "operationId": "postSupportTicketCsat",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["rating"],
+                "properties": {
+                  "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+                  "comment": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "CSAT recorded." },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/tickets": {
+      "get": {
+        "tags": ["Admin — Tickets"],
+        "summary": "List all support tickets (admin)",
+        "description": "Admin-only. Returns all platform support tickets with filtering by status, type, priority, and assignment. Paginated.",
+        "operationId": "adminGetTickets",
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "type", "in": "query", "schema": { "type": "string" } },
+          { "name": "priority", "in": "query", "schema": { "type": "string" } },
+          { "name": "assigned_to", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated ticket list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/Pagination" },
+                    { "type": "object", "properties": { "tickets": { "type": "array", "items": { "$ref": "#/components/schemas/SupportTicket" } } } }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "tags": ["Admin — Tickets"],
+        "summary": "Create job ticket (admin)",
+        "description": "Admin-only. Creates a new ticket on behalf of a requester or as an internal job/task.",
+        "operationId": "adminPostTicket",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["type", "category", "subject", "description"],
+                "properties": {
+                  "type": { "type": "string", "enum": ["support", "job", "incident", "escalation", "complaint", "refund", "payout", "bug", "moderation"] },
+                  "category": { "type": "string" },
+                  "subcategory": { "type": "string" },
+                  "subject": { "type": "string" },
+                  "description": { "type": "string" },
+                  "priority": { "type": "string", "enum": ["low", "normal", "high", "urgent", "critical"] },
+                  "assigned_to": { "type": "string", "format": "uuid" },
+                  "assigned_team": { "type": "string" },
+                  "requester_email": { "type": "string", "format": "email" },
+                  "requester_name": { "type": "string" },
+                  "requester_role": { "type": "string" },
+                  "tags": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Ticket created.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SupportTicket" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/UnprocessableEntity" }
+        }
+      }
+    },
+    "/admin/tickets/{id}": {
+      "get": {
+        "tags": ["Admin — Tickets"],
+        "summary": "Get ticket with full thread (admin)",
+        "description": "Admin-only. Returns a single ticket with ALL messages (public + internal) and the full history audit trail.",
+        "operationId": "adminGetTicket",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket with full thread and history.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ticket": { "$ref": "#/components/schemas/SupportTicket" },
+                    "messages": { "type": "array", "items": { "$ref": "#/components/schemas/TicketMessage" } },
+                    "history": { "type": "array", "items": { "$ref": "#/components/schemas/TicketHistoryEntry" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["Admin — Tickets"],
+        "summary": "Update ticket (admin)",
+        "description": "Admin-only. Updates status, priority, assignment, queue, resolution, or adds a message (internal note or public reply) in a single atomic request.",
+        "operationId": "adminPatchTicket",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": { "type": "string", "enum": ["open", "in_progress", "waiting_requester", "waiting_internal", "escalated", "resolved", "closed", "cancelled"] },
+                  "priority": { "type": "string", "enum": ["low", "normal", "high", "urgent", "critical"] },
+                  "assigned_to": { "type": "string", "format": "uuid", "nullable": true },
+                  "assigned_team": { "type": "string", "nullable": true },
+                  "queue_id": { "type": "string", "format": "uuid", "nullable": true },
+                  "resolution": { "type": "string" },
+                  "message": { "type": "string", "description": "Message body — added as a ticket message." },
+                  "is_internal": { "type": "boolean", "description": "If true, message is an internal note (default true for admins)." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Ticket updated.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SupportTicket" } } } },
+          "400": { "description": "Invalid JSON." },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/UnprocessableEntity" }
+        }
+      }
+    },
+    "/admin/tickets/{id}/tasks": {
+      "get": {
+        "tags": ["Admin — Tickets"],
+        "summary": "List ticket tasks (admin)",
+        "operationId": "adminGetTicketTasks",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "List of tasks." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Admin — Tickets"],
+        "summary": "Create ticket task (admin)",
+        "operationId": "adminPostTicketTask",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["title"], "properties": { "title": { "type": "string" }, "assignee_id": { "type": "string" }, "due_date": { "type": "string", "format": "date" } } } } } },
+        "responses": {
+          "201": { "description": "Task created." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/admin/tickets/{id}/notify": {
+      "post": {
+        "tags": ["Admin — Tickets"],
+        "summary": "Send ticket notification (admin)",
+        "description": "Admin-only. Sends an email notification to the requester about their ticket.",
+        "operationId": "adminNotifyTicket",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" } } } } } },
+        "responses": {
+          "200": { "description": "Notification sent." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/admin/finance/ledger": {
+      "get": {
+        "tags": ["Admin — Finance"],
+        "summary": "Revenue ledger (admin)",
+        "description": "Admin-only. Returns the platform revenue ledger with per-entry breakdowns of gross, platform fees, affiliate commissions, diviner net amounts, refunds, and settlement status. Includes latest finance operation note per entry.",
+        "operationId": "adminGetFinanceLedger",
+        "parameters": [
+          { "name": "status", "in": "query", "description": "Filter by settlement_status.", "schema": { "type": "string", "enum": ["pending", "approved", "paid", "disputed", "cancelled", "all"] } },
+          { "name": "search", "in": "query", "description": "Search by source reference, diviner display name, or username.", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ledger rows (max 150).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "rows": { "type": "array", "items": { "$ref": "#/components/schemas/LedgerEntry" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/admin/finance/ledger/{id}": {
+      "get": {
+        "tags": ["Admin — Finance"],
+        "summary": "Get ledger entry (admin)",
+        "operationId": "adminGetFinanceLedgerEntry",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "Ledger entry.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LedgerEntry" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/bookings": {
+      "get": {
+        "tags": ["Admin — Bookings"],
+        "summary": "List all bookings (admin)",
+        "description": "Admin-only. Returns all platform bookings with filtering by status, diviner, date range, and client search. Includes current-month summary stats.",
+        "operationId": "adminGetBookings",
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "diviner_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "from", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "to", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "search", "in": "query", "description": "Client name or email substring.", "schema": { "type": "string" } },
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated booking list with stats.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/Pagination" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "bookings": { "type": "array", "items": { "$ref": "#/components/schemas/Booking" } },
+                        "stats": {
+                          "type": "object",
+                          "properties": {
+                            "total_this_month": { "type": "integer" },
+                            "confirmed": { "type": "integer" },
+                            "completed": { "type": "integer" },
+                            "revenue": { "type": "number" }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/admin/bookings/{id}/status": {
+      "patch": {
+        "tags": ["Admin — Bookings"],
+        "summary": "Update booking status (admin)",
+        "operationId": "adminPatchBookingStatus",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["status"], "properties": { "status": { "type": "string" }, "reason": { "type": "string" } } } } } },
+        "responses": {
+          "200": { "description": "Booking status updated." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/admin/reports/revenue": {
+      "get": {
+        "tags": ["Admin — Reports"],
+        "summary": "Platform revenue report (admin)",
+        "description": "Admin-only. Aggregated revenue across all diviners: summary totals, per-diviner breakdown, by-service-category, and monthly trend.",
+        "operationId": "adminGetRevenueReport",
+        "parameters": [{ "$ref": "#/components/parameters/PeriodParam" }],
+        "responses": {
+          "200": {
+            "description": "Revenue report.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "summary": {
+                      "type": "object",
+                      "properties": {
+                        "totalRevenue": { "type": "number" },
+                        "totalEvents": { "type": "integer" },
+                        "avgEventValue": { "type": "number" },
+                        "platformFees": { "type": "number" },
+                        "platformNetRevenue": { "type": "number" },
+                        "affiliateCommissions": { "type": "number" },
+                        "divinerPayouts": { "type": "number" },
+                        "platformShareRatio": { "type": "number" },
+                        "divinerShareRatio": { "type": "number" }
+                      }
+                    },
+                    "byDiviner": { "type": "array", "items": { "type": "object" } },
+                    "byService": { "type": "array", "items": { "type": "object" } },
+                    "monthly": { "type": "array", "items": { "type": "object" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/UnprocessableEntity" }
+        }
+      }
+    },
+    "/admin/reports/bookings": {
+      "get": {
+        "tags": ["Admin — Reports"],
+        "summary": "Platform booking report (admin)",
+        "description": "Admin-only. Booking counts, completion rates, and revenue by period.",
+        "operationId": "adminGetBookingsReport",
+        "parameters": [{ "$ref": "#/components/parameters/PeriodParam" }],
+        "responses": {
+          "200": { "description": "Booking report." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/admin/reports/users": {
+      "get": {
+        "tags": ["Admin — Reports"],
+        "summary": "User growth report (admin)",
+        "description": "Admin-only. User registrations, role distribution, and churn metrics.",
+        "operationId": "adminGetUsersReport",
+        "parameters": [{ "$ref": "#/components/parameters/PeriodParam" }],
+        "responses": {
+          "200": { "description": "User report." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/admin/reports/readings": {
+      "get": {
+        "tags": ["Admin — Reports"],
+        "summary": "Readings report (admin)",
+        "description": "Admin-only. Reading counts, types, and duration analytics.",
+        "operationId": "adminGetReadingsReport",
+        "responses": {
+          "200": { "description": "Readings report." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/admin/reports": {
+      "get": {
+        "tags": ["Admin — Reports"],
+        "summary": "User abuse/moderation reports (admin)",
+        "description": "Admin-only. Lists user-submitted abuse and moderation reports with optional status and date filters.",
+        "operationId": "adminGetReports",
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "from", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "to", "in": "query", "schema": { "type": "string", "format": "date-time" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of reports.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": { "type": "string" },
+                      "reporter_id": { "type": "string" },
+                      "reported_user_id": { "type": "string" },
+                      "report_type": { "type": "string" },
+                      "description": { "type": "string" },
+                      "status": { "type": "string" },
+                      "admin_notes": { "type": "string", "nullable": true },
+                      "created_at": { "type": "string", "format": "date-time" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/admin/mundane/entities": {
+      "get": {
+        "tags": ["Admin — Mundane"],
+        "summary": "List mundane entities (admin)",
+        "description": "Admin-only. Lists tracked geopolitical and market entities (countries, cities, institutions, markets, commodities) with pagination and stats.",
+        "operationId": "adminGetMundaneEntities",
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "entity_type", "in": "query", "schema": { "type": "string", "enum": ["country", "city", "institution", "market", "commodity", "organization", "other"] } },
+          { "$ref": "#/components/parameters/PageParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Entity list with stats.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "entities": { "type": "array", "items": { "$ref": "#/components/schemas/MundaneEntity" } },
+                    "total": { "type": "integer" },
+                    "page": { "type": "integer" },
+                    "hasMore": { "type": "boolean" },
+                    "stats": {
+                      "type": "object",
+                      "properties": {
+                        "totalEntities": { "type": "integer" },
+                        "activeCount": { "type": "integer" },
+                        "typeCounts": { "type": "object", "additionalProperties": { "type": "integer" } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "tags": ["Admin — Mundane"],
+        "summary": "Create mundane entity (admin)",
+        "description": "Admin-only. Adds a new geopolitical or market entity to the mundane astrology system.",
+        "operationId": "adminPostMundaneEntity",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "entity_type"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "entity_type": { "type": "string", "enum": ["country", "city", "institution", "market", "commodity", "organization", "other"] },
+                  "region": { "type": "string" },
+                  "latitude": { "type": "number" },
+                  "longitude": { "type": "number" },
+                  "timezone": { "type": "string" },
+                  "flag_emoji": { "type": "string" },
+                  "notes": { "type": "string" },
+                  "is_active": { "type": "boolean", "default": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Entity created.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MundaneEntity" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/UnprocessableEntity" }
+        }
+      }
+    },
+    "/admin/mundane/entities/{id}": {
+      "get": {
+        "tags": ["Admin — Mundane"],
+        "summary": "Get mundane entity (admin)",
+        "operationId": "adminGetMundaneEntity",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "Entity.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MundaneEntity" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["Admin — Mundane"],
+        "summary": "Update mundane entity (admin)",
+        "operationId": "adminPatchMundaneEntity",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MundaneEntity" } } } },
+        "responses": {
+          "200": { "description": "Entity updated." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "delete": {
+        "tags": ["Admin — Mundane"],
+        "summary": "Delete mundane entity (admin)",
+        "operationId": "adminDeleteMundaneEntity",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "204": { "description": "Entity deleted." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/admin/mundane-forecasts": {
+      "get": {
+        "tags": ["Admin — Mundane"],
+        "summary": "List mundane forecasts (admin)",
+        "description": "Admin-only. Lists astrological forecasts for mundane entities with filters by type, entity, and publish status.",
+        "operationId": "adminGetMundaneForecasts",
+        "parameters": [
+          { "name": "forecast_type", "in": "query", "schema": { "type": "string" } },
+          { "name": "entity_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "published", "in": "query", "schema": { "type": "string", "enum": ["true", "false"] } },
+          { "$ref": "#/components/parameters/PageParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated forecast list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "forecasts": { "type": "array", "items": { "$ref": "#/components/schemas/MundaneForecast" } },
+                    "total": { "type": "integer" },
+                    "page": { "type": "integer" },
+                    "hasMore": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Admin — Mundane"],
+        "summary": "Create mundane forecast (admin)",
+        "description": "Admin-only. Creates a new mundane astrology forecast.",
+        "operationId": "adminPostMundaneForecast",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "forecast_type", "forecast_period_start", "forecast_period_end", "content"],
+                "properties": {
+                  "title": { "type": "string" },
+                  "entity_id": { "type": "string", "format": "uuid" },
+                  "forecast_type": { "type": "string", "enum": ["political", "economic", "weather", "social", "market", "general"] },
+                  "forecast_period_start": { "type": "string", "format": "date" },
+                  "forecast_period_end": { "type": "string", "format": "date" },
+                  "content": { "type": "string" },
+                  "signal_strength": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                  "is_published": { "type": "boolean", "default": false }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Forecast created.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MundaneForecast" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "422": { "$ref": "#/components/responses/UnprocessableEntity" }
+        }
+      }
+    },
+    "/admin/mundane-forecasts/{id}": {
+      "get": {
+        "tags": ["Admin — Mundane"],
+        "summary": "Get mundane forecast (admin)",
+        "operationId": "adminGetMundaneForecast",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "description": "Forecast." }, "401": { "$ref": "#/components/responses/Unauthorized" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "patch": {
+        "tags": ["Admin — Mundane"],
+        "summary": "Update mundane forecast (admin)",
+        "operationId": "adminPatchMundaneForecast",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MundaneForecast" } } } },
+        "responses": { "200": { "description": "Forecast updated." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      },
+      "delete": {
+        "tags": ["Admin — Mundane"],
+        "summary": "Delete mundane forecast (admin)",
+        "operationId": "adminDeleteMundaneForecast",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "204": { "description": "Deleted." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/mundane/entities": {
+      "get": {
+        "tags": ["Mundane"],
+        "summary": "List mundane entities (community)",
+        "description": "Community-facing. Returns published mundane entities visible to authenticated community members.",
+        "operationId": "getMundaneEntities",
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "entity_type", "in": "query", "schema": { "type": "string" } },
+          { "$ref": "#/components/parameters/PageParam" }
+        ],
+        "responses": {
+          "200": { "description": "Entity list.", "content": { "application/json": { "schema": { "type": "object", "properties": { "entities": { "type": "array", "items": { "$ref": "#/components/schemas/MundaneEntity" } } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/mundane/entities/{id}": {
+      "get": {
+        "tags": ["Mundane"],
+        "summary": "Get mundane entity (community)",
+        "operationId": "getMundaneEntity",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "description": "Entity." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/mundane/entities/{id}/charts": {
+      "get": {
+        "tags": ["Mundane"],
+        "summary": "List entity charts",
+        "operationId": "getMundaneEntityCharts",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Chart list." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/mundane/forecasts": {
+      "get": {
+        "tags": ["Mundane"],
+        "summary": "List published mundane forecasts",
+        "description": "Community-facing. Returns published forecasts visible to authenticated members.",
+        "operationId": "getMundaneForecasts",
+        "parameters": [
+          { "name": "entity_id", "in": "query", "schema": { "type": "string" } },
+          { "name": "forecast_type", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Published forecasts.", "content": { "application/json": { "schema": { "type": "object", "properties": { "forecasts": { "type": "array", "items": { "$ref": "#/components/schemas/MundaneForecast" } } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/mundane/scoring": {
+      "get": {
+        "tags": ["Mundane"],
+        "summary": "Mundane scoring overview",
+        "description": "Returns current astrological signal scoring for tracked entities.",
+        "operationId": "getMundaneScoring",
+        "responses": {
+          "200": { "description": "Scoring data." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/mundane/ai/weekly-brief": {
+      "post": {
+        "tags": ["Mundane"],
+        "summary": "Generate AI weekly brief",
+        "description": "Triggers AI generation of a weekly mundane astrology brief for the current period.",
+        "operationId": "postMundaneAiWeeklyBrief",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "entity_ids": { "type": "array", "items": { "type": "string", "format": "uuid" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Generated brief content." },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/mundane/workspaces": {
+      "get": {
+        "tags": ["Mundane"],
+        "summary": "List mundane workspaces",
+        "operationId": "getMundaneWorkspaces",
+        "responses": { "200": { "description": "Workspace list." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      },
+      "post": {
+        "tags": ["Mundane"],
+        "summary": "Create mundane workspace",
+        "operationId": "postMundaneWorkspace",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string" }, "description": { "type": "string" } } } } } },
+        "responses": { "201": { "description": "Workspace created." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/mundane/projects": {
+      "get": {
+        "tags": ["Mundane"],
+        "summary": "List mundane research projects",
+        "operationId": "getMundaneProjects",
+        "responses": { "200": { "description": "Project list." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/mundane/market-intelligence": {
+      "get": {
+        "tags": ["Mundane"],
+        "summary": "Market intelligence overview",
+        "description": "Returns astrological correlations and signals for tracked financial markets.",
+        "operationId": "getMundaneMarketIntelligence",
+        "responses": { "200": { "description": "Market intelligence data." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/admin/campaigns": {
+      "get": {
+        "tags": ["Admin — Campaigns"],
+        "summary": "List all campaigns (admin)",
+        "description": "Admin-only. Lists all affiliate campaigns (platform-wide and per-diviner) enriched with affiliate counts, conversion counts, and diviner names. Uses cursor-based pagination.",
+        "operationId": "adminGetCampaigns",
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "diviner_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "q", "in": "query", "description": "Campaign name search.", "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 50 } },
+          { "name": "cursor", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Campaign list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Campaign" } },
+                    "nextCursor": { "type": "string", "nullable": true },
+                    "hasMore": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "tags": ["Admin — Campaigns"],
+        "summary": "Create campaign (admin)",
+        "description": "Admin-only. Creates a platform-wide affiliate campaign (diviner_id=NULL) or a diviner-scoped campaign.",
+        "operationId": "adminPostCampaign",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "start_date"],
+                "properties": {
+                  "diviner_id": { "type": "string", "format": "uuid", "nullable": true, "description": "Null creates a platform-wide campaign." },
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "status": { "type": "string", "enum": ["draft", "active", "paused", "ended"], "default": "draft" },
+                  "start_date": { "type": "string", "format": "date" },
+                  "end_date": { "type": "string", "format": "date" },
+                  "commission_type": { "type": "string" },
+                  "commission_value": { "type": "number" },
+                  "budget_cap_cents": { "type": "integer" },
+                  "target_product_type": { "type": "string" },
+                  "utm_source": { "type": "string" },
+                  "utm_medium": { "type": "string" },
+                  "utm_campaign": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Campaign created.", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Campaign" } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/UnprocessableEntity" }
+        }
+      }
+    },
+    "/admin/campaigns/{id}": {
+      "get": {
+        "tags": ["Admin — Campaigns"],
+        "summary": "Get campaign (admin)",
+        "operationId": "adminGetCampaign",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Campaign." }, "401": { "$ref": "#/components/responses/Unauthorized" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "patch": {
+        "tags": ["Admin — Campaigns"],
+        "summary": "Update campaign (admin)",
+        "operationId": "adminPatchCampaign",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Campaign" } } } },
+        "responses": { "200": { "description": "Campaign updated." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/admin/campaigns/reports": {
+      "get": {
+        "tags": ["Admin — Campaigns"],
+        "summary": "Campaign performance report (admin)",
+        "description": "Admin-only. Platform-wide campaign performance metrics: summary, per-diviner breakdown, top campaigns, and monthly trend.",
+        "operationId": "adminGetCampaignReports",
+        "parameters": [
+          { "name": "period", "in": "query", "schema": { "type": "string", "enum": ["30d", "90d", "1y", "all"], "default": "30d" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Campaign performance report.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "summary": {
+                      "type": "object",
+                      "properties": {
+                        "totalCampaigns": { "type": "integer" },
+                        "activeCampaigns": { "type": "integer" },
+                        "platformWideCampaigns": { "type": "integer" },
+                        "divinerCampaigns": { "type": "integer" },
+                        "totalConversions": { "type": "integer" },
+                        "totalRevenue": { "type": "number" },
+                        "totalCommissions": { "type": "number" }
+                      }
+                    },
+                    "byDiviner": { "type": "array", "items": { "type": "object" } },
+                    "topCampaigns": { "type": "array", "items": { "type": "object" } },
+                    "monthly": { "type": "array", "items": { "type": "object" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "tags": ["Admin — Users"],
+        "summary": "List users (admin)",
+        "description": "Admin-only. Lists all platform users with search, role, and status filters.",
+        "operationId": "adminGetUsers",
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "role", "in": "query", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": { "description": "User list." },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/admin/users/{id}": {
+      "get": { "tags": ["Admin — Users"], "summary": "Get user (admin)", "operationId": "adminGetUser", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "User." }, "401": { "$ref": "#/components/responses/Unauthorized" }, "404": { "$ref": "#/components/responses/NotFound" } } },
+      "patch": { "tags": ["Admin — Users"], "summary": "Update user (admin)", "operationId": "adminPatchUser", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } }, "responses": { "200": { "description": "User updated." }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
+    },
+    "/admin/users/{id}/lock": {
+      "post": { "tags": ["Admin — Users"], "summary": "Lock user account (admin)", "operationId": "adminLockUser", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "requestBody": { "content": { "application/json": { "schema": { "type": "object", "properties": { "reason": { "type": "string" } } } } } }, "responses": { "200": { "description": "Account locked." }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
+    },
+    "/admin/users/{id}/impersonate": {
+      "post": { "tags": ["Admin — Users"], "summary": "Impersonate user (admin)", "description": "Admin-only. Creates a short-lived impersonation session for the target user.", "operationId": "adminImpersonateUser", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Impersonation session established." }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
+    },
+    "/admin/users/{id}/change-role": {
+      "post": { "tags": ["Admin — Users"], "summary": "Change user role (admin)", "operationId": "adminChangeUserRole", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["role"], "properties": { "role": { "type": "string" } } } } } }, "responses": { "200": { "description": "Role updated." }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
+    },
+    "/notifications": {
+      "get": {
+        "tags": ["Notifications"],
+        "summary": "List notifications",
+        "description": "Returns the authenticated user's notification inbox.",
+        "operationId": "getNotifications",
+        "responses": {
+          "200": {
+            "description": "Notification list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": { "type": "string" },
+                      "type": { "type": "string" },
+                      "title": { "type": "string" },
+                      "body": { "type": "string" },
+                      "read": { "type": "boolean" },
+                      "created_at": { "type": "string", "format": "date-time" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/notifications/{id}": {
+      "patch": {
+        "tags": ["Notifications"],
+        "summary": "Mark notification read",
+        "operationId": "patchNotification",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "type": "object", "properties": { "read": { "type": "boolean" } } } } } },
+        "responses": { "200": { "description": "Updated." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/notifications/mark-all-read": {
+      "post": {
+        "tags": ["Notifications"],
+        "summary": "Mark all notifications read",
+        "operationId": "postNotificationsMarkAllRead",
+        "responses": { "200": { "description": "All notifications marked read." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/bookings/{id}/cancel": {
+      "post": {
+        "tags": ["Bookings"],
+        "summary": "Cancel booking",
+        "description": "Cancels a booking. Triggers refund logic and calendar event removal.",
+        "operationId": "postBookingCancel",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "type": "object", "properties": { "reason": { "type": "string" } } } } } },
+        "responses": { "200": { "description": "Booking cancelled." }, "401": { "$ref": "#/components/responses/Unauthorized" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/bookings/{id}/reschedule": {
+      "post": {
+        "tags": ["Bookings"],
+        "summary": "Reschedule booking",
+        "operationId": "postBookingReschedule",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["scheduled_at"], "properties": { "scheduled_at": { "type": "string", "format": "date-time" } } } } } },
+        "responses": { "200": { "description": "Booking rescheduled." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/bookings/{id}/ics": {
+      "get": {
+        "tags": ["Bookings"],
+        "summary": "Download ICS calendar file",
+        "description": "Returns an `.ics` calendar invite for the booking.",
+        "operationId": "getBookingIcs",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "ICS file.", "content": { "text/calendar": { "schema": { "type": "string" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/bookings/{id}/send-note": {
+      "post": {
+        "tags": ["Bookings"],
+        "summary": "Send session note to client",
+        "operationId": "postBookingSendNote",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["note"], "properties": { "note": { "type": "string" } } } } } },
+        "responses": { "200": { "description": "Note sent." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/bookings/session-notes": {
+      "get": {
+        "tags": ["Bookings"],
+        "summary": "List session notes",
+        "operationId": "getSessionNotes",
+        "responses": { "200": { "description": "Session notes." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      },
+      "post": {
+        "tags": ["Bookings"],
+        "summary": "Create session note",
+        "operationId": "postSessionNote",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["booking_id", "note"], "properties": { "booking_id": { "type": "string" }, "note": { "type": "string" } } } } } },
+        "responses": { "201": { "description": "Note created." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/chime/create-meeting": {
+      "post": {
+        "tags": ["Chime"],
+        "summary": "Create Chime video meeting",
+        "description": "Creates an AWS Chime SDK video meeting for a booking. Returns meeting ID and attendee join token.",
+        "operationId": "postChimeCreateMeeting",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["booking_id"], "properties": { "booking_id": { "type": "string" } } } } } },
+        "responses": {
+          "200": {
+            "description": "Meeting created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "meetingId": { "type": "string" },
+                    "attendeeId": { "type": "string" },
+                    "joinToken": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/chime/join-meeting": {
+      "post": {
+        "tags": ["Chime"],
+        "summary": "Join Chime video meeting",
+        "description": "Adds an attendee to an existing Chime meeting.",
+        "operationId": "postChimeJoinMeeting",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["booking_id"], "properties": { "booking_id": { "type": "string" }, "meeting_id": { "type": "string" } } } } } },
+        "responses": { "200": { "description": "Joined meeting." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/chime/end-meeting": {
+      "post": {
+        "tags": ["Chime"],
+        "summary": "End Chime video meeting",
+        "operationId": "postChimeEndMeeting",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["meeting_id"], "properties": { "meeting_id": { "type": "string" } } } } } },
+        "responses": { "200": { "description": "Meeting ended." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/chime/voice/status": {
+      "get": {
+        "tags": ["Chime"],
+        "summary": "Get voice call status",
+        "description": "Returns the current status of a Chime voice (phone) session for a booking.",
+        "operationId": "getChimeVoiceStatus",
+        "parameters": [{ "name": "booking_id", "in": "query", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Voice call status." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/stripe/checkout": {
+      "post": {
+        "tags": ["Stripe"],
+        "summary": "Create Stripe checkout session",
+        "description": "Creates a Stripe Checkout Session for a service booking or subscription.",
+        "operationId": "postStripeCheckout",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "service_id": { "type": "string" }, "diviner_id": { "type": "string" }, "scheduled_at": { "type": "string", "format": "date-time" } } } } } },
+        "responses": { "200": { "description": "Checkout URL.", "content": { "application/json": { "schema": { "type": "object", "properties": { "url": { "type": "string", "format": "uri" } } } } } }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/stripe/webhooks": {
+      "post": {
+        "tags": ["Stripe"],
+        "summary": "Stripe webhook handler",
+        "description": "Receives Stripe webhook events. Validates the `Stripe-Signature` header with the webhook secret. Not authenticated via cookie.",
+        "operationId": "postStripeWebhook",
+        "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": { "200": { "description": "Event processed." }, "400": { "description": "Invalid signature." } }
+      }
+    },
+    "/stripe/connect/onboard": {
+      "post": {
+        "tags": ["Stripe"],
+        "summary": "Start Stripe Connect onboarding",
+        "description": "Creates or retrieves the diviner's Stripe Connect account and returns an Account Link URL for onboarding.",
+        "operationId": "postStripeConnectOnboard",
+        "responses": { "200": { "description": "Account link URL.", "content": { "application/json": { "schema": { "type": "object", "properties": { "url": { "type": "string" } } } } } }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/stripe/connect/status": {
+      "get": {
+        "tags": ["Stripe"],
+        "summary": "Get Stripe Connect status",
+        "description": "Returns the diviner's Stripe Connect account status including charges_enabled and payouts_enabled.",
+        "operationId": "getStripeConnectStatus",
+        "responses": { "200": { "description": "Connect status." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/advocate/campaigns": {
+      "get": {
+        "tags": ["Advocate"],
+        "summary": "List advocate campaigns",
+        "description": "Returns affiliate campaigns available to the authenticated social advocate.",
+        "operationId": "getAdvocateCampaigns",
+        "responses": { "200": { "description": "Campaign list." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/advocate/reports": {
+      "get": {
+        "tags": ["Advocate"],
+        "summary": "Advocate performance report",
+        "description": "Returns conversion and commission stats for the authenticated social advocate.",
+        "operationId": "getAdvocateReports",
+        "parameters": [{ "$ref": "#/components/parameters/PeriodParam" }],
+        "responses": { "200": { "description": "Performance report." }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/marketing/content": {
+      "get": {
+        "tags": ["Marketing"],
+        "summary": "Get marketing content",
+        "description": "Public. Returns marketing page content (heroes, testimonials, CTAs). No authentication required.",
+        "operationId": "getMarketingContent",
+        "security": [],
+        "responses": { "200": { "description": "Marketing content." } }
+      }
+    },
+    "/marketing/subscribe": {
+      "post": {
+        "tags": ["Marketing"],
+        "summary": "Newsletter subscribe",
+        "description": "Public. Subscribes an email address to the marketing newsletter.",
+        "operationId": "postMarketingSubscribe",
+        "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["email"], "properties": { "email": { "type": "string", "format": "email" }, "first_name": { "type": "string" } } } } } },
+        "responses": { "200": { "description": "Subscribed." }, "422": { "$ref": "#/components/responses/UnprocessableEntity" }, "429": { "$ref": "#/components/responses/TooManyRequests" } }
+      }
+    },
+    "/upload/avatar": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Upload avatar image",
+        "description": "Uploads a new avatar image for the authenticated user. Allowlisted MIME types only: image/jpeg, image/png, image/webp. Max 5 MB.",
+        "operationId": "postUploadAvatar",
+        "requestBody": { "required": true, "content": { "multipart/form-data": { "schema": { "type": "object", "properties": { "file": { "type": "string", "format": "binary" } } } } } },
+        "responses": { "200": { "description": "Avatar URL.", "content": { "application/json": { "schema": { "type": "object", "properties": { "url": { "type": "string", "format": "uri" } } } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "422": { "$ref": "#/components/responses/UnprocessableEntity" } }
+      }
+    },
+    "/analytics/track": {
+      "post": {
+        "tags": ["Marketing"],
+        "summary": "Track analytics event",
+        "description": "Records a client-side analytics event for the current user.",
+        "operationId": "postAnalyticsTrack",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["event"], "properties": { "event": { "type": "string" }, "properties": { "type": "object" } } } } } },
+        "responses": { "200": { "description": "Event recorded." } }
+      }
+    },
+    "/docs": {
+      "get": {
+        "tags": ["Marketing"],
+        "summary": "OpenAPI specification",
+        "description": "Returns this OpenAPI 3.1 specification as JSON.",
+        "operationId": "getOpenApiSpec",
+        "security": [],
+        "responses": { "200": { "description": "OpenAPI spec.", "content": { "application/json": { "schema": { "type": "object" } } } } }
+      }
+    }
+  }
+}

@@ -108,7 +108,7 @@ function RolePanel({
 
           <div className="mt-6 flex justify-end">
             <div
-              className="inline-flex items-center gap-2 text-sm font-semibold text-[#20c997] transition group-hover:text-[#4ee3bf]"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[#f5d382] transition group-hover:text-[#f9d86d]"
             >
               View walkthrough
               <ArrowRight className="size-4" />
@@ -129,7 +129,7 @@ export default function WalkthroughIndex() {
   );
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen cosmic-bg">
       <MarketingHeader />
 
       <main className="relative overflow-hidden">

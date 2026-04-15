@@ -14,10 +14,12 @@ type DataSource = {
   source_type: string;
 };
 
-type CorrelationResult = {
+export type CorrelationResult = {
   id: string;
+  data_source_id: string;
   astro_event_type: string;
   planet: string | null;
+  sign: string | null;
   correlation_coefficient: number | null;
   sample_count: number | null;
   date_range_start: string | null;

@@ -101,6 +101,106 @@ export function hasIngressed(planet: Planet, date: Date): Sign | null {
   return todaySign !== yesterdaySign ? todaySign : null;
 }
 
+// ---------------------------------------------------------------------------
+// Cycle Analysis
+// ---------------------------------------------------------------------------
+
+// Known synodic periods in days
+const SYNODIC_PERIODS: Record<string, number> = {
+  'jupiter-saturn': 7253,
+  'saturn-pluto': 12054,
+  'jupiter-pluto': 4633,
+  'uranus-pluto': 44603,
+  'saturn-uranus': 16438,
+};
+
+function cyclePairKey(planet1: string, planet2: string): string {
+  return [planet1, planet2].sort().join('-');
+}
+
+/**
+ * Get current cycle phase angle (0–360°) between two planets.
+ * Phase: 0=conjunction, 90=waxing square, 180=opposition, 270=waning square.
+ * Measured as (longitude_planet2 - longitude_planet1 + 360) % 360.
+ */
+export function getCyclePhase(planet1: string, planet2: string, atDate: Date): number {
+  const lon1 = getEclipticLongitude(planet1 as Planet, atDate);
+  const lon2 = getEclipticLongitude(planet2 as Planet, atDate);
+  return ((lon2 - lon1) % 360 + 360) % 360;
+}
+
+/**
+ * Returns the phase name for a given phase angle (0–360°).
+ */
+export function getPhaseName(
+  phaseAngle: number
+): 'Conjunction' | 'Crescent' | 'First Quarter' | 'Gibbous' | 'Full' | 'Disseminating' | 'Last Quarter' | 'Balsamic' {
+  const a = ((phaseAngle % 360) + 360) % 360;
+  if (a < 45) return 'Conjunction';
+  if (a < 90) return 'Crescent';
+  if (a < 135) return 'First Quarter';
+  if (a < 180) return 'Gibbous';
+  if (a < 225) return 'Full';
+  if (a < 270) return 'Disseminating';
+  if (a < 315) return 'Last Quarter';
+  return 'Balsamic';
+}
+
+/**
+ * Find the most recent conjunction of two planets before a reference date.
+ *
+ * Algorithm:
+ * 1. Step backwards day by day until the phase angle crosses through 0° (i.e. wraps
+ *    from a small value to a value close to 360°, or the signed diff changes sign).
+ * 2. Binary-search within that 1-day window to the nearest hour.
+ */
+export function findLastConjunction(planet1: string, planet2: string, beforeDate: Date): Date {
+  const MS_PER_DAY = 86_400_000;
+  const MS_PER_HOUR = 3_600_000;
+
+  // Max search window: use the known synodic period + buffer
+  const key = cyclePairKey(planet1, planet2);
+  const periodDays = SYNODIC_PERIODS[key] ?? 50_000;
+
+  let cursor = new Date(beforeDate.getTime());
+  let prevPhase = getCyclePhase(planet1, planet2, cursor);
+
+  for (let d = 0; d < periodDays + 30; d++) {
+    const prev = new Date(cursor.getTime() - MS_PER_DAY);
+    const phase = getCyclePhase(planet1, planet2, prev);
+
+    // Conjunction crossing: phase went from near 360 to near 0 (decreasing toward 0
+    // while stepping backwards = conjunction was crossed). We detect it when prevPhase
+    // is small (< 30) and phase jumps to large (> 330), meaning yesterday was just
+    // before/after the crossing.
+    if (prevPhase < 30 && phase > 330) {
+      // Binary search in the window [prev, cursor] for the hour-level crossing
+      let lo = prev.getTime();
+      let hi = cursor.getTime();
+      for (let iter = 0; iter < 24; iter++) {
+        const mid = Math.round((lo + hi) / 2);
+        const midPhase = getCyclePhase(planet1, planet2, new Date(mid));
+        if (midPhase > 180) {
+          lo = mid;
+        } else {
+          hi = mid;
+        }
+        if (hi - lo <= MS_PER_HOUR) break;
+      }
+      return new Date(Math.round((lo + hi) / 2));
+    }
+
+    cursor = prev;
+    prevPhase = phase;
+  }
+
+  // Fallback: return an approximate date using synodic period estimate
+  const currentPhase = getCyclePhase(planet1, planet2, beforeDate);
+  const fractionIntoCurrentCycle = currentPhase / 360;
+  const approxMs = fractionIntoCurrentCycle * periodDays * MS_PER_DAY;
+  return new Date(beforeDate.getTime() - approxMs);
+}
+
 export interface AspectEvent {
   planet1: Planet;
   planet2: Planet;

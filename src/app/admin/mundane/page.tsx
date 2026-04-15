@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Globe, Plus, Building2, CalendarDays, ArrowRight, Loader2, UserRound, BookOpen, CheckCircle2, FlaskConical, Search, Bell, Sparkles, Users, BarChart2, TrendingUp, History, Import, FileText, Map, Zap } from "lucide-react";
+import { Globe, Plus, Building2, CalendarDays, ArrowRight, Loader2, UserRound, BookOpen, CheckCircle2, FlaskConical, Search, Bell, Sparkles, Users, BarChart2, TrendingUp, History, Import, FileText, Map, Zap, Clock, RefreshCw, GitCompare, Sun, BookMarked } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -265,6 +265,17 @@ export default function AdminMundanePage() {
           </Link>
         </Card>
         <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/timeline">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <Clock className="size-4 text-violet-500" />
+                <span className="font-medium text-sm">Predictive Timeline</span>
+              </div>
+              <p className="text-xs text-muted-foreground">12-month forward view of astro events grouped by month, with optional natal hit indicators.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
           <Link href="/admin/mundane/research">
             <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
               <div className="flex items-center gap-2">
@@ -408,6 +419,17 @@ export default function AdminMundanePage() {
           </Link>
         </Card>
         <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/cycles">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="size-4 text-violet-500" />
+                <span className="font-medium text-sm">Cycles</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Major planetary cycle phases — Saturn-Pluto, Jupiter-Saturn, and more.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
           <Link href="/admin/mundane/imports">
             <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
               <div className="flex items-center gap-2">
@@ -426,6 +448,39 @@ export default function AdminMundanePage() {
                 <span className="font-medium text-sm">Subscriptions</span>
               </div>
               <p className="text-xs text-muted-foreground">Manage client subscribers and access to published reports.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/entities/compare">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <GitCompare className="size-4 text-violet-500" />
+                <span className="font-medium text-sm">Compare Entities</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Synastry aspects and composite midpoints between two entity charts.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/eclipses">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <Sun className="size-4 text-amber-500" />
+                <span className="font-medium text-sm">Eclipse Catalog</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Solar and lunar eclipses 2024–2028 with Saros series and zodiac degrees.</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-dashed hover:bg-muted/50 transition-colors">
+          <Link href="/admin/mundane/library">
+            <CardContent className="flex flex-col items-start gap-2 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <BookMarked className="size-4 text-indigo-500" />
+                <span className="font-medium text-sm">Library</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Country rulerships, planet-commodity maps, sign-industry tables, ingress reference.</p>
             </CardContent>
           </Link>
         </Card>
