@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Eye, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw, CalendarClock, XCircle, Send, Receipt } from "lucide-react";
+import { Eye, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw, CalendarClock, XCircle, Send, Receipt, Video, Clock, Share2, Download, FileText } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -62,9 +62,32 @@ function toDatetimeLocal(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+interface SessionDetails {
+  recording_url: string | null;
+  recording_share_id: string | null;
+  actual_duration_minutes: number | null;
+  chime_meeting_id: string | null;
+  video_provider: string | null;
+  total_amount: number | null;
+  overage_amount: number | null;
+}
+
 export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [sessionDetails, setSessionDetails] = useState<SessionDetails | null>(null);
+  const [loadingSession, setLoadingSession] = useState(false);
+
+  // Fetch session/recording details when sheet opens
+  useEffect(() => {
+    if (!open || sessionDetails) return;
+    setLoadingSession(true);
+    fetch(`/api/bookings/${booking.id}/session-details`)
+      .then((r) => r.json())
+      .then((d) => setSessionDetails(d))
+      .catch(() => setSessionDetails(null))
+      .finally(() => setLoadingSession(false));
+  }, [open, booking.id, sessionDetails]);
   const [showRefundForm, setShowRefundForm] = useState(false);
   const [refundReason, setRefundReason] = useState("");
   const [refunding, setRefunding] = useState(false);
@@ -543,6 +566,125 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
                 {savingNotes ? <><Loader2 className="mr-1.5 size-3.5 animate-spin" />Saving…</> : "Save Notes"}
               </Button>
             </div>
+          )}
+
+          {/* ── Session Details + Recording + Transcript (lazy-loaded) ── */}
+          {booking.status === "completed" && (
+            loadingSession ? (
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/20 p-4">
+                <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Loading session details…</p>
+              </div>
+            ) : sessionDetails?.chime_meeting_id ? (
+              <>
+                {/* Session Details */}
+                <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Video className="size-3.5 text-muted-foreground" />
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Session Details</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Provider</p>
+                      <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary capitalize">
+                        {sessionDetails.video_provider ?? "chime"}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Booked Duration</p>
+                      <p className="text-sm font-medium">{booking.duration} min</p>
+                    </div>
+                    {sessionDetails.actual_duration_minutes != null && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Actual Duration</p>
+                        <p className="text-sm font-medium">{sessionDetails.actual_duration_minutes} min</p>
+                      </div>
+                    )}
+                    {sessionDetails.actual_duration_minutes != null &&
+                      sessionDetails.actual_duration_minutes > booking.duration && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Overage</p>
+                        <p className="text-sm font-medium text-amber-500">
+                          +{sessionDetails.actual_duration_minutes - booking.duration} min
+                          {sessionDetails.overage_amount ? ` (${formatCurrency(sessionDetails.overage_amount / 100)})` : ""}
+                        </p>
+                      </div>
+                    )}
+                    {sessionDetails.total_amount != null && sessionDetails.total_amount > 0 && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Total Charged</p>
+                        <p className="text-sm font-semibold">{formatCurrency(sessionDetails.total_amount / 100)}</p>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Meeting ID</p>
+                    <p className="text-xs font-mono text-foreground/60 break-all">{sessionDetails.chime_meeting_id}</p>
+                  </div>
+                </div>
+
+                {/* Recording */}
+                <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-3">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="size-3.5 text-muted-foreground" />
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Recording</p>
+                  </div>
+                  {sessionDetails.recording_url ? (
+                    <>
+                      <div className="rounded-lg overflow-hidden border border-border bg-black" style={{ aspectRatio: "16/9" }}>
+                        <video src={sessionDetails.recording_url} controls preload="metadata" className="w-full h-full" />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {sessionDetails.recording_share_id && (
+                          <Link href={`/session/${sessionDetails.recording_share_id}/recording`} target="_blank" className="w-full">
+                            <Button size="sm" variant="outline" className="w-full gap-2">
+                              <Share2 className="size-3.5" />Open Share Page
+                            </Button>
+                          </Link>
+                        )}
+                        <a href={sessionDetails.recording_url} download target="_blank" rel="noopener noreferrer" className="w-full">
+                          <Button size="sm" variant="outline" className="w-full gap-2">
+                            <Download className="size-3.5" />Download Recording
+                          </Button>
+                        </a>
+                        {sessionDetails.recording_share_id && (
+                          <Button size="sm" variant="ghost" className="w-full gap-2 text-xs text-muted-foreground"
+                            onClick={() => {
+                              navigator.clipboard.writeText(`${window.location.origin}/session/${sessionDetails.recording_share_id}/recording`);
+                              toast.success("Share link copied to clipboard");
+                            }}>
+                            <Share2 className="size-3.5" />Copy Client Share Link
+                          </Button>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/10 p-4">
+                      <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">Processing recording…</p>
+                        <p className="text-xs text-muted-foreground">Usually ready within 5–10 minutes after the session ends.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Transcript */}
+                <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="size-3.5 text-muted-foreground" />
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Transcript</p>
+                  </div>
+                  <div className="flex items-start gap-2 rounded-lg border border-dashed border-border bg-muted/10 p-4">
+                    <FileText className="size-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium">No transcript saved</p>
+                      <p className="text-xs text-muted-foreground">Live captions are available during the session. Full transcript persistence coming soon.</p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : null
           )}
 
           {/* ── Note to Client ────────────────────────────────────────── */}
