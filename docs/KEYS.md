@@ -130,3 +130,10 @@ Last updated: 2026-04-02
 | `STRIPE_SECRET_KEY` | ⚠️ placeholder | ⚠️ placeholder |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | ⚠️ placeholder | ⚠️ placeholder |
 | `STRIPE_WEBHOOK_SECRET` | ⚠️ placeholder | ⚠️ placeholder |
+| `AWS_CHIME_ACCESS_KEY_ID` | ✅ | ✅ |
+| `AWS_CHIME_SECRET_ACCESS_KEY` | ✅ | ✅ |
+| `CHIME_SMA_ID` | ✅ | ✅ |
+| `NEXT_PUBLIC_CHIME_ENABLED` | ✅ | ✅ |
+| `AWS_CHIME_REGION` | ✅ | ✅ |
+| `AWS_ACCOUNT_ID` | ✅ | ✅ |
+| `CHIME_RECORDING_BUCKET` | ✅ | ✅ |
