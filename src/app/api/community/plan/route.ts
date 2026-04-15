@@ -9,11 +9,18 @@ export const runtime = "nodejs";
 /**
  * GET /api/community/plan
  *
- * Returns the full plan details for the authenticated Perennial Mandalism member,
- * including tier info, family members, and the calculated monthly charge breakdown.
+ * Returns plan details for the authenticated PM member.
+ * community_members has no FK to pm_plan_tiers yet — defaults to the
+ * lowest-order active tier (Individual) for all members.
  *
- * Note: community_members has no FK to pm_plan_tiers. We default to the
- * lowest-order active tier (Individual) for all members until the FK is added.
+ * Field names in the response are aligned with the Plan / PlanTier
+ * TypeScript types used by the page component:
+ *   tier.base_price         ← pm_plan_tiers.base_price_usd
+ *   tier.included_members   ← pm_plan_tiers.base_member_limit
+ *   tier.extra_member_price ← pm_plan_tiers.extra_per_member_usd
+ *   plan.member_count       ← family_members.length
+ *   plan.extra_member_count ← max(0, member_count - tier.included_members)
+ *   plan.extra_member_charge← extra_member_count × tier.extra_member_price
  */
 export async function GET() {
   try {
@@ -28,7 +35,7 @@ export async function GET() {
 
     const admin = createAdminClient();
 
-    // Fetch community_members row (no FK join — plan_tier_id column doesn't exist yet)
+    // community_members — no plan_tier_id FK column yet
     const { data: member, error: memberError } = await admin
       .from("community_members")
       .select(
@@ -49,7 +56,7 @@ export async function GET() {
     }
 
     // Fetch family members + available tiers in parallel
-    const [{ data: familyMembers, error: familyError }, { data: tiers }] =
+    const [{ data: familyMembers, error: familyError }, { data: rawTiers }] =
       await Promise.all([
         admin
           .from("community_family_members")
@@ -69,7 +76,8 @@ export async function GET() {
       return NextResponse.json({ error: familyError.message }, { status: 500 });
     }
 
-    type TierShape = {
+    // Map DB column names → page TypeScript type field names
+    type RawTier = {
       id: string;
       name: string;
       description: string;
@@ -78,28 +86,50 @@ export async function GET() {
       extra_per_member_usd: number;
       max_total_members: number;
     };
+    type MappedTier = {
+      id: string;
+      name: string;
+      description: string;
+      base_price: number;
+      included_members: number;
+      extra_member_price: number;
+      max_total_members: number;
+    };
 
+    const mapTier = (t: RawTier): MappedTier => ({
+      id: t.id,
+      name: t.name,
+      description: t.description,
+      base_price: Number(t.base_price_usd),
+      included_members: t.base_member_limit,
+      extra_member_price: Number(t.extra_per_member_usd),
+      max_total_members: t.max_total_members,
+    });
+
+    const availableTiers: MappedTier[] = (rawTiers ?? []).map(
+      (t) => mapTier(t as RawTier)
+    );
     // Default to first (lowest-order) active tier — Individual
-    const tier: TierShape | null = (tiers?.[0] as TierShape) ?? null;
+    const tier: MappedTier | null = availableTiers[0] ?? null;
 
-    const currentMembers = (familyMembers ?? []).length;
-    const extraMembers = tier
-      ? Math.max(0, currentMembers - tier.base_member_limit)
+    const memberCount = (familyMembers ?? []).length;
+    const extraMemberCount = tier
+      ? Math.max(0, memberCount - tier.included_members)
       : 0;
-    const baseCharge = tier ? Number(tier.base_price_usd) : 0;
-    const extraCharge = tier
-      ? Number((extraMembers * Number(tier.extra_per_member_usd)).toFixed(2))
+    const extraMemberCharge = tier
+      ? Number((extraMemberCount * tier.extra_member_price).toFixed(2))
       : 0;
-    const totalMonthly = Number((baseCharge + extraCharge).toFixed(2));
+    const totalMonthly = tier
+      ? Number((tier.base_price + extraMemberCharge).toFixed(2))
+      : 0;
 
     return NextResponse.json({
       plan: {
         tier,
-        available_tiers: tiers ?? [],
-        current_members: currentMembers,
-        extra_members: extraMembers,
-        base_charge: baseCharge,
-        extra_charge: extraCharge,
+        available_tiers: availableTiers,
+        member_count: memberCount,
+        extra_member_count: extraMemberCount,
+        extra_member_charge: extraMemberCharge,
         total_monthly: totalMonthly,
         status: member.membership_status,
         current_period_end: member.current_period_end ?? null,
