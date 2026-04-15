@@ -121,9 +121,10 @@ export default async function DashboardMundaneEventCalendarPage() {
               </h3>
               <div className="space-y-1.5">
                 {byDay.get(day)!.map((ev) => (
-                  <div
+                  <Link
                     key={ev.id}
-                    className="flex items-start gap-3 rounded-lg border bg-card p-3 shadow-sm"
+                    href={`/dashboard/mundane/event-calendar/${ev.id}`}
+                    className="flex items-start gap-3 rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/30 transition-colors"
                   >
                     <Star className="size-4 text-violet-400 mt-0.5 shrink-0" />
                     <div className="flex-1 min-w-0">
@@ -145,7 +146,7 @@ export default async function DashboardMundaneEventCalendarPage() {
                     >
                       {ev.event_type}
                     </Badge>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>

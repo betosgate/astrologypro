@@ -142,9 +142,10 @@ export default async function DashboardMundaneAlertsPage({
       ) : (
         <div className="space-y-2">
           {alerts.map((alert) => (
-            <div
+            <Link
               key={alert.id}
-              className={`flex items-start gap-3 rounded-lg border p-3 shadow-sm ${
+              href={`/dashboard/mundane/alerts/${alert.id}`}
+              className={`flex items-start gap-3 rounded-lg border p-3 shadow-sm transition-colors hover:bg-muted/30 ${
                 alert.is_read ? "bg-card" : "bg-amber-50/40 border-amber-200"
               }`}
             >
@@ -168,12 +169,9 @@ export default async function DashboardMundaneAlertsPage({
                   <Clock className="size-3" />
                   <span>{formatDateTime(alert.triggered_at)}</span>
                   {alert.entity_id && entityMap[alert.entity_id] && (
-                    <Link
-                      href={`/community/mundane/${alert.entity_id}`}
-                      className="hover:text-foreground"
-                    >
+                    <span>
                       {entityMap[alert.entity_id].flag ?? "🌐"} {entityMap[alert.entity_id].name}
-                    </Link>
+                    </span>
                   )}
                 </div>
               </div>
@@ -185,7 +183,7 @@ export default async function DashboardMundaneAlertsPage({
               >
                 {alert.priority}
               </Badge>
-            </div>
+            </Link>
           ))}
         </div>
       )}
