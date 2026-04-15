@@ -32,20 +32,48 @@ export async function provisionChimePhoneNumber(
 
   const voice = getChimeVoiceClient();
 
-  // ── Step 1: Search for an available US local number ──────────────────────
-  // AWS Chime requires either AreaCode or State for Local number searches.
-  const searchResult = await voice.send(
-    new SearchAvailablePhoneNumbersCommand({
-      PhoneNumberType: "Local",
-      Country: "US",
-      AreaCode: areaCode || "212", // Default to NYC area code if not provided
-      MaxResults: 1,
-    })
-  );
+  // ── Step 1: Search for an available US number ────────────────────────────
+  // AWS Chime requires AreaCode or State for Local searches.
+  // Try Local first, fall back to TollFree if none available.
+  let availableNumbers: string[] = [];
 
-  const availableNumbers = searchResult.E164PhoneNumbers ?? [];
+  // Try Local first
+  try {
+    const localResult = await voice.send(
+      new SearchAvailablePhoneNumbersCommand({
+        PhoneNumberType: "Local",
+        Country: "US",
+        AreaCode: areaCode || "212",
+        MaxResults: 1,
+      })
+    );
+    availableNumbers = localResult.E164PhoneNumbers ?? [];
+  } catch (err) {
+    console.warn("[Chime] Local number search failed, trying TollFree:", err);
+  }
+
+  // Fall back to TollFree
   if (availableNumbers.length === 0) {
-    throw new Error("No available Chime PSTN phone numbers");
+    try {
+      const tollFreeResult = await voice.send(
+        new SearchAvailablePhoneNumbersCommand({
+          PhoneNumberType: "TollFree",
+          Country: "US",
+          MaxResults: 1,
+        })
+      );
+      availableNumbers = tollFreeResult.E164PhoneNumbers ?? [];
+    } catch (err) {
+      console.warn("[Chime] TollFree number search also failed:", err);
+    }
+  }
+
+  if (availableNumbers.length === 0) {
+    throw new Error(
+      "No available Chime PSTN phone numbers. " +
+      "This usually means the AWS account needs a Service Quota increase. " +
+      "Go to AWS Console → Service Quotas → Amazon Chime SDK → Phone Number and request an increase."
+    );
   }
 
   const phoneNumber = availableNumbers[0];
