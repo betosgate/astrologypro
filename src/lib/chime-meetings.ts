@@ -127,7 +127,7 @@ export async function startChimeRecording(
             MuxType: "AudioWithCompositedVideo",
           },
           Video: {
-            State: "Enabled",
+            State: "Disabled",
             MuxType: "VideoOnly",
           },
           Content: {
@@ -168,7 +168,6 @@ export async function startChimeRecording(
  */
 export async function startChimeConcatenation(
   capturePipelineArn: string,
-  meetingId: string,
   bookingId: string
 ): Promise<void> {
   if (!RECORDING_BUCKET || !capturePipelineArn) return;
@@ -184,6 +183,8 @@ export async function startChimeConcatenation(
             MediaPipelineArn: capturePipelineArn,
             ChimeSdkMeetingConfiguration: {
               ArtifactsConfiguration: {
+                // Must match capture pipeline config:
+                // Audio+CompositedVideo enabled, Video/Content disabled
                 Audio: { State: "Enabled" },
                 Video: { State: "Disabled" },
                 Content: { State: "Disabled" },
@@ -200,8 +201,8 @@ export async function startChimeConcatenation(
         {
           Type: "S3Bucket",
           S3BucketSinkConfiguration: {
-            // Named by meetingId so retrieval is straightforward
-            Destination: `arn:aws:s3:::${RECORDING_BUCKET}/recordings/${bookingId}/final/${meetingId}.mp4`,
+            // Destination must be a folder prefix — AWS names the output file
+            Destination: `arn:aws:s3:::${RECORDING_BUCKET}/recordings/${bookingId}/final/`,
           },
         },
       ],

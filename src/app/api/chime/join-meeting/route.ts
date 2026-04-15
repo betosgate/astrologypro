@@ -6,6 +6,7 @@ import {
   createChimeMeeting,
   getChimeMeeting,
   listChimeAttendees,
+  startChimeRecording,
 } from "@/lib/chime-meetings";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     if (clientToken) {
       const { data, error } = await admin
         .from("bookings")
-        .select("id, chime_meeting_id, diviner_id, client_id, booking_token, diviners(display_name), clients(full_name, id)")
+        .select("id, chime_meeting_id, chime_pipeline_id, diviner_id, client_id, booking_token, diviners(display_name), clients(full_name, id)")
         .eq("id", bookingId)
         .eq("booking_token", clientToken)
         .single();
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
 
       const { data, error: bookingError } = await admin
         .from("bookings")
-        .select("id, chime_meeting_id, diviner_id, client_id, diviners(display_name), clients(full_name, id)")
+        .select("id, chime_meeting_id, chime_pipeline_id, diviner_id, client_id, diviners(display_name), clients(full_name, id)")
         .eq("id", bookingId)
         .single();
 
@@ -121,6 +122,31 @@ export async function POST(request: NextRequest) {
     }
 
     const attendee = await createChimeAttendee(activeMeetingId, externalUserId);
+
+    // Start recording when diviner joins and no pipeline exists yet.
+    // This covers: (a) fresh meetings created above, (b) existing meetings
+    // where recording was never started (e.g. bucket was misconfigured before).
+    if (role === "diviner" && !booking.chime_pipeline_id) {
+      try {
+        const recording = await startChimeRecording(
+          activeMeetingId,
+          `recordings/${bookingId}`
+        );
+        if (recording.pipelineArn) {
+          console.log(`[join-meeting] Recording pipeline started: id=${recording.pipelineId} arn=${recording.pipelineArn}`);
+          await admin
+            .from("bookings")
+            .update({ chime_pipeline_id: recording.pipelineArn })
+            .eq("id", bookingId);
+        } else {
+          console.warn("[join-meeting] startChimeRecording returned empty pipelineArn");
+        }
+      } catch (err: unknown) {
+        const name = (err as { name?: string }).name ?? "Error";
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[join-meeting] Failed to start recording: ${name}: ${msg}`);
+      }
+    }
 
     // Fetch + set session_started_at (column added via migration — graceful fallback if missing)
     let sessionStartedAt: string = new Date().toISOString();

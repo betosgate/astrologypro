@@ -73,7 +73,6 @@ export async function POST(request: NextRequest) {
       if (booking.chime_pipeline_id) {
         startChimeConcatenation(
           booking.chime_pipeline_id,
-          booking.chime_meeting_id,
           bookingId
         ).catch((err) =>
           console.error("Failed to start Chime concatenation:", err)
