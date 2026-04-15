@@ -1735,7 +1735,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {transitWheelSvg && (
         <div className="rounded-lg border overflow-hidden">
           <div className="px-4 py-2.5 horoscope-section-header text-center">
-            <h3 className="text-[20px] font-semibold text-center w-full" style={{ fontFamily: "'Roboto', sans-serif" }}>Transit Chart</h3>
+            <h3 className="text-[20px] font-semibold text-center w-full text-white" style={{ fontFamily: "'Roboto', sans-serif" }}>Transit Chart</h3>
           </div>
           <div className="p-6 bg-slate-950 flex justify-center border-b border-white/5">
             <div className="relative group max-w-lg w-full">
