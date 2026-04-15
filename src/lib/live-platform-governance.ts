@@ -124,19 +124,21 @@ export function buildGovernedLivePlatforms(
         display_name: typeof row.display_name === "string" ? row.display_name : platformKey,
         is_globally_enabled: isGloballyEnabled,
         is_selectable_by_diviners: isSelectableByDiviners,
-        integration_tier:
+        integration_tier: (
           row.integration_tier === "first_class" ||
           row.integration_tier === "managed" ||
           row.integration_tier === "link_out_only" ||
           row.integration_tier === "custom"
             ? row.integration_tier
-            : "managed",
-        playback_mode:
+            : "managed"
+        ) as LiveIntegrationTier,
+        playback_mode: (
           row.playback_mode === "embedded_player" ||
           row.playback_mode === "external_link" ||
           row.playback_mode === "manual_status"
             ? row.playback_mode
-            : "external_link",
+            : "external_link"
+        ) as LivePlaybackMode,
         supports_embed: row.supports_embed === true,
         supports_chat_embed: row.supports_chat_embed === true,
         supports_oauth_connection: row.supports_oauth_connection === true,
@@ -221,7 +223,7 @@ export function mergeGovernedPlatformConfigs(
   return configRows
     .filter((row) => isValidLivePlatformKey(row.platform))
     .map((row) => {
-      const platform = platformMap.get(row.platform);
+      const platform = platformMap.get(row.platform as LivePlatformKey);
       if (!platform) return null;
       if (options?.publicOnly && !platform.is_publicly_renderable) return null;
       if (options?.divinerAvailableOnly && !platform.is_available_for_diviner) return null;
@@ -229,7 +231,7 @@ export function mergeGovernedPlatformConfigs(
       return {
         id: typeof row.id === "string" ? row.id : "",
         diviner_id: typeof row.diviner_id === "string" ? row.diviner_id : "",
-        platform: row.platform,
+        platform: row.platform as LivePlatformKey,
         display_name: typeof row.display_name === "string" ? row.display_name : null,
         stream_url: typeof row.stream_url === "string" ? row.stream_url : null,
         embed_url: typeof row.embed_url === "string" ? row.embed_url : null,

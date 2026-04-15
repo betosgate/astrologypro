@@ -23,10 +23,10 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Resolve advocate record
+  // Resolve advocate record (include referral_code for share links)
   const { data: advocate } = await supabase
     .from("social_advocates")
-    .select("id")
+    .select("id, referral_code")
     .eq("user_id", user.id)
     .single();
 
@@ -73,13 +73,13 @@ export async function GET(req: NextRequest) {
     const [campaignsRes, conversionsRes] = await Promise.all([
       db
         .from("affiliate_campaigns")
-        .select("id, diviner_id, name, status, start_date, end_date, commission_type, commission_value")
+        .select("id, diviner_id, name, status, start_date, end_date, commission_type, commission_value, target_product_type, utm_campaign, utm_source, utm_medium")
         .in("id", campaignIds),
       db
         .from("campaign_conversions")
         .select("id, campaign_id, order_amount_cents, commission_amount_cents, converted_at")
         .eq("affiliate_id", advocate.id)
-        .eq("affiliate_type", "advocate"),
+        .eq("affiliate_type", "social_advocate"),
     ]);
 
     if (campaignsRes.error) throw campaignsRes.error;
@@ -149,28 +149,50 @@ export async function GET(req: NextRequest) {
     };
 
     // ---- Campaign list ----
+    const referralCodeForLinks = advocate.referral_code ?? "";
+    const appUrlForLinks = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+
     const campaigns = allCampaigns.map((camp) => {
       const stats = campaignConvMap.get(camp.id) ?? { count: 0, earned: 0 };
       const customComm = customCommMap.get(camp.id);
       const commissionRate = customComm ?? Number(camp.commission_value ?? 0);
 
+      // Build unique share link for this advocate + campaign
+      const utmParams = new URLSearchParams({
+        ref: referralCodeForLinks,
+        ...(camp.utm_campaign ? { utm_campaign: camp.utm_campaign } : {}),
+        ...(camp.utm_source ? { utm_source: camp.utm_source } : {}),
+        ...(camp.utm_medium ? { utm_medium: camp.utm_medium } : {}),
+      });
+      const shareLink = `${appUrlForLinks}/?${utmParams.toString()}`;
+      const subId = camp.utm_campaign ?? camp.id.slice(0, 8);
+
       return {
+        campaignId: camp.id,
         campaignName: camp.name,
         divinerName: camp.diviner_id
           ? divinerNameMap.get(camp.diviner_id) ?? "Unknown"
           : "Platform",
+        isDivinerCampaign: !!camp.diviner_id,
+        targetProductType: camp.target_product_type ?? "general",
         status: camp.status,
         startDate: camp.start_date,
         myConversions: stats.count,
         myEarnings: round2(stats.earned / 100),
         commissionRate,
+        commissionType: camp.commission_type,
+        shareLink,
+        subId,
       };
     });
 
     // Sort by earnings descending
     campaigns.sort((a, b) => b.myEarnings - a.myEarnings);
 
-    return NextResponse.json({ summary, campaigns });
+    const referralCode = advocate.referral_code ?? "";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+
+    return NextResponse.json({ summary, campaigns, referralCode, appUrl });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
     return NextResponse.json(
