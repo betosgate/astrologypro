@@ -18,25 +18,23 @@ export async function GET() {
   const [
     traineesRes,
     programsRes,
-    categoriesRes,
     lessonsRes,
     quizAttemptsRes,
     lessonCompletionsRes,
     categoryCompletionsRes,
     lessonProgressRes,
-    enrollmentsRes,
+    programProgressRes,
   ] = await Promise.all([
     admin.from("trainees").select("id, training_status"),
-    admin.from("training_programs").select("id").eq("is_active", true),
-    admin.from("training_categories").select("id").eq("is_active", true),
+    admin.from("training_programs").select("id, name").eq("is_active", true),
     admin.from("training_lessons").select("id").eq("is_active", true),
     admin.from("quiz_attempts").select("passed, lesson_id, user_id"),
     admin.from("lesson_completions").select("id"),
     admin.from("category_completions").select("id"),
     admin.from("lesson_progress").select("time_spent_seconds"),
     admin
-      .from("program_enrollments")
-      .select("program_id, completed_at, user_id"),
+      .from("user_program_progress")
+      .select("program_id, started_at, completed_at, progress_pct"),
   ]);
 
   // Trainees
@@ -48,7 +46,6 @@ export async function GET() {
 
   // Counts
   const total_programs = programsRes.data?.length ?? 0;
-  const total_categories = categoriesRes.data?.length ?? 0;
   const total_lessons = lessonsRes.data?.length ?? 0;
 
   // Quiz stats
@@ -106,57 +103,66 @@ export async function GET() {
         ) / 10
       : 0;
 
-  // Top programs: group enrollments by program_id
-  const enrollments = enrollmentsRes.data ?? [];
-  const programMap = new Map<
+  // Top programs should reflect real learner progress, not the legacy
+  // program_enrollments helper table. `user_program_progress` is the
+  // authoritative per-user/per-program cache for started/completed state.
+  const programRows = programsRes.data ?? [];
+  const programNameById = new Map(programRows.map((p) => [p.id, p.name]));
+  const programProgressRows = programProgressRes.data ?? [];
+  const topProgramMap = new Map<
     string,
-    { enrolled: number; completed: number }
+    { started: number; completed: number; progressTotal: number; progressSamples: number }
   >();
-  for (const e of enrollments) {
-    if (!programMap.has(e.program_id)) {
-      programMap.set(e.program_id, { enrolled: 0, completed: 0 });
+
+  for (const row of programProgressRows) {
+    if (!topProgramMap.has(row.program_id)) {
+      topProgramMap.set(row.program_id, {
+        started: 0,
+        completed: 0,
+        progressTotal: 0,
+        progressSamples: 0,
+      });
     }
-    const entry = programMap.get(e.program_id)!;
-    entry.enrolled += 1;
-    if (e.completed_at) entry.completed += 1;
+    const entry = topProgramMap.get(row.program_id)!;
+    if (row.started_at) entry.started += 1;
+    if (row.completed_at) entry.completed += 1;
+    if (typeof row.progress_pct === "number") {
+      entry.progressTotal += row.progress_pct;
+      entry.progressSamples += 1;
+    }
   }
 
-  // Fetch program names for top programs (sorted by enrolled desc, top 5)
-  const topProgramIds = [...programMap.entries()]
-    .sort((a, b) => b[1].enrolled - a[1].enrolled)
-    .slice(0, 5)
-    .map(([id]) => id);
-
-  let top_programs: {
-    id: string;
-    title: string;
-    enrolled: number;
-    completed: number;
-  }[] = [];
-  if (topProgramIds.length > 0) {
-    const { data: programNames } = await admin
-      .from("training_programs")
-      .select("id, name")
-      .in("id", topProgramIds);
-    const nameById = new Map(
-      (programNames ?? []).map((p: { id: string; name: string }) => [
-        p.id,
-        p.name,
-      ])
-    );
-    top_programs = topProgramIds.map((id) => ({
-      id,
-      title: nameById.get(id) ?? "",
-      enrolled: programMap.get(id)!.enrolled,
-      completed: programMap.get(id)!.completed,
-    }));
-  }
+  const top_programs = [...topProgramMap.entries()]
+    .map(([id, stats]) => {
+      const completion_rate =
+        stats.started > 0
+          ? Math.round((stats.completed / stats.started) * 1000) / 10
+          : 0;
+      const avg_progress_pct =
+        stats.progressSamples > 0
+          ? Math.round((stats.progressTotal / stats.progressSamples) * 10) / 10
+          : 0;
+      return {
+        id,
+        title: programNameById.get(id) ?? "",
+        started: stats.started,
+        completed: stats.completed,
+        completion_rate,
+        avg_progress_pct,
+      };
+    })
+    .filter((program) => program.started > 0)
+    .sort((a, b) => {
+      if (b.started !== a.started) return b.started - a.started;
+      if (b.completed !== a.completed) return b.completed - a.completed;
+      return a.title.localeCompare(b.title);
+    })
+    .slice(0, 5);
 
   return NextResponse.json({
     total_trainees,
     active_trainees,
     total_programs,
-    total_categories,
     total_lessons,
     total_quiz_attempts,
     overall_quiz_pass_rate,

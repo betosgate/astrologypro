@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Orbit } from "lucide-react";
+import { Orbit, ArrowUpRight } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   Card,
@@ -181,9 +181,18 @@ export async function PlanetaryReturns({ divinerId }: PlanetaryReturnsProps) {
           <Orbit className="size-4 text-sky-500" />
           Planetary Returns — Next 30 Days
         </CardTitle>
-        <span className="text-[10px] text-muted-foreground">
-          {returns.length} event{returns.length !== 1 ? "s" : ""}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-muted-foreground">
+            {returns.length} event{returns.length !== 1 ? "s" : ""}
+          </span>
+          <Link
+            href="/dashboard/clients/planetary-returns"
+            className="flex items-center gap-0.5 text-[10px] text-sky-500 hover:text-sky-400 hover:underline"
+          >
+            View All
+            <ArrowUpRight className="size-2.5" />
+          </Link>
+        </div>
       </CardHeader>
       <CardContent className="px-4 pb-4 pt-0">
         {returns.length === 0 ? (

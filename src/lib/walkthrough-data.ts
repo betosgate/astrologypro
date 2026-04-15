@@ -95,23 +95,23 @@ export interface WalkthroughSection {
 // ─── Slug map ───────────────────────────────────────────────────────────────
 
 export const ROLE_SLUGS: Record<string, string> = {
-  admin: "Admin Back Office",
-  diviner: "Diviner Dashboard",
-  community: "Community Member",
+  admin: "Administration Suite",
+  diviner: "Diviner Studio",
+  community: "Perennial Mandalism",
   "mystery-school": "Mystery School",
-  social_advo: "Social Advocate",
-  trainee: "Trainee",
-  customer: "Customer Portal",
-  public: "Public / Visitor",
+  social_advo: "Affiliate Partner",
+  trainee: "Trainee Academy",
+  customer: "Client Portal",
+  public: "Public Experience",
 };
 
 // ─── Section definitions ────────────────────────────────────────────────────
 
 export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   {
-    role: "Admin Back Office",
+    role: "Administration Suite",
     slug: "admin",
-    tagline: "Global governance and system intelligence",
+    tagline: "Platform governance and system intelligence",
     roleDescription:
       "Full oversight for platform owners. Govern users, commerce, astrology engines, and training programs across the entire ecosystem with granular control.",
     icon: Shield,
@@ -1293,11 +1293,11 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ],
   },
   {
-    role: "Diviner Dashboard",
+    role: "Diviner Studio",
     slug: "diviner",
-    tagline: "Clinical espiritual and business operations",
+    tagline: "Spiritual practice and business operations",
     roleDescription:
-      "Manage every aspect of your spiritual business — from clients to marketing and streams.",
+      "A full-featured workspace for practitioners — manage clients, services, calendar, media, and revenue in one place.",
     icon: Star,
     gradient: "from-amber-500/20 to-yellow-600/10",
     featureAreas: ["Scheduling", "CRM", "Business Operations", "Engagement"],
@@ -1385,11 +1385,11 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ],
   },
   {
-    role: "Community Member",
+    role: "Perennial Mandalism",
     slug: "community",
-    tagline: "Interactive astrology and spiritual community",
+    tagline: "Astrology tools and sacred community access",
     roleDescription:
-      "Access powerful astrology tools, weekly live gatherings, and a library of spiritual wisdom for Perennial Mandalism members.",
+      "A dedicated membership experience — access live gatherings, powerful astrology tools, and a curated library of spiritual wisdom.",
     icon: Heart,
     gradient: "from-pink-500/20 to-rose-600/10",
     featureAreas: ["Astrology Tools", "Community Hub", "Spiritual Content"],
@@ -1479,9 +1479,9 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   {
     role: "Mystery School",
     slug: "mystery-school",
-    tagline: "Advanced esoteric training and decan studies",
+    tagline: "Esoteric curriculum and decan mastery",
     roleDescription:
-      "A privileged path for serious practitioners. Dive deep into decan systems and master ritual building.",
+      "A privileged path for serious practitioners. Dive deep into the decan systems, sacred ritual frameworks, and advanced astrology curriculum.",
     icon: Eye,
     gradient: "from-violet-500/20 to-purple-600/10",
     featureAreas: ["Curriculum", "Decan Studies", "Ritual Mastery"],
@@ -1556,11 +1556,11 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ],
   },
   {
-    role: "Social Advocate",
+    role: "Affiliate Partner",
     slug: "social_advo",
-    tagline: "Affiliate growth and referral rewards",
+    tagline: "Community growth and referral partnerships",
     roleDescription:
-      "For partners focusing on community growth. Track referrals and manage affiliate links.",
+      "Purpose-built for growth partners. Track referral performance, manage affiliate links, and monitor commission earnings in real time.",
     icon: Sparkles,
     gradient: "from-blue-500/20 to-indigo-600/10",
     featureAreas: ["Growth", "Referrals", "Earnings"],
@@ -1608,63 +1608,147 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ],
   },
   {
-    role: "Trainee",
+    role: "Trainee Academy",
     slug: "trainee",
-    tagline: "Apprenticeship and skill development",
+    tagline: "Structured apprenticeship and divine arts mastery",
     roleDescription:
-      "Master divine arts through structured lessons and mentor-assigned modules.",
+      "A guided learning environment for aspiring practitioners — structured lessons, mentor feedback, quizzes, and certification tracks.",
     icon: GraduationCap,
     gradient: "from-amber-500/20 to-orange-600/10",
-    featureAreas: ["Training", "Mentorship", "Milestones"],
+    featureAreas: ["Training", "Progress", "Quiz History", "Resources", "Sessions", "Certification"],
     capabilities: [
-      "Access assigned training modules",
-      "Track practice session requirements",
-      "Review mentor feedback",
+      "Access structured training programs with lessons, categories, and programs",
+      "Track granular lesson and category completion progress",
+      "Review complete quiz attempt history with scores and timing",
+      "Download PDFs, docs, and supplemental resources per lesson",
+      "Book and manage practice sessions with assigned mentor",
+      "Earn graduation certificate upon 100% curriculum completion",
     ],
-    keyPages: ["Learning Hub", "Curriculum", "Milestones"],
+    keyPages: ["Dashboard", "Training Programs", "Progress", "Quiz History", "Resources", "Sessions", "Certificate"],
     groups: [
       {
         groupLabel: "Training",
         cards: [
-          { title: "Dashboard", description: "Current training focus", href: "/trainee", icon: LayoutDashboard, status: "live" },
+          { title: "Dashboard", description: "Current training focus and progress overview", href: "/trainee", icon: LayoutDashboard, status: "live" },
+          { title: "Training Programs", description: "Multi-program curriculum with lessons and categories", href: "/trainee/training", icon: BookOpen, status: "live" },
+          { title: "Progress Tracker", description: "Visual category-by-category completion view", href: "/trainee/progress", icon: TrendingUp, status: "live" },
+        ],
+      },
+      {
+        groupLabel: "Assessment & Resources",
+        cards: [
+          { title: "Quiz History", description: "Complete quiz attempt log with scores and timing", href: "/trainee/quiz-history", icon: ClipboardList, status: "live" },
+          { title: "Resources", description: "Lesson assets — PDFs, docs, videos, reference sheets", href: "/trainee/resources", icon: FileText, status: "live" },
+          { title: "Practice Sessions", description: "Mentor session booking and history", href: "/trainee/sessions", icon: CalendarDays, status: "live" },
+        ],
+      },
+      {
+        groupLabel: "Certification",
+        cards: [
+          { title: "Graduation Certificate", description: "Issued on 100% curriculum completion", href: "/trainee/certificate", icon: GraduationCap, status: "live" },
         ],
       },
     ],
     screens: [
-      { 
-        name: "trainee-hub", 
-        label: "Trainee Dashboard", 
-        description: "Personal development center.", 
+      {
+        name: "trainee-hub",
+        label: "Trainee Dashboard",
+        description: "Personal development home — progress, upcoming sessions, and mentor status.",
         group: "Training",
-        purpose: "The home base for apprentices to manage their skills-based training and mentor interactions.",
+        purpose: "The home base for apprentices to manage their skills-based training, mentor interactions, and curriculum progress at a glance.",
         bullets: [
-          "Personal development progress visualization",
-          "Pending assignment and lesson notifications",
-          "Real-time mentor feedback and rating alerts",
-          "Daily practice requirement tracking"
+          "Overall curriculum completion percentage and program breakdown",
+          "Upcoming mentor sessions and lesson bookmarks",
+          "Quiz score trends and recent activity feed",
+          "Graduation progress bar with milestone indicators"
         ]
       },
-      { 
-        name: "curriculum", 
-        label: "Learning Path", 
-        description: "Chronological map of lessons.", 
+      {
+        name: "curriculum",
+        label: "Training Programs",
+        description: "Multi-program curriculum with categories and individual lessons.",
         group: "Training",
-        purpose: "A structured, chronological roadmap of the trainee's journey from apprentice to practitioner.",
+        purpose: "A structured, browsable catalog of all training programs, categories, and lessons with real-time completion state.",
         bullets: [
-          "Linear progression map of required modules",
-          "Locked/Unlocked lesson state visualization",
-          "Milestone-based certification tracking",
-          "Prerequisite knowledge check status"
+          "Program and category hierarchy with completion indicators",
+          "Individual lesson detail pages with video, text, and attachments",
+          "In-lesson quizzes with immediate scoring feedback",
+          "Lesson progress auto-saved on navigation"
+        ]
+      },
+      {
+        name: "progress",
+        label: "Progress Tracker",
+        description: "Category-by-category completion view with percentage breakdowns.",
+        group: "Training",
+        purpose: "A visual progress dashboard showing granular completion state per category and program, including time invested.",
+        bullets: [
+          "Progress bars per training category and program",
+          "Total study time and lessons completed counters",
+          "Completion date history per category",
+          "Link-through to incomplete lessons"
+        ]
+      },
+      {
+        name: "quiz-history",
+        label: "Quiz History",
+        description: "Complete quiz attempt log with per-lesson scores, pass/fail status, and time taken.",
+        group: "Assessment",
+        purpose: "A full audit of all quiz attempts with aggregate stats — total attempted, pass rate, average score, and best score.",
+        bullets: [
+          "Chronological list of all 50 quiz attempts",
+          "Per-attempt score, percentage, and time taken",
+          "Pass/fail indicator with color-coded scoring",
+          "Aggregate stats: avg score, best score, total time, pass rate"
+        ]
+      },
+      {
+        name: "resources",
+        label: "Learning Resources",
+        description: "Downloadable lesson assets — PDFs, docs, reference sheets, and supplemental links.",
+        group: "Assessment",
+        purpose: "A centralized library of all lesson-attached materials, filterable by type, with direct download and external link access.",
+        bullets: [
+          "Filterable by asset type: PDF, doc, image, link",
+          "File size shown with download button",
+          "Organized by lesson and program grouping",
+          "External resource links open in new tab"
+        ]
+      },
+      {
+        name: "sessions",
+        label: "Practice Sessions",
+        description: "Upcoming and past mentor practice session management.",
+        group: "Sessions",
+        purpose: "A dedicated area to track all practice sessions booked with an assigned mentor diviner.",
+        bullets: [
+          "Upcoming session countdown with join button",
+          "Past session history with duration and notes",
+          "Session status: confirmed, completed, cancelled",
+          "Direct link to live video room when active"
+        ]
+      },
+      {
+        name: "graduation",
+        label: "Graduation Certificate",
+        description: "Digital certificate issued on completing all curriculum requirements.",
+        group: "Certification",
+        purpose: "A shareable digital certificate confirming full curriculum completion, issued with a unique code and graduation date.",
+        bullets: [
+          "Unique certificate code (e.g. CERT-BUKQOM-2026)",
+          "Graduation date and trainee full name",
+          "Sharable link and downloadable PDF",
+          "Verification page for employers and clients"
         ]
       },
     ],
   },
   {
-    role: "Customer Portal",
+    role: "Client Portal",
     slug: "customer",
-    tagline: "Personal spiritual management and history",
+    tagline: "Personal readings and spiritual journey",
     roleDescription:
-      "A dedicated area for clients to manage their spiritual journey, track reading history, and interact with practitioners.",
+      "A clean, personal workspace for clients — book sessions, review reading history, explore services, and connect with their chosen diviner.",
     icon: User,
     gradient: "from-emerald-500/20 to-green-600/10",
     featureAreas: ["Dashboard", "Orders", "Bookings", "Account"],
@@ -1739,11 +1823,11 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ],
   },
   {
-    role: "Public / Visitor",
+    role: "Public Experience",
     slug: "public",
-    tagline: "First impressions and platform discovery",
+    tagline: "Platform discovery and visitor onboarding",
     roleDescription:
-      "Unauthenticated pages designed to convert visitors into community members or clients through discovery and education.",
+      "The first impression of AstrologyPro — marketing pages, practitioner discovery, and conversion flows designed to welcome and convert new visitors.",
     icon: Globe,
     gradient: "from-sky-500/20 to-blue-600/10",
     featureAreas: ["Discovery", "Marketing", "Knowledge", "Onboarding"],

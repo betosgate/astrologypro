@@ -67,14 +67,14 @@ function RolePanel({
   return (
     <Link href={`/walkthrough/${role.slug}`} className="block h-full group outline-none">
       <article className="h-full transition-transform duration-300 hover:-translate-y-1">
-        <div className="h-full rounded-3xl border border-white/12 bg-[radial-gradient(circle_at_20%_0%,rgba(72,52,135,0.12),transparent_40%),linear-gradient(180deg,rgba(11,13,30,0.94),rgba(9,11,24,0.98))] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition-all duration-300 group-hover:border-white/20 group-hover:bg-[radial-gradient(circle_at_20%_0%,rgba(72,52,135,0.18),transparent_40%)] group-hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]">
-          <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/14 bg-[#0e1736]/85 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#f4f7ff]">
-              <role.icon className="size-3.5 text-[#f5f0e8]" strokeWidth={1.9} />
-              {role.tagline}
+        <div className="h-full rounded-3xl border border-white/12 bg-[radial-gradient(circle_at_20%_0%,rgba(72,52,135,0.12),transparent_40%),linear-gradient(180deg,rgba(11,13,30,0.94),rgba(9,11,24,0.98))] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition-all duration-300 group-hover:border-white/20 group-hover:bg-[radial-gradient(circle_at_20%_0%,rgba(72,52,135,0.18),transparent_40%)] group-hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)] flex flex-col">
+          <div className="flex-1 min-w-0">
+            <div className="flex w-full items-center gap-2 rounded-full border border-white/14 bg-[#0e1736]/85 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#f4f7ff] min-h-[2.5rem]">
+              <role.icon className="size-3.5 shrink-0 text-[#f5f0e8]" strokeWidth={1.9} />
+              <span className="leading-tight">{role.tagline}</span>
             </div>
 
-            <div className="mt-4 inline-flex max-w-full rounded-2xl bg-[linear-gradient(180deg,#f9d86d_0%,#d79d31_100%)] px-3.5 py-2 shadow-[0_10px_22px_rgba(211,154,52,0.24)]">
+            <div className="mt-4 flex max-w-full rounded-2xl bg-[linear-gradient(180deg,#f9d86d_0%,#d79d31_100%)] px-3.5 py-2 shadow-[0_10px_22px_rgba(211,154,52,0.24)]">
               <p className="truncate text-xl font-semibold leading-none text-[#101114] sm:text-2xl">
                 {role.role}
               </p>

@@ -86,7 +86,14 @@ type OverviewData = {
   avg_attempts_to_pass: number;
   total_lesson_completions: number;
   avg_time_per_lesson_mins: number;
-  top_programs: { id: string; title: string; enrolled: number; completed: number }[];
+  top_programs: {
+    id: string;
+    title: string;
+    started: number;
+    completed: number;
+    completion_rate: number;
+    avg_progress_pct: number;
+  }[];
 };
 
 type UserRow = {
@@ -238,7 +245,6 @@ export default function TrainingAnalyticsPage() {
 
   // ── Fetch overview (always on mount) ────────────────────────────────────────
   useEffect(() => {
-    setOverviewLoading(true);
     fetch("/api/admin/training/analytics/overview")
       .then((r) => r.json())
       .then((d) => {
@@ -474,30 +480,33 @@ export default function TrainingAnalyticsPage() {
                   <TableSkeleton cols={4} rows={4} />
                 </div>
               ) : !overview?.top_programs?.length ? (
-                <p className="px-6 py-4 text-sm text-muted-foreground">No program data yet.</p>
+                <p className="px-6 py-4 text-sm text-muted-foreground">
+                  No started program data yet.
+                </p>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Program</TableHead>
-                        <TableHead className="text-right">Enrolled</TableHead>
+                        <TableHead className="text-right">Started</TableHead>
                         <TableHead className="text-right">Completed</TableHead>
                         <TableHead className="text-right">Completion Rate</TableHead>
+                        <TableHead className="text-right">Avg Progress</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {overview.top_programs.map((p) => {
-                        const rate = p.enrolled > 0
-                          ? Math.round((p.completed / p.enrolled) * 1000) / 10
-                          : 0;
                         return (
                           <TableRow key={p.id}>
                             <TableCell className="font-medium">{p.title}</TableCell>
-                            <TableCell className="text-right tabular-nums">{p.enrolled}</TableCell>
+                            <TableCell className="text-right tabular-nums">{p.started}</TableCell>
                             <TableCell className="text-right tabular-nums">{p.completed}</TableCell>
                             <TableCell className="text-right">
-                              <span className="tabular-nums text-sm">{fmtPct(rate)}</span>
+                              <span className="tabular-nums text-sm">{fmtPct(p.completion_rate)}</span>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className="tabular-nums text-sm">{fmtPct(p.avg_progress_pct)}</span>
                             </TableCell>
                           </TableRow>
                         );

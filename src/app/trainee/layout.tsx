@@ -33,6 +33,7 @@ export default async function TraineeLayout({ children }: { children: React.Reac
     { label: "Training", href: "/trainee/training" },
     { label: "Sessions", href: "/trainee/sessions" },
     { label: "Progress", href: "/trainee/progress" },
+    { label: "Quiz History", href: "/trainee/quiz-history" },
     { label: "Resources", href: "/trainee/resources" },
     ...(trainee.graduated_at ? [{ label: "Certificate", href: "/trainee/certificate" }] : []),
     { label: "Profile", href: "/trainee/profile" },

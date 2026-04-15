@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   // Fetch all trainees
   const { data: traineesData, error: traineesError } = await admin
     .from("trainees")
-    .select("id, user_id, display_name, name, email, training_status, created_at")
+    .select("id, user_id, name, email, training_status, created_at")
     .order("created_at", { ascending: false })
     .limit(10000);
 
@@ -162,7 +162,7 @@ export async function GET(req: NextRequest) {
     return {
       "User ID":          t.user_id,
       "Email":            emailMap.get(t.user_id) ?? (t.email ?? ""),
-      "Name":             t.display_name ?? t.name ?? "",
+      "Name":             t.name ?? "",
       "Program":          programNames,
       "Progress %":       progress_pct,
       "Lessons Done":     completed_lessons,
