@@ -20,7 +20,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { BookingDetailSheet } from "@/components/dashboard/booking-detail-sheet";
-import { SessionPrepSheet } from "@/components/dashboard/session-prep";
 import {
   CalendarX2,
   Search,
@@ -519,46 +518,27 @@ export function BookingsClient({
                               amount: basePrice,
                               payment_intent_id: paymentIntentId,
                               notes: booking.session_notes as string | null,
-                              session_notes:
-                                (booking.session_notes as string) ?? null,
+                              session_notes: (booking.session_notes as string) ?? null,
                               booking_notes: (booking.booking_notes as string) ?? null,
                               client_name: client?.full_name ?? "Unknown",
                               client_email: client?.email ?? "",
-                              service_name: service?.name ?? "Unknown",
-                              refund_amount:
-                                (booking.refund_amount as number) ?? null,
-                              refunded_at: refundedAt,
-                              refund_reason:
-                                (booking.refund_reason as string) ?? null,
-                            }}
-                            linkedOrder={ordersByBookingId[booking.id as string] ?? null}
-                          />
-                          <SessionPrepSheet
-                            booking={{
-                              id: booking.id as string,
-                              scheduled_at: booking.scheduled_at as string,
-                              status,
-                              service_name: service?.name ?? "Unknown",
-                              client_name: client?.full_name ?? "Unknown",
-                              client_email: client?.email ?? "",
                               client_id: (booking.client_id as string) ?? null,
+                              service_name: service?.name ?? "Unknown",
+                              refund_amount: (booking.refund_amount as number) ?? null,
+                              refunded_at: refundedAt,
+                              refund_reason: (booking.refund_reason as string) ?? null,
                               birth_date: client?.birth_date ?? null,
                               birth_time: client?.birth_time ?? null,
                               birth_city: client?.birth_city ?? null,
-                              questionnaire_responses:
-                                (booking.questionnaire_responses as Record<
-                                  string,
-                                  string | undefined
-                                >) ?? null,
+                              questionnaire_responses: (booking.questionnaire_responses as Record<string, string | undefined>) ?? null,
                               previous_session_count: prev?.count ?? 0,
                               last_session_date: prev?.lastDate ?? null,
-                              session_notes: prev?.lastNotes ?? null,
                               username: divinerUsername || "admin",
-                              duration_minutes: (booking.duration_minutes as number) ?? 60,
                               metadata: (booking.metadata as Record<string, unknown>) ?? null,
                               stripe_payment_intent_id: (booking.stripe_payment_intent_id as string) ?? null,
                               base_price: (booking.base_price as number) ?? null,
                             }}
+                            linkedOrder={ordersByBookingId[booking.id as string] ?? null}
                           />
                         </div>
                       </TableCell>

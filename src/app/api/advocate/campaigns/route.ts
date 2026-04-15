@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
       .from("campaign_affiliates")
       .select("campaign_id, custom_commission_value")
       .eq("affiliate_id", advocate.id)
-      .eq("affiliate_type", "advocate");
+      .eq("affiliate_type", "social_advocate");
 
     if (linkErr) throw linkErr;
 
