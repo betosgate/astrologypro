@@ -48,7 +48,7 @@ export default async function ReadingHistoryPage({
     .eq("user_id", user.id)
     .single();
   if (!member) redirect("/join/community");
-  if (member.membership_status !== "active") redirect("/join/community?status=inactive");
+  if (member.membership_status !== "active") redirect("/join/community/resubscribe");
 
   const offset = (page - 1) * limit;
   let query = supabase

@@ -31,7 +31,7 @@ export default async function TarotSpreadsPage() {
     .single();
 
   if (!member) redirect("/join/community");
-  if (member.membership_status !== "active") redirect("/join/community?status=inactive");
+  if (member.membership_status !== "active") redirect("/join/community/resubscribe");
 
   return (
     <div className="space-y-8">

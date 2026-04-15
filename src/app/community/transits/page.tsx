@@ -65,7 +65,7 @@ export default async function TransitsPage() {
     .single();
 
   if (!member) redirect("/join/community");
-  if (member.membership_status !== "active") redirect("/join/community?status=inactive");
+  if (member.membership_status !== "active") redirect("/join/community/resubscribe");
 
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;

@@ -107,7 +107,7 @@ export default async function IngressChartDetailPage({
     .single();
 
   if (!member) redirect("/join/community");
-  if (member.membership_status !== "active") redirect("/join/community?status=inactive");
+  if (member.membership_status !== "active") redirect("/join/community/resubscribe");
 
   const { data: chart, error } = await supabase
     .from("ingress_charts")

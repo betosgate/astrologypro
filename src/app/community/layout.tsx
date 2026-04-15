@@ -28,8 +28,7 @@ export default async function CommunityLayout({ children }: { children: React.Re
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!member) redirect("/join/community");
-
+  if (!member) redirect("/get-started");
   // PM-only gate: legacy Mystery School-only users must use /mystery-school
   if (member.membership_type !== "perennial_mandalism") redirect("/mystery-school");
 
@@ -53,7 +52,7 @@ export default async function CommunityLayout({ children }: { children: React.Re
           membershipStatus={member.membership_status}
           billingPortalEndpoint="/api/community/billing-portal"
           hasStripeSubscription={!!(member as { stripe_subscription_id?: string | null }).stripe_subscription_id}
-          resubscribeHref="/join/community"
+          resubscribeHref="/join/community/resubscribe"
         />
       </div>
     );

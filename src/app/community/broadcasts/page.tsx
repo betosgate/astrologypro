@@ -66,7 +66,7 @@ export default async function CommunityBroadcastsPage() {
     .single();
 
   if (!member) redirect("/join/community");
-  if (member.membership_status !== "active") redirect("/join/community?status=inactive");
+  if (member.membership_status !== "active") redirect("/join/community/resubscribe");
 
   // Fetch directly via admin client — server component, no HTTP round-trip needed
   const admin = createAdminClient();

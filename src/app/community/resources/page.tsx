@@ -50,7 +50,7 @@ export default async function CommunityResourcesPage() {
     .single();
 
   if (!member) redirect("/join/community");
-  if (member.membership_status !== "active") redirect("/join/community?status=inactive");
+  if (member.membership_status !== "active") redirect("/join/community/resubscribe");
 
   const isActiveMember = member.membership_status === "active";
 
