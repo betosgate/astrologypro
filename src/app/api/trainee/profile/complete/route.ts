@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncProfileAcrossRoles } from "@/lib/profile-sync";
+import { sendTraineeWelcome } from "@/lib/email";
 import {
   getAllowedSpecialtiesForPackage,
   getRoleServicePackages,
@@ -177,6 +178,33 @@ export async function POST(req: NextRequest) {
       },
       "trainees"
     ).catch(console.error);
+
+    // Fire-and-forget welcome email — fetch mentor name best-effort
+    (async () => {
+      try {
+        const { data: fullTrainee } = await admin
+          .from("trainees")
+          .select("mentor_diviner_id")
+          .eq("id", trainee.id)
+          .single();
+        let mentorName: string | null = null;
+        if (fullTrainee?.mentor_diviner_id) {
+          const { data: mentor } = await admin
+            .from("diviners")
+            .select("display_name")
+            .eq("id", fullTrainee.mentor_diviner_id)
+            .single();
+          mentorName = mentor?.display_name ?? null;
+        }
+        await sendTraineeWelcome({
+          to: user.email!,
+          name: display_name.trim(),
+          mentorName,
+        });
+      } catch (err) {
+        console.error("[trainee/profile/complete] Welcome email failed:", err);
+      }
+    })();
 
     return NextResponse.json({ success: true });
   } catch (err) {

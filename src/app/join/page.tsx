@@ -1,4 +1,9 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin } from "@/lib/admin-auth";
+import { resolveLoginDestination } from "@/lib/auth/resolve-login-destination";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,7 +58,25 @@ const paths = [
 
 export const metadata = { title: "Join AstrologyPro" };
 
-export default function JoinPage() {
+export default async function JoinPage() {
+  // Redirect authenticated users to their correct portal
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const adminUser = await requireAdmin().catch(() => null);
+    const admin = createAdminClient();
+    const destination = await resolveLoginDestination({
+      userId: user.id,
+      isAdmin: !!adminUser,
+      isInvited: user.user_metadata?.invited_by_admin === true,
+      adminClient: admin,
+    });
+    redirect(destination);
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <MarketingHeader />
