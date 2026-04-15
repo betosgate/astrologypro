@@ -25,7 +25,10 @@ import {
   DollarSign,
   Sparkles,
   Send,
+  Captions,
+  CaptionsOff,
 } from "lucide-react";
+import { encodeAudioEvent, floatToPcm16, decodeTranscriptEvent } from "@/lib/transcribe-stream";
 import { toast } from "sonner";
 import {
   Sheet,
@@ -114,6 +117,16 @@ export function ChimeSessionRoom({
   const [tiles, setTiles] = useState<{ tileId: number; isLocal: boolean; isContent: boolean }[]>([]);
   const videoElemRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
 
+  // ── Live captions (AWS Transcribe Streaming) ─────────────────────────────
+  const [isCaptionsEnabled, setIsCaptionsEnabled] = useState(false);
+  const [captionText, setCaptionText] = useState("");
+  const [captionIsPartial, setCaptionIsPartial] = useState(false);
+  const transcribeWsRef = useRef<WebSocket | null>(null);
+  const transcribeAudioCtxRef = useRef<AudioContext | null>(null);
+  const transcribeStreamRef = useRef<MediaStream | null>(null);
+  // Clear the caption after N ms of silence (no new transcript events)
+  const captionClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Detect mobile viewport
   useEffect(() => {
     function checkMobile() {
@@ -155,6 +168,28 @@ export function ChimeSessionRoom({
       }
     });
   }, [tiles]);
+
+  // Safety net #1 — derive isDivinerPresent from participants state.
+  // The direct setIsDivinerPresent() inside the presence callback is the fast
+  // path, but Chime's roster-replay timing is not guaranteed. Watching the
+  // participants array (which the same callback also updates) ensures the
+  // waiting-room overlay disappears the moment any non-local participant is
+  // tracked, regardless of callback ordering.
+  useEffect(() => {
+    if (role !== "client") return;
+    if (participants.some((p) => !p.isLocal)) {
+      setIsDivinerPresent(true);
+    }
+  }, [participants, role]);
+
+  // Safety net #2 — a remote video tile appearing is proof-positive the
+  // diviner is in the meeting. Covers cases where the presence event fires
+  // but the state update is somehow missed (e.g. StrictMode, rapid fire).
+  useEffect(() => {
+    if (role !== "client") return;
+    const hasRemoteTile = tiles.some((t) => !t.isLocal && !t.isContent);
+    if (hasRemoteTile) setIsDivinerPresent(true);
+  }, [tiles, role]);
 
   // Initialize Chime SDK meeting session
   // Initialize Chime SDK — uses a ref lock to survive StrictMode/HMR
@@ -260,6 +295,10 @@ export function ChimeSessionRoom({
 
         meetingSession.audioVideo.realtimeSubscribeToAttendeeIdPresence(
           (attendeeId: string, present: boolean, externalUserId?: string) => {
+            // Ignore the #content ghost attendee (screen share) — it inflates
+            // the participant count and is not a real person in the call.
+            if (attendeeId.endsWith("#content")) return;
+
             const isLocal = attendeeId === meetingData.attendee.AttendeeId;
             // externalUserId can be undefined for remote attendees in some SDK versions,
             // so we use a dual check: explicit prefix OR any non-local attendee (1-on-1)
@@ -336,7 +375,14 @@ export function ChimeSessionRoom({
             }
           },
           videoTileDidUpdate: (tileState: any) => {
-            if (!tileState.boundAttendeeId) return;
+            // When boundAttendeeId is null the tile became unbound — the participant
+            // turned their camera off. Remove it from tiles so the avatar renders
+            // instead of leaving a stale black video element in state.
+            if (!tileState.boundAttendeeId) {
+              videoElemRefs.current.delete(tileState.tileId);
+              setTiles((prev) => prev.filter((t) => t.tileId !== tileState.tileId));
+              return;
+            }
             setTiles((prev) => {
               if (prev.some((t) => t.tileId === tileState.tileId)) return prev;
               return [
@@ -431,9 +477,111 @@ export function ChimeSessionRoom({
     }
   }, [isScreenSharing]);
 
+  // ── Live captions toggle (AWS Transcribe Streaming) ──────────────────────
+  const handleToggleCaptions = useCallback(async () => {
+    // ── STOP ──────────────────────────────────────────────────────────────
+    if (isCaptionsEnabled) {
+      transcribeWsRef.current?.close();
+      transcribeWsRef.current = null;
+      transcribeAudioCtxRef.current?.close();
+      transcribeAudioCtxRef.current = null;
+      transcribeStreamRef.current?.getTracks().forEach((t) => t.stop());
+      transcribeStreamRef.current = null;
+      if (captionClearTimerRef.current) clearTimeout(captionClearTimerRef.current);
+      setCaptionText("");
+      setIsCaptionsEnabled(false);
+      return;
+    }
+
+    // ── START ─────────────────────────────────────────────────────────────
+    try {
+      // 1. Get pre-signed WebSocket URL from our API (server signs with AWS v4)
+      const res = await fetch("/api/transcribe/signed-url");
+      if (!res.ok) throw new Error("Failed to get Transcribe URL");
+      const { url } = await res.json();
+
+      // 2. Open WebSocket to AWS Transcribe
+      const ws = new WebSocket(url);
+      ws.binaryType = "arraybuffer";
+      transcribeWsRef.current = ws;
+
+      // 3. Capture microphone audio at 16 kHz (Transcribe's required rate)
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true },
+      });
+      transcribeStreamRef.current = stream;
+
+      const audioCtx = new AudioContext({ sampleRate: 16000 });
+      transcribeAudioCtxRef.current = audioCtx;
+
+      const source = audioCtx.createMediaStreamSource(stream);
+
+      // Inline the AudioWorklet processor as a Blob URL — no extra public file needed.
+      // The worklet runs in a dedicated audio thread and transfers Float32 buffers
+      // to the main thread via postMessage, which we then encode and send to Transcribe.
+      const workletBlob = new Blob(
+        [`class P extends AudioWorkletProcessor{process(i){if(i[0]&&i[0][0]){const c=i[0][0].slice();this.port.postMessage(c.buffer,[c.buffer]);}return true;}}registerProcessor("pcm-sender",P);`],
+        { type: "application/javascript" }
+      );
+      const workletUrl = URL.createObjectURL(workletBlob);
+      await audioCtx.audioWorklet.addModule(workletUrl);
+      URL.revokeObjectURL(workletUrl);
+
+      const workletNode = new AudioWorkletNode(audioCtx, "pcm-sender");
+      source.connect(workletNode);
+
+      // 4. Stream PCM16 audio once WebSocket is open
+      ws.onopen = () => {
+        workletNode.port.onmessage = (e: MessageEvent<ArrayBuffer>) => {
+          if (ws.readyState !== WebSocket.OPEN) return;
+          const pcm = floatToPcm16(new Float32Array(e.data));
+          ws.send(encodeAudioEvent(pcm));
+        };
+      };
+
+      // 5. Receive transcript events and update caption state
+      ws.onmessage = (e) => {
+        const chunk = decodeTranscriptEvent(e.data as ArrayBuffer);
+        if (!chunk || !chunk.text) return;
+
+        setCaptionText(chunk.text);
+        setCaptionIsPartial(chunk.isPartial);
+
+        // Auto-clear caption 4 s after a final (non-partial) result
+        if (!chunk.isPartial) {
+          if (captionClearTimerRef.current) clearTimeout(captionClearTimerRef.current);
+          captionClearTimerRef.current = setTimeout(() => setCaptionText(""), 4000);
+        }
+      };
+
+      ws.onerror = () => {
+        toast.error("Captions connection error. Please try again.");
+        setIsCaptionsEnabled(false);
+      };
+
+      // 6. Auto-reconnect when the 5-min pre-signed URL expires
+      ws.onclose = (e) => {
+        if (!isCaptionsEnabled) return; // user turned off — don't reconnect
+        // 1008 = policy violation (URL expired), 1006 = abnormal closure
+        if (e.code === 1008 || e.code === 1006) {
+          void handleToggleCaptions(); // re-start with a fresh URL
+        }
+      };
+
+      setIsCaptionsEnabled(true);
+    } catch (err) {
+      console.error("Captions start failed:", err);
+      toast.error("Could not start captions. Check microphone permissions.");
+    }
+  }, [isCaptionsEnabled]);
+
   const handleEndSession = useCallback(async () => {
     setSessionEnded(true);
     if (timerRef.current) clearInterval(timerRef.current);
+    // Stop captions if running
+    transcribeWsRef.current?.close();
+    transcribeAudioCtxRef.current?.close();
+    transcribeStreamRef.current?.getTracks().forEach((t) => t.stop());
 
     // Stop Chime meeting session and release all media devices.
     // Order matters: stop inputs first so the OS camera/mic indicator turns off,
@@ -835,17 +983,17 @@ export function ChimeSessionRoom({
 
             /* ── PRESENTATION MODE: screen share active ─────────────────── */
             if (contentTile) {
-              // When YOU are the sharer (contentTile.isLocal === true), do NOT render
-              // the screen-capture video — it would show the page inside itself,
-              // creating an infinite mirror loop. Show a "presenting" placeholder instead.
-              // The remote participant has isLocal === false so they still see the real video.
-              const isLocalShare = contentTile.isLocal;
-
+              // Use our own isScreenSharing state — NOT contentTile.isLocal.
+              // Chime SDK sets localTile:false on content share tiles (they're treated
+              // as a separate "#content" attendee), so contentTile.isLocal is always
+              // false and cannot be used to distinguish sharer from viewer.
+              // isScreenSharing is set by our own addContentShareObserver callbacks,
+              // so it is always accurate: true only for the person who started the share.
               return (
                 <div className="absolute inset-0 flex">
                   {/* Screen share — main panel */}
                   <div className="flex min-w-0 flex-1 items-center justify-center bg-black">
-                    {isLocalShare ? (
+                    {isScreenSharing ? (
                       <div className="flex flex-col items-center gap-4 text-center">
                         <div className="flex h-20 w-20 items-center justify-center rounded-full border border-primary/30 bg-primary/10">
                           <Monitor className="h-9 w-9 text-primary" />
@@ -908,13 +1056,32 @@ export function ChimeSessionRoom({
                         </span>
                       </div>
                     )}
-                    {/* Placeholder when camera is off */}
+                    {/* Remote camera off — initials avatar in strip */}
                     {remoteTiles.length === 0 && (
                       <div
-                        className="flex items-center justify-center rounded-lg bg-zinc-800"
+                        className="flex flex-col items-center justify-center gap-1 rounded-lg bg-zinc-800"
                         style={{ aspectRatio: "16/9" }}
                       >
-                        <User className="h-8 w-8 text-zinc-500" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-primary/30 bg-primary/15">
+                          <span className="text-xs font-bold text-primary">
+                            {remoteName.split(" ").map((w) => w[0] ?? "").join("").toUpperCase().slice(0, 2) || "??"}
+                          </span>
+                        </div>
+                        <span className="text-[9px] text-zinc-400">{remoteName}</span>
+                      </div>
+                    )}
+                    {/* Self camera off — initials avatar in strip */}
+                    {!localTile && (
+                      <div
+                        className="flex flex-col items-center justify-center gap-1 rounded-lg bg-zinc-800"
+                        style={{ aspectRatio: "16/9" }}
+                      >
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-primary/30 bg-primary/15">
+                          <span className="text-xs font-bold text-primary">
+                            {(role === "diviner" ? divinerName : clientName).split(" ").map((w) => w[0] ?? "").join("").toUpperCase().slice(0, 2) || "??"}
+                          </span>
+                        </div>
+                        <span className="text-[9px] text-zinc-400">You</span>
                       </div>
                     )}
                   </div>
@@ -924,93 +1091,145 @@ export function ChimeSessionRoom({
 
             /* ── GALLERY MODE: no screen share ──────────────────────────── */
 
-            // Only local camera on — show self full-screen, remote as small placeholder
-            if (remoteTiles.length === 0 && localTile) {
+            // Helper: "John Doe" → "JD", "Client" → "CL"
+            const getInitials = (name: string) =>
+              name
+                .split(" ")
+                .map((w) => w[0] ?? "")
+                .join("")
+                .toUpperCase()
+                .slice(0, 2) || "??";
+
+            const myName = role === "diviner" ? divinerName : clientName;
+
+            // ── BOTH CAMERAS OFF — equal grid (Google Meet / Teams style) ──
+            // When nobody has their camera on, show two equal tiles side by side.
+            // Neither person should dominate the view — it's a symmetric state.
+            if (remoteTiles.length === 0 && !localTile) {
               return (
-                <>
-                  <video
-                    ref={videoRef(localTile.tileId, true)}
-                    autoPlay
-                    playsInline
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                  <span className="absolute bottom-4 left-4 z-[2] rounded bg-black/60 px-2 py-1 text-xs font-medium text-white">
-                    You
-                  </span>
-                  {/* Remote camera-off pill — top-right */}
-                  <div className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-xl border border-zinc-600/50 bg-zinc-800/90 px-3 py-2">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700">
-                      <User className="h-4 w-4 text-zinc-400" />
+                <div className="absolute inset-0 flex items-center justify-center gap-4 bg-zinc-950 p-6">
+                  {/* Remote avatar tile */}
+                  <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-zinc-700/50 bg-zinc-900 py-10">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10">
+                      <span className="text-3xl font-bold text-primary">
+                        {getInitials(remoteName)}
+                      </span>
                     </div>
-                    <span className="text-xs text-zinc-300">{remoteName}</span>
-                    <span className="text-[10px] text-zinc-500">Camera off</span>
+                    <p className="text-sm font-semibold text-zinc-200">{remoteName}</p>
+                    <p className="text-xs text-zinc-500">Camera off</p>
                   </div>
-                </>
+                  {/* Self avatar tile */}
+                  <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-zinc-700/50 bg-zinc-900 py-10">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10">
+                      <span className="text-3xl font-bold text-primary">
+                        {getInitials(myName)}
+                      </span>
+                    </div>
+                    <p className="text-sm font-semibold text-zinc-200">{myName}</p>
+                    <p className="text-xs text-zinc-500">You · Camera off</p>
+                  </div>
+                </div>
               );
             }
 
+            // ── ONE OR BOTH CAMERAS ON — spotlight + PIP ──────────────────
+            // Remote always fills the main area (video or avatar).
+            // Self always sits in the bottom-right PIP slot (video or avatar).
             return (
               <>
-                {/* Remote participant — fills entire area */}
-                {remoteTiles.map((tile) => (
-                  <video
-                    key={tile.tileId}
-                    ref={videoRef(tile.tileId)}
-                    autoPlay
-                    playsInline
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                ))}
-
-                {/* Both cameras off / still connecting */}
-                {remoteTiles.length === 0 && !localTile && chimeSdkReady && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-zinc-900">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-700">
-                      <User className="h-10 w-10 text-zinc-400" />
+                {/* ── Remote participant — main area ─────────────────────── */}
+                {remoteTiles.length > 0 ? (
+                  // Camera on — video fills the area
+                  remoteTiles.map((tile) => (
+                    <video
+                      key={tile.tileId}
+                      ref={videoRef(tile.tileId)}
+                      autoPlay
+                      playsInline
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  ))
+                ) : (
+                  // Remote camera off — large avatar fills main area
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-zinc-900">
+                    <div className="flex h-28 w-28 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10">
+                      <span className="text-4xl font-bold text-primary">
+                        {getInitials(remoteName)}
+                      </span>
                     </div>
-                    <p className="text-sm font-medium text-zinc-300">{remoteName}</p>
-                    <p className="text-xs text-zinc-500">Camera off or connecting…</p>
+                    <div className="text-center">
+                      <p className="text-base font-semibold text-zinc-200">{remoteName}</p>
+                      <p className="mt-0.5 text-xs text-zinc-500">Camera off</p>
+                    </div>
                   </div>
                 )}
 
-                {/* Remote name label */}
+                {/* Remote name label (only when video is on) */}
                 {remoteTiles.length > 0 && (
-                  <span className="absolute bottom-4 left-4 z-[2] rounded bg-black/60 px-2 py-1 text-xs font-medium text-white">
+                  <span className="absolute bottom-20 left-4 z-[2] rounded bg-black/60 px-2 py-1 text-xs font-medium text-white">
                     {remoteName}
                   </span>
                 )}
 
-                {/* Self-view PIP — bottom-right (only when remote is also visible) */}
-                {localTile && remoteTiles.length > 0 && (
-                  <div
-                    className="absolute bottom-4 right-4 z-10 w-40 overflow-hidden rounded-xl border-2 border-primary/50 shadow-2xl"
-                    style={{ aspectRatio: "16/9" }}
-                  >
+                {/* ── Self-view PIP — always bottom-right ─────────────────── */}
+                <div
+                  className="absolute bottom-4 right-4 z-10 w-40 overflow-hidden rounded-xl border-2 border-primary/50 shadow-2xl"
+                  style={{ aspectRatio: "16/9" }}
+                >
+                  {localTile ? (
+                    // Camera on — video
                     <video
                       ref={videoRef(localTile.tileId, true)}
                       autoPlay
                       playsInline
                       className="h-full w-full object-cover"
                     />
-                    <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                      You
-                    </span>
-                  </div>
-                )}
-
-                {/* Remote camera off — pill indicator when only remote video is missing */}
-                {localTile && remoteTiles.length === 0 && chimeSdkReady && (
-                  <div className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-xl border border-zinc-600/50 bg-zinc-800/90 px-3 py-2">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700">
-                      <User className="h-4 w-4 text-zinc-400" />
+                  ) : (
+                    // Camera off — initials avatar (same tile size)
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-zinc-800">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/30 bg-primary/15">
+                        <span className="text-sm font-bold text-primary">
+                          {getInitials(myName)}
+                        </span>
+                      </div>
+                      <span className="text-[9px] text-zinc-400">You</span>
                     </div>
-                    <span className="text-xs text-zinc-300">{remoteName}</span>
-                    <span className="text-[10px] text-zinc-500">Camera off</span>
-                  </div>
-                )}
+                  )}
+                  <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                    You
+                  </span>
+                </div>
               </>
             );
           })()}
+
+          {/* ── Live captions overlay ───────────────────────────────────────
+               Sits just above the controls bar, full width, z-30 so it stays
+               on top of video but below any modal/sheet. Partial results are
+               shown in a lighter colour; final results are white.           */}
+          {isCaptionsEnabled && captionText && (
+            <div className="absolute bottom-2 left-1/2 z-30 w-[90%] max-w-3xl -translate-x-1/2 px-2">
+              <div className="rounded-xl bg-black/75 px-5 py-3 text-center backdrop-blur-sm">
+                <p
+                  className={`text-sm leading-snug md:text-base ${
+                    captionIsPartial ? "text-zinc-300" : "text-white font-medium"
+                  }`}
+                >
+                  {captionText}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Captions active indicator (when no text yet) */}
+          {isCaptionsEnabled && !captionText && (
+            <div className="absolute bottom-2 left-1/2 z-30 -translate-x-1/2">
+              <div className="flex items-center gap-2 rounded-full bg-black/60 px-4 py-1.5 text-xs text-zinc-400 backdrop-blur-sm">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+                Listening for speech…
+              </div>
+            </div>
+          )}
 
           {/* Mobile quick-access buttons */}
           {isMobile && (
@@ -1069,6 +1288,20 @@ export function ChimeSessionRoom({
             title={isScreenSharing ? "Stop sharing" : "Share screen"}
           >
             <Monitor className="h-4 w-4" />
+          </Button>
+          {/* Live captions (AWS Transcribe) */}
+          <Button
+            variant={isCaptionsEnabled ? "secondary" : "outline"}
+            size="icon"
+            className={isCaptionsEnabled ? "border-primary/60 bg-primary/20" : "border-primary/30"}
+            onClick={handleToggleCaptions}
+            title={isCaptionsEnabled ? "Turn off captions" : "Turn on live captions"}
+          >
+            {isCaptionsEnabled ? (
+              <Captions className="h-4 w-4 text-primary" />
+            ) : (
+              <CaptionsOff className="h-4 w-4" />
+            )}
           </Button>
           {role === "diviner" && (
             <Button
