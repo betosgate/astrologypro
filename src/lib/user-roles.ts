@@ -64,7 +64,7 @@ export async function getUserPortals(
       .from("community_members")
       .select("id, membership_type, membership_status")
       .eq("user_id", userId)
-      .eq("membership_status", "active")
+      .eq("membership_type", "perennial_mandalism")
       .maybeSingle(),
     supabase
       .from("mystery_school_students")
@@ -87,17 +87,20 @@ export async function getUserPortals(
   if (advocate.data)
     portals.push({ role: "advocate", label: "Advocate", href: "/advocate" });
 
-  // PM portal: active community_members with perennial_mandalism type
+  // PM portal: show for any PM member (active, cancelling, or cancelled).
+  // Active members see the full dashboard; inactive members see the
+  // SubscriptionExpiredView with a resubscribe option.
   if (
     community.data &&
-    community.data.membership_type === "perennial_mandalism" &&
-    community.data.membership_status === "active"
+    community.data.membership_type === "perennial_mandalism"
   ) {
     portals.push({
       role: "community",
       label: "Community",
       href: "/community",
-      badge: "Perennial Mandalism",
+      badge: community.data.membership_status === "active"
+        ? "Perennial Mandalism"
+        : "Perennial Mandalism (Inactive)",
     });
   }
 
