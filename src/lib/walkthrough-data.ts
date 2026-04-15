@@ -368,302 +368,362 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       // { name: "decan_media", label: "Decan Media", description: "Visual assets for decan-based studies.", group: "Astrology" },
       // { name: "quarters", label: "Solar Quarters", description: "Governance of seasonal solar transitions.", group: "Astrology" },
 
-      { 
-        name: "horoscope_nativity_filled", 
-        label: "Nativity Birth Chart: Setup", 
-        description: "Enter your birth details to generate your personal astrological chart.", 
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "A Nativity Birth Chart is a snapshot of the sky exactly when and where you were born. It reveals your personality, life path, and natural strengths. Fill in the three required fields — date, time, and place of birth — and the Generate button will activate. The more accurate your birth details, the more personal and insightful your reading will be.",
-        bullets: [
-          "📅 Date of Birth — This tells the system which planets were in which signs on the day you arrived in the world.",
-          "🕐 Time of Birth — Even a small difference in birth time changes your rising sign and house placements. Try to be as exact as possible.",
-          "📍 Place of Birth — Your birthplace sets the geographic coordinates that determine your house system and Ascendant sign.",
-          "💬 Area of Inquiry (optional) — You can type a specific life topic like Career, Love, or Spiritual Growth to focus the AI reading on what matters most to you.",
-          "✅ The Generate Reading button becomes active only after Date, Time, and Place of Birth are all filled in."
-        ]
-      },
+{
+  name: "horoscope_nativity_filled",
+  label: "Nativity Birth Chart: Setup & Generation",
+  description: "Enter birth details to generate the full nativity chart and step-by-step astrology reading.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This is the first screen of the Nativity Birth Chart flow. The user begins here by entering date of birth, time of birth, and place of birth. These required inputs allow the system to calculate the natal chart accurately. Once all required fields are entered, the Generate Reading button becomes active. After generation, the system builds the full chart and presents the reading in multiple sections, moving from technical chart data to easy-to-understand interpretations and deeper spiritual analysis. The optional Area of Inquiry field allows the reading to focus more clearly on topics such as career, relationships, family, or personal growth.",
+  bullets: [
+    "📅 Date of Birth — Used to calculate the zodiac sign positions of the Sun, Moon, planets, and key chart points on the day of birth.",
+    "🕐 Time of Birth — Used to calculate the Ascendant, house cusps, Midheaven, and exact planetary house placements. More accurate time gives a more accurate chart.",
+    "📍 Place of Birth — Used to set the geographic location needed to calculate the local sky, house system, and rising sign correctly.",
+    "💬 Area of Inquiry (Optional) — Lets the user focus the reading on a specific life area such as career, love, marriage, health, family, or spiritual growth.",
+    "✅ Generate Reading Button — Becomes active only after Date of Birth, Time of Birth, and Place of Birth are all filled in.",
+    "🪐 Natal Birth Chart — The system first creates the core natal chart wheel, showing the zodiac signs, houses, and planetary placements at the moment of birth.",
+    "📋 Planet Information — Displays each planet’s sign, full degree, house placement, normalized degree, movement speed, and retrograde status.",
+    "🏠 House Information — Shows all 12 houses with their ruling sign, cusp degree, and any planets placed in each house.",
+    "📖 House Interpretations — Explains what each house means in the user’s life, such as self, money, communication, home, work, relationships, and career.",
+    "🔗 Aspect Dynamics — Lists how planets interact with one another through conjunctions, oppositions, trines, squares, sextiles, and other aspect patterns.",
+    "🧠 Aspect Interpretations — Turns those planetary relationships into readable insight about emotions, thinking style, strengths, challenges, and life patterns.",
+    "🔺 Decan Wisdom — Adds a deeper interpretive layer based on the exact 10-degree section of a sign, refining the meaning of a planet’s placement.",
+    "⬆️ Angles and Points — Explains major chart points like the Ascendant, Midheaven, and Vertex, showing personality style, public path, and major turning points.",
+    "⚫ Lilith Analysis — Explores deeper themes such as inner rebellion, authenticity, hidden intensity, and the need to challenge limiting beliefs or structures.",
+    "✨ Dharma and Karma — Provides a deeper spiritual reading of life purpose, growth path, karmic lessons, responsibilities, and inner evolution.",
+    "🧠 Full Reading Flow — The screen works as a guided journey, starting with raw chart data and continuing into interpretations, visuals, and deeper personal meaning."
+  ]
+},
      
-      { 
-        name: "horoscope_nativity_result_1", 
-        label: "Nativity: Your Birth Chart Wheel", 
-        description: "See your personal astrological chart come to life.", 
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "This is your personal birth chart — a circular map of the sky at the exact moment you were born. The wheel is divided into 12 sections (houses) and shows where every planet was positioned. Two chart versions are displayed side by side so you can cross-verify the results from two leading astrology engines for maximum accuracy.",
-        bullets: [
-          "🔵 The inner ring shows your natal planets — where each planet was the moment you were born.",
-          "🌐 Two chart wheels are shown side by side from different astrological sources for comparison.",
-          "🔗 The lines inside the wheel show how planets are connected or in tension — these are called aspects.",
-          "🏠 The 12 segments around the wheel represent the 12 houses — each governs a different area of your life."
-        ]
-      },
+      // { 
+      //   name: "horoscope_nativity_result_1", 
+      //   label: "Nativity: Your Birth Chart Wheel", 
+      //   description: "See your personal astrological chart come to life.", 
+      //   group: "Horoscope Toolkit",
+      //   subModule: "Nativity Birth Chart",
+      //   purpose: "This is your personal birth chart — a circular map of the sky at the exact moment you were born. The wheel is divided into 12 sections (houses) and shows where every planet was positioned. Two chart versions are displayed side by side so you can cross-verify the results from two leading astrology engines for maximum accuracy.",
+      //   bullets: [
+      //     "🔵 The inner ring shows your natal planets — where each planet was the moment you were born.",
+      //     "🌐 Two chart wheels are shown side by side from different astrological sources for comparison.",
+      //     "🔗 The lines inside the wheel show how planets are connected or in tension — these are called aspects.",
+      //     "🏠 The 12 segments around the wheel represent the 12 houses — each governs a different area of your life."
+      //   ]
+      // },
       { 
         name: "horoscope_nativity_processing_v2", 
         label: "Nativity: Generating Your Reading", 
-        description: "Your chart is being calculated — this takes just a moment.", 
+        description: "Your core astrological architecture is being synthesized.", 
         group: "Horoscope Toolkit",
         subModule: "Nativity Birth Chart",
-        purpose: "After you click Generate Reading, the system gets to work! It calculates the exact position of every planet at your birth, builds your chart wheel, and then passes all the data to our AI engine which writes your personal interpretation. This usually takes a few seconds — sit tight while the universe does its work.",
+        purpose: "Our engine is performing a deep-dive analysis into your celestial signature. It scans for your core personality traits, maps planets into 12 distinct life segments (houses), and calculates the 'aspects'—the complex relationships between planets. This process reveals your mental depth, emotional growth triggers, and elemental balance for a professional, 100% accurate reading.",
         bullets: [
-          "⚙️ The platform is calculating your planetary positions based on your exact birth data.",
-          "🤖 The AI engine is being loaded to write your personal interpretation in natural language.",
-          "🔄 Two separate astrology engines run simultaneously for double-verified accuracy.",
-          "⏳ This process takes a few seconds — your full reading will appear automatically when ready."
+          "✔ Mapping Core Components — Identifying how signs, houses, and planets form your unique personality.",
+          "🧠 Mental & Emotional Scan — Calculating aspect lines to measure your thinking style and growth potential.",
+          "🌍 Elemental Balance — Checking the distribution of Fire, Earth, Air, and Water in your nature.",
+          "🏠 Life Area Evaluation — Focusing on your career legacy, relationship patterns, and emotional roots.",
+          "🚀 Destiny Analysis — Identifying the important karmic lessons and major turning points in your life path."
         ]
       },
       { 
         name: "horoscope_nativity_result_planets_v1", 
-        label: "Nativity: Planet Positions", 
-        description: "See exactly where every planet was the moment you were born.", 
+        label: "Nativity: Planet Information Table", 
+        description: "The raw foundation of your entire birth chart — every planet, sign, house, and degree.", 
         group: "Horoscope Toolkit",
         subModule: "Nativity Birth Chart",
-        purpose: "This table shows the exact location of every planet in your natal chart — like a precise record of the sky at your birth. For each planet, you can see which zodiac sign it was in, which life area (house) it occupied, and whether it was moving forward or in retrograde. This data is the foundation that all your chart interpretations are built upon.",
+        purpose: "This is the master data table that powers your entire reading. Each row represents a planet and shows its exact zodiac sign, the house (life area) it occupies, its precise degree, its speed of movement, and whether it is in retrograde. An astrologer reads this table to understand your personality (Sun), emotions (Moon), thinking style (Mercury), love nature (Venus), drive (Mars), career discipline (Saturn), and karmic destiny (Node). This is the raw data from which the chart wheel and all AI interpretations are generated.",
         bullets: [
-          "🪐 Every planet is listed along with the zodiac sign it was in at your exact birth moment.",
-          "🏠 The House column shows which of the 12 life areas each planet was influencing.",
-          "↩️ Retrograde (Rx) means a planet appeared to move backward — planets in retrograde often signal internalized or reflective energy.",
-          "📐 The degree values show the precise position — even a fraction of a degree can change the reading."
+          "🌞 Planet Column — Each planet governs a different part of your life: Sun = core identity, Moon = emotions, Mercury = mind, Venus = love, Mars = energy, Jupiter = growth, Saturn = discipline.",
+          "♈ Sign Column — Shows which zodiac sign the planet was in at birth. Example: Sun in Libra = balanced and diplomatic personality; Moon in Aries = emotionally bold and impulsive.",
+          "📐 Full Degree — The exact position in the full 360° zodiac circle. Used to calculate aspects (relationships between planets) with precision.",
+          "🏠 House Column — Which of the 12 life areas the planet influences. House 6 = work & routine, House 5 = love & creativity, House 10 = career & public image, House 12 = hidden emotions & spirituality.",
+          "📏 Norm Degree — The degree within the sign only (0°–30°). Used for fine-tuning predictions, compatibility matching, and advanced decan-level interpretation.",
+          "⚡ Speed — How fast the planet is moving. Fast planets (like Moon at 13.20) = active daily influence. Slow or negative speed (like Saturn at -0.017) = deep, long-term karmic impact.",
+          "🔁 Retro Column — 'Yes' means the planet is in retrograde (appears to move backward). Saturn Retro = delayed career success but eventual strength. Neptune Retro = deep intuition and spiritual confusion. Node Retro = strong karmic life path and destiny-driven experiences."
         ]
       },
-      { 
-        name: "horoscope_nativity_result_interpret_v1", 
-        label: "Nativity: Your Sun, Moon & Mercury Readings", 
-        description: "Plain-language meanings of your most important planets.", 
+      {
+        name: "horoscope_nativity_result_interpret_v1",
+        label: "Nativity: AI Interpretation — Sun, Moon & Mercury",
+        description: "How the AI converts your raw chart data into personal life readings.",
         group: "Horoscope Toolkit",
         subModule: "Nativity Birth Chart",
-        purpose: "This section shows AI-written personal readings for your three most influential planets. Your Sun reveals who you are at your core, your Moon reflects your inner emotional world, and Mercury shows how your mind works and how you communicate. Each reading is written in clear, personal language that speaks directly to you.",
+        purpose: "This screen transforms raw astronomical data into personal meaning. For each planet, the AI uses a formula: Planet + Sign + House + Degree + Speed = Your Reading. The Sun block reveals your core identity and life direction. The Moon block explains your emotional nature and subconscious patterns. The Mercury block breaks down your thinking style and communication strengths. Each colored block shows the planet's sign and house badge in the top-right corner — click 'Show More' to unlock the full deep-dive interpretation.",
         bullets: [
-          "☀️ Sun Reading — Your core identity, purpose, and the role you are here to play in life.",
-          "🌙 Moon Reading — Your emotional nature, what makes you feel safe, and how you process feelings.",
-          "☿ Mercury Reading — How your mind works, your communication style, and how you learn and think.",
-          "📖 Click 'Show More' on any planet to get a deeper, more personal reading."
+          "🌞 Sun (e.g. Libra · House 6) — Your core identity and life purpose. Libra in House 6 means you thrive in structured, balanced work environments and succeed through teamwork, diplomacy, and collaboration.",
+          "🌙 Moon (e.g. Aries · House 12) — Your emotional world and inner patterns. Aries in House 12 means you feel things deeply and boldly, but process emotions internally and privately — often handling challenges alone.",
+          "🧠 Mercury (e.g. Virgo · House 6) — Your thinking style and communication. Virgo in House 6 means you have a sharp analytical mind with strong attention to detail — excellent for technical work, analysis, and problem-solving.",
+          "⚡ Speed Indicator — A fast-moving planet (like Moon at 13.20) has an active, daily influence on your life. A slow planet means deeper, long-term impact.",
+          "🔁 Retrograde Flag — If a planet shows 'Retro', its energy turns inward. Mercury Retro = overthinking. Saturn Retro = delayed but eventual success.",
+          "📖 Click 'Show More' — Opens the full deep-dive modal with house placement details, degree precision, speed analysis, and actionable career/life advice."
         ]
       },
-      { 
-        name: "horoscope_nativity_interpret_deep_v1", 
-        label: "Nativity: Deep Reading (Sun)", 
-        description: "A detailed personal reading for your Sun placement.", 
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "When you click 'Show More' on the Sun block, this detailed panel opens up. It gives you a story-like interpretation of exactly how your Sun sign and house placement shows up in your daily life, career, and sense of self. Everything is written in plain language — no astrology experience needed to understand it.",
-        bullets: [
-          "🏠 Which house your Sun is in, and what that house means for your daily life.",
-          "♎ Which zodiac sign your Sun is in, and the personality traits that come with it.",
-          "⚡ Whether your Sun energy is moving fast or slow — and what that means for your pace in life.",
-          "💼 Specific advice for your career and work style based on your Sun placement."
-        ]
-      },
-      { 
-        name: "horoscope_nativity_interpret_visual_v1", 
-        label: "Nativity: Picture Guide (Sun in Libra)", 
-        description: "A visual map of your key personality traits.", 
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "This visual guide shows how your Sun sign and zodiac combination come together in one easy-to-read diagram. On the left side are the qualities of your planet, on the right are the qualities of your sign, and in the middle are the traits that emerge when they blend together. It's a quick, beautiful way to understand your core astrological nature.",
-        bullets: [
-          "☀️ Left circle: Traits that come from the Sun itself — like confidence, purpose, and leadership.",
-          "♎ Right circle: Traits from your zodiac sign — like diplomacy, fairness, and charm (for Libra).",
-          "✨ Middle overlap: The combined personality that emerges — like Justice, Equality, and Partnership.",
-          "🎨 This diagram is great for sharing with clients or saving as a personal reference."
-        ]
-      },
-      { 
-        name: "horoscope_nativity_result_interpret_v2", 
-        label: "Nativity: Your Venus, Mars & Personal Drive", 
-        description: "How you love, what motivates you, and your personal style.", 
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "This section reveals your personal planets — the ones that shape how you relate to others, what drives your ambition, and how you express yourself in relationships and work. Venus shows how you attract love and beauty, Mars reveals your inner fire and drive, and a small triangle icon next to a planet means there is an extra layer of esoteric wisdom available (the Decan reading).",
-        bullets: [
-          "💛 Venus Reading — How you attract love, what you find beautiful, and your relationship style.",
-          "🔥 Mars Reading — Your energy levels, what motivates you, and how you go after what you want.",
-          "🔺 Triangle icon — Click this to reveal an extra layer of ancient wisdom from the Decan system.",
-          "🎨 Each planet block has its own color to make it easy to find and read quickly."
-        ]
-      },
-      { 
-        name: "horoscope_nativity_decan_detail_v1", 
-        label: "Nativity: Decan Wisdom (Mercury)", 
-        description: "Esoteric decan layers and archetypes.", 
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "The 'Decan Wisdom' modal is triggered by clicking the specialized triangle icons. It adds a deep esoteric layer to the reading, incorporating historical, mythological, and tarot-based interpretations for each planet's position.",
-        bullets: [
-          "Tarot Minor Arcana mapping (e.g., Ten of Disks for Mercury in Virgo)",
-          "Mundane Force analysis (Asset and Wealth metrics)",
-          "Greek Daemon archetypes (e.g., Ploutos, the God of Wealth)",
-          "Decan-level governing planetary shifts (Venus influence on the 3rd Decan)"
-        ]
-      },
-      { 
-        name: "horoscope_nativity_interpret_outer_v1", 
-        label: "Nativity: AI Narratives (Outer & Social)", 
-        description: "Synthesis of destiny and professional drive.", 
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "The final layer of the narrative engine analyzes the outer and social planets (Jupiter, Saturn, Uranus), focusing on how these greater forces shape the user's career, responsibility, and innovation.",
-        bullets: [
-          "Jupiter: Expansion of creative horizons and professional potential",
-          "Saturn: Assessment of professional responsibility and discipline",
-          "Uranus: Identification of innovative and unconventional career paths",
-          "Distinct color-coded blocks for rapid thematic recognition"
-        ]
-      },
-      { 
-        name: "horoscope_nativity_interpret_outer_v3", 
-        label: "Nativity: AI Narratives (Transpersonal & Karmic)", 
-        description: "Synthesis of subconscious and karmic evolution.", 
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "This layer focuses on the transpersonal planets (Neptune, Pluto) and the North Node, providing deep insights into spiritual ideals, transformative life-cycles, and the primary karmic growth path.",
-        bullets: [
-          "Neptune: Identification of spiritual fulfillment and idealistic career drives",
-          "Pluto: Deep analysis of transformative relationship and partnership cycles",
-          "North Node: Roadmap for the karmic journey of growth and long-term mastery",
-          "Rich indigo, red, and gold themes for deep esoteric differentiation"
-        ]
-      },
-      { 
-        name: "horoscope_nativity_result_houses_v1", 
-        label: "Nativity: House Information", 
-        description: "Granular house system breakdown.", 
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "The 'House Information' table provides a technical deep-dive into the mundane architecture of the chart, mapping every house cusp, degree, and planetary occupant for professional-level auditing.",
-        bullets: [
-          "Precise signs-to-house custody mapping (H1-H12)",
-          "Exact degree metrics for house cusps",
-          "Comprehensive planetary occupancy tracking",
-          "Essential technical reference for advanced house-lord synthesis"
-        ]
-      },
-      { 
-        name: "horoscope_nativity_house_interpret_v2", 
-        label: "Nativity: House Interpretations", 
-        description: "Synthesis of life areas and cusps.", 
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "The House Interpretation module synthesizes the technical cusp data into actionable personality and life-path guidance, providing a narrative for each of the 12 mundane sectors.",
-        bullets: [
-          "Detailed cusp-sign analysis (e.g., Aries on House 1)",
-          "Personality and behavioral synthesis for specific life sectors",
-          "Pioneering and pioneering spirit highlights for House 1",
-          "Deep-dive toggles ('Show More') for comprehensive house readings"
-        ]
-      },
-      { 
-        name: "horoscope_nativity_house_visual_v3", 
-        label: "Nativity: House Visual Synthesis (Aries in H1)", 
-        description: "Esoteric picture representation of house cusps.", 
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "The Visual Synthesis view for houses provides a 'Picture Representation' that maps the qualities of the Zodiac Sign and the House into a unified Venn-diagram, making the influence of a specific cusp instantly understandable.",
-        bullets: [
-          "Zodiacal Essence mapping (Aries: Boldness, Courage, Leadership)",
-          "Mundane House influence (1st House: Persona, Outlook, Beginnings)",
-          "Central Synthesis (Self-assertion, Motivation, Vitality, Identity)",
-          "Educational graphic for high-impact personality auditing"
-        ]
-      },
-      { 
-        name: "horoscope_nativity_interpret_dharma_karma_v1", 
-        label: "Nativity: Dharma & Karma", 
-        description: "Synthesis of soul purpose and karmic lessons.", 
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "The final interpretative layer of the Nativity engine synthesizes complex aspect patterns and house placements into a profound analysis of the user's spiritual path (Dharma) and their core evolutionary lessons (Karma).",
-        bullets: [
-          "Dharma: Identification of creative fulfillment and soul purpose",
-          "Karma: Analysis of responsibility, discipline, and karmic challenges",
-          "Aspect Synthesis: How squares, trines, and oppositions shape the life-path",
-          "Actionable spiritual advice for introspection and healing"
-        ]
-      },
-      { 
-        name: "horoscope_nativity_result_aspects_v1", 
-        label: "Nativity: Aspect Dynamics", 
-        description: "Technical table of planetary interactions.", 
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "The Aspects table provides a precise technical audit of the relationships between celestial bodies, using orb-intensity gauges to show which influences are most dominant in the user's life.",
-        bullets: [
-          "Orb-intensity visual gauges for impact assessment",
-          "Detailed classification of aspect types (Opposition, Trine, Square, etc.)",
-          "Minute-precise degree differential (Diff) tracking",
-          "Aspected vs. Aspecting degree metrics for professional verification"
-        ]
-      },
-      { 
-        name: "horoscope_nativity_aspect_interpret_v1", 
-        label: "Nativity: Aspect Interpretations", 
-        description: "Synthesis of planetary relationships.", 
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "The Aspect Interpretation module translates technical degree-math into actionable psychological guidance, explaining how the dynamic tension and harmony between planets shape the user's personal and professional life.",
-        bullets: [
-          "Detailed tension analysis (e.g., Sun opposite Moon balance)",
-          "Cognitive and communication profiling (e.g., Sun conjunct Mercury)",
-          "Professional stability and discipline narratives (e.g., Sun trine Saturn)",
-          "Expansion toggles for deep-dive aspect narratives"
-        ]
-      },
-      { 
-        name: "horoscope_nativity_aspect_deep_v1", 
-        label: "Nativity: Deep Aspect Analysis (Sun/Moon)", 
-        description: "In-depth psychospiritual aspect reading.", 
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "Expanding an aspect interpretation reveals a comprehensive modal with a profound narrative that integrates conscious goals with subconscious needs, providing a holistic roadmap for professional success.",
-        bullets: [
-          "Full-text synthesis of complex planetary tensions",
-          "Integration strategies for inner emotional well-being and outer career success",
-          "Holistic approach to balancing conscious ambitions and subconscious drives",
-          "Premium modal UI designed for deep client introspection sessions"
-        ]
-      },
-      { 
-        name: "horoscope_nativity_interpret_angles_v1", 
-        label: "Nativity: Angles & Points", 
-        description: "Synthesis of Ascendant, Midheaven, and Vertex.", 
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "The final data view in the Nativity toolkit analyzes the chart's primary angles, defining the user's public persona, their highest professional legacy, and their fated points of interaction.",
-        bullets: [
-          "Ascendant: Analysis of outer personality and direct self-expression",
-          "Midheaven: Synthesis of professional ambition and long-term legacy",
-          "Vertex: Identification of karmic opportunities through partnership",
-          "Lilith & Other Points: Deep-dive into subconscious primal nature"
-        ]
-      },
-      { 
-        name: "horoscope_nativity_ascendant_pictorial_v1", 
-        label: "Nativity: Ascendant Deep Analysis", 
-        description: "Point-by-point pictorial breakdown.", 
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "The 'Ascendant (Pictorial Analysis)' provides a structured deep-dive into the Luminary influences, offering a five-point synthesis of how the Sun and Moon shape the user's professional recognition and emotional security.",
-        bullets: [
-          "Five-point structured analysis for major celestial bodies",
-          "Sun-segment: Recognition and leadership in the 10th House",
-          "Moon-segment: Emotional stability and routine in the 6th House",
-          "Technical alignment of degree metrics with psychological profiles"
-        ]
-      },
-      { 
-        name: "horoscope_nativity_lilith_pictorial_v1", 
-        label: "Nativity: Lilith Deep Analysis", 
-        description: "Esoteric subconscious profiling.", 
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "The 'Lilith (Pictorial Analysis)' provides a profound five-point synthesis of the user's secondary primal nature, focusing on how they challenge traditional norms and seek spiritual truth beyond conventional wisdom.",
-        bullets: [
-          "Five-point analysis of primal and rebellious nature",
-          "Spiritual truth-seeking and philosophical exploration in the 9th House",
-          "Direct motion analysis for outward-facing belief system challenges",
-          "Guidance for confronting and embracing darker, more innovative archetypes"
-        ]
-      },
+      {
+  name: "horoscope_nativity_interpret_deep_v1",
+  label: "Nativity: Deep Sun Insights",
+  description: "A clear, structured breakdown of your Sun placement, explaining your identity, work style, and life direction.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This panel opens when the user clicks 'Show More' on the Sun section. It provides a deeper but easy-to-understand explanation of how the Sun’s sign, house, degree, speed, and motion influence personality, daily life, and career. Instead of complex astrology terms, it explains each factor step-by-step so users can clearly understand how their core identity works in real life.",
+  bullets: [
+    "🏠 House Placement — Explains which area of life (work, relationships, career, etc.) your core identity is focused on.",
+    "♎ Zodiac Sign Meaning — Describes your natural personality traits, behavior style, and how you express yourself.",
+    "📐 Degree Insight — Shows how strongly your Sun expresses its sign qualities and whether it represents a new beginning or mature energy.",
+    "⚡ Speed Influence — Explains whether your actions and decisions are fast, steady, or slow, and how you approach life pace.",
+    "🔁 Motion (Direct/Retrograde) — Clarifies whether your energy is expressed outwardly or more internally.",
+    "💼 Practical Life Impact — Provides real-world meaning for your work style, habits, and how you succeed in daily life."
+  ]
+},
+    {
+  name: "horoscope_nativity_interpret_visual_v1",
+  label: "Nativity: Visual Personality Guide (Sun in Libra)",
+  description: "A simple visual explanation of how your Sun and zodiac sign combine to shape your core personality.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This visual panel helps users quickly understand the meaning of their Sun placement by showing three layers in one diagram. The left section explains the natural qualities of the Sun, such as identity, confidence, purpose, and self-expression. The right section explains the qualities of the zodiac sign, such as Libra’s balance, fairness, diplomacy, charm, and relationship focus. The center section shows the blended traits created when the Sun expresses itself through Libra, helping users understand how their core identity behaves in real life. It is designed to make astrology easy, visual, and immediately understandable even for users with no prior astrology knowledge.",
+  bullets: [
+    "☀️ Left Section — Shows the core qualities of the Sun, including identity, vitality, confidence, purpose, willpower, leadership, and self-expression.",
+    "♎ Right Section — Shows the traits of the zodiac sign, such as Libra’s harmony, fairness, diplomacy, sociability, peace-making, charm, and relationship orientation.",
+    "✨ Center Blend — Explains the combined personality created by Sun in Libra, such as balance, cooperation, equality, justice, partnership, tact, refinement, and peaceful social intelligence.",
+    "🧠 Easy Interpretation — Helps astrologers and users quickly understand how the planet’s natural energy changes when expressed through a specific zodiac sign.",
+    "🎨 Visual Learning Tool — Useful as a clear reference for chart explanation, client sharing, personal reflection, or educational astrology content."
+  ]
+},
+   {
+  name: "horoscope_nativity_result_interpret_v2",
+  label: "Nativity: Venus, Mars & Decan Insights",
+  description: "Explains your love style, motivation, action patterns, and the deeper decan layer linked to a planet.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This section presents deeper interpretations for Venus and Mars, helping users understand how they relate, attract, desire, act, and pursue goals. Venus explains love, beauty, charm, pleasure, values, and relationship style. Mars explains drive, ambition, courage, assertiveness, conflict style, and the way a person takes action in daily life and career. Some planets also show a small triangle icon, which indicates that a Decan interpretation is available. The decan is a more detailed astrological layer that divides each zodiac sign into three 10-degree sections, adding nuance to the planet’s expression. This helps astrologers and users understand not only the sign and house of a planet, but also the subtler tone, style, and secondary influence shaping that placement.",
+  bullets: [
+    "💛 Venus Reading — Explains attraction style, relationship needs, beauty preferences, charm, pleasure, creativity, and how love energy is expressed.",
+    "🔥 Mars Reading — Shows motivation, ambition, courage, action style, work drive, assertiveness, and how the user goes after goals or handles conflict.",
+    "🔺 Triangle Icon (Decan) — Indicates that an extra interpretive layer is available for that planet through the Decan system.",
+    "📐 What a Decan Means — Each zodiac sign is divided into 3 decans of 10 degrees each, and the planet’s exact degree decides which decan it belongs to.",
+    "🧠 Why Decans Matter — Decans refine the reading by adding a second tone to the planet, helping astrologers explain why two people with the same sign placement can still feel different.",
+    "🎨 Visual Planet Cards — Each planet appears in its own colored block so users can quickly identify, read, and compare different personal energies."
+  ]
+},
+  {
+  name: "horoscope_nativity_decan_detail_v1",
+  label: "Nativity: Decan Wisdom (Mercury)",
+  description: "A deeper esoteric layer explaining Mercury’s placement through decan, tarot, and archetypal meaning.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This modal opens when the user clicks the triangle (🔺) icon on a planet. It provides an advanced decan-level interpretation of the planet’s placement. The decan system divides each zodiac sign into three 10-degree sections, and each section adds a unique influence to the planet. In this example, Mercury in Virgo (3rd decan) is influenced by Venus, which refines Mercury’s analytical nature with creativity, value-building, and practical intelligence. The panel combines traditional astrology with symbolic systems like Tarot and mythological archetypes, helping astrologers and advanced users understand the deeper meaning behind the planet’s expression in real life.",
+  bullets: [
+    "🔺 Decan Explanation — Shows which 10-degree segment of the zodiac the planet falls into and how it modifies the base sign meaning.",
+    "🪐 Planet + Decan Blend — Explains how Mercury’s analytical Virgo nature is refined by the decan influence (e.g., Venus adding creativity, value, and refinement).",
+    "🃏 Tarot Mapping — Connects the placement to a Tarot Minor Arcana card (e.g., Ten of Disks), symbolizing long-term success, stability, and material growth.",
+    "💰 Mundane Force Meaning — Interprets real-world themes like work, wealth, productivity, and practical achievement linked to this decan.",
+    "🏛️ Archetypal Insight — Includes mythological or symbolic figures (e.g., Ploutos, god of wealth) to explain deeper psychological and life patterns.",
+    "📚 Advanced Layer — Helps astrologers understand subtle differences between similar placements by adding a refined, symbolic, and historical perspective."
+  ]
+},
+      // { 
+      //   name: "horoscope_nativity_interpret_outer_v1", 
+      //   label: "Nativity: AI Narratives (Outer & Social)", 
+      //   description: "Synthesis of destiny and professional drive.", 
+      //   group: "Horoscope Toolkit",
+      //   subModule: "Nativity Birth Chart",
+      //   purpose: "The final layer of the narrative engine analyzes the outer and social planets (Jupiter, Saturn, Uranus), focusing on how these greater forces shape the user's career, responsibility, and innovation.",
+      //   bullets: [
+      //     "Jupiter: Expansion of creative horizons and professional potential",
+      //     "Saturn: Assessment of professional responsibility and discipline",
+      //     "Uranus: Identification of innovative and unconventional career paths",
+      //     "Distinct color-coded blocks for rapid thematic recognition"
+      //   ]
+      // },
+      // { 
+      //   name: "horoscope_nativity_interpret_outer_v3", 
+      //   label: "Nativity: AI Narratives (Transpersonal & Karmic)", 
+      //   description: "Synthesis of subconscious and karmic evolution.", 
+      //   group: "Horoscope Toolkit",
+      //   subModule: "Nativity Birth Chart",
+      //   purpose: "This layer focuses on the transpersonal planets (Neptune, Pluto) and the North Node, providing deep insights into spiritual ideals, transformative life-cycles, and the primary karmic growth path.",
+      //   bullets: [
+      //     "Neptune: Identification of spiritual fulfillment and idealistic career drives",
+      //     "Pluto: Deep analysis of transformative relationship and partnership cycles",
+      //     "North Node: Roadmap for the karmic journey of growth and long-term mastery",
+      //     "Rich indigo, red, and gold themes for deep esoteric differentiation"
+      //   ]
+      // },
+     {
+  name: "horoscope_nativity_result_houses_v1",
+  label: "Nativity: House Information",
+  description: "A clear breakdown of all 12 houses, their signs, degrees, and planet placements.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This section shows a structured view of the 12 astrological houses, including which zodiac sign rules each house, the exact degree of each house cusp, and which planets are placed in each house. It helps astrologers and users understand how different areas of life (such as personality, money, communication, home, career, and relationships) are influenced. This data is automatically generated based on the user’s birth details entered in the nativity form — specifically date of birth, exact time of birth, and birth location. Using these inputs, the system calculates the house structure and planetary placements with precision.",
+  bullets: [
+    "🏠 House Structure (H1–H12) — Shows all 12 houses and the life areas they represent, such as self, finances, communication, home, creativity, work, relationships, and career.",
+    "♈ Sign Mapping — Displays which zodiac sign is assigned to each house, shaping how that life area behaves.",
+    "📐 Degree Values — Provides the exact degree of each house cusp, used for accurate chart calculation and deeper astrological analysis.",
+    "🪐 Planet Placement — Lists which planets are located in each house, helping identify which life areas are most active or important.",
+    "🧠 Easy Interpretation — Helps astrologers quickly understand focus areas like strong houses (e.g., multiple planets in one house).",
+    "📊 Data Source — All values are calculated from user-provided birth data (date, time, and place) entered in the nativity birth chart form.",
+    "🔍 Advanced Use — Useful for deeper analysis like house lord interpretation, life area prediction, and professional chart reading."
+  ]
+},
+ {
+  name: "horoscope_nativity_house_interpret_v2",
+  label: "Nativity: House Interpretations",
+  description: "Easy-to-understand interpretations of each house, showing how different life areas are shaped in the birth chart.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This module explains the meaning of each astrological house in a simple and readable way. It converts technical house data, such as house number, ruling sign, cusp degree, and planet placements, into clear life-area interpretations. Each house represents a part of life, such as self, money, communication, home, love, work, relationships, and career. The module helps astrologers and users understand how the sign on the house cusp influences that area of life, and how any planets placed in that house add extra emphasis, lessons, or strengths.",
+  bullets: [
+    "🏠 House-by-House Meaning — Explains what each of the 12 houses represents in life, such as identity, family, creativity, health, partnership, and career.",
+    "♈ Cusp Sign Interpretation — Shows how the zodiac sign on each house cusp shapes the style and expression of that life area.",
+    "🪐 Planet Influence — Adds meaning from any planets placed in the house, showing where life energy is strongest or most active.",
+    "🧠 Life-Area Guidance — Helps astrologers connect technical chart structure to real-life themes, behavior patterns, and personal development.",
+    "📖 Expandable Reading — Supports deeper interpretation through 'Show More' sections for users who want a fuller explanation of each house."
+  ]
+},{
+  name: "horoscope_nativity_house_visual_v3",
+  label: "Nativity: House Visual Guide (Aries in 1st House)",
+  description: "A visual explanation of how a zodiac sign and house combine to shape personality and life expression.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This section gives a visual interpretation of a house cusp by combining the meaning of the zodiac sign with the meaning of the house. It helps astrologers and users quickly understand how a specific sign behaves when placed on a specific house cusp. In this example, Aries on the 1st house cusp shows a direct, bold, independent, and action-oriented personality. The left side highlights the natural traits of the sign, the right side explains the life themes of the house, and the center shows the blended qualities that emerge when both are combined.",
+  bullets: [
+    "♈ Sign Traits — Shows the natural qualities of the zodiac sign, such as Aries energy being bold, courageous, assertive, competitive, and action-driven.",
+    "🏠 House Meaning — Explains the life area represented by the house, such as the 1st house ruling identity, self-image, appearance, beginnings, and personal presence.",
+    "✨ Blended Interpretation — Highlights the combined meaning created by the sign and house together, such as self-assertion, vitality, motivation, individuality, and strong personal impact.",
+    "🧠 Easy Visual Understanding — Makes the meaning of house cusps easier to understand through a simple visual layout instead of only technical chart data.",
+    "📖 Learning & Reading Support — Useful for astrology explanation, client guidance, self-understanding, and quick chart interpretation."
+  ]
+},
+    {
+  name: "horoscope_nativity_house_interpret_v4",
+  label: "Nativity: House Readings (Houses 2, 3, 4)",
+  description: "Clear interpretations of Houses 2, 3, and 4, showing how the birth chart describes money, communication, and home life.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This section explains the meaning of the 2nd, 3rd, and 4th houses in a simple and readable format. It helps astrologers and users understand how the sign placed on each house cusp shapes that life area. House 2 describes values, money, possessions, and material security. House 3 explains communication style, learning ability, curiosity, siblings, and everyday interaction. House 4 reveals home life, family roots, emotional foundation, private comfort, and connection to heritage. Each card gives a direct interpretation of the house meaning and supports deeper reading through the expandable 'Show More' option.",
+  bullets: [
+    "🏦 House 2 Interpretation — Explains financial habits, personal values, material security, possessions, and the way the user builds stability over time.",
+    "💬 House 3 Interpretation — Describes communication style, curiosity, learning patterns, speaking ability, networking, and connection with nearby environment or siblings.",
+    "🏠 House 4 Interpretation — Shows home life, family bonds, emotional roots, inner security, private world, and relationship to heritage or upbringing.",
+    "♉ Cusp Sign Influence — Helps astrologers understand how Taurus, Gemini, and Cancer shape the expression of these three life areas.",
+    "📖 Expandable Reading — Each house card can be opened further through 'Show More' for a deeper personal interpretation."
+  ]
+},
+    {
+  name: "horoscope_nativity_interpret_dharma_karma_v1",
+  label: "Nativity: Dharma & Karma",
+  description: "A simple reading of your life purpose, spiritual growth, and important karmic lessons.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This section explains two deeper spiritual themes in the birth chart: Dharma and Karma. Dharma shows the path that brings meaning, growth, fulfillment, and alignment with your higher purpose. Karma shows the lessons, responsibilities, inner challenges, and repeated life patterns that help shape your personal evolution. The reading is created by combining important planets, houses, and aspects, then turning them into clear guidance that users can understand without needing advanced astrology knowledge.",
+  bullets: [
+    "✨ Dharma Reading — Explains where your chart shows fulfillment, meaning, creativity, wisdom, and spiritual direction.",
+    "🪐 Karma Reading — Describes your main life lessons, responsibilities, limitations, healing themes, and areas that require maturity and growth.",
+    "🔗 Aspect Interpretation — Uses important chart patterns such as trines, squares, conjunctions, and oppositions to explain how different energies support or challenge your path.",
+    "🏠 House and Planet Meaning — Connects planets and house placements to real life themes like career, purpose, emotions, belief systems, and personal development.",
+    "🧠 Easy-to-Understand Guidance — Translates deeper astrology into simple personal insight that users can apply in daily life.",
+    "📖 Expandable Reading — Each section can be opened through 'Show More' for a deeper explanation of spiritual purpose and karmic growth."
+  ]
+},
+    {
+  name: "horoscope_nativity_result_aspects_v1",
+  label: "Nativity: Aspect Dynamics",
+  description: "A detailed table showing how planets interact with each other in the birth chart.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This section explains the aspect relationships between planets and important chart points. In astrology, aspects show how two planets connect, support, challenge, or influence each other. This table helps astrologers and users understand which planetary combinations are harmonious, tense, strong, or highly active in the chart. It is useful for identifying emotional patterns, mental tendencies, relationship dynamics, career pressure points, and major strengths or challenges. The table also gives the exact degree relationship between two points, so the aspect strength can be checked precisely.",
+  bullets: [
+    "🪐 Aspected Planet — The planet or chart point receiving the influence in that aspect connection.",
+    "✨ Aspecting Planet — The planet creating or sending the influence toward the other planet or point.",
+    "📏 Orb — The distance between the exact aspect and the actual aspect. A smaller orb usually means a stronger and more noticeable effect.",
+    "🔗 Type — The kind of aspect formed between the two planets, such as conjunction, opposition, trine, square, or sextile.",
+    "📐 Diff — The exact degree difference between the two planets, used to verify how closely the aspect matches its ideal angle.",
+    "🎯 Aspected° — The exact zodiac degree of the planet or point being affected.",
+    "🎯 Aspecting° — The exact zodiac degree of the planet or point creating the aspect.",
+    "🧠 Purpose of the Table — Helps astrologers identify which planetary relationships create harmony, tension, support, conflict, talent, or life lessons in the chart.",
+    "📊 Strength Check — The color indicators and orb values make it easier to quickly judge which aspects are stronger, tighter, or more influential.",
+    "🔍 Advanced Use — Useful for personality analysis, emotional patterns, relationship interpretation, career tendencies, and professional chart verification."
+  ]
+},
+      {
+  name: "horoscope_nativity_aspect_interpret_v1",
+  label: "Nativity: Aspect Interpretations",
+  description: "Easy-to-understand readings of how planets interact and shape personality, emotions, communication, and life patterns.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This section explains the meaning of important planetary aspects in a simple and readable way. In astrology, an aspect is the relationship between two planets, showing how their energies work together, support each other, or create tension. These readings turn technical chart connections into practical insight about personality, emotions, thinking style, behavior, career direction, and inner challenges. For example, Sun opposite Moon explains tension between outer identity and inner emotions, Sun conjunct Mercury explains a strong mind and communication style, and Sun trine Saturn explains discipline, reliability, and long-term stability. Each card gives a short interpretation, and users can open 'Show More' for a deeper explanation.",
+  bullets: [
+    "🔗 Aspect Meaning — Explains how two planets interact and whether the connection creates harmony, tension, pressure, support, or talent.",
+    "🌞 Sun opposite Moon — Shows the struggle between outer goals and inner emotional needs, often creating a need for balance between personal life and responsibilities.",
+    "🧠 Sun conjunct Mercury — Describes a sharp mind, strong communication ability, clear self-expression, and a natural focus on ideas, learning, and speaking.",
+    "🪐 Sun trine Saturn — Shows discipline, maturity, patience, responsibility, and the ability to build long-term success through steady effort.",
+    "💼 Real-Life Guidance — Helps users understand how aspects influence career, emotions, decision-making, communication, and daily behavior.",
+    "📖 Expandable Reading — Each aspect card includes a 'Show More' option for a deeper and more detailed interpretation."
+  ]
+},
+      {
+  name: "horoscope_nativity_aspect_deep_v2",
+  label: "Nativity: Deep Aspect Analysis (Sun/Moon)",
+  description: "A deeper reading of the Sun–Moon aspect, explaining the inner tension between identity and emotions.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This modal opens when the user wants a deeper interpretation of an aspect. It explains the Sun opposite Moon aspect in a clear and personal way, showing how outer identity, goals, and self-expression interact with inner emotions, security needs, and subconscious patterns. The reading helps users understand why they may feel pulled in two directions, and how this inner tension can affect relationships, home life, emotional balance, and career choices. It also includes a visual picture representation that makes the contrast and integration between the two planets easier to understand.",
+  bullets: [
+    "☀️ Sun Meaning — Explains the conscious self, identity, ambitions, confidence, and the part of life that wants recognition and purpose.",
+    "🌙 Moon Meaning — Explains emotions, inner needs, instincts, comfort, memory, and the private emotional world.",
+    "⚖️ Opposition Aspect — Shows a push-pull dynamic between two energies, creating tension that must be balanced rather than ignored.",
+    "🧠 Emotional and Life Guidance — Helps users understand how this aspect can affect personal balance, family needs, emotional security, and career direction.",
+    "✨ Integration Insight — Encourages users to bring outer ambitions and inner emotional needs into harmony for a more stable and fulfilling life path.",
+    "🖼️ Picture Representation — Includes a visual blend of Sun traits, Moon traits, and the shared themes created by their opposition.",
+    "📖 Deep Reflection Tool — Designed for users who want a more detailed, self-aware, and meaningful interpretation beyond the short summary."
+  ]
+},
+      {
+  name: "horoscope_nativity_interpret_angles_v2",
+  label: "Nativity: Angles & Points",
+  description: "A clear reading of the Ascendant, Midheaven, and Vertex, showing personality style, career direction, and important turning points.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This section explains the major chart angles and special points in a simple and readable way. These points are very important in astrology because they describe how a person presents themselves, where they are heading in life, and which kinds of connections or events can become significant. The Ascendant explains outer personality, natural behavior, first impression, and how the user approaches life. The Midheaven explains career path, ambition, public image, achievement style, and long-term professional direction. The Vertex highlights meaningful encounters, partnership-related turning points, and life moments that feel important or destined. The degree shown with each point adds precision and helps astrologers refine the interpretation.",
+  bullets: [
+    "⬆️ Ascendant — Explains self-expression, outer personality, first impression, natural attitude, and how the user begins new experiences.",
+    "🏔️ Midheaven — Describes career goals, ambition, reputation, public image, achievement style, and the long-term path of success.",
+    "🔮 Vertex — Shows important turning points, meaningful encounters, and opportunities that often come through relationships, cooperation, or chance meetings.",
+    "📐 Degree Meaning — Includes the exact degree of each point to support more precise chart interpretation and advanced astrological reading.",
+    "🧠 Real-Life Guidance — Helps users understand how personality, career direction, and major life connections appear in practical life.",
+    "📊 Core Chart Angles — Useful for astrologers who want to read the most important directional points in the chart quickly and clearly."
+  ]
+},
+      // { 
+      //   name: "horoscope_nativity_ascendant_pictorial_v1", 
+      //   label: "Nativity: Ascendant Deep Analysis", 
+      //   description: "Point-by-point pictorial breakdown.", 
+      //   group: "Horoscope Toolkit",
+      //   subModule: "Nativity Birth Chart",
+      //   purpose: "The 'Ascendant (Pictorial Analysis)' provides a structured deep-dive into the Luminary influences, offering a five-point synthesis of how the Sun and Moon shape the user's professional recognition and emotional security.",
+      //   bullets: [
+      //     "Five-point structured analysis for major celestial bodies",
+      //     "Sun-segment: Recognition and leadership in the 10th House",
+      //     "Moon-segment: Emotional stability and routine in the 6th House",
+      //     "Technical alignment of degree metrics with psychological profiles"
+      //   ]
+      // },
+      {
+  name: "horoscope_nativity_lilith_pictorial_v3",
+  label: "Nativity: Lilith Deep Analysis",
+  description: "A focused reading of Lilith, showing deeper truth-seeking, inner rebellion, and nontraditional beliefs.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This section explains the meaning of Lilith in the birth chart in a clear and readable way. Lilith represents the part of the self that resists control, questions rules, seeks authenticity, and explores deeper personal truth. In this example, Lilith in Capricorn in the 9th house points to a strong need to challenge rigid belief systems, social expectations, and traditional ideas about truth, morality, education, or spirituality. It helps astrologers and users understand where a person may feel rebellious, independent, intense, or driven to find their own path of wisdom and meaning.",
+  bullets: [
+    "⚫ Lilith Meaning — Explains the deeper, raw, independent, and less-controlled side of personality that resists restriction and seeks authenticity.",
+    "♑ Lilith in Capricorn — Shows ambition, seriousness, discipline, and a desire to challenge authority, structure, or traditional systems in a strong and purposeful way.",
+    "🏠 9th House Influence — Connects Lilith to beliefs, philosophy, higher learning, truth-seeking, spirituality, travel, and the search for personal wisdom.",
+    "📐 Degree and Position — Includes sign, house, and degree details to support more accurate interpretation of Lilith’s expression in the chart.",
+    "⚡ Speed and Motion — Helps astrologers review how actively this point is operating and whether its influence is expressed more directly or subtly.",
+    "🧠 Personal Insight — Useful for understanding inner rebellion, belief conflicts, truth-seeking behavior, and the need to break away from limiting ideologies."
+  ]
+},
       { 
         name: "horoscope_solar_setup", 
         label: "Solar Return: Configuration", 
