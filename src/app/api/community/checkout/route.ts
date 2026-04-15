@@ -228,10 +228,26 @@ export async function POST(request: NextRequest) {
       metadata.entry_year = String(entry_year);
     }
 
-    // Route success/cancel URLs to the correct portal context
+    // Route success/cancel URLs to the correct portal context.
+    // For returning PM members (onboarding already done), skip onboarding
+    // and go straight to the dashboard.
+    let pmSuccessUrl = `${APP_URL}/community/onboarding?subscribed=true`;
+    if (!isMysterySchool) {
+      const { data: existingMember } = await admin
+        .from("community_members")
+        .select("onboarding_completed")
+        .eq("user_id", user.id)
+        .eq("membership_type", "perennial_mandalism")
+        .maybeSingle();
+      if (existingMember) {
+        // Returning member — skip onboarding, use session_id finalize flow
+        pmSuccessUrl = `${APP_URL}/join/community/resubscribe/success?session_id={CHECKOUT_SESSION_ID}`;
+      }
+    }
+
     const successUrl = isMysterySchool
       ? `${APP_URL}/mystery-school/checkout/success?session_id={CHECKOUT_SESSION_ID}`
-      : `${APP_URL}/community/onboarding?subscribed=true`;
+      : pmSuccessUrl;
     const cancelUrl = isMysterySchool
       ? `${APP_URL}/mystery-school/checkout/cancel`
       : `${APP_URL}/community/upgrade`;
