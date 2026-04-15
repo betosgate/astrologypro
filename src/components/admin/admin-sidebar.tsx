@@ -195,7 +195,7 @@ const NAV_GROUPS = [
       { label: "Programs & Lessons", href: "/admin/training", icon: GraduationCap, exact: true },
       { label: "Analytics", href: "/admin/training/analytics", icon: TrendingUp },
       { label: "Settings", href: "/admin/training/settings", icon: Settings2 },
-      { label: "Class Config", href: "/admin/class-config", icon: LayoutDashboard },
+      // { label: "Class Config", href: "/admin/class-config", icon: LayoutDashboard },
       { label: "Certificate Config", href: "/admin/certificate-config", icon: GraduationCap },
     ],
   },
