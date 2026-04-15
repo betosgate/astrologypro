@@ -83,10 +83,12 @@ export async function POST(request: NextRequest) {
     const admin = createAdminClient();
 
     // --- Build Stripe line items from pricing_plans ---
-    let lineItems: Array<
-      | { price: string; quantity: 1 }
-      | { price_data: { currency: string; product_data: { name: string }; unit_amount: number; recurring?: { interval: "month" | "year" } }; quantity: 1 }
-    > = [];
+    //
+    // Stripe mode: "subscription" allows mixing a saved one-time Price with
+    // recurring line items, but does NOT allow inline price_data without
+    // `recurring`. For one-time fees without a saved Stripe Price, we create
+    // an ad-hoc Stripe Price on the fly via stripe.prices.create().
+    let lineItems: Array<{ price: string; quantity: 1 }> = [];
 
     if (isMysterySchool) {
       // Determine which plan to use: standard or PM discount
@@ -130,32 +132,28 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // One-time enrollment fee — use inline price_data (no Stripe price ID for one-time)
+      // One-time enrollment fee — create an ad-hoc Stripe Price
       if (plan.onetime_amount != null && plan.onetime_amount > 0) {
-        lineItems.push({
-          price_data: {
-            currency: (plan.onetime_currency ?? "USD").toLowerCase(),
-            product_data: { name: `${plan.display_name} — Enrollment Fee` },
-            unit_amount: Math.round(plan.onetime_amount * 100),
-          },
-          quantity: 1,
+        const onetimePrice = await stripe.prices.create({
+          currency: (plan.onetime_currency ?? "USD").toLowerCase(),
+          unit_amount: Math.round(plan.onetime_amount * 100),
+          product_data: { name: `${plan.display_name} — Enrollment Fee` },
         });
+        lineItems.push({ price: onetimePrice.id, quantity: 1 });
       }
 
-      // Recurring subscription — use stripe_price_id
-      if (plan.recurring_amount != null && plan.stripe_price_id) {
+      // Recurring subscription — use stripe_price_id from pricing_plans
+      if (plan.stripe_price_id) {
         lineItems.push({ price: plan.stripe_price_id, quantity: 1 });
       } else if (plan.recurring_amount != null && plan.recurring_amount > 0) {
-        // Fallback: create inline price_data if no stripe_price_id configured
-        lineItems.push({
-          price_data: {
-            currency: (plan.recurring_currency ?? "USD").toLowerCase(),
-            product_data: { name: plan.display_name },
-            unit_amount: Math.round(plan.recurring_amount * 100),
-            recurring: { interval: (plan.recurring_interval ?? "month") as "month" | "year" },
-          },
-          quantity: 1,
+        // Fallback: create ad-hoc recurring price if no stripe_price_id configured
+        const recurringPrice = await stripe.prices.create({
+          currency: (plan.recurring_currency ?? "USD").toLowerCase(),
+          unit_amount: Math.round(plan.recurring_amount * 100),
+          recurring: { interval: (plan.recurring_interval ?? "month") as "month" | "year" },
+          product_data: { name: plan.display_name },
         });
+        lineItems.push({ price: recurringPrice.id, quantity: 1 });
       }
 
       if (lineItems.length === 0) {
@@ -186,31 +184,27 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // One-time fee if configured
+      // One-time fee if configured — create an ad-hoc Stripe Price
       if (plan.onetime_amount != null && plan.onetime_amount > 0) {
-        lineItems.push({
-          price_data: {
-            currency: (plan.onetime_currency ?? "USD").toLowerCase(),
-            product_data: { name: `${plan.display_name} — One-Time Fee` },
-            unit_amount: Math.round(plan.onetime_amount * 100),
-          },
-          quantity: 1,
+        const onetimePrice = await stripe.prices.create({
+          currency: (plan.onetime_currency ?? "USD").toLowerCase(),
+          unit_amount: Math.round(plan.onetime_amount * 100),
+          product_data: { name: `${plan.display_name} — One-Time Fee` },
         });
+        lineItems.push({ price: onetimePrice.id, quantity: 1 });
       }
 
       // Recurring subscription
       if (plan.stripe_price_id) {
         lineItems.push({ price: plan.stripe_price_id, quantity: 1 });
       } else if (plan.recurring_amount != null && plan.recurring_amount > 0) {
-        lineItems.push({
-          price_data: {
-            currency: (plan.recurring_currency ?? "USD").toLowerCase(),
-            product_data: { name: plan.display_name },
-            unit_amount: Math.round(plan.recurring_amount * 100),
-            recurring: { interval: (plan.recurring_interval ?? "month") as "month" | "year" },
-          },
-          quantity: 1,
+        const recurringPrice = await stripe.prices.create({
+          currency: (plan.recurring_currency ?? "USD").toLowerCase(),
+          unit_amount: Math.round(plan.recurring_amount * 100),
+          recurring: { interval: (plan.recurring_interval ?? "month") as "month" | "year" },
+          product_data: { name: plan.display_name },
         });
+        lineItems.push({ price: recurringPrice.id, quantity: 1 });
       }
 
       if (lineItems.length === 0) {
