@@ -302,38 +302,38 @@ export default async function DashboardMundanePage({ searchParams }: PageProps) 
             label: "Watched Entities",
             value: kpis.watchedEntities,
             icon: <Eye className="size-4 text-violet-500" />,
-            href: "/admin/mundane/entities",
+            href: "/dashboard/mundane/entities",
           },
           {
             label: "Unread Alerts",
             value: kpis.unreadAlerts,
             icon: <Bell className="size-4 text-amber-500" />,
-            href: "/admin/mundane/alerts",
+            href: "/dashboard/mundane/alerts",
             amber: kpis.unreadAlerts > 0,
           },
           {
             label: "Today's Events",
             value: kpis.todayAstro,
             icon: <Sparkles className="size-4 text-purple-500" />,
-            href: "/admin/mundane/event-calendar",
+            href: "/dashboard/mundane/event-calendar",
           },
           {
             label: "Open Forecasts",
             value: kpis.openForecasts,
             icon: <TrendingUp className="size-4 text-blue-500" />,
-            href: "/admin/mundane/forecasts",
+            href: "/dashboard/mundane/forecasts",
           },
           {
             label: "Active Projects",
             value: kpis.activeProjects,
             icon: <BookOpen className="size-4 text-rose-500" />,
-            href: "/admin/mundane/research",
+            href: "/dashboard/mundane/research",
           },
           {
             label: "Sky: Next 7 Days",
             value: kpis.next7Days,
             icon: <Telescope className="size-4 text-emerald-500" />,
-            href: "/admin/mundane/event-calendar",
+            href: "/dashboard/mundane/event-calendar",
           },
         ].map((kpi) => (
           <Link key={kpi.label} href={kpi.href}>
@@ -373,7 +373,7 @@ export default async function DashboardMundanePage({ searchParams }: PageProps) 
                   Today&apos;s Sky
                 </CardTitle>
                 <Link
-                  href="/admin/mundane/event-calendar"
+                  href="/dashboard/mundane/event-calendar"
                   className="text-xs text-muted-foreground hover:text-foreground"
                 >
                   Calendar →
@@ -437,7 +437,7 @@ export default async function DashboardMundanePage({ searchParams }: PageProps) 
                   Watchlist
                 </CardTitle>
                 <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" asChild>
-                  <Link href="/admin/mundane/entities">Manage</Link>
+                  <Link href="/dashboard/mundane/entities">Manage</Link>
                 </Button>
               </div>
             </CardHeader>
@@ -451,7 +451,7 @@ export default async function DashboardMundanePage({ searchParams }: PageProps) 
                   {watchedEntities.map((e) => (
                     <Link
                       key={e.id}
-                      href={`/admin/mundane/entities/${e.id}`}
+                      href={`/dashboard/mundane/entities/${e.id}`}
                       className="flex items-center gap-2 py-1.5 rounded-md px-1 hover:bg-muted/50 transition-colors"
                     >
                       {e.flag_emoji ? (
@@ -489,7 +489,7 @@ export default async function DashboardMundanePage({ searchParams }: PageProps) 
                   )}
                 </CardTitle>
                 <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" asChild>
-                  <Link href="/admin/mundane/alerts">View All</Link>
+                  <Link href="/dashboard/mundane/alerts">View All</Link>
                 </Button>
               </div>
             </CardHeader>
@@ -543,7 +543,7 @@ export default async function DashboardMundanePage({ searchParams }: PageProps) 
                   Open Projects
                 </CardTitle>
                 <Link
-                  href="/admin/mundane/research"
+                  href="/dashboard/mundane/research"
                   className="text-xs text-muted-foreground hover:text-foreground"
                 >
                   All projects →
@@ -560,7 +560,7 @@ export default async function DashboardMundanePage({ searchParams }: PageProps) 
                   {openProjects.map((p) => (
                     <Link
                       key={p.id}
-                      href={`/admin/mundane/research/${p.id}`}
+                      href={`/dashboard/mundane/research/${p.id}`}
                       className="flex items-center gap-2 py-1.5 rounded-md px-1 hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex-1 min-w-0">
@@ -610,7 +610,7 @@ export default async function DashboardMundanePage({ searchParams }: PageProps) 
                     return (
                       <Link
                         key={note.id}
-                        href={`/admin/mundane/research/${note.project_id}`}
+                        href={`/dashboard/mundane/research/${note.project_id}`}
                         className="block py-2 border-b border-border/40 last:border-0 hover:bg-muted/30 rounded-sm px-1 transition-colors"
                       >
                         {note.title && (
@@ -647,7 +647,7 @@ export default async function DashboardMundanePage({ searchParams }: PageProps) 
               </span>
             </CardTitle>
             <Link
-              href="/admin/mundane/forecasts"
+              href="/dashboard/mundane/forecasts"
               className="text-xs text-muted-foreground hover:text-foreground"
             >
               All forecasts →
@@ -689,7 +689,7 @@ export default async function DashboardMundanePage({ searchParams }: PageProps) 
                     >
                       <td className="py-2.5 pr-4">
                         <Link
-                          href={`/admin/mundane/forecasts/${fc.id}`}
+                          href={`/dashboard/mundane/forecasts/${fc.id}`}
                           className="font-medium hover:text-violet-600 transition-colors line-clamp-1"
                         >
                           {fc.title}
