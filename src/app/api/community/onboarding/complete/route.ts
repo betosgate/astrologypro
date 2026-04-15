@@ -383,7 +383,6 @@ export async function POST(req: NextRequest) {
         birth_date: trimStr(date_of_birth) ?? undefined,
         birth_time: trimStr(birth_time) ?? undefined,
         birth_city: trimStr(birth_city) ?? undefined,
-        birth_country: trimStr(birth_country) ?? undefined,
       },
       "community_members"
     ).catch(console.error);

@@ -39,7 +39,7 @@ export default async function AdminMySchedulePage() {
     .filter((connection) => connection.provider === "google")
     .map((connection) => ({
       id: String(connection.id),
-      provider: "google",
+      provider: "google" as const,
       email: typeof connection.email === "string" ? connection.email : null,
       accountIdentifier: String(connection.account_identifier ?? ""),
       createdAt: typeof connection.created_at === "string" ? connection.created_at : null,
@@ -50,7 +50,7 @@ export default async function AdminMySchedulePage() {
     .filter((connection) => connection.provider === "microsoft")
     .map((connection) => ({
       id: String(connection.id),
-      provider: "microsoft",
+      provider: "microsoft" as const,
       email: typeof connection.email === "string" ? connection.email : null,
       accountIdentifier: String(connection.account_identifier ?? ""),
       createdAt: typeof connection.created_at === "string" ? connection.created_at : null,

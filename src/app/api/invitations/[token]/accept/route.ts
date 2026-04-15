@@ -73,9 +73,10 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
 
   // 3. Check for existing user with this email
-  const { data: existingUsers } = await admin.auth.admin.listUsers();
+  const { data: existingListData } = await admin.auth.admin.listUsers();
+  const existingAuthUsers = (existingListData?.users ?? []) as Array<{ id: string; email?: string }>;
   const emailLower = invitation.email.toLowerCase();
-  const alreadyExists = existingUsers?.users?.some(
+  const alreadyExists = existingAuthUsers.some(
     (u) => u.email?.toLowerCase() === emailLower
   );
 

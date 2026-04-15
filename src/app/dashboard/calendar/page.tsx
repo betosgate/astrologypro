@@ -150,7 +150,7 @@ export default async function CalendarPage() {
         divinerUsername={diviner?.username ?? ""}
         availabilitySlots={slotsResult.data ?? []}
         overrides={overridesResult.data ?? []}
-        bookings={(bookingsResult.data as CalendarBooking[] | null) ?? []}
+        bookings={(bookingsResult.data as unknown as CalendarBooking[] | null) ?? []}
       />
     </div>
   );

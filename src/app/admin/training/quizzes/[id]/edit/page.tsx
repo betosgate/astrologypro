@@ -54,7 +54,6 @@ export default function EditQuizPage() {
         setInitialValue({
           title: q.title ?? "",
           lesson_id: q.lesson_id ?? "",
-          pass_score: Number(q.pass_score ?? 70),
           is_active: q.is_active ?? true,
           questions: Array.isArray(q.questions)
             ? (q.questions as ApiQuestion[]).map((question, index) => ({

@@ -136,6 +136,42 @@ function getPlanetReturnDisplay(tab: string, responseData: unknown, fallbackRetu
   return resolved;
 }
 
+function getPlanetReturnDisplayFromAi(tab: string, aiData: unknown): string | null {
+  if (!aiData || typeof aiData !== "object") return null;
+
+  const chartData = (aiData as Record<string, any>)?.chart_data;
+  if (!chartData || typeof chartData !== "object") return null;
+
+  if (tab === "uranus_return_v2") {
+    const opposition = chartData.next_uranus_opposition;
+    return typeof opposition === "string" && opposition.trim() ? opposition.trim() : null;
+  }
+
+  const planetKey = `next_${tab.split("_")[0]}_return`;
+  const returnValue = chartData[planetKey];
+  return typeof returnValue === "string" && returnValue.trim() ? returnValue.trim() : null;
+}
+
+function parseAiJsonResponse(raw: unknown): unknown {
+  if (typeof raw !== "string") return raw;
+
+  const trimmed = raw.trim();
+  const candidates = [
+    trimmed,
+    trimmed.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/, "").trim(),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      // keep trying
+    }
+  }
+
+  return raw;
+}
+
 function formatPlanetReturnDate(value: string | null): string | null {
   if (!value) return null;
 
@@ -1077,72 +1113,43 @@ function NatalChartsRow({ svgs, labels, onExpandImg }: {
 
 // ─── Planet Return Summary Table ──────────────────────────────────────────────
 
-function PlanetReturnSummaryTable({ tab, birth, returnDate, natalData, responseData }: {
-  tab: string; birth: BirthInput; returnDate: string | null; natalData: any; responseData?: unknown;
+function PlanetReturnSummaryTable({ tab, birth, returnDate, natalData, responseData, aiData }: {
+  tab: string; birth: BirthInput; returnDate: string | null; natalData: any; responseData?: unknown; aiData?: unknown;
 }) {
   const planet = tab.split("_")[0]; // jupiter, saturn, mars, uranus
   const label = planet.charAt(0).toUpperCase() + planet.slice(1);
   const natalDeg = natalData?.planets ? getPlanetDegree(natalData.planets, label) : null;
   const birthPosition = formatPlanetBirthPosition(natalData?.planets, label);
-  const resolvedReturnDate = formatPlanetReturnDate(getPlanetReturnDisplay(tab, responseData, returnDate));
-  const isJupiterReturn = tab === "jupiter_return_v2";
-  const nextReturnLabel = isJupiterReturn ? "Next Jupiter Return" : `Next ${label} Return`;
-
-  if (isJupiterReturn) {
-    return (
-      <div className="horoscope-table-container">
-        <div className="horoscope-table-header">
-          <h3>{label} Return — Summary</h3>
-        </div>
-        <div className="horoscope-table-wrapper">
-          <table className="horoscope-table">
-            <thead>
-              <tr>
-                {["Date of Birth", "Place of Birth", "Time of Birth", "House System", `${label} at Birth`, nextReturnLabel].map((h) => (
-                  <th key={h}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>{birth.dob ? format(parse(birth.dob, "yyyy-MM-dd", new Date()), "PPP") : "—"}</td>
-                <td>{birth.city?.label ?? "—"}</td>
-                <td>{birth.tob || "—"}</td>
-                <td>Whole Sign</td>
-                <td>{birthPosition ?? (natalDeg != null ? `${natalDeg.toFixed(2)}°` : "—")}</td>
-                <td className="font-semibold text-amber-700 dark:text-amber-300">
-                  {resolvedReturnDate ?? <span className="text-muted-foreground">Calculating…</span>}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  }
+  const rawReturnDisplay = getPlanetReturnDisplay(tab, responseData, returnDate) ?? getPlanetReturnDisplayFromAi(tab, aiData);
+  const resolvedReturnDate = tab === "uranus_return_v2"
+    ? (rawReturnDisplay ?? null)
+    : formatPlanetReturnDate(rawReturnDisplay);
+  const nextReturnLabel = tab === "uranus_return_v2" ? "Next Uranus Opposition" : `Next ${label} Return`;
 
   return (
-    <div className="rounded-lg border overflow-hidden">
-      <div className="px-4 py-2.5 horoscope-section-header text-center">
-        <h3 className="text-sm font-semibold text-center w-full">{label} Return — Summary</h3>
+    <div className="horoscope-table-container">
+      <div className="horoscope-table-header">
+        <h3>{label} Return — Summary</h3>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className="horoscope-table-wrapper">
+        <table className="horoscope-table">
           <thead>
-            <tr className="horoscope-thead">
+            <tr>
               {["Date of Birth", "Place of Birth", "Time of Birth", "House System", `${label} at Birth`, nextReturnLabel].map((h) => (
-                <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
+                <th key={h}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            <tr className="horoscope-tbody-row">
-              <td className="px-3 py-2">{birth.dob ? format(parse(birth.dob, "yyyy-MM-dd", new Date()), "PPP") : "—"}</td>
-              <td className="px-3 py-2">{birth.city?.label ?? "—"}</td>
-              <td className="px-3 py-2">{birth.tob || "—"}</td>
-              <td className="px-3 py-2">Whole Sign</td>
-              <td className="px-3 py-2">{birthPosition ?? (natalDeg != null ? `${natalDeg.toFixed(2)}°` : "—")}</td>
-              <td className="px-3 py-2 font-semibold text-amber-600 dark:text-amber-400">{resolvedReturnDate ?? <span className="text-muted-foreground">Calculating…</span>}</td>
+            <tr>
+              <td>{birth.dob ? format(parse(birth.dob, "yyyy-MM-dd", new Date()), "PPP") : "—"}</td>
+              <td>{birth.city?.label ?? "—"}</td>
+              <td>{birth.tob || "—"}</td>
+              <td>Whole Sign</td>
+              <td>{birthPosition ?? (natalDeg != null ? `${natalDeg.toFixed(2)}°` : "—")}</td>
+              <td className="font-semibold text-amber-700 dark:text-amber-300">
+                {resolvedReturnDate ?? <span className="text-muted-foreground">Calculating…</span>}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -1207,6 +1214,34 @@ function PlanetReturnPositions({ chartData }: { chartData: any }) {
   );
 }
 
+function getPlanetReturnAnalysisStyle(tab: string): { background: string; color: string } {
+  const planet = tab.split("_")[0];
+
+  switch (planet) {
+    case "saturn":
+      return {
+        background: "linear-gradient(166deg, #000000 0%, #4B4B4B 100%)",
+        color: "#fff",
+      };
+    case "mars":
+      return {
+        background: "linear-gradient(166deg, #4a0000 0%, #c62828 100%)",
+        color: "#fff",
+      };
+    case "uranus":
+      return {
+        background: "linear-gradient(166deg, #0000FF 0%, #1E90FF 100%)",
+        color: "#fff",
+      };
+    case "jupiter":
+    default:
+      return {
+        background: "linear-gradient(180deg, #0f22ff 0%, #2147ff 100%)",
+        color: "#fff",
+      };
+  }
+}
+
 function PlanetReturnInterpretation({ tab, aiData, areaOfInquiry }: { tab: string; aiData: any; areaOfInquiry?: string }) {
   const { modal, trigger, close } = useShowMore();
   if (!aiData && aiData !== "error") return <SectionSkeleton title="Return Interpretation" />;
@@ -1214,9 +1249,10 @@ function PlanetReturnInterpretation({ tab, aiData, areaOfInquiry }: { tab: strin
 
   const interp = aiData?.title_and_interpretation?.interpretation ?? aiData?.interpretation ?? null;
   const title = aiData?.title_and_interpretation?.title ?? `${tab.split("_")[0].charAt(0).toUpperCase() + tab.split("_")[0].slice(1)} Return`;
-  const isJupiterReturn = tab === "jupiter_return_v2";
+  const isPlanetReturnTab = ["jupiter_return_v2", "saturn_return_v2", "mars_return_v2", "uranus_return_v2"].includes(tab);
+  const analysisStyle = getPlanetReturnAnalysisStyle(tab);
 
-  if (isJupiterReturn) {
+  if (isPlanetReturnTab) {
     return (
       <div className="rounded-lg border overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
         <div className="bg-white px-6 py-5 text-center border-b border-slate-200">
@@ -1230,7 +1266,8 @@ function PlanetReturnInterpretation({ tab, aiData, areaOfInquiry }: { tab: strin
         <div
           className="px-8 py-8 space-y-8"
           style={{
-            background: "linear-gradient(180deg, #0f22ff 0%, #2147ff 100%)",
+            background: analysisStyle.background,
+            color: analysisStyle.color,
             fontFamily: "'Roboto', sans-serif",
           }}
         >
@@ -1280,7 +1317,7 @@ function PlanetReturnInterpretation({ tab, aiData, areaOfInquiry }: { tab: strin
             <p className="leading-relaxed">{String(interp)}</p>
           </div>
         ) : null}
-        {!isJupiterReturn && aiData && typeof aiData === "object" && aiData.chart_data && (
+        {!isPlanetReturnTab && aiData && typeof aiData === "object" && aiData.chart_data && (
           <div className="px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Chart Data</p>
             <pre className="text-xs font-mono bg-muted/40 rounded p-2 overflow-x-auto whitespace-pre-wrap">{JSON.stringify(aiData.chart_data, null, 2)}</pre>
@@ -2787,7 +2824,6 @@ export default function AdminHoroscopePage() {
           jupiter_return_v2: "jupiter_return",
           saturn_return_v2: "saturn_return",
           mars_return_v2: "mars_return",
-          uranus_return_v2: "uranus_return",
         };
         if (planetReturnMap[currentTab.slug]) {
           tasks.push(
@@ -2851,12 +2887,12 @@ export default function AdminHoroscopePage() {
               json: p.json,
             };
             const aiRes = await callAI(aiPayload, form.areaOfInquiry || undefined);
-            let parsed = aiRes.ai_response;
-            if (typeof parsed === "string") {
-              try {
-                parsed = JSON.parse(parsed);
-              } catch {
-                /* keep string */
+            let parsed = parseAiJsonResponse(aiRes.ai_response);
+            if (currentTab.slug === "uranus_return_v2" && p.key === "uranus_return_v2") {
+              const uranusOpposition = getPlanetReturnDisplayFromAi(currentTab.slug, parsed);
+              if (uranusOpposition) {
+                collected.returnDate = uranusOpposition;
+                setReturnDate(uranusOpposition);
               }
             }
             setResults((prev) => {
@@ -3012,14 +3048,7 @@ export default function AdminHoroscopePage() {
               json: p.json,
             };
             const aiRes = await callAI(aiPayload, form.areaOfInquiry || undefined);
-            let parsed = aiRes.ai_response;
-            if (typeof parsed === "string") {
-              try {
-                parsed = JSON.parse(parsed);
-              } catch {
-                /* keep */
-              }
-            }
+            let parsed = parseAiJsonResponse(aiRes.ai_response);
             setResults((prev) => {
               const prevAi = prev?.ai_interpretations ?? {};
               return {
@@ -3118,8 +3147,11 @@ export default function AdminHoroscopePage() {
   const ai = results?.ai_interpretations ?? {};
   const natalData = results?.natal_chart_data;
   const isPlanetReturn = ["jupiter_return_v2", "saturn_return_v2", "mars_return_v2", "uranus_return_v2"].includes(currentSlug);
+  const rawPlanetReturnDisplay = isPlanetReturn
+    ? (getPlanetReturnDisplay(currentSlug, results?.[currentSlug], returnDate) ?? getPlanetReturnDisplayFromAi(currentSlug, ai[currentSlug]))
+    : null;
   const planetReturnDisplay = isPlanetReturn
-    ? formatPlanetReturnDate(getPlanetReturnDisplay(currentSlug, results?.[currentSlug], returnDate))
+    ? (currentSlug === "uranus_return_v2" ? rawPlanetReturnDisplay : formatPlanetReturnDate(rawPlanetReturnDisplay))
     : null;
   const isTwoPersonAiTab = currentTab.type === "two-person";
   const isTransit = ["tropical_transits_weekly_v2", "tropical_transits_monthly_v3"].includes(currentSlug);
@@ -3249,7 +3281,8 @@ export default function AdminHoroscopePage() {
                     {planetReturnDisplay && (
                       <div className="rounded-md border border-amber-400/40 bg-amber-500/10 px-4 py-3">
                         <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
-                          Return Response: <span className="font-bold">{planetReturnDisplay}</span>
+                          {currentSlug === "uranus_return_v2" ? "Next Uranus Opposition: " : "Return Response: "}
+                          <span className="font-bold">{planetReturnDisplay}</span>
                         </p>
                       </div>
                     )}
@@ -3282,12 +3315,13 @@ export default function AdminHoroscopePage() {
                         returnDate={returnDate}
                         natalData={natalData}
                         responseData={results?.[currentSlug]}
+                        aiData={ai[currentSlug]}
                       />
                     )}
-                    {currentSlug === "jupiter_return_v2" && ai[currentSlug]?.chart_data && (
+                    {isPlanetReturn && ai[currentSlug]?.chart_data && (
                       <PlanetReturnPositions chartData={ai[currentSlug].chart_data} />
                     )}
-                    {currentSlug === "jupiter_return_v2" && (
+                    {isPlanetReturn && (
                       <PlanetReturnInterpretation tab={currentSlug} aiData={ai[currentSlug]} areaOfInquiry={form.areaOfInquiry} />
                     )}
 
@@ -3418,9 +3452,6 @@ export default function AdminHoroscopePage() {
                       </div>
                     )}
 
-                    {isPlanetReturn && currentSlug !== "jupiter_return_v2" && (
-                      <PlanetReturnInterpretation tab={currentSlug} aiData={ai[currentSlug]} areaOfInquiry={form.areaOfInquiry} />
-                    )}
                   </div>
                 );
               })()}
