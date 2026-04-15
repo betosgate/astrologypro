@@ -646,6 +646,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "🔍 Advanced Use — Useful for personality analysis, emotional patterns, relationship interpretation, career tendencies, and professional chart verification."
   ]
 },
+
       {
   name: "horoscope_nativity_aspect_interpret_v1",
   label: "Nativity: Aspect Interpretations",
@@ -695,20 +696,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "📊 Core Chart Angles — Useful for astrologers who want to read the most important directional points in the chart quickly and clearly."
   ]
 },
-      // { 
-      //   name: "horoscope_nativity_ascendant_pictorial_v1", 
-      //   label: "Nativity: Ascendant Deep Analysis", 
-      //   description: "Point-by-point pictorial breakdown.", 
-      //   group: "Horoscope Toolkit",
-      //   subModule: "Nativity Birth Chart",
-      //   purpose: "The 'Ascendant (Pictorial Analysis)' provides a structured deep-dive into the Luminary influences, offering a five-point synthesis of how the Sun and Moon shape the user's professional recognition and emotional security.",
-      //   bullets: [
-      //     "Five-point structured analysis for major celestial bodies",
-      //     "Sun-segment: Recognition and leadership in the 10th House",
-      //     "Moon-segment: Emotional stability and routine in the 6th House",
-      //     "Technical alignment of degree metrics with psychological profiles"
-      //   ]
-      // },
+    
       {
   name: "horoscope_nativity_lilith_pictorial_v3",
   label: "Nativity: Lilith Deep Analysis",
@@ -725,62 +713,381 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "🧠 Personal Insight — Useful for understanding inner rebellion, belief conflicts, truth-seeking behavior, and the need to break away from limiting ideologies."
   ]
 },
-      { 
-        name: "horoscope_solar_setup", 
-        label: "Solar Return: Configuration", 
-        description: "Annual birthday chart setup.", 
-        group: "Horoscope Toolkit",
-        subModule: "Solar Return",
-        purpose: "Predictive tool used to forecast the themes of the upcoming year based on the Sun's return to its exact natal position.",
-        bullets: [
-          "Current location vs Birth location toggle",
-          "Year selection for historical or future returns",
-          "Precision-timed engine calculations",
-          "Interactive theme indicators for the solar year"
-        ]
-      },
-      { 
-        name: "horoscope_solar_synthesis", 
-        label: "Solar Return: Yearly Themes", 
-        description: "AI-powered annual outlook.", 
-        group: "Horoscope Toolkit",
-        subModule: "Solar Return",
-        purpose: "Visualizes the solar return chart overlaid with the natal chart to identify key growth areas for the year.",
-        bullets: [
-          "Synastry-style overlay with natal positions",
-          "Ascendant-of-the-year interpretation",
-          "House focus priority lists",
-          "AI-driven 'Monthly Milestone' forecasts"
-        ]
-      },
-      { 
-        name: "horoscope_solar_processing", 
-        label: "Solar Return: Processing", 
-        description: "Annual engine initialization.", 
-        group: "Horoscope Toolkit",
-        subModule: "Solar Return",
-        purpose: "Calculates the exact moment of the Sun's return to its natal degree and initializes the yearly theme engine.",
-        bullets: [
-          "Precision-timing of the Solar Return moment",
-          "Relocation calculation for current geographic position",
-          "Yearly theme and house ingression mapping",
-          "AI narrative engine setup for long-term forecasting"
-        ]
-      },
-      { 
-        name: "horoscope_solar_analytics", 
-        label: "Solar Return: Annual Analytics", 
-        description: "Technical breakdown of the solar year.", 
-        group: "Horoscope Toolkit",
-        subModule: "Solar Return",
-        purpose: "A deep technical view into the core metrics of the solar return year, including degree precision and house overlays.",
-        bullets: [
-          "Annual house placement vs Natal house mapping",
-          "Critical degree highlights for the year",
-          "Profected lord and yearly time-lord calculations",
-          "Intensity meters for specific solar theme areas"
-        ]
-      },
+
+// ---------Solar Return----------------//
+
+  {
+  "name": "horoscope_solar_setup",
+  "label": "Solar Return: Annual Chart Setup",
+  "description": "Your yearly solar return chart is being prepared from your birth details and selected return year.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Solar Return",
+  "purpose": "A Solar Return chart is a powerful yearly forecast chart created for the exact moment the Sun returns to the same zodiac degree and minute it held at your birth. By using your date of birth, time of birth, place of birth, and the selected return year and location, this chart reveals the major themes, opportunities, emotional patterns, personal growth areas, relationship focus, and career direction for the coming solar year. It helps astrologers quickly understand what the year is likely to emphasize and where the strongest life developments may unfold.",
+  "bullets": [
+    "☀ Exact Solar Return Calculation — Determines the precise moment the Sun returns to its natal position for the selected year.",
+    "📍 Location-Based Chart Casting — Uses birth details and return location to generate the most accurate annual wheel chart.",
+    "🗓 Year Theme Forecast — Highlights the dominant influences, challenges, and opportunities for the upcoming birthday year.",
+    "🏠 House Activation Analysis — Shows which life areas such as career, relationships, home, and finances are most emphasized.",
+    "🔭 Astrologer-Friendly Wheel View — Presents the solar return chart in an easy-to-read format for quick interpretation and deeper yearly insights."
+  ]
+},
+
+
+    {
+  "name": "horoscope_solar_synthesis_v1",
+  "label": "Solar Return: Yearly Themes & Planet Table",
+  "description": "Your annual solar return chart is translated into a structured planetary table for quick interpretation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Solar Return",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, place of birth, and selects the solar return year and return location. The system calculates the exact moment when the Sun returns to the same zodiac degree it occupied at birth. From that exact return moment, a new yearly chart is cast and converted into an astrologer-friendly table. This table helps astrologers and advanced users quickly understand where each planet is placed in the solar return chart, which house it activates, which zodiac sign it occupies, how fast it is moving, and whether it is retrograde. It is used to identify the strongest themes of the year, such as relationship focus, career movement, emotional development, financial shifts, inner transformation, and major life priorities.",
+  "bullets": [
+    "☀ Solar Return Generation Logic — Uses birth date, birth time, and birth place to calculate the natal Sun position, then finds the exact yearly return of the Sun for the selected year.",
+    "📍 Accurate Chart Casting — Builds the Solar Return chart for the chosen return location so astrologers can study how relocation changes the yearly influences.",
+    "🪐 Planet-by-Planet Interpretation — Displays each planet's yearly placement to show which energies become most active during the solar year.",
+    "🏠 House Activation Mapping — Reveals the life area influenced by each planet, such as identity, money, communication, family, romance, work, partnership, travel, or career.",
+    "🔁 Motion & Retrograde Insight — Shows planetary speed and retrograde condition so astrologers can judge whether the year's energy flows directly, slowly, or inwardly.",
+    "📊 Table Header Meaning — Planet: the celestial body being analyzed; House: the life area where the planet acts during the year; Full Degree: the exact zodiacal longitude of the planet; Sign: the zodiac sign the planet occupies; Norm Degree: the normalized degree within the sign; Speed: the daily motion rate of the planet; Retro?: shows whether the planet is retrograde or moving direct.",
+    "🧭 Ascendant-of-the-Year Focus — Includes the Solar Return Ascendant to define the personal tone, attitude, and external style of the entire year.",
+    "✨ Practical Annual Reading Tool — Helps astrologers quickly detect yearly priorities, strong planetary clusters, repeated natal triggers, and major developmental themes."
+  ]
+},
+    
+{
+  "name": "horoscope_solar_processing",
+  "label": "Solar Return: Generating Your Yearly Reading",
+  "description": "Your annual solar return chart and planet interpretations are being prepared.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Solar Return",
+  "purpose": "After the user enters date of birth, time of birth, and place of birth, the system first creates the natal birth reference from those details. Then it calculates the exact moment in the selected year when the Sun returns to the same zodiac position it held at birth. Using that return moment and the selected location, the Solar Return chart is generated. From this chart, the system reads the sign, house, and condition of each planet and then creates easy-to-understand yearly interpretations. This screen is used to explain how each planet may influence the year ahead in areas such as confidence, emotions, communication, relationships, work, money, creativity, and personal growth. It helps astrologers read the year quickly and also helps normal users understand the meaning in simple language.",
+  "bullets": [
+    "☀ Birth Data Input — Uses the user's date of birth, time of birth, and place of birth to calculate the natal Sun position and create the base chart.",
+    "🕒 Exact Solar Return Timing — Finds the precise moment in the selected year when the Sun returns to its original natal degree and minute.",
+    "📍 Location-Based Calculation — Generates the Solar Return chart for the selected return location, because location can change house placements and yearly focus.",
+    "🪐 Planet Interpretation Generation — Reads each planet's yearly sign and house placement, then converts that data into text interpretations for the user.",
+    "🏠 Life Area Focus — Shows which areas of life will be most active during the year, such as self-image, family, love, health, career, travel, or finances.",
+    "💬 Easy Reading Screen — Displays planet-by-planet meanings, such as Mars for action and drive, Mercury for thinking and communication, Venus for love and harmony, and other planets for their yearly influence.",
+    "🔁 Annual Theme Analysis — Identifies the strongest themes, repeating patterns, inner lessons, and growth opportunities for the coming solar year.",
+    "✨ Why This Screen Is Useful — It turns complex astrological calculations into simple yearly guidance so both astrologers and general users can understand the forecast more easily."
+  ]
+},
+   {
+  "name": "horoscope_solar_analytics_v1",
+  "label": "Solar Return: House Cusps & Annual Analytics",
+  "description": "A technical yearly table showing the Solar Return angles and all 12 house cusp positions.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Solar Return",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, then selects the Solar Return year and return location. The system first calculates the natal Sun position, then finds the exact moment in the selected year when the Sun returns to that same zodiac position. From that precise moment, it creates the Solar Return chart and calculates the angles and all 12 house cusps. This table is used to show how the year's life areas are divided and where each house begins. It helps astrologers understand which parts of life will be emphasized during the solar year, such as identity, money, communication, home, creativity, work, relationships, travel, career, friendships, and inner growth. The house cusp table is important because even small changes in time or location can shift the house structure and change the meaning of the yearly forecast.",
+  "bullets": [
+    "☀ How It Is Generated — Uses the user's birth date, birth time, and birth place to find the natal Sun position, then calculates the exact Solar Return moment for the selected year and casts the chart for the chosen location.",
+    "🕒 Why Timing Matters — House cusps depend heavily on exact time and location, so precise calculations are needed to produce the correct annual chart structure.",
+    "🏠 What This Table Means — The table shows the starting point of each of the 12 houses in the Solar Return chart, helping define which life areas become active during the year.",
+    "🧭 Ascendant Meaning — The Ascendant is the rising sign of the Solar Return chart and shows the overall approach, personality tone, and outer style of the year.",
+    "🏆 Midheaven Meaning — The Midheaven shows public life, career direction, status, ambition, achievement, and what the year is building toward in the outside world.",
+    "✨ Vertex Meaning — The Vertex is a sensitive point often linked with important meetings, fated contacts, turning points, and meaningful experiences during the year.",
+    "📊 House Column Meaning — The House column lists House 1 through House 12, showing each life department of the Solar Return year.",
+    "♈ Sign Column Meaning — The Sign column shows which zodiac sign begins each house, explaining the style or tone through which that life area will operate.",
+    "📐 Degree Column Meaning — The Degree column shows the exact zodiac degree where that house cusp begins, which is useful for precise astrological analysis and advanced interpretation.",
+    "🔍 Why Each Header Is Used — Ascendant gives the personal yearly tone, Midheaven shows career/public direction, Vertex shows significant encounters, House identifies the life area, Sign describes how that area expresses itself, and Degree provides exact measurement for professional chart reading.",
+    "🔄 Why This Screen Is Useful — It helps astrologers study annual house emphasis, compare Solar Return houses with natal houses, identify major focus zones for the year, and detect how relocation or exact return timing changes the yearly life pattern.",
+    "🚀 Practical Interpretation Value — With this table, an astrologer can quickly see whether the year is more focused on self-development, family matters, relationships, work, finances, travel, reputation, or spiritual growth."
+  ]
+},
+
+{
+  "name": "horoscope_solar_planet_interpretations",
+  "label": "Solar Return: Planet-by-Planet Interpretations",
+  "description": "Detailed yearly meanings for each planetary placement in the Solar Return chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Solar Return",
+  "purpose": "This section is generated after the user provides date of birth, time of birth, and place of birth, along with the selected solar return year and location. The system calculates the exact Solar Return moment and builds the yearly chart. It then analyzes each planet individually by combining its zodiac sign and house placement to generate clear, easy-to-read interpretations. Each block explains how that specific planet will influence the user's behavior, emotions, decisions, relationships, work, and personal growth throughout the year. This format allows astrologers to quickly read each planetary influence separately while also helping general users understand the meaning in a simple and structured way.",
+  "bullets": [
+    "☀ How It Is Generated — Uses birth details to calculate the Solar Return chart and determine each planet’s sign and house placement for the year.",
+    "🪐 Planet-by-Planet Breakdown — Each section focuses on one planet (Sun, Moon, Mars, etc.) and explains its specific yearly influence.",
+    "♈ Sign Influence — Shows how the zodiac sign shapes the expression of the planet (e.g., Libra adds balance, Aquarius adds innovation, Cancer adds emotion).",
+    "🏠 House Influence — Explains the life area where the planet’s energy will be most active (e.g., 1st house = self, 6th = work/health, 11th = friendships).",
+    "🔗 Combined Interpretation — Merges planet + sign + house into a meaningful yearly prediction for real-life understanding.",
+    "💬 Simple Explanation Style — Written in easy language so both astrologers and normal users can quickly understand the message.",
+    "📖 Expandable Content (Show More) — Provides a short summary first, with an option to expand and read deeper insights.",
+    "🎯 Life Impact Insight — Helps identify where energy will be focused, such as identity (Sun), emotions (Moon), action (Mars), communication (Mercury), and relationships (Venus).",
+    "⚖️ Balanced Guidance — Highlights both positive opportunities and possible challenges for each planetary placement.",
+    "🔄 Yearly Theme Building — When all planets are read together, they form the complete story of the Solar Return year.",
+    "✨ Why This Section Is Useful — Allows astrologers to quickly interpret each planetary influence without manually analyzing the full chart.",
+    "🚀 Practical Use — Useful for yearly predictions, client consultations, self-awareness, and planning important life decisions."
+  ]
+},
+
+{
+  "name": "horoscope_solar_deep_analysis_v1",
+  "label": "Solar Return: Deep Astrological Analysis",
+  "description": "In-depth interpretation of planetary placements with visual and psychological insights.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Solar Return",
+  "purpose": "This section is generated after the Solar Return chart is calculated using the user's date of birth, time of birth, place of birth, and selected return year and location. The system analyzes each planet's placement by combining three key factors: the planet itself, the zodiac sign it is in, and the house it occupies. It then produces a deep, easy-to-understand interpretation explaining how that specific combination will influence the user's personality, behavior, decisions, and life direction during the year. This section is especially useful for astrologers because it translates technical chart data into meaningful psychological and practical insights, while also supporting visual understanding through symbolic image representation.",
+  "bullets": [
+    "☀ Planet + Sign + House Synthesis — Combines the planet (what energy), sign (how it behaves), and house (where it acts) to create a complete yearly interpretation.",
+    "🧠 Psychological Interpretation — Explains how the placement influences mindset, emotions, personality traits, and behavioral patterns during the year.",
+    "🎯 Life Focus Explanation — Highlights the main areas of life affected, such as identity, relationships, career, communication, or personal growth.",
+    "💬 Easy-to-Understand Narrative — Converts complex astrological data into simple, readable text so both astrologers and general users can understand it clearly.",
+    "🪐 Example Insight — 'Sun in Libra in 1st House' shows a year focused on self-identity, social charm, balance, and how others perceive you.",
+    "🖼 Visual Representation — Displays a symbolic diagram that breaks down the meaning of the sign, house, and their combined influence for faster understanding.",
+    "♈ Sign Meaning Layer — Explains the qualities of the zodiac sign (e.g., Libra = balance, harmony, relationships, diplomacy).",
+    "🏠 House Meaning Layer — Explains the life area (e.g., 1st House = self, personality, appearance, first impressions).",
+    "🔗 Combined Meaning — Shows how sign and house energies merge (e.g., Libra traits expressed through personal identity and self-image).",
+    "✨ Why This Section Is Important — Helps astrologers quickly interpret yearly influences without manually combining multiple chart factors.",
+    "📊 Practical Use — Useful for client readings, yearly forecasting, personality insights, and identifying key opportunities and challenges.",
+    "🚀 Outcome — Provides a clear understanding of how each planetary placement shapes the overall theme and experience of the solar return year."
+  ]
+},
+
+{
+  "name": "horoscope_solar_aspects_v1",
+  "label": "Solar Return: Planetary Aspects Analysis",
+  "description": "Relationship dynamics between Solar Return planets and natal planets for yearly influence.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Solar Return",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and selects the solar return year. The system calculates both the natal chart and the Solar Return chart, then compares the positions of planets between the two charts. It identifies 'aspects' (angular relationships) between Solar Return planets and natal planets. These aspects show how the energy of the current year interacts with the user's core personality and life patterns. This table is very important for astrologers because it reveals the dynamic influences, challenges, opportunities, and key events that may unfold during the year.",
+  "bullets": [
+    "☀ How It Is Generated — Calculates natal chart from birth data and Solar Return chart from the yearly Sun return, then compares planetary positions between both charts.",
+    "🔗 What Are Aspects — Aspects are angular relationships between planets that show how energies interact (supportive, challenging, or neutral).",
+    "🪐 SR Planet Column — Shows the planet from the Solar Return chart representing current year energy and temporary influences.",
+    "🌌 Natal Planet Column — Shows the planet from the birth chart representing the user's core personality and long-term traits.",
+    "📐 Type Column — Displays the type of aspect such as Conjunction (strong focus), Sextile (opportunity), Trine (ease), or Opposition (tension or balance).",
+    "📏 Orb Column — Shows how close the aspect is in degrees; smaller orb means stronger and more impactful influence.",
+    "⚖️ Interpretation Meaning — Each aspect explains how current year events interact with personal tendencies, creating growth, pressure, or opportunity.",
+    "🔥 Dynamic Energy Mapping — Helps identify where action, emotion, communication, or transformation will be activated during the year.",
+    "🧠 Psychological Impact — Reveals inner conflicts, motivations, emotional triggers, and mental patterns influenced by the year's planetary movement.",
+    "🎯 Event Trigger Indicators — Strong aspects often correlate with important life events, decisions, or turning points.",
+    "🔄 Why This Table Is Useful — Allows astrologers to quickly see how the current year modifies the natal chart without manually calculating aspects.",
+    "🚀 Practical Use — Used for yearly forecasting, understanding challenges vs opportunities, and guiding personal or professional decisions."
+  ]
+},
+{
+  "name": "horoscope_solar_aspect_interpretations",
+  "label": "Solar Return: Aspect Interpretations",
+  "description": "Detailed explanations of how planetary aspects influence your solar year.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Solar Return",
+  "purpose": "This section is generated after calculating both the natal chart and the Solar Return chart using the user's date of birth, time of birth, and place of birth. The system identifies aspects (angular relationships) between planets and then creates detailed interpretations for each aspect. These interpretations explain how different planetary energies interact during the year, showing areas of harmony, tension, growth, confusion, opportunity, or transformation. This helps astrologers and users understand how combined planetary forces shape real-life experiences, emotions, decisions, and events throughout the solar year.",
+  "bullets": [
+    "☀ How It Is Generated — Uses birth data to create natal and Solar Return charts, then detects aspects between planets and generates interpretation text for each.",
+    "🔗 Aspect Combination Meaning — Each interpretation explains the interaction between two planets (e.g., Uranus vs Neptune, Mercury vs Jupiter).",
+    "📐 Aspect Type Insight — Shows how the relationship behaves: Conjunction (intense focus), Sextile (opportunity), Trine (ease), Opposition (tension or balance).",
+    "🪐 Planet Pair Influence — Explains how two planetary energies combine and affect thoughts, emotions, actions, or life direction.",
+    "🧠 Psychological Impact — Describes inner feelings like confusion, clarity, stress, motivation, inspiration, or emotional shifts.",
+    "🎯 Real-Life Effects — Connects planetary aspects to real situations such as career changes, relationships, learning, travel, or personal growth.",
+    "💬 Easy Narrative Format — Written in simple language so both astrologers and general users can easily understand the meaning.",
+    "📖 Expandable Reading (Show More) — Displays short summaries with an option to expand into deeper, more detailed insights.",
+    "⚖️ Balanced Interpretation — Highlights both positive opportunities and possible challenges within each aspect.",
+    "🔄 Yearly Theme Building — Multiple aspect interpretations combine to form the overall story of the solar return year.",
+    "✨ Why This Section Is Important — Helps astrologers quickly interpret complex planetary relationships without manual calculation.",
+    "🚀 Practical Use — Useful for forecasting major events, understanding emotional and mental patterns, and guiding decisions throughout the year."
+  ]
+},
+
+{
+  "name": "horoscope_solar_aspect_deep_analysis",
+  "label": "Solar Return: Deep Aspect Analysis",
+  "description": "In-depth interpretation of specific planetary aspects with psychological and visual insights.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Solar Return",
+  "purpose": "This section is generated after the system calculates the Solar Return chart using the user's date of birth, time of birth, and place of birth. It identifies strong planetary aspects (such as Opposition, Conjunction, Trine, or Sextile) and provides a deep-dive interpretation for each one. Unlike basic aspect descriptions, this section explains the inner psychological tension, transformation, and life direction created by the interaction between two planets. It helps astrologers and users understand not just what will happen, but why it happens and how to navigate it effectively during the year.",
+  "bullets": [
+    "☀ How It Is Generated — Uses birth data to calculate the Solar Return chart, detects strong planetary aspects, and selects the most impactful ones for deep analysis.",
+    "🔗 Aspect Focus — Each block focuses on one major aspect (e.g., Uranus Opposition Neptune) and explains its deeper meaning.",
+    "🪐 Planet Energy Interaction — Describes how two planetary forces interact (e.g., Uranus = change, Neptune = spirituality), creating tension or harmony.",
+    "⚖️ Opposition Meaning — Explains the balance between two opposing energies, often creating inner conflict, growth pressure, or major turning points.",
+    "🧠 Psychological Depth — Highlights inner struggles, emotional confusion, awakening, transformation, and mindset shifts caused by the aspect.",
+    "🌊 Real-Life Impact — Connects the aspect to real situations such as sudden changes, spiritual growth, confusion, career shifts, or relationship dynamics.",
+    "🧘 Guidance & Advice — Provides practical suggestions like mindfulness, patience, self-reflection, or balanced decision-making.",
+    "🖼 Visual Representation — Includes a symbolic diagram showing both planets and the shared interaction zone for easier understanding.",
+    "🔍 Symbol Meaning — Breaks down each planet’s qualities (e.g., Uranus = rebellion/change, Neptune = illusion/dream/spirituality) visually and conceptually.",
+    "🔄 Transformation Insight — Shows how challenging aspects can lead to personal evolution and deeper awareness.",
+    "✨ Why This Section Is Important — Helps astrologers go beyond surface-level meanings and understand the deeper purpose of planetary interactions.",
+    "🚀 Practical Use — Useful for advanced readings, client consultations, personal reflection, and navigating complex emotional or life situations."
+  ]
+},
+
+{
+  "name": "horoscope_solar_planet_information",
+  "label": "Solar Return: Planet Information",
+  "description": "Detailed planetary positions and technical data for the solar return chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Solar Return",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, along with the selected solar return year and location. The system calculates the exact Solar Return chart and lists all planetary positions in a structured table format. This table provides astrologers with precise technical data about each planet, including its zodiac sign, exact degree, house placement, motion speed, and retrograde status. It is used as the foundational dataset for all further interpretations, helping astrologers accurately analyze yearly influences, patterns, and predictions.",
+  "bullets": [
+    "☀ How It Is Generated — Uses birth data to calculate the Solar Return chart and extract precise planetary positions for the selected year.",
+    "🪐 Planet Column — Lists all celestial bodies and key points such as Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto, Node, Part of Fortune, and Chiron.",
+    "♈ Sign Column — Shows the zodiac sign each planet is placed in, defining the style and nature of its expression.",
+    "📐 Full Degree Column — Displays the exact zodiac longitude (0°–360°) of each planet for precise astronomical positioning.",
+    "🏠 House Column — Indicates which house the planet occupies, showing the life area where its influence is strongest.",
+    "📏 Norm Degree Column — Shows the degree of the planet within its zodiac sign (0°–30°), useful for detailed astrological interpretation.",
+    "⚡ Speed Column — Represents the daily motion speed of the planet, helping astrologers understand how fast or slow its influence is acting.",
+    "🔁 Retro Column — Indicates whether the planet is in retrograde motion (Yes/No), which affects how its energy is expressed (internalized, delayed, or reflective).",
+    "🧠 Interpretation Base — Serves as the core data used for generating all interpretations such as planetary meanings, aspects, and yearly themes.",
+    "🔍 Precision Analysis Tool — Allows astrologers to perform advanced analysis like degree-based aspects, timing predictions, and pattern recognition.",
+    "🔄 Why This Table Is Important — It provides the exact technical foundation required to understand and interpret the entire Solar Return chart accurately.",
+    "🚀 Practical Use — Used for professional readings, forecasting, identifying key influences, and supporting all higher-level astrological insights."
+  ]
+},
+
+{
+  "name": "horoscope_solar_planet_cards",
+  "label": "Solar Return: Planet Interpretation Cards",
+  "description": "Readable interpretation cards for each planet with sign, house, degree, speed, retrograde status, and optional decan marker.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Solar Return",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, then selects the Solar Return year and location. The system calculates the Solar Return chart and creates a separate interpretation card for each planet. Each card explains the planet's yearly meaning using its sign, house, full degree, normalized degree, and speed. It gives astrologers and users an easy way to read planet-by-planet yearly guidance in a visual card format. If a special symbol such as a triangle appears near the planet name, it can represent an additional astrological layer such as the decan, which gives more refined meaning to that planet's placement.",
+  "bullets": [
+    "☀ Planet Card Generation — Creates one interpretation card for each Solar Return planet using the calculated yearly chart data.",
+    "🪐 Planet Name Header — Shows the planet being interpreted, such as Sun, Moon, or Mercury.",
+    "♈ Sign + House Tag — Displays the zodiac sign and house placement, such as Libra - House 6 or Aries - House 1.",
+    "📐 Degree-Based Meaning — Uses full degree and norm degree to refine the interpretation and explain how mature, early, or specialized the placement is.",
+    "⚡ Speed Meaning — Uses planetary speed to describe whether the energy is steady, fast-moving, slow, reflective, or intensified.",
+    "🔁 Retrograde Layer — Can include retrograde status to explain whether the planet's influence is more inward, delayed, karmic, or reflective.",
+    "🔺 Decan Indicator — The triangle-like symbol can be stored as a decan marker, showing the decan or sub-division of the zodiac sign for deeper interpretation.",
+    "🧠 Why Decan Is Useful — Decan adds a finer interpretive layer inside the zodiac sign, helping astrologers understand the planet's more specific tone, style, and expression.",
+    "💬 Easy Reading Format — The card turns technical chart values into simple readable yearly guidance for both astrologers and general users.",
+    "📖 Expandable Content — The Show More action can reveal a longer version of the interpretation with advanced astrological detail.",
+    "✨ Visual Interpretation Support — Card layout, icons, sign labels, and optional decan symbols help astrologers scan the yearly chart more quickly.",
+    "🚀 Practical Use — Useful for yearly forecasts, client readings, planet-by-planet analysis, and advanced astrology UI presentation."
+  ]
+},
+
+{
+  "name": "horoscope_solar_planet_insights",
+  "label": "Solar Return: Planet Insights",
+  "description": "Structured insight points for each planet in the Solar Return chart, with visual support for fast astrological reading.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Solar Return",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system calculates the Solar Return chart for the selected year and location. It converts the technical planetary data into short, numbered insight points so astrologers can quickly understand the meaning of one planet at a time. Each insight is based on the planet's house placement, sign placement, full degree, normalized degree, speed, and retrograde condition. This format is useful because it breaks the interpretation into clear observations instead of one long paragraph, making the yearly reading easier to scan, explain, and compare.",
+  "bullets": [
+    "☀ Planet Insight Generation — Creates a focused insight panel for one selected planet using Solar Return chart data.",
+    "🪐 Planet Focus — The screen highlights one planet at a time, such as Sun, Moon, Mercury, Venus, or Mars, for deeper yearly understanding.",
+    "🏠 House-Based Meaning — Explains which life area is activated by the planet, such as work, identity, health, relationships, creativity, or career.",
+    "♈ Sign-Based Meaning — Shows how the zodiac sign colors the planet's expression, such as Libra bringing balance, diplomacy, and harmony.",
+    "📐 Full Degree Insight — Uses the exact zodiac longitude to support precise astrological analysis and advanced interpretation.",
+    "📏 Norm Degree Insight — Uses the planet's degree within the sign to show how early, middle, or late the placement is, adding interpretive refinement.",
+    "⚡ Speed Insight — Explains whether the planet's influence is moving steadily, quickly, slowly, or with unusual emphasis during the year.",
+    "🔁 Retrograde Insight — Shows whether the planet is direct or retrograde, helping astrologers judge whether the energy is outward, delayed, inward, or reflective.",
+    "🔢 Numbered Reading Format — Presents interpretation as separate insight points so astrologers can read, teach, and explain the placement more easily.",
+    "🖼 Picture Representation — Includes a symbolic visual diagram that combines the planet's nature with the sign meaning for quick conceptual understanding.",
+    "🧠 Astrologer-Friendly Use — Helps astrologers quickly extract practical yearly meaning without reading one long block of text.",
+    "🚀 Practical Value — Useful for client sessions, yearly forecasts, educational astrology tools, and fast interpretation workflows."
+  ]
+},
+{
+  "name": "horoscope_solar_house_information",
+  "label": "Solar Return: House Information",
+  "description": "Structured table showing house-wise sign placements, degrees, and planetary distribution for the solar year.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Solar Return",
+  "purpose": "This section is generated after the Solar Return chart is calculated using the user's date of birth, time of birth, and place of birth, along with the selected return year and location. The system divides the chart into 12 houses and maps each house with its starting zodiac sign, exact degree, and the planets placed within it. This table helps astrologers quickly understand which life areas are activated during the year and which planets are influencing those areas. It provides a clear structure of how planetary energy is distributed across different domains such as self, money, communication, home, creativity, work, relationships, transformation, travel, career, social life, and spirituality.",
+  "bullets": [
+    "🏠 House Structure Mapping — Displays all 12 houses of the Solar Return chart with their corresponding zodiac signs and degrees.",
+    "♈ Sign Column Meaning — Shows which zodiac sign rules each house, defining the style and behavior of that life area.",
+    "📐 Degree Column Meaning — Indicates the exact starting point (cusp) of each house, important for precise astrological calculations.",
+    "🪐 Planets Column Meaning — Lists the planets present in each house, showing where planetary energy is concentrated during the year.",
+    "☀ Empty Houses Insight — Houses without planets are still important and are interpreted through their ruling sign and ruler planet.",
+    "🎯 Life Area Focus — Each house represents a specific life domain such as identity (1st), finances (2nd), communication (3rd), home (4th), creativity (5th), work/health (6th), relationships (7th), transformation (8th), travel (9th), career (10th), social networks (11th), and subconscious/spirituality (12th).",
+    "🔄 Energy Distribution — Helps astrologers quickly see which areas of life are more active based on the number of planets in each house.",
+    "🧠 Interpretation Support — Used as a base for deeper analysis like house rulerships, transits, and aspect influence within houses.",
+    "📊 Practical Reading Tool — Makes it easy to explain yearly focus areas to clients in a structured and visual way.",
+    "🚀 Why This Section Is Important — It provides a clear overview of how the entire Solar Return chart is organized and where the strongest life themes will manifest during the year."
+  ]
+},
+
+{
+  "name": "horoscope_solar_house_insights",
+  "label": "Solar Return: House Insights",
+  "description": "Detailed interpretation of each house in the Solar Return chart with visual house distribution.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Solar Return",
+  "purpose": "This section is generated after the Solar Return chart is calculated using the user's date of birth, time of birth, and place of birth, along with the selected return year and location. The system maps all 12 houses, assigns zodiac signs to each house cusp, and distributes planets across the houses. It then provides individual interpretations for each house, explaining how that specific life area will be influenced during the year. The visual bar representation at the top helps astrologers quickly see planetary distribution across houses, while the detailed text below explains the meaning of each house placement in simple and structured language.",
+  "bullets": [
+    "🏠 House Distribution Visualization — Displays a graphical bar showing how planets are distributed across the 12 houses for quick analysis.",
+    "♈ House Cusp Meaning — Each house interpretation is based on the zodiac sign present on its cusp, defining how that life area behaves.",
+    "🪐 Planet Presence Insight — Houses with planets are more active and receive stronger focus during the year.",
+    "📊 Visual + Text Combination — Combines graphical representation with written interpretation for faster understanding.",
+    "🎯 Life Area Explanation — Each house represents a domain of life such as self (1st), money (2nd), communication (3rd), home (4th), creativity (5th), work/health (6th), relationships (7th), transformation (8th), travel (9th), career (10th), social circle (11th), and spirituality (12th).",
+    "🧠 Easy Interpretation Format — Each house is explained separately so astrologers can read and explain one life area at a time.",
+    "💬 Practical Meaning — Provides real-life meaning such as personality traits, financial behavior, communication style, emotional patterns, and career direction.",
+    "📖 Expandable Content — Includes 'Show More' option to reveal deeper insights for each house.",
+    "🔄 Yearly Focus Identification — Helps astrologers quickly identify which life areas will be most important during the Solar Return year.",
+    "✨ Why This Section Is Important — It translates house-level chart data into clear yearly guidance for both astrologers and general users.",
+    "🚀 Practical Use — Useful for client readings, yearly planning, and understanding how different life areas will evolve throughout the year."
+  ]
+},
+
+{
+  "name": "horoscope_solar_house_deep_analysis",
+  "label": "Solar Return: Deep House Analysis",
+  "description": "Expanded house interpretation shown in a modal after the user clicks Show More.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Solar Return",
+  "purpose": "This section is used for deep analysis of a specific Solar Return house. After the user enters date of birth, time of birth, and place of birth, the system calculates the Solar Return chart for the selected year and location. On the main House Insights screen, each house shows a short summary with a Show More button. When the user clicks Show More, a modal opens and displays a detailed interpretation of that selected house. The modal explains the zodiac sign on the house cusp, the meaning of that house, the yearly life focus connected to it, and a picture representation that helps astrologers understand the combined symbolism more easily.",
+  "bullets": [
+    "🏠 Modal Open Scenario — This screen appears when the user clicks Show More on any house card from the Solar Return House Insights section.",
+    "🧭 Selected House Focus — The modal opens for one specific house at a time, such as House 1, House 2, or House 7.",
+    "♈ Cusp Sign Interpretation — Explains the zodiac sign placed on the cusp of the selected house and how it shapes that life area during the year.",
+    "📖 Deep Text Reading — Shows a longer and more complete explanation than the short preview shown on the main screen.",
+    "🎯 House Meaning Layer — Describes the selected life area in detail, such as self-image, finances, communication, home, creativity, work, relationships, transformation, travel, career, social life, or spirituality.",
+    "🪐 Yearly Influence — Explains how the Solar Return year will activate that house and what themes are likely to become important.",
+    "🖼 Picture Representation — Includes a symbolic visual image that combines the house meaning, zodiac sign meaning, and merged interpretation for faster astrological understanding.",
+    "🧠 Astrologer-Friendly Format — Helps astrologers quickly read the technical meaning and also use the picture as a visual teaching tool.",
+    "🔗 Combined Symbolism — Shows how the sign energy and house energy work together, such as Aries in the 1st House indicating initiative, presence, courage, and self-assertion.",
+    "💬 Easy User Understanding — The modal is designed to make deep astrology easier to understand for both astrologers and general users.",
+    "✨ Why This Screen Is Useful — It gives expanded insight without overcrowding the main page, keeping the summary screen simple while allowing deeper study on demand.",
+    "🚀 Practical Use — Useful for detailed yearly consultation, teaching astrology, client explanation, and focused interpretation of one house at a time."
+  ]
+},
+
+
+{
+  "name": "horoscope_solar_house_cards",
+  "label": "Solar Return: House Interpretation Cards",
+  "description": "Short house-by-house interpretation cards with expandable yearly meaning for each Solar Return house.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Solar Return",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system calculates the Solar Return chart for the selected year and location. It creates a separate interpretation card for each house, such as House 1, House 2, House 3, and so on. Each card gives a short and easy-to-understand summary based on the zodiac sign on that house cusp and the life area represented by that house. This helps astrologers quickly review the yearly meaning of each house one by one. The Show More button is used to open a deeper modal analysis for the selected house without making the main screen too crowded.",
+  "bullets": [
+    "🏠 House Card Generation — Creates one card for each of the 12 Solar Return houses after the yearly chart is calculated.",
+    "♈ Cusp Sign Meaning — Uses the zodiac sign on each house cusp to explain how that life area behaves during the year.",
+    "📖 Short Interpretation Format — Shows a brief summary for each house so astrologers can quickly scan the major yearly themes.",
+    "🎯 House Life Area Meaning — Explains the focus of each house, such as communication in House 3, home and family in House 4, and creativity in House 5.",
+    "🧠 Astrologer-Friendly Layout — Keeps each house reading separate and clear, making interpretation easier during consultation or analysis.",
+    "💬 Easy User Understanding — Converts technical house data into simple readable text for both astrologers and normal users.",
+    "📊 Sequential House Reading — Allows the astrologer to review the yearly flow house by house in a structured order.",
+    "🔍 Focused Interpretation — Highlights the most important yearly message of each house without showing too much detail at once.",
+    "📖 Show More Action — Each card includes a Show More button that opens a detailed modal for deeper analysis of that specific house.",
+    "✨ Why This Screen Is Useful — It gives a clean overview of all house meanings while keeping advanced explanation available only when needed.",
+    "🚀 Practical Use — Useful for yearly readings, client explanation, quick astrology review, and structured Solar Return analysis."
+  ]
+},
+
+{
+  "name": "horoscope_solar_house_cards_v1",
+  "label": "Solar Return: House Interpretation Cards",
+  "description": "Short house-by-house interpretation cards with expandable yearly meanings for each Solar Return house.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Solar Return",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system calculates the Solar Return chart for the selected year and location. It creates one interpretation card for each house, such as House 3, House 4, and House 5. Each card gives a short summary based on the zodiac sign on that house cusp and the life area represented by that house. This helps astrologers quickly review the meaning of each house for the year in a simple, structured format. The Show More button allows the user to open a deeper interpretation for that specific house without overcrowding the main screen.",
+  "bullets": [
+    "🏠 House Card Generation — Creates a separate interpretation card for each Solar Return house after the yearly chart is calculated.",
+    "♈ Cusp Sign Reading — Uses the zodiac sign on the house cusp to explain how that life area will behave during the year.",
+    "📖 Short Summary Format — Shows a concise interpretation so astrologers can scan yearly themes quickly.",
+    "🎯 Life Area Meaning — Explains the meaning of each house, such as House 3 for communication and learning, House 4 for home and family, and House 5 for creativity, joy, and self-expression.",
+    "🧠 Astrologer-Friendly Structure — Keeps each house reading separate and organized, making yearly analysis easier.",
+    "💬 Easy User Understanding — Converts technical astrology into simple text that both astrologers and general users can understand.",
+    "📊 Sequential House Flow — Presents the houses in order so the yearly story can be read house by house.",
+    "🔍 Focused House Insight — Highlights the main message of each house without showing too much detail at once.",
+    "📖 Show More Action — Each card includes a Show More button to open a deeper modal explanation for that specific house.",
+    "✨ Why This Section Is Useful — It gives a clean overview of all house meanings while keeping detailed analysis available on demand.",
+    "🚀 Practical Use — Useful for yearly readings, client consultation, astrology education, and structured Solar Return interpretation."
+  ]
+},
+
+
+// ---------weekly transits----------//
       { 
         name: "horoscope_weekly_setup", 
         label: "Weekly Transits: Focus", 
