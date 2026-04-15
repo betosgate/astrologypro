@@ -14,7 +14,7 @@ export const ASPECT_SYMBOLS: Record<string, string> = {
   Conjunction: "☌", Sextile: "⚹", Square: "□", Trine: "△", Opposition: "☍",
 };
 
-export const PLANET_ORDER = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Node", "Part of Fortune", "Chiron"];
+export const PLANET_ORDER = ["Moon", "Mercury", "Venus", "Sun", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Other"];
 
 // AWS S3 planet images
 export const PLANET_IMAGES: Record<string, string> = {
@@ -32,6 +32,23 @@ export const PLANET_IMAGES: Record<string, string> = {
   "Part of Fortune": "",
   Fortune: "",
   Chiron: "",
+};
+
+export const LADDER_PLANET_IMAGES: Record<string, string> = {
+  Sun: "/images/horoscope-zodiac/sun.png",
+  Moon: "/images/horoscope-zodiac/moon.png",
+  Mercury: "/images/horoscope-zodiac/mercury.png",
+  Venus: "/images/horoscope-zodiac/venus.png",
+  Mars: "/images/horoscope-zodiac/mars.png",
+  Jupiter: "/images/horoscope-zodiac/jupiter.png",
+  Saturn: "/images/horoscope-zodiac/saturn.png",
+  Uranus: "/images/horoscope-zodiac/uranus.png",
+  Neptune: "/images/horoscope-zodiac/neptune.png",
+  Pluto: "/images/horoscope-zodiac/pluto.png",
+  Node: "/images/horoscope-zodiac/node.png",
+  "Part of Fortune": "/images/horoscope-zodiac/part_of_fortune.png",
+  Fortune: "/images/horoscope-zodiac/part_of_fortune.png",
+  Chiron: "/images/horoscope-zodiac/chiron.png",
 };
 
 // Planet sign images + aspect images

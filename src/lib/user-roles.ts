@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { hasValidMysterySchoolBilling } from "@/lib/mystery-school/access";
 
 export interface UserPortal {
@@ -19,10 +20,38 @@ export interface UserPortal {
  *   - the MS row must also contain the required payment-linked fields
  *   - A user can have BOTH records → dual-entitlement, both portals shown
  */
+/**
+ * Options for getUserPortals.
+ * @param isAdmin - Explicitly set admin status.
+ *   - true  → always include Admin portal
+ *   - false → never include Admin portal
+ *   - undefined (default) → auto-check admin_users table via service-role client
+ */
+export interface GetUserPortalsOptions {
+  isAdmin?: boolean;
+}
+
 export async function getUserPortals(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  options: GetUserPortalsOptions = {}
 ): Promise<UserPortal[]> {
+  // Resolve admin status: explicit override or auto-check via service-role client
+  let resolvedIsAdmin = options.isAdmin ?? false;
+  if (options.isAdmin === undefined) {
+    try {
+      const adminDb = createAdminClient();
+      const { data: adminRow } = await adminDb
+        .from("admin_users")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      resolvedIsAdmin = !!adminRow;
+    } catch {
+      resolvedIsAdmin = false;
+    }
+  }
+
   const [diviner, client, advocate, community, mysteryStudent, trainee] = await Promise.all([
     supabase.from("diviners").select("id").eq("user_id", userId).maybeSingle(),
     supabase.from("clients").select("id").eq("user_id", userId).maybeSingle(),
@@ -47,12 +76,16 @@ export async function getUserPortals(
 
   const portals: UserPortal[] = [];
 
+  // Admin portal
+  if (resolvedIsAdmin)
+    portals.push({ role: "admin", label: "Admin", href: "/admin" });
+
   if (diviner.data)
-    portals.push({ role: "diviner", label: "Diviner Dashboard", href: "/dashboard" });
+    portals.push({ role: "diviner", label: "Diviner", href: "/dashboard" });
   if (client.data)
     portals.push({ role: "client", label: "Client Portal", href: "/portal" });
   if (advocate.data)
-    portals.push({ role: "advocate", label: "Advocate Portal", href: "/advocate" });
+    portals.push({ role: "advocate", label: "Advocate", href: "/advocate" });
 
   // PM portal: active community_members with perennial_mandalism type
   if (
