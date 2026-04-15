@@ -17,7 +17,7 @@ export default async function CommunityProfilePage() {
     .eq("user_id", user.id)
     .single();
 
-  if (!member) redirect("/join/community");
+  if (!member) redirect("/get-started");
 
   const completion = calculateProfileCompletion([
     { key: "full_name", label: "Full Name", value: member.full_name },

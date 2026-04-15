@@ -45,14 +45,14 @@ const paths = [
     title: "Mystery School",
     description: "A structured learning path — courses, live classes, and mentored readings for those called to master the esoteric arts.",
     cta: "Apply to Mystery School",
-    href: "/join/community?program=mystery_school",
+    href: "/join/mystery-school",
   },
   {
     icon: Users,
     title: "Perennial Mandalism",
     description: "A living tradition of cosmic wisdom, sacred geometry, and ceremony. Join our community of dedicated practitioners.",
     cta: "Join the Circle",
-    href: "/join/community?program=perennial_mandalism",
+    href: "/get-started",
   },
 ];
 

@@ -73,7 +73,7 @@ export default async function CommunityEntityPage({
     .eq("user_id", user.id)
     .single();
 
-  if (!member) redirect("/join/community");
+  if (!member) redirect("/get-started");
   if (member.membership_status !== "active") redirect("/join/community/resubscribe");
 
   const today = new Date().toISOString().slice(0, 10);

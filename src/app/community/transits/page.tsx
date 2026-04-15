@@ -64,7 +64,7 @@ export default async function TransitsPage() {
     .eq("user_id", user.id)
     .single();
 
-  if (!member) redirect("/join/community");
+  if (!member) redirect("/get-started");
   if (member.membership_status !== "active") redirect("/join/community/resubscribe");
 
   const now = new Date();
