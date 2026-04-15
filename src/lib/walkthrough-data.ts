@@ -1555,46 +1555,130 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       "A guided learning environment for aspiring practitioners — structured lessons, mentor feedback, quizzes, and certification tracks.",
     icon: GraduationCap,
     gradient: "from-amber-500/20 to-orange-600/10",
-    featureAreas: ["Training", "Mentorship", "Milestones"],
+    featureAreas: ["Training", "Progress", "Quiz History", "Resources", "Sessions", "Certification"],
     capabilities: [
-      "Access assigned training modules",
-      "Track practice session requirements",
-      "Review mentor feedback",
+      "Access structured training programs with lessons, categories, and programs",
+      "Track granular lesson and category completion progress",
+      "Review complete quiz attempt history with scores and timing",
+      "Download PDFs, docs, and supplemental resources per lesson",
+      "Book and manage practice sessions with assigned mentor",
+      "Earn graduation certificate upon 100% curriculum completion",
     ],
-    keyPages: ["Learning Hub", "Curriculum", "Milestones"],
+    keyPages: ["Dashboard", "Training Programs", "Progress", "Quiz History", "Resources", "Sessions", "Certificate"],
     groups: [
       {
         groupLabel: "Training",
         cards: [
-          { title: "Dashboard", description: "Current training focus", href: "/trainee", icon: LayoutDashboard, status: "live" },
+          { title: "Dashboard", description: "Current training focus and progress overview", href: "/trainee", icon: LayoutDashboard, status: "live" },
+          { title: "Training Programs", description: "Multi-program curriculum with lessons and categories", href: "/trainee/training", icon: BookOpen, status: "live" },
+          { title: "Progress Tracker", description: "Visual category-by-category completion view", href: "/trainee/progress", icon: TrendingUp, status: "live" },
+        ],
+      },
+      {
+        groupLabel: "Assessment & Resources",
+        cards: [
+          { title: "Quiz History", description: "Complete quiz attempt log with scores and timing", href: "/trainee/quiz-history", icon: ClipboardList, status: "live" },
+          { title: "Resources", description: "Lesson assets — PDFs, docs, videos, reference sheets", href: "/trainee/resources", icon: FileText, status: "live" },
+          { title: "Practice Sessions", description: "Mentor session booking and history", href: "/trainee/sessions", icon: CalendarDays, status: "live" },
+        ],
+      },
+      {
+        groupLabel: "Certification",
+        cards: [
+          { title: "Graduation Certificate", description: "Issued on 100% curriculum completion", href: "/trainee/certificate", icon: GraduationCap, status: "live" },
         ],
       },
     ],
     screens: [
-      { 
-        name: "trainee-hub", 
-        label: "Trainee Dashboard", 
-        description: "Personal development center.", 
+      {
+        name: "trainee-hub",
+        label: "Trainee Dashboard",
+        description: "Personal development home — progress, upcoming sessions, and mentor status.",
         group: "Training",
-        purpose: "The home base for apprentices to manage their skills-based training and mentor interactions.",
+        purpose: "The home base for apprentices to manage their skills-based training, mentor interactions, and curriculum progress at a glance.",
         bullets: [
-          "Personal development progress visualization",
-          "Pending assignment and lesson notifications",
-          "Real-time mentor feedback and rating alerts",
-          "Daily practice requirement tracking"
+          "Overall curriculum completion percentage and program breakdown",
+          "Upcoming mentor sessions and lesson bookmarks",
+          "Quiz score trends and recent activity feed",
+          "Graduation progress bar with milestone indicators"
         ]
       },
-      { 
-        name: "curriculum", 
-        label: "Learning Path", 
-        description: "Chronological map of lessons.", 
+      {
+        name: "curriculum",
+        label: "Training Programs",
+        description: "Multi-program curriculum with categories and individual lessons.",
         group: "Training",
-        purpose: "A structured, chronological roadmap of the trainee's journey from apprentice to practitioner.",
+        purpose: "A structured, browsable catalog of all training programs, categories, and lessons with real-time completion state.",
         bullets: [
-          "Linear progression map of required modules",
-          "Locked/Unlocked lesson state visualization",
-          "Milestone-based certification tracking",
-          "Prerequisite knowledge check status"
+          "Program and category hierarchy with completion indicators",
+          "Individual lesson detail pages with video, text, and attachments",
+          "In-lesson quizzes with immediate scoring feedback",
+          "Lesson progress auto-saved on navigation"
+        ]
+      },
+      {
+        name: "progress",
+        label: "Progress Tracker",
+        description: "Category-by-category completion view with percentage breakdowns.",
+        group: "Training",
+        purpose: "A visual progress dashboard showing granular completion state per category and program, including time invested.",
+        bullets: [
+          "Progress bars per training category and program",
+          "Total study time and lessons completed counters",
+          "Completion date history per category",
+          "Link-through to incomplete lessons"
+        ]
+      },
+      {
+        name: "quiz-history",
+        label: "Quiz History",
+        description: "Complete quiz attempt log with per-lesson scores, pass/fail status, and time taken.",
+        group: "Assessment",
+        purpose: "A full audit of all quiz attempts with aggregate stats — total attempted, pass rate, average score, and best score.",
+        bullets: [
+          "Chronological list of all 50 quiz attempts",
+          "Per-attempt score, percentage, and time taken",
+          "Pass/fail indicator with color-coded scoring",
+          "Aggregate stats: avg score, best score, total time, pass rate"
+        ]
+      },
+      {
+        name: "resources",
+        label: "Learning Resources",
+        description: "Downloadable lesson assets — PDFs, docs, reference sheets, and supplemental links.",
+        group: "Assessment",
+        purpose: "A centralized library of all lesson-attached materials, filterable by type, with direct download and external link access.",
+        bullets: [
+          "Filterable by asset type: PDF, doc, image, link",
+          "File size shown with download button",
+          "Organized by lesson and program grouping",
+          "External resource links open in new tab"
+        ]
+      },
+      {
+        name: "sessions",
+        label: "Practice Sessions",
+        description: "Upcoming and past mentor practice session management.",
+        group: "Sessions",
+        purpose: "A dedicated area to track all practice sessions booked with an assigned mentor diviner.",
+        bullets: [
+          "Upcoming session countdown with join button",
+          "Past session history with duration and notes",
+          "Session status: confirmed, completed, cancelled",
+          "Direct link to live video room when active"
+        ]
+      },
+      {
+        name: "graduation",
+        label: "Graduation Certificate",
+        description: "Digital certificate issued on completing all curriculum requirements.",
+        group: "Certification",
+        purpose: "A shareable digital certificate confirming full curriculum completion, issued with a unique code and graduation date.",
+        bullets: [
+          "Unique certificate code (e.g. CERT-BUKQOM-2026)",
+          "Graduation date and trainee full name",
+          "Sharable link and downloadable PDF",
+          "Verification page for employers and clients"
         ]
       },
     ],
