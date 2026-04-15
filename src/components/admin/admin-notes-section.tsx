@@ -26,6 +26,7 @@ function formatDateTime(iso: string) {
 export function AdminNotesSection({
   title = "Add an admin note…",
   emptyLabel = "No notes yet",
+  autoFocusComposer = false,
   notes,
   loading,
   currentAdminEmail,
@@ -35,6 +36,7 @@ export function AdminNotesSection({
 }: {
   title?: string;
   emptyLabel?: string;
+  autoFocusComposer?: boolean;
   notes: AdminNote[];
   loading?: boolean;
   currentAdminEmail?: string | null;
@@ -51,8 +53,9 @@ export function AdminNotesSection({
   const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
+    if (!autoFocusComposer) return;
     textareaRef.current?.focus();
-  }, []);
+  }, [autoFocusComposer]);
 
   const sortedNotes = useMemo(
     () =>
