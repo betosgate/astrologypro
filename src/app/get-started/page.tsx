@@ -179,6 +179,7 @@ function GetStartedPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [showAllBundles, setShowAllBundles] = useState(false);
 
   // Fetch pricing from API
   useEffect(() => {
@@ -505,6 +506,14 @@ function GetStartedPage() {
             ) : (
               <div className="mt-12 space-y-16">
                 {pricingSections.map((section) => {
+                  const isBundle = section.itemKey === "trainee_diviner_bundle";
+                  const BUNDLE_DEFAULT_SHOW = 6;
+                  const visiblePlanOrder =
+                    isBundle && !showAllBundles
+                      ? section.planOrder.slice(0, BUNDLE_DEFAULT_SHOW)
+                      : section.planOrder;
+                  const hiddenCount = section.planOrder.length - BUNDLE_DEFAULT_SHOW;
+
                   return (
                     <div key={section.itemKey || section.itemName} className="space-y-8">
                       <div className="text-center">
@@ -518,8 +527,8 @@ function GetStartedPage() {
                         )}
                       </div>
 
-                      <div className={`grid items-start gap-6 ${section.planOrder.length === 1 ? "mx-auto max-w-md" : section.planOrder.length === 2 ? "md:grid-cols-2 max-w-3xl mx-auto" : "md:grid-cols-3"}`}>
-                        {section.planOrder.map((planId) => {
+                      <div className={`grid items-start gap-6 ${visiblePlanOrder.length === 1 ? "mx-auto max-w-md" : visiblePlanOrder.length === 2 ? "md:grid-cols-2 max-w-3xl mx-auto" : "md:grid-cols-3"}`}>
+                        {visiblePlanOrder.map((planId) => {
                           const p = section.plans[planId];
                           if (!p) return null;
                           const isSelected = selectedPlan === planId;
@@ -615,6 +624,23 @@ function GetStartedPage() {
                           );
                         })}
                       </div>
+
+                      {/* View all / show less toggle — only on bundle section */}
+                      {isBundle && hiddenCount > 0 && (
+                        <div className="text-center">
+                          <button
+                            type="button"
+                            onClick={() => setShowAllBundles((v) => !v)}
+                            className="inline-flex items-center gap-2 text-sm text-[#c9a84c] hover:text-[#e2c97e] transition-colors"
+                          >
+                            {showAllBundles ? (
+                              <>Show fewer combinations <ChevronDown className="size-4 rotate-180 transition-transform" /></>
+                            ) : (
+                              <>View all {section.planOrder.length} combinations <ChevronDown className="size-4 transition-transform" /></>
+                            )}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
