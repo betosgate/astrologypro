@@ -2390,6 +2390,192 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Social links — add or update your Instagram, YouTube, and personal website links shown on your public profile"
         ]
       },
+      {
+        name: "finance",
+        label: "Finance Dashboard",
+        description: "A complete revenue command centre showing every financial dimension of your practice in one view. See revenue totals, average session value, refund rate, pending payouts, tax reserves, and year-to-date net earnings across configurable time windows. Charts break down revenue by source and show the impact of discount rules on your bottom line.",
+        group: "Finance & Billing",
+        purpose: "Single-screen financial health overview for your divination practice.",
+        bullets: [
+          "Revenue card — total income earned in the selected period with month-over-month comparison",
+          "Avg Session value — average dollar amount collected per completed booking",
+          "Refund Rate — percentage of sessions refunded; click to see individual refund records",
+          "Tax Reserve — amount auto-set aside at your configured tax percentage (e.g. 25%)",
+          "YTD Revenue — running year-to-date net after refunds and platform fees",
+          "Revenue Trend chart — Diviner Net line chart across the selected 30-day, 90-day, 1-year, or All Time window",
+          "Revenue by Source — breakdown by service type (natal chart, tarot, subscription, etc.)",
+          "Discount Impact — total dollar value discounted away via loyalty and package rules",
+          "Top Clients — ranked list of clients by total spend in the period",
+          "Export CSV — download all finance data for tax filing or bookkeeping"
+        ]
+      },
+      {
+        name: "discounts",
+        label: "Discount Rules",
+        description: "Create and manage loyalty and package discount rules that apply automatically when clients meet the configured criteria. Rules can trigger by session count, package purchase, or manual override, and each shows real-time usage and savings data so you can see which promotions actually drive retention.",
+        group: "Finance & Billing",
+        purpose: "Automate loyalty rewards and package pricing without manual coupon codes.",
+        bullets: [
+          "Active Rules count — shows how many rules are live vs. paused at a glance",
+          "Session Count rules — trigger a discount automatically after a client completes N sessions (e.g. 10% off after 5)",
+          "Package rules — bundle services and apply a flat discount to the package price (e.g. 20% off Birth Chart + Transit Bundle)",
+          "Discount percentage — set any percentage from 1% to 100%; VIP rules can go up to 25% or more",
+          "Min Sessions threshold — the minimum booking count a client must reach before the discount activates",
+          "Active / Inactive toggle — pause a rule during busy seasons without deleting it",
+          "Total Discount Uses — how many times the rule has triggered across all clients",
+          "Total Amount Saved — cumulative dollars clients have saved; useful for marketing messaging",
+          "Recent Discount Uses — last 15 bookings where a discount rule was applied with client name and savings",
+          "Create Discount button — opens the rule builder to define name, type, threshold, and percentage"
+        ]
+      },
+      {
+        name: "check-ins",
+        label: "Check-In Leads",
+        description: "Viewer sign-ups captured from live sessions and public events are collected here as warm leads. Every person who checked in is logged with their name, email, city, and birth data if provided — giving you a ready-made prospect list to follow up with or convert to a booked client.",
+        group: "Clients & Growth",
+        purpose: "Convert live session viewers into booked clients using captured check-in data.",
+        bullets: [
+          "Total Check-Ins counter — running count of all sign-ups captured across every live session",
+          "This Week count — check-ins in the past 7 days; spikes indicate a successful live event",
+          "With Birth Data count — subset who provided their birth date and time (highest-value leads for natal chart outreach)",
+          "All Time / This Week / This Month filter — narrow the table to the time window you want to work",
+          "Check-In Records table — Date, Name, Email, City, Birth Date, Birth Time for each entry",
+          "Export CSV — download all leads for import into an email platform or CRM",
+          "Giveaways button — jump directly to the Giveaways page to create a prize draw targeting your check-in audience",
+          "Deduplication — multiple check-ins from the same email in one session are collapsed to avoid double-counting",
+          "Birth data gap — entries without birth time show '—' in the Birth Time column; follow up to complete the chart"
+        ]
+      },
+      {
+        name: "campaigns",
+        label: "Affiliate Campaigns",
+        description: "Design and track affiliate marketing campaigns that your referral partners promote on your behalf. Each campaign has its own commission rate, date window, and affiliate links. The analytics tab reveals conversion counts, commission spend, and which campaigns drive the most real bookings.",
+        group: "Marketing & Growth",
+        purpose: "Run structured affiliate promotions with per-campaign tracking and commission control.",
+        bullets: [
+          "Total Campaigns — count of all campaigns ever created; active badge shows currently running ones",
+          "Total Affiliates — number of affiliate partners enrolled across all campaigns",
+          "Conversions — total confirmed bookings credited to affiliate referral links",
+          "Commission Spent — total dollars paid or owed to affiliates across all campaigns",
+          "Campaigns tab — table view with Name, Status, Dates, Commission %, Affiliates count, Conversions, Spent/Budget",
+          "Analytics tab — time-series charts of clicks, conversions, and earnings by campaign",
+          "Create Campaign button — define name, commission type (% or flat), date range, and UTM parameters",
+          "Status filter — filter table by All / Active / Draft / Ended / Paused",
+          "Campaign row actions — edit, pause, or archive a campaign without losing its historical data",
+          "Spring Solar Return Promo, Mercury Retrograde Prep Pack — real campaigns shown in the table with live status"
+        ]
+      },
+      {
+        name: "affiliates",
+        label: "Affiliate Partners",
+        description: "Manage the individual people who promote your services through your affiliate programme. Each affiliate gets a unique referral link and earns commissions on bookings they send. Track their status, commission rate, total earnings, and payment history from a single table.",
+        group: "Marketing & Growth",
+        purpose: "Oversee your affiliate roster and ensure accurate commission tracking and payment.",
+        bullets: [
+          "Total Affiliates stat — total enrolled partners with active subset highlighted",
+          "Commissions Earned — cumulative commission amount earned by all affiliates combined",
+          "Total Paid — amount already disbursed to affiliates via Stripe or manual payout",
+          "Pending Balance — commissions earned but not yet paid out; shows what you owe",
+          "Affiliate table — Name, Email, Commission Rate, Status (pending / active / suspended), Created date",
+          "Invite Affiliate button — send an invitation email with a unique sign-up link",
+          "Add Affiliate button — manually add an affiliate by entering their name, email, and commission %",
+          "Eye icon — view an affiliate's detailed conversion history and earnings breakdown",
+          "Status badges — pending (not yet started promoting), active (live), suspended (temporarily blocked)",
+          "Suspended affiliates — commission accrual stops; their referral links no longer convert"
+        ]
+      },
+      {
+        name: "settings",
+        label: "Account Settings",
+        description: "A tabbed settings hub where you manage every aspect of your AstrologyPro account in one place. Tabs cover your account identity, connected payment methods, calendar sync configuration, notification preferences, phone reading settings, and loyalty programme options — all editable without leaving the dashboard.",
+        group: "Account & Profile",
+        purpose: "Central configuration panel for your practice account, payments, and communication preferences.",
+        bullets: [
+          "Account tab — update your legal name, email address, and account-level details",
+          "Payments tab — manage connected Stripe account, view payout schedule, and set minimum payout threshold",
+          "Calendar tab — link Google Calendar or Outlook to auto-block busy slots and send invites",
+          "Notifications tab — choose which events trigger email, SMS, or push alerts (new booking, cancellation, review, etc.)",
+          "Phone tab — configure phone reading number, call recording consent, and voicemail greeting",
+          "Loyalty tab — set up or edit your loyalty discount programme (session count thresholds and reward percentages)",
+          "Subscription Status — shows your current AstrologyPro plan (active, trialing, or cancelled) with option to cancel",
+          "Cancel Subscription button — initiates the cancellation flow with a confirmation step to prevent accidental cancellation",
+          "Changes saved instantly — each tab saves independently; no master 'Save All' button needed"
+        ]
+      },
+      {
+        name: "media",
+        label: "Media Gallery",
+        description: "Your central library for videos, recordings, articles, audio, and image albums that showcase your work to potential clients. Media can be featured on your public profile, shared via social links, or used as resources in your sessions. The gallery shows review status so only approved content goes public.",
+        group: "Content & Media",
+        purpose: "Curate and publish the portfolio content that builds trust with prospective clients.",
+        bullets: [
+          "Total Items counter — running count of all uploaded media across all types",
+          "Featured count — items pinned to the top of your public profile's media section",
+          "Active count — items currently visible on your public profile (approved and not hidden)",
+          "Pending Review — items submitted but awaiting platform moderation before going live",
+          "Blocked — items the platform has removed from public view with a reason shown on hover",
+          "Image Albums — grouped photo albums; shows slots used vs. total album capacity",
+          "Media card grid — thumbnail, title, type badge (Video / Audio / Article / Image), and review status",
+          "Add From Past Live — import a recording from a previous live stream directly into the gallery",
+          "Add Media button — upload a new video, audio file, or image; drag-and-drop supported",
+          "Review status badge — Approved (public), Pending (in queue), Blocked (removed) visible on each card"
+        ]
+      },
+      {
+        name: "giveaways",
+        label: "Giveaways",
+        description: "Run prize draw campaigns tied to your live sessions or social promotions to build your audience and check-in list. Each giveaway has a title, prize description, date window, entry count, and winner selection. Active giveaways display a public entry form you can share on social media.",
+        group: "Marketing & Growth",
+        purpose: "Grow your check-in audience and email list through structured prize promotions.",
+        bullets: [
+          "Giveaway table — Title, Status (Active / Draft / Ended), Dates, Entries count, Winners count",
+          "New Giveaway button — opens creation form with title, prize description, value, start/end dates",
+          "Active status — currently accepting entries; public entry link is live and shareable",
+          "Draft status — saved but not yet published; lets you prepare campaigns in advance",
+          "Ended status — closed for entries; winner was drawn and announced",
+          "Entries counter — live count of how many people entered the giveaway",
+          "Winners column — shows the number of winners drawn; click to see their names and contact details",
+          "View button — opens the public-facing entry page preview",
+          "Prize examples — Mercury Retrograde Survival Kit (crystal set + natal chart reading), Jupiter Return Reading",
+          "Search and filter — find a specific giveaway by title or filter by All Statuses"
+        ]
+      },
+      {
+        name: "mktcontent",
+        label: "Content Management",
+        description: "Create and manage marketing content — images, videos, and caption templates — that you upload to social media to drive bookings. Write a caption once with dynamic placeholders for your username and booking link, then select the platforms you want to post to and preview how it will look before publishing.",
+        group: "Marketing & Growth",
+        purpose: "Produce ready-to-post social content that consistently promotes your practice.",
+        bullets: [
+          "Title field — give the content piece a name for your own library reference (e.g. 'Mercury Retrograde Awareness Post')",
+          "Media upload — drag and drop PNG, JPG, or MP4 files up to 50 MB; supports images and short video clips",
+          "Caption Template — write your post copy using {username} and {link} placeholders that auto-fill at share time",
+          "Available variables listed — {username} and {link} are shown as clickable hints below the caption field",
+          "Platform selection — toggle Instagram, Twitter / X, YouTube, TikTok, and Facebook individually",
+          "Preview panel — shows a real-time preview of how the caption looks with placeholders resolved",
+          "Content Tips sidebar — best-practice reminders (square images for IG, keep captions under 280 chars for Twitter, post peak hours)",
+          "Saved content library — all uploaded pieces appear below the form for reuse or editing",
+          "Share directly — once saved, each content piece has a one-click share button per selected platform"
+        ]
+      },
+      {
+        name: "calconn",
+        label: "Calendar Connections",
+        description: "Link your Google Calendar or Microsoft Outlook calendar to AstrologyPro so your real-world availability is always in sync and clients receive native calendar invites when they book a session. Connected calendars block off your busy times automatically, preventing double-bookings.",
+        group: "Schedule & Availability",
+        purpose: "Keep your availability accurate by syncing your practice calendar with your personal calendar.",
+        bullets: [
+          "Google Calendar card — connect your Google account with one click via OAuth; shows last sync timestamp once linked",
+          "Outlook Calendar card — connect your Microsoft 365 or Outlook.com account with the same OAuth flow",
+          "Last sync timestamp — displays when availability was last pulled from the connected calendar",
+          "Auto-block busy times — events in your personal calendar automatically mark those slots as unavailable in your booking page",
+          "Native invites — confirmed bookings send a .ics calendar invite to the client's inbox from your connected account",
+          "Multiple connections — you can connect both Google and Outlook if you use both calendars",
+          "Disconnect option — appears after connecting; removes the sync without deleting historical booking records",
+          "Sync errors — if a token expires, a yellow warning appears prompting you to re-authenticate",
+          "Availability page link — after connecting, jump to the Availability page to fine-tune your weekly time windows"
+        ]
+      },
     ],
   },
   {

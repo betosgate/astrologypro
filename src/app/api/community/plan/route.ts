@@ -12,22 +12,8 @@ export const runtime = "nodejs";
  * Returns the full plan details for the authenticated Perennial Mandalism member,
  * including tier info, family members, and the calculated monthly charge breakdown.
  *
- * Response shape:
- * {
- *   plan: {
- *     tier: { id, name, description, base_price_usd, base_member_limit,
- *              extra_per_member_usd, max_total_members },
- *     current_members: number,
- *     extra_members: number,
- *     base_charge: number,
- *     extra_charge: number,
- *     total_monthly: number,
- *     membership_status: string,
- *     current_period_end: string | null,
- *     stripe_subscription_id: string | null,
- *     family_members: Array<{ id, full_name, relationship, age_group, date_of_birth }>
- *   }
- * }
+ * Note: community_members has no FK to pm_plan_tiers. We default to the
+ * lowest-order active tier (Individual) for all members until the FK is added.
  */
 export async function GET() {
   try {
@@ -42,7 +28,7 @@ export async function GET() {
 
     const admin = createAdminClient();
 
-    // Fetch community_members row joined with pm_plan_tiers
+    // Fetch community_members row (no FK join — plan_tier_id column doesn't exist yet)
     const { data: member, error: memberError } = await admin
       .from("community_members")
       .select(
@@ -50,16 +36,7 @@ export async function GET() {
          membership_status,
          current_period_end,
          stripe_subscription_id,
-         extra_member_count,
-         pm_plan_tiers (
-           id,
-           name,
-           description,
-           base_price_usd,
-           base_member_limit,
-           extra_per_member_usd,
-           max_total_members
-         )`
+         extra_member_count`
       )
       .eq("user_id", user.id)
       .single();
@@ -71,12 +48,22 @@ export async function GET() {
       );
     }
 
-    // Fetch family members
-    const { data: familyMembers, error: familyError } = await admin
-      .from("community_family_members")
-      .select("id, full_name, relationship, age_group, date_of_birth")
-      .eq("member_id", member.id)
-      .order("created_at", { ascending: true });
+    // Fetch family members + available tiers in parallel
+    const [{ data: familyMembers, error: familyError }, { data: tiers }] =
+      await Promise.all([
+        admin
+          .from("community_family_members")
+          .select("id, full_name, relationship, age_group, date_of_birth")
+          .eq("member_id", member.id)
+          .order("created_at", { ascending: true }),
+        admin
+          .from("pm_plan_tiers")
+          .select(
+            "id, name, description, base_price_usd, base_member_limit, extra_per_member_usd, max_total_members"
+          )
+          .eq("is_active", true)
+          .order("display_order", { ascending: true }),
+      ]);
 
     if (familyError) {
       return NextResponse.json({ error: familyError.message }, { status: 500 });
@@ -91,10 +78,9 @@ export async function GET() {
       extra_per_member_usd: number;
       max_total_members: number;
     };
-    const rawTier = member.pm_plan_tiers;
-    const tier: TierShape | null = Array.isArray(rawTier)
-      ? (rawTier[0] as TierShape) ?? null
-      : (rawTier as unknown as TierShape | null);
+
+    // Default to first (lowest-order) active tier — Individual
+    const tier: TierShape | null = (tiers?.[0] as TierShape) ?? null;
 
     const currentMembers = (familyMembers ?? []).length;
     const extraMembers = tier
@@ -109,6 +95,7 @@ export async function GET() {
     return NextResponse.json({
       plan: {
         tier,
+        available_tiers: tiers ?? [],
         current_members: currentMembers,
         extra_members: extraMembers,
         base_charge: baseCharge,
