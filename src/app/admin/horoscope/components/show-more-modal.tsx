@@ -111,14 +111,14 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
                                </h3>
                              </div>
                              <div className="w-full rounded-xl border border-black/10 bg-[#f0a023] pt-6 pb-2 px-8 space-y-4 shadow-2xl text-black">
-                                <ol className="space-y-4 list-none">
+                                <ul className="space-y-4 list-none">
                                   {items.map((item, idx) => (
                                     <li key={idx} className="text-[18px] leading-relaxed flex gap-4 font-normal">
-                                      <span className="flex-shrink-0 size-6 flex items-center justify-center rounded-full bg-black/10 text-black font-bold text-xs border border-black/20">{idx + 1}</span>
+                                      <span className="flex-shrink-0 text-black font-bold text-[20px] leading-[28px]">&bull;</span>
                                       <span>{item}</span>
                                     </li>
                                   ))}
-                                </ol>
+                                </ul>
                              </div>
                           </div>
                         ))}
