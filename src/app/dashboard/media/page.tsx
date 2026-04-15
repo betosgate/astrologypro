@@ -5,39 +5,12 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Play,
-  Video,
-  Music,
-  Image,
-  FileText,
-  Link2,
-  Star,
-  PlusCircle,
-  Eye,
-} from "lucide-react";
-import {
-  MediaActiveToggle,
-  MediaFeaturedToggle,
-  MediaDeleteButton,
-  MediaEditButton,
-  MediaReorderButtons,
-} from "@/components/dashboard/media-controls";
+import { Play, PlusCircle } from "lucide-react";
 import { ImportLiveSessionButton } from "@/components/dashboard/import-live-session-button";
+import { MediaGalleryGrid } from "@/components/dashboard/media-gallery-grid";
 import { MAX_MEDIA_IMAGES } from "@/lib/media-gallery";
 
 export const metadata = { title: "Media Gallery" };
-
-const TYPE_META: Record<
-  string,
-  { label: string; icon: React.ElementType; color: string }
-> = {
-  video: { label: "Video", icon: Video, color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
-  audio: { label: "Audio", icon: Music, color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
-  image: { label: "Image", icon: Image, color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
-  article: { label: "Article", icon: FileText, color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
-  link: { label: "Link", icon: Link2, color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
-};
 
 export default async function MediaGalleryPage() {
   const supabase = await createClient();
@@ -80,9 +53,6 @@ export default async function MediaGalleryPage() {
         .filter((album): album is string => !!album)
     )
   );
-
-  // Shape for reorder buttons
-  const reorderItems = allItems.map((i) => ({ id: i.id, sort_order: i.sort_order }));
 
   return (
     <div className="space-y-6">
@@ -198,97 +168,7 @@ export default async function MediaGalleryPage() {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {allItems.map((item) => {
-                const meta = TYPE_META[item.type] ?? TYPE_META.link;
-                const Icon = meta.icon;
-                return (
-                  <div
-                    key={item.id}
-                    className="group relative rounded-lg border bg-card p-4 space-y-3"
-                  >
-                    {/* Thumbnail or type icon */}
-                    <div className="aspect-video w-full overflow-hidden rounded-md bg-muted flex items-center justify-center">
-                      {item.thumbnail_url ? (
-                        <img
-                          src={item.thumbnail_url}
-                          alt={item.title}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className={`flex size-12 items-center justify-center rounded-full ${meta.color}`}>
-                          <Icon className="size-6" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Title + badge */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-sm">{item.title}</p>
-                        {item.type === "image" && item.album_name && (
-                          <p className="mt-1 truncate text-xs text-muted-foreground">
-                            Album: {item.album_name}
-                          </p>
-                        )}
-                      </div>
-                      <Badge variant="secondary" className={`shrink-0 text-xs ${meta.color}`}>
-                        {meta.label}
-                      </Badge>
-                    </div>
-
-                    {/* View count */}
-                    {(item.view_count ?? 0) > 0 && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Eye className="size-3" />
-                        {item.view_count} view{item.view_count !== 1 ? "s" : ""}
-                      </div>
-                    )}
-
-                    {/* Controls row */}
-                    <div className="flex items-center justify-between border-t pt-3">
-                      <div className="flex items-center gap-3">
-                        {/* Featured */}
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Star className="size-3" />
-                          <MediaFeaturedToggle itemId={item.id} featured={item.is_featured} blocked={item.moderation_status === "blocked"} />
-                        </div>
-                        {/* Active */}
-                        <MediaActiveToggle itemId={item.id} active={item.is_active} blocked={item.moderation_status === "blocked"} />
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        <MediaReorderButtons
-                          itemId={item.id}
-                          allItems={reorderItems}
-                        />
-                        <MediaEditButton itemId={item.id} />
-                        <MediaDeleteButton itemId={item.id} />
-                      </div>
-                    </div>
-                    <div className="space-y-1 rounded-md border border-dashed border-muted px-3 py-2 text-xs">
-                      <p className="font-medium text-foreground">
-                        Review status:{" "}
-                        <span className="capitalize">{String(item.moderation_status).replace("_", " ")}</span>
-                      </p>
-                      {item.moderation_status === "pending" && (
-                        <p className="text-muted-foreground">
-                          Awaiting admin review before this item can appear publicly.
-                        </p>
-                      )}
-                      {item.moderation_status === "blocked" && (
-                        <p className="text-destructive">
-                          Permanently blocked by admin. This item cannot be republished from your dashboard.
-                        </p>
-                      )}
-                      {item.admin_review_notes && (
-                        <p className="text-muted-foreground">Admin note: {item.admin_review_notes}</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <MediaGalleryGrid items={allItems} />
           )}
         </CardContent>
       </Card>
