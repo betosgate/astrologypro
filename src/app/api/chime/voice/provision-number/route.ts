@@ -43,9 +43,11 @@ export async function POST(request: NextRequest) {
 
   // ── Input validation ──────────────────────────────────────────────────────
   let divinerId: string | undefined;
+  let areaCode: string | undefined;
   try {
     const body = await request.json();
     divinerId = body?.divinerId;
+    areaCode = body?.areaCode; // optional US area code (e.g. "212", "310")
   } catch {
     return NextResponse.json(
       {
@@ -106,7 +108,7 @@ export async function POST(request: NextRequest) {
 
   // ── Provision (long-running — up to 90 s) ─────────────────────────────────
   try {
-    const result = await provisionChimePhoneNumber(divinerId);
+    const result = await provisionChimePhoneNumber(divinerId, areaCode);
 
     return NextResponse.json(
       {
