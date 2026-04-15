@@ -87,6 +87,10 @@
     {
       "path": "/api/cron/alert-check",
       "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/sync-recordings",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

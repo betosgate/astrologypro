@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { endChimeMeeting, stopChimeRecording } from "@/lib/chime-meetings";
+import { endChimeMeeting, stopChimeRecording, startChimeConcatenation } from "@/lib/chime-meetings";
 import { PRICING } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     const { data: booking, error: bookingError } = await admin
       .from("bookings")
       .select(
-        "id, diviner_id, base_price, duration_minutes, chime_meeting_id, services(duration_minutes, overage_rate)"
+        "id, diviner_id, base_price, duration_minutes, chime_meeting_id, chime_pipeline_id, services(duration_minutes, overage_rate)"
       )
       .eq("id", bookingId)
       .single();
@@ -65,6 +65,19 @@ export async function POST(request: NextRequest) {
       } catch (err) {
         console.error("Failed to delete Chime meeting:", err);
         // Non-blocking — continue with billing
+      }
+
+      // Trigger concatenation pipeline — merges all segment files into a
+      // single named MP4: recordings/{bookingId}/final/{meetingId}.mp4
+      // This runs asynchronously on AWS; sync-recordings cron picks it up.
+      if (booking.chime_pipeline_id) {
+        startChimeConcatenation(
+          booking.chime_pipeline_id,
+          booking.chime_meeting_id,
+          bookingId
+        ).catch((err) =>
+          console.error("Failed to start Chime concatenation:", err)
+        );
       }
 
       // Stop recording pipeline if active
