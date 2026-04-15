@@ -388,11 +388,11 @@ export default async function DashboardMundanePage({ searchParams }: PageProps) 
               ) : (
                 <div className="space-y-2">
                   {todayAstroEvents.map((ev) => (
-                    <div
+                    <Link
                       key={ev.id}
-                      className="flex items-start gap-2 py-2 border-b border-border/40 last:border-0"
+                      href={`/dashboard/mundane/event-calendar/${ev.id}`}
+                      className="flex items-start gap-2 py-2 border-b border-border/40 last:border-0 hover:bg-muted/30 rounded-sm px-1 -mx-1 transition-colors"
                     >
-                      {/* Planet symbol or star */}
                       <Star className="size-3.5 text-violet-400 mt-0.5 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium leading-snug truncate">
@@ -417,7 +417,7 @@ export default async function DashboardMundanePage({ searchParams }: PageProps) 
                       >
                         {ev.event_type}
                       </Badge>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               )}
@@ -501,9 +501,10 @@ export default async function DashboardMundanePage({ searchParams }: PageProps) 
               ) : (
                 <div className="space-y-2">
                   {unreadAlerts.map((alert) => (
-                    <div
+                    <Link
                       key={alert.id}
-                      className="flex items-start gap-2 py-2 border-b border-border/40 last:border-0"
+                      href={`/dashboard/mundane/alerts/${alert.id}`}
+                      className="flex items-start gap-2 py-2 border-b border-border/40 last:border-0 hover:bg-muted/30 rounded-sm px-1 -mx-1 transition-colors"
                     >
                       {PRIORITY_ICON[alert.priority] ?? (
                         <Info className="size-3.5 text-muted-foreground shrink-0" />
@@ -523,7 +524,7 @@ export default async function DashboardMundanePage({ searchParams }: PageProps) 
                       >
                         {alert.priority}
                       </Badge>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               )}
@@ -685,45 +686,54 @@ export default async function DashboardMundanePage({ searchParams }: PageProps) 
                   {upcomingForecasts.map((fc) => (
                     <tr
                       key={fc.id}
-                      className="border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors"
+                      className="border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                      onClick={undefined}
                     >
                       <td className="py-2.5 pr-4">
                         <Link
                           href={`/dashboard/mundane/forecasts/${fc.id}`}
-                          className="font-medium hover:text-violet-600 transition-colors line-clamp-1"
+                          className="font-medium hover:text-violet-600 transition-colors line-clamp-1 after:absolute after:inset-0"
                         >
                           {fc.title}
                         </Link>
                       </td>
                       <td className="py-2.5 pr-4 whitespace-nowrap text-muted-foreground text-xs">
-                        {formatDate(fc.forecast_period_start)}
+                        <Link href={`/dashboard/mundane/forecasts/${fc.id}`} className="block">
+                          {formatDate(fc.forecast_period_start)}
+                        </Link>
                       </td>
                       <td className="py-2.5 pr-4">
-                        {fc.confidence_level ? (
+                        <Link href={`/dashboard/mundane/forecasts/${fc.id}`} className="block">
+                          {fc.confidence_level ? (
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] capitalize ${
+                                CONFIDENCE_BADGE[fc.confidence_level] ?? ""
+                              }`}
+                            >
+                              {fc.confidence_level}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </Link>
+                      </td>
+                      <td className="py-2.5 pr-4 text-xs text-muted-foreground truncate max-w-[120px]">
+                        <Link href={`/dashboard/mundane/forecasts/${fc.id}`} className="block">
+                          {fc.entity_id ? forecastEntityMap[fc.entity_id] ?? "—" : "—"}
+                        </Link>
+                      </td>
+                      <td className="py-2.5">
+                        <Link href={`/dashboard/mundane/forecasts/${fc.id}`} className="block">
                           <Badge
                             variant="outline"
                             className={`text-[10px] capitalize ${
-                              CONFIDENCE_BADGE[fc.confidence_level] ?? ""
+                              OUTCOME_BADGE[fc.outcome_status] ?? ""
                             }`}
                           >
-                            {fc.confidence_level}
+                            {fc.outcome_status?.replace(/_/g, " ")}
                           </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
-                        )}
-                      </td>
-                      <td className="py-2.5 pr-4 text-xs text-muted-foreground truncate max-w-[120px]">
-                        {fc.entity_id ? forecastEntityMap[fc.entity_id] ?? "—" : "—"}
-                      </td>
-                      <td className="py-2.5">
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] capitalize ${
-                            OUTCOME_BADGE[fc.outcome_status] ?? ""
-                          }`}
-                        >
-                          {fc.outcome_status?.replace(/_/g, " ")}
-                        </Badge>
+                        </Link>
                       </td>
                     </tr>
                   ))}
