@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimit, rateLimitResponse, getIpIdentifier } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,20 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Always returns 200 — never reveals whether email exists.
 
 export async function POST(req: NextRequest) {
+  // Rate limit: 5 requests per minute per IP (auth endpoints are high-value abuse targets)
+  const rl = await rateLimit(getIpIdentifier(req), 5, 60 * 1_000);
+  if (!rl.success) {
+    // Return 200 to avoid leaking the existence of the rate limit to scrapers.
+    // The Retry-After header is still set so legitimate clients can back off.
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": String(Math.ceil((rl.reset - Date.now()) / 1_000)),
+      },
+    });
+  }
+
   let body: { email?: unknown };
   try {
     body = await req.json();

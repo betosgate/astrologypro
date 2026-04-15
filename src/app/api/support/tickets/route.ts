@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,7 @@ interface CreateTicketBody {
   subcategory?: string;
   subject: string;
   description: string;
+  priority?: string;
   related_entity_type?: string;
   related_entity_id?: string;
   // Chart escalation fields — pre-populated when created from the PM portal
@@ -114,6 +116,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return problem(401, "Unauthorized", "You must be logged in to create a ticket.");
   }
 
+  // Rate limit: 10 tickets per hour per user
+  const rl = await rateLimit(`support-tickets:${user.id}`, 10, 60 * 60 * 1_000);
+  if (!rl.success) {
+    return rateLimitResponse(rl, "You can submit at most 10 support tickets per hour.") as unknown as NextResponse;
+  }
+
   let body: CreateTicketBody;
   try {
     body = await req.json();
@@ -126,6 +134,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     subcategory,
     subject,
     description,
+    priority,
     related_entity_type,
     related_entity_id,
     chart_family_member_id,
@@ -140,6 +149,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   if (description.trim().length < 10) {
     return problem(422, "Validation Error", "description must be at least 10 characters.");
+  }
+
+  // Validate priority if provided — must match DB CHECK constraint values
+  const allowedPriorities = ["low", "normal", "high", "urgent", "critical"];
+  if (priority && !allowedPriorities.includes(priority)) {
+    return problem(422, "Validation Error", `priority must be one of: ${allowedPriorities.join(", ")}.`);
   }
 
   // Validate related entity if provided.
@@ -174,12 +189,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     requesterEmail ??
     null;
 
-  // Derive chart-specific type label so tickets route correctly
-  // to the astrology ops queue when category is chart-related.
+  // Resolve the ticket type. Only DB-valid values are allowed:
+  // ('support','job','incident','escalation','complaint','refund','payout','bug','moderation')
+  // Chart-related categories route as 'support' type (use tags/category for ops routing).
+  const allowedTypes = ["support", "job", "incident", "escalation", "complaint", "refund", "payout", "bug", "moderation"];
   const resolvedType = (() => {
-    if (body.type) return body.type;
-    const chartCategories = ["natal_chart_issue", "monthly_transit_issue", "family_relationship_chart_issue"];
-    if (chartCategories.includes(category)) return "chart_support";
+    if (body.type && allowedTypes.includes(body.type)) return body.type;
     return "support";
   })();
 
@@ -197,6 +212,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       subcategory: subcategory?.trim() ?? null,
       subject: subject.trim(),
       description: description.trim(),
+      priority: priority ?? "normal",
       requester_user_id: user.id,
       requester_email: requesterEmail,
       requester_name: requesterName,

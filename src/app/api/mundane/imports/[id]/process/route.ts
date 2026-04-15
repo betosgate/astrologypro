@@ -130,20 +130,26 @@ export async function POST(
         if (!title || !eventDate) {
           throw new Error("title and event_date are required");
         }
+        const VALID_EVENT_TYPES = ["historical","forecast","ingress","eclipse","return","transit_hit","election","conflict","economic","weather","other"];
+        const rawEventType = getMapped(row, "event_type") || "other";
+        const eventType = VALID_EVENT_TYPES.includes(rawEventType) ? rawEventType : "other";
         const { error } = await admin.from("mundane_events").insert({
           title,
           event_date: eventDate,
           location: getMapped(row, "location") || null,
-          event_type: getMapped(row, "event_type") || "general",
+          event_type: eventType,
           created_by: adminUser.id,
         });
         if (error) throw new Error(error.message);
       } else if (importType === "csv_entities") {
         const name = getMapped(row, "name");
         if (!name) throw new Error("name is required");
+        const rawType = getMapped(row, "type") || "other";
+        const VALID_ENTITY_TYPES = ["country","city","institution","market","commodity","organization","other"];
+        const entityType = VALID_ENTITY_TYPES.includes(rawType) ? rawType : "other";
         const { error } = await admin.from("mundane_entities").insert({
           name,
-          entity_type: getMapped(row, "type") || "other",
+          entity_type: entityType,
           region: getMapped(row, "region") || null,
           created_by: adminUser.id,
         });
@@ -154,11 +160,10 @@ export async function POST(
         const entityId = getMapped(row, "entity_id") || null;
         const birthDate = getMapped(row, "birth_date") || null;
         const { error } = await admin.from("mundane_leaders").insert({
-          name,
-          title: getMapped(row, "title") || null,
-          entity_id: entityId,
+          full_name: name,
+          office_title: getMapped(row, "title") || null,
+          country_entity_id: entityId,
           birth_date: birthDate,
-          created_by: adminUser.id,
         });
         if (error) throw new Error(error.message);
       } else if (importType === "csv_forecasts") {

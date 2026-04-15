@@ -121,7 +121,16 @@ const ENTITY_TYPES = [
   { value: "payout", label: "Payout" },
 ];
 
+// Priority options exposed to the user (maps to DB values)
+const PRIORITY_OPTIONS = [
+  { value: "low", label: "Low — general question, no urgency" },
+  { value: "normal", label: "Normal — issue affecting my work" },
+  { value: "high", label: "High — significant impact on my service" },
+  { value: "urgent", label: "Urgent — blocking me from working" },
+] as const;
+
 type CategoryKey = keyof typeof CATEGORY_MAP;
+type PriorityValue = (typeof PRIORITY_OPTIONS)[number]["value"];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -132,6 +141,7 @@ export default function NewTicketPage() {
   const [subcategory, setSubcategory] = useState("");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState<PriorityValue>("normal");
   const [entityType, setEntityType] = useState("");
   const [entityId, setEntityId] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -170,6 +180,7 @@ export default function NewTicketPage() {
           subcategory: subcategory || undefined,
           subject: subject.trim(),
           description: description.trim(),
+          priority,
           related_entity_type: entityType || undefined,
           related_entity_id: entityId.trim() || undefined,
         }),
@@ -270,6 +281,28 @@ export default function NewTicketPage() {
               <p className="text-xs text-muted-foreground">
                 {subject.length}/150 characters
               </p>
+            </div>
+
+            {/* Priority */}
+            <div className="space-y-1.5">
+              <Label htmlFor="priority">
+                Priority <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={priority}
+                onValueChange={(val) => setPriority(val as PriorityValue)}
+              >
+                <SelectTrigger id="priority">
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRIORITY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Description */}

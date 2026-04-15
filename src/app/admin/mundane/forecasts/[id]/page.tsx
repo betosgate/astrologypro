@@ -13,6 +13,7 @@ import {
   XCircle, AlertCircle, Clock, Loader2, Edit3, Save, X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { AiGeneratePanel } from "@/components/mundane/ai-generate-panel";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Forecast = any;
@@ -291,6 +292,17 @@ export default function ForecastDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* AI Generation Panel */}
+      <AiGeneratePanel
+        subjectType="forecast"
+        subjectId={id}
+        subjectLabel={forecast.title}
+        aspectType="forecast"
+        saveToField="narrative_summary"
+        saveToId={id}
+        onSave={() => load()}
+      />
 
       {/* Metadata */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
