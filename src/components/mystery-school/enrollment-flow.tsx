@@ -27,6 +27,54 @@ import {
   type QuarterName,
 } from "@/lib/mystery-school/quarters";
 
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
+
+interface PricingPlan {
+  plan_id: string;
+  display_name: string;
+  onetime_amount: number | null;
+  onetime_currency: string | null;
+  recurring_amount: number | null;
+  recurring_currency: string | null;
+  recurring_interval: string | null;
+  mrp: number | null;
+  stripe_price_id: string | null;
+  description: string | null;
+  html_description: string | null;
+  custom_fields: Array<{ label: string; value: string; slug: string }> | null;
+  sort_order: number;
+}
+
+interface MysterySchoolPricing {
+  standardPlan: PricingPlan | null;
+  discountPlan: PricingPlan | null;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+function formatCurrency(amount: number, currency: string = "USD"): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
+
+function getActivePlan(pricing: MysterySchoolPricing, isPmMember: boolean, discountEnabled: boolean): PricingPlan | null {
+  if (isPmMember && discountEnabled && pricing.discountPlan) {
+    return pricing.discountPlan;
+  }
+  return pricing.standardPlan;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Constants                                                          */
+/* ------------------------------------------------------------------ */
+
 const FEATURES = [
   {
     icon: BookOpen,
@@ -52,6 +100,10 @@ const FEATURES = [
 
 const TOTAL_STEPS = 4;
 const STEP_LABELS = ["Overview", "Quarter", "Review", "Payment"];
+
+/* ------------------------------------------------------------------ */
+/*  Step indicator                                                     */
+/* ------------------------------------------------------------------ */
 
 function StepIndicator({
   current,
@@ -109,15 +161,24 @@ function StepIndicator({
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  Step 1 — Overview                                                  */
+/* ------------------------------------------------------------------ */
+
 function Step1Info({
+  pricing,
   isPmMember,
   discountEnabled,
   onNext,
 }: {
+  pricing: MysterySchoolPricing;
   isPmMember: boolean;
   discountEnabled: boolean;
   onNext: () => void;
 }) {
+  const plan = pricing.standardPlan;
+  const discountPlan = pricing.discountPlan;
+
   return (
     <div className="space-y-8">
       <div className="space-y-3 text-center">
@@ -135,14 +196,26 @@ function Step1Info({
 
       <div className="space-y-2 rounded-xl border bg-primary/5 p-5 text-center">
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <Badge variant="secondary" className="px-3 py-1 text-sm">$97 one-time enrollment</Badge>
-          <span className="text-sm text-muted-foreground">+</span>
-          <Badge variant="secondary" className="px-3 py-1 text-sm">$27 / month</Badge>
+          {plan?.onetime_amount != null && (
+            <Badge variant="secondary" className="px-3 py-1 text-sm">
+              {formatCurrency(plan.onetime_amount, plan.onetime_currency ?? "USD")} one-time enrollment
+            </Badge>
+          )}
+          {plan?.onetime_amount != null && plan?.recurring_amount != null && (
+            <span className="text-sm text-muted-foreground">+</span>
+          )}
+          {plan?.recurring_amount != null && (
+            <Badge variant="secondary" className="px-3 py-1 text-sm">
+              {formatCurrency(plan.recurring_amount, plan.recurring_currency ?? "USD")} / {plan.recurring_interval ?? "month"}
+            </Badge>
+          )}
         </div>
-        {isPmMember && discountEnabled && (
+        {isPmMember && discountEnabled && discountPlan?.recurring_amount != null && (
           <p className="mt-1 text-sm text-muted-foreground">
             Active Perennial Mandalism members qualify for the current monthly member rate of{" "}
-            <span className="font-semibold text-primary">$17.03/month</span>.
+            <span className="font-semibold text-primary">
+              {formatCurrency(discountPlan.recurring_amount, discountPlan.recurring_currency ?? "USD")}/{discountPlan.recurring_interval ?? "month"}
+            </span>.
           </p>
         )}
         <p className="text-xs text-muted-foreground">5-quarter commitment · cancel after any quarter</p>
@@ -175,6 +248,10 @@ function Step1Info({
     </div>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/*  Step 2 — Quarter selection                                         */
+/* ------------------------------------------------------------------ */
 
 function Step2Quarter({
   selected,
@@ -254,8 +331,13 @@ function Step2Quarter({
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  Step 3 — Review                                                    */
+/* ------------------------------------------------------------------ */
+
 function Step3Review({
   selected,
+  pricing,
   isPmMember,
   discountEnabled,
   confirmed,
@@ -264,6 +346,7 @@ function Step3Review({
   onBack,
 }: {
   selected: UpcomingEntryDate;
+  pricing: MysterySchoolPricing;
   isPmMember: boolean;
   discountEnabled: boolean;
   confirmed: boolean;
@@ -272,6 +355,22 @@ function Step3Review({
   onBack: () => void;
 }) {
   const meta = QUARTER_UI_META[selected.quarter as QuarterName];
+  const plan = pricing.standardPlan;
+  const activePlan = getActivePlan(pricing, isPmMember, discountEnabled);
+  const currency = plan?.recurring_currency ?? plan?.onetime_currency ?? "USD";
+  const interval = plan?.recurring_interval ?? "month";
+
+  const showDiscount =
+    isPmMember &&
+    discountEnabled &&
+    pricing.discountPlan?.recurring_amount != null &&
+    plan?.recurring_amount != null &&
+    pricing.discountPlan.recurring_amount < plan.recurring_amount;
+
+  const savingsAmount =
+    showDiscount && plan?.recurring_amount != null && pricing.discountPlan?.recurring_amount != null
+      ? plan.recurring_amount - pricing.discountPlan.recurring_amount
+      : 0;
 
   return (
     <div className="space-y-6">
@@ -302,26 +401,38 @@ function Step3Review({
           <div className="border-t" />
 
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">One-time enrollment fee</span>
-              <span className="font-medium">$97.00</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Monthly subscription</span>
-              <span className="font-medium">$27.00 / month</span>
-            </div>
-            {isPmMember && discountEnabled && (
-              <div className="flex justify-between text-primary">
-                <span>PM member discount applied</span>
-                <span className="font-medium">−$9.97 / month</span>
+            {activePlan?.onetime_amount != null && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">One-time enrollment fee</span>
+                <span className="font-medium">
+                  {formatCurrency(activePlan.onetime_amount, activePlan.onetime_currency ?? currency)}
+                </span>
               </div>
             )}
-            <div className="flex justify-between border-t pt-2 font-semibold">
-              <span>Monthly cost</span>
-              <span className="text-primary">
-                ${isPmMember && discountEnabled ? "17.03" : "27.00"} / month
-              </span>
-            </div>
+            {plan?.recurring_amount != null && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Monthly subscription</span>
+                <span className="font-medium">
+                  {formatCurrency(plan.recurring_amount, plan.recurring_currency ?? currency)} / {interval}
+                </span>
+              </div>
+            )}
+            {showDiscount && (
+              <div className="flex justify-between text-primary">
+                <span>PM member discount applied</span>
+                <span className="font-medium">
+                  &minus;{formatCurrency(savingsAmount, currency)} / {interval}
+                </span>
+              </div>
+            )}
+            {activePlan?.recurring_amount != null && (
+              <div className="flex justify-between border-t pt-2 font-semibold">
+                <span>Monthly cost</span>
+                <span className="text-primary">
+                  {formatCurrency(activePlan.recurring_amount, activePlan.recurring_currency ?? currency)} / {interval}
+                </span>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -359,19 +470,27 @@ function Step3Review({
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  Step 4 — Payment                                                   */
+/* ------------------------------------------------------------------ */
+
 function Step4Payment({
   selected,
+  pricing,
   isPmMember,
   discountEnabled,
   onBack,
 }: {
   selected: UpcomingEntryDate;
+  pricing: MysterySchoolPricing;
   isPmMember: boolean;
   discountEnabled: boolean;
   onBack: () => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const activePlan = getActivePlan(pricing, isPmMember, discountEnabled);
+  const interval = activePlan?.recurring_interval ?? "month";
 
   async function handleCheckout() {
     setLoading(true);
@@ -416,11 +535,23 @@ function Step4Payment({
             <span className="text-base font-normal text-muted-foreground">cohort</span>
           </div>
           <div className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">$97</span> enrollment +{" "}
-            <span className="font-semibold text-foreground">
-              ${isPmMember && discountEnabled ? "17.03" : "27.00"}
-            </span>
-            /mo
+            {activePlan?.onetime_amount != null && (
+              <>
+                <span className="font-semibold text-foreground">
+                  {formatCurrency(activePlan.onetime_amount, activePlan.onetime_currency ?? "USD")}
+                </span>
+                {" "}enrollment
+              </>
+            )}
+            {activePlan?.onetime_amount != null && activePlan?.recurring_amount != null && " + "}
+            {activePlan?.recurring_amount != null && (
+              <>
+                <span className="font-semibold text-foreground">
+                  {formatCurrency(activePlan.recurring_amount, activePlan.recurring_currency ?? "USD")}
+                </span>
+                /{interval === "month" ? "mo" : interval}
+              </>
+            )}
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button
@@ -455,24 +586,38 @@ function Step4Payment({
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  Main component                                                     */
+/* ------------------------------------------------------------------ */
+
 export function MysterySchoolEnrollmentFlow() {
   const [step, setStep] = useState(1);
   const [selectedQuarter, setSelectedQuarter] = useState<UpcomingEntryDate | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [isPmMember, setIsPmMember] = useState(false);
   const [discountEnabled, setDiscountEnabled] = useState(false);
+  const [pricing, setPricing] = useState<MysterySchoolPricing>({ standardPlan: null, discountPlan: null });
+  const [pricingLoading, setPricingLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/community/subscription").then((r) => r.json()).catch(() => ({})),
       fetch("/api/community/settings").then((r) => r.json()).catch(() => ({})),
-    ]).then(([subData, settingsData]) => {
+      fetch("/api/pricing/mystery_school").then((r) => r.json()).catch(() => ({ plans: [] })),
+    ]).then(([subData, settingsData, pricingData]) => {
       if (subData?.subscription?.membership_type === "perennial_mandalism") {
         setIsPmMember(true);
       }
       if (settingsData?.ms_pm_discount_enabled === true) {
         setDiscountEnabled(true);
       }
+
+      const plans: PricingPlan[] = pricingData?.plans ?? [];
+      setPricing({
+        standardPlan: plans.find((p) => p.plan_id === "plan_mystery_monthly") ?? null,
+        discountPlan: plans.find((p) => p.plan_id === "plan_mystery_monthly_pm_discount") ?? null,
+      });
+      setPricingLoading(false);
     });
   }, []);
 
@@ -485,12 +630,20 @@ export function MysterySchoolEnrollmentFlow() {
     if (step === 3) setConfirmed(false);
   }
 
+  if (pricingLoading) {
+    return (
+      <div className="flex min-h-[300px] items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-2xl py-4">
       <StepIndicator current={step} labels={STEP_LABELS} />
 
       {step === 1 && (
-        <Step1Info isPmMember={isPmMember} discountEnabled={discountEnabled} onNext={goNext} />
+        <Step1Info pricing={pricing} isPmMember={isPmMember} discountEnabled={discountEnabled} onNext={goNext} />
       )}
 
       {step === 2 && (
@@ -505,6 +658,7 @@ export function MysterySchoolEnrollmentFlow() {
       {step === 3 && selectedQuarter && (
         <Step3Review
           selected={selectedQuarter}
+          pricing={pricing}
           isPmMember={isPmMember}
           discountEnabled={discountEnabled}
           confirmed={confirmed}
@@ -517,6 +671,7 @@ export function MysterySchoolEnrollmentFlow() {
       {step === 4 && selectedQuarter && (
         <Step4Payment
           selected={selectedQuarter}
+          pricing={pricing}
           isPmMember={isPmMember}
           discountEnabled={discountEnabled}
           onBack={goBack}
