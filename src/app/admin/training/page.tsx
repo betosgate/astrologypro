@@ -57,7 +57,6 @@ type Quiz = {
   title: string;
   name?: string;
   questions: unknown[];
-  pass_score: number | null;
   is_active: boolean;
   created_at: string;
 };
@@ -485,17 +484,6 @@ export default function TrainingPage() {
       ),
     },
     {
-      key: "pass_score",
-      label: "Pass Score",
-      sortable: true,
-      sortValue: (q) => q.pass_score ?? 0,
-      render: (q) => (
-        <span className="text-sm">
-          {q.pass_score != null ? `${q.pass_score}%` : "—"}
-        </span>
-      ),
-    },
-    {
       key: "questions",
       label: "Questions",
       sortable: true,
@@ -610,10 +598,6 @@ export default function TrainingPage() {
     editHref: `/admin/training/quizzes/${q.id}/edit`,
     overview: [
       { label: "Lesson", value: lessonMap[q.lesson_id] ?? "—" },
-      {
-        label: "Pass Score",
-        value: q.pass_score != null ? `${q.pass_score}%` : "—",
-      },
       {
         label: "Questions",
         value: Array.isArray(q.questions) ? q.questions.length : "—",

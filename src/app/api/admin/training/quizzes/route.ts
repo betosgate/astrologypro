@@ -81,7 +81,7 @@ async function buildQuizRowsForList(admin: ReturnType<typeof createAdminClient>)
           title: lesson?.title ? `${lesson.title} Quiz` : "Lesson Quiz",
           lesson_title: lesson?.title ?? null,
           questions: Array.from({ length: count }, (_, idx) => idx),
-          pass_score: 70,
+          pass_score: 100,
           is_active: lesson?.is_active ?? true,
           created_at: lesson?.created_at ?? new Date(0).toISOString(),
           is_legacy_lesson_quiz: true,
@@ -196,7 +196,7 @@ export async function POST(req: NextRequest) {
     .insert({
       title: title.trim(),
       lesson_id,
-      pass_score: pass_score ?? 70,
+      pass_score: 100,
       is_active: is_active ?? true,
       questions: normalized.questions,
     })
