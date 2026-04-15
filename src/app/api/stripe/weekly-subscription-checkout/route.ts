@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe/client";
+import { stripe, getOrCreateStripeCustomer } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { trackDivinerActivityEvent } from "@/lib/diviner-analytics";
 import { ensureWeeklySubscriptionStripeProduct } from "@/lib/weekly-subscriptions";
@@ -107,9 +107,11 @@ export async function POST(request: NextRequest) {
     )}&subscription=success`;
     const cancelUrl = `${appUrl}/${diviner.username}?subscription=cancelled`;
 
+    const customerId = await getOrCreateStripeCustomer(email);
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      customer_email: email,
+      customer: customerId,
       line_items: [
         {
           price: stripeIds.stripePriceId,

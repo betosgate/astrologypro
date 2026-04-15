@@ -2445,6 +2445,558 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Reject and notify: removes the content and sends a policy violation notice to the author"
         ]
       },
+      {
+        name: "quiz-bank-admin",
+        label: "Quiz Bank",
+        description: "Central library of all quiz questions used across trainee lessons and certifications. Admins can create, edit, tag, and retire questions. Each question is tagged to a lesson topic and difficulty tier.",
+        group: "Training",
+        purpose: "Maintains a structured, reusable pool of assessment questions so lesson authors do not have to duplicate effort when building new quizzes.",
+        bullets: [
+          "Question list with topic tag, difficulty (Beginner / Intermediate / Advanced), and active status",
+          "Inline editor — add answer choices, mark the correct answer, and attach an explanation",
+          "Usage count column showing how many quizzes currently reference each question"
+        ]
+      },
+      {
+        name: "quiz-detail-admin",
+        label: "Quiz Detail",
+        description: "Full editor for a single quiz assigned to a training lesson. Admins configure the question set, passing score, number of attempts allowed, and remediation content. Shows live completion stats once deployed.",
+        group: "Training",
+        purpose: "Gives admins granular control over each quiz without touching the broader lesson structure.",
+        bullets: [
+          "Drag-and-drop question ordering with live preview of the student experience",
+          "Passing-score slider and max-attempts spinner with save confirmation",
+          "Submission analytics panel — avg score, pass rate, most-missed question"
+        ]
+      },
+      {
+        name: "package-detail",
+        label: "Service Package Detail",
+        description: "Detailed view and editor for a single session package sold on the platform. Admins can adjust session count, price, expiry window, and which diviner types are eligible. Includes sales history and active subscriber count.",
+        group: "Commerce",
+        purpose: "Allows fine-grained control over individual packages without bulk-editing the full pricing grid.",
+        bullets: [
+          "Package metadata: name, description, session count, validity period, and allowed service types",
+          "Pricing override per-currency with Stripe price ID sync status",
+          "Sales chart showing units sold per month with revenue total"
+        ]
+      },
+      {
+        name: "stripe-config",
+        label: "Stripe Configuration",
+        description: "Admin panel for managing Stripe Connect settings including platform fee percentage, payout schedule, connected account requirements, and webhook endpoint health. Shows live connection status to Stripe dashboard.",
+        group: "Config",
+        purpose: "Centralises all Stripe integration settings so payment behaviour can be adjusted without a code deploy.",
+        bullets: [
+          "Platform fee percentage field with instant preview of net diviner payout on a sample transaction",
+          "Webhook endpoint health — last ping timestamp and event types registered",
+          "Connected accounts summary: total active, pending verification, and suspended"
+        ]
+      },
+      {
+        name: "ses-config",
+        label: "SES Email Configuration",
+        description: "Configuration panel for AWS Simple Email Service settings including sending domain, DKIM records, bounce and complaint handling thresholds, and daily sending quota usage. Surfaces suppression list management.",
+        group: "Config",
+        purpose: "Keeps transactional email delivery healthy by surfacing deliverability signals and quota usage before they cause platform-wide issues.",
+        bullets: [
+          "Sending domain list with DKIM / DMARC verification status per domain",
+          "Bounce rate and complaint rate gauges with AWS-recommended thresholds marked",
+          "Suppression list viewer — search and manually remove email addresses"
+        ]
+      },
+      {
+        name: "twilio-config",
+        label: "Twilio / Phone Configuration",
+        description: "Admin interface for Twilio phone-session settings including purchased phone numbers, call routing rules, fallback URLs, and SMS template management. Shows per-number call volume and error rates.",
+        group: "Config",
+        purpose: "Manages the phone-session infrastructure that diviners use for audio readings, ensuring routing rules are correct and numbers are healthy.",
+        bullets: [
+          "Purchased number list with assignment status (assigned to diviner / unassigned / retired)",
+          "Call routing rule builder — select primary and fallback numbers per region",
+          "SMS templates editor for booking confirmations and session reminders"
+        ]
+      },
+      {
+        name: "media-detail",
+        label: "Media Item Detail",
+        description: "Detailed view for a single media asset in the platform library. Shows metadata, usage references, transcoding status, access permissions, and storage cost. Admins can update tags, replace the file, or delete.",
+        group: "Config",
+        purpose: "Provides a single place to audit and manage individual media assets so the library stays clean and cost-efficient.",
+        bullets: [
+          "Asset preview (video player, image viewer, or audio waveform depending on type)",
+          "Usage references — lists every lesson, blog post, or broadcast that links to this asset",
+          "Storage size, transcoding status, and CDN cache-purge button"
+        ]
+      },
+      {
+        name: "holy-book-detail",
+        label: "Holy Book Detail",
+        description: "Editor for a single Holy Book entry in the platform doctrine library. Admins can update the title, body text, associated symbols, visibility scope (public / PM members / MS students), and publication date.",
+        group: "Governance",
+        purpose: "Keeps doctrinal content versioned and role-gated so the right audience sees the appropriate depth of material.",
+        bullets: [
+          "Rich-text body editor with symbol-tag linking to the symbol glossary",
+          "Visibility toggle: Public, Perennial Mandalism, Mystery School, Admin only",
+          "Publication history — previous versions accessible with diff view"
+        ]
+      },
+      {
+        name: "decan-journal-detail",
+        label: "Decan Journal Entry Detail",
+        description: "Admin view of a single student decan journal submission. Shows the student's written reflection, the target decan, submission date, and admin annotation fields. Used during graduation review.",
+        group: "Mystery School",
+        purpose: "Enables admin review and annotation of student journal entries without needing direct database access.",
+        bullets: [
+          "Full journal text with student name, decan number, and submission timestamp",
+          "Admin annotation sidebar — add private notes or a review rating",
+          "Quick-action buttons: Approve for graduation, Flag for follow-up, or Request revision"
+        ]
+      },
+      {
+        name: "ingress-chart-detail",
+        label: "Ingress Chart Detail",
+        description: "Detailed view of a specific planetary ingress chart in the mundane astrology system. Shows the chart wheel, triggered entities, AI-generated interpretation, and linked research notes. Admins can edit the interpretation and add manual annotations.",
+        group: "Mundane Astrology",
+        purpose: "Allows deep inspection and manual curation of individual ingress events to ensure published interpretations meet editorial standards.",
+        bullets: [
+          "Full chart wheel rendering with planet glyphs and house cusps",
+          "Triggered entities panel — which world leaders, nations, and markets are flagged",
+          "AI interpretation text with admin override editor and publish/unpublish toggle"
+        ]
+      },
+      {
+        name: "entity-compare",
+        label: "Entity Comparison",
+        description: "Side-by-side comparison tool for two or more mundane entities (countries, leaders, organisations). Overlays their natal charts, active transits, and current scores to surface correlations and conflicts.",
+        group: "Mundane Astrology",
+        purpose: "Helps researchers identify which entities are in synchronised astrological cycles and where divergence signals geopolitical tension.",
+        bullets: [
+          "Dual chart wheel view with colour-coded glyphs per entity",
+          "Transit overlay table showing shared triggers on the same degree within a 2° orb",
+          "Score delta column — numerical difference in mundane scores side by side"
+        ]
+      },
+      {
+        name: "backtesting-new",
+        label: "New Backtesting Run",
+        description: "Setup form for launching a new mundane backtesting job. Admins specify the target entity, date range, signal parameters, and which event database to validate against. Job is queued and results appear in the backtesting detail screen.",
+        group: "Mundane Astrology",
+        purpose: "Allows the research team to validate predictive models against historical data before publishing forecasts to members.",
+        bullets: [
+          "Entity selector with date range picker (supports ranges up to 100 years)",
+          "Signal parameter sliders: orb tolerance, minimum score threshold, event type filter",
+          "Estimated runtime display — updates live as parameters are adjusted"
+        ]
+      },
+      {
+        name: "workspaces-new",
+        label: "New Workspace",
+        description: "Creation form for a new mundane research workspace. Admins name the workspace, choose a lead researcher, select seed entities, and set the collaboration visibility (private / team / published). Workspaces group related charts, notes, and backtesting runs.",
+        group: "Mundane Astrology",
+        purpose: "Organises long-running research projects so charts, notes, and backtests are grouped together rather than scattered across the global library.",
+        bullets: [
+          "Workspace name and description fields with slug preview",
+          "Lead researcher selector from the admin user list",
+          "Seed entity picker — search and add up to 20 starting entities"
+        ]
+      },
+      {
+        name: "mundane-forecasts-list",
+        label: "Mundane Forecasts List",
+        description: "Paginated list of all published and draft mundane forecasts. Each row shows the forecast title, target entity, publication date, expiry date, and current status. Admins can filter by status, entity type, and date range.",
+        group: "Mundane Astrology",
+        purpose: "Gives the editorial team a single view of the forecast pipeline so nothing is accidentally left unpublished or allowed to expire stale.",
+        bullets: [
+          "Status filter tabs: All, Draft, Scheduled, Published, Expired",
+          "Bulk actions: publish, unpublish, or delete selected forecasts",
+          "Expiry warning badge on forecasts within 7 days of their end date"
+        ]
+      },
+      {
+        name: "mundane-forecast-detail",
+        label: "Mundane Forecast Detail",
+        description: "Full editor and preview for a single mundane forecast. Contains the forecast body, associated ingress chart, entity tags, start and end dates, and member visibility tier. Admins can preview the member-facing rendering before publishing.",
+        group: "Mundane Astrology",
+        purpose: "Provides a complete authoring environment for forecasts so editors can manage content, metadata, and visibility in one screen.",
+        bullets: [
+          "Rich-text forecast body editor with astrology symbol picker",
+          "Linked ingress chart panel with miniature chart wheel thumbnail",
+          "Member tier selector: Public, PM, MS — with preview toggle to see each audience view"
+        ]
+      },
+      {
+        name: "report-training-completion",
+        label: "Training Completion Report",
+        description: "Aggregate report showing lesson and quiz completion rates across all active trainees. Filterable by cohort start date, lesson, and completion status. Exports to CSV for offline analysis.",
+        group: "Reports",
+        purpose: "Helps admins identify which lessons have the highest drop-off so training content can be prioritised for improvement.",
+        bullets: [
+          "Completion funnel: enrolled → started → passed quiz → completed lesson for each lesson",
+          "Average time-to-complete per lesson compared to platform median",
+          "Cohort comparison table — compare completion rates across different trainee intake batches"
+        ]
+      },
+      {
+        name: "report-ms-progress",
+        label: "Mystery School Progress Report",
+        description: "Dashboard report tracking Mystery School student progress across the 36 decans. Shows how many students are active per decan, average completion rate, journal submission volume, and graduation pipeline.",
+        group: "Reports",
+        purpose: "Gives the Mystery School admin team visibility into the student body's collective momentum and highlights where students are stalling.",
+        bullets: [
+          "Decan-by-decan progress heatmap — colour intensity reflects student density",
+          "Journal submission volume chart by week",
+          "Graduation pipeline: students within 3 decans of completion highlighted"
+        ]
+      },
+      {
+        name: "report-pm-growth",
+        label: "Perennial Mandalism Growth Report",
+        description: "Monthly and cumulative growth report for the Perennial Mandalism subscription. Tracks new sign-ups, cancellations, net growth, and revenue. Filterable by plan tier and cohort month.",
+        group: "Reports",
+        purpose: "Provides the business team with subscription health data to inform retention campaigns and pricing decisions.",
+        bullets: [
+          "Net growth chart: new MRR minus churned MRR per month",
+          "Churn reasons breakdown (from exit survey) as a donut chart",
+          "Cohort retention table: % of month-0 subscribers still active at months 1, 3, 6, 12"
+        ]
+      },
+      {
+        name: "report-diviner-performance",
+        label: "Diviner Performance Report",
+        description: "Per-diviner performance scorecard covering session volume, average rating, cancellation rate, response time, and earnings. Filterable by date range and service type. Exportable to CSV.",
+        group: "Reports",
+        purpose: "Enables the admin team to identify top-performing diviners for promotion and flag underperforming accounts for support outreach.",
+        bullets: [
+          "Performance league table sortable by any metric",
+          "Trend sparklines per diviner showing 12-week trajectory for rating and session count",
+          "Flag for review button — marks a diviner for SLA follow-up without sending a notification"
+        ]
+      },
+      {
+        name: "report-client-lifetime-value",
+        label: "Client Lifetime Value Report",
+        description: "Report showing average and median client lifetime value (LTV) segmented by acquisition channel, first session type, and subscription status. Includes cohort LTV curves for clients acquired in each quarter.",
+        group: "Reports",
+        purpose: "Guides marketing spend allocation by revealing which acquisition channels produce the highest-value long-term clients.",
+        bullets: [
+          "LTV by acquisition channel bar chart (organic, referral, affiliate, paid)",
+          "Cohort LTV curves — line chart showing cumulative spend per client over 24 months",
+          "Top 10% client segment detail — session frequency, average order value, and subscription tier"
+        ]
+      },
+      {
+        name: "discount-code-create",
+        label: "Create Discount Code",
+        description: "Form to create a new discount or promo code. Admins specify the code string, discount type (percentage or fixed), applicable products, usage limit, and expiry date. Stripe coupon is created automatically on save.",
+        group: "Commerce",
+        purpose: "Allows the marketing and sales team to issue targeted discounts without needing engineering involvement.",
+        bullets: [
+          "Code string field with auto-generate option and collision check",
+          "Discount type toggle: % off or fixed amount, with currency selector for fixed",
+          "Usage limit (per-user and total) and expiry date-time picker with timezone"
+        ]
+      },
+      {
+        name: "discount-code-list",
+        label: "Discount Codes List",
+        description: "Paginated list of all discount codes with status, redemption count, revenue impact, and expiry date. Admins can activate, deactivate, or clone any code. Filterable by active status and campaign tag.",
+        group: "Commerce",
+        purpose: "Provides a single view of all promotional codes so the team can audit active promotions and retire expired ones.",
+        bullets: [
+          "Status badges: Active, Paused, Expired, Exhausted",
+          "Redemption count vs. limit progress bar per code",
+          "Clone button — copies all settings to a new code with an auto-incremented suffix"
+        ]
+      },
+      {
+        name: "affiliate-leaderboard-admin",
+        label: "Affiliate Leaderboard (Admin)",
+        description: "Full affiliate performance leaderboard with raw earnings, referral counts, conversion rates, and payout status. Admin view shows all advocates including those below public leaderboard threshold. Exportable to CSV.",
+        group: "Reports",
+        purpose: "Gives the admin team an unfiltered view of affiliate performance to identify top earners, detect fraud patterns, and plan commission reviews.",
+        bullets: [
+          "Sortable columns: referrals sent, conversions, gross revenue, net commission, payout status",
+          "Fraud flag indicator — unusual referral velocity triggers an automatic caution badge",
+          "Bulk payout action — mark multiple advocates as paid in one click after bank transfer"
+        ]
+      },
+      {
+        name: "testimonial-moderation-queue",
+        label: "Testimonial Moderation Queue",
+        description: "Queue of testimonials awaiting admin review before publication. Each entry shows the client's review text, star rating, targeted diviner, and submission date. Admins can approve, reject, or request an edit.",
+        group: "Governance",
+        purpose: "Ensures that only authentic, policy-compliant testimonials are published, protecting the platform's reputation and diviner credibility.",
+        bullets: [
+          "Review card with full testimonial text, star rating, and diviner name",
+          "One-click Approve (publishes immediately) or Reject (sends policy notification to client)",
+          "Flag for follow-up — holds the testimonial in queue and assigns it to a moderator"
+        ]
+      },
+      {
+        name: "user-search",
+        label: "User Search",
+        description: "Full-text and filtered user search across all roles. Admins can search by name, email, user type, subscription status, or registration date. Results link directly to the relevant detail page for that user's role.",
+        group: "Governance",
+        purpose: "Replaces ad-hoc database queries by giving support and admin staff a fast, role-aware user lookup tool.",
+        bullets: [
+          "Search bar with instant results as you type (debounced, 300 ms)",
+          "Filter chips: role, subscription status, account age, last-active date",
+          "Result rows show avatar, name, email, role badge, and quick-action links"
+        ]
+      },
+      {
+        name: "advanced-user-filter",
+        label: "Advanced User Filter",
+        description: "Multi-condition filter builder for the user list. Admins can combine conditions across role, subscription tier, join date, session count, revenue contributed, and custom tags to build precise audience segments.",
+        group: "Governance",
+        purpose: "Enables data-driven segmentation for targeted communications, retention campaigns, and compliance audits without a separate BI tool.",
+        bullets: [
+          "Condition builder with AND / OR logic and nested groups",
+          "Live count preview updates as conditions are added",
+          "Save segment button — persists the filter as a named segment for reuse in email campaigns"
+        ]
+      },
+      {
+        name: "role-permission-matrix",
+        label: "Role Permission Matrix",
+        description: "Visual matrix showing which platform features each user role can access. Rows are roles and columns are feature areas. Admins can toggle individual permissions and publish changes, which take effect immediately via the session middleware.",
+        group: "Governance",
+        purpose: "Provides a single authoritative view of role-based access control so permission drift can be identified and corrected without reading source code.",
+        bullets: [
+          "Matrix grid with role rows and feature-area columns — colour-coded green/red per cell",
+          "Inline toggle — click any cell to grant or revoke access with a confirmation modal",
+          "Change history drawer showing who changed what permission and when"
+        ]
+      },
+      {
+        name: "training-program-detail",
+        label: "Training Program Detail",
+        description: "Detail and editor for a single training program (e.g. Astrology Foundations). Shows the ordered list of lessons, quiz assignments, estimated total duration, and enrolled trainee count. Admins can reorder lessons and update metadata.",
+        group: "Training",
+        purpose: "Gives curriculum designers a structured view of the full program so they can manage lesson order and content gaps in one place.",
+        bullets: [
+          "Lesson list with drag-and-drop reordering and status badges (Draft / Live)",
+          "Program metadata: title, description, prerequisite program, estimated hours",
+          "Enrolled count with link to the filtered trainee list for this program"
+        ]
+      },
+      {
+        name: "trainee-quiz-scores",
+        label: "Trainee Quiz Scores",
+        description: "Detailed quiz score history for a single trainee across all lessons. Shows each attempt, score, pass/fail result, and time taken. Admins can grant a manual pass or reset attempts for extenuating circumstances.",
+        group: "Training",
+        purpose: "Supports admin review of trainee progression, especially when a trainee requests an exception or appeal after repeated quiz failures.",
+        bullets: [
+          "Attempt timeline: date, score percentage, pass/fail badge, time taken",
+          "Most-missed questions panel highlighting knowledge gaps",
+          "Manual pass button with mandatory reason field — creates an audit log entry"
+        ]
+      },
+      {
+        name: "certificate-issued-log",
+        label: "Certificate Issued Log",
+        description: "Audit log of all training certificates issued by the platform. Each row shows the trainee, program, issue date, certificate ID, and download link. Admins can revoke certificates and trigger re-issue.",
+        group: "Training",
+        purpose: "Creates a tamper-evident record of certifications so credentials can be verified by third parties and revoked if fraud is detected.",
+        bullets: [
+          "Log table with certificate ID, trainee name, program, issue date, and status",
+          "Revoke button with mandatory reason field — certificate becomes invalid and trainee is notified",
+          "Export to PDF — generates a signed certificate log for regulatory record-keeping"
+        ]
+      },
+      {
+        name: "payment-dispute-detail",
+        label: "Payment Dispute Detail",
+        description: "Detail view for a single Stripe payment dispute (chargeback). Shows the dispute reason, amount, evidence deadline, customer and order details, and a form to submit counter-evidence directly from the admin panel.",
+        group: "Commerce",
+        purpose: "Centralises dispute management so the finance team can respond to chargebacks within Stripe's evidence window without switching between tools.",
+        bullets: [
+          "Dispute summary: reason code, amount, currency, evidence deadline countdown",
+          "Order and session history for the transaction — shows what the client received",
+          "Evidence submission form with file upload for session notes, receipts, and communication logs"
+        ]
+      },
+      {
+        name: "subscription-pause-override",
+        label: "Subscription Pause Override",
+        description: "Admin tool to manually pause or resume a specific client or diviner subscription outside of the self-service flow. Used for hardship accommodations, billing disputes, or technical error recovery.",
+        group: "Commerce",
+        purpose: "Gives the support team a safe override path for subscription state without requiring direct Stripe dashboard access.",
+        bullets: [
+          "User selector with current subscription status and next billing date displayed",
+          "Pause duration selector: 1, 2, 3 months or indefinite, with auto-resume option",
+          "Reason field and audit trail — every override is logged with admin ID and timestamp"
+        ]
+      },
+      {
+        name: "content-calendar",
+        label: "Content Calendar",
+        description: "Monthly calendar view of all scheduled platform content including blog posts, broadcasts, email sequences, and social media posts. Admins can drag items to reschedule, click to edit, and filter by content type.",
+        group: "Config",
+        purpose: "Gives the content team a single timeline view so publications are evenly spaced and no two major pieces conflict on the same day.",
+        bullets: [
+          "Month / week / day view toggle with colour-coded content type legend",
+          "Drag-and-drop rescheduling with instant save and conflict warning if another item exists on the same slot",
+          "Filter by content type: Blog, Broadcast, Email, Social — show/hide categories independently"
+        ]
+      },
+      {
+        name: "video-upload-admin",
+        label: "Video Upload (Admin)",
+        description: "Dedicated upload interface for platform video content. Admins select a file, set the title, description, visibility tier, and associated lesson or product. File is uploaded to S3, transcoded, and indexed automatically.",
+        group: "Config",
+        purpose: "Provides a controlled upload path for platform video assets with metadata capture at upload time, avoiding orphaned files in S3.",
+        bullets: [
+          "File picker with drag-and-drop zone — accepts MP4, MOV up to 10 GB",
+          "Metadata form: title, description, visibility tier, linked lesson or product",
+          "Upload progress bar with transcoding status indicator and estimated time remaining"
+        ]
+      },
+      {
+        name: "sla-incident-detail",
+        label: "SLA Incident Detail",
+        description: "Detail page for a single SLA breach or service incident. Shows the affected users, timeline of events, assigned admin, resolution notes, and whether a client credit was issued. Supports post-incident documentation.",
+        group: "Governance",
+        purpose: "Creates a structured record of every service incident so the team can improve reliability and demonstrate accountability to affected clients.",
+        bullets: [
+          "Incident timeline with event log: breach detected, admin assigned, client notified, resolved",
+          "Affected users list with session details and compensation credit status",
+          "Post-incident report field — internal notes on root cause and remediation steps taken"
+        ]
+      },
+      {
+        name: "alert-config",
+        label: "Alert Configuration",
+        description: "Admin panel for configuring platform monitoring alerts. Admins set thresholds for metrics like error rate, booking failure rate, and payment decline rate, and choose notification channels (email, Slack, PagerDuty).",
+        group: "Config",
+        purpose: "Ensures the engineering and ops teams are automatically notified when platform health metrics breach safe thresholds, reducing mean time to detection.",
+        bullets: [
+          "Alert rules list with metric, threshold, comparison operator, and notification channel",
+          "Channel selector: email address, Slack webhook URL, or PagerDuty integration key",
+          "Test alert button — fires a simulated alert to verify the channel is reachable"
+        ]
+      },
+      {
+        name: "ingress-chart-new",
+        label: "New Ingress Chart",
+        description: "Creation form for a new planetary ingress chart entry. Admins input the planet, sign, ingress date and time, and geographic focus. The system computes the chart wheel and pre-populates AI interpretation for admin review.",
+        group: "Mundane Astrology",
+        purpose: "Allows the mundane astrology team to capture and publish ingress events quickly while keeping chart computation server-side and consistent.",
+        bullets: [
+          "Planet and sign selectors with ingress date-time picker in UTC",
+          "Geographic focus field — regional or global scope affects which entities are triggered",
+          "Auto-computed chart wheel preview with one-click AI interpretation generation"
+        ]
+      },
+      {
+        name: "mundane-research-detail",
+        label: "Mundane Research Detail",
+        description: "Detail view for a single mundane research note or analysis document. Shows the body, associated entities and charts, author, publication status, and linked backtesting run. Admins can edit and publish research.",
+        group: "Mundane Astrology",
+        purpose: "Provides a structured authoring environment for long-form research so findings are linked to the charts and data that support them.",
+        bullets: [
+          "Rich-text research body with inline entity and chart embed support",
+          "Linked backtesting run panel showing the validation result that supports this analysis",
+          "Publish toggle with visibility tier: Admin only, Research team, Published to PM members"
+        ]
+      },
+      {
+        name: "mundane-leaders-new",
+        label: "New World Leader Entry",
+        description: "Form to add a new world leader entity to the mundane astrology database. Admins enter name, birth data, country association, role title, and active status. The system generates the natal chart and begins tracking transits.",
+        group: "Mundane Astrology",
+        purpose: "Keeps the leader entity database up to date as political landscapes change, ensuring transit tracking reflects current world affairs.",
+        bullets: [
+          "Birth data form: name, date, time, location with geocoding lookup",
+          "Country and role association with effective date (for leaders who assumed office at a specific time)",
+          "Auto-generated natal chart preview with save and publish confirmation"
+        ]
+      },
+      {
+        name: "onboarding-config",
+        label: "Onboarding Configuration",
+        description: "Admin panel for managing the onboarding checklist steps shown to new diviners and trainees after first login. Admins can add, remove, reorder, and toggle steps, and set which role sees each step.",
+        group: "Config",
+        purpose: "Allows the product team to iterate on the onboarding experience without a code deploy.",
+        bullets: [
+          "Step list with drag-and-drop reorder and role visibility toggles per step",
+          "Step editor: title, description, CTA label, and target URL",
+          "Completion rate per step showing what percentage of new users complete each item"
+        ]
+      },
+      {
+        name: "diviner-earnings-detail",
+        label: "Diviner Earnings Detail (Admin)",
+        description: "Admin view of a specific diviner's earnings breakdown including session fees, package revenue, affiliate commissions, and any deductions. Shows the payout history and next scheduled payout amount.",
+        group: "Commerce",
+        purpose: "Gives the finance team visibility into individual diviner earnings for dispute resolution and payout verification without requiring Stripe dashboard access.",
+        bullets: [
+          "Earnings breakdown table: session type, count, gross, platform fee, net per category",
+          "Payout history timeline with Stripe transfer ID and settlement date",
+          "Manual adjustment form — issue a correction credit or debit with mandatory reason"
+        ]
+      },
+      {
+        name: "ms-quarter-config",
+        label: "Mystery School Quarter Configuration",
+        description: "Editor for a single Mystery School quarter (3-month curriculum period). Admins set the start and end dates, assign featured decans, configure the Sunday Service schedule, and set the graduation eligibility window.",
+        group: "Mystery School",
+        purpose: "Keeps the Mystery School calendar structured and aligned so students and admins have clear expectations for each quarter's milestones.",
+        bullets: [
+          "Quarter date range picker with academic year label",
+          "Featured decans selector — choose up to 3 decans to highlight in the quarter",
+          "Graduation window: set the date range when students in this quarter can request graduation review"
+        ]
+      },
+      {
+        name: "broadcast-admin-detail",
+        label: "Broadcast Detail (Admin)",
+        description: "Admin view of a single platform broadcast. Shows the diviner, title, recording, audience reach, RSVP count, watch-time analytics, and any flagged content reports. Admins can unpublish, feature, or archive broadcasts.",
+        group: "Governance",
+        purpose: "Gives admins oversight of broadcast content so high-quality material can be promoted and policy-violating content can be removed promptly.",
+        bullets: [
+          "Broadcast metadata: title, diviner, date, duration, audience tier, RSVP vs. actual viewers",
+          "Watch-time histogram showing viewer drop-off by minute",
+          "Moderation actions: Unpublish, Feature on home page, Archive, or Flag for review"
+        ]
+      },
+      {
+        name: "client-birth-data-admin",
+        label: "Client Birth Data (Admin)",
+        description: "Admin view of a specific client's stored birth data including name, date, time, and location. Used to verify chart accuracy and resolve disputes where a chart was calculated on incorrect data.",
+        group: "Governance",
+        purpose: "Provides a read-only audit view of client birth data so support staff can verify chart inputs without exposing unnecessary PII.",
+        bullets: [
+          "Birth data fields: name, date, time, location with geocode result displayed",
+          "Last-modified timestamp and which flow captured the data (onboarding, booking, or manual update)",
+          "Chart recalculate button — re-runs the chart engine against current stored data"
+        ]
+      },
+      {
+        name: "referral-code-admin",
+        label: "Referral Code Admin",
+        description: "Management panel for all platform referral codes including advocate codes, diviner referral links, and gift referral tokens. Admins can view usage, deactivate codes, and manually attribute a referral to a different advocate.",
+        group: "Commerce",
+        purpose: "Maintains integrity of the referral attribution system and provides a correction path when codes are incorrectly applied.",
+        bullets: [
+          "Code table: code string, owner, type, usage count, revenue attributed, status",
+          "Manual re-attribution form — reassign a specific conversion to a different code owner",
+          "Deactivate button with immediate effect and notification to code owner"
+        ]
+      },
+      {
+        name: "giveaway-create",
+        label: "Create Giveaway",
+        description: "Form to create a new platform giveaway campaign. Admins set the prize, entry method (follow, share, sign-up), eligibility rules, entry period, and winner selection method (random draw or points-based).",
+        group: "Commerce",
+        purpose: "Enables the marketing team to run acquisition and engagement giveaways without engineering involvement.",
+        bullets: [
+          "Prize configuration: title, description, and upload a prize image",
+          "Entry methods checklist with per-method point values for points-based draws",
+          "Entry window date picker and winner selection method toggle (random / top points)"
+        ]
+      },
     ],
   },
   {
@@ -3429,6 +3981,270 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Edit shortcut links — click any section of the preview to jump directly to the edit form for that section"
         ]
       },
+      {
+        name: "client-detail-diviner",
+        label: "Client Detail (Diviner View)",
+        description: "Full client profile as seen by the diviner. Shows the client's birth data, natal chart summary, session history, notes written by this diviner, and any intake form responses submitted for previous sessions.",
+        group: "Clients",
+        purpose: "Gives the diviner a comprehensive pre-session brief so they can deliver personalised readings without asking the client to repeat information.",
+        bullets: [
+          "Client avatar, name, birth data, and natal chart thumbnail",
+          "Session history table: date, service type, duration, session notes link",
+          "Diviner-private notes field — only visible to this diviner, never shared with client"
+        ]
+      },
+      {
+        name: "booking-reschedule",
+        label: "Reschedule Booking",
+        description: "Flow that lets the diviner reschedule an existing confirmed booking. Displays the original slot, shows available alternative slots on a mini calendar, and sends an automated reschedule notification to the client on confirm.",
+        group: "Schedule",
+        purpose: "Reduces cancellation friction by giving diviners a self-service reschedule path rather than forcing a cancel-and-rebook cycle.",
+        bullets: [
+          "Original booking details shown above the reschedule calendar",
+          "Available slot grid filtered to same service type and duration",
+          "Confirm reschedule button — sends client email and updates the booking record"
+        ]
+      },
+      {
+        name: "service-create-form",
+        label: "Create New Service",
+        description: "Step-by-step form for adding a new reading or session service to the diviner's offering. Captures service name, type (video, phone, chat), duration options, price per duration tier, and a description shown on the public profile.",
+        group: "Services",
+        purpose: "Empowers diviners to expand their offering without admin assistance by walking through all required fields in a structured wizard.",
+        bullets: [
+          "Service type selector: Video Call, Phone Call, Chat, or In-Person",
+          "Duration and price matrix — add multiple duration tiers (30 min, 60 min, 90 min) each with their own price",
+          "Public description editor with character counter and live profile preview"
+        ]
+      },
+      {
+        name: "service-edit-form",
+        label: "Edit Service",
+        description: "Edit form for an existing service. Pre-populated with all current settings. Diviners can update price, description, availability toggle, and duration options. Changes take effect on the next booking attempt.",
+        group: "Services",
+        purpose: "Allows diviners to keep service details accurate as their practice evolves without creating a duplicate service.",
+        bullets: [
+          "All fields pre-populated with current service data for quick editing",
+          "Active / Paused toggle — pausing hides the service from the public profile without deleting it",
+          "Price change warning: existing confirmed bookings are unaffected, only future bookings use the new price"
+        ]
+      },
+      {
+        name: "payout-history",
+        label: "Payout History",
+        description: "Complete history of all payouts received by the diviner from the platform. Each row shows the payout date, amount, currency, and Stripe transfer status. Filterable by date range and payment method.",
+        group: "Finance",
+        purpose: "Gives diviners a transparent record of their earnings disbursements for personal accounting and tax reporting.",
+        bullets: [
+          "Payout table: date, amount, currency, Stripe transfer ID, status (Pending / Paid / Failed)",
+          "Monthly earnings summary at the top showing current period total vs. previous period",
+          "Download CSV button for selected date range — formatted for accounting software import"
+        ]
+      },
+      {
+        name: "payout-detail",
+        label: "Payout Detail",
+        description: "Breakdown of a single payout showing which sessions, packages, and affiliate commissions contributed to the total. Displays the platform fee deducted and the net amount transferred.",
+        group: "Finance",
+        purpose: "Provides full transparency into how each payout is calculated so diviners can reconcile their own records without contacting support.",
+        bullets: [
+          "Line-item breakdown: each session with date, client name, gross amount, and fee deducted",
+          "Fee summary: total gross, total platform fee (%), net payout",
+          "Stripe transfer reference and settlement date with bank processing note"
+        ]
+      },
+      {
+        name: "affiliate-campaign-detail",
+        label: "Affiliate Campaign Detail (Diviner)",
+        description: "Detail view for a specific affiliate referral campaign the diviner is participating in. Shows the campaign terms, unique referral link, click and conversion stats, and earnings attributed to this campaign.",
+        group: "Marketing",
+        purpose: "Helps diviners understand the performance of individual campaigns and optimise their referral strategy accordingly.",
+        bullets: [
+          "Campaign terms: commission rate, eligible products, start and end date",
+          "Unique referral link with one-click copy and QR code download",
+          "Conversion funnel: clicks → signups → paid conversions with attributed earnings"
+        ]
+      },
+      {
+        name: "broadcast-viewer-stats",
+        label: "Broadcast Viewer Stats",
+        description: "Analytics detail for a specific broadcast the diviner has published. Shows RSVP count, actual viewer count, watch-time distribution, peak concurrent viewers, and geographic audience breakdown.",
+        group: "Marketing",
+        purpose: "Helps diviners understand which broadcasts resonate most so they can plan future content around audience engagement patterns.",
+        bullets: [
+          "Viewer funnel: RSVPs → joined → watched 50% → watched to end",
+          "Watch-time histogram by minute with drop-off points annotated",
+          "Geographic map showing viewer location distribution by country"
+        ]
+      },
+      {
+        name: "review-response",
+        label: "Review Response",
+        description: "Interface for the diviner to write a public reply to a client testimonial. The response appears below the review on the public profile. Includes character limit, preview, and submission confirmation.",
+        group: "Marketing",
+        purpose: "Allows diviners to acknowledge positive reviews and professionally address concerns, improving trust with prospective clients browsing the profile.",
+        bullets: [
+          "Original review displayed above the response editor for context",
+          "Response text area with 500-character limit and live counter",
+          "Public preview showing how the reply appears on the profile before submission"
+        ]
+      },
+      {
+        name: "client-chart-view",
+        label: "Client Chart View",
+        description: "Natal chart viewer for a specific client, accessible by the diviner from the client detail screen. Displays the wheel, planet positions, house cusps, and aspect grid with interpretive keywords on hover.",
+        group: "Clients",
+        purpose: "Gives the diviner a structured astrological tool within their dashboard so they can review chart details before or during a session without switching to a separate app.",
+        bullets: [
+          "Full natal chart wheel rendered from the client's stored birth data",
+          "Planet and house summary table with sign, degree, and dignity status",
+          "Aspect grid with click-to-expand interpretation for each major aspect"
+        ]
+      },
+      {
+        name: "phone-setup-guide",
+        label: "Phone Session Setup Guide",
+        description: "Onboarding guide for setting up the diviner's phone session capability. Walks through Twilio number assignment, microphone check, call test, and fallback number configuration in sequential steps.",
+        group: "Settings",
+        purpose: "Reduces setup errors by guiding diviners through phone session configuration in a structured flow rather than leaving them to discover settings independently.",
+        bullets: [
+          "Step-by-step setup checklist with completion checkmarks per step",
+          "Twilio number assignment status with one-click request if unassigned",
+          "Test call button — triggers an automated inbound call to verify the number is working"
+        ]
+      },
+      {
+        name: "library-item-detail",
+        label: "Library Item Detail (Diviner)",
+        description: "Detail view for a single resource item in the diviner's private library — a video, PDF, audio file, or article. Shows full content, metadata, and usage stats if the diviner has shared the item with clients.",
+        group: "Library",
+        purpose: "Gives diviners a focused reading or viewing experience for library resources they have saved for reference or client sharing.",
+        bullets: [
+          "Full content viewer: video player, PDF embed, or audio player depending on item type",
+          "Item metadata: title, author, topic tags, date added to library",
+          "Share with client button — generates a time-limited access link for the specific client"
+        ]
+      },
+      {
+        name: "session-prep-notes",
+        label: "Session Prep Notes",
+        description: "Pre-session notepad tied to a specific upcoming booking. Diviners can jot astrological observations, questions to explore, and focus areas before the session begins. Notes are saved privately and carry over to the post-session notes screen.",
+        group: "Schedule",
+        purpose: "Helps diviners arrive at sessions prepared, reducing cold-start time and improving the client experience from the first minute.",
+        bullets: [
+          "Client birth data summary and natal chart thumbnail at the top for quick reference",
+          "Free-text notes field with auto-save every 30 seconds",
+          "Previous session notes from the same client collapsed below with expand option"
+        ]
+      },
+      {
+        name: "upcoming-session-countdown",
+        label: "Upcoming Session Countdown",
+        description: "Live countdown widget for the diviner's next confirmed session. Shows the client name, session type, time remaining, and quick-access buttons to join the video room, view client notes, or send a pre-session message.",
+        group: "Schedule",
+        purpose: "Ensures diviners never miss a session start by surfacing the next booking prominently with a countdown and direct action links.",
+        bullets: [
+          "Large countdown timer: hours and minutes to session start",
+          "Client name, session type, and duration displayed below the timer",
+          "Quick-access buttons: Join Room, View Client, Prep Notes, Message Client"
+        ]
+      },
+      {
+        name: "intake-form-builder",
+        label: "Intake Form Builder",
+        description: "Drag-and-drop form builder for creating custom intake questionnaires that clients fill in before booking. Diviners add text, multiple-choice, and date-picker fields. Forms are assigned to specific services.",
+        group: "Settings",
+        purpose: "Allows diviners to gather structured pre-session information from clients so readings are more targeted and efficient.",
+        bullets: [
+          "Field type palette: short text, paragraph, multiple choice, date, and birth data capture",
+          "Drag-and-drop field ordering with delete and duplicate per field",
+          "Service assignment selector — choose which services trigger this intake form at booking"
+        ]
+      },
+      {
+        name: "intake-responses",
+        label: "Intake Form Responses",
+        description: "List of all client intake form submissions for the diviner's services. Filterable by service and date range. Each row links to the full response and the associated booking.",
+        group: "Clients",
+        purpose: "Gives diviners a centralised view of all pre-session client information so they can prepare across their full schedule in one place.",
+        bullets: [
+          "Response list: client name, service, submission date, and linked booking",
+          "Filter by service and date range",
+          "Full response view on click — shows each question and the client's answer in a readable layout"
+        ]
+      },
+      {
+        name: "earnings-by-month",
+        label: "Earnings by Month",
+        description: "Month-by-month earnings chart and table showing the diviner's gross revenue, platform fee, and net payout for each month. Allows comparison between any two months and highlights best and worst performing periods.",
+        group: "Finance",
+        purpose: "Helps diviners track their financial trajectory and plan for slower months by understanding seasonal patterns in their earnings.",
+        bullets: [
+          "Bar chart with gross and net earnings per month for the trailing 12 months",
+          "Month comparison selector — pick any two months to see a side-by-side breakdown",
+          "Best month badge and lowest month badge highlighted automatically"
+        ]
+      },
+      {
+        name: "booking-confirm-flow",
+        label: "Booking Confirm Flow",
+        description: "Multi-step confirmation flow the diviner goes through when accepting a new booking request (for request-based services). Shows client details, requested slot, service, and an accept or suggest-alternative action.",
+        group: "Bookings",
+        purpose: "Gives diviners a structured, deliberate step to review and confirm bookings rather than auto-accepting, which reduces scheduling errors.",
+        bullets: [
+          "Booking request summary: client, service, requested date and time, duration",
+          "Accept button with confirmation modal showing the slot added to the calendar",
+          "Suggest alternative button — opens the availability grid to propose a different slot to the client"
+        ]
+      },
+      {
+        name: "client-search-diviner",
+        label: "Client Search (Diviner)",
+        description: "Search interface within the diviner's client list. Supports name and email search with filters for session count and last-session date. Results link directly to the client detail screen.",
+        group: "Clients",
+        purpose: "Allows diviners with large client rosters to quickly find a specific client without scrolling through an unfiltered list.",
+        bullets: [
+          "Search bar with instant results filtered to this diviner's own clients only",
+          "Filter chips: all clients, recent (last 90 days), new (first session pending)",
+          "Result row shows avatar, name, last session date, and total sessions with this diviner"
+        ]
+      },
+      {
+        name: "diviner-resources",
+        label: "Diviner Resources Hub",
+        description: "Curated resource hub for platform diviners with guides, policy documents, marketing templates, and training videos provided by the platform team. Content is organised by category and searchable.",
+        group: "Library",
+        purpose: "Provides diviners with a single source of truth for platform policies and best-practice materials without needing to contact support.",
+        bullets: [
+          "Category tabs: Platform Guides, Marketing Assets, Policy Documents, Video Tutorials",
+          "Search within the hub to find specific topics quickly",
+          "Bookmark any resource — saved items appear in the diviner's personal library"
+        ]
+      },
+      {
+        name: "video-session-pre-check",
+        label: "Video Session Pre-Check",
+        description: "Pre-session technical check that runs camera, microphone, and network tests before the diviner enters the video session room. Shows a pass or fail status per check with troubleshooting guidance if any test fails.",
+        group: "Live",
+        purpose: "Catches technical issues before the client is waiting, reducing session delays and improving the professional impression of the diviner.",
+        bullets: [
+          "Camera check: live preview of the camera feed with resolution indicator",
+          "Microphone check: audio level meter with a speak-to-test instruction",
+          "Network check: latency and bandwidth test with a suitability rating (Good / Marginal / Poor)"
+        ]
+      },
+      {
+        name: "service-bundle-create",
+        label: "Create Service Bundle",
+        description: "Form for creating a multi-session bundle that clients can purchase at a discounted rate. Diviners set the number of sessions, eligible service types, bundle price, and expiry window from the date of purchase.",
+        group: "Services",
+        purpose: "Increases client retention by incentivising commitment to multiple sessions upfront through a structured discount offer.",
+        bullets: [
+          "Session count selector and eligible service types multi-select",
+          "Bundle price field with automatic per-session savings calculation shown to the diviner",
+          "Expiry window selector: 30, 60, 90, or 180 days from purchase date"
+        ]
+      },
     ],
   },
   {
@@ -4051,6 +4867,210 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Response time expectation — a visible note that tickets are responded to within 1 to 2 business days"
         ]
       },
+      {
+        name: "broadcast-detail",
+        label: "Broadcast Detail (Community)",
+        description: "Full detail page for a single platform broadcast available to Perennial Mandalism members. Shows the diviner's name, broadcast title, recording playback, description, and member comments section.",
+        group: "Events",
+        purpose: "Gives members a focused viewing experience for individual broadcasts with community discussion context below the video.",
+        bullets: [
+          "Video player with broadcast recording and chapter markers if available",
+          "Diviner bio and quick-link to book a personal session with this diviner",
+          "Member comment thread — leave a timestamped comment tied to a specific moment in the broadcast"
+        ]
+      },
+      {
+        name: "event-detail",
+        label: "Event Detail (Community)",
+        description: "Full detail page for a community event such as a workshop, ritual gathering, or live Q&A. Shows the date, time, host diviner, description, RSVP button, and attendee count.",
+        group: "Events",
+        purpose: "Provides members with all the information they need to decide whether to attend and to RSVP in one place.",
+        bullets: [
+          "Event banner image, title, date and time in the member's local timezone",
+          "Host diviner profile card with quick-link to their public profile",
+          "RSVP button with confirmation email trigger and add-to-calendar download option"
+        ]
+      },
+      {
+        name: "ingress-chart-detail-pm",
+        label: "Ingress Chart Detail (PM Member)",
+        description: "Member-facing detail view for a planetary ingress chart. Displays the chart wheel, the triggered world entities, and the plain-language interpretation written for the Perennial Mandalism audience.",
+        group: "Mundane",
+        purpose: "Allows PM members to explore individual ingress events in depth and understand how they connect to current world affairs.",
+        bullets: [
+          "Chart wheel with planet glyphs and house lines rendered at member resolution",
+          "Triggered entities list: countries, leaders, and markets flagged by this ingress",
+          "Plain-language interpretation with a link to the full forecast if one exists"
+        ]
+      },
+      {
+        name: "ritual-detail",
+        label: "Ritual Detail (Community)",
+        description: "Full detail page for a ritual available in the community ritual library. Shows the ritual purpose, planetary alignment, step-by-step instructions, required materials, and a completion tracker.",
+        group: "Rituals",
+        purpose: "Gives members a structured, self-guided ritual experience that connects their practice to the live astrological calendar.",
+        bullets: [
+          "Ritual header: name, planet, sign, recommended timing window",
+          "Step-by-step instructions with materials list and estimated duration",
+          "Mark complete button — logs the completion in the member's practice streak tracker"
+        ]
+      },
+      {
+        name: "tarot-spread-history",
+        label: "Tarot Spread History",
+        description: "Chronological log of all tarot readings the member has completed within the community portal. Each row shows the spread type, date, and a link to review the cards drawn and their interpretations.",
+        group: "Tarot",
+        purpose: "Allows members to track patterns in their tarot practice over time and revisit past readings as their circumstances evolve.",
+        bullets: [
+          "Reading log: spread name, date, number of cards drawn",
+          "Click to expand full reading — shows card positions, card names, and interpretation text",
+          "Export reading as PDF — formatted summary suitable for journalling"
+        ]
+      },
+      {
+        name: "mundane-entity-detail-pm",
+        label: "World Entity Detail (PM Member)",
+        description: "Member-facing profile for a world entity (country, organisation, or leader) in the mundane astrology system. Shows the natal chart, current transits, recent mundane score changes, and linked forecasts.",
+        group: "Mundane",
+        purpose: "Lets members dive deep into specific entities they are following without needing admin access, building investment in the mundane astrology content.",
+        bullets: [
+          "Entity natal chart wheel with current transit overlays",
+          "Mundane score trend chart: 30-day and 90-day trajectories",
+          "Linked forecasts panel — all published forecasts that reference this entity"
+        ]
+      },
+      {
+        name: "transit-detail-pm",
+        label: "Transit Detail (PM Member)",
+        description: "Detailed explanation of a single active transit affecting the member's personal natal chart. Shows the transiting planet, natal planet being aspected, orb, duration, and a personalised interpretation.",
+        group: "Horoscope",
+        purpose: "Helps members understand how current sky positions are personally affecting them with clear, non-jargon language and timing guidance.",
+        bullets: [
+          "Transit header: transiting planet aspect natal planet, current orb, exact date",
+          "Personalised interpretation paragraph based on the member's natal placements",
+          "Duration bar: when the transit entered orb, exact date, and when it leaves orb"
+        ]
+      },
+      {
+        name: "family-chart",
+        label: "Family Chart",
+        description: "Composite or synastry chart view for the member's family circle group. Displays overlapping natal placements between selected family members and highlights key compatibility aspects and tension points.",
+        group: "Charts",
+        purpose: "Deepens members' astrological practice by extending chart work to their closest relationships within a privacy-safe family circle.",
+        bullets: [
+          "Family member selector — choose 2 to 4 members to include in the composite",
+          "Overlay chart wheel showing combined placements with colour-coded glyphs per person",
+          "Aspect summary table: harmonious, challenging, and neutral aspects with plain-language labels"
+        ]
+      },
+      {
+        name: "upgrade-to-ms",
+        label: "Upgrade to Mystery School",
+        description: "Upgrade prompt page for Perennial Mandalism members showing the Mystery School offering, what additional content they would unlock, the price difference, and a direct enrolment CTA.",
+        group: "Plan",
+        purpose: "Converts interested PM members to Mystery School subscribers by clearly articulating the value add with a frictionless single-click enrolment path.",
+        bullets: [
+          "Side-by-side feature comparison: what you have now vs. what you gain with Mystery School",
+          "Price and billing frequency display with dynamic pricing from the admin pricing config",
+          "Enrol Now button — leads directly to the Mystery School checkout with PM discount applied if applicable"
+        ]
+      },
+      {
+        name: "onboarding-step-1",
+        label: "Community Onboarding Step 1",
+        description: "First step of the Perennial Mandalism onboarding flow. Welcomes the new member, explains the community pillars, and prompts them to enter or confirm their birth data for personalised chart features.",
+        group: "Onboarding",
+        purpose: "Captures essential birth data at the earliest opportunity so the member's first chart experience is personalised rather than generic.",
+        bullets: [
+          "Welcome message with community overview and what to expect from the portal",
+          "Birth data form: date, time (with 'unknown' option), and birthplace with geocoding",
+          "Progress indicator showing this is step 1 of the onboarding sequence"
+        ]
+      },
+      {
+        name: "onboarding-step-2",
+        label: "Community Onboarding Step 2",
+        description: "Second onboarding step where the member selects their areas of astrological interest and sets notification preferences. This configures the home hub to surface the most relevant content for their practice.",
+        group: "Onboarding",
+        purpose: "Personalises the member's content feed from day one so they immediately encounter relevant material rather than a generic default layout.",
+        bullets: [
+          "Interest picker: Natal Chart, Transits, Mundane, Rituals, Tarot, Mystery School — multi-select",
+          "Notification preference toggles: weekly transit digest, event reminders, broadcast alerts",
+          "Finish and enter community button — redirects to the personalised hub"
+        ]
+      },
+      {
+        name: "chart-synastry",
+        label: "Synastry Chart",
+        description: "Bi-wheel synastry chart comparing the member's natal chart with another person (partner, friend, or family member). Highlights conjunctions, oppositions, trines, and squares between the two charts with relationship interpretations.",
+        group: "Charts",
+        purpose: "Extends the member's personal chart work to relationship dynamics, one of the most engaging practical applications of astrology.",
+        bullets: [
+          "Dual-person selector: choose from family circle or enter new birth data for the comparison person",
+          "Bi-wheel chart with inner (self) and outer (other) rings",
+          "Aspect interpretation list sorted by significance — most impactful aspects described first"
+        ]
+      },
+      {
+        name: "pm-legal",
+        label: "PM Legal & Terms",
+        description: "Page displaying the Perennial Mandalism membership terms of service, community guidelines, and privacy policy in full. Includes the date each document was last updated and a member-signed acknowledgement log.",
+        group: "Settings",
+        purpose: "Ensures members can access the legal framework for their membership at any time and provides an audit trail of acceptance.",
+        bullets: [
+          "Full terms of service, community guidelines, and privacy policy in readable format",
+          "Last-updated date displayed prominently for each document",
+          "Acceptance history: date the member agreed to each version"
+        ]
+      },
+      {
+        name: "pm-help",
+        label: "PM Help & Support",
+        description: "Help centre for Perennial Mandalism members with a searchable FAQ, guided troubleshooting articles, and a contact form to raise a support ticket. Commonly asked questions are displayed without needing to search.",
+        group: "Settings",
+        purpose: "Reduces support ticket volume by surfacing self-service answers for the most common member questions first.",
+        bullets: [
+          "Search bar with instant FAQ results as you type",
+          "Category tiles: Billing, Technical, Content, Community Guidelines — tap to browse by topic",
+          "Contact support form — pre-filled with account details so members do not need to repeat them"
+        ]
+      },
+      {
+        name: "pm-notifications-settings",
+        label: "PM Notification Settings",
+        description: "Granular notification preferences for the Perennial Mandalism member. Controls email and in-app notifications for transit alerts, event reminders, broadcast announcements, and community activity.",
+        group: "Settings",
+        purpose: "Gives members control over notification frequency so the platform adds value without becoming intrusive.",
+        bullets: [
+          "Toggle rows per notification type: on/off with email vs. in-app selectors",
+          "Digest frequency selector for transit alerts: daily, weekly, or real-time",
+          "Quiet hours setting — suppress all notifications outside specified hours"
+        ]
+      },
+      {
+        name: "pm-activity-feed",
+        label: "PM Activity Feed",
+        description: "Chronological activity feed showing the member's recent platform interactions: rituals completed, transits triggered, events attended, and broadcasts watched. Acts as a personal practice journal alternative.",
+        group: "Community",
+        purpose: "Helps members see the breadth of their engagement and feel a sense of progress and continuity in their spiritual practice.",
+        bullets: [
+          "Feed entries with icon, description, and timestamp for each activity type",
+          "Filter by activity type: Rituals, Charts, Events, Broadcasts",
+          "Practice streak counter at the top — consecutive days with at least one completed activity"
+        ]
+      },
+      {
+        name: "sunday-service-archive",
+        label: "Sunday Service Archive",
+        description: "Archive of all past Sunday Service recordings available to PM members. Each entry shows the date, diviner host, topic, and recording length. Members can search by topic or date and play directly in the portal.",
+        group: "Events",
+        purpose: "Ensures members who missed live Sunday Services can catch up at their own pace, extending the value of live content beyond the broadcast date.",
+        bullets: [
+          "Archive list sorted by most recent with search by topic and host",
+          "Recording length and host displayed on each card",
+          "In-portal video player with playback speed control and resume-from-last-position"
+        ]
+      },
     ],
   },
   {
@@ -4407,6 +5427,162 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Once submitted, marks the decan as fully complete"
         ]
       },
+      {
+        name: "decan-ritual-page",
+        label: "Decan Ritual Page",
+        description: "Guided ritual page for the current active decan. Presents the full ritual sequence: opening invocation, planetary working, contemplative practice, and closing. Students mark each step complete as they go.",
+        group: "Decans",
+        purpose: "Structures the ritual component of each decan study so students engage with it as a living practice rather than a reading exercise.",
+        bullets: [
+          "Step-by-step ritual sequence with instructional text for each phase",
+          "Materials and preparation checklist displayed before the ritual begins",
+          "Step completion checkboxes — all steps must be checked to enable journal submission"
+        ]
+      },
+      {
+        name: "decan-scrying-page",
+        label: "Decan Scrying Page",
+        description: "Guided scrying exercise tied to the active decan's planetary intelligence. Provides a timed meditation prompt, a visual focal point, and a free-text field for recording visions and impressions received during the practice.",
+        group: "Decans",
+        purpose: "Integrates a contemplative inner-work component into the decan curriculum to balance textual study with direct experiential practice.",
+        bullets: [
+          "Timed meditation countdown (configurable 5, 10, or 20 minutes) with ambient sound option",
+          "Decan sigil or symbol displayed as the visual focal point during the session",
+          "Impression recording field — auto-saves every 30 seconds and feeds into the journal"
+        ]
+      },
+      {
+        name: "decan-journal-write",
+        label: "Decan Journal Write",
+        description: "Journal submission page for the current decan. Students record their ritual observations, scrying impressions, and personal reflections. On submit the decan is marked complete and submitted for admin review if graduation-eligible.",
+        group: "Decans",
+        purpose: "Creates the formal record of the student's decan work, which is reviewed during the graduation process to assess depth of engagement.",
+        bullets: [
+          "Prompted journal structure: Ritual observations, Scrying impressions, Personal insights",
+          "Rich-text editor with minimum word guidance (not enforced, but recommended 200 words)",
+          "Submit button with confirmation modal explaining that entries cannot be edited after submission"
+        ]
+      },
+      {
+        name: "foundation-task-complete",
+        label: "Foundation Task Complete",
+        description: "Completion screen shown after a student finishes a Foundation Week task. Displays a congratulatory message, the task they completed, their updated Foundation progress bar, and the next task to unlock.",
+        group: "Foundation",
+        purpose: "Provides positive reinforcement at each Foundation milestone to build momentum and reduce early-stage drop-off.",
+        bullets: [
+          "Task title and completion checkmark with a congratulatory headline",
+          "Foundation progress bar updated to reflect the newly completed task",
+          "Next task preview card with a CTA to begin it immediately"
+        ]
+      },
+      {
+        name: "ms-subscription-manage",
+        label: "Mystery School Subscription Management",
+        description: "Self-service subscription management page for Mystery School students. Shows the current plan, billing date, payment method on file, and options to pause, cancel, or upgrade to an annual plan.",
+        group: "Settings",
+        purpose: "Gives students control over their subscription without needing to contact support, reducing churn caused by friction in the cancellation process.",
+        bullets: [
+          "Current plan, price, and next billing date displayed prominently",
+          "Payment method card with update button (opens Stripe hosted form)",
+          "Pause and Cancel options with clear impact explanation for each action"
+        ]
+      },
+      {
+        name: "decans-by-sign",
+        label: "Decans by Sign",
+        description: "Reference page showing all 36 decans organised by zodiac sign. Each sign has three decan cards with the ruling planet, associated symbolism, and the student's completion status. Acts as a curriculum map.",
+        group: "Decans",
+        purpose: "Helps students navigate the full decan curriculum at a glance and understand how their progress maps across the zodiac.",
+        bullets: [
+          "Sign sections with three decan cards each, colour-coded by completion status",
+          "Decan card: number, name, ruling planet, brief description, and locked/active/complete badge",
+          "Progress summary: X of 36 decans complete, shown at the top of the page"
+        ]
+      },
+      {
+        name: "ritual-builder-step-1",
+        label: "Ritual Builder Step 1 — Intent",
+        description: "First step of the student-facing ritual builder. The student selects a planetary intelligence to work with, states their ritual intention, and chooses a working type (petition, gratitude, banishing, or invocation).",
+        group: "Builder",
+        purpose: "Guides students through building a personalised ritual by starting with clear intent, ensuring the working has a defined purpose before the structure is assembled.",
+        bullets: [
+          "Planetary selector with glyph and brief description of each planet's domain",
+          "Intent text field with guidance prompts to help students articulate their working clearly",
+          "Working type selector with a plain-English explanation of each type"
+        ]
+      },
+      {
+        name: "ritual-builder-step-2",
+        label: "Ritual Builder Step 2 — Structure",
+        description: "Second step of the ritual builder where the student assembles the ritual sequence from a library of components: invocations, correspondences, actions, and closings. The assembled ritual can be saved and used later.",
+        group: "Builder",
+        purpose: "Teaches students to construct rituals structurally rather than following a script, deepening their practical understanding of planetary magic.",
+        bullets: [
+          "Component library sorted by ritual phase: Opening, Working, Closing",
+          "Drag-and-drop builder canvas where students sequence their chosen components",
+          "Save as personal ritual button — stores the built ritual in the student's private library"
+        ]
+      },
+      {
+        name: "ms-center",
+        label: "Mystery School Center",
+        description: "The main navigation hub for Mystery School students. Displays the current decan, foundation progress, upcoming Sunday Service, and quick links to the decan study, ritual, builder, and journal pages.",
+        group: "Dashboard",
+        purpose: "Orients students each time they log in by surfacing where they are in the curriculum and what action to take next.",
+        bullets: [
+          "Current decan card with active status and a Go to Decan CTA",
+          "Foundation progress bar and next unlocking milestone",
+          "Upcoming Sunday Service countdown with RSVP button"
+        ]
+      },
+      {
+        name: "ms-community",
+        label: "Mystery School Community",
+        description: "Community discussion space exclusive to Mystery School students. Organised by topic channels including general, decan-by-decan discussions, ritual questions, and graduation support. Moderated by admin and senior students.",
+        group: "Community",
+        purpose: "Creates a peer support environment where students at similar stages can share observations and support each other through the curriculum.",
+        bullets: [
+          "Channel list with unread message counts",
+          "Threaded discussion view within each channel",
+          "Mention and direct message capabilities for student-to-student interaction"
+        ]
+      },
+      {
+        name: "ms-help",
+        label: "Mystery School Help",
+        description: "Help centre specific to Mystery School students. Contains FAQs about the curriculum, decan progression rules, graduation requirements, and subscription billing. Includes a contact form for escalation.",
+        group: "Settings",
+        purpose: "Reduces admin support burden by providing structured answers to the most common Mystery School student questions.",
+        bullets: [
+          "Curriculum FAQ covering decan unlocking, journal requirements, and graduation eligibility",
+          "Subscription FAQ covering billing, pausing, and cancellation impact on progress",
+          "Contact form pre-populated with the student's account and current decan for faster support triage"
+        ]
+      },
+      {
+        name: "ms-decan-progress-chart",
+        label: "Decan Progress Chart",
+        description: "Visual chart showing the student's completion progress across all 36 decans. Displays a wheel or grid view with completed, active, and locked decans marked. Highlights the graduation milestone decans.",
+        group: "Dashboard",
+        purpose: "Gives students a motivating visual representation of their long-term progress to sustain engagement across the multi-year curriculum.",
+        bullets: [
+          "36-segment wheel or grid with colour coding: complete (filled), active (highlighted), locked (dim)",
+          "Graduation milestone markers at decan 12, 24, and 36",
+          "Estimated completion date based on current average completion pace"
+        ]
+      },
+      {
+        name: "ms-profile",
+        label: "Mystery School Profile",
+        description: "Student profile page within the Mystery School portal showing their display name, avatar, current decan, completed decan count, and any badges earned. Editable by the student for name and avatar.",
+        group: "Settings",
+        purpose: "Gives students an identity within the Mystery School community that reflects their progress and encourages continued engagement.",
+        bullets: [
+          "Avatar upload and display name editor",
+          "Progress summary: decans complete, current active decan, graduation status",
+          "Earned badges displayed as a trophy shelf — hover shows the criteria for each badge"
+        ]
+      },
     ],
   },
   {
@@ -4723,6 +5899,126 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Monthly leaderboard resets on the 1st of each month"
         ]
       },
+      {
+        name: "referral-detail",
+        label: "Referral Detail",
+        description: "Detail view for a single referral conversion. Shows the referred user's signup date, what they purchased, the commission earned, and the current payout status for this specific referral.",
+        group: "Referrals",
+        purpose: "Gives advocates transparency into exactly which referrals have converted and earned commission so they can verify their earnings are correctly tracked.",
+        bullets: [
+          "Referred user identifier (anonymised after 30 days), signup date, and first purchase",
+          "Commission amount, commission rate applied, and platform fee deducted",
+          "Payout status badge: Pending, Approved, Paid — with expected payout date for Pending items"
+        ]
+      },
+      {
+        name: "campaign-detail-advo",
+        label: "Campaign Detail (Advocate)",
+        description: "Detail view for a specific affiliate campaign the advocate is enrolled in. Shows campaign terms, the advocate's unique tracking link, real-time click and conversion stats, and earnings attributed to this campaign.",
+        group: "Campaigns",
+        purpose: "Helps advocates focus promotional efforts on the campaigns with the best conversion terms and track which channels are working best for each campaign.",
+        bullets: [
+          "Campaign terms: product scope, commission rate, start and end date, minimum payout threshold",
+          "Unique tracking link with UTM parameters and one-click copy",
+          "Live stats: link clicks, signups, paid conversions, earnings — updated every hour"
+        ]
+      },
+      {
+        name: "payout-receipt",
+        label: "Payout Receipt",
+        description: "Printable receipt for a completed advocate payout. Shows the payment date, amount, currency, payment method, and line-item breakdown of referrals included in the payout.",
+        group: "Earnings",
+        purpose: "Provides advocates with a formal payment record suitable for personal tax filing and accounting reconciliation.",
+        bullets: [
+          "Receipt header: payment date, reference number, advocate name, and total amount",
+          "Line-item table: each referral included with commission amount",
+          "Download as PDF button for record-keeping and tax documentation"
+        ]
+      },
+      {
+        name: "email-referral-tool",
+        label: "Email Referral Tool",
+        description: "Built-in email composition tool for advocates to send personalised referral invitations directly from the portal. Pre-populates the referral link and provides customisable template text.",
+        group: "Content",
+        purpose: "Lowers the barrier to active referral outreach by eliminating copy-paste steps and ensuring the tracking link is always correctly embedded.",
+        bullets: [
+          "Recipient email field (single or comma-separated list for bulk invitations)",
+          "Email body pre-filled with the advocate's referral link and editable template text",
+          "Send confirmation with delivery status and opt-out compliance note"
+        ]
+      },
+      {
+        name: "bio-link-page",
+        label: "Bio Link Page",
+        description: "Customisable bio link landing page that advocates can share on social media. Displays their referral links, a personal introduction, and curated content links. Each click on a referral link is tracked.",
+        group: "Content",
+        purpose: "Gives advocates a single shareable URL that works as a mini-website for their referral activity, ideal for platforms that only allow one link in a bio.",
+        bullets: [
+          "Editable headline, profile photo, and short bio field",
+          "Up to 8 custom link cards with label, URL, and icon — referral links are auto-tracked",
+          "Live preview of the bio link page as it appears to visitors"
+        ]
+      },
+      {
+        name: "advo-support",
+        label: "Advocate Support",
+        description: "Support centre for social advocates with FAQs on commission tracking, payout schedules, referral rules, and content guidelines. Includes a contact form for escalating issues not covered by the FAQ.",
+        group: "Settings",
+        purpose: "Reduces support ticket volume by giving advocates self-service answers to the most common questions about their earnings and referral tracking.",
+        bullets: [
+          "FAQ categories: Tracking & Attribution, Payouts, Content Rules, Campaign Terms",
+          "Search within the FAQ for quick lookup",
+          "Contact support form pre-populated with account details and current campaign enrolment"
+        ]
+      },
+      {
+        name: "content-calendar-advo",
+        label: "Content Calendar (Advocate)",
+        description: "Personalised content calendar for the advocate showing scheduled social posts, campaign launch dates, and payout dates. Advocates can add their own content notes to plan around platform promotional windows.",
+        group: "Content",
+        purpose: "Helps advocates align their promotional activity with platform campaign windows for maximum commission impact.",
+        bullets: [
+          "Month view with platform campaign dates highlighted in the campaign colour",
+          "Payout schedule dates marked so advocates can plan cash flow",
+          "Personal content note field per day — private to the advocate"
+        ]
+      },
+      {
+        name: "advo-training-resources",
+        label: "Advocate Training Resources",
+        description: "Curated training materials for social advocates including guides on effective referral strategies, content creation tips, platform product knowledge, and compliance guidelines for promotional content.",
+        group: "Content",
+        purpose: "Equips advocates with the knowledge and tools to promote effectively while staying compliant with platform and regulatory guidelines.",
+        bullets: [
+          "Getting Started guide for new advocates covering account setup and first referral steps",
+          "Content creation tips: what to say, what not to say, and FTC disclosure requirements",
+          "Product knowledge sheets for each platform offering to help advocates speak accurately about benefits"
+        ]
+      },
+      {
+        name: "advo-team-view",
+        label: "Advocate Team View",
+        description: "For advocates in a tiered structure, this view shows their sub-advocates and their referral performance. Displays the team's aggregate clicks, conversions, and earnings alongside the advocate's own stats.",
+        group: "Referrals",
+        purpose: "Enables senior advocates to monitor their team's performance and identify members who need coaching or support.",
+        bullets: [
+          "Team member list with avatar, referral count, conversion rate, and earnings this period",
+          "Aggregate team stats at the top: total referrals, total conversions, total team earnings",
+          "Invite sub-advocate button — generates a team join link with pre-filled team code"
+        ]
+      },
+      {
+        name: "advo-commission-breakdown",
+        label: "Commission Breakdown",
+        description: "Detailed breakdown of how the advocate's commission is calculated for the current period. Shows gross referral revenue, applicable commission tier rate, bonuses earned, and any deductions or adjustments.",
+        group: "Earnings",
+        purpose: "Provides full transparency into commission calculation so advocates understand exactly how their tier and bonus rules interact with raw referral performance.",
+        bullets: [
+          "Current commission tier with threshold and current progress toward the next tier",
+          "Earnings breakdown: base commission, tier bonus, campaign bonus, minus adjustments",
+          "Comparison to previous period with percentage change highlighted"
+        ]
+      },
     ],
   },
   {
@@ -4992,6 +6288,126 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Set your preferred timezone for session scheduling",
           "Choose weekly vs. daily email digest frequency",
           "Enable or disable mentor activity notifications"
+        ]
+      },
+      {
+        name: "lesson-detail",
+        label: "Lesson Detail",
+        description: "Full content view for a single training lesson. Displays the lesson video or article, supplementary materials, learning objectives, and a progress tracker. The quiz unlocks after the trainee marks the lesson as complete.",
+        group: "Curriculum",
+        purpose: "Provides a focused, distraction-free learning environment with all lesson materials in one place and a clear path to the assessment.",
+        bullets: [
+          "Video player or article body with estimated read or watch time displayed",
+          "Supplementary materials section: downloadable PDFs, reference links, and diagrams",
+          "Mark as Complete button that updates progress and unlocks the associated quiz"
+        ]
+      },
+      {
+        name: "quiz-result-detail",
+        label: "Quiz Result Detail",
+        description: "Result page shown after a trainee submits a quiz. Displays the score, pass or fail status, each question with the trainee's answer marked correct or incorrect, and the correct answer with explanation for missed questions.",
+        group: "Curriculum",
+        purpose: "Converts quiz mistakes into learning moments by immediately showing the correct answers with explanations rather than just a score.",
+        bullets: [
+          "Score summary: percentage correct, pass/fail badge, and attempts remaining if failed",
+          "Question-by-question review with the trainee's answer and correct answer side by side",
+          "Explanation panel for each missed question linking back to the relevant lesson section"
+        ]
+      },
+      {
+        name: "program-certificate",
+        label: "Program Certificate",
+        description: "Certificate of completion page shown when a trainee passes all lessons and quizzes in a training program. Displays a branded certificate with the trainee's name, program title, and completion date. Downloadable as PDF.",
+        group: "Graduation",
+        purpose: "Provides trainees with a formal, shareable record of their achievement that motivates completion and supports their professional credibility.",
+        bullets: [
+          "Branded certificate with trainee name, program title, completion date, and platform seal",
+          "Download as PDF button — formatted for print and digital sharing",
+          "Share to LinkedIn button — pre-fills the credential fields on LinkedIn Certifications"
+        ]
+      },
+      {
+        name: "mentor-profile-view",
+        label: "Mentor Profile View",
+        description: "Read-only profile page for the trainee's assigned mentor. Shows the mentor's bio, qualifications, current session availability, and a button to book the next mentor session within the training program.",
+        group: "Mentor",
+        purpose: "Helps trainees understand their mentor's background and approach, building confidence in the mentorship relationship from the start.",
+        bullets: [
+          "Mentor avatar, name, bio, and listed specialisations",
+          "Upcoming availability slots with Book a Session CTA",
+          "Shared session history between this mentor and trainee with session notes links"
+        ]
+      },
+      {
+        name: "lesson-resources",
+        label: "Lesson Resources",
+        description: "Supplementary resources page for a specific lesson. Lists all downloadable materials, external reference links, recommended reading, and media assets associated with the lesson, separate from the main lesson content view.",
+        group: "Curriculum",
+        purpose: "Gives trainees a dedicated space to access and organise lesson materials without needing to return to the full lesson view each time.",
+        bullets: [
+          "Downloadable assets list with file type icon, name, and size",
+          "External reference links with brief descriptions of what each resource covers",
+          "Add to bookmarks button per resource — saves to the trainee's personal bookmark collection"
+        ]
+      },
+      {
+        name: "peer-community",
+        label: "Trainee Peer Community",
+        description: "Discussion forum exclusive to current trainees. Organised into channels: general chat, lesson questions, quiz help, and graduation advice. Moderated by assigned mentors.",
+        group: "Community",
+        purpose: "Creates a peer support network where trainees at similar stages can help each other through difficult lessons without waiting for mentor availability.",
+        bullets: [
+          "Channel list with unread message indicators",
+          "Threaded discussions with mentor reply tags for mentor-originated content",
+          "Direct message capability for trainee-to-trainee private conversations"
+        ]
+      },
+      {
+        name: "session-recording-replay",
+        label: "Session Recording Replay",
+        description: "Playback page for a recorded mentor session the trainee can replay at any time. Shows the video recording, the session date, topics covered, and any notes shared by the mentor during the session.",
+        group: "Mentor",
+        purpose: "Extends the value of mentor sessions beyond the live call by allowing trainees to revisit key points at their own pace.",
+        bullets: [
+          "Video player with playback speed control and chapter markers tied to topic timestamps",
+          "Mentor session notes displayed alongside the video in a split-panel layout",
+          "Download notes as PDF button for offline reference"
+        ]
+      },
+      {
+        name: "training-glossary",
+        label: "Training Glossary",
+        description: "Searchable reference glossary of astrological and platform-specific terms used throughout the training curriculum. Each term has a definition, example usage, and links to lessons where it is first introduced.",
+        group: "Resources",
+        purpose: "Reduces lesson drop-off caused by unfamiliar terminology by giving trainees an always-accessible reference without breaking their learning flow.",
+        bullets: [
+          "Alphabetical index with instant search across all terms",
+          "Term definition card with an example sentence or chart context",
+          "Linked lesson badge — click to jump to the lesson where this term was first introduced"
+        ]
+      },
+      {
+        name: "lesson-bookmark-detail",
+        label: "Lesson Bookmark Detail",
+        description: "Detail view for a single bookmarked lesson or resource the trainee has saved. Shows the full bookmarked item, the trainee's personal note attached to the bookmark, and options to remove the bookmark or add it to a collection.",
+        group: "Resources",
+        purpose: "Allows trainees to build a personalised study reference library alongside the structured curriculum.",
+        bullets: [
+          "Full lesson or resource content preview within the bookmark view",
+          "Trainee note field — editable annotation the trainee added when bookmarking",
+          "Collection organiser — drag the bookmark into a named collection (e.g. Aspects, Houses, Planets)"
+        ]
+      },
+      {
+        name: "trainee-help",
+        label: "Trainee Help & Support",
+        description: "Help centre for trainees with FAQs covering quiz retake rules, mentor session booking, curriculum progression, certificate issuance, and subscription billing. Includes a contact form for escalation.",
+        group: "Settings",
+        purpose: "Provides trainees with self-service answers so they can unblock themselves quickly without waiting for mentor or admin response.",
+        bullets: [
+          "FAQ categories: Curriculum, Quizzes, Mentor Sessions, Certificates, Billing",
+          "Search within FAQs with instant filtering",
+          "Contact support form pre-filled with current lesson and program for faster triage"
         ]
       },
     ],
@@ -5345,6 +6761,126 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Upcoming high-impact transit alerts for the next 7 days"
         ]
       },
+      {
+        name: "booking-step-1-select",
+        label: "Book a Session — Select Diviner",
+        description: "First step of the client booking flow. The client browses or searches for a diviner by specialty, rating, and availability. Each diviner card shows a brief bio, services offered, and average rating.",
+        group: "Bookings",
+        purpose: "Makes diviner discovery and selection frictionless so clients can find the right match quickly and move through the booking funnel.",
+        bullets: [
+          "Diviner grid with filter by specialty (Natal, Tarot, Vedic, Horary) and availability",
+          "Diviner card: avatar, name, specialty tags, average rating, and starting price",
+          "Click card to expand a quick-view with the full service list before committing"
+        ]
+      },
+      {
+        name: "booking-step-2-datetime",
+        label: "Book a Session — Select Date and Time",
+        description: "Second step of the booking flow where the client picks a date and available time slot for the selected service and diviner. Calendar shows real-time availability and highlights the earliest available slot.",
+        group: "Bookings",
+        purpose: "Reduces booking abandonment by presenting available slots clearly and defaulting to the earliest option so the client can complete the booking in seconds.",
+        bullets: [
+          "Calendar view with available dates highlighted and unavailable dates greyed out",
+          "Time slot grid for the selected date in the client's local timezone",
+          "Earliest available slot auto-highlighted with a Best Availability badge"
+        ]
+      },
+      {
+        name: "booking-step-3-confirm",
+        label: "Book a Session — Confirm and Pay",
+        description: "Final step of the booking flow showing an order summary and payment form. Client confirms the diviner, service, date, time, and total cost before completing payment. Supports saved payment methods and package credits.",
+        group: "Bookings",
+        purpose: "Converts the booking intent into a confirmed paid appointment with a clear summary and minimal friction at the payment step.",
+        bullets: [
+          "Order summary: diviner, service name, date and time, duration, and total cost",
+          "Payment method selector: saved card, new card, or available package credits",
+          "Confirm and Pay button — on success shows a booking confirmation with add-to-calendar option"
+        ]
+      },
+      {
+        name: "order-detail",
+        label: "Order Detail",
+        description: "Full detail view for a single client order. Shows the items purchased, amounts, payment method used, invoice number, and the current status of any associated sessions or deliverables.",
+        group: "Orders",
+        purpose: "Provides clients with a verifiable purchase record and a direct link to the associated session or content, reducing support inquiries about past orders.",
+        bullets: [
+          "Order header: order number, date, total, payment method, and status",
+          "Line-item list: each service or product with unit price and quantity",
+          "Download invoice button — formatted PDF receipt for personal records"
+        ]
+      },
+      {
+        name: "subscription-detail-client",
+        label: "Subscription Detail (Client)",
+        description: "Detail page for a client's active subscription (Perennial Mandalism or Mystery School). Shows the plan name, billing amount, next renewal date, payment method, and self-service options to pause or cancel.",
+        group: "Subscriptions",
+        purpose: "Gives clients transparent subscription management so they feel in control of their commitment and are less likely to resort to chargebacks.",
+        bullets: [
+          "Plan name, billing frequency, amount, and next renewal date",
+          "Payment method on file with Update button",
+          "Pause and Cancel options with clear plain-language explanation of the impact"
+        ]
+      },
+      {
+        name: "gift-card-redeem",
+        label: "Gift Card Redeem",
+        description: "Page where clients enter a gift card code to apply the credit to their account balance. Shows the credit amount added, current balance, and eligible products the balance can be applied toward.",
+        group: "Orders",
+        purpose: "Enables gift card recipients to claim their credit quickly and understand how to apply it to their next purchase.",
+        bullets: [
+          "Gift card code input field with Redeem button",
+          "Success confirmation showing credit amount added and new account balance",
+          "Eligible products list: which services and subscriptions the credit can be applied to"
+        ]
+      },
+      {
+        name: "notification-settings-client",
+        label: "Notification Settings (Client)",
+        description: "Granular notification preferences for the client. Controls email and push notifications for booking confirmations, session reminders, transit alerts, and platform announcements.",
+        group: "Settings",
+        purpose: "Gives clients control over their notification experience so they receive timely reminders without feeling overwhelmed by platform communications.",
+        bullets: [
+          "Toggle rows per notification type: email and push independently configurable",
+          "Session reminder timing selector: 24 hours, 2 hours, or 30 minutes before session",
+          "Marketing communications opt-out section — separate from transactional notices"
+        ]
+      },
+      {
+        name: "review-write",
+        label: "Write a Review",
+        description: "Review submission form for a completed session. The client rates the session with 1–5 stars, writes a review, and optionally consents to it being published on the diviner's public profile. Submitted reviews go to admin moderation.",
+        group: "Reviews",
+        purpose: "Captures client feedback promptly after sessions while the experience is fresh, building the diviner's social proof and platform trust signals.",
+        bullets: [
+          "Star rating selector with labelled descriptions (Poor to Excellent)",
+          "Review text area with guidance prompts and 1000-character limit",
+          "Consent toggle for public publication — unchecked means the review is shared with the diviner only"
+        ]
+      },
+      {
+        name: "support-help",
+        label: "Client Support & Help",
+        description: "Help centre for clients with FAQs covering booking, session problems, refund policy, account management, and subscriptions. Includes a contact form and a live chat option if enabled.",
+        group: "Settings",
+        purpose: "Provides clients with self-service resolution paths so minor issues are resolved without agent involvement.",
+        bullets: [
+          "FAQ categories: Booking, Sessions, Billing, Account, Subscriptions",
+          "Search FAQ with instant result filtering",
+          "Contact form with session selector so the client can attach a specific booking to the support request"
+        ]
+      },
+      {
+        name: "astro-daily-detail",
+        label: "Daily Astrology Detail",
+        description: "Expanded detail page for the client's daily astrological overview. Shows the day's planetary positions, aspects forming, moon phase, and how the day's energy connects to the client's natal placements.",
+        group: "Astrology",
+        purpose: "Gives clients a personalised daily astrological touchpoint that keeps them engaged with the platform between booked sessions.",
+        bullets: [
+          "Day overview: moon sign and phase, major aspects forming, planetary hour",
+          "Personal connection: how today's sky aspects the client's natal planets",
+          "Recommended action card: a single practical suggestion based on the day's astrology"
+        ]
+      },
     ],
   },
   {
@@ -5644,6 +7180,114 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "FAQ section — answers to the most common pricing questions (Can I cancel? Is there a free trial? What is the Mystery School?)",
           "Diviner application path — a separate card explaining that diviners apply and are vetted before receiving dashboard access",
           "PM member discount note — a callout explaining that PM members get a discounted rate on Mystery School enrollment"
+        ]
+      },
+      {
+        name: "signup-step-1",
+        label: "Sign Up — Create Account",
+        description: "First step of the public registration flow. Visitors enter their name, email address, and password to create an account. Includes social sign-in options (Google) and a link to the login page for returning users.",
+        group: "Auth",
+        purpose: "Converts anonymous visitors into registered users with a minimal-friction entry form that gets them into the platform quickly.",
+        bullets: [
+          "Name, email, and password fields with password strength indicator",
+          "Google OAuth sign-in button as a one-click alternative",
+          "Link to login page for users who already have an account"
+        ]
+      },
+      {
+        name: "email-verify",
+        label: "Email Verification",
+        description: "Post-registration page instructing the new user to verify their email address. Shows the email sent-to address, a resend button, and a troubleshooting note about spam folders. Verification unlocks the full account.",
+        group: "Auth",
+        purpose: "Ensures account email addresses are valid before granting access, reducing fake accounts and improving deliverability of platform communications.",
+        bullets: [
+          "Confirmation message showing the email address the verification link was sent to",
+          "Resend verification email button with a 60-second cooldown to prevent spam",
+          "Spam folder note with step-by-step instructions for common email providers"
+        ]
+      },
+      {
+        name: "about-page",
+        label: "About Us",
+        description: "Public about page explaining the platform's mission, founding story, team, and core values. Includes a timeline of key milestones and links to the diviner and community sections for new visitors.",
+        group: "Marketing",
+        purpose: "Builds trust with prospective users by establishing the platform's credibility, purpose, and the human team behind it.",
+        bullets: [
+          "Mission statement and founding story in approachable narrative format",
+          "Team section with photos, names, and roles of key platform figures",
+          "Milestones timeline: key dates in the platform's history with brief descriptions"
+        ]
+      },
+      {
+        name: "privacy-policy",
+        label: "Privacy Policy",
+        description: "Full publicly accessible privacy policy page. Clearly states what data is collected, how it is used, who it is shared with, and how users can exercise their data rights. Includes last-updated date and contact information for privacy inquiries.",
+        group: "Legal",
+        purpose: "Meets GDPR and CCPA transparency requirements and builds user trust by being explicit about data handling practices.",
+        bullets: [
+          "Structured sections: Data Collected, Purpose of Use, Third-Party Sharing, Retention, Your Rights",
+          "Last-updated date prominently displayed",
+          "Privacy contact email and link to the data subject request form"
+        ]
+      },
+      {
+        name: "terms-of-service",
+        label: "Terms of Service",
+        description: "Full publicly accessible terms of service page covering platform usage rules, diviner obligations, client expectations, payment terms, and dispute resolution. Includes the last-updated date and effective date.",
+        group: "Legal",
+        purpose: "Establishes the legal framework for platform use and protects the business by clearly setting expectations for all user types.",
+        bullets: [
+          "Structured sections: Eligibility, Account Terms, Services, Payment, Termination, Governing Law",
+          "Plain-language summaries at the top of each section for quick scanning",
+          "Last-updated and effective dates displayed prominently"
+        ]
+      },
+      {
+        name: "testimonials-page",
+        label: "Testimonials Page",
+        description: "Public testimonials page featuring approved client reviews of the platform and individual diviners. Sorted by most helpful with filter by diviner specialty. Includes aggregate star ratings.",
+        group: "Marketing",
+        purpose: "Provides social proof to prospective clients at the point of evaluation, increasing conversion by showing authentic experiences from existing clients.",
+        bullets: [
+          "Aggregate platform rating with total review count displayed at the top",
+          "Review cards with client name (anonymised option), rating, date, diviner name, and review text",
+          "Filter by specialty: Natal, Tarot, Horary, Vedic, and All"
+        ]
+      },
+      {
+        name: "how-it-works",
+        label: "How It Works",
+        description: "Public explainer page walking prospective clients through the platform process from sign-up to completed session. Uses numbered steps, iconography, and a short FAQ to address common first-time questions.",
+        group: "Marketing",
+        purpose: "Reduces new visitor uncertainty by clearly explaining what to expect before they commit to signing up.",
+        bullets: [
+          "Four numbered steps: Create account → Browse diviners → Book a session → Connect",
+          "Icon-led feature highlights: secure payments, verified diviners, flexible scheduling",
+          "Short FAQ section addressing the top 5 first-time visitor questions"
+        ]
+      },
+      {
+        name: "faq",
+        label: "Frequently Asked Questions",
+        description: "Comprehensive public FAQ page covering account creation, diviner qualifications, session formats, pricing, refund policy, and subscription options. Searchable and organised by category.",
+        group: "Marketing",
+        purpose: "Reduces support load from prospective clients by addressing common questions before they reach the contact form or abandon the site.",
+        bullets: [
+          "Search bar with instant filtering across all questions and answers",
+          "Category tabs: Getting Started, Sessions, Billing, Subscriptions, Privacy",
+          "Expandable accordion items with clear, plain-language answers"
+        ]
+      },
+      {
+        name: "waitlist-join",
+        label: "Join Waitlist",
+        description: "Public waitlist signup page for prospective users when the platform is at capacity or launching a new feature. Visitors enter their name and email to be notified when a spot opens or the feature launches.",
+        group: "Marketing",
+        purpose: "Captures demand from users who arrive when the platform is not accepting open signups, preserving the lead for future conversion.",
+        bullets: [
+          "Simple form: name and email with waitlist join button",
+          "Social proof note: how many people are already on the waitlist",
+          "Confirmation page with expected notification timeline and referral option to move up the list"
         ]
       },
     ],

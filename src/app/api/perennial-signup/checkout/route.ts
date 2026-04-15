@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { stripe } from "@/lib/stripe/client";
+import { stripe, getOrCreateStripeCustomer } from "@/lib/stripe/client";
 import type {
   HouseholdMemberPayload,
   HouseholdPayload,
@@ -256,9 +256,11 @@ export async function POST(req: NextRequest) {
   // Create the Stripe Checkout session.
   let session;
   try {
+    const customerId = await getOrCreateStripeCustomer(primary.email);
+
     session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      customer_email: primary.email,
+      customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}/perennial-signup/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/perennial-signup?cancelled=1`,

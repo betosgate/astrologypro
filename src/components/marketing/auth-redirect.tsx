@@ -18,12 +18,12 @@ async function resolveDestination(): Promise<string> {
 }
 
 /**
- * Invisible component — redirects logged-in users to their dashboard.
+ * Invisible component — redirects users to their dashboard only when they
+ * actively sign in via the Supabase implicit flow (i.e. Supabase lands them
+ * here with #access_token in the URL hash after a successful login).
  *
- * Handles two cases:
- * 1. User already has a session (returning visit) — getSession() catches it
- * 2. Supabase implicit flow lands user here with #access_token in the hash —
- *    onAuthStateChange fires once the client parses the fragment and sets the session
+ * Intentionally does NOT redirect already-logged-in visitors so they can
+ * browse the marketing homepage freely.
  */
 export function AuthRedirect() {
   const router = useRouter();
@@ -39,14 +39,11 @@ export function AuthRedirect() {
       router.replace(dest);
     }
 
-    // Case 1: session already exists (e.g. returning visitor)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) go();
-    });
-
-    // Case 2: implicit flow — #access_token in URL hash, client parses async
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) go();
+    // Only redirect on an active SIGNED_IN event (implicit OAuth / magic-link
+    // flow). Existing sessions on return visits are intentionally ignored so
+    // logged-in users can stay on the marketing page.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) go();
     });
 
     return () => subscription.unsubscribe();

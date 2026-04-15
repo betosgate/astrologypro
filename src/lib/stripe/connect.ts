@@ -1,4 +1,4 @@
-import { stripe } from "./client";
+import { stripe, getOrCreateStripeCustomer } from "./client";
 
 interface CreateConnectAccountParams {
   email: string;
@@ -86,6 +86,8 @@ export async function createCheckoutSession({
   cancelUrl,
   metadata,
 }: CreateCheckoutSessionParams) {
+  const customerId = await getOrCreateStripeCustomer(customerEmail);
+
   return stripe.checkout.sessions.create({
     mode: "payment",
     line_items: [
@@ -98,7 +100,7 @@ export async function createCheckoutSession({
         quantity: 1,
       },
     ],
-    customer_email: customerEmail,
+    customer: customerId,
     payment_intent_data: {
       application_fee_amount: Math.round(platformFeeAmount * 100),
       transfer_data: { destination: connectedAccountId },
