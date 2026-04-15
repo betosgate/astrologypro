@@ -15,6 +15,7 @@ interface TrainingNote {
 interface TrainingNotesProps {
   entityType: "program" | "category" | "lesson" | "quiz";
   entityId: string;
+  autoFocusComposer?: boolean;
   /**
    * Called after a successful add / edit / delete so parents that show a
    * notes count (e.g. the Training Management table) can refetch. The
@@ -24,7 +25,12 @@ interface TrainingNotesProps {
   onCountChange?: (nextCount: number) => void;
 }
 
-export function TrainingNotes({ entityType, entityId, onCountChange }: TrainingNotesProps) {
+export function TrainingNotes({
+  entityType,
+  entityId,
+  autoFocusComposer = false,
+  onCountChange,
+}: TrainingNotesProps) {
   const [notes, setNotes] = useState<TrainingNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentAdminEmail, setCurrentAdminEmail] = useState<string | null>(null);
@@ -112,6 +118,7 @@ export function TrainingNotes({ entityType, entityId, onCountChange }: TrainingN
   return (
     <AdminNotesSection
       title="Add a training note…"
+      autoFocusComposer={autoFocusComposer}
       notes={notes.map((note): AdminNote => ({
         id: note.id,
         content: note.content,

@@ -228,6 +228,7 @@ export function TrainingEntitySheet({
                   <TrainingNotes
                     entityType={entityType}
                     entityId={row.id}
+                    autoFocusComposer
                     onCountChange={(n) => onNotesCountChange?.(row.id, n)}
                   />
                 </>
