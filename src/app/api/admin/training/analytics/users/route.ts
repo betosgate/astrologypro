@@ -21,11 +21,11 @@ export async function GET(req: NextRequest) {
 
   const admin = createAdminClient();
 
-  // Fetch all trainees with auth user emails via join
-  // Supabase JS doesn't support direct auth.users join; use admin listUsers + merge
+  // Fetch all trainees. Trainee records in this codebase use `name`/`email`,
+  // not `display_name`, so this must stay aligned with the actual table shape.
   const { data: traineesData, error: traineesError } = await admin
     .from("trainees")
-    .select("id, user_id, display_name, training_status, created_at");
+    .select("id, user_id, name, email, training_status, created_at");
 
   if (traineesError) {
     return NextResponse.json({ error: "Failed to fetch trainees." }, { status: 500 });
@@ -34,25 +34,24 @@ export async function GET(req: NextRequest) {
   const trainees = traineesData ?? [];
   const userIds = trainees.map((t) => t.user_id);
 
-  // Fetch emails from auth.users via admin API
-  // We page through all users and build a map
+  // Fetch auth emails only for trainees that don't already have one stored.
   const emailMap = new Map<string, string>();
-  if (userIds.length > 0) {
-    // Supabase admin.auth.admin.listUsers returns paginated results
-    // For typical trainee volumes this is acceptable
-    let authPage = 1;
-    const perPage = 1000;
-    while (true) {
-      const { data: authData } = await admin.auth.admin.listUsers({
-        page: authPage,
-        perPage,
-      });
-      if (!authData?.users?.length) break;
-      for (const u of authData.users) {
-        if (u.email) emailMap.set(u.id, u.email);
-      }
-      if (authData.users.length < perPage) break;
-      authPage++;
+  for (const trainee of trainees) {
+    if (trainee.email) {
+      emailMap.set(trainee.user_id, trainee.email);
+    }
+  }
+
+  const missingEmailUserIds = trainees
+    .filter((t) => !t.email && t.user_id)
+    .map((t) => t.user_id);
+
+  if (missingEmailUserIds.length > 0) {
+    const authRes = await admin.rpc("get_auth_users_by_ids", {
+      user_ids: missingEmailUserIds,
+    });
+    for (const u of (authRes.data ?? []) as Array<{ user_id: string; email: string }>) {
+      if (u.email) emailMap.set(u.user_id, u.email);
     }
   }
 
@@ -66,7 +65,7 @@ export async function GET(req: NextRequest) {
     const lower = search.toLowerCase();
     filtered = filtered.filter(
       (t) =>
-        t.display_name?.toLowerCase().includes(lower) ||
+        t.name?.toLowerCase().includes(lower) ||
         t.email.toLowerCase().includes(lower)
     );
   }
@@ -78,7 +77,7 @@ export async function GET(req: NextRequest) {
   // Sort first (basic sorts that don't need aggregation)
   if (sort === "name") {
     filtered.sort((a, b) =>
-      (a.display_name ?? "").localeCompare(b.display_name ?? "")
+      (a.name ?? "").localeCompare(b.name ?? "")
     );
   }
 
@@ -224,7 +223,7 @@ export async function GET(req: NextRequest) {
 
     return {
       user_id: t.user_id,
-      display_name: t.display_name ?? "",
+      display_name: t.name ?? "",
       email: t.email,
       training_status: t.training_status ?? "active",
       enrolled_programs: agg.enrolled_programs.size,
