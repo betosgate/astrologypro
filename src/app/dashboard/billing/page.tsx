@@ -195,7 +195,7 @@ export default async function BillingPage() {
         .eq("is_active", true),
     ]);
 
-  const subscription = subResult.data as PlanSubscription | null;
+  const subscription = subResult.data as unknown as PlanSubscription | null;
   const activeAddons = (addonsResult.data ?? []) as unknown as ActiveAddon[];
   const invoices = (invoicesResult.data ?? []) as Invoice[];
   const telephonyRecords = ((telephonyResult.data ?? []) as unknown as TelephonyRecord[]).map((record) => ({

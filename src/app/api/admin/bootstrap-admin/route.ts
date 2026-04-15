@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     /* empty body ok */
   }
 
-  const targetEmail = (body.email ?? admin_user.email ?? "").trim().toLowerCase();
+  const targetEmail = (body.email ?? (admin_user as { email?: string }).email ?? "").trim().toLowerCase();
   if (!targetEmail) {
     return NextResponse.json({ error: "Email required" }, { status: 400 });
   }
@@ -32,8 +32,9 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient();
 
   // Find the user by email
-  const { data: userList } = await admin.auth.admin.listUsers({ perPage: 1000 });
-  const target = userList?.users?.find(
+  const { data: listData } = await admin.auth.admin.listUsers({ perPage: 1000 });
+  const authUsers = (listData?.users ?? []) as Array<{ id: string; email?: string }>;
+  const target = authUsers.find(
     (u) => u.email?.toLowerCase() === targetEmail
   );
   if (!target) {
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
     {
       user_id: target.id,
       email: target.email!,
-      granted_by: admin_user.email ?? "bootstrap",
+      granted_by: (admin_user as { email?: string }).email ?? "bootstrap",
     },
     { onConflict: "user_id", ignoreDuplicates: true }
   );

@@ -3,6 +3,7 @@ import {
   CreateAttendeeCommand,
   DeleteMeetingCommand,
   GetMeetingCommand,
+  ListAttendeesCommand,
 } from "@aws-sdk/client-chime-sdk-meetings";
 import {
   CreateMediaCapturePipelineCommand,
@@ -203,6 +204,19 @@ export async function startChimeConcatenation(
       ],
     })
   );
+}
+
+export async function listChimeAttendees(
+  meetingId: string
+): Promise<{ attendeeId: string; externalUserId: string }[]> {
+  const client = getChimeMeetingsClient();
+  const response = await client.send(
+    new ListAttendeesCommand({ MeetingId: meetingId })
+  );
+  return (response.Attendees ?? []).map((a) => ({
+    attendeeId: a.AttendeeId ?? "",
+    externalUserId: a.ExternalUserId ?? "",
+  }));
 }
 
 export async function stopChimeRecording(pipelineId: string): Promise<void> {

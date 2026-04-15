@@ -80,7 +80,7 @@ export async function getServiceLandingDiviners(serviceSlug: string) {
     return [];
   }
 
-  const visibleServices = (services as Array<Record<string, unknown>>).filter((row) => {
+  const visibleServices = (services as unknown as Array<Record<string, unknown>>).filter((row) => {
     const divinerRelation = row.diviners;
     const diviner = Array.isArray(divinerRelation) ? divinerRelation[0] : divinerRelation;
     if (!diviner || typeof diviner !== "object") return false;

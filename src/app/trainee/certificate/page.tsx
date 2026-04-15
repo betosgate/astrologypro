@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,8 @@ import Link from "next/link";
 
 export const metadata = { title: "Certificate of Completion - AstrologyPro" };
 
-const ASTROLOGY_PROGRAMS = [
+// ── Fallbacks (used only if DB config is missing) ─────────────────────────────
+const DEFAULT_ASTROLOGY_PROGRAMS = [
   "Natal Chart Reading",
   "Solar Return",
   "Monthly Transit & Lunar Return",
@@ -19,7 +21,7 @@ const ASTROLOGY_PROGRAMS = [
   "Predictive Event (Horary)",
 ];
 
-const TAROT_PROGRAMS = [
+const DEFAULT_TAROT_PROGRAMS = [
   "3-Card Basic Question Spread",
   "5-Card Complex Question Spread",
   "7-Card Six-Month Forward Review",
@@ -122,6 +124,32 @@ export default async function TraineeCertificatePage() {
 
   if (!trainee) redirect("/join/trainee");
   if (!trainee.graduated_at) redirect("/trainee/progress");
+
+  // Load certificate config from DB (admin-managed), fall back to defaults
+  const admin = createAdminClient();
+  const { data: certConfig } = await admin
+    .from("certificate_config")
+    .select("*")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  const SCHOOL_NAME = certConfig?.school_name ?? "School of Our Divine Infinite Being";
+  const SCHOOL_TAGLINE = certConfig?.school_tagline ?? "Polytheistic Monism · Divine Theurgy · Oracle to the Gods";
+  const DESIGNATION_TITLE = certConfig?.designation_title ?? "Certified Divination Consultant";
+  const PROGRAM_TITLE = certConfig?.program_title ?? "Astrology & Tarot Consulting Certification Course";
+  const HEAD_MASTER_NAME = certConfig?.head_master_name ?? "Eddie Paredes";
+  const STUDY_HOURS = certConfig?.study_hours ?? "100+";
+  const LIVE_CLASSROOM_HOURS = certConfig?.live_classroom_hours ?? "30";
+  const LIVE_READINGS = certConfig?.live_readings ?? "20+";
+  const CERTIFICATION_COUNT = certConfig?.certification_count ?? "15";
+  const ASTROLOGY_PROGRAMS: string[] =
+    Array.isArray(certConfig?.astrology_programs) && certConfig.astrology_programs.length > 0
+      ? (certConfig.astrology_programs as string[])
+      : DEFAULT_ASTROLOGY_PROGRAMS;
+  const TAROT_PROGRAMS: string[] =
+    Array.isArray(certConfig?.tarot_programs) && certConfig.tarot_programs.length > 0
+      ? (certConfig.tarot_programs as string[])
+      : DEFAULT_TAROT_PROGRAMS;
 
   const graduatedDate = new Date(trainee.graduated_at).toLocaleDateString("en-US", {
     month: "long", day: "numeric", year: "numeric",
@@ -236,14 +264,14 @@ export default async function TraineeCertificatePage() {
               </div>
               <div>
                 <p className="text-[10px] font-bold tracking-[0.4em] uppercase" style={{ color: "#7A5C0A" }}>
-                  School of Our Divine
+                  {SCHOOL_NAME.split(" ").slice(0, -2).join(" ")}
                 </p>
                 <h2 className="text-2xl font-bold tracking-widest uppercase mt-0.5"
                   style={{ color: "#2A1A00", fontFamily: "Georgia, 'Times New Roman', serif", letterSpacing: "0.2em" }}>
-                  Infinite Being
+                  {SCHOOL_NAME.split(" ").slice(-2).join(" ")}
                 </h2>
                 <p className="text-[9px] tracking-[0.22em] uppercase mt-1" style={{ color: "#9A7A2A" }}>
-                  Polytheistic Monism &nbsp;·&nbsp; Divine Theurgy &nbsp;·&nbsp; Oracle to the Gods
+                  {SCHOOL_TAGLINE}
                 </p>
               </div>
               <div className="cert-divider"><OrnamentalDivider /></div>
@@ -278,14 +306,14 @@ export default async function TraineeCertificatePage() {
                       background: "linear-gradient(135deg, #8B6000 0%, #D4A017 40%, #C9922A 60%, #8B6000 100%)",
                       WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
                     }}>
-                    Astrology &amp; Tarot Consulting Certification Course
+                    {PROGRAM_TITLE}
                   </p>
                   <p className="text-sm" style={{ color: "#4A3810" }}>
                     is hereby recognized and awarded the designation of
                   </p>
                   <p id="cert-designation" className="text-2xl font-bold tracking-[0.08em] uppercase"
                     style={{ color: "#1a0f00", fontFamily: "Georgia, 'Times New Roman', serif" }}>
-                    Certified Divination Consultant
+                    {DESIGNATION_TITLE}
                   </p>
                 </div>
               </div>
@@ -300,10 +328,10 @@ export default async function TraineeCertificatePage() {
               </p>
               <div className="flex justify-center gap-8 flex-wrap text-center">
                 {[
-                  { value: "100+", label: "Hours of Study" },
-                  { value: "30", label: "Hours Live Classroom" },
-                  { value: "20+", label: "Live Readings Performed" },
-                  { value: "15", label: "Certification Programs" },
+                  { value: STUDY_HOURS, label: "Hours of Study" },
+                  { value: LIVE_CLASSROOM_HOURS, label: "Hours Live Classroom" },
+                  { value: LIVE_READINGS, label: "Live Readings Performed" },
+                  { value: CERTIFICATION_COUNT, label: "Certification Programs" },
                 ].map(({ value, label }) => (
                   <div key={label} className="flex flex-col items-center">
                     <span className="cert-stat-val text-2xl font-bold"
@@ -326,7 +354,7 @@ export default async function TraineeCertificatePage() {
             {/* 15 programs */}
             <div className="my-4 cert-section">
               <p className="text-center text-[10px] font-bold tracking-[0.3em] uppercase mb-3" style={{ color: "#7A5C0A" }}>
-                Mastery Demonstrated Across All 15 Consultation Programs
+                Mastery Demonstrated Across All {CERTIFICATION_COUNT} Consultation Programs
               </p>
               <div className="grid grid-cols-2 gap-x-10 gap-y-2">
                 <div className="space-y-1.5">
@@ -335,7 +363,7 @@ export default async function TraineeCertificatePage() {
                     Astrology Programs
                   </p>
                   <ul className="space-y-1">
-                    {ASTROLOGY_PROGRAMS.map((p) => (
+                    {ASTROLOGY_PROGRAMS.map((p: string) => (
                       <li key={p} className="cert-prog-item flex items-start gap-1.5 text-[11px]" style={{ color: "#3A2A0A" }}>
                         <span style={{ color: "#B8860B", flexShrink: 0, marginTop: "1px" }}>✦</span>
                         <span>{p}</span>
@@ -349,7 +377,7 @@ export default async function TraineeCertificatePage() {
                     Tarot Programs
                   </p>
                   <ul className="space-y-1">
-                    {TAROT_PROGRAMS.map((p) => (
+                    {TAROT_PROGRAMS.map((p: string) => (
                       <li key={p} className="cert-prog-item flex items-start gap-1.5 text-[11px]" style={{ color: "#3A2A0A" }}>
                         <span style={{ color: "#B8860B", flexShrink: 0, marginTop: "1px" }}>✦</span>
                         <span>{p}</span>
@@ -392,7 +420,7 @@ export default async function TraineeCertificatePage() {
                   <p className="text-[9px] font-bold tracking-[0.22em] uppercase" style={{ color: "#8B6914" }}>
                     Head Master
                   </p>
-                  <p className="text-xs font-semibold" style={{ color: "#2A1A00" }}>Eddie Paredes</p>
+                  <p className="text-xs font-semibold" style={{ color: "#2A1A00" }}>{HEAD_MASTER_NAME}</p>
                 </div>
 
                 {/* Center seal — hidden in print via CSS */}
@@ -419,7 +447,7 @@ export default async function TraineeCertificatePage() {
                 Certificate of Authenticity &nbsp;·&nbsp; ID:&nbsp;{displayCode}
               </p>
               <p className="text-[10px]" style={{ color: "#7A6030" }}>
-                Issued by the School of Our Divine Infinite Being via AstrologyPro &nbsp;·&nbsp; {graduatedDate}
+                Issued by {SCHOOL_NAME} via AstrologyPro &nbsp;·&nbsp; {graduatedDate}
               </p>
               {verifyUrl && (
                 <div className="cert-verify-box inline-block rounded-lg px-6 py-2 space-y-0.5"

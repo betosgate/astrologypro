@@ -86,7 +86,7 @@ export default async function QuizHistoryPage() {
     .eq("user_id", user.id)
     .order("attempted_at", { ascending: false });
 
-  const rows = (attempts ?? []) as Array<{
+  const rows = (attempts ?? [] as unknown[]) as Array<{
     id: string;
     lesson_id: string;
     score: number;

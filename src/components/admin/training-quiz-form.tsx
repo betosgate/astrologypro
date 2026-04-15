@@ -31,7 +31,6 @@ export interface TrainingQuizQuestionFormValue {
 export interface TrainingQuizFormValue {
   title: string;
   lesson_id: string;
-  pass_score: number;
   is_active: boolean;
   questions: TrainingQuizQuestionFormValue[];
 }
@@ -224,10 +223,6 @@ export function TrainingQuizForm({
       toast.error("Add at least one question.");
       return;
     }
-    if (!Number.isInteger(form.pass_score) || form.pass_score < 0 || form.pass_score > 100) {
-      toast.error("Pass score must be between 0 and 100.");
-      return;
-    }
     await onSubmit({
       ...form,
       title: form.title.trim(),
@@ -278,23 +273,6 @@ export function TrainingQuizForm({
                     </option>
                   ))}
                 </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="quiz-pass-score">Pass Score (%)</Label>
-                <Input
-                  id="quiz-pass-score"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={String(form.pass_score)}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      pass_score: Number.parseInt(e.target.value || "0", 10),
-                    }))
-                  }
-                />
               </div>
 
               <div className="flex items-end">

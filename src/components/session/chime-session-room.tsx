@@ -228,6 +228,12 @@ export function ChimeSessionRoom({
         startTimeRef.current = new Date(meetingData.sessionStartedAt);
         setSessionStarted(true);
 
+        // If the server confirmed the diviner is already in the meeting, show
+        // the session immediately — don't wait for the presence callback.
+        if (role === "client" && meetingData.divinerPresent) {
+          setIsDivinerPresent(true);
+        }
+
         // Store participant names for display
         if (meetingData.participants) {
           participantMapRef.current.set("diviner", meetingData.participants.divinerName);
@@ -333,6 +339,17 @@ export function ChimeSessionRoom({
           }
         );
 
+        // "Session ended" signal — diviner sends this just before deleting the meeting.
+        // Gives the client a chance to show "Session Complete" before the Chime SDK
+        // disconnects them with a MeetingEnded status code.
+        meetingSession.audioVideo.realtimeSubscribeToReceiveDataMessage(
+          "session-ended",
+          () => {
+            setSessionEnded(true);
+            if (timerRef.current) clearInterval(timerRef.current);
+          }
+        );
+
         // Chat data messaging — receive messages from the other participant
         meetingSession.audioVideo.realtimeSubscribeToReceiveDataMessage(
           "chat",
@@ -368,7 +385,15 @@ export function ChimeSessionRoom({
           audioVideoDidStop: (status: any) => {
             const code = status?.statusCode?.();
             console.log("Chime session stopped, status code:", code);
-            if (!stopped && code !== 1) {
+            if (stopped) return; // Already handled by local cleanup
+            if (code === 5) {
+              // MeetingEnded (5) — the meeting was deleted by the host.
+              // Treat this as a graceful session end for the non-ending participant
+              // (client) so they see "Session Complete" instead of an error.
+              setSessionEnded(true);
+              if (timerRef.current) clearInterval(timerRef.current);
+            } else if (code !== 1) {
+              // Any other non-voluntary disconnect is a real connection error.
               setConnectionError(
                 "Session disconnected. Please click Retry to reconnect."
               );
@@ -587,6 +612,17 @@ export function ChimeSessionRoom({
     // Order matters: stop inputs first so the OS camera/mic indicator turns off,
     // then stop the local tile, then disconnect from Chime.
     if (meetingSessionRef.current) {
+      // Notify the other participant BEFORE stopping so they can react gracefully.
+      // This fires before the meeting is deleted on the server, giving the client
+      // a chance to set sessionEnded=true via the data message handler as a
+      // belt-and-suspenders backup to the MeetingEnded status code (5).
+      try {
+        meetingSessionRef.current.audioVideo.realtimeSendDataMessage(
+          "session-ended",
+          "ended",
+          5_000
+        );
+      } catch { /* non-critical */ }
       try { await meetingSessionRef.current.audioVideo.stopVideoInput(); } catch { /* non-critical */ }
       try { await meetingSessionRef.current.audioVideo.stopAudioInput(); } catch { /* non-critical */ }
       try { meetingSessionRef.current.audioVideo.stopLocalVideoTile(); } catch { /* non-critical */ }
@@ -964,6 +1000,9 @@ export function ChimeSessionRoom({
             const localTile   = tiles.find((t) => t.isLocal && !t.isContent);
             const remoteTiles = tiles.filter((t) => !t.isLocal && !t.isContent);
             const remoteName  = role === "diviner" ? clientName : divinerName;
+            // True once the remote participant has joined the Chime meeting
+            // (presence callback fires). False = they haven't connected yet.
+            const isRemotePresent = participants.some((p) => !p.isLocal);
 
             /** Callback-ref: mount → add to map & bind; unmount → remove */
             const videoRef = (tileId: number, muted = false) =>
@@ -1056,8 +1095,8 @@ export function ChimeSessionRoom({
                         </span>
                       </div>
                     )}
-                    {/* Remote camera off — initials avatar in strip */}
-                    {remoteTiles.length === 0 && (
+                    {/* Remote camera off — initials avatar in strip (only when they've joined) */}
+                    {remoteTiles.length === 0 && isRemotePresent && (
                       <div
                         className="flex flex-col items-center justify-center gap-1 rounded-lg bg-zinc-800"
                         style={{ aspectRatio: "16/9" }}
@@ -1068,6 +1107,15 @@ export function ChimeSessionRoom({
                           </span>
                         </div>
                         <span className="text-[9px] text-zinc-400">{remoteName}</span>
+                      </div>
+                    )}
+                    {/* Remote not yet connected — waiting placeholder in strip */}
+                    {remoteTiles.length === 0 && !isRemotePresent && (
+                      <div
+                        className="flex flex-col items-center justify-center gap-1 rounded-lg bg-zinc-800/50"
+                        style={{ aspectRatio: "16/9" }}
+                      >
+                        <span className="text-[9px] text-zinc-500">Waiting for {remoteName}…</span>
                       </div>
                     )}
                     {/* Self camera off — initials avatar in strip */}
@@ -1105,18 +1153,32 @@ export function ChimeSessionRoom({
             // ── BOTH CAMERAS OFF — equal grid (Google Meet / Teams style) ──
             // When nobody has their camera on, show two equal tiles side by side.
             // Neither person should dominate the view — it's a symmetric state.
+            // If the remote participant hasn't joined yet, show a waiting state
+            // instead of a "Camera off" avatar for them.
             if (remoteTiles.length === 0 && !localTile) {
               return (
                 <div className="absolute inset-0 flex items-center justify-center gap-4 bg-zinc-950 p-6">
-                  {/* Remote avatar tile */}
+                  {/* Remote tile — waiting or camera off */}
                   <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-zinc-700/50 bg-zinc-900 py-10">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10">
-                      <span className="text-3xl font-bold text-primary">
-                        {getInitials(remoteName)}
-                      </span>
-                    </div>
-                    <p className="text-sm font-semibold text-zinc-200">{remoteName}</p>
-                    <p className="text-xs text-zinc-500">Camera off</p>
+                    {isRemotePresent ? (
+                      <>
+                        <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10">
+                          <span className="text-3xl font-bold text-primary">
+                            {getInitials(remoteName)}
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold text-zinc-200">{remoteName}</p>
+                        <p className="text-xs text-zinc-500">Camera off</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-zinc-700/50 bg-zinc-800">
+                          <span className="text-3xl font-bold text-zinc-500">…</span>
+                        </div>
+                        <p className="text-sm font-semibold text-zinc-400">Waiting for {remoteName}</p>
+                        <p className="text-xs text-zinc-600">Not yet in session</p>
+                      </>
+                    )}
                   </div>
                   {/* Self avatar tile */}
                   <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-zinc-700/50 bg-zinc-900 py-10">
@@ -1149,8 +1211,8 @@ export function ChimeSessionRoom({
                       className="absolute inset-0 h-full w-full object-cover"
                     />
                   ))
-                ) : (
-                  // Remote camera off — large avatar fills main area
+                ) : isRemotePresent ? (
+                  // Remote joined but camera off — large avatar fills main area
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-zinc-900">
                     <div className="flex h-28 w-28 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10">
                       <span className="text-4xl font-bold text-primary">
@@ -1160,6 +1222,17 @@ export function ChimeSessionRoom({
                     <div className="text-center">
                       <p className="text-base font-semibold text-zinc-200">{remoteName}</p>
                       <p className="mt-0.5 text-xs text-zinc-500">Camera off</p>
+                    </div>
+                  </div>
+                ) : (
+                  // Remote hasn't joined yet — waiting placeholder
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-zinc-950">
+                    <div className="flex h-28 w-28 items-center justify-center rounded-full border-2 border-zinc-700/50 bg-zinc-800">
+                      <span className="text-4xl font-bold text-zinc-500">…</span>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-base font-semibold text-zinc-400">Waiting for {remoteName}</p>
+                      <p className="mt-0.5 text-xs text-zinc-600">Not yet in session</p>
                     </div>
                   </div>
                 )}

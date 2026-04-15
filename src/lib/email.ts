@@ -3,6 +3,7 @@ import {
   buildEmailHtml,
   detailRow,
   infoCard,
+  numberedSteps,
   secondaryCta,
   sectionHeading,
   starRating,

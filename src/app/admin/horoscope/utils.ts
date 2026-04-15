@@ -1,6 +1,28 @@
 import { ASPECT_TYPE_WORDS, MONTH_NAMES } from "./constants";
 import type { BirthInput } from "./types";
 
+export function orderPlanetEntries<T extends { name?: string | null }>(items: T[], categories: string[]): T[] {
+  const ordered: T[] = [];
+  const matched = new Set<T>();
+
+  for (const category of categories) {
+    for (const item of items) {
+      if (item.name === category) {
+        ordered.push(item);
+        matched.add(item);
+      }
+    }
+  }
+
+  for (const item of items) {
+    if (!matched.has(item)) {
+      ordered.push(item);
+    }
+  }
+
+  return ordered;
+}
+
 export function parseDecimalTz(offset: string): number {
   const sign = offset[0] === "-" ? -1 : 1;
   const [h, m] = offset.slice(1).split(":").map(Number);

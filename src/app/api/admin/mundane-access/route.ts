@@ -82,13 +82,14 @@ export async function POST(req: NextRequest) {
 
   // Use direct lookup via RPC if available, else fall back to listUsers search
   // We need to find the user by email — use Supabase auth admin API
-  const { data: { users: allUsers }, error: searchErr } = await admin.auth.admin.listUsers({
+  const { data: mundaneListData, error: searchErr } = await admin.auth.admin.listUsers({
     perPage: 1000,
   });
   void users; // used above for error checking only
   if (searchErr) return NextResponse.json({ error: searchErr.message }, { status: 500 });
 
-  const targetUser = allUsers.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+  const allUsers2 = (mundaneListData?.users ?? []) as Array<{ id: string; email?: string }>;
+  const targetUser = allUsers2.find((u) => u.email?.toLowerCase() === email.toLowerCase());
   if (!targetUser) {
     return NextResponse.json({ error: `No user found with email: ${email}` }, { status: 404 });
   }

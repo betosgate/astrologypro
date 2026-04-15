@@ -183,9 +183,10 @@ export async function provisionPerennialHousehold(
         // account they use. Just attach them to the household.
         const msg = createError.message ?? "";
         if (/already (registered|exists)|User already/i.test(msg)) {
-          const { data: usersList } =
+          const { data: usersListData } =
             await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-          const existing = usersList?.users.find(
+          const usersListArr = (usersListData?.users ?? []) as Array<{ id: string; email?: string }>;
+          const existing = usersListArr.find(
             (u) => (u.email ?? "").toLowerCase() === emailNormalized,
           );
           if (!existing) {

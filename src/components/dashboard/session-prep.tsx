@@ -30,7 +30,10 @@ import {
   Sparkles,
   Video,
   Loader2,
+  Download,
+  Share2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { getSessionInsights } from "@/lib/astrology";
 
 interface BookingData {
@@ -108,11 +111,34 @@ function useCountdown(targetDate: string) {
   return timeLeft;
 }
 
+interface SessionDetails {
+  chime_meeting_id: string | null;
+  actual_duration_minutes: number | null;
+  recording_url: string | null;
+  recording_share_id: string | null;
+  video_provider: string | null;
+  total_amount: number | null;
+  overage_amount: number | null;
+}
+
 function PrepContent({ booking }: SessionPrepProps) {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [joiningSession, setJoiningSession] = useState(false);
+  const [sessionDetails, setSessionDetails] = useState<SessionDetails | null>(null);
+  const [loadingSession, setLoadingSession] = useState(false);
   const timeLeft = useCountdown(booking.scheduled_at);
+
+  // Fetch session/recording details for completed bookings
+  useEffect(() => {
+    if (booking.status !== "completed") return;
+    setLoadingSession(true);
+    fetch(`/api/bookings/${booking.id}/session-details`)
+      .then((r) => r.json())
+      .then((d) => setSessionDetails(d))
+      .catch(() => setSessionDetails(null))
+      .finally(() => setLoadingSession(false));
+  }, [booking.id, booking.status]);
 
   const storageKey = `session-prep-${booking.id}`;
 
@@ -169,7 +195,94 @@ function PrepContent({ booking }: SessionPrepProps) {
 
   return (
     <div className="flex flex-col gap-5 p-1">
-      {/* Timer + Join Session */}
+
+      {/* ── COMPLETED: Session Details + Recording ─────────────────────── */}
+      {booking.status === "completed" && (
+        loadingSession ? (
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/20 p-4">
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Loading session details…</p>
+          </div>
+        ) : sessionDetails?.chime_meeting_id ? (
+          <>
+            {/* Session Details */}
+            <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Video className="size-3.5 text-muted-foreground" />
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Session Details</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Provider</p>
+                  <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary capitalize">
+                    {sessionDetails.video_provider ?? "chime"}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Booked Duration</p>
+                  <p className="font-medium">{booking.duration_minutes} min</p>
+                </div>
+                {sessionDetails.actual_duration_minutes != null && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Actual Duration</p>
+                    <p className="font-medium">{sessionDetails.actual_duration_minutes} min</p>
+                  </div>
+                )}
+                {sessionDetails.total_amount != null && sessionDetails.total_amount > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total Charged</p>
+                    <p className="font-semibold">${(sessionDetails.total_amount / 100).toFixed(2)}</p>
+                  </div>
+                )}
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Meeting ID</p>
+                <p className="text-xs font-mono text-foreground/60 break-all">{sessionDetails.chime_meeting_id}</p>
+              </div>
+            </div>
+
+            {/* Recording */}
+            <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-3">
+              <div className="flex items-center gap-1.5">
+                <Video className="size-3.5 text-muted-foreground" />
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Recording</p>
+              </div>
+              {sessionDetails.recording_url ? (
+                <>
+                  <div className="rounded-lg overflow-hidden border border-border bg-black" style={{ aspectRatio: "16/9" }}>
+                    <video src={sessionDetails.recording_url} controls preload="metadata" className="w-full h-full" />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <a href={sessionDetails.recording_url} download target="_blank" rel="noopener noreferrer" className="w-full">
+                      <Button size="sm" variant="outline" className="w-full gap-2">
+                        <Download className="size-3.5" />Download Recording
+                      </Button>
+                    </a>
+                    {sessionDetails.recording_share_id && (
+                      <Button size="sm" variant="ghost" className="w-full gap-2 text-xs text-muted-foreground"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/session/${sessionDetails.recording_share_id}/recording`);
+                          toast.success("Share link copied to clipboard");
+                        }}>
+                        <Share2 className="size-3.5" />Copy Client Share Link
+                      </Button>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">No recording available yet.</p>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="rounded-lg border border-border bg-muted/20 p-3">
+            <p className="text-sm text-muted-foreground">No session data found for this booking.</p>
+          </div>
+        )
+      )}
+
+      {/* Timer + Join Session (upcoming/in-progress only) */}
+      {booking.status !== "completed" && (
       <div className="flex items-center justify-between rounded-lg bg-muted p-3">
         <div className="flex items-center gap-2 text-sm">
           <Clock className="size-4 text-muted-foreground" />
@@ -177,6 +290,7 @@ function PrepContent({ booking }: SessionPrepProps) {
         </div>
         <span className="text-sm font-semibold">{timeLeft}</span>
       </div>
+      )}
 
       {["confirmed", "in_progress", "pending"].includes(booking.status) && (
         <Button

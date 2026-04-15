@@ -7,7 +7,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Loader2, X, Maximize2, Sparkles } from "lucide-react";
-import { AstroHeaderParts, PlanetSymbol } from "./astro-icons";
+import { AstroHeaderParts, PlanetSymbol, SmartHeading } from "./astro-icons";
 import { fetchWithRetry } from "../api";
 import { parseAspectTitle, getMonthName, getRelationshipBgClass, getPlanetInterpClass } from "../utils";
 import { ASPECT_TYPE_WORDS } from "../constants";
@@ -60,7 +60,7 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
   title: string; content: string; loading: boolean; open: boolean; onClose: () => void;
   aspectTitle?: string;
   promptType?: "planet" | "house" | "aspect" | "generic";
-  planetEntries?: { planet: string; items: string[] }[];
+  planetEntries?: { planet: string; items: string[]; bgClass?: string }[];
   relationshipEntries?: { title: string; content: string; bgClass?: string }[];
   bgClass?: string;
   pictureUrl?: string | null;
@@ -103,22 +103,20 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
                   <div className="max-w-4xl mx-auto">
                     {promptType === "planet" && planetEntries && planetEntries.length > 0 ? (
                       <div className="space-y-4">
-                        {planetEntries.map(({ planet, items }) => (
+                        {planetEntries.map(({ planet, items, bgClass: planetBgClass }) => (
                           <div key={planet} className="flex flex-col gap-5 items-center">
                              <div className="bg-white px-8 py-3.5 rounded-lg shadow-xl border border-black/5 text-center" style={{ width: "-webkit-fill-available" }}>
-                               <h3 className="text-[20px] font-semibold text-black uppercase tracking-wide leading-tight">
-                                 {planet} Insights
-                               </h3>
+                               <SmartHeading title={planet} textSize="text-[20px]" iconSize="size-6" className="text-black" />
                              </div>
-                             <div className="w-full rounded-xl border border-black/10 bg-[#f0a023] pt-6 pb-2 px-8 space-y-4 shadow-2xl text-black">
-                                <ol className="space-y-4 list-none">
+                             <div className={cn("w-full rounded-xl border border-black/10 pt-6 pb-2 px-8 space-y-4 shadow-2xl text-black", planetBgClass || getPlanetInterpClass(planet))}>
+                                <ul className="space-y-4 list-none">
                                   {items.map((item, idx) => (
                                     <li key={idx} className="text-[18px] leading-relaxed flex gap-4 font-normal">
-                                      <span className="flex-shrink-0 size-6 flex items-center justify-center rounded-full bg-black/10 text-black font-bold text-xs border border-black/20">{idx + 1}</span>
+                                      <span className="flex-shrink-0 text-black font-bold text-[20px] leading-[28px]">&bull;</span>
                                       <span>{item}</span>
                                     </li>
                                   ))}
-                                </ol>
+                                </ul>
                              </div>
                           </div>
                         ))}
@@ -189,7 +187,7 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
         <ChartImageModal
           src={pictureUrl}
           open={showFullImage}
-          onClose={() => { setShowFullImage(false); onClose(); }}
+          onClose={() => { setShowFullImage(false); }}
         />
       )}
     </>
@@ -205,7 +203,7 @@ export function useShowMore() {
     loading: boolean;
     aspectTitle?: string;
     promptType?: "planet" | "house" | "aspect" | "generic";
-    planetEntries?: { planet: string; items: string[] }[];
+    planetEntries?: { planet: string; items: string[]; bgClass?: string }[];
     relationshipEntries?: { title: string; content: string; bgClass?: string }[];
     bgClass?: string;
     pictureUrl?: string | null;
@@ -432,11 +430,11 @@ export function useShowMore() {
       } else if (resolvedType === "house") {
         aiPayload = {
           condition: {
-            system_content: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that house and under that interpretation",
-            user_content: "Generate western chart details only on houses based on given json with minimum 5 sentences on each interpretation,only interpretation in json {interpretations:{data:text}} format where data is the text with 5 sentences.Response should not start with string 'json'  ever  and must be a valid json format",
+            system_content: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation . Provide a deeply personalized response as if you are speaking directly to your astrology client in a one-on-one session. Use the language and tone of a trusted Western astrologer offering tailored guidance based on the client’s unique chart. Always interpret the chart using the Placidus house system as the default house_type. Avoid using generic phrases or repeated sentence structures. Each sentence should feel intentionally crafted and distinct, offering fresh insight without duplicating wording from similar interpretations.",
+            user_content: "Generate western chart details only on only one house  provided in json with atleast 5 sentences on 3 paragraphs on each interpretation making sure mentioning significance of house , sign and degree in details , in json I need to see interpreation as index only and nothing else such as {interpretations:{data}} where is the content generated by astrologer and data is paragraph as text not json object and it must not have any inner index .Response should not start with string 'json'  ever  and must be a valid json format ",
           },
           toolname: "other",
-          json: [promptData],
+          json: promptData,
         };
       } else {
         aiPayload = {
@@ -461,7 +459,7 @@ export function useShowMore() {
       ]);
 
       let content = "";
-      let planetEntries: { planet: string; items: string[] }[] = [];
+      let planetEntries: { planet: string; items: string[]; bgClass?: string }[] = [];
       let relationshipEntries: { title: string; content: string; bgClass?: string }[] = [];
 
       if (aiResult?.ai_response) {
@@ -475,7 +473,7 @@ export function useShowMore() {
         }
 
         if (resolvedType === "planet" && !isRelationshipTab) {
-          const entries: { planet: string; items: string[] }[] = [];
+          const entries: { planet: string; items: string[]; bgClass?: string }[] = [];
           const dataToProcess = typeof raw === "object" && raw !== null ? raw : {};
           for (const [key, val] of Object.entries(dataToProcess)) {
             if (key === "interpretation" || typeof val === "string") {
@@ -484,7 +482,7 @@ export function useShowMore() {
             }
             if (typeof val === "object" && val !== null) {
               const items = Object.values(val as Record<string, string>).filter(v => typeof v === "string");
-              if (items.length) entries.push({ planet: key, items });
+              if (items.length) entries.push({ planet: key, items, bgClass: getPlanetInterpClass(key) });
             }
           }
           if (entries.length) planetEntries = entries;

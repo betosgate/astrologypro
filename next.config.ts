@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // @ts-ignore — eslint option not in this version's NextConfig type
   eslint: {
     ignoreDuringBuilds: true,
   },

@@ -68,15 +68,15 @@ async function findQuizByIdOrLessonId(
   }
 
   return {
-    quiz: {
-      id: id,
-      lesson_id: id,
-      title: lesson.data.title ? `${lesson.data.title} Quiz` : "Lesson Quiz",
-      questions: [],
-      pass_score: 70,
-      is_active: lesson.data.is_active ?? true,
-      created_at: lesson.data.created_at,
-    },
+      quiz: {
+        id: id,
+        lesson_id: id,
+        title: lesson.data.title ? `${lesson.data.title} Quiz` : "Lesson Quiz",
+        questions: [],
+        pass_score: 100,
+        is_active: lesson.data.is_active ?? true,
+        created_at: lesson.data.created_at,
+      },
     synthetic: true,
   };
 }
@@ -185,7 +185,7 @@ export async function PUT(
   const payload = {
     title: title.trim(),
     lesson_id,
-    pass_score: pass_score ?? 70,
+    pass_score: 100,
     is_active: is_active ?? true,
     questions: normalized.questions,
   };

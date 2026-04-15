@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { WALKTHROUGH_SECTIONS } from "@/lib/walkthrough-data";
 import ScreenshotLightbox from "../_components/screenshot-lightbox";
+import { CollapsibleText } from "../_components/collapsible-text";
 import { ChevronRight, LayoutDashboard, Layers, MousePointer2 } from "lucide-react";
 
 export function generateStaticParams() {
@@ -76,9 +77,7 @@ export default async function RoleWalkthroughPage({
             <p className="mt-4 text-lg font-medium text-amber-500/80">
               {section.tagline}
             </p>
-            <p className="mt-4 text-base leading-relaxed text-muted-foreground font-medium">
-              {section.roleDescription}
-            </p>
+            <CollapsibleText text={section.roleDescription} maxLines={4} className="mt-4" />
           </div>
 
           <div className="flex flex-wrap gap-3 lg:flex-nowrap">
@@ -94,11 +93,11 @@ export default async function RoleWalkthroughPage({
         </div>
 
         {/* Capabilities Grid */}
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {section.capabilities.map((cap) => (
-            <div key={cap} className="flex items-start gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
-              <div className="mt-1 size-1.5 shrink-0 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
-              <p className="text-xs font-medium text-muted-foreground">{cap}</p>
+            <div key={cap} className="flex items-start gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3">
+              <div className="mt-1.5 size-1.5 shrink-0 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+              <p className="text-xs font-medium leading-relaxed text-muted-foreground">{cap}</p>
             </div>
           ))}
         </div>

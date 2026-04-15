@@ -10,11 +10,15 @@ export const dynamic = "force-dynamic";
  * POST /api/community/checkout
  * Creates a Stripe Checkout session for community membership.
  *
- * Plans:
- *   - perennial_mandalism individual: $9.97/month (STRIPE_PRICE_COMMUNITY_INDIVIDUAL)
- *   - perennial_mandalism family:     $19.97/month (STRIPE_PRICE_COMMUNITY_FAMILY)
- *   - mystery_school:                 $97 one-time + $27/month
- *       (STRIPE_PRICE_MYSTERY_ENROLLMENT + STRIPE_PRICE_MYSTERY_MONTHLY)
+ * All pricing (amounts, Stripe price IDs) is read from the `pricing_plans`
+ * table — the admin pricing screen is the single source of truth.
+ *
+ * Mystery School plans:
+ *   - plan_mystery_monthly:             recurring subscription + optional one-time enrollment
+ *   - plan_mystery_monthly_pm_discount: discounted recurring for active PM members
+ *
+ * Perennial Mandalism plans:
+ *   - plan_pm_individual / plan_pm_couple / plan_pm_family
  *
  * Body for mystery_school:
  * {
@@ -26,12 +30,6 @@ export const dynamic = "force-dynamic";
  *
  * PM and MS memberships coexist (parallel entitlement model).
  * Buying MS does NOT cancel an existing PM subscription.
- * The webhook provisions mystery_school_students as the MS entitlement;
- * community_members continues to track PM membership separately.
- *
- * When the admin PM-discount toggle is enabled and the user is an active PM
- * member, the discounted monthly price (STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT)
- * is used instead of the standard price.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -81,70 +79,140 @@ export async function POST(request: NextRequest) {
     }
 
     const isFamily = planType === "family" && !isMysterySchool;
+    const isCouple = planType === "couple" && !isMysterySchool;
+    const admin = createAdminClient();
 
-    // --- Build Stripe line items ---
-    let lineItems: Array<
-      | { price: string; quantity: 1 }
-      | { price_data: { currency: string; product_data: { name: string }; unit_amount: number }; quantity: 1 }
-    > = [];
+    // --- Build Stripe line items from pricing_plans ---
+    //
+    // Stripe mode: "subscription" allows mixing a saved one-time Price with
+    // recurring line items, but does NOT allow inline price_data without
+    // `recurring`. For one-time fees without a saved Stripe Price, we create
+    // an ad-hoc Stripe Price on the fly via stripe.prices.create().
+    let lineItems: Array<{ price: string; quantity: 1 }> = [];
 
     if (isMysterySchool) {
-      const enrollmentPriceId = process.env.STRIPE_PRICE_MYSTERY_ENROLLMENT;
-      const standardMonthlyPriceId = process.env.STRIPE_PRICE_MYSTERY_MONTHLY;
-      const discountMonthlyPriceId = process.env.STRIPE_PRICE_MYSTERY_MONTHLY_PM_DISCOUNT;
-      if (!enrollmentPriceId || !standardMonthlyPriceId) {
+      // Determine which plan to use: standard or PM discount
+      let planId = "plan_mystery_monthly";
+
+      // Check if PM-discount applies
+      const [memberResult, settingsResult] = await Promise.all([
+        admin
+          .from("community_members")
+          .select("id, membership_type, membership_status")
+          .eq("user_id", user.id)
+          .eq("membership_type", "perennial_mandalism")
+          .eq("membership_status", "active")
+          .maybeSingle(),
+        admin
+          .from("platform_settings")
+          .select("ms_pm_discount_enabled")
+          .limit(1)
+          .single(),
+      ]);
+
+      const isActivePm = !!memberResult.data;
+      const discountEnabled = settingsResult.data?.ms_pm_discount_enabled ?? true;
+
+      if (isActivePm && discountEnabled) {
+        planId = "plan_mystery_monthly_pm_discount";
+      }
+
+      // Fetch the selected plan from pricing_plans
+      const { data: plan, error: planErr } = await admin
+        .from("pricing_plans")
+        .select("plan_id, display_name, onetime_amount, onetime_currency, recurring_amount, recurring_currency, recurring_interval, stripe_price_id")
+        .eq("plan_id", planId)
+        .eq("is_active", true)
+        .single();
+
+      if (planErr || !plan) {
         return NextResponse.json(
-          { error: "Mystery School Stripe prices not configured." },
+          { error: "Mystery School pricing plan not found or inactive." },
           { status: 500 }
         );
       }
 
-      // Determine if PM-discount applies: user must be active PM member AND
-      // admin toggle must be enabled AND the discount price must be configured.
-      let monthlyPriceId = standardMonthlyPriceId;
-
-      if (discountMonthlyPriceId) {
-        const admin = createAdminClient();
-
-        // Check both conditions in parallel
-        const [memberResult, settingsResult] = await Promise.all([
-          admin
-            .from("community_members")
-            .select("id, membership_type, membership_status")
-            .eq("user_id", user.id)
-            .eq("membership_type", "perennial_mandalism")
-            .eq("membership_status", "active")
-            .maybeSingle(),
-          admin
-            .from("platform_settings")
-            .select("ms_pm_discount_enabled")
-            .limit(1)
-            .single(),
-        ]);
-
-        const isActivePm = !!memberResult.data;
-        const discountEnabled = settingsResult.data?.ms_pm_discount_enabled ?? true;
-
-        if (isActivePm && discountEnabled) {
-          monthlyPriceId = discountMonthlyPriceId;
-        }
+      // One-time enrollment fee — create an ad-hoc Stripe Price
+      if (plan.onetime_amount != null && plan.onetime_amount > 0) {
+        const onetimePrice = await stripe.prices.create({
+          currency: (plan.onetime_currency ?? "USD").toLowerCase(),
+          unit_amount: Math.round(plan.onetime_amount * 100),
+          product_data: { name: `${plan.display_name} — Enrollment Fee` },
+        });
+        lineItems.push({ price: onetimePrice.id, quantity: 1 });
       }
 
-      lineItems = [
-        { price: enrollmentPriceId, quantity: 1 },
-        { price: monthlyPriceId, quantity: 1 },
-      ];
+      // Recurring subscription — use stripe_price_id from pricing_plans
+      if (plan.stripe_price_id) {
+        lineItems.push({ price: plan.stripe_price_id, quantity: 1 });
+      } else if (plan.recurring_amount != null && plan.recurring_amount > 0) {
+        // Fallback: create ad-hoc recurring price if no stripe_price_id configured
+        const recurringPrice = await stripe.prices.create({
+          currency: (plan.recurring_currency ?? "USD").toLowerCase(),
+          unit_amount: Math.round(plan.recurring_amount * 100),
+          recurring: { interval: (plan.recurring_interval ?? "month") as "month" | "year" },
+          product_data: { name: plan.display_name },
+        });
+        lineItems.push({ price: recurringPrice.id, quantity: 1 });
+      }
+
+      if (lineItems.length === 0) {
+        return NextResponse.json(
+          { error: "Mystery School plan has no configured prices." },
+          { status: 500 }
+        );
+      }
     } else {
-      const priceId = isFamily
-        ? process.env.STRIPE_PRICE_COMMUNITY_FAMILY
-        : process.env.STRIPE_PRICE_COMMUNITY_INDIVIDUAL;
-      if (!priceId) {
+      // Perennial Mandalism — resolve plan_id from planType
+      const pmPlanId = isFamily
+        ? "plan_pm_family"
+        : isCouple
+          ? "plan_pm_couple"
+          : "plan_pm_individual";
+
+      const { data: plan, error: planErr } = await admin
+        .from("pricing_plans")
+        .select("stripe_price_id, display_name, recurring_amount, recurring_currency, recurring_interval, onetime_amount, onetime_currency")
+        .eq("plan_id", pmPlanId)
+        .eq("is_active", true)
+        .single();
+
+      if (planErr || !plan) {
         return NextResponse.json(
-          { error: "Community Stripe price not configured." },
+          { error: "Community pricing plan not found or inactive." },
           { status: 500 }
         );
       }
-      lineItems = [{ price: priceId, quantity: 1 }];
+
+      // One-time fee if configured — create an ad-hoc Stripe Price
+      if (plan.onetime_amount != null && plan.onetime_amount > 0) {
+        const onetimePrice = await stripe.prices.create({
+          currency: (plan.onetime_currency ?? "USD").toLowerCase(),
+          unit_amount: Math.round(plan.onetime_amount * 100),
+          product_data: { name: `${plan.display_name} — One-Time Fee` },
+        });
+        lineItems.push({ price: onetimePrice.id, quantity: 1 });
+      }
+
+      // Recurring subscription
+      if (plan.stripe_price_id) {
+        lineItems.push({ price: plan.stripe_price_id, quantity: 1 });
+      } else if (plan.recurring_amount != null && plan.recurring_amount > 0) {
+        const recurringPrice = await stripe.prices.create({
+          currency: (plan.recurring_currency ?? "USD").toLowerCase(),
+          unit_amount: Math.round(plan.recurring_amount * 100),
+          recurring: { interval: (plan.recurring_interval ?? "month") as "month" | "year" },
+          product_data: { name: plan.display_name },
+        });
+        lineItems.push({ price: recurringPrice.id, quantity: 1 });
+      }
+
+      if (lineItems.length === 0) {
+        return NextResponse.json(
+          { error: "Community plan has no configured prices." },
+          { status: 500 }
+        );
+      }
     }
 
     // --- Build metadata ---
@@ -152,7 +220,7 @@ export async function POST(request: NextRequest) {
       type: "community",
       userId: user.id,
       membershipType,
-      planType: isFamily ? "family" : "individual",
+      planType: isFamily ? "family" : isCouple ? "couple" : "individual",
     };
 
     if (isMysterySchool && entry_quarter && entry_year) {

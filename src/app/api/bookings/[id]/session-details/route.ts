@@ -11,9 +11,11 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     const supabase = await createClient();
     const {
       data: { user },
@@ -36,19 +38,15 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Fetch only the columns that may not exist in older DB states —
-    // use a broad select and let PostgREST ignore unknown columns gracefully.
-    const { data: booking, error } = await admin
+    // Step 1 — fetch columns that are guaranteed to exist
+    const { data: booking, error: baseError } = await admin
       .from("bookings")
-      .select(
-        "id, owner_id, diviner_id, recording_url, recording_share_id, actual_duration_minutes, chime_meeting_id, video_provider, total_amount, overage_amount"
-      )
-      .eq("id", params.id)
+      .select("id, diviner_id, chime_meeting_id, actual_duration_minutes")
+      .eq("id", id)
       .maybeSingle();
 
-    if (error) {
-      // If columns don't exist yet (schema not migrated), return empty rather than 500
-      console.warn("[session-details] query error:", error.message);
+    if (baseError) {
+      console.warn("[session-details] base query error:", baseError.message);
       return NextResponse.json({});
     }
 
@@ -57,19 +55,27 @@ export async function GET(
     }
 
     // Enforce ownership
-    const ownerId = (booking.owner_id ?? booking.diviner_id) as string;
-    if (ownerId !== diviner.id) {
+    if ((booking.diviner_id as string) !== diviner.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Step 2 — fetch optional columns (recording, billing etc.)
+    let extended: Record<string, unknown> = {};
+    const { data: ext } = await admin
+      .from("bookings")
+      .select("recording_url, recording_share_id, video_provider, total_amount, overage_amount")
+      .eq("id", id)
+      .maybeSingle();
+    if (ext) extended = ext as Record<string, unknown>;
+
     return NextResponse.json({
-      recording_url: booking.recording_url ?? null,
-      recording_share_id: booking.recording_share_id ?? null,
-      actual_duration_minutes: booking.actual_duration_minutes ?? null,
       chime_meeting_id: booking.chime_meeting_id ?? null,
-      video_provider: booking.video_provider ?? null,
-      total_amount: booking.total_amount ?? null,
-      overage_amount: booking.overage_amount ?? null,
+      actual_duration_minutes: booking.actual_duration_minutes ?? null,
+      recording_url: extended.recording_url ?? null,
+      recording_share_id: extended.recording_share_id ?? null,
+      video_provider: extended.video_provider ?? null,
+      total_amount: extended.total_amount ?? null,
+      overage_amount: extended.overage_amount ?? null,
     });
   } catch (err) {
     console.error("[session-details]", err);

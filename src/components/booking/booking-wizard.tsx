@@ -591,24 +591,6 @@ export function BookingWizard({
             </div>
           )}
 
-          {requiresPostPaymentIntake && portalSignInUrl && (
-            <Button
-              asChild
-              className="mb-4 w-full gap-2 bg-amber-600 text-white hover:bg-amber-700"
-              size="lg"
-            >
-              <a href={portalSignInUrl}>
-                <ExternalLink className="size-4" />
-                Complete Your Intake
-              </a>
-            </Button>
-          )}
-
-          {requiresPostPaymentIntake && (
-            <p className="mb-4 text-sm text-muted-foreground">
-              We’ll collect your birth details and product-specific questions after payment so checkout stays fast.
-            </p>
-          )}
 
           {/* Session Join Link */}
           {sessionJoinUrl && (

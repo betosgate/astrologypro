@@ -7,7 +7,7 @@ import { clearQuizQuestionProgress } from "@/lib/training/quiz-question-progress
 
 export const dynamic = "force-dynamic";
 
-const PASS_THRESHOLD_PCT = 70;
+const PASS_THRESHOLD_PCT = 100;
 const COOLDOWN_MINUTES = 30;
 const FREE_ATTEMPTS_BEFORE_COOLDOWN = 2; // first 2 attempts have no cooldown
 
