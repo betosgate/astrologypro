@@ -96,6 +96,16 @@
     border-bottom: none;
 }
 
+.house-information-table th,
+.house-information-table td {
+    text-align: center;
+}
+
+.asc-midheaven-vertex-table th,
+.asc-midheaven-vertex-table td {
+    text-align: center;
+}
+
 /* Specific Column Styling */
 .td-planet {
     font-weight: 500;

@@ -20,6 +20,10 @@ import {
   uploadTrainingPdf,
   uploadTrainingVideo,
 } from "@/lib/training/upload-video";
+import {
+  getDurationMinsFromFile,
+  getDurationMinsFromUrl,
+} from "@/lib/training/video-duration";
 
 // ---- types for sub-resource sections ----
 
@@ -349,6 +353,24 @@ export default function EditLessonPage() {
     }
   }
 
+  async function handleMainVideoUrlBlur(url: string) {
+    const durationMins = await getDurationMinsFromUrl(url);
+    if (durationMins == null) return;
+    setForm((prev) => ({
+      ...prev,
+      duration_mins: String(durationMins),
+    }));
+  }
+
+  async function handleLessonVideoUrlBlur(url: string) {
+    const durationMins = await getDurationMinsFromUrl(url);
+    if (durationMins == null) return;
+    setVideoForm((prev) => ({
+      ...prev,
+      duration_mins: String(durationMins),
+    }));
+  }
+
   async function handleDeleteVideo(videoId: string) {
     try {
       const res = await fetch(
@@ -614,12 +636,18 @@ export default function EditLessonPage() {
     setUploadPercent(0);
     setUploadStatus("Preparing upload…");
     try {
+      const durationMins = await getDurationMinsFromFile(file);
       const { url } = await uploadTrainingVideo({
         file,
         onProgress: (percent) => setUploadPercent(percent),
         onStatus: setUploadStatus,
       });
-      setForm((prev) => ({ ...prev, video_url: url }));
+      setForm((prev) => ({
+        ...prev,
+        video_url: url,
+        duration_mins:
+          durationMins != null ? String(durationMins) : prev.duration_mins,
+      }));
       setUploadedFileName(file.name);
       toast.success("Video uploaded.");
     } catch (err) {
@@ -886,7 +914,7 @@ export default function EditLessonPage() {
                     placeholder="https://www.youtube.com/watch?v=..."
                   />
                   <p className="text-xs text-muted-foreground">
-                    Paste a YouTube watch URL. The ID will be normalised automatically.
+                    Paste a YouTube watch URL. The ID will be normalised automatically. Duration stays manual for YouTube videos.
                   </p>
                 </div>
               )}
@@ -899,6 +927,7 @@ export default function EditLessonPage() {
                   onChange={(e) =>
                     setForm((prev) => ({ ...prev, video_url: e.target.value }))
                   }
+                  onBlur={(e) => void handleMainVideoUrlBlur(e.target.value)}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   placeholder="https://example.com/video.mp4"
                 />
@@ -1066,7 +1095,7 @@ export default function EditLessonPage() {
                   value={form.duration_mins}
                   onChange={handleChange}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                  placeholder="e.g. 30"
+                  placeholder="Auto-populated when video metadata is available"
                 />
               </div>
 
@@ -1218,6 +1247,7 @@ export default function EditLessonPage() {
                   type="url"
                   value={videoForm.video_url}
                   onChange={(e) => setVideoForm((p) => ({ ...p, video_url: e.target.value }))}
+                  onBlur={(e) => void handleLessonVideoUrlBlur(e.target.value)}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   placeholder="https://..."
                 />
@@ -1234,7 +1264,7 @@ export default function EditLessonPage() {
                     value={videoForm.duration_mins}
                     onChange={(e) => setVideoForm((p) => ({ ...p, duration_mins: e.target.value }))}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                    placeholder="e.g. 15"
+                    placeholder="Auto-populated when video metadata is available"
                   />
                 </div>
                 <div className="space-y-1.5">

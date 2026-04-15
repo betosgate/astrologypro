@@ -17,6 +17,10 @@ import {
   uploadTrainingPdf,
   uploadTrainingVideo,
 } from "@/lib/training/upload-video";
+import {
+  getDurationMinsFromFile,
+  getDurationMinsFromUrl,
+} from "@/lib/training/video-duration";
 import { SectionContainer } from "@/components/shared/section-container";
 
 interface Category {
@@ -189,12 +193,18 @@ export default function NewLessonPage() {
     setUploadPercent(0);
     setUploadStatus("Preparing upload…");
     try {
+      const durationMins = await getDurationMinsFromFile(file);
       const { url } = await uploadTrainingVideo({
         file,
         onProgress: (percent) => setUploadPercent(percent),
         onStatus: setUploadStatus,
       });
-      setForm((prev) => ({ ...prev, video_url: url }));
+      setForm((prev) => ({
+        ...prev,
+        video_url: url,
+        duration_mins:
+          durationMins != null ? String(durationMins) : prev.duration_mins,
+      }));
       setUploadedFileName(file.name);
       toast.success("Video uploaded.");
     } catch (err) {
@@ -204,6 +214,15 @@ export default function NewLessonPage() {
       setUploadPercent(null);
       setUploadStatus(null);
     }
+  }
+
+  async function handleMainVideoUrlBlur(url: string) {
+    const durationMins = await getDurationMinsFromUrl(url);
+    if (durationMins == null) return;
+    setForm((prev) => ({
+      ...prev,
+      duration_mins: String(durationMins),
+    }));
   }
 
   async function handlePdfFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -423,7 +442,7 @@ export default function NewLessonPage() {
                     placeholder="https://www.youtube.com/watch?v=..."
                   />
                   <p className="text-xs text-muted-foreground">
-                    Paste a YouTube watch URL. The ID will be normalised automatically.
+                    Paste a YouTube watch URL. The ID will be normalised automatically. Duration stays manual for YouTube videos.
                   </p>
                 </div>
               )}
@@ -435,6 +454,7 @@ export default function NewLessonPage() {
                   onChange={(e) =>
                     setForm((prev) => ({ ...prev, video_url: e.target.value }))
                   }
+                  onBlur={(e) => void handleMainVideoUrlBlur(e.target.value)}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   placeholder="https://example.com/video.mp4"
                 />
@@ -568,7 +588,7 @@ export default function NewLessonPage() {
                   value={form.duration_mins}
                   onChange={handleChange}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                  placeholder="e.g. 30"
+                  placeholder="Auto-populated when video metadata is available"
                 />
               </div>
 

@@ -2,9 +2,11 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/admin-auth";
+import { getUserPortals } from "@/lib/user-roles";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { MobileNav } from "@/components/dashboard/mobile-nav";
 import { PhoneWidgetLoader } from "@/components/dashboard/phone-widget-loader";
+import { PortalSwitcher } from "@/components/shared/portal-switcher";
 import { RouteTracker } from "@/components/shared/route-tracker";
 
 export const metadata = {
@@ -48,6 +50,8 @@ export default async function DashboardLayout({
     if (!diviner.onboarding_completed) redirect("/onboarding");
   }
 
+  const portals = await getUserPortals(supabase, user.id, { isAdmin });
+
   return (
     <div className="min-h-screen bg-background">
       <RouteTracker href="/dashboard" />
@@ -59,6 +63,12 @@ export default async function DashboardLayout({
         }}
       />
       <main className="lg:pl-64">
+        {/* Top utility bar — only visible on desktop when user has multiple roles */}
+        {portals.length > 1 && (
+          <div className="hidden lg:flex items-center justify-end gap-2 border-b px-6 h-10 bg-background">
+            <PortalSwitcher portals={portals} currentBase="/dashboard" />
+          </div>
+        )}
         <div className="container mx-auto max-w-6xl p-4 pb-20 py-6 lg:p-8 lg:pb-8">
           {children}
         </div>

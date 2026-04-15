@@ -53,8 +53,11 @@ const GROUP_ICONS: Record<string, LucideIcon> = {
   Config: Settings2,
   Curriculum: GraduationCap,
   Dashboard: LayoutDashboard,
+  "Dashboard & Decans": Eye,
   Discovery: Search,
+  "Discovery & Access": Search,
   Engagement: Sparkles,
+  "Enrollment & Checkout": ShoppingBag,
   Features: Layers,
   Governance: Shield,
   "Horoscope Toolkit": Sparkles,
@@ -65,6 +68,7 @@ const GROUP_ICONS: Record<string, LucideIcon> = {
   "Manage Testimonial": MessageSquare,
   Support: MessageSquare,
   Tools: Settings2,
+  "Training & Graduation": GraduationCap,
   Reports: BarChart3,
 };
 
@@ -77,9 +81,12 @@ const GROUP_DESCRIPTIONS: Record<string, string> = {
   Config: "Platform settings, legal controls, and audit surfaces.",
   Curriculum: "Training journeys, structured lessons, and progression.",
   Dashboard: "Primary role-aware command centers.",
+  "Dashboard & Decans": "The 36-decan journey dashboard, individual decan study pages, and guided ritual execution.",
   "Manage Testimonial": "Moderation of user feedback and public ratings.",
   Discovery: "Search, browse, and booking paths for visitors.",
+  "Discovery & Access": "How users find, access, and switch to the Mystery School portal.",
   Engagement: "Live experiences, streaming, and participation loops.",
+  "Enrollment & Checkout": "Multi-step signup wizard, Stripe payment, and post-checkout finalization.",
   Features: "Additional feature pages in this role experience.",
   Governance: "Oversight, user management, and system controls.",
   Marketing: "Public brand surfaces and campaign-oriented pages.",
@@ -88,6 +95,7 @@ const GROUP_DESCRIPTIONS: Record<string, string> = {
   "My Schedule": "Availability, sessions, and calendar operations.",
   Services: "Orders, bookings, subscriptions, and account activity.",
   Training: "Mentor-assigned learning and trainee milestones.",
+  "Training & Graduation": "Foundation Q1 curriculum, lesson modules, graduation eligibility, and post-grad ritual builder.",
 };
 
 export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Props) {

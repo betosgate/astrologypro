@@ -2761,285 +2761,283 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   {
     role: "Mystery School",
     slug: "mystery-school",
-    tagline: "Esoteric curriculum and decan mastery",
+    tagline: "Enrollment, foundation training, decan mastery, and graduation",
     roleDescription:
-      "The Mystery School is the deepest level of study at the School of Our Divine Infinite Being. Students progress through all 36 decans of the zodiac — each one a 10-degree segment with its own ruling spirit, mythology, tarot card, and ritual requirement. The school blends academic study with active spiritual practice through structured lessons, mandatory rituals, personal journals, live ceremony participation, and mentorship. This is for those committed to serious esoteric transformation.",
+      "The Mystery School is the deepest level of study at AstrologyPro — a structured initiatory programme lasting five quarters (15 months). Students begin by choosing one of four seasonal entry points aligned to astronomical equinox/solstice dates: Spring (~March 20), Summer (~June 21), Autumn (~September 22), or Winter (~December 21). The first quarter (Q1) is the 12-week Foundation Training — a sequential curriculum with weekly audio introductions from Beto, reading material, and task checklists. After completing Foundation Q1, the student enters the year-long decan cycle: 36 decans, one for each 10-degree segment of the zodiac wheel (3 per sign × 12 signs = 36). Each decan has a time-based window tied to its astronomical dates — it opens, stays active for approximately 10 days, then closes. During the active window, the student must complete three requirements: (1) perform a step-by-step guided ritual with invocations, gates, and affirmations; (2) submit a scrying journal recording a tarot card draw and spiritual experience; (3) submit a mundane impact journal reflecting on how the decan's energy appeared in relationships, work, and perception. If the student does not finish within the active window, a 2-day grace period begins. If they still do not finish, the decan is marked as 'missed' — the student must wait for a retry window the following year (or 5 years later for Q4 decans). Graduation requires all 12 foundation weeks complete, all 36 decans completed, and zero unresolved missed decans. Upon graduation, the student receives the title of Priest or Priestess of the Mystery School and gains access to the post-graduation Ritual Builder for designing custom rituals. The Mystery School operates on a separate subscription from Perennial Mandalism (PM) — a user can hold both simultaneously. PM members receive a discounted monthly rate if the admin toggle is enabled. Pricing is dynamic and admin-managed via the pricing_plans table.",
     icon: Eye,
     gradient: "from-violet-500/20 to-purple-600/10",
-    featureAreas: ["Decans", "Curriculum", "Rituals", "Journals", "Ceremonies", "Scrying", "Mentorship", "Community", "Billing"],
+    featureAreas: ["Enrollment", "Foundation Training", "Decans", "Rituals", "Journals", "Training Lessons", "Graduation", "Ritual Builder", "Subscription", "Portal Switching"],
     capabilities: [
-      "Navigate the 36 decans grid and track your progression through each decan study",
-      "Access and complete structured lessons with text, video, and downloadable materials",
-      "Submit personal journal entries as required by each decan study",
-      "Perform and record completion of ritual requirements for each decan",
-      "Participate in live school ceremonies and sacred group events",
-      "Practice scrying and record your observations in your scrying journal",
-      "Book private mentorship sessions with an assigned school mentor",
-      "Connect with fellow Mystery School students in the community area",
-      "Track your full curriculum progress and graduation requirements",
-      "Manage your school membership and billing",
+      "Enroll via a 4-step wizard: view pricing, choose an entry quarter, review, then pay via Stripe Checkout",
+      "Complete a 12-week Foundation Training quarter with weekly audio introductions, reading, and task checklists",
+      "Navigate all 36 decans in a colour-coded grid with live countdown timers and status indicators",
+      "Open each decan's study page to view ruling planet, sign, tarot card reference, and description",
+      "Complete three requirements per decan: perform the ritual, submit the scrying journal, submit the mundane journal",
+      "Run step-through rituals with a guided interface — invocations, gates, instructions, affirmations, and closings",
+      "Browse training categories and complete individual lessons with video, text content, and PDF downloads",
+      "Track graduation eligibility: 12 foundation weeks + 36 decans + zero unexcused misses",
+      "After graduation, design custom rituals in the post-graduation Ritual Builder",
+      "Manage your subscription via Stripe Billing Portal directly from the dashboard",
+      "Switch between PM Community and Mystery School portals using the header Portal Switcher",
+      "Discover Mystery School from the PM Community dashboard with upgrade CTAs and subscription status cards",
     ],
-    keyPages: ["Decans Grid", "Training Center", "Lesson View", "My Journal", "Ritual Tracker", "Ceremonies", "Scrying Room", "Community", "Mentorship", "Profile", "Billing"],
+    keyPages: ["PM Dashboard CTA", "Enrollment", "Checkout Success", "Login Redirect", "Portal Switcher", "Decans Dashboard", "Decan Detail", "Ritual Runner", "Foundation Training", "Training Category", "Lesson View", "Graduation", "Ritual Builder"],
     groups: [
       {
-        groupLabel: "Core Studies",
+        groupLabel: "Discovery & Access",
         cards: [
-          { title: "Decans Grid", description: "Your 36-decan progress map and entry point", href: "/mystery-school", icon: Eye, status: "live" },
-          { title: "Decan Detail", description: "Deep study of an individual decan", href: "/mystery-school/decan", icon: Star, status: "live" },
-          { title: "Training Center", description: "All lessons and curriculum programs", href: "/mystery-school/training", icon: BookOpen, status: "live" },
-          { title: "Lesson View", description: "Immersive lesson reading and video space", href: "/mystery-school/lesson", icon: ScrollText, status: "live" },
+          { title: "PM Dashboard CTA", description: "Mystery School upgrade cards on the Perennial Mandalism community dashboard", href: "/community", icon: Heart, status: "live" },
+          { title: "Login Redirect", description: "Auto-redirect to /mystery-school for active MS users after login", href: "/login", icon: Zap, status: "live" },
+          { title: "Portal Switcher", description: "Header links to switch between PM Community and Mystery School portals", href: "/mystery-school", icon: Layers, status: "live" },
         ],
       },
       {
-        groupLabel: "Practice & Devotion",
+        groupLabel: "Enrollment & Checkout",
         cards: [
-          { title: "My Journal", description: "Personal reflection journal for decan studies", href: "/mystery-school/journal", icon: FileText, status: "live" },
-          { title: "Rituals", description: "Required and optional ritual completion tracker", href: "/mystery-school/rituals", icon: Flame, status: "live" },
-          { title: "Ritual Builder", description: "Design and save your own ritual sequences", href: "/mystery-school/builder", icon: Sparkles, status: "live" },
-          { title: "Scrying Room", description: "Practice and record scrying observations", href: "/mystery-school/scrying", icon: Eye, status: "live" },
-          { title: "Ceremonies", description: "Live and archived school ceremony events", href: "/mystery-school/ceremonies", icon: Radio, status: "live" },
+          { title: "Enrollment Flow", description: "4-step signup: overview, quarter selection, review, Stripe payment", href: "/join/mystery-school", icon: Star, status: "live" },
+          { title: "Checkout Success", description: "Post-payment finalization with polling and redirect", href: "/join/mystery-school/checkout/success", icon: Zap, status: "live" },
+          { title: "Checkout Cancel", description: "Friendly cancellation page with return options", href: "/join/mystery-school/checkout/cancel", icon: Eye, status: "live" },
         ],
       },
       {
-        groupLabel: "Community & Support",
+        groupLabel: "Dashboard & Decans",
         cards: [
-          { title: "School Community", description: "Connect with fellow students", href: "/mystery-school/community", icon: Users, status: "live" },
-          { title: "Mentorship", description: "Sessions with your assigned school mentor", href: "/mystery-school/mentorship", icon: GraduationCap, status: "live" },
-          { title: "Progress Tracker", description: "Full curriculum completion overview", href: "/mystery-school/progress", icon: Activity, status: "live" },
+          { title: "Decans Dashboard", description: "36-decan grid, current decan hero, subscription info, progress bar", href: "/mystery-school", icon: Eye, status: "live" },
+          { title: "Decan Detail", description: "Individual decan study with ritual, scrying journal, and mundane journal", href: "/mystery-school/decans/[id]", icon: Star, status: "live" },
+          { title: "Ritual Runner", description: "Step-by-step guided ritual execution with timed reading", href: "/mystery-school/decans/[id]/ritual", icon: Flame, status: "live" },
         ],
       },
       {
-        groupLabel: "My Account",
+        groupLabel: "Training & Graduation",
         cards: [
-          { title: "Profile", description: "Your school profile and personal settings", href: "/mystery-school/profile", icon: User, status: "live" },
-          { title: "Billing", description: "Subscription management and payment history", href: "/mystery-school/billing", icon: CreditCard, status: "live" },
+          { title: "Foundation Training", description: "12-week Q1 foundation with audio, tasks, and sequential unlock", href: "/mystery-school/training", icon: BookOpen, status: "live" },
+          { title: "Training Category", description: "Module listing with lessons, durations, and video indicators", href: "/mystery-school/training/[categoryId]", icon: Layers, status: "live" },
+          { title: "Lesson View", description: "Individual lesson with video, content, and PDF downloads", href: "/mystery-school/training/[categoryId]/[lessonId]", icon: ScrollText, status: "live" },
+          { title: "Graduation", description: "Progress checklist, eligibility tracking, and certificate display", href: "/mystery-school/training/graduation", icon: GraduationCap, status: "live" },
+          { title: "Ritual Builder", description: "Post-graduation tool for designing custom ritual sequences", href: "/mystery-school/training/ritual-builder", icon: Sparkles, status: "live" },
         ],
       },
     ],
     screens: [
       {
-        name: "decans",
-        label: "Decans Grid",
-        description: "The visual map of all 36 decans — your personal progression dashboard for the Mystery School. Each of the 36 squares represents a 10-degree segment of the zodiac with its own colour, ruling spirit, and unlock status based on your progress.",
-        group: "Core Studies",
-        purpose: "This is your main home screen in the Mystery School. The 36 decans are arranged in a grid — 3 decans per zodiac sign, 12 signs, 36 total. Each square lights up when you unlock it and dims when it is still locked. Your job as a student is to progress through all 36, one at a time, completing the study, ritual, and journal requirement for each before the next one unlocks. Click any unlocked decan to enter its study space.",
+        name: "pm-dashboard-cta",
+        label: "PM Dashboard — Mystery School CTA",
+        description: "The Perennial Mandalism (PM) community dashboard at /community includes two Mystery School promotional sections. The Mystery School is a separate, deeper programme that PM members can upgrade to while keeping their PM membership. Both subscriptions run independently — purchasing Mystery School does NOT cancel Perennial Mandalism. PM members who also hold an active MS subscription get the discounted monthly rate ($17.03/month instead of $27/month) if the admin has enabled the ms_pm_discount_enabled toggle in platform_settings.",
+        group: "Discovery & Access",
+        purpose: "PM members discover the Mystery School through their existing community dashboard. Two sections appear: (1) A compact card near the top of the dashboard showing MS status — if the user has active MS access, it shows 'Mystery School access is active' with renewal date and an 'Open Mystery School' button; if cancelled/paused, it shows a 'Rejoin Mystery School' button; if never enrolled, it shows 'Deepen your practice with the Mystery School curriculum' with an 'Upgrade to Mystery School' button. (2) A larger promotional section lower on the page with a purple gradient card titled 'The Mystery School Awaits You', describing the programme as a sacred gateway with seasonal cohort entries. For users who already have MS access, this section instead shows their 5 subscription info cards (Status, Enrolled date, Billing amount, Next Renewal date, Cohort quarter/year) with 'Open Mystery School' and 'Manage Subscription' buttons. The dual-entitlement model means the PM dashboard always shows MS status because the user might have both — they are two parallel memberships, not an upgrade that replaces PM. All enroll links use /mystery-school/enroll which proxy.ts silently rewrites to /join/mystery-school.",
         bullets: [
-          "36-square grid — each cell represents one decan, arranged in zodiac sign order (Aries I, II, III → Taurus I, II, III → etc.)",
-          "Colour coding — locked decans appear dimmed, current decan highlighted, completed decans fully lit with a completion mark",
-          "Decan name and number — each cell shows the decan's name, ruling planet, and associated tarot card symbol",
-          "Click to study — tap any unlocked decan to open its full study page with all content and requirements",
-          "Progress indicator — a progress bar below the grid shows overall completion (e.g. 14 of 36 decans complete)",
-          "Current decan pointer — an arrow or highlight shows exactly which decan you are currently studying",
-          "Lock system — the next decan unlocks only after the current one's study, ritual, and journal are all marked complete"
+          "Compact CTA card: appears for all PM members, shows MS status (active/paused/cancelled/not enrolled) with contextual button text",
+          "Active MS users: 'Mystery School access is active' with renewal date, 'Open Mystery School' button linking to /mystery-school",
+          "Inactive/paused users: 'Rejoin Mystery School' button linking to /mystery-school/enroll",
+          "New users: 'Upgrade to Mystery School' with tagline about deepening practice — this is NOT an upgrade that replaces PM, it is a separate parallel subscription",
+          "Full promotional section: purple gradient card with 'The Mystery School Awaits You' heading, 'Sacred Gateway — Next Seasonal Cohort Open' subtitle, cohort info, gradient 'Enter the Sacred Gateway' CTA",
+          "Active users in promo section: 5 subscription info cards (Status, Enrolled, Billing, Renewal, Cohort) + 'Open Mystery School' button + 'Manage Subscription' button opening Stripe Billing Portal in new tab",
+          "Dual entitlement: PM and MS run side by side — the PM dashboard always shows MS status because the user may hold both memberships simultaneously"
+        ]
+      },
+      {
+        name: "login-redirect",
+        label: "Login Redirect",
+        description: "After login (magic link or password), the system automatically routes Mystery School users to /mystery-school. No manual portal selection is needed. The redirect is transparent — the user signs in and immediately lands on their dashboard. Because Mystery School and Perennial Mandalism are parallel memberships, a user may qualify for both portals. The system resolves this by checking saved portal preferences first (which portal did they last visit?), then falling back to a role hierarchy where Mystery School outranks Perennial Mandalism.",
+        group: "Discovery & Access",
+        purpose: "The login redirect logic in resolve-login-destination.ts runs after every authentication. It follows a priority chain: (1) Pending legal contracts — the user must sign any outstanding contracts before entering any portal; (2) Admin shortcut — admin users go to /admin; (3) Saved last_portal_url — if the user has a user_portal_preferences record with a trusted portal URL, they return to wherever they were last (this is how dual PM+MS users seamlessly return to the right dashboard); (4) Role hierarchy fallback — on first login with no saved preference, the system checks all role tables in parallel and picks the highest-priority role: diviner > trainee > social_advo > mystery_school > perennial_mandalism > client. For Mystery School specifically, the check queries mystery_school_students and validates: (a) status is 'active', OR status is 'cancelled' with access_expires_at still in the future; (b) billing fields are present — stripe_subscription_id is set, one_time_fee_paid is true, and one_time_fee_amount is a number. If both conditions pass, the user qualifies for /mystery-school. If they also have an active PM membership, MS wins in the hierarchy (it is higher priority). After the first visit, the system saves their last portal URL, so subsequent logins return them to whichever portal they last used.",
+        bullets: [
+          "Role hierarchy: diviner > trainee > social_advo > mystery_school > perennial_mandalism > client — MS outranks PM when both are active",
+          "MS billing validation: stripe_subscription_id must be set, one_time_fee_paid must be true, one_time_fee_amount must be a number — all three required",
+          "Cancelled with access: status = 'cancelled' still qualifies if access_expires_at is a future date (paid-through period)",
+          "Saved preference: user_portal_preferences.last_portal_url checked before hierarchy — lets dual users return to whichever dashboard they used last",
+          "Dual entitlement example: a user with both active PM and active MS lands on their last-visited portal, or /mystery-school if no preference saved (MS > PM in hierarchy)",
+          "Pending contracts: legal gate always checked first — user must sign any outstanding contracts before entering any portal",
+          "Onboarding gates: some roles (diviner, trainee, advocate, PM) have onboarding checks — MS does not have an onboarding step, so users go directly to the dashboard"
+        ]
+      },
+      {
+        name: "portal-switcher",
+        label: "Portal Switcher",
+        description: "A header component visible on desktop that shows links to all other portals the user has access to. Allows one-click switching between PM Community and Mystery School dashboards.",
+        group: "Discovery & Access",
+        purpose: "The PortalSwitcher component appears in the top-right header area of every portal layout (including the Mystery School layout). It calls getUserPortals() which queries all role tables in parallel — diviners, clients, social_advocates, community_members (active PM), mystery_school_students (active or cancelled-with-access). Each qualifying role produces a portal entry with a label and href. The switcher filters out the current portal and renders the remaining ones as compact text links separated by a pipe character. For a dual PM+MS user, the Mystery School layout header shows a 'Community' link, and the PM community layout header shows a 'Mystery School' link. The component is hidden on mobile (sm:flex) — mobile navigation handles portal access separately via the MobileNav hamburger menu.",
+        bullets: [
+          "Placement: right side of the portal header, desktop only (hidden on mobile via sm:flex)",
+          "Data source: getUserPortals() queries diviners, clients, social_advocates, community_members, mystery_school_students in parallel",
+          "MS portal shown when: mystery_school_students row exists with active status + valid billing, or cancelled with future access_expires_at",
+          "PM portal shown when: community_members row exists with membership_type = 'perennial_mandalism' and membership_status = 'active'",
+          "Rendering: compact text links with hover highlight, separated by a pipe divider",
+          "Dual user example: MS layout header shows 'Community' link; PM layout header shows 'Mystery School' link",
+          "Mobile alternative: MobileNav hamburger menu includes portal navigation items"
+        ]
+      },
+      {
+        name: "enrollment",
+        label: "Enrollment Flow",
+        description: "A 4-step enrollment wizard at /join/mystery-school that guides new students from overview to Stripe payment. The Mystery School is a 5-quarter (15-month) programme. Students choose one of four seasonal entry points — Spring (March equinox), Summer (June solstice), Autumn (September equinox), or Winter (December solstice). The first quarter is Foundation Training (12 weeks of structured study), followed by the 36-decan year-long practice cycle. Pricing is fetched dynamically from the admin pricing database (pricing_plans table) — not hardcoded. Active Perennial Mandalism (PM) members receive a discounted monthly rate if the admin has enabled the ms_pm_discount_enabled toggle.",
+        group: "Enrollment & Checkout",
+        purpose: "This is the entry point for all new Mystery School students. The flow walks the user through four sequential steps. Step 1 (Overview) presents four programme features — Foundation Training (12 weeks of structured weekly study with audio from Beto), 36-Decan Year-Long Practice (working through all 36 zodiac decans with rituals and journals), Ritual Performer (step-through ritual interface per decan), and Priest/Priestess Graduation (complete all 36 decans to earn the title). Pricing badges show the one-time enrollment fee and monthly subscription, loaded from /api/pricing/mystery_school (plan_mystery_monthly and plan_mystery_monthly_pm_discount rows in pricing_plans table). If the user is an active PM member AND the admin toggle ms_pm_discount_enabled is true, a discount notice shows the reduced monthly rate. Step 2 (Quarter Selection) displays the next 4 upcoming seasonal entry dates computed from hardcoded astronomical equinox/solstice dates (2026–2030). Each quarter card shows the emoji (🌱/☀️/🍂/❄️), the season name and year, the exact astronomical date (e.g. 'March 20, 2026'), and when Week 1 begins (7 days after the turning point). Step 3 (Review & Confirm) shows a summary card with the selected cohort, one-time fee, monthly cost, PM discount line (savings amount shown as a negative), and the effective monthly cost. A commitment checkbox must be checked: 'By continuing I agree to the 5-quarter commitment.' The 5-quarter structure is: Q1 Foundation (12 weeks) + Q2-Q5 Decan Year (36 decans across 4 quarters following the zodiac calendar). Step 4 (Payment) shows the final summary and an 'Enroll in Mystery School' button. Clicking it calls POST /api/community/checkout which reads the stripe_price_id for the recurring subscription from pricing_plans (plan_mystery_monthly or plan_mystery_monthly_pm_discount), creates an ad-hoc Stripe Price for the one-time enrollment fee using stripe.prices.create() with the amount and currency from the same table, and creates a Stripe Checkout session in subscription mode with both line items. The user is redirected to Stripe to complete payment.",
+        bullets: [
+          "Step 1 — Overview: hero with 4 programme features (Foundation Training, 36-Decan Practice, Ritual Performer, Graduation), pricing loaded from /api/pricing/mystery_school, PM discount notice shown conditionally",
+          "Step 2 — Quarter Selection: 4 upcoming entry quarters (Spring equinox ~Mar 20, Summer solstice ~Jun 21, Autumn equinox ~Sep 22, Winter solstice ~Dec 21), each showing astronomical date and Week 1 start (7 days after equinox/solstice)",
+          "Step 3 — Review & Confirm: summary with cohort, one-time fee, monthly cost, PM discount savings, effective monthly total, and 5-quarter commitment checkbox",
+          "Step 4 — Payment: 'Enroll in Mystery School' button → POST /api/community/checkout → Stripe Checkout redirect",
+          "Pricing source: plan_mystery_monthly and plan_mystery_monthly_pm_discount rows in pricing_plans table — admin controls amounts via /admin/pricing",
+          "PM discount logic: user must have active PM membership (community_members.membership_status = 'active') AND admin toggle ms_pm_discount_enabled must be true in platform_settings",
+          "Stripe checkout: recurring charge uses saved stripe_price_id from DB, one-time fee uses ad-hoc stripe.prices.create() with amount/currency from DB",
+          "5-quarter commitment: Q1 = Foundation (12 weeks), Q2–Q5 = 36 decans following the zodiac calendar year"
+        ]
+      },
+      {
+        name: "checkout-success",
+        label: "Checkout Success",
+        description: "The post-payment landing page at /join/mystery-school/checkout/success that finalizes the enrollment by polling the server until the Stripe webhook provisions access.",
+        group: "Enrollment & Checkout",
+        purpose: "After Stripe redirects back with a session_id, this page automatically polls POST /api/mystery-school/checkout/finalize up to 8 times with 1.2-second intervals. It handles four states: (1) Loading — spinner with 'Finalizing Your Enrollment' while polling; (2) Success — green checkmark with 'Enrollment Confirmed', then auto-redirect to /mystery-school dashboard after 900ms; (3) Unauthorized — prompts user to sign in with a link back to login; (4) Failed — error message with 'Try Again' reload button and link back to enrollment. If no session_id is present in the URL, the page immediately shows the failed state.",
+        bullets: [
+          "Auto-polling: POST /api/mystery-school/checkout/finalize called up to 8 times, 1.2s apart",
+          "Loading state: spinning loader with 'One Moment While We Open The Gates' heading",
+          "Success state: green checkmark, 'Enrollment Confirmed' badge, auto-redirect to dashboard",
+          "Unauthorized state: triangle alert icon, sign-in prompt with redirect back to this page after login",
+          "Failed state: red alert icon, error message, 'Try Again' button and 'Back to Enrollment' link",
+          "Stripe badge: shows 'Stripe Payment Verified Server-Side' during loading"
+        ]
+      },
+      {
+        name: "checkout-cancel",
+        label: "Checkout Cancel",
+        description: "A friendly cancellation page at /join/mystery-school/checkout/cancel shown when the user exits Stripe Checkout without completing payment.",
+        group: "Enrollment & Checkout",
+        purpose: "Reassures the user that nothing was charged and their spot remains open. Provides two clear actions: 'Return to Enrollment' to restart the flow, and 'Back to Community' to exit entirely. The heading reads 'Checkout Was Not Completed' with the message 'No problem. Your enrollment has not been finalized, and you can return whenever you are ready to continue.'",
+        bullets: [
+          "Heading: 'Checkout Was Not Completed' with 'Your Place Is Still Open' card title",
+          "Two CTA buttons: 'Return to Enrollment' (primary) and 'Back to Community' (outline)",
+          "No payment was processed — the page confirms this clearly"
+        ]
+      },
+      {
+        name: "decans",
+        label: "Decans Dashboard",
+        description: "The main Mystery School dashboard at /mystery-school. A 'decan' is a 10-degree segment of the zodiac — there are 3 decans per zodiac sign (e.g. Aries I, II, III) and 12 signs, making 36 decans total. Each decan is ruled by a planet (Sun, Moon, Mercury, Venus, Mars, Jupiter, or Saturn) and is associated with a Minor Arcana tarot card. Decans are NOT unlocked sequentially by the student — they are TIME-BASED. Each decan has a fixed astronomical date window tied to the degrees of the zodiac it occupies (e.g. Aries I covers March 21–30). When the calendar reaches that window, the decan becomes 'active' for all students. The student has approximately 10 days to complete all three requirements before the window closes. After the window closes, a 2-day grace period allows late completion. After grace ends, the decan is marked 'missed'.",
+        group: "Dashboard & Decans",
+        purpose: "This is the student's home screen after enrolling. It fetches all data from GET /api/mystery-school/decans. The hero header uses a gold-on-dark design with a 'Mystery School' badge. If the student has completed all 12 foundation weeks, a green 'Foundation Complete' badge appears. The title reads 'Your Decan Journey' with progress text (e.g. 'Decan 5 of 36 · 4 completed') and a yellow gradient progress bar showing completion percentage. Below the hero, five subscription info cards display: (1) Status — active, cancelled, or 'Cancelled · Access Active' if access_expires_at is in the future; (2) Enrolled — the date the student enrolled; (3) Billing — monthly subscription amount fetched live from Stripe (e.g. '$27.00/month'), plus the one-time enrollment fee amount if applicable; (4) Next Renewal / Access Until — next billing date for active subscribers, or access expiry for cancelled; (5) Cohort — the entry quarter and year (e.g. 'Spring 2026'). A 'Manage Subscription' button opens the Stripe Billing Portal in a new browser tab via POST /api/mystery-school/billing-portal, where the user can update payment method, view invoices, cancel, or pause. The current decan section shows a hero card ONLY if a decan is currently in its active window. The card displays: the planet glyph (☉ ☽ ☿ ♀ ♂ ♃ ♄), decan name, zodiac sign with colour coding, tarot card reference (clickable link to /community/tarot), active window dates (e.g. 'Active Mar 21 – Mar 30'), a LIVE countdown timer updating every 60 seconds (e.g. '5d 12h remaining'), and three completion pips: Ritual ✓/○, Scry ✓/○, Journal ✓/○. Clicking the card navigates to the decan detail page. Below that, up to 3 upcoming/preview decans show as smaller cards — preview decans (within 7-day pre-window) are clickable, upcoming ones are not. The 36-decan compact grid is the core visual — grouped by zodiac sign (Aries, Taurus, … Pisces), 3 cells per sign. Each cell shows: a status icon (🔒 locked, ○ upcoming, 👁 preview, ⚡ active, G grace, ✓ completed, ⚠ missed), the decan number, and the sign abbreviation. Colour coding: amber border for active, green for completed, red for missed, orange for grace, purple for preview, dimmed for locked. The page auto-refreshes data on tab focus, page show, and visibility change events — so returning to the tab always shows current state.",
+        bullets: [
+          "Gold-themed hero header with 'Mystery School' badge, foundation complete badge (if applicable), progress text and percentage bar",
+          "Five subscription info cards: Status, Enrolled date, Billing (amount/month from DB), Next Renewal / Access Until, Cohort quarter",
+          "Manage Subscription button: opens Stripe Billing Portal in new tab via POST /api/mystery-school/billing-portal",
+          "Current decan hero card: planet glyph, decan name, sign, tarot card link, active window dates, live countdown timer (updates every 60s), completion pips (Ritual ✓/○, Scry ✓/○, Journal ✓/○), 'Continue Work' link",
+          "Upcoming section: next 3 decans with upcoming/preview status, smaller cards with lock icon and unlock date",
+          "36-decan compact grid: grouped by zodiac sign, 3 cells per sign, each cell shows decan number, sign abbreviation, and status icon with colour coding (amber=active, green=completed, red=missed, orange=grace, purple=preview, dimmed=locked)",
+          "Status legend at bottom: Active, Grace, Preview, Upcoming, Completed, Missed, Locked with matching icons",
+          "Auto-refresh: data reloads on pageshow, focus, and visibility change events"
         ]
       },
       {
         name: "decan-detail",
-        label: "Decan Study Page",
-        description: "The dedicated study page for a single decan. Contains everything the student needs to understand, work with, and complete this decan — mythology, astrology data, ruling spirit, tarot card, required ritual, and journal prompt.",
-        group: "Core Studies",
-        purpose: "When you click on a decan in the grid, this is the detailed study page that opens. It is a comprehensive spiritual study document for that specific 10-degree section of the zodiac. You will find the decan's ruling planet, the sign it falls in, the associated tarot Minor Arcana card, the mythological spirit or deity connected to it, its elemental qualities, and the traditional esoteric teachings the school assigns to it. At the bottom, you complete the three requirements to mark the decan done: confirm you read the study, submit your journal reflection, and mark the ritual complete.",
+        label: "Decan Detail Page",
+        description: "The individual decan study page at /mystery-school/decans/[id]. Each decan represents a 10-degree segment of the zodiac — for example, 'Aries I' covers degrees 0–10 of Aries. The decan is ruled by a planet (e.g. Mars for Aries I) and associated with a specific Minor Arcana tarot card (e.g. Two of Wands). The student must complete THREE requirements during the decan's active window to mark it done: (1) Ritual — a step-through guided ceremony; (2) Scrying Journal — a tarot card draw and spiritual experience reflection; (3) Mundane Impact Journal — how the decan's energy manifested in daily life across three areas (relationships, business/work, perception). The decan lifecycle is: locked → preview (7 days before window opens) → active (window open, ~10 days) → grace (2 days after window close) → completed OR missed.",
+        group: "Dashboard & Decans",
+        purpose: "When a student clicks on an unlocked decan in the grid, this page opens. It fetches from GET /api/mystery-school/decan/[id] and displays everything about this decan. The header shows the planet glyph (☉☽☿♀♂♃♄), the decan title (e.g. 'Decan 1 — Aries I'), the decan name if set, the zodiac sign with colour coding, and a clickable tarot card reference linking to /community/tarot. If the decan has artwork, it displays as a large image. The description text explains the decan's esoteric meaning. Status banners appear based on the decan's lifecycle state: ACTIVE — green banner with live countdown timer showing days/hours/minutes until window_close (updates every 60 seconds), with the active date range; GRACE — orange banner warning that the action window closed on [date] and the student has until [grace_close] to complete, with a live countdown to grace end; MISSED — red banner indicating the decan was missed, with retry information if a retry window has been assigned (retry windows are set by the daily cron — typically the same dates the following year, or 5 years later for Q4 decans in months 10–12); ADMIN EXCUSED — if an admin has excused the missed decan, shows the excuse reason and date instead of the missed warning; LOCKED — muted banner for decans whose window has not yet opened. The three completion sections each have distinct forms: (1) RITUAL — if not started, shows a 'Begin Ritual' button linking to /mystery-school/decans/[id]/ritual (the step-through ritual runner). If a ritual execution exists but is incomplete, shows 'Resume Ritual' with a play icon. If completed, shows a green 'Completed' badge with the completion date. (2) SCRYING JOURNAL — the assigned tarot card for this decan is displayed (e.g. 'Two of Wands'). The student enters an optional alternate card they drew, then writes their spiritual experience in a text area with a 200-character minimum (a live character counter shows progress). After submission, the form becomes read-only showing the submitted text and date. The scrying practice involves gazing into a reflective surface and recording spiritual visions, symbols, or impressions received — the tarot card serves as a focal point for the decan's energy. (3) MUNDANE IMPACT JOURNAL — three separate text areas for: Relationships (how did this decan's energy affect your relationships?), Business/Work (how did it manifest in your professional life?), and Shifts in Perception (what changed in how you see the world?). Each requires 100 characters minimum with a live counter. After submission, the form becomes read-only. All three requirements must be completed to mark the decan as 'completed'. Once all three pips show ✓, the student_decan_progress status changes to 'completed' and the decan cell in the grid turns green.",
         bullets: [
-          "Decan identity — which 10-degree segment of which sign this is (e.g. Virgo III, degrees 20–30)",
-          "Ruling planet — the planet that governs this decan and the qualities it brings",
-          "Tarot card — the Minor Arcana card associated with this decan (e.g. Ten of Disks) with imagery and symbolism",
-          "Mythological spirit — the historical spirit or deity traditionally assigned to this decan from Egyptian, Greek, or Arabic tradition",
-          "Elemental and modality analysis — the Fire/Earth/Air/Water quality and Cardinal/Fixed/Mutable nature within this decan",
-          "School teaching — the school's own interpretation and spiritual lesson for this decan",
-          "Completion checklist — three checkboxes: (1) Study read ✓, (2) Journal submitted ✓, (3) Ritual completed ✓",
-          "Navigation arrows — move to the previous or next decan without going back to the grid"
+          "Decan header: planet glyph, title, decan name, sign with colour coding, tarot card reference link to /community/tarot",
+          "Artwork display: decan illustration via next/image if artwork_url is set",
+          "Description: full decan text content",
+          "Status banners: Active (green, with live countdown), Grace (orange, shows grace deadline), Missed (red, with admin excused info), Locked (muted)",
+          "Ritual section: 'Begin Ritual' button → /mystery-school/decans/[id]/ritual, or green 'Completed' badge with date, or 'Retry Ritual' if execution exists but not complete",
+          "Scrying Journal section: assigned tarot card display, alternate card input, experience text area (200 char min), character counter, submit button, or read-only submitted view with date",
+          "Mundane Impact Journal section: three text areas — Relationships, Business/Work, Shifts in Perception (100 char min each), submit button, or read-only submitted view",
+          "Retry window: if decan was missed but has a retry window assigned, shows retry dates and allows completion",
+          "Admin excuse: if admin_excused is true, shows excuse reason and excused date instead of missed warning"
+        ]
+      },
+      {
+        name: "ritual",
+        label: "Ritual Runner",
+        description: "A step-by-step guided ritual execution interface at /mystery-school/decans/[id]/ritual. Each decan has a pre-built ritual consisting of ordered steps of different types: Invocation (calling upon planetary or spiritual forces), Gate (a threshold or transition point in the ritual), Instruction (guidance on what to do physically or mentally), Affirmation (a statement to speak aloud or internalize), and Closing (sealing and completing the ritual). The ritual is the active, experiential requirement of each decan — where the student moves from intellectual study to lived spiritual practice. The student performs each step in their own physical space while following the on-screen guidance.",
+        group: "Dashboard & Decans",
+        purpose: "This is the immersive ritual experience page. It fetches the ritual steps from GET /api/mystery-school/decan/[id]/ritual and displays them one at a time. The page enforces a deliberate, meditative pace — each step has a mandatory 3-second reading period (STEP_READ_DELAY_MS = 3000) before the 'Continue' button becomes active, ensuring the student actually reads and reflects rather than clicking through. The page has three states: (1) NOT STARTED — shows a preview list of all steps as dimmed rows with lock icons. Each row shows the step number and type label (Invocation, Gate, Instruction, Affirmation, or Closing) but the content is hidden until the ritual begins. The step count is displayed (e.g. 'This ritual contains 7 steps'). A 'Begin Ritual' button calls POST /api/mystery-school/decan/[id]/ritual/start which creates a ritual_execution record on the server. (2) IN PROGRESS — the UI focuses entirely on the current step. A progress bar at the top shows percentage complete, and a row of breadcrumb dots below it shows each step as green (done), primary colour (current), or muted (pending). The current step appears in a highlighted card with its step type as a badge (e.g. 'Invocation') and the full step content below as pre-wrapped text. The 'Continue to Next Step' button is initially disabled with the text 'Read the step above…' and a gentle message 'Take a moment to read and reflect before continuing.' After 3 seconds, the button activates. Clicking it calls POST /api/mystery-school/decan/[id]/ritual/step with the next step_index. On the final step, the button reads 'Complete Ritual' instead. (3) COMPLETE — a green checkmark icon, 'Ritual Complete' heading, the completion date and time, total steps summary, and a 'Return to Decan' button. Progress is persisted server-side in the ritual_execution table — if the student navigates away mid-ritual and returns later, they resume at exactly the step where they left off.",
+        bullets: [
+          "Not started state: preview list of all ritual steps (dimmed, locked), step type labels, 'Begin Ritual' button",
+          "In progress state: progress bar with percentage, breadcrumb dots (green=done, primary=current, muted=pending), current step card with step type badge and content",
+          "3-second read timer: 'Continue' button disabled with 'Read the step above...' text until 3 seconds pass",
+          "Step types: Invocation, Gate, Instruction, Affirmation, Closing — each labelled in a badge above the content",
+          "Advance: POST /api/mystery-school/decan/[id]/ritual/step with step_index, returns updated state",
+          "Complete state: green checkmark, 'Ritual Complete' heading, completion date/time, total steps summary, 'Return to Decan' button",
+          "Resume support: if the student navigates away mid-ritual, returning loads the execution state and resumes at the current step",
+          "Back link: 'Back to Decan' link always visible at the top"
         ]
       },
       {
         name: "center",
-        label: "Training Center",
-        description: "The formal curriculum hub for the Mystery School. All structured lesson programs, categories, and individual lessons are organized here. Track your completion, access lesson materials, and see which programs are part of your graduation path.",
-        group: "Core Studies",
-        purpose: "Beyond the 36 decan studies, the Mystery School has an organized academic curriculum — a series of lesson programs covering topics like planetary magic, elemental theory, sacred geometry, divination techniques, and esoteric philosophy. The Training Center is where you access this structured learning. Lessons are organized into programs and categories, and you progress through them in sequence. Completing the full curriculum is required for graduation.",
+        label: "Foundation Training",
+        description: "The 12-week Foundation Training page at /mystery-school/training. Foundation is Q1 (the first quarter) of the 5-quarter Mystery School programme. It must be completed BEFORE the student can participate in the 36-decan year-long cycle (Q2–Q5). Foundation weeks begin 7 days after the student's chosen equinox/solstice entry date. Each week is structured with: an audio introduction recorded by Beto (the programme leader), written description/reading material, and a task checklist. Weeks unlock sequentially — you must complete all tasks in Week 1 before Week 2 opens. The 12 weeks cover the foundational esoteric teachings that prepare the student for decan work: planetary principles, elemental theory, sacred geometry, divination basics, ritual theory, and the cosmological framework of the 36-decan system.",
+        group: "Training & Graduation",
+        purpose: "This is the structured Q1 curriculum. It fetches from GET /api/mystery-school/foundation and displays all 12 weeks as expandable cards. A gold-themed hero header shows the 'Mystery School — Foundation Q1' badge with a flame icon, 'Foundation Training' title, the student's entry quarter (e.g. 'Quarter: Spring'), current week counter (e.g. 'Week 4 of 12'), and a yellow progress bar with completion percentage. When all 12 weeks are done, a green message appears: 'Foundation complete — your decan year is unlocked.' Each week card shows: the week number, the title (e.g. 'Planetary Principles'), a 'Done' badge if completed, a lock icon if not yet unlocked (previous week not finished), and an expand/collapse chevron button. When expanded, the card reveals three sections: (1) Audio Player — Beto's weekly introduction with his photo displayed beside the audio player; (2) Week Description — the full reading material in prose text; (3) Task Checklist — each task has a checkbox, title, and optional description. Tasks are completed one at a time by clicking the checkbox, which calls POST /api/mystery-school/foundation/complete-task with the week_number and task_id. The UI uses optimistic updates — checking a task immediately marks it done in the UI before the server responds, showing a green CheckSquare icon and a completion date. In-progress weeks show an inline progress bar and count (e.g. '3 of 5 tasks complete'). When all tasks in a week are done, the next week's lock automatically opens and its card becomes expandable. If no foundation weeks have been published yet (admin has not added content), an empty state card appears: 'Your journey begins when you enroll — Foundation content is being prepared. Check back soon.' with a book icon. The foundation week curriculum content (title, description, audio_url, tasks) is managed by admin in the mystery_school_foundation_weeks table and is published via the admin Mystery School management pages.",
         bullets: [
-          "All programs listed — the complete set of learning programs that make up the Mystery School curriculum",
-          "Program progress bars — how far through each program you currently are",
-          "Lesson categories — each program is divided into thematic categories (e.g. Planetary Principles, Sacred Geometry, Ritual Theory)",
-          "Individual lessons — click any program to expand its lessons, each with a completion status",
-          "Lock system — some lessons are locked until prerequisite lessons are completed",
-          "Total curriculum completion — an overall percentage showing how close you are to finishing all required material",
-          "Resume where you left off — the system highlights your most recently accessed lesson for quick return"
+          "Gold hero header: 'Mystery School — Foundation Q1' badge, 'Foundation Training' title, entry quarter, week counter, progress bar with percentage",
+          "Foundation complete badge: green 'Foundation complete — your decan year is unlocked' message when all 12 weeks done",
+          "Week cards: sequential list, each with week number, title, completion badge, lock/unlock icon, expand button",
+          "Expanded card: audio player with Beto's photo, week description text, task checklist with checkboxes",
+          "Task completion: click checkbox → POST /api/mystery-school/foundation/complete-task, optimistic UI update, completion date shown",
+          "Sequential unlock: next week unlocks only when all tasks in the current week are complete",
+          "Progress indicators: inline task count (e.g. '3 of 5 tasks complete') and thin progress bar per week card",
+          "Empty state: 'Your journey begins when you enroll' message with book icon if no weeks published yet"
+        ]
+      },
+      {
+        name: "training-category",
+        label: "Training Category",
+        description: "A server-rendered module listing page at /mystery-school/training/[categoryId]. Beyond the 12-week Foundation Training, the Mystery School has an organized academic curriculum — a series of training categories (modules) covering esoteric topics. Categories and their lessons are managed by admin via the training_categories and training_lessons tables. Each category groups related lessons into a thematic unit. This page lists all published lessons in a given category.",
+        group: "Training & Graduation",
+        purpose: "When a student navigates into a specific training category (module), this page loads. It is a server-rendered page that fetches the category details from training_categories and all active lessons from training_lessons in parallel, both filtered by is_active = true. The page header shows a 'Back to Training' breadcrumb link with a ChevronLeft icon, the category name as an h1 heading, and the category description below. Each lesson appears as a card in a vertical list showing: a numbered circle (1, 2, 3...) based on priority order, the lesson title in bold, the lesson description in muted text, a PlayCircle icon in primary colour if the lesson has a video_url (indicating video content is available), a duration badge (e.g. '15 min') with a Clock icon if duration_mins is set, and a 'View Lesson' button linking to /mystery-school/training/[categoryId]/[lessonId]. If the category has no published lessons, an empty state card reads 'No lessons published in this module yet.' Access is guarded by requireMysterySchoolAccess() — non-MS users are redirected to /mystery-school/enroll (which proxy.ts rewrites to /join/mystery-school).",
+        bullets: [
+          "Breadcrumb: 'Back to Training' link with ChevronLeft icon at top",
+          "Category header: category name as h1 heading, category description below",
+          "Lesson cards: numbered list, each card shows lesson title, description, video icon (if video_url exists), duration badge (if duration_mins set)",
+          "View Lesson button: links to /mystery-school/training/[categoryId]/[lessonId]",
+          "Empty state: 'No lessons published in this module yet' card if no active lessons",
+          "Access guard: requireMysterySchoolAccess() check, redirects to /mystery-school/enroll if unauthorized"
         ]
       },
       {
         name: "lesson",
         label: "Lesson View",
-        description: "The immersive reading and learning space for a single lesson. Contains the full lesson content — written text, embedded videos, downloadable materials, and an optional quiz at the end.",
-        group: "Core Studies",
-        purpose: "When you click on a lesson in the Training Center, this is the page that opens. It presents all of that lesson's content in a clean, focused reading environment — with no distractions. After reading the lesson material, you may have a quiz to complete before the lesson is marked done. Some lessons also have downloadable PDFs, reference charts, or supplemental audio recordings attached. The lesson automatically saves your progress if you need to stop and return later.",
+        description: "A server-rendered individual lesson page at /mystery-school/training/[categoryId]/[lessonId]. This is the focused learning environment for a single lesson within the Mystery School curriculum. Lessons can include video content (embedded from external providers), written text material, and downloadable PDF reference documents. Lessons are part of the broader training curriculum that supplements the core Foundation + Decan programme.",
+        group: "Training & Graduation",
+        purpose: "This is the immersive, distraction-free reading and learning space for a single lesson. It fetches the lesson from training_lessons and its parent category from training_categories in parallel, both using the admin Supabase client. The page layout is clean and focused: a breadcrumb at the top links back to the parent category page showing the category name with a ChevronLeft icon. The lesson title appears as an h1 heading, with the description and a duration badge (e.g. '15 min' with a Clock icon) below. The lesson content is presented in up to three card sections: (1) VIDEO — if the lesson has a video_url, an iframe embed appears in a 16:9 aspect ratio wrapper (aspect-video class) inside a card. The iframe has full permissions for autoplay, clipboard-write, encrypted-media, gyroscope, picture-in-picture, and fullscreen. The video URL is set by admin and typically points to a hosted video provider. (2) LESSON CONTENT — if the lesson has text content, it renders in a prose-styled card using whitespace-pre-wrap formatting to preserve line breaks and paragraph structure from the admin-entered content. (3) SUPPLEMENTAL MATERIAL — if the lesson has a pdf_url, a card with a FileText icon shows a 'Download PDF' button that opens the PDF in a new browser tab. At the bottom, a 'Back to Module' button returns to the category listing. If the lesson ID is invalid or the lesson is inactive (is_active = false), the page returns a 404 via Next.js notFound(). Access is guarded by requireMysterySchoolAccess() — non-MS users are redirected to enrollment.",
         bullets: [
-          "Lesson content — the full written teaching, structured with headings, paragraphs, and images",
-          "Embedded video — some lessons include a video explanation or demonstration embedded directly in the page",
-          "Downloadable attachments — PDF study guides, reference charts, or audio recordings linked at the bottom",
-          "In-lesson quiz — a short knowledge check quiz at the end of lessons that require it",
-          "Mark as complete — a button to confirm you have read and understood the lesson content",
-          "Progress auto-save — your position in the lesson is remembered if you navigate away and return",
-          "Next lesson link — after completing a lesson, a prompt appears to move to the next one in sequence"
+          "Breadcrumb: links back to parent category page with category name, ChevronLeft icon",
+          "Lesson header: title as h1, description text, duration badge with Clock icon",
+          "Video section: iframe embed in 16:9 aspect ratio card, full autoplay/clipboard/gyroscope/picture-in-picture permissions, fullscreen enabled",
+          "Content section: lesson text rendered in prose styling with whitespace-pre-wrap, wrapped in a card",
+          "PDF download: 'Download PDF' button opens pdf_url in new tab, shown only if pdf_url is set, with FileText icon",
+          "Back navigation: 'Back to Module' button at bottom returns to category listing",
+          "Access guard: requireMysterySchoolAccess() check, 404 via notFound() if lesson not found or inactive"
         ]
       },
       {
-        name: "journal",
-        label: "My Journal",
-        description: "Your personal practice journal where you write reflections for each decan study. Each decan requires a journal entry describing your experience, insights, and how the decan's energy relates to your own life.",
-        group: "Practice & Devotion",
-        purpose: "The journal is a core requirement of the Mystery School experience. It is not just academic — it is deeply personal. After studying a decan, you are asked to write a reflection: what did this decan's energy bring up for you? Have you experienced its themes in your own life? What ritual did you perform and what happened? Your mentor may read your journal and provide feedback. The journal is a record of your inner transformation through the school.",
+        name: "graduation",
+        label: "Graduation Page",
+        description: "The graduation tracking and certificate page at /mystery-school/training/graduation. Graduation is the culmination of the 5-quarter Mystery School programme. To graduate, a student must satisfy ALL THREE requirements: (1) Complete all 12 Foundation Q1 weeks (each week's tasks fully done, week_completed_at set); (2) Complete all 36 decans (every decan's status = 'completed', meaning ritual_done + scry_done + journal_done); (3) Have ZERO unresolved missed decans (any decan with status = 'missed' must have admin_excused = true, or the student must complete it during a retry window). When all three conditions are met, graduation is processed automatically by a server-side cron job within 24 hours — it sets training_status = 'graduated', graduated_at timestamp, and sends a congratulation email. The graduated student receives the title of 'Priest or Priestess of the Mystery School'.",
+        group: "Training & Graduation",
+        purpose: "This server-rendered page checks the student's graduation status by querying student_foundation_progress (counting rows where week_completed_at is not null), student_decan_progress (counting rows with status = 'completed'), and student_decan_progress (counting rows with status = 'missed' and admin_excused = false). It shows one of two views. FOR STUDENTS WHO HAVE NOT GRADUATED: A gold hero header with 'Graduation' title and a combined progress bar that weights foundation at 50% and decans at 50% (e.g. 6/12 foundation + 18/36 decans = 50% overall). A 'Your Progress' card shows three checklist items with green checkmarks or empty circles: (1) Foundation Q1 — 'X of 12 weeks' with a Complete/X badge; (2) 36 Decans — 'X of 36 completed' with a badge; (3) Unresolved missed decans — only shown if count > 0, in red with 'Contact your admin to resolve'. If all three requirements are satisfied, a green message reads: 'All requirements met — graduation will be processed automatically within 24 hours.' This auto-processing is handled by the graduation cron (processGraduation function) which checks eligibility, sets graduated_at, and sends the email. A 'Remaining Requirements' card lists specific blockers (e.g. 'Foundation Q1 not yet complete', '14 decan(s) remaining', '2 unresolved missed decan(s)'). Navigation shortcuts link to Foundation Training (/mystery-school/training) and Decan Training (/mystery-school). A locked teaser card previews the Post-Graduation Ritual Builder with a lock icon and description: 'Unlocks when you graduate — design personal rituals using the full component library.' FOR GRADUATED STUDENTS: A certificate-style card with a golden star icon, the title 'Priest / Priestess of the Mystery School', completion stats (36 Decans Complete, 12 Foundation Weeks), the graduation date formatted as month/day/year, and a share section with the graduation page URL and a 'Share on X' button linking to Twitter intent with pre-filled text. Below the certificate, a CTA card for the now-unlocked Ritual Builder with 'Access Your Ritual Builder' button linking to /mystery-school/training/ritual-builder.",
         bullets: [
-          "Journal entry list — all your past journal entries organized by decan number and date",
-          "Write a new entry — a full-screen text editor for composing a decan reflection",
-          "Required vs optional — entries required for decan completion are clearly marked",
-          "Submission status — see which entries are pending mentor review and which have been acknowledged",
-          "Mentor feedback — if your mentor has responded to an entry, their comment appears beneath your text",
-          "Private by default — your journal is private to you and your mentor; other students cannot see it",
-          "Rich text formatting — use headings, bold, italic, and bullet lists to organize your reflection"
-        ]
-      },
-      {
-        name: "rituals",
-        label: "Ritual Tracker",
-        description: "The ritual completion log for the Mystery School. Each decan has one or more associated rituals that must be performed and recorded. Track which rituals are complete, which are pending, and review your ritual history.",
-        group: "Practice & Devotion",
-        purpose: "Ritual practice is the active, experiential side of Mystery School learning. While the lesson teaches the theory, the ritual is the lived practice. Each decan has a specific ritual associated with it — it might be a planetary invocation, a meditation at a specific time, a candle ceremony, or a nature-based offering. You perform the ritual in your own space, then return here to mark it complete and record any observations. This cannot be faked — it is a commitment of time and attention that the school takes seriously.",
-        bullets: [
-          "Ritual list — all rituals across all 36 decans, organized by decan number and completion status",
-          "Required vs optional — which rituals are mandatory for decan completion and which are supplementary",
-          "Ritual instructions — click any ritual to see the full step-by-step guide for performing it",
-          "Mark complete — after performing the ritual, click to confirm completion and unlock the decan",
-          "Observation notes — a text field to record what you experienced, saw, or felt during the ritual",
-          "Completion date — when each ritual was completed, creating a permanent record of your practice",
-          "Ritual calendar — upcoming planetary timing recommendations for performing specific rituals optimally"
+          "Not graduated view: gold hero header with progress bar, 'Your Progress' card with Foundation/Decans/Missed checklist, remaining requirements list, navigation shortcuts to training pages, locked Ritual Builder teaser",
+          "Graduated view: certificate card with golden star icon, 'Priest / Priestess of the Mystery School' title, 36 decans + 12 weeks stats, graduation date, share URL and 'Share on X' button",
+          "Post-grad CTA: 'Post-Graduation Ritual Builder' card with link to /mystery-school/training/ritual-builder (locked before graduation, active after)",
+          "Graduation eligibility: 12/12 foundation weeks + 36/36 decans completed + 0 unexcused missed decans",
+          "Auto-graduation message: 'will be processed automatically within 24 hours' when all requirements met"
         ]
       },
       {
         name: "builder",
         label: "Ritual Builder",
-        description: "A creative tool for designing and saving your own custom ritual sequences. Build personalized ceremonies combining astrological timing, elemental components, invocations, and meditative practices.",
-        group: "Practice & Devotion",
-        purpose: "Beyond the required rituals for each decan, advanced students are encouraged to design their own. The Ritual Builder is a structured creative environment where you can assemble a ritual step by step — choosing the intention, the planetary timing, the elemental components involved, the opening invocation, the core practice, and the closing. You can save rituals you design, repeat them, and share templates with your mentor. It teaches students to understand ritual construction rather than just following instructions.",
+        description: "A post-graduation creative tool at /mystery-school/training/ritual-builder for designing custom ritual sequences. This tool is the reward and the practical application of everything learned in the Mystery School — it represents the transition from following pre-built rituals (during the decan year) to CREATING your own. Available only to graduated students (graduated_at is not null). Non-graduated students see a locked teaser. The builder provides a library of ritual building blocks drawn from the entire Mystery School tradition: planetary invocations for all 7 classical planets, sign invocations for all 12 zodiac signs, decan invocations for all 36 decans, grand invocations (opening ceremonies), opening gates (threshold transitions), closing prayers, and free-form custom steps. The student assembles these into ordered sequences to create personalized ceremonies for any occasion — personal transits, seasonal rites, decan workings, or free-form spiritual practice.",
+        group: "Training & Graduation",
+        purpose: "This is the advanced ritual design tool unlocked after graduation. It checks whether graduated_at is not null — if the student has not graduated, the entire page shows a locked teaser card with a Lock icon and the text 'Unlocks when you graduate — design personal rituals using the full component library: planetary invocations, decan workings, seasonal rites, and custom steps.' For graduated students, the builder provides a structured creative environment with three sections: (1) COMPONENT LIBRARY — organized by category: Grand Invocations (ceremonial openings), Opening Gates (threshold crossings), Planetary Invocations (one for each of the 7 classical planets: Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn, plus Uranus, Neptune, Pluto — 10 total), Sign Invocations (one for each of the 12 zodiac signs: Aries through Pisces), Decan Invocations (one for each of the 36 decans, numbered 1–36), Closing Prayers (ritual endings), and Custom Steps (free-text steps the student writes themselves). Each component can be clicked to add it to the ritual canvas. (2) RITUAL CANVAS — the main area showing the ordered list of selected components. Each item has up/down arrow buttons (ChevronUp/ChevronDown) for reordering and a trash button (Trash2) for removal. There is no drag-and-drop — the interface uses simple button-based reordering with no external dependencies. (3) SAVE FORM — fields for ritual name (required), ritual type selector (Free Form, Personal Transit, Seasonal, or Decan Custom), tags, notes (textarea), and a share toggle. Saving calls POST /api/mystery-school/ritual-builder which stores the ritual in the database. A PERSONAL LIBRARY TAB shows all previously saved rituals in a list, with load, duplicate, and delete actions per ritual. Loading a saved ritual populates the canvas with its components for editing.",
         bullets: [
-          "Ritual name and intention — name your ritual and write the central intention or goal",
-          "Planetary timing selector — choose the optimal planet day, planetary hour, and moon phase for this ritual",
-          "Elemental components — select which elements to incorporate (Fire, Earth, Air, Water) and what tools they represent",
-          "Step builder — add, remove, and reorder ritual steps using a drag-and-drop interface",
-          "Step types — invocation, meditation, offering, candle work, affirmation, visualization, closing",
-          "Save to library — save your completed ritual design to your personal ritual library for future use",
-          "Share with mentor — send your ritual design to your mentor for feedback and guidance"
-        ]
-      },
-      {
-        name: "scrying",
-        label: "Scrying Room",
-        description: "A dedicated practice space for scrying — the ancient art of gazing into a reflective surface (mirror, water, crystal, or flame) to receive spiritual vision, imagery, and guidance.",
-        group: "Practice & Devotion",
-        purpose: "Scrying is one of the oldest forms of divination and a core practice taught in the Mystery School. The Scrying Room provides a focused, atmospheric digital space designed to facilitate a scrying practice session. You set the conditions (low light, a focal point image or candle animation on screen), enter a meditative state, and then record what you see or sense. Your scrying records are saved as a personal log that you and your mentor can review over time to track the development of your inner sight.",
-        bullets: [
-          "Session mode — enter a full-screen immersive scrying environment with optional dark background and focal point",
-          "Focal point options — choose between a candle flame animation, a mirror surface, crystal ball, or plain dark screen",
-          "Session timer — set a duration for your scrying practice (5, 10, 20, or 30 minutes)",
-          "Record observations — after your session, write down any images, symbols, words, or feelings that arose",
-          "Scrying log — a chronological journal of all past scrying sessions with observations",
-          "Pattern tracking — over time, identify recurring symbols or themes across multiple sessions",
-          "Mentor sharing — mark specific scrying records to share with your mentor for guidance and interpretation"
-        ]
-      },
-      {
-        name: "ceremonies",
-        label: "School Ceremonies",
-        description: "Join live and archived ceremonial events hosted by the Mystery School — seasonal rites, new and full moon ceremonies, initiation ceremonies, and special planetary observances.",
-        group: "Practice & Devotion",
-        purpose: "Ceremonies are the collective spiritual events of the Mystery School — moments where the entire student body gathers (virtually) for a shared ritual or sacred observance. Unlike Sunday Service which is more lecture-oriented, ceremonies are participatory and ritualistic. The Head Master and school leaders conduct the ceremony; students follow along in their own space and participate through the shared stream. Attending ceremonies counts toward your overall engagement in the school.",
-        bullets: [
-          "Upcoming ceremonies — the next scheduled ceremonial event with date, time, and description",
-          "Live ceremony stream — watch and participate in the ceremony in real time via the video player",
-          "Ceremonial instructions — what you need to prepare at home (candles, water, specific materials) before the ceremony",
-          "Ceremony archive — recordings of all past ceremonies available for replay if you could not attend live",
-          "Attendance record — your personal history of ceremonies attended, used for graduation assessment",
-          "Ceremony calendar — all scheduled ceremonies for the coming season, aligned with planetary events",
-          "Notifications — receive an email or platform alert when a ceremony is approaching"
-        ]
-      },
-      {
-        name: "community",
-        label: "School Community",
-        description: "The Mystery School's private student community — a space to connect with fellow students, share insights, ask questions, and deepen your learning through peer discussion.",
-        group: "Community & Support",
-        purpose: "The Mystery School is a serious and private school — not everyone on AstrologyPro is a student here. The School Community is a members-only space where only Mystery School students can post and interact. It is a place to discuss decan studies, share ritual experiences, ask questions about the curriculum, and build relationships with others on the same path. Conversations here can go deep in ways that are not possible in a broader public forum.",
-        bullets: [
-          "Discussion threads — organized conversations by topic, decan, ritual, or curriculum question",
-          "Post and reply — share your own insights or respond to fellow students' posts",
-          "Private messaging — send a direct message to any fellow student",
-          "Pin important posts — moderators and the Head Master can pin key announcements to the top",
-          "Search — find past discussions on any topic before asking a new question",
-          "Student directory — browse all current Mystery School students with their decan progress visible (if they have made it public)",
-          "Moderation — the community is moderated to ensure respectful, focused esoteric discussion"
-        ]
-      },
-      {
-        name: "mentorship",
-        label: "Mentorship Sessions",
-        description: "Book, manage, and review your private one-on-one mentorship sessions with your assigned Mystery School mentor. Your mentor guides your personal journey through the school curriculum.",
-        group: "Community & Support",
-        purpose: "Every Mystery School student is assigned a personal mentor — an experienced practitioner who knows the school curriculum deeply. Your mentor reviews your journals, answers your questions, provides personalized guidance on ritual practice, and helps you navigate any difficulties in the curriculum. You book sessions with your mentor through this page. These sessions are private and focused entirely on your individual spiritual development within the school.",
-        bullets: [
-          "Your assigned mentor — name, photo, and brief bio of the practitioner assigned as your school mentor",
-          "Book a session — select a time from your mentor's available slots and confirm the booking",
-          "Upcoming session countdown — when your next session is and how to join the video room",
-          "Session history — all past mentorship sessions with dates, durations, and any shared notes",
-          "Session recordings — if your mentor has enabled recording, access replays of past sessions",
-          "Mentor notes — any written guidance your mentor has shared after a session",
-          "Request a topic — before booking, specify what you want to focus on (a specific decan, a ritual question, etc.)"
-        ]
-      },
-      {
-        name: "progress",
-        label: "Progress Tracker",
-        description: "Your complete Mystery School progress overview — how many decans are complete, curriculum lesson completion percentage, rituals performed, journals submitted, ceremonies attended, and how close you are to graduation.",
-        group: "Community & Support",
-        purpose: "The Progress Tracker is your personal academic record for the Mystery School. It shows everything in one place so you always know exactly where you stand — how many of the 36 decans are done, what percentage of the lesson curriculum is complete, how many rituals have been performed, and how many ceremonies you have attended. This is the page your mentor reviews before giving guidance, and it is what determines when you qualify for graduation.",
-        bullets: [
-          "Decan completion — X of 36 decans complete, with a grid showing which ones are done and which remain",
-          "Curriculum progress — percentage of the lesson curriculum completed across all programs and categories",
-          "Journal count — how many journal entries have been submitted and how many are still required",
-          "Ritual completion — how many required rituals have been performed and recorded",
-          "Ceremony attendance — number of live school ceremonies attended",
-          "Mentorship sessions — total mentorship sessions completed",
-          "Graduation eligibility — a checklist showing exactly what remains before graduation is awarded"
-        ]
-      },
-      {
-        name: "profile",
-        label: "School Profile",
-        description: "Your personal Mystery School profile — your name, initiation date, current decan, preferred spiritual name (if any), and settings for notifications and community visibility.",
-        group: "My Account",
-        purpose: "Your School Profile is your identity within the Mystery School. It includes your real name, the date you were initiated (enrolled), your current decan of study, any spiritual or craft name you use within the school, and settings for how you want to appear in the community directory. Keeping your profile accurate is important because your mentor and the school administrators reference it when reviewing your progress.",
-        bullets: [
-          "Full name and initiation date — your legal name and the date you formally enrolled in the Mystery School",
-          "Spiritual name — an optional alternative name used within the school community",
-          "Current decan — which of the 36 decans you are currently studying",
-          "Community visibility — choose whether other students can see your profile and decan progress",
-          "Notification settings — how you want to be notified of ceremony announcements, mentor messages, and curriculum updates",
-          "Profile photo — the image shown alongside your name in community discussions and the student directory",
-          "Account security — update your login credentials and security settings"
-        ]
-      },
-      {
-        name: "billing",
-        label: "School Billing",
-        description: "Manage your Mystery School membership subscription — current plan, billing date, payment method, invoice history, and options to pause or cancel.",
-        group: "My Account",
-        purpose: "The Mystery School operates on a separate subscription from the Perennial Mandalism membership. This billing page shows you the current status of your school subscription — what plan you are on, when it renews, and how much it costs. If you need to update your payment method, review past invoices, or pause your enrollment for a period, all of that is handled here.",
-        bullets: [
-          "Current plan — your Mystery School membership tier and monthly price",
-          "Next billing date — when the next charge will be processed",
-          "Payment method — the card or account on file (showing last 4 digits only)",
-          "Invoice history — a list of all past payments with date, amount, and download link for each receipt",
-          "Update payment method — add a new card or change your payment source",
-          "Pause membership — temporarily pause your enrollment (access pauses, resumes when you return)",
-          "Cancel enrollment — end your Mystery School subscription (access continues until the billing period ends)"
+          "Component library: categorized ritual building blocks — Grand Invocations, Opening Gates, Planetary (10 planets), Sign (12 signs), Decan (36 decans), Closings, Custom steps",
+          "Ritual canvas: ordered list of selected components, up/down buttons for reordering, trash button to remove",
+          "Save form: ritual name, type selector (Free Form / Personal Transit / Seasonal / Decan Custom), tags, notes, share toggle",
+          "Personal library tab: list of saved rituals with load, duplicate, and delete actions",
+          "Locked state: non-graduated students see a locked teaser card explaining the feature unlocks after graduation",
+          "No external dependencies: uses up/down arrow buttons instead of drag-and-drop"
         ]
       },
     ],
