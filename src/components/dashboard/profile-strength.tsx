@@ -5,7 +5,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   Camera,
   FileText,
@@ -16,6 +15,7 @@ import {
   CreditCard,
   CalendarSync,
   ArrowRight,
+  CheckCircle2,
 } from "lucide-react";
 
 interface ProfileStrengthProps {
@@ -129,8 +129,8 @@ export function ProfileStrength({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-3">
-        <CardTitle className="text-lg">Complete Your Profile</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4">
+        <CardTitle className="text-sm font-semibold">Complete Your Profile</CardTitle>
         <Link
           href="/dashboard/profile"
           className="flex items-center gap-1 text-xs text-primary hover:underline"
@@ -139,45 +139,44 @@ export function ProfileStrength({
           <ArrowRight className="size-3" />
         </Link>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="px-4 pb-4 pt-0 space-y-3">
         {/* Progress bar */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">
-              {completedCount} of {total} completed
-            </span>
-            <span className={`font-semibold ${textColor}`}>{percentage}%</span>
-          </div>
-          <div className="h-2.5 w-full rounded-full bg-muted">
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${barColor}`}
               style={{ width: `${percentage}%` }}
             />
           </div>
+          <span className={`text-xs font-semibold tabular-nums shrink-0 ${textColor}`}>
+            {completedCount}/{total} · {percentage}%
+          </span>
         </div>
 
-        {/* Incomplete items */}
-        <div className="space-y-2">
-          {incompleteItems.map((item) => {
+        {/* All items — compact 2-col grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          {items.map((item) => {
             const Icon = item.icon;
-            return (
+            return item.complete ? (
               <div
                 key={item.label}
-                className="flex items-center justify-between rounded-lg border border-dashed p-3"
+                className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground/60"
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex size-8 items-center justify-center rounded-md bg-muted">
-                    <Icon className="size-4 text-muted-foreground" />
-                  </div>
-                  <span className="text-sm">{item.label}</span>
-                </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href={item.href}>
-                    {item.action}
-                    <ArrowRight className="ml-1 size-3" />
-                  </Link>
-                </Button>
+                <CheckCircle2 className="size-3.5 shrink-0 text-emerald-500" />
+                <span className="truncate line-through">{item.label.replace(" (at least 20 characters)", "").replace("at least 3 ", "3+ ").replace("at least 1 ", "1+ ")}</span>
               </div>
+            ) : (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="flex items-center justify-between gap-2 rounded-md border border-dashed px-2.5 py-1.5 text-xs hover:bg-muted/50 hover:border-primary/30 transition-colors group"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Icon className="size-3.5 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <span className="truncate">{item.label.replace(" (at least 20 characters)", "").replace("at least 3 ", "3+ ").replace("at least 1 ", "1+ ")}</span>
+                </div>
+                <ArrowRight className="size-3 shrink-0 text-muted-foreground/50 group-hover:text-primary transition-colors" />
+              </Link>
             );
           })}
         </div>

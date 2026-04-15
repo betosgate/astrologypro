@@ -25,9 +25,9 @@ export default async function PerennialSignupSuccessPage({
             Welcome to Perennial Mandalism
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Your payment has been received. We&apos;re creating an account for
-            every household member now — each member will receive an email with
-            their login credentials in the next few moments.
+            Your payment has been received. Your account is being set up now —
+            you&apos;ll receive an email with your login credentials in the next
+            few moments.
           </p>
         </div>
         <div className="rounded-md border bg-muted/30 p-4 text-left text-xs space-y-2">

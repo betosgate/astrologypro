@@ -44,7 +44,7 @@ import type {
 } from "./types";
 import {
   parseDecimalTz, parseBirth, freeWheelBody, pad, getPlanetDegree,
-  getAspectOrbColor, getPlanetInterpClass, getRelationshipBgClass, parseAspectTitle,
+  getAspectOrbColor, getPlanetInterpClass, parseAspectTitle,
   getMonthName, convertTo12HourFormat, emptyBirth, defaultForm,
 } from "./utils";
 import {
@@ -92,6 +92,97 @@ const TABS: TabDef[] = [
 
 function ordinalDecan(n: number): string {
   return n === 1 ? "1st" : n === 2 ? "2nd" : "3rd";
+}
+
+function ordinalHouse(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${n}st`;
+  if (mod10 === 2 && mod100 !== 12) return `${n}nd`;
+  if (mod10 === 3 && mod100 !== 13) return `${n}rd`;
+  return `${n}th`;
+}
+
+function extractPlanetReturnText(value: unknown, expectedKey?: string): string | null {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  if (!value || typeof value !== "object") return null;
+
+  const record = value as Record<string, unknown>;
+  if (expectedKey && expectedKey in record) {
+    return extractPlanetReturnText(record[expectedKey], expectedKey);
+  }
+
+  for (const nestedValue of Object.values(record)) {
+    const resolved = extractPlanetReturnText(nestedValue, expectedKey);
+    if (resolved) return resolved;
+  }
+
+  return null;
+}
+
+function getPlanetReturnDisplay(tab: string, responseData: unknown, fallbackReturnDate?: string | null): string | null {
+  if (fallbackReturnDate?.trim()) return fallbackReturnDate.trim();
+
+  const planetKey = `${tab.split("_")[0]}_return`;
+  const resolved = extractPlanetReturnText(responseData, planetKey);
+
+  if (!resolved) return null;
+  if (resolved === planetKey || resolved === tab) return null;
+
+  return resolved;
+}
+
+function formatPlanetReturnDate(value: string | null): string | null {
+  if (!value) return null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  // Some upstream responses append a timezone label like "IST".
+  // For the UI we only need the calendar date.
+  const leadingIsoDateMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})\b/);
+  if (leadingIsoDateMatch) {
+    const parsedDate = parse(leadingIsoDateMatch[1], "yyyy-MM-dd", new Date());
+    if (isValid(parsedDate)) return format(parsedDate, "MMM d, yyyy");
+  }
+
+  const dateFormats = [
+    "yyyy-MM-dd",
+    "yyyy-MM-dd HH:mm:ss",
+    "yyyy-MM-dd'T'HH:mm:ss",
+    "yyyy-MM-dd'T'HH:mm:ssXXX",
+    "MMM d, yyyy",
+    "MMMM d, yyyy",
+  ];
+
+  for (const pattern of dateFormats) {
+    const parsedDate = parse(trimmed, pattern, new Date());
+    if (isValid(parsedDate)) return format(parsedDate, "MMM d, yyyy");
+  }
+
+  const fallbackParsedDate = new Date(trimmed);
+  if (isValid(fallbackParsedDate)) return format(fallbackParsedDate, "MMM d, yyyy");
+
+  return trimmed;
+}
+
+function formatPlanetBirthPosition(planets: any[] | undefined, planetName: string): string | null {
+  const planet = planets?.find((item: any) => item.name?.toLowerCase() === planetName.toLowerCase());
+  if (!planet) return null;
+
+  const degree = Number(planet.norm_degree ?? planet.full_degree);
+  const roundedDegree = Number.isFinite(degree) ? Math.round(degree) : null;
+  const sign = planet.sign ? String(planet.sign) : null;
+  const house = Number(planet.house);
+  const houseLabel = Number.isFinite(house) ? ordinalHouse(house) : null;
+
+  if (roundedDegree == null || !sign || !houseLabel) return null;
+
+  return `${planetName} at ${roundedDegree}° ${sign} in the ${houseLabel} House`;
 }
 
 function DecanAiBlock({ title, data, loading }: { title: string; data: DecanAi | null; loading: boolean }) {
@@ -770,7 +861,7 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry, isSolarReturn
                 </div>
                 {/* Golden-orange gradient interpretation */}
                 <div className="interp-gradient-default px-4 py-3">
-                  <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px' }}>{item.interpretation}</p>
+                  <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{item.interpretation}</p>
                   <div className="mt-3 flex justify-center">
                     <button onClick={() => trigger(item.title ?? `Aspect ${i + 1}`, item.interpretation, item, areaOfInquiry, item.title)} className="horoscope-show-more">Show More</button>
                   </div>
@@ -986,12 +1077,49 @@ function NatalChartsRow({ svgs, labels, onExpandImg }: {
 
 // ─── Planet Return Summary Table ──────────────────────────────────────────────
 
-function PlanetReturnSummaryTable({ tab, birth, returnDate, natalData }: {
-  tab: string; birth: BirthInput; returnDate: string | null; natalData: any;
+function PlanetReturnSummaryTable({ tab, birth, returnDate, natalData, responseData }: {
+  tab: string; birth: BirthInput; returnDate: string | null; natalData: any; responseData?: unknown;
 }) {
   const planet = tab.split("_")[0]; // jupiter, saturn, mars, uranus
   const label = planet.charAt(0).toUpperCase() + planet.slice(1);
   const natalDeg = natalData?.planets ? getPlanetDegree(natalData.planets, label) : null;
+  const birthPosition = formatPlanetBirthPosition(natalData?.planets, label);
+  const resolvedReturnDate = formatPlanetReturnDate(getPlanetReturnDisplay(tab, responseData, returnDate));
+  const isJupiterReturn = tab === "jupiter_return_v2";
+  const nextReturnLabel = isJupiterReturn ? "Next Jupiter Return" : `Next ${label} Return`;
+
+  if (isJupiterReturn) {
+    return (
+      <div className="horoscope-table-container">
+        <div className="horoscope-table-header">
+          <h3>{label} Return — Summary</h3>
+        </div>
+        <div className="horoscope-table-wrapper">
+          <table className="horoscope-table">
+            <thead>
+              <tr>
+                {["Date of Birth", "Place of Birth", "Time of Birth", "House System", `${label} at Birth`, nextReturnLabel].map((h) => (
+                  <th key={h}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{birth.dob ? format(parse(birth.dob, "yyyy-MM-dd", new Date()), "PPP") : "—"}</td>
+                <td>{birth.city?.label ?? "—"}</td>
+                <td>{birth.tob || "—"}</td>
+                <td>Whole Sign</td>
+                <td>{birthPosition ?? (natalDeg != null ? `${natalDeg.toFixed(2)}°` : "—")}</td>
+                <td className="font-semibold text-amber-700 dark:text-amber-300">
+                  {resolvedReturnDate ?? <span className="text-muted-foreground">Calculating…</span>}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-lg border overflow-hidden">
@@ -1002,7 +1130,7 @@ function PlanetReturnSummaryTable({ tab, birth, returnDate, natalData }: {
         <table className="w-full text-sm">
           <thead>
             <tr className="horoscope-thead">
-              {["Date of Birth", "Place of Birth", "Time of Birth", "House System", `${label} at Birth`, `Next ${label} Return`].map((h) => (
+              {["Date of Birth", "Place of Birth", "Time of Birth", "House System", `${label} at Birth`, nextReturnLabel].map((h) => (
                 <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide whitespace-nowrap" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 600, lineHeight: '26px', color: '#fff' }}>{h}</th>
               ))}
             </tr>
@@ -1013,8 +1141,8 @@ function PlanetReturnSummaryTable({ tab, birth, returnDate, natalData }: {
               <td className="px-3 py-2">{birth.city?.label ?? "—"}</td>
               <td className="px-3 py-2">{birth.tob || "—"}</td>
               <td className="px-3 py-2">Whole Sign</td>
-              <td className="px-3 py-2 font-mono text-xs">{natalDeg != null ? `${natalDeg.toFixed(2)}°` : "—"}</td>
-              <td className="px-3 py-2 font-semibold text-amber-600 dark:text-amber-400">{returnDate ?? <span className="text-muted-foreground">Calculating…</span>}</td>
+              <td className="px-3 py-2">{birthPosition ?? (natalDeg != null ? `${natalDeg.toFixed(2)}°` : "—")}</td>
+              <td className="px-3 py-2 font-semibold text-amber-600 dark:text-amber-400">{resolvedReturnDate ?? <span className="text-muted-foreground">Calculating…</span>}</td>
             </tr>
           </tbody>
         </table>
@@ -1025,6 +1153,60 @@ function PlanetReturnSummaryTable({ tab, birth, returnDate, natalData }: {
 
 // ─── Planet Return AI Interpretation ─────────────────────────────────────────
 
+function PlanetReturnPositions({ chartData }: { chartData: any }) {
+  const positions = chartData?.Positions;
+  if (!positions || typeof positions !== "object") return null;
+
+  const firstColumns = ["Ascendant", "Jupiter", "Mars", "Mercury", "Moon", "Neptune", "North_Node"];
+  const secondColumns = ["Pluto", "Saturn", "South_Node", "Sun", "Uranus", "Venus"];
+
+  const renderHeader = (key: string) => key.replace(/_/g, " ");
+  const renderValue = (key: string) => {
+    const value = positions[key];
+    return typeof value === "string" && value.trim() ? value : "—";
+  };
+
+  const renderTable = (columns: string[]) => (
+    <div className="horoscope-table-container">
+      <div className="horoscope-table-wrapper">
+        <table className="horoscope-table horoscope-table-positions">
+          <thead>
+            <tr>
+              {columns.map((column) => (
+                <th key={column}>{renderHeader(column)}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              {columns.map((column) => (
+                <td key={column}>{renderValue(column)}</td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-lg border overflow-hidden">
+        <div className="px-4 py-2.5 horoscope-section-header text-center">
+          <h3
+            className="text-sm font-semibold text-center w-full"
+            style={{ color: "#fff", fontSize: "large" }}
+          >
+            Positions
+          </h3>
+        </div>
+      </div>
+      {renderTable(firstColumns)}
+      {renderTable(secondColumns)}
+    </div>
+  );
+}
+
 function PlanetReturnInterpretation({ tab, aiData, areaOfInquiry }: { tab: string; aiData: any; areaOfInquiry?: string }) {
   const { modal, trigger, close } = useShowMore();
   if (!aiData && aiData !== "error") return <SectionSkeleton title="Return Interpretation" />;
@@ -1032,6 +1214,49 @@ function PlanetReturnInterpretation({ tab, aiData, areaOfInquiry }: { tab: strin
 
   const interp = aiData?.title_and_interpretation?.interpretation ?? aiData?.interpretation ?? null;
   const title = aiData?.title_and_interpretation?.title ?? `${tab.split("_")[0].charAt(0).toUpperCase() + tab.split("_")[0].slice(1)} Return`;
+  const isJupiterReturn = tab === "jupiter_return_v2";
+
+  if (isJupiterReturn) {
+    return (
+      <div className="rounded-lg border overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+        <div className="bg-white px-6 py-5 text-center border-b border-slate-200">
+          <h3
+            className="font-semibold text-slate-900"
+            style={{ fontFamily: "'Roboto', sans-serif", fontSize: "22px", lineHeight: "30px" }}
+          >
+            {title}
+          </h3>
+        </div>
+        <div
+          className="px-8 py-8 space-y-8"
+          style={{
+            background: "linear-gradient(180deg, #0f22ff 0%, #2147ff 100%)",
+            fontFamily: "'Roboto', sans-serif",
+          }}
+        >
+          {interp && typeof interp === "object" ? (
+            Object.entries(interp).map(([k, v]) => (
+              <div key={k} className="space-y-1.5">
+                <p
+                  className="text-white"
+                  style={{ fontSize: "18px", lineHeight: "30px", fontWeight: 400 }}
+                >
+                  <span style={{ fontWeight: 700 }}>{k} :</span> {String(v)}
+                </p>
+              </div>
+            ))
+          ) : interp ? (
+            <p
+              className="text-white"
+              style={{ fontSize: "18px", lineHeight: "30px", fontWeight: 400 }}
+            >
+              {String(interp)}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-lg border overflow-hidden">
@@ -1055,7 +1280,7 @@ function PlanetReturnInterpretation({ tab, aiData, areaOfInquiry }: { tab: strin
             <p className="leading-relaxed">{String(interp)}</p>
           </div>
         ) : null}
-        {aiData && typeof aiData === "object" && aiData.chart_data && (
+        {!isJupiterReturn && aiData && typeof aiData === "object" && aiData.chart_data && (
           <div className="px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Chart Data</p>
             <pre className="text-xs font-mono bg-muted/40 rounded p-2 overflow-x-auto whitespace-pre-wrap">{JSON.stringify(aiData.chart_data, null, 2)}</pre>
@@ -1819,51 +2044,12 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
 
 // ─── Horary Section ───────────────────────────────────────────────────────────
 
-function HorarySection({ data, areaOfInquiry, rawData, checkDacen, onDecanClick, suggestMoreDays, setSuggestMoreDays, handleRecreateHorary, recreating }: {
-  data: any; areaOfInquiry?: string; rawData?: any;
+function HorarySection({ data, areaOfInquiry, checkDacen, onDecanClick }: {
+  data: any; areaOfInquiry?: string;
   checkDacen: (p: string, s: string) => boolean;
   onDecanClick: (p: string, s: string) => void;
-  suggestMoreDays: string;
-  setSuggestMoreDays: React.Dispatch<React.SetStateAction<string>>;
-  handleRecreateHorary: (date: string) => Promise<void>;
-  recreating: boolean;
 }) {
   const { modal, trigger, close } = useShowMore();
-
-  const handleRecreateDate = useCallback((date: string) => {
-    handleRecreateHorary(date);
-  }, [handleRecreateHorary]);
-
-  useEffect(() => {
-    const patchSpans = () => {
-      const spans = document.querySelectorAll(".timedata:not(.patched)");
-      spans.forEach((span) => {
-        span.classList.add("patched");
-        const btn = document.createElement("button");
-        btn.className = "timedata-btn";
-        btn.innerHTML = `
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="23 4 23 10 17 10"></polyline>
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-          </svg>
-        `;
-        btn.onclick = (e) => {
-          e.stopPropagation();
-          const clone = span.cloneNode(true) as HTMLElement;
-          clone.querySelectorAll("button").forEach((b) => b.remove());
-          const dateText = clone.textContent?.trim() || "";
-          handleRecreateDate(dateText);
-        };
-        span.appendChild(btn);
-      });
-    };
-
-    patchSpans();
-    const mo = new MutationObserver(patchSpans);
-    mo.observe(document.body, { childList: true, subtree: true });
-    return () => mo.disconnect();
-  }, [data, handleRecreateDate]);
-
   if (!data) return <SectionSkeleton title="Horary Chart Interpretation" />;
   if (data === "error") return <SectionError title="Horary Chart Interpretation" />;
 
@@ -1880,12 +2066,12 @@ function HorarySection({ data, areaOfInquiry, rawData, checkDacen, onDecanClick,
   const astroAspect = inner?.astrological_aspect ?? {};
   const aspectItems: any[] = Array.isArray(astroAspect?.aspect) ? astroAspect.aspect : [];
   const planetItems: any[] = Array.isArray(astroAspect?.planet) ? astroAspect.planet : [];
-  const houseItems: any[]  = Array.isArray(astroAspect?.house)  ? astroAspect.house  : [];
+  const houseItems: any[] = Array.isArray(astroAspect?.house) ? astroAspect.house : [];
 
   const summary = inner?.summary ?? {};
-  const timelineItems: any[]    = Array.isArray(summary?.recommendation_on_date_and_timeline) ? summary.recommendation_on_date_and_timeline : [];
-  const answerItems: any[]      = Array.isArray(summary?.answer)         ? summary.answer         : [];
-  const recommendItems: any[]   = Array.isArray(summary?.recommendation) ? summary.recommendation : [];
+  const timelineItems: any[] = Array.isArray(summary?.recommendation_on_date_and_timeline) ? summary.recommendation_on_date_and_timeline : [];
+  const answerItems: any[] = Array.isArray(summary?.answer) ? summary.answer : [];
+  const recommendItems: any[] = Array.isArray(summary?.recommendation) ? summary.recommendation : [];
 
   const contentStyle: React.CSSProperties = {
     fontFamily: "'Roboto', sans-serif",
@@ -1898,69 +2084,70 @@ function HorarySection({ data, areaOfInquiry, rawData, checkDacen, onDecanClick,
   // Render text that may contain <span class="timedata">…</span> HTML from the AI
   function HtmlText({ html, className }: { html: string; className?: string }) {
     return (
-      <div
-        className={className ?? "leading-relaxed text-center"}
+      <p
+        className={className ?? "leading-relaxed"}
         dangerouslySetInnerHTML={{ __html: html ?? "" }}
       />
     );
   }
 
-  function HtmlHeading({ title, className }: { title: string; className?: string }) {
-    if (title.includes("<")) {
-      return (
-        <div
-          className={cn("font-bold uppercase tracking-wider text-center text-black px-4 py-1", className)}
-          dangerouslySetInnerHTML={{ __html: title }}
-        />
-      );
-    }
-    return <SmartHeading title={title} textSize="text-[22px]" iconSize="size-7" className={cn("text-black", className)} />;
-  }
-
   // A single interpretation block (header + gold-gradient body + Show More)
-  function InterpBlock({ title, text, itemObj, sectionKey }: { title: string; text: string; itemObj?: any; sectionKey?: string }) {
+  function InterpBlock({ title, text, itemObj }: { title: string; text: string; itemObj?: any }) {
     if (!text) return null;
-    const bgClass = getRelationshipBgClass(title, "horary_chart_v2", sectionKey);
+    const pName = title?.split(" ")[0];
     return (
-      <div className="rounded-lg border overflow-hidden mt-6 first:mt-0">
-        <div className="px-4 py-4 horoscope-interp-header flex items-center justify-center border-b border-black/10">
-          <HtmlHeading title={title} className="text-[22px]" />
+      <div className="rounded-lg border overflow-hidden">
+        <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center">
+          <div className="flex items-center gap-2">
+            {pName && PLANET_IMAGES[pName] && (
+              <img src={PLANET_IMAGES[pName]} alt={pName} className="size-6 object-contain" />
+            )}
+            <SmartHeading title={title} textSize="text-[22px]" iconSize="size-7" className="text-black" />
+          </div>
         </div>
-        <div className={cn(bgClass, "px-4 py-5 pb-8")} style={contentStyle}>
+        <div className="interp-gradient-default px-4 py-3 pb-8" style={contentStyle}>
           <HtmlText html={text} />
+          <div className="mt-2 flex justify-center border-t border-black/10 pt-2">
+            <button
+              onClick={() => trigger(title, text, itemObj ?? { title, data: text }, areaOfInquiry)}
+              className="horoscope-show-more"
+            >
+              Show More
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   // A group section with a dark header bar + multiple InterpBlocks below
-  function GroupSection({ sectionTitle, items, sectionKey }: { sectionTitle: string; items: any[]; sectionKey?: string }) {
+  function GroupSection({ sectionTitle, items }: { sectionTitle: string; items: any[] }) {
     if (!items.length) return null;
     return (
-      <div className="space-y-4">
-        <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-3 horoscope-section-header-dark text-center">
-            <h3 className="text-sm font-semibold text-white">
-              <SmartHeading title={sectionTitle} textSize="text-[20px]" iconSize="size-7" className="text-white" />
-            </h3>
-          </div>
+      <div className="rounded-lg border overflow-hidden">
+        <div className="px-4 py-2.5 horoscope-section-header text-center">
+          <h3 className="text-sm font-semibold text-white">{sectionTitle}</h3>
         </div>
-        <div className="space-y-6">
-          {items.map((item: any, i: number) => {
-            const bgClass = getRelationshipBgClass(item.title ?? sectionTitle, "horary_chart_v2", sectionKey);
-            return (
-              <div key={i} className="rounded-lg border overflow-hidden shadow-sm">
-                {item.title && (
-                  <div className="px-4 py-4 horoscope-interp-header flex items-center justify-center border-b border-black/10">
-                    <HtmlHeading title={item.title} className="text-[22px]" />
-                  </div>
-                )}
-                <div className={cn(bgClass, "px-4 py-5 pb-8")} style={contentStyle}>
-                  <HtmlText html={item.data ?? item.text ?? String(item)} />
+        <div className="divide-y space-y-0">
+          {items.map((item: any, i: number) => (
+            <div key={i} className="interp-gradient-default px-4 py-3 pb-8" style={contentStyle}>
+              {item.title && (
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  {(() => { const pn = item.title?.split(" ")[0]; return pn && PLANET_IMAGES[pn] ? <img src={PLANET_IMAGES[pn]} alt={pn} className="size-5 object-contain" /> : null; })()}
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-center">{item.title}</h4>
                 </div>
+              )}
+              <HtmlText html={item.data ?? item.text ?? String(item)} />
+              <div className="mt-1.5 flex justify-center border-t border-black/10 pt-2">
+                <button
+                  onClick={() => trigger(item.title, item.data ?? item.text ?? "", item, areaOfInquiry)}
+                  className="horoscope-show-more"
+                >
+                  Show More
+                </button>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -1969,118 +2156,89 @@ function HorarySection({ data, areaOfInquiry, rawData, checkDacen, onDecanClick,
   const hasContent = timelineItems.length > 0 || houseItems.length > 0 || planetItems.length > 0 || aspectItems.length > 0 || answerItems.length > 0 || recommendItems.length > 0;
 
   return (
-    <div className="relative space-y-4">
-      {recreating && (
-        <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-black/20 backdrop-blur-[3px]">
-          <div className="flex flex-col items-center p-10 bg-white shadow-[0_22px_70px_8px_rgba(0,0,0,0.18)] rounded-3xl border border-amber-100/50 max-w-[420px] mx-4">
-            <div className="relative mb-6">
-              <Loader2 className="size-16 animate-spin text-amber-600" />
-              <Sparkles className="size-6 text-amber-400 absolute -top-2 -right-2 animate-pulse" />
-            </div>
-            <h4 className="text-2xl font-bold text-amber-950 text-center">Refining Your Timeline</h4>
-            <p className="text-amber-900/70 text-center mt-3 leading-relaxed text-lg font-medium">
-              Consulting the celestial alignments for a more auspicious window...
-            </p>
-          </div>
-        </div>
-      )}
+    <div className="space-y-4">
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} relationshipEntries={modal?.relationshipEntries} bgClass={modal?.bgClass} pictureUrl={modal?.pictureUrl} />
 
       {/* ── Section 1: Recommendation on Date & Timeline ─────────────────── */}
       {timelineItems.length > 0 && (
-        <div className="space-y-4">
-          <div className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-3 horoscope-section-header-dark text-center">
-              <h3 className="text-sm font-semibold text-white">
-                <SmartHeading title="Recommendation on Date & Timeline" textSize="text-[20px]" iconSize="size-7" className="text-white" />
-              </h3>
-            </div>
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-2.5 horoscope-section-header text-center">
+            <h3 className="text-sm font-semibold text-white">Recommendation on Date &amp; Timeline</h3>
           </div>
-          <div className="space-y-6">
-            {timelineItems.map((s: any, i: number) => {
-              const bgClass = getRelationshipBgClass(s.timeline_title ?? "Timeline", "horary_chart_v2", "timing_and_transits");
-              return (
-                <div key={i} className="rounded-lg border overflow-hidden shadow-sm">
-                  {s.timeline_title && (
-                    <div className="px-4 py-4 horoscope-interp-header flex items-center justify-center border-b border-black/10">
-                      <HtmlHeading title={s.timeline_title} className="text-[22px]" />
-                    </div>
-                  )}
-                  <div className={cn(bgClass, "px-4 py-5 pb-8")} style={contentStyle}>
-                    <HtmlText html={s.timeline_data ?? ""} />
-                  </div>
+          <div className="divide-y">
+            {timelineItems.map((s: any, i: number) => (
+              <div key={i} className="interp-gradient-default px-4 py-3 pb-8" style={contentStyle}>
+                {s.timeline_title && (
+                  <h4 className="text-xs font-semibold uppercase tracking-wider mb-2 text-center w-full">
+                    {s.timeline_title}
+                  </h4>
+                )}
+                <HtmlText html={s.timeline_data ?? ""} />
+                <div className="mt-1.5 flex justify-center border-t border-black/10 pt-2">
+                  <button
+                    onClick={() => trigger(s.timeline_title, s.timeline_data, s, areaOfInquiry)}
+                    className="horoscope-show-more"
+                  >
+                    Show More
+                  </button>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* ── Section 4: Astrological Aspects ──────────────────────────────── */}
-      <GroupSection sectionTitle="Astrological Aspects" items={aspectItems} sectionKey="astrological_aspect" />
+      {/* ── Section 2: House Analysis ─────────────────────────────────────── */}
+      <GroupSection sectionTitle="House Analysis" items={houseItems} />
 
       {/* ── Section 3: Planetary Influence ───────────────────────────────── */}
-      <GroupSection sectionTitle="Planetary Influence" items={planetItems} sectionKey="planetary_influence" />
+      <GroupSection sectionTitle="Planetary Influence" items={planetItems} />
 
-      {/* ── Section 2: House Analysis ─────────────────────────────────────── */}
-      <GroupSection sectionTitle="House Analysis" items={houseItems} sectionKey="house_analysis" />
+      {/* ── Section 4: Astrological Aspects ──────────────────────────────── */}
+      <GroupSection sectionTitle="Astrological Aspects" items={aspectItems} />
 
       {/* ── Section 5a: Summary — Answer ─────────────────────────────────── */}
       {answerItems.length > 0 && (
-        <div className="space-y-4">
-          <div className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-3 horoscope-section-header-dark text-center">
-              <h3 className="text-sm font-semibold text-white">
-                <SmartHeading title="Summary" textSize="text-[20px]" iconSize="size-7" className="text-white" />
-              </h3>
-            </div>
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-2.5 horoscope-section-header text-center">
+            <h3 className="text-sm font-semibold text-white">Summary</h3>
           </div>
-          <div className="space-y-6">
-            {answerItems.map((a: any, i: number) => {
-              const bgClass = getRelationshipBgClass(a.title ?? "Summary", "horary_chart_v2", "compatibility_score_or_summary");
-              return (
-                <div key={i} className="rounded-lg border overflow-hidden shadow-sm">
-                  {a.title && (
-                    <div className="px-4 py-4 horoscope-interp-header flex items-center justify-center border-b border-black/10">
-                      <HtmlHeading title={a.title} className="text-[22px]" />
-                    </div>
-                  )}
-                  <div className={cn(bgClass, "px-4 py-5 pb-4")} style={contentStyle}>
-                    <HtmlText html={a.data ?? a.text ?? String(a)} />
-                  </div>
-                </div>
-              );
-            })}
+          <div className="divide-y">
+            {answerItems.map((a: any, i: number) => (
+              <div key={i} className="interp-gradient-default px-4 py-3" style={contentStyle}>
+                {a.title && (
+                  <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{a.title}</h4>
+                )}
+                <HtmlText html={a.data ?? a.text ?? String(a)} />
+              </div>
+            ))}
           </div>
         </div>
       )}
 
       {/* ── Section 5b: Summary — Recommendations ────────────────────────── */}
       {recommendItems.length > 0 && (
-        <div className="space-y-4">
-          <div className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-3 horoscope-section-header-dark text-center">
-              <h3 className="text-sm font-semibold text-white">
-                <SmartHeading title="Recommendations" textSize="text-[20px]" iconSize="size-7" className="text-white" />
-              </h3>
-            </div>
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-2.5 horoscope-section-header text-center">
+            <h3 className="text-sm font-semibold text-white">Recommendations</h3>
           </div>
-          <div className="space-y-6">
-            {recommendItems.map((r: any, i: number) => {
-              const bgClass = getRelationshipBgClass(r.title ?? "Recommendations", "horary_chart_v2", "compatibility_score_or_summary");
-              return (
-                <div key={i} className="rounded-lg border overflow-hidden shadow-sm">
-                  {r.title && (
-                    <div className="px-4 py-4 horoscope-interp-header flex items-center justify-center border-b border-black/10">
-                      <HtmlHeading title={r.title} className="text-[22px]" />
-                    </div>
-                  )}
-                  <div className={cn(bgClass, "px-4 py-5 pb-8")} style={contentStyle}>
-                    <HtmlText html={r.data ?? r.text ?? String(r)} />
-                  </div>
+          <div className="divide-y">
+            {recommendItems.map((r: any, i: number) => (
+              <div key={i} className="interp-gradient-default px-4 py-3 pb-8" style={contentStyle}>
+                {r.title && (
+                  <h4 className="text-xs font-semibold uppercase tracking-wider mb-1 text-center w-full">{r.title}</h4>
+                )}
+                <HtmlText html={r.data ?? r.text ?? String(r)} />
+                <div className="mt-1.5 flex justify-center border-t border-black/10 pt-2">
+                  <button
+                    onClick={() => trigger(r.title, r.data ?? r.text ?? "", r, areaOfInquiry)}
+                    className="horoscope-show-more"
+                  >
+                    Show More
+                  </button>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -2268,8 +2426,6 @@ export default function AdminHoroscopePage() {
   const [transitChartSvg, setTransitChartSvg] = useState<string | null>(null);
   const [dacenPsibality, setDacenPsibality] = useState<DecanPossibility[]>([]);
   const [decanPlanet, setDecanPlanet] = useState<{ name: string; sign: string } | null>(null);
-  const [suggestMoreDays, setSuggestMoreDays] = useState<string>("");
-  const [recreating, setRecreating] = useState(false);
 
   const checkDacen = (planetName: string, signName: string) => {
     const normalizedPlanet = normalizeDecanValue(planetName);
@@ -2288,7 +2444,6 @@ export default function AdminHoroscopePage() {
     setNatalSvgP2(null); setNatalSvgTransitP2(null);
     setReturnDate(null); setError(null); setProgress([]); setForm(defaultForm());
     setShowScrollTop(false); setShowChartBtn(false); setTransitChartSvg(null);
-    setSuggestMoreDays(""); // Reset excluded dates
   }, [currentSlug]);
 
   // Pre-fetch decan possibilities (distinct planet+sign pairs)
@@ -2357,60 +2512,8 @@ export default function AdminHoroscopePage() {
     setTimeout(() => { win.print(); win.close(); }, 500);
   }
 
-  const handleRecreateHorary = async (excludedDate: string) => {
-    // 1. Update exclusions immediately
-    const newExclusions = suggestMoreDays ? `${suggestMoreDays}, ${excludedDate}` : excludedDate;
-    setSuggestMoreDays(newExclusions);
-    setRecreating(true);
-
-    try {
-      // 2. Prepare combined data for prompt
-      const birth1 = parseBirth(form.person1);
-      const combinedData = {
-        ...birth1,
-        ...results,
-        city: form.person1?.city ?? "",
-        question: form.question,
-      };
-
-      // 3. Build only the necessary prompt part
-      const prompts = buildAiPrompts(combinedData, "horary_chart_v2", form.areaOfInquiry || undefined, newExclusions);
-      const p = prompts.find((pr) => pr.key === "horary_chart_question");
-      if (!p) throw new Error("Horary prompt not found");
-
-      // 4. One specific API call to AI
-      const aiPayload = {
-        condition: { system_content: p.system, user_content: p.user },
-        toolname: "other",
-        json: p.json,
-      };
-
-      const aiRes = await callAI(aiPayload, form.areaOfInquiry || undefined);
-      let parsed = aiRes.ai_response;
-      if (typeof parsed === "string") {
-        try { parsed = JSON.parse(parsed); } catch { /* keep string */ }
-      }
-
-      // 5. Update only the Horary section data in state
-      setResults((prev) => {
-        if (!prev) return prev;
-        const prevAi = prev.ai_interpretations ?? {};
-        return {
-          ...prev,
-          ai_interpretations: { ...prevAi, [p.key]: parsed },
-        };
-      });
-      toast.success("New auspicious timelines generated.");
-    } catch (err) {
-      console.error("Recreation error:", err);
-      toast.error("Failed to recreate date. Please try again.");
-    } finally {
-      setRecreating(false);
-    }
-  };
-
-  async function handleSubmit(e?: React.FormEvent) {
-    if (e) e.preventDefault();
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
@@ -2419,10 +2522,7 @@ export default function AdminHoroscopePage() {
 
     setLoading(true);
     setError(null);
-
-    // If we have excluded dates, we don't necessarily want to wipe everything immediately
-    // but we should clear results so the loader shows up.
-    setResults({}); 
+    setResults({}); // Initialize results so the section shows up immediately
     setNatalSvg(null);
     setNatalSvgTransit(null);
     setNatalSvgP2(null);
@@ -2695,57 +2795,37 @@ export default function AdminHoroscopePage() {
               const steps = planetReturnMap[currentTab.slug];
               const planetName = steps.split("_")[0];
               const planetCap = planetName.charAt(0).toUpperCase() + planetName.slice(1);
-              const nDeg = getPlanetDegree(natalData?.planets, planetCap);
-              const bod = `${pad(birth1.year)}-${pad(birth1.month)}-${pad(
-                birth1.day
-              )} ${pad(birth1.hour)}:${pad(birth1.min)}:00`;
-              const retData = await callPlanetReturn({
-                steps,
-                date_of_birth_with_time: bod,
-                natal_deg: nDeg,
-                tzone: form.person1.city!.timezone.offset_string,
-              });
-              const rdVal = retData?.[`${planetName}_return`];
-              if (rdVal) {
-                setReturnDate(rdVal);
-                collected.returnDate = rdVal;
-              }
-              collected.planet_return_data = retData;
-              setResults((prev) => ({ ...prev, planet_return_data: retData }));
+              const natalDeg = getPlanetDegree(natalData?.planets, planetCap);
+              const normalizedNatalDeg = Number.isFinite(Number(natalDeg))
+                ? Number(Number(natalDeg).toFixed(4))
+                : null;
+              const dateOfBirthWithTime = `${pad(birth1.year)}-${pad(birth1.month)}-${pad(birth1.day)} ${pad(birth1.hour)}:${pad(birth1.min)}:00`;
 
-              if (currentTab.slug === "saturn_return_v2") {
-                const [det, pla, cup, asp] = await Promise.allSettled([
-                  callCompute(
-                    "solar_return_details",
-                    birth1 as unknown as Record<string, unknown>
-                  ),
-                  callCompute(
-                    "solar_return_planets",
-                    birth1 as unknown as Record<string, unknown>
-                  ),
-                  callCompute(
-                    "solar_return_house_cusps",
-                    birth1 as unknown as Record<string, unknown>
-                  ),
-                  callCompute(
-                    "solar_return_planet_aspects",
-                    birth1 as unknown as Record<string, unknown>
-                  ),
-                ]);
-                const detV = det.status === "fulfilled" ? det.value : null;
-                const plaV = pla.status === "fulfilled" ? pla.value : null;
-                const cupV = cup.status === "fulfilled" ? cup.value : null;
-                const aspV = asp.status === "fulfilled" ? asp.value : null;
-                collected.solar_return_details = detV;
-                collected.solar_return_planets = plaV;
-                collected.solar_return_cusps = cupV;
-                collected.solar_return_aspects = aspV;
+              try {
+                if (normalizedNatalDeg == null) {
+                  throw new Error(`Unable to calculate natal degree for ${planetCap}`);
+                }
+
+                const planetReturnPayload = {
+                  steps,
+                  date_of_birth_with_time: dateOfBirthWithTime,
+                  natal_deg: normalizedNatalDeg,
+                };
+                const planetReturnResponse = await callPlanetReturn(planetReturnPayload);
+                const resolvedReturnDate = getPlanetReturnDisplay(currentTab.slug, planetReturnResponse, null);
+
+                collected[currentTab.slug] = planetReturnResponse;
+                collected.returnDate = resolvedReturnDate;
+                setReturnDate(resolvedReturnDate);
                 setResults((prev) => ({
                   ...prev,
-                  solar_return_details: detV,
-                  solar_return_planets: plaV,
-                  solar_return_cusps: cupV,
-                  solar_return_aspects: aspV,
+                  [currentTab.slug]: planetReturnResponse,
+                }));
+              } catch {
+                collected[currentTab.slug] = "error";
+                setResults((prev) => ({
+                  ...prev,
+                  [currentTab.slug]: "error",
                 }));
               }
             })()
@@ -2761,7 +2841,7 @@ export default function AdminHoroscopePage() {
           ...collected,
           returnDate: collected.returnDate ?? returnDate ?? "calculated",
         };
-        const prompts = buildAiPrompts(combinedData, currentTab.slug, form.areaOfInquiry || undefined, suggestMoreDays);
+        const prompts = buildAiPrompts(combinedData, currentTab.slug, form.areaOfInquiry || undefined);
 
         const aiPromises = prompts.map(async (p) => {
           try {
@@ -2923,7 +3003,7 @@ export default function AdminHoroscopePage() {
         // AI Interpretations
         addProgress("Running relationship AI…");
         const combinedData = { ...(collected.synastry ?? {}), ...collected };
-        const prompts = buildAiPrompts(combinedData, currentTab.slug, form.areaOfInquiry || undefined, suggestMoreDays);
+        const prompts = buildAiPrompts(combinedData, currentTab.slug, form.areaOfInquiry || undefined);
         const aiPromises = prompts.map(async (p) => {
           try {
             const aiPayload = {
@@ -3038,6 +3118,9 @@ export default function AdminHoroscopePage() {
   const ai = results?.ai_interpretations ?? {};
   const natalData = results?.natal_chart_data;
   const isPlanetReturn = ["jupiter_return_v2", "saturn_return_v2", "mars_return_v2", "uranus_return_v2"].includes(currentSlug);
+  const planetReturnDisplay = isPlanetReturn
+    ? formatPlanetReturnDate(getPlanetReturnDisplay(currentSlug, results?.[currentSlug], returnDate))
+    : null;
   const isTwoPersonAiTab = currentTab.type === "two-person";
   const isTransit = ["tropical_transits_weekly_v2", "tropical_transits_monthly_v3"].includes(currentSlug);
   const isHorary = currentSlug === "horary_chart_v2";
@@ -3163,9 +3246,11 @@ export default function AdminHoroscopePage() {
                     </div>
 
                     {/* Return date banner */}
-                    {returnDate && (
+                    {planetReturnDisplay && (
                       <div className="rounded-md border border-amber-400/40 bg-amber-500/10 px-4 py-3">
-                        <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">Return Date: <span className="font-bold">{returnDate}</span></p>
+                        <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                          Return Response: <span className="font-bold">{planetReturnDisplay}</span>
+                        </p>
                       </div>
                     )}
 
@@ -3191,7 +3276,19 @@ export default function AdminHoroscopePage() {
 
                     {/* ─── Planet Return Summary ──────────────────── */}
                     {isPlanetReturn && (
-                      <PlanetReturnSummaryTable tab={currentSlug} birth={form.person1} returnDate={returnDate} natalData={natalData} />
+                      <PlanetReturnSummaryTable
+                        tab={currentSlug}
+                        birth={form.person1}
+                        returnDate={returnDate}
+                        natalData={natalData}
+                        responseData={results?.[currentSlug]}
+                      />
+                    )}
+                    {currentSlug === "jupiter_return_v2" && ai[currentSlug]?.chart_data && (
+                      <PlanetReturnPositions chartData={ai[currentSlug].chart_data} />
+                    )}
+                    {currentSlug === "jupiter_return_v2" && (
+                      <PlanetReturnInterpretation tab={currentSlug} aiData={ai[currentSlug]} areaOfInquiry={form.areaOfInquiry} />
                     )}
 
                     {/* ─── Solar Return ───────────────────────────── */}
@@ -3247,17 +3344,8 @@ export default function AdminHoroscopePage() {
                       <HorarySection
                         data={ai.horary_chart_question}
                         areaOfInquiry={form.areaOfInquiry}
-                        rawData={{
-                          person1: form.person1,
-                          question: form.question,
-                          chartJson: results?.horary_chart_data,
-                        }}
                         checkDacen={checkDacen}
                         onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
-                        suggestMoreDays={suggestMoreDays}
-                        setSuggestMoreDays={setSuggestMoreDays}
-                        handleRecreateHorary={handleRecreateHorary}
-                        recreating={recreating}
                       />
                     )}
 
@@ -3291,7 +3379,7 @@ export default function AdminHoroscopePage() {
                               onDecanClick={(p, s) => setDecanPlanet({ name: p, sign: s })}
                             />
                             <div className="rounded-lg border overflow-hidden">
-                             <div className="px-4 py-3 flex items-center gap-2 bg-black text-white border-none rounded-t-lg">
+                              <div className="px-4 py-3 flex items-center gap-2 bg-black text-white border-none rounded-t-lg">
                                 <Home className="size-4 text-white" />
                                 <h2 className="text-sm font-semibold text-white">House Information</h2>
                               </div>
@@ -3300,7 +3388,7 @@ export default function AdminHoroscopePage() {
                               </div>
                             </div>
                             <div className="rounded-lg border overflow-hidden">
-                             <div className="px-4 py-3 flex items-center gap-2 bg-black text-white border-none rounded-t-lg">
+                              <div className="px-4 py-3 flex items-center gap-2 bg-black text-white border-none rounded-t-lg">
                                 <Sparkles className="size-4 text-white" />
                                 <h2 className="text-sm font-semibold text-white">Dharma & Karma</h2>
                               </div>
@@ -3309,7 +3397,7 @@ export default function AdminHoroscopePage() {
                               </div>
                             </div>
                             <div className="rounded-lg border overflow-hidden">
-                             <div className="px-4 py-3 flex items-center gap-2 bg-black text-white border-none rounded-t-lg">
+                              <div className="px-4 py-3 flex items-center gap-2 bg-black text-white border-none rounded-t-lg">
                                 <Link className="size-4 text-white" />
                                 <h2 className="text-sm font-semibold text-white">Aspects</h2>
                               </div>
@@ -3330,7 +3418,7 @@ export default function AdminHoroscopePage() {
                       </div>
                     )}
 
-                    {isPlanetReturn && (
+                    {isPlanetReturn && currentSlug !== "jupiter_return_v2" && (
                       <PlanetReturnInterpretation tab={currentSlug} aiData={ai[currentSlug]} areaOfInquiry={form.areaOfInquiry} />
                     )}
                   </div>
