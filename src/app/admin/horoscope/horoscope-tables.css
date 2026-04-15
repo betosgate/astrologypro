@@ -67,6 +67,10 @@
     white-space: nowrap;
 }
 
+.horoscope-table-positions th {
+    color: #ffffff;
+}
+
 .horoscope-table tbody tr {
     background-color: #0c0f16;
     transition: background-color 0.2s ease;
