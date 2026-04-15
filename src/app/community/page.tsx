@@ -162,7 +162,7 @@ export default async function CommunityDashboardPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!member) redirect("/join/community");
+  if (!member) redirect("/get-started");
 
   // ── Derive subscription display data from member row ──────────────────────
   const PLAN_LABELS: Record<string, Record<string, string>> = {

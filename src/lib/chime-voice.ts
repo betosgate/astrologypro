@@ -24,25 +24,77 @@ import { createAdminClient } from "./supabase/admin";
  * Mirrors the Twilio provisionPhoneNumber() function in twilio-voice.ts.
  */
 export async function provisionChimePhoneNumber(
-  divinerId: string
+  divinerId: string,
+  areaCode?: string
 ): Promise<{ phoneNumber: string; phoneArn: string }> {
   const smaId = process.env.CHIME_SMA_ID;
   if (!smaId) throw new Error("CHIME_SMA_ID env var not set");
 
   const voice = getChimeVoiceClient();
 
-  // ── Step 1: Search for an available US local number ──────────────────────
-  const searchResult = await voice.send(
-    new SearchAvailablePhoneNumbersCommand({
-      PhoneNumberType: "Local",
-      Country: "US",
-      MaxResults: 1,
-    })
-  );
+  // ── Step 1: Search for an available US number ────────────────────────────
+  // AWS Chime SDK Voice requires specific parameters per phone number type:
+  //   - Local:    AreaCode (3-digit US) OR (State + optional City)
+  //   - TollFree: TollFreePrefix (e.g. "800", "888", "877", "866", "855", "844", "833")
+  // Omitting these causes BadRequestException: "required search parameters are empty".
+  let availableNumbers: string[] = [];
 
-  const availableNumbers = searchResult.E164PhoneNumbers ?? [];
+  // Validate area code — must be 3-digit US area code
+  const sanitizedAreaCode = (areaCode || "212").replace(/\D/g, "");
+  if (sanitizedAreaCode.length !== 3) {
+    throw new Error(
+      `Invalid area code "${areaCode}". Must be a 3-digit US area code (e.g. "212", "310", "415").`
+    );
+  }
+
+  // Try Local first
+  try {
+    console.log(`[Chime] Searching Local numbers with AreaCode=${sanitizedAreaCode}...`);
+    const localResult = await voice.send(
+      new SearchAvailablePhoneNumbersCommand({
+        PhoneNumberType: "Local",
+        Country: "US",
+        AreaCode: sanitizedAreaCode,
+        MaxResults: 1,
+      })
+    );
+    availableNumbers = localResult.E164PhoneNumbers ?? [];
+    console.log(`[Chime] Local search returned ${availableNumbers.length} numbers`);
+  } catch (err) {
+    console.warn("[Chime] Local number search failed, trying TollFree:", err);
+  }
+
+  // Fall back to TollFree — requires TollFreePrefix
+  const TOLL_FREE_PREFIXES = ["800", "888", "877", "866", "855", "844", "833"];
   if (availableNumbers.length === 0) {
-    throw new Error("No available Chime PSTN phone numbers");
+    for (const prefix of TOLL_FREE_PREFIXES) {
+      try {
+        console.log(`[Chime] Searching TollFree numbers with prefix=${prefix}...`);
+        const tollFreeResult = await voice.send(
+          new SearchAvailablePhoneNumbersCommand({
+            PhoneNumberType: "TollFree",
+            Country: "US",
+            TollFreePrefix: prefix,
+            MaxResults: 1,
+          })
+        );
+        availableNumbers = tollFreeResult.E164PhoneNumbers ?? [];
+        if (availableNumbers.length > 0) {
+          console.log(`[Chime] TollFree search (${prefix}) returned ${availableNumbers.length} numbers`);
+          break;
+        }
+      } catch (err) {
+        console.warn(`[Chime] TollFree search (${prefix}) failed:`, err);
+      }
+    }
+  }
+
+  if (availableNumbers.length === 0) {
+    throw new Error(
+      "No available Chime PSTN phone numbers. " +
+      "This usually means the AWS account needs a Service Quota increase. " +
+      "Go to AWS Console → Service Quotas → Amazon Chime SDK → Phone Number and request an increase."
+    );
   }
 
   const phoneNumber = availableNumbers[0];
@@ -98,7 +150,7 @@ export async function provisionChimePhoneNumber(
   // command in the V2 SDK — routing is done entirely through SIP Rules.
   const sipRuleResult = await voice.send(
     new CreateSipRuleCommand({
-      Name: `diviner-${divinerId}-${phoneNumber}`,
+      Name: `diviner-${divinerId}-${phoneNumber.replace(/[^a-zA-Z0-9 _.-]/g, "")}`,
       TriggerType: "ToPhoneNumber",
       TriggerValue: phoneNumber,
       Disabled: false,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { stripe } from "@/lib/stripe/client";
+import { stripe, getOrCreateStripeCustomer } from "@/lib/stripe/client";
 import { APP_URL } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -236,8 +236,10 @@ export async function POST(request: NextRequest) {
       ? `${APP_URL}/mystery-school/checkout/cancel`
       : `${APP_URL}/community/upgrade`;
 
+    const customerId = await getOrCreateStripeCustomer(user.email!, { supabase_user_id: user.id });
+
     const session = await stripe.checkout.sessions.create({
-      customer_email: user.email,
+      customer: customerId,
       mode: "subscription",
       line_items: lineItems,
       metadata,

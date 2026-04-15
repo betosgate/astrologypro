@@ -147,14 +147,17 @@ export async function startChimeRecording(
   );
 
   const pipeline = response.MediaCapturePipeline;
-  if (!pipeline?.MediaPipelineId || !pipeline?.MediaPipelineArn) {
-    throw new Error("Chime SDK: Failed to create media capture pipeline");
+  if (!pipeline?.MediaPipelineId) {
+    throw new Error("Chime SDK: Failed to create media capture pipeline — no MediaPipelineId returned");
   }
 
-  return {
-    pipelineId: pipeline.MediaPipelineId,
-    pipelineArn: pipeline.MediaPipelineArn,
-  };
+  const pipelineId = pipeline.MediaPipelineId;
+  // Some SDK versions don't return the ARN in the create response — construct it
+  const pipelineArn =
+    pipeline.MediaPipelineArn ??
+    `arn:aws:chime::${accountId}:media-pipeline/${pipelineId}`;
+
+  return { pipelineId, pipelineArn };
 }
 
 /**
