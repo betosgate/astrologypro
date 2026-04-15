@@ -470,11 +470,11 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {/* Today's Sessions Quick-Start */}
-      <TodaysSessions sessions={todaysSessions} nextSessionDate={nextSessionDate} />
-
-      {/* Planetary Returns */}
-      <PlanetaryReturns divinerId={diviner.id} />
+      {/* Today's Sessions + Planetary Returns — side by side */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <TodaysSessions sessions={todaysSessions} nextSessionDate={nextSessionDate} />
+        <PlanetaryReturns divinerId={diviner.id} />
+      </div>
 
       {/* Profile Completion */}
       <ProfileStrength

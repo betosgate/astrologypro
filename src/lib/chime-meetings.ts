@@ -6,6 +6,7 @@ import {
 } from "@aws-sdk/client-chime-sdk-meetings";
 import {
   CreateMediaCapturePipelineCommand,
+  CreateMediaConcatenationPipelineCommand,
   DeleteMediaCapturePipelineCommand,
 } from "@aws-sdk/client-chime-sdk-media-pipelines";
 import {
@@ -102,29 +103,106 @@ export async function endChimeMeeting(meetingId: string): Promise<void> {
 export async function startChimeRecording(
   meetingId: string,
   s3KeyPrefix: string
-): Promise<{ pipelineId: string }> {
+): Promise<{ pipelineId: string; pipelineArn: string }> {
   if (!RECORDING_BUCKET) {
     console.warn("CHIME_RECORDING_BUCKET not set — skipping recording");
-    return { pipelineId: "" };
+    return { pipelineId: "", pipelineArn: "" };
   }
 
+  const accountId = await getAccountId();
   const client = getChimeMediaPipelinesClient();
 
   const response = await client.send(
     new CreateMediaCapturePipelineCommand({
       SourceType: "ChimeSdkMeeting",
-      SourceArn: `arn:aws:chime::${await getAccountId()}:meeting/${meetingId}`,
+      SourceArn: `arn:aws:chime::${accountId}:meeting/${meetingId}`,
       SinkType: "S3Bucket",
       SinkArn: `arn:aws:s3:::${RECORDING_BUCKET}/${s3KeyPrefix}`,
+      // Capture both audio + composited video so recordings include the full
+      // session visually, not just audio segments.
+      ChimeSdkMeetingConfiguration: {
+        ArtifactsConfiguration: {
+          Audio: {
+            MuxType: "AudioWithCompositedVideo",
+          },
+          Video: {
+            State: "Enabled",
+            MuxType: "VideoOnly",
+          },
+          Content: {
+            State: "Disabled",
+            MuxType: "ContentOnly",
+          },
+          CompositedVideo: {
+            Layout: "GridView",
+            Resolution: "FHD",
+            GridViewConfiguration: {
+              ContentShareLayout: "ActiveSpeakerOnly",
+            },
+          },
+        },
+      },
     })
   );
 
   const pipeline = response.MediaCapturePipeline;
-  if (!pipeline?.MediaPipelineId) {
+  if (!pipeline?.MediaPipelineId || !pipeline?.MediaPipelineArn) {
     throw new Error("Chime SDK: Failed to create media capture pipeline");
   }
 
-  return { pipelineId: pipeline.MediaPipelineId };
+  return {
+    pipelineId: pipeline.MediaPipelineId,
+    pipelineArn: pipeline.MediaPipelineArn,
+  };
+}
+
+/**
+ * Creates a Media Concatenation Pipeline that merges all the segment files
+ * from a capture pipeline into a single named MP4 file.
+ * Call this when the session ends (after stopChimeRecording).
+ * Output: recordings/{bookingId}/final/{meetingId}.mp4
+ */
+export async function startChimeConcatenation(
+  capturePipelineArn: string,
+  meetingId: string,
+  bookingId: string
+): Promise<void> {
+  if (!RECORDING_BUCKET || !capturePipelineArn) return;
+
+  const client = getChimeMediaPipelinesClient();
+
+  await client.send(
+    new CreateMediaConcatenationPipelineCommand({
+      Sources: [
+        {
+          Type: "MediaCapturePipeline",
+          MediaCapturePipelineSourceConfiguration: {
+            MediaPipelineArn: capturePipelineArn,
+            ChimeSdkMeetingConfiguration: {
+              ArtifactsConfiguration: {
+                Audio: { State: "Enabled" },
+                Video: { State: "Disabled" },
+                Content: { State: "Disabled" },
+                DataChannel: { State: "Disabled" },
+                TranscriptionMessages: { State: "Disabled" },
+                MeetingEvents: { State: "Disabled" },
+                CompositedVideo: { State: "Enabled" },
+              },
+            },
+          },
+        },
+      ],
+      Sinks: [
+        {
+          Type: "S3Bucket",
+          S3BucketSinkConfiguration: {
+            // Named by meetingId so retrieval is straightforward
+            Destination: `arn:aws:s3:::${RECORDING_BUCKET}/recordings/${bookingId}/final/${meetingId}.mp4`,
+          },
+        },
+      ],
+    })
+  );
 }
 
 export async function stopChimeRecording(pipelineId: string): Promise<void> {

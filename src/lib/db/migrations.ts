@@ -25,6 +25,7 @@ import { MIGRATION_SQL as MIG_20260413000008 } from "@/data/migrations/202604130
 import { MIGRATION_SQL as MIG_20260413000140 } from "@/data/migrations/20260413000140_media_albums";
 import { MIGRATION_SQL as MIG_20260413000126 } from "@/data/migrations/20260413000126_training_quiz_question_progress";
 import { MIGRATION_SQL as MIG_20260414000002 } from "@/data/migrations/20260414000002_booking_session_started_at";
+import { MIGRATION_SQL as MIG_20260415000001 } from "@/data/migrations/20260415000001_chime_pipeline_id";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -265,6 +266,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds session_started_at timestamptz to bookings. Set on first participant join and never overwritten — allows the video session timer to survive page reloads instead of restarting from zero.",
     sortKey: "20260414000002",
     sql: MIG_20260414000002,
+  },
+  "20260415000001_chime_pipeline_id": {
+    id: "20260415000001_chime_pipeline_id",
+    title: "Chime pipeline ID (recording concatenation)",
+    description:
+      "Adds chime_pipeline_id text column to bookings. Stores the Media Capture Pipeline ARN created when a Chime session starts. Required to trigger the concatenation pipeline on session end, which merges all segment files into a single named MP4 under recordings/{bookingId}/final/{meetingId}.mp4.",
+    sortKey: "20260415000001",
+    sql: MIG_20260415000001,
   },
 };
 

@@ -84,18 +84,21 @@ export async function POST(request: NextRequest) {
 
     // Start recording (non-blocking if bucket not configured)
     let pipelineId = "";
+    let pipelineArn = "";
     try {
       const recording = await startChimeRecording(
         meeting.meetingId,
         `recordings/${bookingId}`
       );
       pipelineId = recording.pipelineId;
+      pipelineArn = recording.pipelineArn;
     } catch (err) {
       console.error("Failed to start Chime recording:", err);
       // Non-blocking — session can proceed without recording
     }
 
-    // Update booking with Chime meeting details
+    // Update booking with Chime meeting details + pipeline ARN
+    // (pipeline ARN is needed to trigger concatenation when session ends)
     const { error: updateError } = await admin
       .from("bookings")
       .update({
@@ -103,6 +106,7 @@ export async function POST(request: NextRequest) {
         chime_external_meeting_id: meeting.externalMeetingId,
         video_provider: "chime",
         status: "confirmed",
+        ...(pipelineArn ? { chime_pipeline_id: pipelineArn } : {}),
       })
       .eq("id", bookingId);
 
