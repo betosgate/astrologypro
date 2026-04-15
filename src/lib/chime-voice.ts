@@ -24,7 +24,8 @@ import { createAdminClient } from "./supabase/admin";
  * Mirrors the Twilio provisionPhoneNumber() function in twilio-voice.ts.
  */
 export async function provisionChimePhoneNumber(
-  divinerId: string
+  divinerId: string,
+  areaCode?: string
 ): Promise<{ phoneNumber: string; phoneArn: string }> {
   const smaId = process.env.CHIME_SMA_ID;
   if (!smaId) throw new Error("CHIME_SMA_ID env var not set");
@@ -32,10 +33,12 @@ export async function provisionChimePhoneNumber(
   const voice = getChimeVoiceClient();
 
   // ── Step 1: Search for an available US local number ──────────────────────
+  // AWS Chime requires either AreaCode or State for Local number searches.
   const searchResult = await voice.send(
     new SearchAvailablePhoneNumbersCommand({
       PhoneNumberType: "Local",
       Country: "US",
+      AreaCode: areaCode || "212", // Default to NYC area code if not provided
       MaxResults: 1,
     })
   );

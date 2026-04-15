@@ -16,7 +16,8 @@ ALTER TABLE diviners
   ADD COLUMN IF NOT EXISTS video_provider VARCHAR(20) DEFAULT 'daily',
   ADD COLUMN IF NOT EXISTS phone_provider VARCHAR(20) DEFAULT 'twilio',
   ADD COLUMN IF NOT EXISTS chime_phone_number VARCHAR(20),
-  ADD COLUMN IF NOT EXISTS chime_sma_phone_arn TEXT;
+  ADD COLUMN IF NOT EXISTS chime_sma_phone_arn TEXT,
+  ADD COLUMN IF NOT EXISTS chime_sip_rule_id VARCHAR(255);
 
 DO $$
 BEGIN

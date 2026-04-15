@@ -247,13 +247,13 @@ export default async function AdminDivinersPage({
                   {diviners.map((diviner) => (
                     <TableRow key={diviner.id}>
                       <TableCell>
-                        <div>
+                        <Link href={`/admin/diviners/${diviner.id}`} className="block hover:underline">
                           <p className="font-medium text-sm">{diviner.displayName}</p>
                           <p className="text-xs text-muted-foreground">{diviner.email || `@${diviner.username}`}</p>
                           {diviner.username && diviner.email && (
                             <p className="text-xs text-muted-foreground">@{diviner.username}</p>
                           )}
-                        </div>
+                        </Link>
                       </TableCell>
                       <TableCell>
                         <StatusBadge
@@ -296,7 +296,7 @@ export default async function AdminDivinersPage({
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button size="sm" variant="ghost" asChild>
-                            <Link href={`/admin/users/${diviner.userId}`}>
+                            <Link href={`/admin/diviners/${diviner.id}`}>
                               <Eye className="size-3.5" />
                               <span className="sr-only">View detail</span>
                             </Link>

@@ -1880,6 +1880,571 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Preview mode — see exactly how a screen entry looks from the member's perspective before publishing"
         ]
       },
+
+      // ── Mundane Astrology (extended) ─────────────────────────────────────
+      {
+        name: "admin_mundane_leaders",
+        label: "World Leaders Registry",
+        description: "A searchable directory of world leaders and notable persons tracked in mundane astrology — current and historical.",
+        group: "Mundane Astrology",
+        purpose: "Maintains a biographical and astrological record of key political and cultural figures whose charts are used in mundane research and forecasting.",
+        bullets: [
+          "Filter by current / former leader status",
+          "Birth date, birth location, and Astrodatabank confidence rating (AA–X) per record",
+          "Linked to country entity — one click navigates to the entity's full mundane profile",
+          "Add / edit leader with natal chart data entry fields"
+        ]
+      },
+      {
+        name: "admin_mundane_leader_detail",
+        label: "Leader Detail — Natal Profile",
+        description: "Full profile for a single world leader: natal chart, time-lord analysis (Profection, Firdaria), linked events, and admin notes.",
+        group: "Mundane Astrology",
+        purpose: "The deepest view in the leader registry — combines biographical data with astrological time-lord calculations to support event correlation research.",
+        bullets: [
+          "Natal wheel chart generated from stored birth data",
+          "Annual profection table showing current activated house and sign lord",
+          "Firdaria timeline — major and minor lord periods mapped to a scrollable chart",
+          "Linked mundane events where this leader is a key actor"
+        ]
+      },
+      {
+        name: "admin_mundane_backtesting",
+        label: "Backtesting Engine",
+        description: "Test astrological hypotheses against historical data — enter a planetary configuration and see when it recurred across recorded history.",
+        group: "Mundane Astrology",
+        purpose: "Allows researchers to validate predictive models by comparing current transits against historical analogues with documented outcomes.",
+        bullets: [
+          "Input any planet-sign-house combination and search historical occurrence dates",
+          "Returns a ranked list of closest analogues with correlation scores",
+          "Click any result to open the historical analogue detail with event log",
+          "Export results as CSV for external research use"
+        ]
+      },
+      {
+        name: "admin_mundane_backtesting_detail",
+        label: "Backtesting Result Detail",
+        description: "Detailed view of a single backtesting run — the analogue date, planetary snapshot, correlated events, and confidence score breakdown.",
+        group: "Mundane Astrology",
+        purpose: "Gives researchers a granular look at how closely a historical period mirrors current transits and what documented events occurred.",
+        bullets: [
+          "Side-by-side planetary position comparison: current vs. historical",
+          "Correlation score components: orb tolerance, exact aspects, midpoints",
+          "Timeline of events that occurred within the analogue window",
+          "Admin notes field for attaching commentary and research findings"
+        ]
+      },
+      {
+        name: "admin_mundane_timeline",
+        label: "Event Timeline",
+        description: "A chronological view of all mundane events, forecasts, and chart activations — filterable by entity, event type, and date range.",
+        group: "Mundane Astrology",
+        purpose: "Provides a unified time-ordered view of everything tracked in the mundane system so researchers can spot patterns and gaps.",
+        bullets: [
+          "Swimlane view: events grouped by entity in a horizontal timeline",
+          "Filter by event type (political, economic, natural disaster, military)",
+          "Click any event bar to open the full mundane event record",
+          "Export filtered timeline as PDF or PNG for presentations"
+        ]
+      },
+      {
+        name: "admin_mundane_alerts",
+        label: "Mundane Alerts",
+        description: "Automated alert system that fires when a significant planetary configuration (eclipse, ingress, major aspect) enters orb.",
+        group: "Mundane Astrology",
+        purpose: "Ensures the research team never misses a critical astrological event by surfacing actionable alerts before the window opens.",
+        bullets: [
+          "Pending alerts ranked by significance score",
+          "Each alert shows the exact date, planet, aspect, and affected entities",
+          "Snooze or dismiss alerts with a logged reason",
+          "Configure alert thresholds: orb tolerance and minimum significance score"
+        ]
+      },
+      {
+        name: "admin_mundane_cycles",
+        label: "Planetary Cycles Tracker",
+        description: "Monitor long-term planetary cycles — Jupiter-Saturn conjunctions, Pluto ingresses, nodal returns — across a configurable time horizon.",
+        group: "Mundane Astrology",
+        purpose: "Tracks the macro backdrop of mundane astrology so that shorter-term research is contextualised within larger civilisational cycles.",
+        bullets: [
+          "Cycle list: all active and upcoming cycles with exact dates and current phase",
+          "Phase bar: visual arc showing how far through the cycle the world currently sits",
+          "Historical events overlaid on each cycle for research correlation",
+          "Subscribe to a cycle to receive alerts when phase milestones are reached"
+        ]
+      },
+      {
+        name: "admin_mundane_eclipses",
+        label: "Eclipse Tracker",
+        description: "Full catalogue of upcoming solar and lunar eclipses with shadow path, chart data, and entity exposure analysis.",
+        group: "Mundane Astrology",
+        purpose: "Eclipses are primary mundane triggers — this page ensures every eclipse is logged, geocoded, and linked to the entities it most directly activates.",
+        bullets: [
+          "Eclipse list with type (total/partial/annular), path countries, and saros series",
+          "Entity exposure: which tracked countries and cities fall in the shadow path",
+          "Natal-chart sensitivity: which tracked leader charts have planets near the eclipse degree",
+          "Click any eclipse to open the full chart and generate a mundane interpretation"
+        ]
+      },
+      {
+        name: "admin_mundane_scoring",
+        label: "Mundane Significance Scoring",
+        description: "Rule-based engine that assigns a significance score (0–100) to any date based on active transits, eclipses, ingresses, and station events.",
+        group: "Mundane Astrology",
+        purpose: "Provides an objective ranking of which dates carry the highest astrological charge — useful for allocating research attention and scheduling client reports.",
+        bullets: [
+          "Calendar heatmap: dates colour-coded by significance score",
+          "Score breakdown panel: which factors contribute to each date's total",
+          "Adjust weighting rules for each transit type to customise the model",
+          "Export a 12-month significance calendar as CSV or PDF"
+        ]
+      },
+      {
+        name: "admin_mundane_ai_brief",
+        label: "AI Mundane Brief",
+        description: "AI-generated weekly intelligence brief synthesising current transits, active cycles, and upcoming eclipses into a plain-language narrative.",
+        group: "Mundane Astrology",
+        purpose: "Reduces the research overhead for the team by automating the first draft of a weekly mundane briefing — editors refine and publish.",
+        bullets: [
+          "Auto-generates on Monday mornings using the Lambda AI router",
+          "Sections: global weather, regional hotspots, key leader activations, market notes",
+          "Edit inline before publishing to the member-facing mundane dashboard",
+          "Version history — compare this week's draft to previous briefs"
+        ]
+      },
+      {
+        name: "admin_mundane_market_intelligence",
+        label: "Market Intelligence",
+        description: "Correlate planetary transits with asset price movements — charts, commodity prices, and index performance mapped against astrological events.",
+        group: "Mundane Astrology",
+        purpose: "Supports the platform's financial astrology offering by giving researchers the data they need to validate and publish market-oriented forecasts.",
+        bullets: [
+          "Asset selector: choose from tracked indices, commodities, and FX pairs",
+          "Overlay transits: add any planet-aspect event to the price chart as a vertical marker",
+          "Correlation matrix: auto-calculate r-values between aspect dates and price changes",
+          "Save correlation studies to the research library for later citation"
+        ]
+      },
+      {
+        name: "admin_mundane_workspaces",
+        label: "Research Workspaces",
+        description: "Saved research sessions — a workspace bundles a set of entities, date ranges, transits, and notes into a persistent named project.",
+        group: "Mundane Astrology",
+        purpose: "Allows researchers to organise long-running projects without losing context — each workspace is its own persistent analytical environment.",
+        bullets: [
+          "Workspace list with last-opened date, entity count, and collaborator avatars",
+          "Create a new workspace from a template (election, disaster, financial crisis)",
+          "Add entities, events, chart screenshots, and notes within the workspace",
+          "Share a workspace with another admin or export to PDF for client delivery"
+        ]
+      },
+      {
+        name: "admin_mundane_historical_analogs",
+        label: "Historical Analogues Library",
+        description: "A curated database of past mundane events with full planetary snapshots — the source material for backtesting and AI brief generation.",
+        group: "Mundane Astrology",
+        purpose: "Provides the ground-truth dataset for the backtesting engine and AI brief — well-documented historical events make the predictions more defensible.",
+        bullets: [
+          "Search by event type, date, entity, or planet involved",
+          "Each record: event description, exact date, planetary snapshot at time, outcome notes",
+          "Admin-verified records marked with a trust badge; unverified shown in amber",
+          "Import events from a CSV template or add individually"
+        ]
+      },
+      {
+        name: "admin_mundane_library",
+        label: "Mundane Research Library",
+        description: "Centralised repository for all saved mundane research: reports, chart screenshots, AI briefs, and published forecasts.",
+        group: "Mundane Astrology",
+        purpose: "Ensures that research doesn't live in individual researchers' inboxes — everything is searchable, tagged, and attributable.",
+        bullets: [
+          "Filter by document type (report, brief, chart, forecast) and date",
+          "Tag documents by entity, planet, or event for cross-referenced retrieval",
+          "Published documents are visible to members in the PM portal mundane section",
+          "Version history on each document — restore any prior version"
+        ]
+      },
+      {
+        name: "admin_mundane_watchlist",
+        label: "Entity Watchlist",
+        description: "A curated short-list of entities under active monitoring — admins pin the most astrologically activated entities here for daily attention.",
+        group: "Mundane Astrology",
+        purpose: "Surfaces the highest-priority entities without requiring a full search each day — the watchlist is the researcher's morning dashboard.",
+        bullets: [
+          "Pin any entity from the registry to the watchlist in one click",
+          "Each pinned entity shows current transit highlights and next alert date",
+          "Custom note per entity: private research memo visible only to admins",
+          "Watchlist is shared across the admin team — everyone sees the same priority list"
+        ]
+      },
+      {
+        name: "admin_mundane_imports",
+        label: "Data Imports",
+        description: "Bulk import mundane entities, events, or leaders from structured CSV or JSON files — useful for onboarding new research datasets.",
+        group: "Mundane Astrology",
+        purpose: "Allows the research team to ingest large datasets (e.g., a complete election database or a century of documented crises) without manual entry.",
+        bullets: [
+          "Download the import template for each record type (entity, event, leader)",
+          "Validation report shows errors and warnings before committing the import",
+          "Import history log: who imported what, when, and how many records were created",
+          "Rollback button: undo the last import if errors are discovered post-commit"
+        ]
+      },
+      {
+        name: "admin_mundane_subscriptions",
+        label: "Mundane Report Subscriptions",
+        description: "Manage which members receive the weekly AI mundane brief by email — subscription list, unsubscribes, and delivery status.",
+        group: "Mundane Astrology",
+        purpose: "Controls the distribution of published mundane research to member inboxes — separate from the platform notification system.",
+        bullets: [
+          "Subscriber list with email, subscription date, open rate, and last delivery",
+          "Add members manually or enable auto-enrolment for all active PM members",
+          "Unsubscribe log: reason captured when a member opts out",
+          "Test delivery: send the latest brief to a single email address for QA"
+        ]
+      },
+
+      // ── Mystery School Admin (extended) ──────────────────────────────────
+      {
+        name: "admin_ms_student_detail",
+        label: "Student Detail Page",
+        description: "Full record for a single Mystery School student — subscription status, decan progress grid, foundation week completion, and admin actions.",
+        group: "Mystery School",
+        purpose: "The most granular admin view of a student — gives support staff and programme directors complete context for handling queries or exceptions.",
+        bullets: [
+          "Subscription status: active/cancelled, one-time fee paid, next billing date",
+          "36-decan progress grid: coloured status per decan (completed/active/missed/excused)",
+          "Foundation week completion: 12 weeks with per-task breakdown",
+          "Admin actions: excuse a missed decan, override status, add internal note"
+        ]
+      },
+      {
+        name: "admin_ms_decan_detail",
+        label: "Decan Detail — Admin View",
+        description: "Admin perspective on a single decan record: decan description, active student cohort, completion rates, and content management.",
+        group: "Mystery School",
+        purpose: "Allows admins to monitor how students are engaging with each decan and update the decan's instructional content without a code deploy.",
+        bullets: [
+          "Decan metadata: sign, ruling planet, tarot card reference, artwork URL",
+          "Cohort view: how many students are active/completed/missed on this decan right now",
+          "Content editor: update the preview text, ritual instructions, and scrying prompt",
+          "Window configuration: set or override window open, close, and grace dates for this decan"
+        ]
+      },
+      {
+        name: "admin_ms_graduation_queue",
+        label: "Graduation Queue",
+        description: "Students who have completed all 36 decans and 12 foundation weeks — awaiting final admin review and certificate generation.",
+        group: "Mystery School",
+        purpose: "Provides a clear workflow for approving graduations — admins verify completion, confirm no unexcused misses, then trigger the certificate.",
+        bullets: [
+          "Queue sorted by completion date — longest-waiting graduates shown first",
+          "One-click eligibility check: flags unexcused misses or incomplete foundation weeks",
+          "Generate certificate button: sends the Priest/Priestess certificate email and updates the student record",
+          "Graduation log: complete history of all graduates with certificate generation date"
+        ]
+      },
+      {
+        name: "admin_ms_excuse_workflow",
+        label: "Decan Excuse Workflow",
+        description: "Review and approve student requests to excuse a missed decan — see the reason, the decan details, and approve or reject with a note.",
+        group: "Mystery School",
+        purpose: "Maintains programme integrity while allowing compassionate exceptions for students with documented unavoidable circumstances.",
+        bullets: [
+          "Pending excuse requests with student name, decan number, missed date, and stated reason",
+          "Approve: marks the decan as admin-excused so it no longer blocks graduation",
+          "Reject: sends the student a rejection notification with the admin's note",
+          "Excuse history: all decisions audited with timestamp and admin username"
+        ]
+      },
+      {
+        name: "admin_ms_foundation_weeks",
+        label: "Foundation Week Manager",
+        description: "Edit the content of each of the 12 foundation weeks — title, description, audio recording URL, Beto photo, and per-week task list.",
+        group: "Mystery School",
+        purpose: "Allows the curriculum team to update foundation content without engineering involvement — new audio drops, task revisions, and week descriptions.",
+        bullets: [
+          "12 week cards in week-number order, each expandable for editing",
+          "Audio URL field: paste the direct media URL for the week's Beto teaching",
+          "Task editor: add, remove, or reorder tasks within each week",
+          "Published / draft toggle: keep a week in draft while content is being finalised"
+        ]
+      },
+
+      // ── Governance & Users (extended) ────────────────────────────────────
+      {
+        name: "admin_diviner_detail",
+        label: "Diviner Profile — Admin View",
+        description: "Full admin view of a single diviner: contact info, services, revenue history, booking stats, active subscriptions, and suspension controls.",
+        group: "Governance",
+        purpose: "Support staff use this page to resolve diviner queries, audit their account activity, and manage any compliance or quality issues.",
+        bullets: [
+          "Lifetime revenue, booking count, and average rating pulled in real-time",
+          "Service list with per-service pricing and active/inactive status",
+          "Recent bookings table with session type, client name, and completion status",
+          "Admin controls: suspend account, reset password, add internal compliance note"
+        ]
+      },
+      {
+        name: "admin_client_detail",
+        label: "Client Profile — Admin View",
+        description: "Full admin view of a single client account — birth data, session history, active subscriptions, and support notes.",
+        group: "Governance",
+        purpose: "Gives support staff complete context on a client before responding to a query or escalation — no need to switch between systems.",
+        bullets: [
+          "Birth data on file: date, time, city, and chart generation history",
+          "Session history: all completed and upcoming bookings with diviner names",
+          "Subscription status: active PM/MS memberships, payment method, next billing date",
+          "Support notes: internal timeline of all admin actions taken on this account"
+        ]
+      },
+      {
+        name: "admin_trainee_detail",
+        label: "Trainee Profile — Admin View",
+        description: "Full admin view of a trainee: mentor assignment, program enrolment, lesson completion, quiz scores, and training status.",
+        group: "Governance",
+        purpose: "Training managers use this to monitor individual trainee progress and intervene when a trainee falls behind or needs re-assignment.",
+        bullets: [
+          "Current training status: active / graduated / on-hold",
+          "Mentor assignment with last session date",
+          "Program completion bars for all enrolled programs",
+          "Quiz score history and average — flag if score drops below threshold"
+        ]
+      },
+      {
+        name: "admin_user_audit_log",
+        label: "User Audit Log",
+        description: "Complete timestamped log of all admin actions taken on a specific user account — who did what and when.",
+        group: "Governance",
+        purpose: "Provides accountability and a paper trail for every administrative change — essential for compliance and dispute resolution.",
+        bullets: [
+          "Chronological action log: login events, role changes, subscription modifications, notes added",
+          "Admin actor shown for every entry — no anonymous changes",
+          "Filter by action type (auth, billing, role, content, support)",
+          "Export to CSV for legal or compliance reporting"
+        ]
+      },
+      {
+        name: "admin_bulk_actions",
+        label: "Bulk Actions Console",
+        description: "Perform the same operation on multiple users at once — bulk suspend, bulk email, bulk role assignment, or bulk export.",
+        group: "Governance",
+        purpose: "Saves hours of repetitive individual account management — a single bulk action can process hundreds of users in seconds.",
+        bullets: [
+          "Filter and select users by role, status, join date, or tag",
+          "Available bulk actions: send email, assign role, suspend, export CSV, add tag",
+          "Confirmation modal shows exact count and action before executing",
+          "Bulk action log: every bulk operation recorded with actor, timestamp, and affected users"
+        ]
+      },
+      {
+        name: "admin_feature_flags",
+        label: "Feature Flags",
+        description: "Toggle platform features on or off by role, user group, or percentage rollout — without a code deploy.",
+        group: "Config",
+        purpose: "Gives the product team safe gradual rollouts and instant kill-switches for any feature — essential for managing risk in production.",
+        bullets: [
+          "Feature list with current state (enabled/disabled) and rollout percentage",
+          "Target by role: enable a feature only for Diviners, or only for PM Members",
+          "User overrides: force a feature on or off for a specific user (for QA testing)",
+          "Change log: every flag toggle recorded with actor and reason"
+        ]
+      },
+      {
+        name: "admin_webhook_logs",
+        label: "Webhook Logs",
+        description: "Real-time log of all incoming Stripe, VideoSDK, and third-party webhook events — status, payload, retry count, and processing result.",
+        group: "Config",
+        purpose: "The first place to look when a payment, session, or integration event is not reflected correctly in the platform — full payload visibility.",
+        bullets: [
+          "Webhook log with event type, source, received-at timestamp, and HTTP response code",
+          "Payload viewer: expand any event to see the full JSON body",
+          "Failed events highlighted in red with error message and retry count",
+          "Manual retry button: re-process any failed webhook immediately"
+        ]
+      },
+      {
+        name: "admin_system_health",
+        label: "System Health Dashboard",
+        description: "Live overview of platform health — API response times, error rate, active sessions, database query performance, and third-party status.",
+        group: "Config",
+        purpose: "Provides the engineering and ops team with an always-on health view so issues are caught before members report them.",
+        bullets: [
+          "Four golden signals: latency P95, error rate %, active sessions, DB saturation",
+          "Stripe, VideoSDK, and AWS Chime status widgets (live heartbeat checks)",
+          "Alert history: last 24 hours of triggered monitoring alerts",
+          "Link to full OpenTelemetry dashboard (Grafana / Datadog) for deep-dive"
+        ]
+      },
+      {
+        name: "admin_email_templates",
+        label: "Email Template Library",
+        description: "All transactional and marketing email templates — view, preview, and edit HTML/text content for any system-generated email.",
+        group: "Config",
+        purpose: "Allows content and ops teams to update email copy, branding, and CTAs without engineering involvement.",
+        bullets: [
+          "Template list: grouped by trigger (booking confirmation, subscription renewal, graduation, etc.)",
+          "Live preview: see the rendered HTML email in a web frame with test variable substitution",
+          "Edit HTML and plain-text versions side by side",
+          "Send test email to any address before saving changes"
+        ]
+      },
+      {
+        name: "admin_scheduled_tasks",
+        label: "Scheduled Task Manager",
+        description: "View and control all cron jobs and scheduled tasks running on the platform — mundane alerts, decan window opens, email digests, and more.",
+        group: "Config",
+        purpose: "Gives ops full visibility and control over automated background processes — catch stuck jobs, trigger manual runs, and audit run history.",
+        bullets: [
+          "Task list with name, cron expression, last run time, and last run status",
+          "Run now button: trigger any scheduled task immediately for testing or backfill",
+          "Failure alerts: tasks that errored in the last 24 hours highlighted with error detail",
+          "Disable / enable toggle: pause any task without deleting the schedule"
+        ]
+      },
+      {
+        name: "admin_session_recordings",
+        label: "Session Recordings Library",
+        description: "Admin-side library of recorded video and phone sessions stored in S3 — searchable by diviner, client, date, and session type.",
+        group: "Governance",
+        purpose: "Required for quality control, dispute resolution, and compliance — admins can retrieve any recorded session on demand.",
+        bullets: [
+          "Search by diviner name, client name, session date, or session ID",
+          "Play back video recordings directly in the portal with timestamp navigation",
+          "Download or delete any recording (with logged deletion reason)",
+          "Retention policy indicator: how many days remain before auto-deletion"
+        ]
+      },
+      {
+        name: "admin_chime_infrastructure",
+        label: "Chime Infrastructure Status",
+        description: "Live status of the AWS Chime SIP Media Application — active calls, pipeline health, and SMA configuration for phone readings.",
+        group: "Config",
+        purpose: "Gives ops visibility into the telephony layer so call failures can be diagnosed without opening the AWS console.",
+        bullets: [
+          "Active call count: live count of ongoing phone readings routed through Chime SMA",
+          "SMA health check: last heartbeat, last error, and PSTN gateway status",
+          "DID inventory: all E.164 numbers provisioned for inbound calling",
+          "Lambda ARN and version displayed for quick reference during incidents"
+        ]
+      },
+      {
+        name: "admin_pm_member_detail",
+        label: "PM Member Detail — Admin View",
+        description: "Full admin view of a Perennial Mandalism member: subscription, family members, plan tier, billing history, and portal activity.",
+        group: "Governance",
+        purpose: "Support staff use this to answer member billing queries, verify plan entitlements, and make exceptions (e.g., manual tier adjustments).",
+        bullets: [
+          "Membership status, tier, and next billing date",
+          "Family member list with relationship, age group, and date of birth",
+          "Stripe subscription ID and link to the customer's Stripe dashboard page",
+          "Activity summary: last login, last session attended, resources accessed this month"
+        ]
+      },
+      {
+        name: "admin_pm_plan_tiers",
+        label: "Plan Tier Configuration",
+        description: "Edit the Perennial Mandalism plan tiers — name, base price, included member count, extra member price, and max total members.",
+        group: "Config",
+        purpose: "Allows ops to adjust pricing and tier structure without a code deploy — critical for promotional pricing and plan restructuring.",
+        bullets: [
+          "Tier list with current price and member limits at a glance",
+          "Edit tier: inline form for all pricing fields with change preview",
+          "Active / inactive toggle: retire a tier without deleting it",
+          "Stripe product ID linkage: each tier maps to a Stripe Price object"
+        ]
+      },
+      {
+        name: "admin_commission_payouts",
+        label: "Commission Payout Manager",
+        description: "Manage pending and historical commission payouts to social advocates and affiliates — approve, hold, or release batch payouts.",
+        group: "Commerce",
+        purpose: "Prevents payout errors by requiring manual approval before funds transfer — gives finance a checkpoint on every commission batch.",
+        bullets: [
+          "Pending payouts list: advocate name, amount owed, referral count, and period",
+          "Approve selected: sends the payout via Stripe payouts to the linked bank account",
+          "Hold: flag a payout for review with a reason — advocate notified",
+          "Export: generate a payout batch report for accounting reconciliation"
+        ]
+      },
+      {
+        name: "admin_giveaway_detail",
+        label: "Giveaway Detail Page",
+        description: "Full view of a single giveaway campaign: entry rules, participants, draw configuration, winner selection, and notification history.",
+        group: "Commerce",
+        purpose: "Manages the full giveaway lifecycle — from entry configuration through randomised winner selection and prize notification.",
+        bullets: [
+          "Giveaway status: draft / active / ended / winner-selected",
+          "Participant list with entry date, entry method, and qualification status",
+          "Winner draw: configure the algorithm (random, weighted by entries, admin pick)",
+          "Notify winner: sends the prize email with redemption instructions"
+        ]
+      },
+      {
+        name: "admin_testimonial_detail",
+        label: "Testimonial Detail — Moderation View",
+        description: "Single testimonial review screen: full text, star rating, client identity, attached session, and moderation actions.",
+        group: "Governance",
+        purpose: "Gives moderators full context on a testimonial before approving or rejecting — links back to the actual session record for verification.",
+        bullets: [
+          "Full testimonial text with client name (or anonymous flag) and star rating",
+          "Linked booking record: verify the session actually happened before approving",
+          "Approve: publishes the testimonial on the diviner's public profile",
+          "Reject with reason: sends a notification to the client explaining the decision"
+        ]
+      },
+      {
+        name: "admin_report_engagement",
+        label: "Engagement Report",
+        description: "Platform-wide engagement metrics — daily active users, feature adoption rates, content consumption, and session-to-booking conversion.",
+        group: "Reports",
+        purpose: "Measures how deeply members are using the platform beyond just paying — engagement is the lead indicator of retention and upsell.",
+        bullets: [
+          "DAU/MAU ratio — the stickiness metric that shows how often active users return",
+          "Feature adoption heatmap: which pages and tools are used most across each role",
+          "Content consumption: most-watched videos, most-read articles, most-completed rituals",
+          "Conversion funnel: member acquisition → first session → second session rates"
+        ]
+      },
+      {
+        name: "admin_report_churn",
+        label: "Churn & Retention Report",
+        description: "Monthly cohort analysis of subscription churn — which cohorts have the highest dropout, at what tenure month, and correlated factors.",
+        group: "Reports",
+        purpose: "Identifies at-risk member segments before they cancel so the team can intervene with outreach or feature improvements.",
+        bullets: [
+          "Cohort retention grid: signup month on the Y axis, tenure month on the X axis",
+          "Churn reasons captured at cancellation: price, inactivity, life changes, product",
+          "At-risk segment: members in month 3–4 of tenure (historically highest dropout point)",
+          "Revenue impact of churn: estimated MRR lost if current cohort churn rates persist"
+        ]
+      },
+      {
+        name: "admin_report_nps",
+        label: "NPS & Satisfaction Report",
+        description: "Net Promoter Score trends from post-session surveys, testimonial star ratings, and platform satisfaction polls.",
+        group: "Reports",
+        purpose: "Tracks the platform's reputation from the member perspective — NPS is the leading indicator of word-of-mouth growth.",
+        bullets: [
+          "Overall NPS score with 30/90/365-day trend sparklines",
+          "NPS by role: Diviners vs PM Members vs Clients — different satisfaction drivers",
+          "Verbatim response browser: read unfiltered member comments with sentiment tag",
+          "Alert if NPS drops more than 10 points month-over-month"
+        ]
+      },
+      {
+        name: "admin_ai_content_moderation",
+        label: "AI Content Moderation Queue",
+        description: "AI-flagged content items (testimonials, journal entries, community posts) awaiting human review before appearing on the platform.",
+        group: "Governance",
+        purpose: "First line of defence for content safety — AI catches obvious violations at scale, human moderators handle edge cases in the queue.",
+        bullets: [
+          "Flagged items list with content type, AI confidence score, and flag reason",
+          "Side-by-side view: flagged content on the left, AI explanation on the right",
+          "Approve: clears the flag and publishes the content",
+          "Reject and notify: removes the content and sends a policy violation notice to the author"
+        ]
+      },
     ],
   },
   {
@@ -2390,6 +2955,480 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Social links — add or update your Instagram, YouTube, and personal website links shown on your public profile"
         ]
       },
+      {
+        name: "finance",
+        label: "Finance Dashboard",
+        description: "A complete revenue command centre showing every financial dimension of your practice in one view. See revenue totals, average session value, refund rate, pending payouts, tax reserves, and year-to-date net earnings across configurable time windows. Charts break down revenue by source and show the impact of discount rules on your bottom line.",
+        group: "Finance & Billing",
+        purpose: "Single-screen financial health overview for your divination practice.",
+        bullets: [
+          "Revenue card — total income earned in the selected period with month-over-month comparison",
+          "Avg Session value — average dollar amount collected per completed booking",
+          "Refund Rate — percentage of sessions refunded; click to see individual refund records",
+          "Tax Reserve — amount auto-set aside at your configured tax percentage (e.g. 25%)",
+          "YTD Revenue — running year-to-date net after refunds and platform fees",
+          "Revenue Trend chart — Diviner Net line chart across the selected 30-day, 90-day, 1-year, or All Time window",
+          "Revenue by Source — breakdown by service type (natal chart, tarot, subscription, etc.)",
+          "Discount Impact — total dollar value discounted away via loyalty and package rules",
+          "Top Clients — ranked list of clients by total spend in the period",
+          "Export CSV — download all finance data for tax filing or bookkeeping"
+        ]
+      },
+      {
+        name: "discounts",
+        label: "Discount Rules",
+        description: "Create and manage loyalty and package discount rules that apply automatically when clients meet the configured criteria. Rules can trigger by session count, package purchase, or manual override, and each shows real-time usage and savings data so you can see which promotions actually drive retention.",
+        group: "Finance & Billing",
+        purpose: "Automate loyalty rewards and package pricing without manual coupon codes.",
+        bullets: [
+          "Active Rules count — shows how many rules are live vs. paused at a glance",
+          "Session Count rules — trigger a discount automatically after a client completes N sessions (e.g. 10% off after 5)",
+          "Package rules — bundle services and apply a flat discount to the package price (e.g. 20% off Birth Chart + Transit Bundle)",
+          "Discount percentage — set any percentage from 1% to 100%; VIP rules can go up to 25% or more",
+          "Min Sessions threshold — the minimum booking count a client must reach before the discount activates",
+          "Active / Inactive toggle — pause a rule during busy seasons without deleting it",
+          "Total Discount Uses — how many times the rule has triggered across all clients",
+          "Total Amount Saved — cumulative dollars clients have saved; useful for marketing messaging",
+          "Recent Discount Uses — last 15 bookings where a discount rule was applied with client name and savings",
+          "Create Discount button — opens the rule builder to define name, type, threshold, and percentage"
+        ]
+      },
+      {
+        name: "check-ins",
+        label: "Check-In Leads",
+        description: "Viewer sign-ups captured from live sessions and public events are collected here as warm leads. Every person who checked in is logged with their name, email, city, and birth data if provided — giving you a ready-made prospect list to follow up with or convert to a booked client.",
+        group: "Clients & Growth",
+        purpose: "Convert live session viewers into booked clients using captured check-in data.",
+        bullets: [
+          "Total Check-Ins counter — running count of all sign-ups captured across every live session",
+          "This Week count — check-ins in the past 7 days; spikes indicate a successful live event",
+          "With Birth Data count — subset who provided their birth date and time (highest-value leads for natal chart outreach)",
+          "All Time / This Week / This Month filter — narrow the table to the time window you want to work",
+          "Check-In Records table — Date, Name, Email, City, Birth Date, Birth Time for each entry",
+          "Export CSV — download all leads for import into an email platform or CRM",
+          "Giveaways button — jump directly to the Giveaways page to create a prize draw targeting your check-in audience",
+          "Deduplication — multiple check-ins from the same email in one session are collapsed to avoid double-counting",
+          "Birth data gap — entries without birth time show '—' in the Birth Time column; follow up to complete the chart"
+        ]
+      },
+      {
+        name: "campaigns",
+        label: "Affiliate Campaigns",
+        description: "Design and track affiliate marketing campaigns that your referral partners promote on your behalf. Each campaign has its own commission rate, date window, and affiliate links. The analytics tab reveals conversion counts, commission spend, and which campaigns drive the most real bookings.",
+        group: "Marketing & Growth",
+        purpose: "Run structured affiliate promotions with per-campaign tracking and commission control.",
+        bullets: [
+          "Total Campaigns — count of all campaigns ever created; active badge shows currently running ones",
+          "Total Affiliates — number of affiliate partners enrolled across all campaigns",
+          "Conversions — total confirmed bookings credited to affiliate referral links",
+          "Commission Spent — total dollars paid or owed to affiliates across all campaigns",
+          "Campaigns tab — table view with Name, Status, Dates, Commission %, Affiliates count, Conversions, Spent/Budget",
+          "Analytics tab — time-series charts of clicks, conversions, and earnings by campaign",
+          "Create Campaign button — define name, commission type (% or flat), date range, and UTM parameters",
+          "Status filter — filter table by All / Active / Draft / Ended / Paused",
+          "Campaign row actions — edit, pause, or archive a campaign without losing its historical data",
+          "Spring Solar Return Promo, Mercury Retrograde Prep Pack — real campaigns shown in the table with live status"
+        ]
+      },
+      {
+        name: "affiliates",
+        label: "Affiliate Partners",
+        description: "Manage the individual people who promote your services through your affiliate programme. Each affiliate gets a unique referral link and earns commissions on bookings they send. Track their status, commission rate, total earnings, and payment history from a single table.",
+        group: "Marketing & Growth",
+        purpose: "Oversee your affiliate roster and ensure accurate commission tracking and payment.",
+        bullets: [
+          "Total Affiliates stat — total enrolled partners with active subset highlighted",
+          "Commissions Earned — cumulative commission amount earned by all affiliates combined",
+          "Total Paid — amount already disbursed to affiliates via Stripe or manual payout",
+          "Pending Balance — commissions earned but not yet paid out; shows what you owe",
+          "Affiliate table — Name, Email, Commission Rate, Status (pending / active / suspended), Created date",
+          "Invite Affiliate button — send an invitation email with a unique sign-up link",
+          "Add Affiliate button — manually add an affiliate by entering their name, email, and commission %",
+          "Eye icon — view an affiliate's detailed conversion history and earnings breakdown",
+          "Status badges — pending (not yet started promoting), active (live), suspended (temporarily blocked)",
+          "Suspended affiliates — commission accrual stops; their referral links no longer convert"
+        ]
+      },
+      {
+        name: "settings",
+        label: "Account Settings",
+        description: "A tabbed settings hub where you manage every aspect of your AstrologyPro account in one place. Tabs cover your account identity, connected payment methods, calendar sync configuration, notification preferences, phone reading settings, and loyalty programme options — all editable without leaving the dashboard.",
+        group: "Account & Profile",
+        purpose: "Central configuration panel for your practice account, payments, and communication preferences.",
+        bullets: [
+          "Account tab — update your legal name, email address, and account-level details",
+          "Payments tab — manage connected Stripe account, view payout schedule, and set minimum payout threshold",
+          "Calendar tab — link Google Calendar or Outlook to auto-block busy slots and send invites",
+          "Notifications tab — choose which events trigger email, SMS, or push alerts (new booking, cancellation, review, etc.)",
+          "Phone tab — configure phone reading number, call recording consent, and voicemail greeting",
+          "Loyalty tab — set up or edit your loyalty discount programme (session count thresholds and reward percentages)",
+          "Subscription Status — shows your current AstrologyPro plan (active, trialing, or cancelled) with option to cancel",
+          "Cancel Subscription button — initiates the cancellation flow with a confirmation step to prevent accidental cancellation",
+          "Changes saved instantly — each tab saves independently; no master 'Save All' button needed"
+        ]
+      },
+      {
+        name: "media",
+        label: "Media Gallery",
+        description: "Your central library for videos, recordings, articles, audio, and image albums that showcase your work to potential clients. Media can be featured on your public profile, shared via social links, or used as resources in your sessions. The gallery shows review status so only approved content goes public.",
+        group: "Content & Media",
+        purpose: "Curate and publish the portfolio content that builds trust with prospective clients.",
+        bullets: [
+          "Total Items counter — running count of all uploaded media across all types",
+          "Featured count — items pinned to the top of your public profile's media section",
+          "Active count — items currently visible on your public profile (approved and not hidden)",
+          "Pending Review — items submitted but awaiting platform moderation before going live",
+          "Blocked — items the platform has removed from public view with a reason shown on hover",
+          "Image Albums — grouped photo albums; shows slots used vs. total album capacity",
+          "Media card grid — thumbnail, title, type badge (Video / Audio / Article / Image), and review status",
+          "Add From Past Live — import a recording from a previous live stream directly into the gallery",
+          "Add Media button — upload a new video, audio file, or image; drag-and-drop supported",
+          "Review status badge — Approved (public), Pending (in queue), Blocked (removed) visible on each card"
+        ]
+      },
+      {
+        name: "giveaways",
+        label: "Giveaways",
+        description: "Run prize draw campaigns tied to your live sessions or social promotions to build your audience and check-in list. Each giveaway has a title, prize description, date window, entry count, and winner selection. Active giveaways display a public entry form you can share on social media.",
+        group: "Marketing & Growth",
+        purpose: "Grow your check-in audience and email list through structured prize promotions.",
+        bullets: [
+          "Giveaway table — Title, Status (Active / Draft / Ended), Dates, Entries count, Winners count",
+          "New Giveaway button — opens creation form with title, prize description, value, start/end dates",
+          "Active status — currently accepting entries; public entry link is live and shareable",
+          "Draft status — saved but not yet published; lets you prepare campaigns in advance",
+          "Ended status — closed for entries; winner was drawn and announced",
+          "Entries counter — live count of how many people entered the giveaway",
+          "Winners column — shows the number of winners drawn; click to see their names and contact details",
+          "View button — opens the public-facing entry page preview",
+          "Prize examples — Mercury Retrograde Survival Kit (crystal set + natal chart reading), Jupiter Return Reading",
+          "Search and filter — find a specific giveaway by title or filter by All Statuses"
+        ]
+      },
+      {
+        name: "mktcontent",
+        label: "Content Management",
+        description: "Create and manage marketing content — images, videos, and caption templates — that you upload to social media to drive bookings. Write a caption once with dynamic placeholders for your username and booking link, then select the platforms you want to post to and preview how it will look before publishing.",
+        group: "Marketing & Growth",
+        purpose: "Produce ready-to-post social content that consistently promotes your practice.",
+        bullets: [
+          "Title field — give the content piece a name for your own library reference (e.g. 'Mercury Retrograde Awareness Post')",
+          "Media upload — drag and drop PNG, JPG, or MP4 files up to 50 MB; supports images and short video clips",
+          "Caption Template — write your post copy using {username} and {link} placeholders that auto-fill at share time",
+          "Available variables listed — {username} and {link} are shown as clickable hints below the caption field",
+          "Platform selection — toggle Instagram, Twitter / X, YouTube, TikTok, and Facebook individually",
+          "Preview panel — shows a real-time preview of how the caption looks with placeholders resolved",
+          "Content Tips sidebar — best-practice reminders (square images for IG, keep captions under 280 chars for Twitter, post peak hours)",
+          "Saved content library — all uploaded pieces appear below the form for reuse or editing",
+          "Share directly — once saved, each content piece has a one-click share button per selected platform"
+        ]
+      },
+      {
+        name: "calconn",
+        label: "Calendar Connections",
+        description: "Link your Google Calendar or Microsoft Outlook calendar to AstrologyPro so your real-world availability is always in sync and clients receive native calendar invites when they book a session. Connected calendars block off your busy times automatically, preventing double-bookings.",
+        group: "Schedule & Availability",
+        purpose: "Keep your availability accurate by syncing your practice calendar with your personal calendar.",
+        bullets: [
+          "Google Calendar card — connect your Google account with one click via OAuth; shows last sync timestamp once linked",
+          "Outlook Calendar card — connect your Microsoft 365 or Outlook.com account with the same OAuth flow",
+          "Last sync timestamp — displays when availability was last pulled from the connected calendar",
+          "Auto-block busy times — events in your personal calendar automatically mark those slots as unavailable in your booking page",
+          "Native invites — confirmed bookings send a .ics calendar invite to the client's inbox from your connected account",
+          "Multiple connections — you can connect both Google and Outlook if you use both calendars",
+          "Disconnect option — appears after connecting; removes the sync without deleting historical booking records",
+          "Sync errors — if a token expires, a yellow warning appears prompting you to re-authenticate",
+          "Availability page link — after connecting, jump to the Availability page to fine-tune your weekly time windows"
+        ]
+      },
+      {
+        name: "booking-detail",
+        label: "Booking Detail View",
+        description: "The full record for a single client appointment — every piece of information about one booking in one screen. See payment status, intake form responses, session notes, and take actions like reschedule, cancel, or mark complete.",
+        group: "My Practice",
+        purpose: "When you need to manage a specific appointment — whether to confirm it, look up what the client submitted, or add notes after completing the session — this is the screen you use. It consolidates everything about one booking so you do not have to navigate between multiple pages.",
+        bullets: [
+          "Booking summary — client name, service booked, date, time, duration, and total paid",
+          "Intake form responses — read the pre-session questionnaire the client completed when they booked",
+          "Payment details — gross charge, platform fee, your net amount, and Stripe payment ID",
+          "Session notes — write post-session notes that are either private (only you) or shared with the client",
+          "Join video room — when the session is about to start, a button appears to enter the live session room",
+          "Reschedule action — propose a new time to the client, triggering an email with the new slot",
+          "Cancel with reason — cancel the session and automatically notify the client with your reason"
+        ]
+      },
+      {
+        name: "service-pricing",
+        label: "Service Pricing Configurator",
+        description: "Set and fine-tune the pricing for each service you offer. Control base price, intro rates, package bundles, and session length options — all from one configuration screen per service.",
+        group: "My Practice",
+        purpose: "Pricing flexibility is essential for growing a practice. This configurator lets you adjust how each service is priced without rebuilding the entire service from scratch. You can set a standard rate, offer a discounted introductory price for new clients, and configure bundle pricing for clients who buy multiple sessions at once.",
+        bullets: [
+          "Base price field — the standard rate clients pay for this service",
+          "Intro offer — a lower one-time price for new clients who have never booked you before",
+          "Package pricing — price for a bundle of sessions (e.g. 5 readings for the price of 4)",
+          "Duration variants — offer the same service at multiple time lengths with different prices",
+          "Currency display — prices are shown to clients in USD with automatic local currency hints",
+          "Save and preview — see how the price appears on your public service card before publishing",
+          "Price history — a log of past price changes for your own reference"
+        ]
+      },
+      {
+        name: "testimonials-manage",
+        label: "Testimonials Management",
+        description: "Review every client testimonial submitted for your profile. Approve reviews to make them public, reject inappropriate ones, feature your best reviews at the top, and respond publicly to build trust with prospective clients.",
+        group: "Marketing & Growth",
+        purpose: "Your testimonials are a primary factor in whether a new client decides to book you. Managing them well — responding thoughtfully and featuring your most compelling reviews — can meaningfully increase your booking rate. This screen gives you full control over what your public review section looks like.",
+        bullets: [
+          "Pending testimonials — reviews submitted but not yet published; approve or reject before they go live",
+          "Approved reviews — all currently visible testimonials on your public profile",
+          "Feature a review — pin your best testimonials to the top of your profile's review section",
+          "Respond publicly — write a reply that appears below the review for prospective clients to read",
+          "Reject a review — remove a review that is inaccurate, abusive, or violates policy, with a reason logged",
+          "Overall rating display — your current star average shown at the top of the management view",
+          "Request a testimonial — send a post-session email prompting a specific client to leave a review"
+        ]
+      },
+      {
+        name: "blocked-dates",
+        label: "Availability — Blocked Dates",
+        description: "Mark specific calendar dates as unavailable so clients cannot book you during those periods. Useful for holidays, personal time, travel, or any block of days when you will not be offering sessions.",
+        group: "Schedule & Availability",
+        purpose: "Your weekly availability schedule handles recurring hours, but there will always be specific dates you need to block off — a vacation, a family event, a health day, or a retreat. This tool lets you block individual dates or multi-day ranges without changing your regular weekly schedule. Clients will simply see those days as unavailable when they try to book.",
+        bullets: [
+          "Date range picker — select a single date or a multi-day range to block off at once",
+          "Reason field — add a private note explaining why you are blocking this time (only visible to you)",
+          "All blocked dates listed — see every date or range you have blocked, sorted chronologically",
+          "Remove a block — restore availability by deleting a date block before it arrives",
+          "Conflict warning — if a block overlaps with an existing confirmed booking, you are alerted before saving",
+          "Calendar preview — see how the blocked dates appear from the client's booking view",
+          "Recurring blocks — optionally mark an annual recurring block (e.g. every Christmas week)"
+        ]
+      },
+      {
+        name: "video-session-room",
+        label: "Video Session Room",
+        description: "The live HD video room where one-on-one readings happen. Includes two-way video, chart screen sharing, in-session notes, timer, and recording controls — all purpose-built for spiritual consultation.",
+        group: "Engagement",
+        purpose: "This is where the actual reading takes place. When a client joins their booked session, both of you enter this private room together. Everything you need to run a professional, focused session is here — no distractions, no context-switching. The room closes automatically when the session timer ends and triggers the post-session review request to the client.",
+        bullets: [
+          "HD two-way video — high-definition video connection between you and your client with no software required",
+          "Screen share mode — share your chart tool, transit report, or tarot spread directly from your screen",
+          "Private notes panel — a sidebar only visible to you showing the client's birth data and your pre-session notes",
+          "In-session chat — send links, chart URLs, or short messages to your client without interrupting the flow",
+          "Session timer — a countdown and elapsed-time display so both parties stay aware of session length",
+          "Recording toggle — start and stop recording; client is notified and must consent before recording begins",
+          "End session button — cleanly closes the room and triggers automatic follow-up and review request flows"
+        ]
+      },
+      {
+        name: "phone-session-flow",
+        label: "Phone Session Flow",
+        description: "Initiate and manage phone-based reading sessions using the platform's built-in Chime telephony integration. Clients call a platform-managed number; you receive the call through your connected phone without sharing your personal number.",
+        group: "Engagement",
+        purpose: "Not every client is comfortable with video, and phone readings are a significant portion of the market. This flow handles the entire phone session experience — the client dials a platform number, the call routes to you, and both sides are protected. Your personal phone number is never exposed. Calls can optionally be recorded with client consent, and the session is logged automatically in your booking record.",
+        bullets: [
+          "Platform phone number — clients call a dedicated Chime-managed number assigned to your profile",
+          "Incoming call alert — a browser notification appears when the client calls at their session time",
+          "Accept or decline — answer the call from your dashboard without picking up a separate device",
+          "Call recording (optional) — record the call with client consent; recording is saved to the session record",
+          "Call duration timer — see elapsed call time so you manage session length correctly",
+          "Post-call session log — the system logs call start time, duration, and outcome automatically",
+          "International support — phased rollout supporting US first, then UK, AU, and Germany in subsequent phases"
+        ]
+      },
+      {
+        name: "revenue-breakdown",
+        label: "Revenue by Service Type",
+        description: "A detailed revenue breakdown showing exactly how much each of your services earns — natal chart readings, transit consultations, tarot sessions, subscriptions, gift certificate redemptions, and packages — compared across time periods.",
+        group: "Finance & Reports",
+        purpose: "Understanding which services make you the most money is essential for running a sustainable practice. This breakdown shows you not just total revenue, but revenue by service type — so you can see that natal chart readings bring in the most gross income but tarot sessions have the best booking frequency, for example. That insight helps you decide where to focus your marketing and how to price new offerings.",
+        bullets: [
+          "Service revenue ranking — every active service ranked from highest to lowest revenue in the selected period",
+          "Booking count per service — how many sessions of each type were completed, separate from revenue",
+          "Average value per service — average session price, useful for comparing service profitability",
+          "Subscription revenue line — recurring income from subscription clients shown separately from one-off bookings",
+          "Gift certificate redemptions — revenue that came through gift certificates, tracked as its own category",
+          "Period comparison — compare service revenue this month vs last month side by side",
+          "Export by service — download the revenue breakdown per service as a CSV for your records"
+        ]
+      },
+      {
+        name: "session-notes",
+        label: "Client Session Notes",
+        description: "Write, view, and organize private notes for individual client sessions. Notes are linked to a specific booking and stored in the client's permanent profile so you can review them before any future session.",
+        group: "My Practice",
+        purpose: "Session notes are your private memory system for each client relationship. After a reading, you can write what was discussed, what insights arose, what the client's main concerns were, and any follow-up actions you recommended. These notes are only visible to you. When the same client books again, you can pull up their notes before the session to recall the full context of your relationship.",
+        bullets: [
+          "Linked to booking — every note is attached to the specific session it was written after",
+          "Private notes — notes are only visible to you; the client cannot see what you write here",
+          "Shared notes (optional) — if you choose, mark a note as 'shared' to make it visible to the client after the session",
+          "Rich text editor — format notes with bullet points, bold text, and section headings for clarity",
+          "Client history view — see all notes across all sessions with this client in chronological order",
+          "Pre-session prep — before a session, use the notes view to recall everything from past readings",
+          "Search across notes — find any note by keyword across all clients and sessions"
+        ]
+      },
+      {
+        name: "affiliate-dashboard",
+        label: "Affiliate Dashboard",
+        description: "Your personal affiliate hub on AstrologyPro. See your unique referral code, track how many people have signed up using your link, and monitor commissions earned from your referrals — all in one place.",
+        group: "Marketing & Growth",
+        purpose: "If you participate in the platform's affiliate or social advocacy program, this dashboard shows you the performance of your referral activity. When you share your referral link and someone signs up or makes a booking, you earn a commission. This screen tracks every referral, every conversion, and every dollar earned so you always know exactly what you are owed.",
+        bullets: [
+          "Your referral code — your unique affiliate code and full referral URL ready to share",
+          "Total referrals — how many people have clicked your link and registered on the platform",
+          "Conversions — how many referrals completed a qualifying action (first booking, subscription, etc.)",
+          "Commission balance — total commissions earned to date with breakdown of paid vs pending",
+          "Commission rate — your configured percentage per qualifying referral or conversion",
+          "Payout history — dates and amounts of previous commission payouts to your connected account",
+          "Performance trend — a chart showing referral and conversion activity over time"
+        ]
+      },
+      {
+        name: "broadcast-creation",
+        label: "Live Broadcast Creation Form",
+        description: "Set up and schedule a new live broadcast session. Define the title, description, date and time, access level (public or members-only), and whether it will be recorded — all before going live.",
+        group: "Engagement",
+        purpose: "Before you go live, you need to create the broadcast event so the platform can notify your audience and generate the session link. This form is where you do that. It takes a few minutes to complete but ensures your live event is properly set up with a public listing, correct access control, and auto-record settings from the moment you start streaming.",
+        bullets: [
+          "Broadcast title — the name of your live session that appears in the platform's live schedule",
+          "Description — what the session covers, who it is for, and what viewers can expect",
+          "Scheduled date and time — when the session starts; the platform shows a countdown on your profile",
+          "Access level — choose between public (anyone can watch), members-only, or paid ticket",
+          "Recording setting — toggle whether this session will be automatically recorded for replay",
+          "Thumbnail upload — add a cover image that appears in the broadcast listing",
+          "Notify followers — opt in to send a notification to your followers when the broadcast is published"
+        ]
+      },
+      {
+        name: "broadcast-archive",
+        label: "Broadcast Archive",
+        description: "Browse and manage all your past live broadcast recordings. Each archived session can be featured on your profile, shared via link, or kept private — with view counts and engagement data available for each.",
+        group: "Engagement",
+        purpose: "Every live session you record becomes an asset in your archive. Clients who missed the live event can watch the replay. Prospective clients can browse your archive to see what your live sessions are like before booking. This screen lets you manage that archive — editing titles, controlling what is publicly visible, and seeing which recordings get the most views.",
+        bullets: [
+          "All past broadcasts listed — every recorded live session with date, title, duration, and view count",
+          "Public or private toggle — control which recordings are visible on your public profile",
+          "Feature on profile — pin a specific recording to the top of your profile's media section",
+          "Edit title and description — update the name or description of a past recording",
+          "Share link — copy a direct link to any recording to share on social media or with clients",
+          "View analytics — see how many people watched each recording and the average watch time",
+          "Delete a recording — permanently remove a session from the archive if it should not be stored"
+        ]
+      },
+      {
+        name: "chart-studio-diviner",
+        label: "Chart Studio Access",
+        description: "Access the platform's chart generation tools for your own astrological work. Create natal charts for clients, run transit analyses, and generate relationship comparison charts directly from your dashboard.",
+        group: "Content & Tools",
+        purpose: "Diviners are practitioners, not just session hosts — they use chart tools actively in their work. This screen gives you direct access to the chart studio so you can generate charts during session preparation, run transit analyses to understand a client's current moment, and build relationship charts for compatibility readings. Charts generated here can be shared directly in your live session room.",
+        bullets: [
+          "Natal chart generator — enter any birth data to create a fully rendered natal chart for a client",
+          "Transit overlay — add today's planetary positions to any natal chart to show current influences",
+          "Synastry chart — compare two natal charts side by side for relationship compatibility readings",
+          "Composite chart — generate the relationship chart that emerges from combining two people's birth data",
+          "Ingress charts — calculate the chart for the exact moment a planet enters a new zodiac sign",
+          "Save to client profile — save a generated chart directly to the relevant client's CRM profile",
+          "Share in session — send a chart link to a client during a live reading so they can see it in real time"
+        ]
+      },
+      {
+        name: "natal-chart-personal",
+        label: "Personal Natal Chart",
+        description: "Your own birth chart as a diviner on the platform. View your natal positions, decan placements, and personal transit report — the same tools you offer clients, applied to your own chart.",
+        group: "Content & Tools",
+        purpose: "Knowing your own chart deeply is part of being an effective astrology practitioner. This screen shows your personal birth chart — stored from your profile's birth data — with all the planet positions, house placements, and decan layers. You can run your own transit report to stay aware of the major astrological influences affecting your personal practice and life right now.",
+        bullets: [
+          "Your natal chart wheel — a rendered chart using your own birth date, time, and location",
+          "Planet-by-planet summary — what each planet in your chart means for your personality and practice",
+          "Current transits to your chart — what the planets are doing to your natal placements right now",
+          "Decan placements — which of the 36 decans each of your planets falls in",
+          "Upcoming major transits — a forward-looking list of the most significant transits arriving in the next 90 days",
+          "Download your chart — save a PDF of your natal chart to share or use offline",
+          "Compare with a client — jump directly to a synastry chart comparing your chart with a client's"
+        ]
+      },
+      {
+        name: "social-scheduler",
+        label: "Social Media Scheduler",
+        description: "Draft, schedule, and publish social media posts that promote your practice across Instagram, Twitter/X, Facebook, TikTok, and YouTube — all from one interface using the platform's Ayrshare integration.",
+        group: "Marketing & Growth",
+        purpose: "Consistent social media presence is one of the most effective ways to attract new clients. The Social Scheduler removes the friction of switching between apps — you write your caption once, attach your media, choose your platforms, and set a publish time. The platform handles the posting automatically via Ayrshare. You can also post immediately or save as a draft for later review.",
+        bullets: [
+          "Platform selector — toggle on/off each social network: Instagram, Twitter/X, Facebook, TikTok, YouTube",
+          "Caption editor — write your post text with support for {link} and {username} dynamic placeholders",
+          "Media attachment — upload an image or short video clip to accompany the post",
+          "Schedule for later — set a specific future date and time for the post to be published automatically",
+          "Post now — publish immediately to all selected platforms in one click",
+          "Draft mode — save an unfinished post to return to before scheduling",
+          "Post history — a log of all published posts with their platform, date, and engagement summary"
+        ]
+      },
+      {
+        name: "chime-conference-room",
+        label: "Chime Conference Room",
+        description: "A persistent virtual meeting room for multi-participant sessions, group readings, or practitioner team calls. Powered by AWS Chime, this room supports up to 25 attendees with HD video, screen sharing, and recording.",
+        group: "Engagement",
+        purpose: "Unlike the one-on-one session room designed for individual readings, the Chime Conference Room is built for group experiences — a group natal chart workshop, a team meeting with other practitioners, a live Q&A for your followers. It handles multiple video feeds simultaneously and includes a waiting room so you control exactly when participants are admitted.",
+        bullets: [
+          "Multi-participant video — up to 25 attendees in HD video simultaneously",
+          "Waiting room — participants wait in a lobby until you admit them, giving you session control",
+          "Screen sharing — share charts, slides, or any browser tab with all attendees",
+          "Raise hand feature — participants can signal they want to speak without interrupting the flow",
+          "Recording — the entire session is recorded and stored in your broadcast archive",
+          "Chat panel — a group text chat visible to all participants during the session",
+          "Mute controls — mute individual participants or all attendees at once to manage noise"
+        ]
+      },
+      {
+        name: "email-triggers",
+        label: "Email Sequence Triggers",
+        description: "Configure which automated email sequences are sent to your clients based on their actions — such as after a booking, after a completed session, after a no-show, or on a client's birthday.",
+        group: "Marketing & Growth",
+        purpose: "Automated emails keep your client relationships active without requiring manual effort from you. This screen lets you configure the triggers that determine when automated emails fire — so a new client automatically receives a welcome sequence, a completed session triggers a follow-up and review request, and an inactive client receives a re-engagement email after 30 days of no bookings. You set it up once and the system handles it.",
+        bullets: [
+          "Trigger list — all available trigger events shown with toggle to enable or disable each",
+          "New booking trigger — fire a sequence when a client books their first or any session with you",
+          "Post-session trigger — send a follow-up email after a session is marked as completed",
+          "No-show trigger — automated reminder or re-engagement email if a client misses their session",
+          "Anniversary trigger — a personalized note sent on the anniversary of a client's first session with you",
+          "Birthday trigger — an email sent to clients on their birthday (if birth date is in their profile)",
+          "Sequence assignment — select which email sequence fires for each trigger event from your library"
+        ]
+      },
+      {
+        name: "onboarding-checklist",
+        label: "Diviner Onboarding Checklist",
+        description: "A step-by-step first-time setup guide for new diviners. Complete each item to make your profile fully operational — from uploading your photo to creating your first service and connecting your Stripe account for payouts.",
+        group: "Account & Profile",
+        purpose: "When a diviner joins the platform, there are several essential setup steps before they can start accepting bookings. This checklist guides them through every required step in the right order, with a clear progress bar showing how close they are to being fully live. Completing the checklist means your profile is visible in search, your services are listed, and you are ready to receive and get paid for sessions.",
+        bullets: [
+          "Progress bar — visual indicator showing what percentage of setup is complete",
+          "Profile photo — upload a professional headshot (required for profile to appear in search)",
+          "Bio completion — write a practitioner bio of at least 100 words",
+          "First service created — create at least one bookable service with a price and duration",
+          "Availability set — configure at least one day per week as available for bookings",
+          "Stripe Connect — link your bank account for payouts (required before accepting any paid bookings)",
+          "Launch profile — a final step that makes your profile publicly visible in the diviner directory"
+        ]
+      },
+      {
+        name: "public-profile-preview",
+        label: "Profile Public Preview",
+        description: "See exactly how your practitioner profile appears to potential clients browsing the platform — your photo, bio, services, reviews, and booking button — before making any changes live.",
+        group: "Account & Profile",
+        purpose: "Before updating your profile and immediately going live with changes, this preview mode lets you see the client-facing view of your profile exactly as it appears on AstrologyPro. Spot issues — a missing service description, a photo that looks cropped wrong, or a bio that cuts off — before any real client sees them. Changes are only published when you explicitly click 'Go Live'.",
+        bullets: [
+          "Full client view — see your profile exactly as a prospective client sees it when they visit your page",
+          "Service cards preview — how each service you offer appears in the booking flow on your profile",
+          "Reviews section — how your testimonials appear, including the star rating summary at the top",
+          "Mobile preview toggle — switch between desktop and mobile views to check responsive layout",
+          "Booking button test — verify the 'Book a Session' button leads to your correct booking calendar",
+          "Discovery card preview — see how your profile card looks in the search/discover directory listing",
+          "Edit shortcut links — click any section of the preview to jump directly to the edit form for that section"
+        ]
+      },
     ],
   },
   {
@@ -2756,6 +3795,262 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Moderation — the community is privately moderated to ensure respectful, spiritually focused discussion"
         ]
       },
+      {
+        name: "mundane-dashboard-pm",
+        label: "Mundane Astrology Dashboard",
+        description: "Access the platform's world astrology tools as a Perennial Mandalism member. Track planetary transits against nations and global events, browse historical mundane charts, and understand the collective astrological climate shaping world events.",
+        group: "Astrology Tools",
+        purpose: "Mundane astrology — the study of planetary influences on nations, leaders, and collective world events — is a core part of the Perennial Mandalism tradition. This dashboard gives PM members access to the same world-astrology tools the school uses in its teachings, so members can follow along with current global astrological patterns and understand how they connect to what is taught in the curriculum.",
+        bullets: [
+          "Current world transits — major planetary movements and the nations or themes they are influencing right now",
+          "NAT charts (national entity charts) — natal charts for major countries and how transits aspect them",
+          "Global transit calendar — upcoming major ingresses and conjunctions with their world-event implications",
+          "Historical mundane archive — browse past world events mapped to their astrological signatures",
+          "Geopolitical entity list — search any country, organization, or public figure by name to view their chart",
+          "Mundane forecast brief — a short admin-curated summary of the most significant world astrological events this month",
+          "Connection to teachings — links from each mundane chart to related lessons in the Training section"
+        ]
+      },
+      {
+        name: "horoscope-reader",
+        label: "Horoscope Reader",
+        description: "Read personalized weekly and monthly horoscopes generated from your natal chart. These are not generic sun-sign horoscopes — they are calculated specifically for your chart positions and current transits.",
+        group: "Astrology Tools",
+        purpose: "Generic horoscopes written for the masses miss the nuance of your individual chart. The Horoscope Reader in the PM portal generates interpretations based on your actual natal chart — where your planets are, which house each transit touches, and what that means for your specific life areas. Think of it as a personalized astrological weather report written just for you.",
+        bullets: [
+          "Weekly horoscope — a narrative forecast for the current week based on your natal chart and active transits",
+          "Monthly overview — a broader look at the major astrological themes affecting you this month",
+          "House-by-house focus — which life areas (career, relationships, health, finances) are highlighted this period",
+          "Planet spotlight — the most important transit active in your chart right now, explained in plain language",
+          "Retrograde alerts — notifications when a planet relevant to your chart goes retrograde",
+          "Archive of past readings — browse horoscopes from previous weeks to see how predictions played out",
+          "Practitioner note — your assigned practitioner can add a personalized comment to your monthly horoscope"
+        ]
+      },
+      {
+        name: "ingress-charts-pm",
+        label: "Ingress Charts Viewer",
+        description: "View the ingress charts for each major planetary sign change — the astrological snapshot taken at the exact moment a planet enters a new zodiac sign. Use these as a lens for understanding collective themes for each astrological season.",
+        group: "Astrology Tools",
+        purpose: "Ingress charts are one of the most important tools in mundane astrology. When the Sun enters Aries (the Aries Ingress), a chart is cast for that exact moment — and that chart is interpreted to understand the themes of the coming quarter. This viewer lets PM members access all ingress charts, see how they relate to current global events, and understand the seasonal astrological energy the school teaches about.",
+        bullets: [
+          "All ingress charts — browse ingress charts for every major planetary sign entry in the current year",
+          "Aries Ingress — the most significant annual chart, cast when the Sun enters Aries at the vernal equinox",
+          "Cancer, Libra, Capricorn Ingresses — the three other seasonal ingresses completing the quarterly cycle",
+          "Interactive chart wheel — a rendered chart wheel for each ingress with house cusps and planet positions",
+          "Interpretation panel — a written summary of what the ingress chart indicates for the coming season",
+          "Historical ingress archive — browse ingress charts from past years for study and comparison",
+          "School commentary — the Head Master's notes on each ingress chart, added at the time of entry"
+        ]
+      },
+      {
+        name: "rituals-library-pm",
+        label: "Rituals Library",
+        description: "Browse the full library of sacred rituals available to Perennial Mandalism members. Filter by planetary cycle, season, intention type, or decan. Access step-by-step ritual guides, material lists, and timing recommendations.",
+        group: "Community & Worship",
+        purpose: "The Rituals Library is the complete collection of every sacred practice available in the PM portal. Some rituals are tied to specific astrological moments (new moon in Scorpio, Sun entering Aries), others are general practices for daily alignment. This library lets you browse everything available, filter for what is relevant right now, and follow the ritual when you are ready.",
+        bullets: [
+          "Full ritual collection — every ritual in the school's library, available to PM members",
+          "Filter by planet — find rituals related to a specific planet you are working with (Saturn, Venus, Mars, etc.)",
+          "Filter by season — browse rituals aligned to Spring, Summer, Autumn, or Winter energy",
+          "Filter by decan — find rituals tied to the currently active or upcoming decan period",
+          "Step-by-step guide — each ritual has clear numbered steps with what to say, do, and use",
+          "Materials list — what you need to gather before beginning (candles, water, crystals, journal, etc.)",
+          "Completion log — mark any ritual as completed; this feeds into your Practice Tracker streak"
+        ]
+      },
+      {
+        name: "tarot-readings-pm",
+        label: "Tarot Readings",
+        description: "Pull tarot cards and receive interpretations connected to your natal chart, current transits, and the active astrological decan. Spreads range from a single daily draw to full Celtic Cross layouts.",
+        group: "Learning & Wisdom",
+        purpose: "In the tradition taught by this school, tarot and astrology are deeply interwoven — each card corresponds to a planet, sign, or decan. This reading tool lets PM members pull cards and receive interpretations that are specific to the current astrological moment, not generic card meanings. The school's esoteric approach adds a layer of astrological context that makes each reading richer.",
+        bullets: [
+          "Daily draw — pull a single card each day as a contemplative focus tied to the current decan energy",
+          "Three-card spread — past, present, future layout with astrological context for each position",
+          "Celtic Cross — a full 10-card spread for in-depth exploration of a specific question or situation",
+          "Astrological overlay — each card drawn shows its zodiac sign, planetary ruler, and decan correspondence",
+          "Reading history — every card draw is saved so you can look back at patterns over time",
+          "Card meanings library — tap any card in a spread to read its full upright and reversed meanings",
+          "Journal prompt — after each reading, a reflective question is offered for your spiritual journal"
+        ]
+      },
+      {
+        name: "pm-profile-settings",
+        label: "Profile & Settings",
+        description: "Manage your Perennial Mandalism profile and account settings — personal details, birth data, notification preferences, privacy controls, and portal display options.",
+        group: "My Membership",
+        purpose: "Your profile in the PM portal is the foundation for all personalized features. Your birth data powers your natal chart, transit reports, and personalized horoscopes. Notification settings control how you are alerted about events, new content, and Sunday Service reminders. Keeping this profile complete and accurate ensures every tool on the platform works as well as possible for you.",
+        bullets: [
+          "Personal information — update your name, email, profile photo, and display name",
+          "Birth data — your date, time, and place of birth (required for all personalized astrology tools)",
+          "Timezone setting — ensure all events, service times, and transit data are displayed in your local time",
+          "Notification preferences — choose email or push notifications for events, Sunday Service, new rituals, and announcements",
+          "Privacy settings — control what parts of your profile (if any) are visible to other community members",
+          "Portal display — choose your preferred homepage layout (chart-first, calendar-first, or community feed-first)",
+          "Account security — update your password and manage login sessions"
+        ]
+      },
+      {
+        name: "broadcast-rsvp",
+        label: "Broadcasts RSVP",
+        description: "Browse upcoming live broadcasts from diviners and school leaders. RSVP to receive a reminder, see who else is attending, and access the session link when it goes live.",
+        group: "Community & Worship",
+        purpose: "Broadcasts are live events — group sessions, seasonal teachings, Q&A sessions, and special celestial event commentaries. This page shows you everything upcoming so you can plan your schedule. RSVPing tells the system to send you a reminder before the session starts and adds you to the attendance list, which helps organizers see expected participation.",
+        bullets: [
+          "Upcoming broadcasts list — all scheduled live sessions with title, host, date, time, and topic",
+          "RSVP button — confirm your attendance so you receive a pre-session reminder notification",
+          "Attendee count — see how many community members have already RSVPed for each session",
+          "Session description — what the broadcast covers and who it is most relevant for",
+          "Live link on session day — when a session starts, an active join button appears on the entry",
+          "Past broadcasts — recordings of previous sessions you can watch if you missed the live event",
+          "Filter by host — find broadcasts from a specific diviner or school leader you follow"
+        ]
+      },
+      {
+        name: "events-calendar-pm",
+        label: "Events Calendar",
+        description: "A monthly calendar view of all community events — Sunday services, workshops, ceremonies, seasonal rituals, and special gatherings. See the full month at a glance and register directly from the calendar.",
+        group: "Community & Worship",
+        purpose: "Planning ahead is easier with a visual calendar. While the Events list shows all upcoming events in order, the calendar gives you a full month view so you can see at a glance how your spiritual schedule looks. Busy weeks with multiple events are obvious, and you can navigate forward to see future months.",
+        bullets: [
+          "Monthly calendar grid — all events displayed on the days they occur for the full month",
+          "Event type color coding — each event type (Sunday Service, workshop, ceremony, webinar) has a distinct color",
+          "Click to register — click any event on the calendar to see details and register in two clicks",
+          "Multi-day events — events that span multiple days show across the full range on the calendar",
+          "Navigate forward — advance to future months to see events being planned for upcoming seasons",
+          "My registered events — a filter to show only the events you have already RSVPed to",
+          "Export to calendar — add any event to your Google Calendar or Outlook with a single click"
+        ]
+      },
+      {
+        name: "resources-media-library",
+        label: "Resources & Media Library",
+        description: "A searchable library of all media resources — video teachings, audio meditations, guided practices, and downloadable documents — available to PM members. Organized by topic, teacher, and format.",
+        group: "Learning & Wisdom",
+        purpose: "The Resources library is the full multimedia archive of the Perennial Mandalism school. It complements the text-based Spiritual Library with video and audio content — recordings of past teachings, guided meditations, planetary invocations, and special presentations. PM members can browse, search, and save resources to their personal library for later.",
+        bullets: [
+          "Video teachings — recorded lessons and presentations from the Head Master and school diviners",
+          "Audio meditations — guided meditation recordings tied to specific planets, decans, or seasonal themes",
+          "Downloadable documents — PDFs of study materials, ritual scripts, and reference guides",
+          "Search by topic — find resources on any planet, sign, decan, tarot card, or ritual practice",
+          "Filter by format — view only videos, only audio, or only documents depending on what you want",
+          "Save to my library — bookmark any resource to a personal collection for easy future access",
+          "Newly added — a highlighted section at the top showing the most recently uploaded content"
+        ]
+      },
+      {
+        name: "family-member-detail",
+        label: "Family Member Detail View",
+        description: "The individual profile page for one family member added to your Family plan. See their birth data, natal chart, upcoming sessions linked to their profile, and any notes you have added for them.",
+        group: "My Membership",
+        purpose: "Under a Family membership, each family member has their own sub-profile. This detail view shows you everything specific to one person — their chart, their sessions, their practice. Parents managing a child's profile, or spouses tracking their partner's chart data, use this page to keep each family member's information organized and accessible without mixing it with their own.",
+        bullets: [
+          "Family member profile — their name, relationship, and profile photo",
+          "Birth data summary — date, time, and place of birth used to generate their charts",
+          "Natal chart — their fully rendered birth chart with planet positions and house placements",
+          "Upcoming sessions — any booked sessions linked to this family member's profile",
+          "Notes — private notes you have added about this person's chart, needs, or spiritual journey",
+          "Edit birth data — update their birth information if the time or location needs correction",
+          "Remove member — remove this profile from your family plan (the plan seat is freed up immediately)"
+        ]
+      },
+      {
+        name: "discount-tokens",
+        label: "Discount Tokens & Coupons",
+        description: "Enter a discount code or coupon token to apply a price reduction to your Perennial Mandalism membership renewal or Mystery School enrollment. See active discounts applied to your account and their expiry dates.",
+        group: "My Membership",
+        purpose: "Discount tokens allow PM members to take advantage of promotional pricing — whether from a referral, a special event, or a school-issued loyalty reward. This page is where you enter a coupon code and see it applied to your next billing cycle. It also shows any discounts currently active on your account and when they expire.",
+        bullets: [
+          "Coupon entry field — enter a discount code and click Apply to validate it instantly",
+          "Validation feedback — the platform confirms if the code is valid, expired, or already used",
+          "Discount type shown — whether the code gives a percentage off, a flat dollar amount off, or a free period",
+          "Active discounts on your account — all currently applied discounts with their expiry dates",
+          "Applies to next billing — discounts are applied to your next subscription renewal, not the current period",
+          "Referral discount — if a friend referred you, your referral discount appears here automatically",
+          "PM member discount for Mystery School — if you are a PM member enrolling in the Mystery School, your discounted rate is shown here"
+        ]
+      },
+      {
+        name: "transit-overlay",
+        label: "Charts Transit Overlay",
+        description: "Overlay current or future planetary positions onto any natal chart in your family account. See exactly which houses and natal planets are being activated by today's transits — or any date you choose.",
+        group: "Astrology Tools",
+        purpose: "Seeing current transits in isolation is useful, but seeing them overlaid directly on a natal chart is transformative — it shows you exactly which part of a person's life is being activated right now. The Transit Overlay tool lets you select any chart in your account (your own or a family member's) and overlay any date's planetary positions to see the full picture of what is happening astrologically for that person at that moment.",
+        bullets: [
+          "Chart selector — choose which natal chart to use as the base (your own or any family member's)",
+          "Date picker — set a specific date to see that day's planetary positions overlaid on the chosen chart",
+          "Today's overlay — default view shows today's transits against the selected natal chart",
+          "Transit highlights — planets making major aspects (conjunction, square, trine, opposition) are highlighted in the overlay",
+          "Aspect table — a table listing all active transit aspects with the natal planet affected and the type of angle",
+          "Interpretation layer — plain-language description of what each major transit means for the chart holder",
+          "Timeline slider — drag through a date range to watch transits move across the chart over time"
+        ]
+      },
+      {
+        name: "pm-decan-study",
+        label: "Decan Study Guide",
+        description: "A deep-dive reference page for any of the 36 decans — its ruling planet, mythological story, tarot card correspondence, and spiritual teaching from the school. Use this to understand any decan your planets fall in or that is currently active.",
+        group: "Astrology Tools",
+        purpose: "The 36 decans are the foundational curriculum of this school, and understanding each one deeply takes ongoing study. This page provides PM members access to the school's full decan reference material — not just the name and ruling planet, but the mythology, the spiritual archetype, the tarot connection, and Eddie Paredes' commentary. It is the study reference that complements the Decans Explorer.",
+        bullets: [
+          "Decan name and position — the 10-degree segment of the zodiac wheel this decan occupies",
+          "Ruling planet — which planet governs this decan and what energy it brings",
+          "Sign context — which zodiac sign this decan falls within and what that combination means",
+          "Tarot correspondence — the Minor Arcana card linked to this decan with card image and meaning summary",
+          "Mythological archetype — the ancient story or spirit associated with this decan in the Western esoteric tradition",
+          "Head Master commentary — Eddie Paredes' personal spiritual interpretation of this decan's energy",
+          "Your planets here — which of your natal planets fall in this decan, shown from your saved birth data"
+        ]
+      },
+      {
+        name: "practice-streak",
+        label: "Practice Streak & Milestones",
+        description: "Track your daily spiritual practice streak — consecutive days of logged rituals and meditations. View milestone achievements, see your longest streak, and compare your current consistency with your personal best.",
+        group: "Community & Worship",
+        purpose: "Spiritual practice builds through consistency. The streak system gamifies daily practice in a meaningful way — seeing your streak grow motivates you to maintain your practice even on difficult days. Milestones (7 days, 30 days, 100 days) mark real achievements in your spiritual discipline and are celebrated by the platform with recognition and a message from the school.",
+        bullets: [
+          "Current streak — how many consecutive days you have logged a practice without a gap",
+          "Longest streak — your personal record for unbroken daily practice",
+          "Milestone badges — achievements awarded at 7, 30, 60, 90, and 100 days of consecutive practice",
+          "Practice calendar — a visual heatmap showing every day you practiced in the past year",
+          "Upcoming milestone — how many more days until you reach your next milestone badge",
+          "Streak restore — if you miss a day, the platform offers one annual 'grace day' that preserves your streak",
+          "School recognition — practitioners and school leaders can see your streak milestones and acknowledge them"
+        ]
+      },
+      {
+        name: "pm-notifications",
+        label: "Notification Centre",
+        description: "A central inbox for all platform notifications — upcoming event reminders, new library content, Sunday Service announcements, practitioner messages, billing alerts, and community activity relevant to you.",
+        group: "My Membership",
+        purpose: "The Notification Centre ensures you never miss something important in the PM community — whether it is a Sunday Service starting in 30 minutes, a new ritual added to the library, a message from your practitioner, or a billing reminder. All alerts land here in one place with clear timestamps and one-click navigation to the relevant page.",
+        bullets: [
+          "All notifications in one list — sorted by most recent, with unread items highlighted at the top",
+          "Event reminders — automated reminders for Sunday Service, workshops, and events you have RSVPed to",
+          "New content alerts — when a new ritual, article, video, or doctrine document is added to the library",
+          "Practitioner messages — messages from your assigned practitioner or school administrator",
+          "Billing alerts — upcoming renewal reminders and payment confirmation receipts",
+          "Mark as read — clear individual notifications or mark all as read at once",
+          "Notification preferences link — a shortcut to your profile settings where you configure which alerts you receive"
+        ]
+      },
+      {
+        name: "pm-support",
+        label: "Help & Support",
+        description: "Access help resources, submit support tickets, and find answers to common questions about your Perennial Mandalism membership — from billing inquiries to technical issues with astrology tools.",
+        group: "My Membership",
+        purpose: "Members occasionally need help — they cannot find a feature, have a billing question, or are experiencing a technical issue. The Help and Support page gives them a self-service first layer (FAQs, how-to guides, video walkthroughs) before escalating to a support ticket if their question is not answered. Clear, organized support reduces frustration and improves member retention.",
+        bullets: [
+          "FAQ library — answers to the most common membership questions organized by topic",
+          "Video walkthroughs — short screen-recording guides showing how to use key features like charts, rituals, and events",
+          "Submit a ticket — a form to describe your issue, attach a screenshot, and send it to the support team",
+          "Ticket history — view all past support tickets and their resolution status",
+          "Billing questions — dedicated section for billing, refund, and subscription inquiry submissions",
+          "Community chat link — a shortcut to the PM community discussion board for peer support",
+          "Response time expectation — a visible note that tickets are responded to within 1 to 2 business days"
+        ]
+      },
     ],
   },
   {
@@ -3040,6 +4335,78 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "No external dependencies: uses up/down arrow buttons instead of drag-and-drop"
         ]
       },
+      {
+        name: "ms-dashboard",
+        label: "Mystery School Dashboard",
+        description: "Your home screen after login as a Mystery School student — current decan status, foundation week progress, and upcoming decan windows.",
+        group: "Overview",
+        purpose: "Provides the student an at-a-glance summary of where they are in the curriculum and what is active right now.",
+        bullets: [
+          "Active decan card showing current window open/close dates",
+          "Foundation quarter progress with weeks completed out of 12",
+          "Quick-links to this week's foundation audio and ritual"
+        ]
+      },
+      {
+        name: "ms-subscription",
+        label: "Subscription & Billing",
+        description: "Manage your Mystery School subscription — view billing date, plan amount, and cancel or resume access.",
+        group: "Account",
+        purpose: "Full transparency on what you pay and when, with self-serve cancel and resume controls.",
+        bullets: [
+          "Monthly subscription amount and next billing date",
+          "One-time initiation fee receipt for your records",
+          "Cancel subscription with retained access until period end"
+        ]
+      },
+      {
+        name: "ms-settings",
+        label: "MS Account Settings",
+        description: "Update your display name, timezone, and notification preferences for Mystery School content.",
+        group: "Account",
+        purpose: "Personalise your experience so decan window reminders fire at the right local time.",
+        bullets: [
+          "Timezone picker so window open/close times display correctly",
+          "Email notification toggle for decan preview and grace period alerts",
+          "Display name shown on your graduation certificate"
+        ]
+      },
+      {
+        name: "ms-foundation-audio",
+        label: "Foundation Week Audio Player",
+        description: "Each of the 12 foundation weeks includes an audio teaching by Beto — listen directly in the portal.",
+        group: "Training",
+        purpose: "Guided audio instruction makes the curriculum accessible without requiring a video setup.",
+        bullets: [
+          "Embedded audio player with playback speed control",
+          "Beto photo card displayed alongside the audio for context",
+          "Progress saved — resume from where you left off on any device"
+        ]
+      },
+      {
+        name: "ms-decan-grid",
+        label: "36 Decan Mastery Grid",
+        description: "The full 36-decan grid showing which decans you have completed, which are active now, and which are upcoming.",
+        group: "Training",
+        purpose: "A birds-eye view of the entire year's curriculum mapped to zodiac sign and ruling planet.",
+        bullets: [
+          "36 cards arranged by zodiac order — green for complete, amber for active, grey for upcoming",
+          "Click any active or completed decan to view its detail page",
+          "Your completion count shown prominently above the grid"
+        ]
+      },
+      {
+        name: "ms-journal",
+        label: "Decan Journal",
+        description: "After completing the ritual and scrying session, record your personal observations and insights in the structured journal.",
+        group: "Training",
+        purpose: "Journalling is required as the final step of each decan completion and becomes part of your permanent record.",
+        bullets: [
+          "Prompted fields: themes observed, entities encountered, insights received",
+          "Private entry — only visible to you and assigned admin",
+          "Once submitted, marks the decan as fully complete"
+        ]
+      },
     ],
   },
   {
@@ -3284,6 +4651,78 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Annual summary — a year-in-review summary showing total commissions received in a calendar year for tax filing"
         ]
       },
+      {
+        name: "advocate-link-generator",
+        label: "Referral Link Generator",
+        description: "Create custom referral links for specific diviners, services, or campaigns with UTM tracking built in.",
+        group: "Tools",
+        purpose: "Generate targeted deep-links so you can promote individual readings rather than just the home page.",
+        bullets: [
+          "Pick any diviner or service to link directly to their booking page",
+          "Auto-appended referral code so every click is tracked to your account",
+          "Copy link with one click or share directly to social"
+        ]
+      },
+      {
+        name: "advocate-social-toolkit",
+        label: "Social Media Toolkit",
+        description: "Ready-to-post images, captions, and hashtag sets provided by the platform for your social promotion.",
+        group: "Tools",
+        purpose: "Reduces the effort of content creation so advocates can post quality material consistently.",
+        bullets: [
+          "Brand-approved image assets sized for Instagram, Facebook, and X",
+          "Caption templates with placeholder fields for personalisation",
+          "Best-posting-time guidance per platform"
+        ]
+      },
+      {
+        name: "advocate-tier-progress",
+        label: "Tier & Milestone Progress",
+        description: "Track your progress toward the next commission tier — how many referrals and what revenue is needed to unlock a higher rate.",
+        group: "Performance",
+        purpose: "Motivates advocates to reach the next tier by making progress visible and specific.",
+        bullets: [
+          "Current tier badge and percentage progress to next tier",
+          "Projected earnings if you maintain your current monthly pace",
+          "Milestone history — when you unlocked each tier in the past"
+        ]
+      },
+      {
+        name: "advocate-notifications",
+        label: "Notifications",
+        description: "New commission earned, payout processed, campaign started, or tier upgrade — all alerts in one feed.",
+        group: "Settings",
+        purpose: "Keeps advocates informed of earning events without having to check the dashboard constantly.",
+        bullets: [
+          "Real-time commission earned alerts with session and amount details",
+          "Payout processed notifications with bank transfer reference",
+          "New campaign launched alert with commission rate and end date"
+        ]
+      },
+      {
+        name: "advocate-settings",
+        label: "Advocate Settings",
+        description: "Manage your payout method, contact email, and notification preferences.",
+        group: "Settings",
+        purpose: "Control how and when you receive your commissions and how the platform contacts you.",
+        bullets: [
+          "Payout method — bank transfer or PayPal linked account",
+          "Minimum payout threshold configuration",
+          "Email and push notification toggle per event type"
+        ]
+      },
+      {
+        name: "advocate-leaderboard",
+        label: "Advocate Leaderboard",
+        description: "See where you rank among all social advocates by referral volume and commission earned this month.",
+        group: "Performance",
+        purpose: "Healthy competition drives performance — top advocates are spotlighted and may receive bonus incentives.",
+        bullets: [
+          "Top 10 advocates by referrals and by earnings (anonymised beyond top 3)",
+          "Your rank badge shown prominently at the top of your dashboard",
+          "Monthly leaderboard resets on the 1st of each month"
+        ]
+      },
     ],
   },
   {
@@ -3469,6 +4908,90 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Head Master acknowledgment — signed by Eddie Paredes as Head Master of the school",
           "Download as PDF — save a high-resolution, print-ready PDF version of your certificate",
           "Verification link — a public URL anyone can visit to verify the certificate is authentic and issued by the school"
+        ]
+      },
+      {
+        name: "trainee-profile",
+        label: "Trainee Profile",
+        description: "Your public trainee profile — mentors and admins can view your bio, specialities, and training history.",
+        group: "Settings",
+        purpose: "Manage how you appear to mentors and platform admins during your apprenticeship.",
+        bullets: [
+          "Editable bio, display name, and profile photo",
+          "Visible specialties and astrological interests",
+          "Training history summary available to mentors"
+        ]
+      },
+      {
+        name: "trainee-notifications",
+        label: "Notifications Centre",
+        description: "Lesson drops, mentor messages, quiz results, and milestone alerts all delivered here.",
+        group: "Settings",
+        purpose: "Consolidated inbox so no training event is missed.",
+        bullets: [
+          "Lesson availability alerts when new content drops",
+          "Mentor message notifications",
+          "Badge and milestone earned alerts"
+        ]
+      },
+      {
+        name: "trainee-mentor-chat",
+        label: "Mentor Chat",
+        description: "Direct message thread with your assigned mentor — ask questions and receive feedback between live sessions.",
+        group: "Mentorship",
+        purpose: "Asynchronous support channel between formal scheduled sessions.",
+        bullets: [
+          "Message history with timestamps and read receipts",
+          "Attach chart screenshots or files for mentor review",
+          "Pinned messages for key instructions from mentor"
+        ]
+      },
+      {
+        name: "trainee-schedule",
+        label: "Training Schedule",
+        description: "Calendar view of upcoming lessons, quizzes, and scheduled mentor sessions for the next 30 days.",
+        group: "Training",
+        purpose: "Visual weekly planner for managing your apprenticeship workload.",
+        bullets: [
+          "Week-at-a-glance calendar with lesson blocks colour-coded by program",
+          "Click any block to jump directly to the lesson or session",
+          "Upcoming quiz deadlines highlighted in amber"
+        ]
+      },
+      {
+        name: "trainee-bookmarks",
+        label: "Bookmarked Lessons",
+        description: "A curated list of lessons you have bookmarked for reference during readings and revision.",
+        group: "Resources",
+        purpose: "Quick-access library of content you have flagged for return visits.",
+        bullets: [
+          "Star any lesson to add it here instantly",
+          "Grouped by program for easy retrieval",
+          "Search bookmarks by keyword"
+        ]
+      },
+      {
+        name: "trainee-badge-wall",
+        label: "Badge Wall",
+        description: "Every milestone badge you have earned — quiz streaks, lesson completions, on-time attendance, and special honours.",
+        group: "Progress",
+        purpose: "Gamified recognition system that motivates consistent training engagement.",
+        bullets: [
+          "Earned badges displayed with the date achieved",
+          "Locked future badges shown as silhouettes — see what is coming next",
+          "Share your badge wall link to social or community"
+        ]
+      },
+      {
+        name: "trainee-settings",
+        label: "Trainee Settings",
+        description: "Account and notification preferences specific to your trainee portal.",
+        group: "Settings",
+        purpose: "Customise your training experience — email digests, session reminders, and timezone.",
+        bullets: [
+          "Set your preferred timezone for session scheduling",
+          "Choose weekly vs. daily email digest frequency",
+          "Enable or disable mentor activity notifications"
         ]
       },
     ],
@@ -3750,6 +5273,78 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Received gifts — if someone has gifted you a reading, it appears here ready to use for booking"
         ]
       },
+      {
+        name: "client-chart",
+        label: "My Natal Chart",
+        description: "Your personal natal chart generated from your saved birth data — view planetary positions, aspect grid, and AI interpretation.",
+        group: "Astrology",
+        purpose: "Gives clients a permanent, shareable natal chart tied to their AstrologyPro profile for use in readings.",
+        bullets: [
+          "Full wheel chart with glyph annotations for all 10 planets",
+          "Aspect grid showing major and minor aspects at a glance",
+          "AI-generated interpretation summary for each house and planet placement"
+        ]
+      },
+      {
+        name: "client-birth-data",
+        label: "Birth Data Settings",
+        description: "Manage the birth time, date, and city saved to your profile — used for chart generation and diviner readings.",
+        group: "Profile",
+        purpose: "Accurate birth data is essential for precise readings — this page lets you update it any time.",
+        bullets: [
+          "City search with timezone auto-detection",
+          "Rectified time toggle if exact birth time is unknown",
+          "Changes propagate to all future chart requests"
+        ]
+      },
+      {
+        name: "client-notifications",
+        label: "Notifications",
+        description: "Session reminders, diviner messages, new reading availability, and platform announcements.",
+        group: "Settings",
+        purpose: "Keeps clients informed of everything happening in their AstrologyPro account.",
+        bullets: [
+          "24-hour and 1-hour session reminder notifications",
+          "Diviner reply notifications when a message is sent",
+          "Platform event and new offering announcements"
+        ]
+      },
+      {
+        name: "client-session-notes",
+        label: "Session Notes",
+        description: "View notes left by your diviner after each completed reading — a personal record of what was covered.",
+        group: "My Sessions",
+        purpose: "Post-session notes help clients retain key insights and track themes across multiple readings.",
+        bullets: [
+          "Notes organised by session date and diviner name",
+          "Downloadable as PDF for your personal records",
+          "Private — only visible to you and the reading diviner"
+        ]
+      },
+      {
+        name: "client-settings",
+        label: "Account Settings",
+        description: "Manage your contact email, password, notification preferences, and communication opt-ins.",
+        group: "Settings",
+        purpose: "Full account self-service so clients never need support for routine changes.",
+        bullets: [
+          "Email address and password update with verification",
+          "Newsletter and promotional email opt-in controls",
+          "Account deletion request — triggers a 30-day grace before data removal"
+        ]
+      },
+      {
+        name: "client-astrology-home",
+        label: "Astrology Hub",
+        description: "Your personal astrology centre — daily transit overview, current planetary weather, and your chart highlights for today.",
+        group: "Astrology",
+        purpose: "Provides personalised daily astrological context so clients feel the value of the platform every day, not just on reading days.",
+        bullets: [
+          "Today's planetary positions overlaid on your natal chart",
+          "Transit description in plain language — no jargon",
+          "Upcoming high-impact transit alerts for the next 7 days"
+        ]
+      },
     ],
   },
   {
@@ -3905,6 +5500,150 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Star ratings — each testimonial includes the star rating given by the reviewer",
           "Verified badge — testimonials from verified accounts are marked as confirmed by the platform",
           "Filter by role — visitors can filter testimonials to see only those relevant to their interest"
+        ]
+      },
+      {
+        name: "homepage-hero",
+        label: "Homepage Hero",
+        description: "The first thing a visitor sees when they arrive at AstrologyPro — a full-screen hero section with a powerful headline, spiritual branding, a live cosmic clock, and clear calls to action for joining or browsing diviners.",
+        group: "Marketing",
+        purpose: "The homepage hero exists to convert a curious visitor into someone who wants to explore further or sign up. Within the first 5 seconds, a visitor needs to understand what AstrologyPro is, why it is different from a generic astrology website, and what they can do next. The hero answers those three questions: it names the value proposition, shows the platform's spiritual personality, and gives two clear paths — find a diviner, or join the community.",
+        bullets: [
+          "Headline and tagline — the platform's core value proposition stated in bold, compelling language",
+          "Live cosmic clock — a real-time display of the current planetary positions and active astrological energies",
+          "Primary CTA — 'Find a Diviner' or 'Start Your Journey' button leading to discovery or registration",
+          "Secondary CTA — 'Explore the Community' or 'Learn About the School' leading to the About page",
+          "Background visuals — premium celestial imagery that communicates spiritual depth and professionalism",
+          "Social proof strip — a brief row of trust signals (number of practitioners, member count, session count)",
+          "Mobile responsive — the hero adapts cleanly to phone screens with stacked layout and touch-friendly buttons"
+        ]
+      },
+      {
+        name: "diviner-directory",
+        label: "Diviner Directory",
+        description: "The public browse page where visitors discover and filter through AstrologyPro's practitioners. Filter by specialty, reading type, price range, language, and availability to find the right diviner for your needs.",
+        group: "Discovery",
+        purpose: "The Diviner Directory is the engine of new client acquisition for every practitioner on the platform. This is the page a visitor arrives on when they want to find a spiritual guide — and it needs to make that search feel easy and trustworthy. Visitors can filter and sort to narrow down from hundreds of practitioners to the few who match their specific needs, then click through to a profile and book.",
+        bullets: [
+          "Practitioner grid — cards showing each diviner's photo, name, specialties, star rating, and starting price",
+          "Specialty filter — narrow by reading type (natal chart, tarot, relationship, mundane, transit, etc.)",
+          "Price range slider — filter to see only diviners within a specific budget",
+          "Availability filter — show only diviners with open slots in the next 7 days",
+          "Language filter — find practitioners who read in a specific language",
+          "Sort options — sort by highest rating, most reviews, lowest price, or newest to the platform",
+          "Search by name — type a practitioner's name to jump directly to their profile"
+        ]
+      },
+      {
+        name: "diviner-public-profile",
+        label: "Individual Diviner Profile",
+        description: "The public-facing profile page for one practitioner on AstrologyPro. Includes their photo, bio, credentials, services, reviews, and a direct booking button — the primary conversion page for new client acquisition.",
+        group: "Discovery",
+        purpose: "When a visitor clicks on a diviner from the directory, this is where they land. This page needs to do one thing exceptionally well: turn a curious visitor into a booked client. It presents everything a person needs to decide if this practitioner is right for them — their background, their approach, their services and prices, what past clients say, and a visible, frictionless way to book. Every element of this page is designed to build trust and reduce booking hesitation.",
+        bullets: [
+          "Profile photo and display name — a professional, welcoming first impression",
+          "Specialties badge list — quick visual summary of the diviner's reading types and traditions",
+          "Bio section — the practitioner's own words about their background, lineage, and approach",
+          "Service listings — each service with name, description, duration, and price with a 'Book' button",
+          "Client testimonials — curated reviews showing star ratings, client names, and written feedback",
+          "Availability preview — a compact calendar showing the nearest available booking slots",
+          "Video intro — if the diviner has uploaded a video introduction, it plays here before the bio"
+        ]
+      },
+      {
+        name: "blog-listing",
+        label: "Blog Listing",
+        description: "The public blog index page — a grid of all published articles on AstrologyPro, organized by category and sorted by most recent. Covers planetary transits, astrology education, seasonal rituals, tarot guides, and community news.",
+        group: "Marketing",
+        purpose: "The blog serves dual purposes: it builds SEO traffic by providing searchable astrological content, and it demonstrates the school's authority and depth of knowledge to prospective members. A visitor who arrives from a Google search for 'what does Saturn Return mean' and reads a well-written article is far more likely to explore the platform further and eventually join.",
+        bullets: [
+          "Article grid — all published articles displayed as cards with title, category, author, and cover image",
+          "Category navigation — filter articles by category (transits, natal chart basics, tarot, rituals, community news, etc.)",
+          "Most recent articles first — new content is always at the top to give returning visitors a reason to come back",
+          "Featured article — a highlighted post at the top of the page selected by the editorial team",
+          "Author attribution — each card shows the author's name and photo, linking to their author profile page",
+          "Estimated reading time — shows how long each article takes to read so visitors can choose based on time available",
+          "Newsletter subscribe — a call-to-action strip inviting visitors to subscribe for weekly astrological insights"
+        ]
+      },
+      {
+        name: "blog-article-detail",
+        label: "Blog Article Detail",
+        description: "The full reading experience for a single published article. Rich text content with embedded charts, images, and videos. Related articles and a clear call to action at the end to discover practitioners or join the community.",
+        group: "Marketing",
+        purpose: "An article detail page is often a first-time visitor's introduction to AstrologyPro. They arrived from a search engine or a social share, and this is their first impression of the platform's quality and voice. The page must deliver value with the article content while also guiding the reader toward the next step — browsing diviners, joining the PM community, or reading another article.",
+        bullets: [
+          "Full article body — richly formatted content with headings, images, embedded charts, and pull quotes",
+          "Author bio block — a short bio of the author with their photo and a link to their other published articles",
+          "Category and tags — breadcrumb showing which category the article belongs to with related tag filters",
+          "Estimated reading time — shown prominently at the top so readers can commit knowingly",
+          "Share buttons — quick social sharing for Twitter/X, Facebook, and a copy-link button",
+          "Related articles — 3 to 4 suggested articles on similar topics shown at the bottom to keep readers engaged",
+          "End CTA — a contextual call to action at the article's conclusion (e.g. 'Book a reading' or 'Join the community')"
+        ]
+      },
+      {
+        name: "login-page",
+        label: "Login Page",
+        description: "The sign-in page for returning AstrologyPro members and practitioners. Supports email and password login with a clear 'Forgot password' link and options to register if the visitor is new.",
+        group: "Onboarding",
+        purpose: "Every returning member passes through the login page. It needs to be fast, clear, and friction-free. Diviners, PM members, customers, trainees, and admins all log in through this single page — the platform then routes them to the correct portal based on their role. A clear layout and minimal fields keep the experience simple for all user types.",
+        bullets: [
+          "Email and password fields — the standard credentials used for all account types on the platform",
+          "Sign In button — submits the form and routes the user to their role-appropriate dashboard",
+          "Forgot password link — visible without requiring any action first; leads directly to the password reset flow",
+          "Remember me option — keeps the user logged in on their personal device for faster future access",
+          "Register prompt — a visible link for first-time visitors who do not have an account yet",
+          "Error handling — clear messaging for incorrect credentials with guidance on next steps",
+          "Role-based routing — after login, the platform automatically sends each user to their correct portal"
+        ]
+      },
+      {
+        name: "forgot-password",
+        label: "Forgot Password Flow",
+        description: "A two-step process for recovering account access — enter your registered email to receive a reset link, then set a new password. Includes clear confirmation messaging and security best-practice guidance.",
+        group: "Onboarding",
+        purpose: "Password recovery is a critical trust moment — if a member cannot get back into their account easily, they may give up and lose access to their readings, session history, and community connection. This flow needs to be reassuringly simple: one field, one button, clear confirmation that the email was sent, and a secure link that works reliably.",
+        bullets: [
+          "Email entry field — enter the address associated with your account to receive a reset link",
+          "Send Reset Link button — triggers the password reset email with a one-time secure link",
+          "Confirmation screen — a clear message confirming the email was sent, with guidance to check spam if not received",
+          "Secure reset link — the emailed link expires after 24 hours for security; expired links show a clear re-request option",
+          "New password form — the page the reset link leads to, with password and confirm-password fields",
+          "Password strength indicator — visual feedback on the strength of the new password being entered",
+          "Return to login — a visible link back to the login page for users who remember their password or are in the wrong flow"
+        ]
+      },
+      {
+        name: "platform-walkthrough-preview",
+        label: "Platform Walkthrough Preview",
+        description: "An interactive tour of the AstrologyPro platform available to public visitors without requiring registration. Browse role-specific feature previews, see screenshots of the dashboard, and understand what each portal offers before committing to join.",
+        group: "Marketing",
+        purpose: "Many prospective members hesitate to sign up because they do not know what they are getting. The Platform Walkthrough Preview removes that barrier — it shows them exactly what the platform looks like and what they will be able to do, organized by the role that applies to them. A visitor interested in becoming a diviner can preview the Diviner Studio; someone curious about the community can explore the PM portal screens. Seeing is believing, and this page turns browsers into registrants.",
+        bullets: [
+          "Role selector — choose which portal to preview: Client, Diviner, PM Community, Mystery School, or Affiliate",
+          "Feature overview for each role — a curated list of what each role gets access to on the platform",
+          "Screen previews — annotated screenshots of real platform pages so visitors see the actual product",
+          "Key capability bullets — concise list of what you can do in each portal, written for a non-technical audience",
+          "Join CTA per role — each role's preview section ends with a specific call to action for that role's registration flow",
+          "Mobile-friendly layout — the preview page is fully readable and navigable on phone screens",
+          "No sign-up required — all preview content is accessible without creating an account or providing an email"
+        ]
+      },
+      {
+        name: "join-pricing-page",
+        label: "Join / Pricing Page",
+        description: "The membership selection and pricing transparency page where new visitors choose how to join AstrologyPro. Presents each available membership path with pricing, features, and enrollment buttons in one clear comparison view.",
+        group: "Onboarding",
+        purpose: "Price transparency and role clarity are the two biggest conversion factors for a spiritual platform. Visitors who cannot quickly find the price or understand the difference between membership options leave without joining. This page makes both immediately clear — what each path costs, what it includes, and how to get started in one scroll.",
+        bullets: [
+          "Membership path cards — Client, Perennial Mandalism (Individual and Family), Mystery School, and Diviner displayed side by side",
+          "Pricing displayed prominently — PM Individual at $19.95/mo, Family at $34.95/mo, Mystery School enrollment fee shown clearly",
+          "What is included per plan — bullet list of features for each membership type so visitors can compare",
+          "Get Started button per plan — each card leads directly to that role's registration and onboarding flow",
+          "FAQ section — answers to the most common pricing questions (Can I cancel? Is there a free trial? What is the Mystery School?)",
+          "Diviner application path — a separate card explaining that diviners apply and are vetted before receiving dashboard access",
+          "PM member discount note — a callout explaining that PM members get a discounted rate on Mystery School enrollment"
         ]
       },
     ],

@@ -111,7 +111,13 @@ const EMPTY_FORM = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatMoney(cents: number): string {
+/** Formats a dollar-denominated amount (from our API). */
+function formatMoney(dollars: number): string {
+  return `$${Number(dollars).toFixed(2)}`;
+}
+
+/** Formats a Stripe amount returned in cents. */
+function formatStripeCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
@@ -183,7 +189,9 @@ export default function CommunityPlanPage() {
         const d = await res.json().catch(() => ({}));
         throw new Error(d.error ?? "Failed to load plan");
       }
-      setPlan(await res.json());
+      const body = await res.json();
+      // API wraps the plan object under { plan: { ... } }
+      setPlan(body.plan ?? body);
     } catch (err: unknown) {
       setPlanError(err instanceof Error ? err.message : "Failed to load plan");
     } finally {
@@ -900,7 +908,7 @@ export default function CommunityPlanPage() {
                           {formatPeriod(inv.period_start, inv.period_end)}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">
-                          {formatMoney(inv.amount_paid)}
+                          {formatStripeCents(inv.amount_paid)}
                         </td>
                         <td className="px-4 py-3">
                           <Badge

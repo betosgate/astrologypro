@@ -11,6 +11,7 @@ import { NavDropdown } from "@/components/shared/nav-dropdown";
 import { PortalLogoutButton } from "@/components/portal/logout-button";
 import { OnboardingGuard } from "@/components/community/onboarding-guard";
 import { SectionContainer } from "@/components/shared/section-container";
+import { SubscriptionExpiredView } from "@/components/shared/subscription-expired-view";
 
 export const metadata = { title: "Community - AstrologyPro" };
 
@@ -23,14 +24,39 @@ export default async function CommunityLayout({ children }: { children: React.Re
   // throwing a PostgREST single-row error.
   const { data: member } = await supabase
     .from("community_members")
-    .select("id, full_name, first_name, membership_type, membership_status, onboarding_completed")
+    .select("id, full_name, first_name, membership_type, membership_status, onboarding_completed, stripe_subscription_id")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!member) redirect("/join/community");
-  if (member.membership_status !== "active") redirect("/join/community?status=inactive");
+  if (!member) redirect("/get-started");
   // PM-only gate: legacy Mystery School-only users must use /mystery-school
   if (member.membership_type !== "perennial_mandalism") redirect("/mystery-school");
+
+  // Subscription expired / cancelled — show an inline resume flow instead of
+  // redirecting to the generic join page, which is confusing for returning members.
+  if (member.membership_status !== "active") {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-20 border-b bg-background">
+          <div className="flex h-14 items-center justify-between px-4">
+            <Link href="/community" className="text-lg font-bold">AstrologyPro</Link>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Perennial Mandalism</span>
+              <PortalLogoutButton />
+            </div>
+          </div>
+        </header>
+        <SubscriptionExpiredView
+          portalName="Perennial Mandalism"
+          portalEmoji="🌙"
+          membershipStatus={member.membership_status}
+          billingPortalEndpoint="/api/community/billing-portal"
+          hasStripeSubscription={!!(member as { stripe_subscription_id?: string | null }).stripe_subscription_id}
+          resubscribeHref="/join/community/resubscribe"
+        />
+      </div>
+    );
+  }
 
   // New members who haven't completed onboarding get a minimal layout
   // that client-side redirects to the onboarding wizard (unless already there).
