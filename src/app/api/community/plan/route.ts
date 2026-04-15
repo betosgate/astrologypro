@@ -101,7 +101,7 @@ export async function GET() {
         base_charge: baseCharge,
         extra_charge: extraCharge,
         total_monthly: totalMonthly,
-        membership_status: member.membership_status,
+        status: member.membership_status,
         current_period_end: member.current_period_end ?? null,
         stripe_subscription_id: member.stripe_subscription_id ?? null,
         family_members: familyMembers ?? [],
