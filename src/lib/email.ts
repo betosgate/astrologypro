@@ -2908,6 +2908,116 @@ interface AffiliateInvitationParams {
   acceptUrl: string;
 }
 
+// ── Advocate — Welcome on signup ─────────────────────────────────────────────
+
+export async function sendAdvocateWelcome({
+  to,
+  name,
+  referralCode,
+  referralUrl,
+}: {
+  to: string;
+  name: string;
+  referralCode: string;
+  referralUrl: string;
+}) {
+  if (await isSequencePaused("advocate_welcome")) {
+    console.log("[email] advocate_welcome sequence is paused — skipping send to", to);
+    return { success: false, id: "" };
+  }
+
+  const portalUrl = `${APP_URL}/advocate`;
+  const subject = "Welcome to AstrologyPro — Your affiliate account is live 🌟";
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Welcome, ${name}! Your affiliate account is ready.</p>
+
+    <p style="margin:0 0 20px;color:#a1a1aa;">You can now share your referral link and start earning commission on every booking you refer.</p>
+
+    ${sectionHeading("Your Referral Details")}
+    ${detailRow("Referral Code", `<strong style="color:#f4f4f5;">${referralCode}</strong>`)}
+    ${detailRow("Referral Link", `<a href="${referralUrl}" style="color:#8b5cf6;">${referralUrl}</a>`)}
+
+    ${sectionHeading("Getting Started")}
+    ${numberedSteps([
+      { title: "Share your referral link", body: "Post it on social media, your website, or send it directly to people interested in divination readings." },
+      { title: "Track your referrals", body: "Log into your affiliate dashboard to see who clicked, who signed up, and what commission you've earned." },
+      { title: "Get paid", body: "Commissions are tracked automatically. Payouts are processed on a regular schedule." },
+    ])}
+  `;
+
+  const result = await sendEmail({
+    to,
+    subject,
+    html: buildEmailHtml({
+      title: "Your affiliate account is live",
+      badge: "Affiliate Partner",
+      preheader: `Welcome to AstrologyPro, ${name}. Your referral link is ready to share.`,
+      content,
+      ctaText: "Open Affiliate Dashboard",
+      ctaUrl: portalUrl,
+      footer: "AstrologyPro &mdash; Grow Together",
+    }),
+  });
+
+  await logEmail({ emailTo: to, templateName: "advocate_welcome", subject });
+  return result;
+}
+
+// ── Trainee — Welcome on profile completion ───────────────────────────────────
+
+export async function sendTraineeWelcome({
+  to,
+  name,
+  mentorName,
+}: {
+  to: string;
+  name: string;
+  mentorName?: string | null;
+}) {
+  if (await isSequencePaused("trainee_welcome")) {
+    console.log("[email] trainee_welcome sequence is paused — skipping send to", to);
+    return { success: false, id: "" };
+  }
+
+  const portalUrl = `${APP_URL}/trainee`;
+  const subject = "Welcome to AstrologyPro — Your trainee portal is ready 🎓";
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Welcome, ${name}! Your trainee account is confirmed.</p>
+
+    <p style="margin:0 0 20px;color:#a1a1aa;">
+      Your learning journey has begun.${mentorName ? ` Your assigned mentor is <strong style="color:#f4f4f5;">${mentorName}</strong>.` : ""} Here's how to get started:
+    </p>
+
+    ${numberedSteps([
+      { title: "Start your first lesson", body: "Navigate to the Training section and begin the first module in your assigned curriculum." },
+      { title: "Complete practice sessions", body: "Book sessions with your mentor to practice readings under guidance." },
+      { title: "Track your progress", body: "Your progress dashboard shows lesson completion, quiz scores, and category milestones." },
+      { title: "Earn your certificate", body: "Complete all 50 lessons and quizzes to receive your AstrologyPro Practitioner Certificate." },
+    ])}
+  `;
+
+  const result = await sendEmail({
+    to,
+    subject,
+    html: buildEmailHtml({
+      title: `Welcome, ${name}! Your journey begins.`,
+      badge: "Trainee",
+      preheader: "Your AstrologyPro trainee portal is ready — start your first lesson today.",
+      content,
+      ctaText: "Go to My Training Portal",
+      ctaUrl: portalUrl,
+      footer: "AstrologyPro &mdash; Master the Divine Arts",
+    }),
+  });
+
+  await logEmail({ emailTo: to, templateName: "trainee_welcome", subject });
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export async function sendAffiliateInvitation({
   to,
   affiliateName,

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendAdvocateWelcome } from "@/lib/email";
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -128,12 +131,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 
+  const referralCode = generateCode(name);
+
   const { error: insertError } = await admin.from("social_advocates").insert({
     user_id: data.user.id,
     name,
     email,
     username,
-    referral_code: generateCode(name),
+    referral_code: referralCode,
     onboarding_completed: true,
     is_active: true,
   });
@@ -145,6 +150,14 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
+
+  // Fire-and-forget welcome email — never block signup on email failure
+  sendAdvocateWelcome({
+    to: email,
+    name,
+    referralCode,
+    referralUrl: `${APP_URL}?ref=${referralCode}`,
+  }).catch((err) => console.error("[advocate/signup] Welcome email failed:", err));
 
   return NextResponse.json({ userId: data.user.id, email }, { status: 201 });
 }
