@@ -240,8 +240,8 @@ export async function POST(request: NextRequest) {
         .eq("membership_type", "perennial_mandalism")
         .maybeSingle();
       if (existingMember) {
-        // Returning member — skip onboarding, go to polling success page
-        pmSuccessUrl = `${APP_URL}/join/community/resubscribe/success`;
+        // Returning member — skip onboarding, use session_id finalize flow
+        pmSuccessUrl = `${APP_URL}/join/community/resubscribe/success?session_id={CHECKOUT_SESSION_ID}`;
       }
     }
 
