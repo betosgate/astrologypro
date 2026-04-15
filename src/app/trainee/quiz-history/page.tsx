@@ -111,79 +111,59 @@ export default async function QuizHistoryPage() {
     : 0;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Quiz History</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Your complete quiz attempt record across all lessons.
-        </p>
-      </div>
-
-      {/* Stats row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-5 pb-4 px-4">
-            <div className="flex items-center gap-2 text-muted-foreground mb-1">
-              <ClipboardList className="size-3.5" />
-              <span className="text-xs font-medium">Total Attempts</span>
-            </div>
-            <p className="text-3xl font-bold">{total}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-5 pb-4 px-4">
-            <div className="flex items-center gap-2 text-emerald-600 mb-1">
-              <CheckCircle2 className="size-3.5" />
-              <span className="text-xs font-medium">Passed</span>
-            </div>
-            <p className="text-3xl font-bold text-emerald-600">{passed}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-5 pb-4 px-4">
-            <div className="flex items-center gap-2 text-muted-foreground mb-1">
-              <TrendingUp className="size-3.5" />
-              <span className="text-xs font-medium">Avg Score</span>
-            </div>
-            <p className={`text-3xl font-bold ${scoreColor(avgScore)}`}>{avgScore}%</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-5 pb-4 px-4">
-            <div className="flex items-center gap-2 text-amber-600 mb-1">
-              <Star className="size-3.5" />
-              <span className="text-xs font-medium">Best Score</span>
-            </div>
-            <p className={`text-3xl font-bold ${scoreColor(bestScore)}`}>{bestScore}%</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Secondary stats */}
-      {total > 0 && (
-        <div className="flex flex-wrap gap-3">
-          <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground">
-            <Clock className="size-3" />
-            Total time: {fmtDuration(totalTime)}
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground">
-            Pass rate: {total > 0 ? Math.round((passed / total) * 100) : 0}%
-          </span>
-          {failed > 0 && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/25 bg-red-500/5 px-3 py-1 text-xs font-medium text-red-600">
-              <XCircle className="size-3" />
-              {failed} retake{failed !== 1 ? "s" : ""} needed
-            </span>
-          )}
-          {trainee.training_status === "graduated" && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600">
-              <Trophy className="size-3" />
-              Graduated — all quizzes complete
-            </span>
-          )}
+    <div className="space-y-4">
+      {/* Header + badges in one row */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight">Quiz History</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Your complete quiz attempt record across all lessons.
+          </p>
         </div>
-      )}
+        {total > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+              <Clock className="size-3" />
+              {fmtDuration(totalTime)}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+              Pass rate: {Math.round((passed / total) * 100)}%
+            </span>
+            {failed > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-red-500/25 bg-red-500/5 px-2.5 py-0.5 text-[11px] font-medium text-red-600">
+                <XCircle className="size-3" />
+                {failed} retake{failed !== 1 ? "s" : ""}
+              </span>
+            )}
+            {trainee.training_status === "graduated" && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-600">
+                <Trophy className="size-3" />
+                Graduated
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Stats row — compact */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { icon: ClipboardList, label: "Total Attempts", value: String(total), color: "text-muted-foreground" },
+          { icon: CheckCircle2, label: "Passed", value: String(passed), color: "text-emerald-600" },
+          { icon: TrendingUp, label: "Avg Score", value: `${avgScore}%`, color: scoreColor(avgScore) },
+          { icon: Star, label: "Best Score", value: `${bestScore}%`, color: scoreColor(bestScore) },
+        ].map(({ icon: Icon, label, value, color }) => (
+          <Card key={label} className="border-border/50">
+            <CardContent className="px-4 py-3 flex items-center gap-3">
+              <Icon className={`size-4 shrink-0 ${color}`} />
+              <div className="min-w-0">
+                <p className="text-[10px] font-medium text-muted-foreground leading-none">{label}</p>
+                <p className={`text-xl font-bold leading-tight mt-0.5 ${color}`}>{value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
       {/* Empty state */}
       {total === 0 && (
