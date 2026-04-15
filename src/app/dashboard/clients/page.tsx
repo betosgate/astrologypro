@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -273,7 +274,16 @@ export default function ClientsPage() {
                   <TableRow key={relation.id}>
                     <TableCell>
                       <div>
-                        <p className="font-medium text-sm">{client?.full_name ?? "Unknown"}</p>
+                        {client?.id ? (
+                          <Link
+                            href={`/dashboard/clients/${client.id}`}
+                            className="font-medium text-sm hover:underline hover:text-primary"
+                          >
+                            {client.full_name ?? "Unknown"}
+                          </Link>
+                        ) : (
+                          <p className="font-medium text-sm">{client?.full_name ?? "Unknown"}</p>
+                        )}
                         <p className="text-xs text-muted-foreground">{client?.email ?? "—"}</p>
                       </div>
                     </TableCell>
