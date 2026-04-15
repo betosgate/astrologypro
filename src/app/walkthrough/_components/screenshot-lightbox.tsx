@@ -157,7 +157,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
 
   // Used to prevent IntersectionObserver from fighting with user-clicked scrolls
   const isClickScrolling = useRef(false);
-  const scrollTimeout = useRef<NodeJS.Timeout>();
+  const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Panning logic
   const handleMouseDown = (e: React.MouseEvent) => {
