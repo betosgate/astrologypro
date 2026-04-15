@@ -184,6 +184,10 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
     });
   };
 
+  // Used to prevent IntersectionObserver from fighting with user-clicked scrolls
+  const isClickScrolling = useRef(false);
+  const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
+
   // Panning logic
   const handleMouseDown = (e: React.MouseEvent) => {
     if (scale <= 1) return;
@@ -225,12 +229,14 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
+        if (isClickScrolling.current) return;
+
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const groupName = entry.target.getAttribute("data-group-name");
             const screenName = entry.target.getAttribute("data-screen-name");
             const subModuleName = entry.target.getAttribute("data-sub-module-name");
-            
+
             if (groupName) setActiveGroup(groupName);
             if (screenName) setActiveScreen(screenName);
             if (subModuleName) {
@@ -246,7 +252,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
           }
         });
       },
-      { 
+      {
         root: containerRef.current,
         rootMargin: "-10% 0px -70% 0px",
         threshold: [0, 0.1, 0.5]
@@ -254,7 +260,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
     );
 
     screenRefs.current.forEach((element) => observer.observe(element));
-    
+
     return () => {
       observer.disconnect();
     };
@@ -271,8 +277,8 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
   }, []);
 
   const groups = useMemo(() => {
-    const grouped: Array<{ 
-      name: string; 
+    const grouped: Array<{
+      name: string;
       subModules: Array<{ name: string; screens: Screen[] }>;
       totalScreens: number;
     }> = [];
@@ -280,7 +286,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
     for (const screen of screens) {
       const groupName = screen.group || "Features";
       const subModuleName = screen.subModule || "General";
-      
+
       let group = grouped.find((g) => g.name === groupName);
       if (!group) {
         group = { name: groupName, subModules: [], totalScreens: 0 };
@@ -324,12 +330,24 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
     });
   };
 
+  const handleScrollClick = (callback: () => void) => {
+    isClickScrolling.current = true;
+    callback();
+
+    if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+    scrollTimeout.current = setTimeout(() => {
+      isClickScrolling.current = false;
+    }, 800); // Wait for smooth scroll to finish
+  };
+
   const scrollToGroup = (groupName: string) => {
-    const element = sectionRefs.current.get(groupName);
-    if (!element) return;
-    element.scrollIntoView({ behavior: "smooth", block: "start" });
-    setActiveGroup(groupName);
-    
+    handleScrollClick(() => {
+      const element = sectionRefs.current.get(groupName);
+      if (!element) return;
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+      setActiveGroup(groupName);
+    });
+
     // Ensure expanded
     setExpandedGroups(prev => {
       if (prev.has(groupName)) return prev;
@@ -340,22 +358,24 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
   };
 
   const scrollToSubModule = (subModuleName: string, groupName: string) => {
-    if (!expandedGroups.has(groupName)) {
-      toggleGroup(groupName);
-    }
-    const element = subModuleRefs.current.get(subModuleName);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    } else {
-      // Fallback to screen-based scroll if sub-module ref not found
-      const group = groups.find(g => g.name === groupName);
-      const subModule = group?.subModules.find(sm => sm.name === subModuleName);
-      if (subModule?.screens[0]) {
-        scrollToScreen(subModule.screens[0].name, groupName);
+    handleScrollClick(() => {
+      if (!expandedGroups.has(groupName)) {
+        toggleGroup(groupName);
       }
-    }
-    setActiveSubModule(subModuleName);
-    
+      const element = subModuleRefs.current.get(subModuleName);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        // Fallback to screen-based scroll if sub-module ref not found
+        const group = groups.find(g => g.name === groupName);
+        const subModule = group?.subModules.find(sm => sm.name === subModuleName);
+        if (subModule?.screens[0]) {
+          scrollToScreenDOM(subModule.screens[0].name, groupName);
+        }
+      }
+      setActiveSubModule(subModuleName);
+    });
+
     // Auto expand the sub-module tracking
     setExpandedSubModules(prev => {
       const next = new Set(prev);
@@ -364,7 +384,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
     });
   };
 
-  const scrollToScreen = (screenName: string, groupName: string) => {
+  const scrollToScreenDOM = (screenName: string, groupName: string) => {
     // Try Ref first, fallback to DOM ID search
     let element = screenRefs.current.get(screenName);
     if (!element) {
@@ -376,6 +396,12 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
     element.scrollIntoView({ behavior: "smooth", block: "start" });
     setActiveScreen(screenName);
     setActiveGroup(groupName);
+  };
+
+  const scrollToScreen = (screenName: string, groupName: string) => {
+    handleScrollClick(() => {
+      scrollToScreenDOM(screenName, groupName);
+    });
   };
 
   const scrollToTop = () => {
@@ -396,8 +422,8 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                 onClick={() => scrollToGroup(group.name)}
                 title={`Scroll to ${group.name}`}
                 className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${isActive
-                    ? "border border-amber-500/30 bg-amber-500/12 text-amber-500"
-                    : "border border-white/10 bg-white/5 text-[#b8bcd0]/75 hover:bg-white/10 hover:text-[#f5f0e8]"
+                  ? "border border-amber-500/30 bg-amber-500/12 text-amber-500"
+                  : "border border-white/10 bg-white/5 text-[#b8bcd0]/75 hover:bg-white/10 hover:text-[#f5f0e8]"
                   }`}
               >
                 <Icon className="size-3" />
@@ -436,11 +462,11 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                   >
                     <Icon className={cn("size-3.5 shrink-0", isActive ? "text-amber-500" : "opacity-40")} />
                     <span className="flex-1 truncate">{group.name}</span>
-                    <ChevronRight 
+                    <ChevronRight
                       className={cn(
-                        "size-3 opacity-30 transition-transform duration-200", 
+                        "size-3 opacity-30 transition-transform duration-200",
                         isExpanded && "rotate-90 opacity-60"
-                      )} 
+                      )}
                     />
                   </button>
 
@@ -464,8 +490,8 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                                 }}
                                 className={cn(
                                   "flex w-full items-center gap-2 rounded-lg py-1.5 px-2 text-left text-[11px] font-bold transition-all",
-                                  isSubActive 
-                                    ? "text-amber-500 bg-amber-500/5 shadow-[inset_0_0_10px_rgba(245,158,11,0.05)]" 
+                                  isSubActive
+                                    ? "text-amber-500 bg-amber-500/5 shadow-[inset_0_0_10px_rgba(245,158,11,0.05)]"
                                     : "text-[#8e9ab7] hover:bg-white/5 hover:text-[#f5f0e8]"
                                 )}
                               >
@@ -494,8 +520,8 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                                   >
                                     <div className={cn(
                                       "size-1.5 shrink-0 rounded-full transition-all duration-500",
-                                      isScreenActive 
-                                        ? "bg-amber-500 scale-125 shadow-[0_0_10px_rgba(245,158,11,0.8)]" 
+                                      isScreenActive
+                                        ? "bg-amber-500 scale-125 shadow-[0_0_10px_rgba(245,158,11,0.8)]"
                                         : "bg-white/20 group-hover:bg-white/40"
                                     )} />
                                     <span className={cn(
@@ -557,9 +583,9 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                 <div className="space-y-10">
                   {group.subModules.map((sub) => {
                     const hasSubModule = sub.name !== "General";
-                    
+
                     return (
-                      <div 
+                      <div
                         key={sub.name}
                         ref={(element) => {
                           if (element) subModuleRefs.current.set(sub.name, element);
@@ -800,7 +826,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
             </div>
 
             {/* Information Panel */}
-            <div className="w-full shrink-0 overflow-y-auto rounded-[2rem] border border-white/10 bg-[#0d121f]/60 p-6 backdrop-blur-xl lg:w-80 xl:w-96 scrollbar-thin scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20">
+            <div className="w-full shrink-0 overflow-y-auto rounded-[2rem] border border-white/10 bg-[#0d121f]/60 p-6 backdrop-blur-xl lg:w-[28rem] xl:w-[32rem] 2xl:w-[36rem] 2xl:p-8 scrollbar-thin scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20">
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500/80">
                 <Info className="size-3" />
                 Screen Context
@@ -847,8 +873,8 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                   onClick={() => setOpenIndex(index)}
                   title={screen.label}
                   className={`relative cursor-pointer h-14 w-24 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${index === openIndex
-                      ? "border-amber-500 opacity-100 scale-105 shadow-[0_0_15px_rgba(245,158,11,0.4)]"
-                      : "border-transparent opacity-40 hover:opacity-70"
+                    ? "border-amber-500 opacity-100 scale-105 shadow-[0_0_15px_rgba(245,158,11,0.4)]"
+                    : "border-transparent opacity-40 hover:opacity-70"
                     }`}
                 >
                   {failedImages.has(screen.name) ? (
