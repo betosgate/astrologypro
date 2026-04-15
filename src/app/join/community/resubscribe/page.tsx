@@ -76,7 +76,6 @@ export default function ResubscribePage() {
     if (!selectedPlan) return;
     setSubmitting(true);
     try {
-      const plan = plans.find((p) => p.plan_id === selectedPlan);
       const planType = selectedPlan.includes("family")
         ? "family"
         : selectedPlan.includes("couple")

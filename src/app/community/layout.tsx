@@ -31,6 +31,7 @@ export default async function CommunityLayout({ children }: { children: React.Re
   if (!member) redirect("/get-started");
   // PM-only gate: legacy Mystery School-only users must use /mystery-school
   if (member.membership_type !== "perennial_mandalism") redirect("/mystery-school");
+  if (member.membership_status !== "active") redirect("/join/community/resubscribe");
 
   // Subscription expired / cancelled — show an inline resume flow instead of
   // redirecting to the generic join page, which is confusing for returning members.
