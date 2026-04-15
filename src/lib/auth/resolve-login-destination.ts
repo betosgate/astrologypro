@@ -222,12 +222,29 @@ export async function resolveLoginDestination({
     client: client as PortalCheckData["client"],
   };
 
-  for (const entry of ROLE_HIERARCHY) {
-    if (entry.check(checkData)) {
-      return entry.destination(checkData, isInvited);
-    }
+  // Count how many portals this user qualifies for.
+  // If more than one → send to /switch so the user can choose.
+  // Exception: if any portal has incomplete onboarding, prioritise
+  // sending them there first so they don't get stuck.
+  const qualifiedEntries = ROLE_HIERARCHY.filter((entry) =>
+    entry.check(checkData)
+  );
+
+  if (qualifiedEntries.length === 0) return "/portal";
+
+  // Check if the highest-priority role needs onboarding — gate wins over /switch.
+  const highestDestination = qualifiedEntries[0].destination(checkData, isInvited);
+  const isOnboardingGate = (dest: string) =>
+    dest.includes("/onboarding") || dest.includes("/join/") || dest.includes("/profile");
+
+  if (isOnboardingGate(highestDestination)) {
+    return highestDestination;
   }
 
-  // Ultimate fallback
-  return "/portal";
+  // Multi-portal user with no pending onboarding → let them choose.
+  if (qualifiedEntries.length > 1) {
+    return "/switch";
+  }
+
+  return highestDestination;
 }
