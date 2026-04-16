@@ -346,7 +346,11 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
         toast.error(data.message ?? "No recording files found in S3 yet");
         return;
       }
-      toast.success("Recording synced — reloading details");
+      if (data.stitchedFromSegments) {
+        toast.success(`Stitched ${data.segmentCount} segments into full recording`);
+      } else {
+        toast.success("Recording synced — reloading details");
+      }
       setSessionDetails(null); // force refetch
     } catch {
       toast.error("Failed to sync recording");

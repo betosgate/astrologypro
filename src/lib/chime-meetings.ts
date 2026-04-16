@@ -223,15 +223,28 @@ export async function listChimeAttendees(
   }));
 }
 
-export async function stopChimeRecording(pipelineId: string): Promise<void> {
-  if (!pipelineId) return;
+/**
+ * Gracefully stops a Chime media capture pipeline.
+ * Accepts either a pipeline ID or a full ARN — extracts the ID from the ARN
+ * if needed (format: arn:aws:chime::ACCOUNT:media-pipeline/PIPELINE_ID).
+ */
+export async function stopChimeRecording(pipelineIdOrArn: string): Promise<void> {
+  if (!pipelineIdOrArn) return;
 
+  const pipelineId = extractPipelineId(pipelineIdOrArn);
   const client = getChimeMediaPipelinesClient();
   await client.send(
     new DeleteMediaCapturePipelineCommand({
       MediaPipelineId: pipelineId,
     })
   );
+}
+
+/** Extract pipeline ID from an ARN, or return as-is if already an ID. */
+function extractPipelineId(pipelineIdOrArn: string): string {
+  // ARN format: arn:aws:chime::ACCOUNT:media-pipeline/PIPELINE_ID
+  const arnMatch = pipelineIdOrArn.match(/media-pipeline\/(.+)$/);
+  return arnMatch ? arnMatch[1] : pipelineIdOrArn;
 }
 
 /** Resolve AWS account ID from STS for ARN construction */
