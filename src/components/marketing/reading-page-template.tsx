@@ -296,6 +296,20 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                       Find a {readerLabel} ↓
                     </a>
                   </div>
+
+                  {/* Hero inline lead capture */}
+                  <div className="mt-6">
+                    <div className="mb-3 flex items-center gap-3">
+                      <div className="h-px flex-1 bg-white/10" aria-hidden="true" />
+                      <span className="text-xs uppercase tracking-widest text-[#b8bcd0]/35">
+                        or get a free reading guide
+                      </span>
+                      <div className="h-px flex-1 bg-white/10" aria-hidden="true" />
+                    </div>
+                    <div className="mx-auto max-w-sm md:mx-0">
+                      <ReadingLeadCapture subject={emailGuideSubject} />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Right: service image card — desktop only */}
@@ -418,6 +432,31 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          </section>
+
+          {/* SECTION D.5 — Email Lead Capture (mid-page, after education, before deep-dive) */}
+          <section className="px-4 pb-8 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-2xl">
+              <div className="relative overflow-hidden rounded-2xl border border-[#c9a84c]/20 bg-[radial-gradient(ellipse_at_50%_50%,rgba(201,168,76,0.06)_0%,transparent_70%)] p-8 text-center sm:p-10">
+                <div className="pointer-events-none absolute -left-10 -top-10 size-40 rounded-full bg-[#c9a84c]/10 blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-10 -right-10 size-40 rounded-full bg-[#c9a84c]/10 blur-3xl" />
+                <div className="relative">
+                  <div className="mb-4 inline-flex size-12 items-center justify-center rounded-full border border-[#c9a84c]/30 bg-[#c9a84c]/10">
+                    <svg className="size-6 text-[#e2c97e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                    </svg>
+                  </div>
+                  <h2 className="mb-2 text-xl font-bold text-[#f5f0e8]">
+                    Get Your Free {serviceType === "tarot" ? "Tarot" : "Astrology"} Reading Guide
+                  </h2>
+                  <p className="mx-auto mb-6 max-w-md text-sm leading-relaxed text-[#b8bcd0]/65">
+                    What to prepare, what questions to ask, and how to get the most from {emailGuideSubject} — delivered to your inbox.
+                  </p>
+                  <ReadingLeadCapture subject={emailGuideSubject} />
+                  <p className="mt-3 text-xs text-[#b8bcd0]/35">No spam. Unsubscribe anytime.</p>
+                </div>
               </div>
             </div>
           </section>
@@ -583,48 +622,6 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
               </div>
             </section>
           )}
-
-          {/* SECTION I — Email Lead Capture */}
-          <section className="px-4 py-16 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-2xl">
-              <div className="relative overflow-hidden rounded-2xl border border-[#c9a84c]/20 bg-[radial-gradient(ellipse_at_50%_50%,rgba(201,168,76,0.06)_0%,transparent_70%)] p-10 text-center">
-                {/* Gold glow accents */}
-                <div className="pointer-events-none absolute -left-10 -top-10 size-40 rounded-full bg-[#c9a84c]/10 blur-3xl" />
-                <div className="pointer-events-none absolute -bottom-10 -right-10 size-40 rounded-full bg-[#c9a84c]/10 blur-3xl" />
-
-                <div className="relative">
-                  {/* Envelope icon circle */}
-                  <div className="mb-5 inline-flex size-14 items-center justify-center rounded-full border border-[#c9a84c]/30 bg-[#c9a84c]/10">
-                    <svg
-                      className="size-7 text-[#e2c97e]"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={1.5}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-                      />
-                    </svg>
-                  </div>
-
-                  <h2 className="mb-3 text-2xl font-bold text-[#f5f0e8]">
-                    Get Your Free Reading Guide
-                  </h2>
-                  <p className="mx-auto mb-8 max-w-md text-sm leading-relaxed text-[#b8bcd0]/70">
-                    Learn what to expect from {emailGuideSubject}, what questions to prepare, and
-                    how to get the most from your session.
-                  </p>
-
-                  <ReadingLeadCapture subject={emailGuideSubject} />
-
-                  <p className="mt-4 text-xs text-[#b8bcd0]/40">No spam. Unsubscribe anytime.</p>
-                </div>
-              </div>
-            </div>
-          </section>
 
           {/* SECTION J — FAQ with JSON-LD */}
           <section className="px-4 py-16 sm:px-6 lg:px-8">
