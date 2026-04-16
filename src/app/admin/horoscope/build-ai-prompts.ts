@@ -45,9 +45,14 @@ export function buildAiPrompts(data: any, tab: string, areaOfInquiry?: string, e
   if (tab === "solar_return_v2") {
     prompts.push({
       key: "solar_return_details",
-      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
-      user: "Generate solar return details based on given json with minimum 3 sentences on each interpretation with a number as index of details in as much detail as possible, only interpretation in json index in lowest level of indexes please and don't miss a single detail. Response should not start with string 'json' ever but in proper json format in an array with objects {\"title\":\"...\",\"interpretation\":\"...\"}",
-      json: [{ details: data.solar_return_details, planets: data.solar_return_planets, cusps: data.solar_return_cusps, aspects: data.solar_return_aspects }],
+      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation . Provide a deeply personalized response as if you are speaking directly to your astrology client in a one-on-one session. Use the language and tone of a trusted Western astrologer offering tailored guidance based on the client’s unique chart. Always interpret the chart using the Placidus house system as the default house_type. Avoid using generic phrases or repeated sentence structures. Each sentence should feel intentionally crafted and distinct, offering fresh insight without duplicating wording from similar interpretations.",
+      user: "Generate western chart details only on solar_return_details based on given json with minimum 3 sentences on each interpretation as interpretation  with a numnber as index named index  of  solar_return_details in as much as detail possible , only interpretation in json index in lowest level of indexes  please and don't miss a single solar_return_details there are many please be careful and response should not start with string 'json'  ever but in proper json format and with in  an array of object format should be [\n{\n\"houses\":\n\"interpretation\"\n\n},\n{\n\"ascendant\":\n\"interpretation\"\n\n},\n{\n\"midheaven\":\n\"interpretation\":\n}\n\n,\n{\n\"vertex\":\n\"interpretation\":\n}\n\n] ",
+      json: {
+        houses: data.solar_return_cusps?.houses ?? data.solar_return_cusps ?? data.houses ?? [],
+        ascendant: data.solar_return_cusps?.ascendant ?? data.ascendant ?? null,
+        midheaven: data.solar_return_cusps?.midheaven ?? data.midheaven ?? null,
+        vertex: data.solar_return_cusps?.vertex ?? data.vertex ?? null,
+      },
     });
   }
 

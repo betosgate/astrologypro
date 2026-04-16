@@ -1357,24 +1357,37 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
   const planetAi = null; // not used anymore — see planetReport prop
   const aspectsAi = null; // not used anymore — see aspectsReport prop
 
-  function AiCards({ data, title }: { data: any; title: string }) {
+  function AiCards({ data, title, showMore = true }: { data: any; title: string; showMore?: boolean }) {
     if (!data) return <SectionSkeleton title={title} />;
     if (data === "error") return <SectionError title={title} />;
     const items: any[] = Array.isArray(data) ? data : [];
     return (
       <div className="space-y-2">
         {items.map((item: any, i: number) => (
+          (() => {
+            const derivedEntry = Object.entries(item ?? {}).find(([key, value]) => {
+              if (["title", "name", "interpretation", "data", "forecast"].includes(key)) return false;
+              return typeof value === "string";
+            });
+            const cardTitle = item.title ?? item.name ?? derivedEntry?.[0] ?? `${title} ${i + 1}`;
+            const cardText = item.interpretation ?? item.data ?? item.forecast ?? derivedEntry?.[1] ?? "";
+
+            return (
           <div key={i} className="rounded-lg border overflow-hidden">
             <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center">
-              <SmartHeading title={item.title ?? item.name ?? `${title} ${i + 1}`} textSize="text-[22px]" iconSize="size-7" className="text-black" />
+              <SmartHeading title={cardTitle} textSize="text-[22px]" iconSize="size-7" className="text-black" />
             </div>
             <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
-              <p className="leading-relaxed">{item.interpretation ?? item.data ?? item.forecast}</p>
-              <div className="mt-2 flex justify-center border-t border-black/10 pt-2">
-                <button onClick={() => trigger(item.title ?? item.name ?? title, item.interpretation ?? item.data ?? "", item, areaOfInquiry)} className="horoscope-show-more">Show More</button>
-              </div>
+              <p className="leading-relaxed">{String(cardText)}</p>
+              {showMore && (
+                <div className="mt-2 flex justify-center border-t border-black/10 pt-2">
+                  <button onClick={() => trigger(cardTitle, String(cardText), item, areaOfInquiry)} className="horoscope-show-more">Show More</button>
+                </div>
+              )}
             </div>
           </div>
+            );
+          })()
         ))}
       </div>
     );
@@ -1492,10 +1505,10 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
                         </Tooltip>
                       )}
                     </div>
-                    {p.sign && (
+                    {p.house && (
                       <div className="absolute right-4 flex items-center gap-2">
                         <Badge variant="outline" className="text-xs text-amber-600 border-amber-400 font-bold uppercase tracking-widest px-3 py-1">
-                          {p.sign}{p.house ? ` · House ${p.house}` : ""}
+                          {`House ${p.house}`}
                         </Badge>
                       </div>
                     )}
@@ -1515,73 +1528,72 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
 
       {/* 4. Solar Return House Cusps section */}
       {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex || houseList.length > 0) && (
-        <div className="horoscope-table-container">
-          <div className="horoscope-table-header">
-            <h3>Solar Return House Cusps</h3>
-          </div>
-
-          {/* Critical Points Subset */}
-          {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex) && (
-            <div className="horoscope-table-wrapper border-b border-white/5">
-              <table className="horoscope-table">
-                <thead>
-                  <tr>
-                    {["Ascendant", "Midheaven", "Vertex"].map((h) => (
-                      <th key={h}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    {[cuspObj.ascendant, cuspObj.midheaven, cuspObj.vertex].map((val, i) => (
-                      <td key={i}>
-                        {val ? (
-                          typeof val === "object" ? (
-                            <div className="flex items-center gap-3">
-                              <ZodiacSymbol sign={val?.sign} />
-                              <span className="td-mono">{Number(val?.degree ?? 0).toFixed(2)}°</span>
-                            </div>
-                          ) : (
-                            <span className="td-mono">{Number(val).toFixed(2)}°</span>
-                          )
-                        ) : "—"}
-                      </td>
-                    ))}
-                  </tr>
-                </tbody>
-              </table>
+        <div className="space-y-2">
+          <div className="horoscope-table-container">
+            <div className="horoscope-table-header">
+              <h3>Solar Return House Cusps</h3>
             </div>
-          )}
 
-          {/* Regular Houses Subset */}
-          {houseList.length > 0 && (
-            <div className="horoscope-table-wrapper">
-              <table className="horoscope-table">
-                <thead>
-                  <tr>
-                    {["House", "Sign", "Degree"].map((h) => (
-                      <th key={h}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {houseList.map((h: any, i: number) => (
-                    <tr key={`house-${i}`}>
-                      <td className="font-medium">House {h.house}</td>
-                      <td><ZodiacSymbol sign={h.sign} /></td>
-                      <td className="td-mono">{Number(h.degree ?? 0).toFixed(2)}°</td>
+            {/* Critical Points Subset */}
+            {(cuspObj.ascendant || cuspObj.midheaven || cuspObj.vertex) && (
+              <div className="horoscope-table-wrapper border-b border-white/5">
+                <table className="horoscope-table">
+                  <thead>
+                    <tr>
+                      {["Ascendant", "Midheaven", "Vertex"].map((h) => (
+                        <th key={h}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody>
+                    <tr>
+                      {[cuspObj.ascendant, cuspObj.midheaven, cuspObj.vertex].map((val, i) => (
+                        <td key={i}>
+                          {val ? (
+                            typeof val === "object" ? (
+                              <div className="flex items-center gap-3">
+                                <ZodiacSymbol sign={val?.sign} />
+                                <span className="td-mono">{Number(val?.degree ?? 0).toFixed(2)}°</span>
+                              </div>
+                            ) : (
+                              <span className="td-mono">{Number(val).toFixed(2)}°</span>
+                            )
+                          ) : "—"}
+                        </td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Regular Houses Subset */}
+            {houseList.length > 0 && (
+              <div className="horoscope-table-wrapper">
+                <table className="horoscope-table">
+                  <thead>
+                    <tr>
+                      {["House", "Sign", "Degree"].map((h) => (
+                        <th key={h}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {houseList.map((h: any, i: number) => (
+                      <tr key={`house-${i}`}>
+                        <td className="font-medium">House {h.house}</td>
+                        <td><ZodiacSymbol sign={h.sign} /></td>
+                        <td className="td-mono">{Number(h.degree ?? 0).toFixed(2)}°</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          {detailsAi && <AiCards data={detailsAi} title="Solar Return House Cusps Discussion" showMore={false} />}
         </div>
       )}
-
-      {/* 7. General AI interpretation (solar_return_details key) */}
-      {detailsAi && <AiCards data={detailsAi} title="Solar Return Interpretation" />}
-
 
       {/* 5. Solar Return Planet Aspects table */}
       {aspectList.length > 0 && (
@@ -1698,13 +1710,77 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
   const { modal, trigger, close } = useShowMore();
   const isWeekly = tabSlug === "tropical_transits_weekly_v2";
   const label = isWeekly ? "Weekly Transits" : "Monthly Transits";
+  const isMonthlyV3 = tabSlug === "tropical_transits_monthly_v3";
+
+  function toTimestamp(value: unknown): number {
+    if (typeof value !== "string" || !value.trim()) return Number.POSITIVE_INFINITY;
+    const direct = Date.parse(value);
+    if (!Number.isNaN(direct)) return direct;
+
+    const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
+      return new Date(Number(year), Number(month) - 1, Number(day)).getTime();
+    }
+
+    const slashMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (slashMatch) {
+      const [, day, month, year] = slashMatch;
+      return new Date(Number(year), Number(month) - 1, Number(day)).getTime();
+    }
+
+    return Number.POSITIVE_INFINITY;
+  }
 
   // Normalise transit relation rows — handles both Lambda and AstrologyAPI shapes
   const transitRows: any[] = (() => {
     if (!data) return [];
-    if (Array.isArray(data?.transit_relation)) return data.transit_relation;
-    if (Array.isArray(data?.transits)) return data.transits;
-    if (Array.isArray(data)) return data;
+    const sourceRows = isMonthlyV3 && Array.isArray(data?.unique_transits)
+      ? data.unique_transits
+      : Array.isArray(data?.transit_relation)
+        ? data.transit_relation
+        : Array.isArray(data?.transits)
+          ? data.transits
+          : Array.isArray(data)
+            ? data
+            : null;
+
+    if (sourceRows) {
+      if (!isMonthlyV3) return sourceRows;
+
+      const excludedBodies = new Set(["lilith", "ascendant", "asc", "midheaven", "mc", "vertex"]);
+      const allowedAspectTypes = new Set(["conjunction", "opposition", "square", "trine", "sextile"]);
+
+      return sourceRows
+        .filter((row: any) => {
+          const tPlanet = String(row?.transit_planet ?? row?.transiting_planet ?? "").trim().toLowerCase();
+          const nPlanet = String(row?.natal_planet ?? row?.aspected_planet ?? "").trim().toLowerCase();
+          const aspectType = String(row?.type ?? row?.aspect ?? "").trim().toLowerCase();
+
+          if (!tPlanet || !nPlanet || !aspectType) return false;
+          if (excludedBodies.has(tPlanet) || excludedBodies.has(nPlanet)) return false;
+          if (tPlanet === "moon" || nPlanet === "moon") return false;
+          if (!allowedAspectTypes.has(aspectType)) return false;
+
+          return true;
+        })
+        .sort((a: any, b: any) => {
+          const aTime = toTimestamp(a?.date ?? a?.transit_date ?? "");
+          const bTime = toTimestamp(b?.date ?? b?.transit_date ?? "");
+          if (aTime !== bTime) return aTime - bTime;
+
+          const aTransit = String(a?.transit_planet ?? a?.transiting_planet ?? "");
+          const bTransit = String(b?.transit_planet ?? b?.transiting_planet ?? "");
+          if (aTransit !== bTransit) return aTransit.localeCompare(bTransit);
+
+          const aNatal = String(a?.natal_planet ?? a?.aspected_planet ?? "");
+          const bNatal = String(b?.natal_planet ?? b?.aspected_planet ?? "");
+          if (aNatal !== bNatal) return aNatal.localeCompare(bNatal);
+
+          return String(a?.type ?? a?.aspect ?? "").localeCompare(String(b?.type ?? b?.aspect ?? ""));
+        });
+    }
+
     if (data?.transit_planet && typeof data.transit_planet === "object") {
       return Object.entries(data.transit_planet).flatMap(([tPlanet, aspects]: [string, any]) =>
         Object.entries(aspects ?? {}).map(([nPlanet, detail]: [string, any]) => ({
