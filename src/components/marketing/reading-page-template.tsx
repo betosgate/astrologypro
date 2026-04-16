@@ -469,6 +469,7 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                     serviceType={serviceType}
                     serviceName={serviceLabel}
                     sourceUrl={pageUrl}
+                    diviners={diviners}
                   />
                 </div>
               </div>
