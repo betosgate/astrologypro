@@ -590,28 +590,28 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
                     ) : (
                       <ManualPlanetIcon name={p.name} size="size-8" />
                     )}
-                  {hasDecan && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => onDecanClick(p.name, p.sign)}
-                          className="size-9 flex items-center justify-center rounded-full bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 hover:border-amber-500/60 transition-all shadow-[0_0_15px_rgba(245,158,11,0.1)] hover:shadow-[0_0_20px_rgba(245,158,11,0.25)] active:scale-90 group"
-                          aria-label={`Open decan information for ${p.name} in ${p.sign}`}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
-                            alt=""
-                            className="size-6 cursor-pointer transition-transform group-hover:scale-110 brightness-110"
-                          />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
-                        Decan Insights
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
+                    {hasDecan && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={() => onDecanClick(p.name, p.sign)}
+                            className="size-9 flex items-center justify-center rounded-full bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 hover:border-amber-500/60 transition-all shadow-[0_0_15px_rgba(245,158,11,0.1)] hover:shadow-[0_0_20px_rgba(245,158,11,0.25)] active:scale-90 group"
+                            aria-label={`Open decan information for ${p.name} in ${p.sign}`}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src="https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/dzuommtqurxx-removebg-preview.png"
+                              alt=""
+                              className="size-6 cursor-pointer transition-transform group-hover:scale-110 brightness-110"
+                            />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-amber-500/20 shadow-xl">
+                          Decan Insights
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                   </div>
                 </div>
                 {/* Interpretation Content — Planet-specific gradient */}
@@ -1373,19 +1373,19 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
             const cardText = item.interpretation ?? item.data ?? item.forecast ?? derivedEntry?.[1] ?? "";
 
             return (
-          <div key={i} className="rounded-lg border overflow-hidden">
-            <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center">
-              <SmartHeading title={cardTitle} textSize="text-[22px]" iconSize="size-7" className="text-black" />
-            </div>
-            <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
-              <p className="leading-relaxed">{String(cardText)}</p>
-              {showMore && (
-                <div className="mt-2 flex justify-center border-t border-black/10 pt-2">
-                  <button onClick={() => trigger(cardTitle, String(cardText), item, areaOfInquiry)} className="horoscope-show-more">Show More</button>
+              <div key={i} className="rounded-lg border overflow-hidden">
+                <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center">
+                  <SmartHeading title={cardTitle} textSize="text-[22px]" iconSize="size-7" className="text-black" />
                 </div>
-              )}
-            </div>
-          </div>
+                <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                  <p className="leading-relaxed">{String(cardText)}</p>
+                  {showMore && (
+                    <div className="mt-2 flex justify-center border-t border-black/10 pt-2">
+                      <button onClick={() => trigger(cardTitle, String(cardText), item, areaOfInquiry)} className="horoscope-show-more">Show More</button>
+                    </div>
+                  )}
+                </div>
+              </div>
             );
           })()
         ))}
@@ -2288,10 +2288,11 @@ function HorarySection({ data, slug, areaOfInquiry, checkDacen, onDecanClick }: 
     );
   }
 
+  // A group section with a dark header bar + multiple HoraryCards below
   function GroupSection({ sectionTitle, sectionPath, items }: { sectionTitle: string; sectionPath: string; items: any[] }) {
     if (!items.length) return null;
     return (
-      <div className="space-y-4 font-group-section" data-section-path={sectionPath} data-section-label={sectionTitle}>
+      <div className="space-y-4" data-section-path={sectionPath} data-section-label={sectionTitle}>
         <div className="px-4 py-3 bg-[#111827] border border-white/10 rounded-lg text-center shadow-lg">
           <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-white">
             {sectionTitle}
@@ -2330,6 +2331,7 @@ function HorarySection({ data, slug, areaOfInquiry, checkDacen, onDecanClick }: 
             content={
               <div className="space-y-6">
                 {timelineItems.map((s, idx) => {
+                  // Strip leading "Between <span class="timedata">...</span>", "On <span class="timedata">...</span>", etc.
                   const cleanedBody = s.timeline_data.replace(/^\s*(Between|During|On|From|Starting|In|Throughout)\s+(the period of|the month of|the dates of)?\s*<span class="timedata">[^<]+<\/span>(,)?\s*/i, "");
                   return (
                     <div key={idx} className={idx > 0 ? "pt-6 border-t border-black/10" : ""}>
@@ -2344,24 +2346,25 @@ function HorarySection({ data, slug, areaOfInquiry, checkDacen, onDecanClick }: 
       )}
 
       {/* ── Section 2: Aspect ────────────────────────────────────────────── */}
-      <GroupSection sectionTitle="Astrological Aspects" sectionPath="astrological_aspect.aspect" items={aspectItems} />
+      <GroupSection sectionTitle="Aspect" sectionPath="astrological_aspect.aspect" items={aspectItems} />
 
       {/* ── Section 3: Planet ────────────────────────────────────────────── */}
-      <GroupSection sectionTitle="Planet Identifications" sectionPath="astrological_aspect.planet" items={planetItems} />
+      <GroupSection sectionTitle="Planet" sectionPath="astrological_aspect.planet" items={planetItems} />
 
       {/* ── Section 4: House ─────────────────────────────────────────────── */}
-      <GroupSection sectionTitle="House Activations" sectionPath="astrological_aspect.house" items={houseItems} />
+      <GroupSection sectionTitle="House" sectionPath="astrological_aspect.house" items={houseItems} />
 
       {/* ── Section 5a: Summary — Answer ─────────────────────────────────── */}
       {answerItems.length > 0 && (
-        <GroupSection sectionTitle="Direct Answer" sectionPath="summary.answer" items={answerItems} />
+        <GroupSection sectionTitle="Summary" sectionPath="summary.answer" items={answerItems} />
       )}
 
       {/* ── Section 5b: Summary — Recommendations ────────────────────────── */}
       {recommendItems.length > 0 && (
-        <GroupSection sectionTitle="Specific Recommendations" sectionPath="summary.recommendation" items={recommendItems} />
+        <GroupSection sectionTitle="Recommendations" sectionPath="summary.recommendation" items={recommendItems} />
       )}
 
+      {/* Fallback raw data when nothing parsed correctly */}
       {!hasContent && (
         <details className="rounded-lg border">
           <summary className="px-4 py-2.5 text-sm font-semibold cursor-pointer bg-muted/20 hover:bg-muted/40">
@@ -2546,7 +2549,6 @@ export default function AdminHoroscopePage() {
   const [decanPlanet, setDecanPlanet] = useState<{ name: string; sign: string } | null>(null);
   const [excludedHoraryDates, setExcludedHoraryDates] = useState<string>("");
   const [isSuggestingDate, setIsSuggestingDate] = useState(false);
-  const [regeneratedSections, setRegeneratedSections] = useState<Set<string>>(new Set());
 
   const checkDacen = (planetName: string, signName: string) => {
     const normalizedPlanet = normalizeDecanValue(planetName);
@@ -2633,60 +2635,42 @@ export default function AdminHoroscopePage() {
     setTimeout(() => { win.print(); win.close(); }, 500);
   }
 
-  const handleSuggestAnotherDate = async (newExclusion: string, sectionPath: string, sectionLabel: string) => {
+  const handleSuggestAnotherDate = async (newExclusion: string, _sectionPath: string, _sectionName: string) => {
     if (isSuggestingDate) return;
     setIsSuggestingDate(true);
-    setRegeneratedSections(prev => new Set(prev).add(sectionLabel));
     setExcludedHoraryDates(prev => prev ? `${prev}, ${newExclusion}` : newExclusion);
-    
+
     try {
+      // Small delay to ensure state update is processed
       await new Promise(r => setTimeout(r, 100));
+
       const birth1 = parseBirth(form.person1);
       const initialData = { ...birth1, city: form.person1?.city ?? "", question: form.question };
       const collected = { ...results, ...initialData, horary_chart_data: results?.natal_chart_data ?? natalData };
-      
+
       const prompts = buildAiPrompts(collected, currentTab.slug, form.areaOfInquiry || undefined, (excludedHoraryDates ? `${excludedHoraryDates}, ${newExclusion}` : newExclusion));
       const horaryPrompt = prompts.find(p => p.key === "horary_chart_question");
-      
+
       if (!horaryPrompt) throw new Error("Horary prompt not found");
 
-      const aiRes = await callAI({
+      const aiPayload = {
         condition: { system_content: horaryPrompt.system, user_content: horaryPrompt.user },
         toolname: "other",
         json: horaryPrompt.json,
-      }, form.areaOfInquiry || undefined);
-      
-      const fullRes = parseAiJsonResponse(aiRes.ai_response) as any;
-      const innerNew = fullRes?.data ?? fullRes;
-      
-      // Navigate to the correct portion of the nested JSON
-      const pathParts = sectionPath.split('.');
-      let targetOld = results?.ai_interpretations?.horary_chart_question?.data ?? results?.ai_interpretations?.horary_chart_question;
-      let targetNew = innerNew;
+      };
 
-      // Extract new data for JUST this section
-      for (const part of pathParts) {
-        targetNew = targetNew?.[part];
-      }
+      const aiRes = await callAI(aiPayload, form.areaOfInquiry || undefined);
+      const fullRes = parseAiJsonResponse(aiRes.ai_response) as any;
 
       setResults(prev => {
         const prevAi = prev?.ai_interpretations ?? {};
-        const oldFull = prevAi.horary_chart_question;
-        const newFull = JSON.parse(JSON.stringify(oldFull)); // Deep clone old state
-        
-        let pointer = newFull?.data ?? newFull;
-        for (let i = 0; i < pathParts.length - 1; i++) {
-          pointer = pointer[pathParts[i]];
-        }
-        pointer[pathParts[pathParts.length - 1]] = targetNew;
-
         return {
           ...prev!,
-          ai_interpretations: { ...prevAi, horary_chart_question: newFull }
+          ai_interpretations: { ...prevAi, horary_chart_question: fullRes }
         };
       });
     } catch (err) {
-      console.error("Error generating another date:", err);
+      toast.error("Failed to generate another date. Please try again.");
     } finally {
       setIsSuggestingDate(false);
     }
@@ -2711,7 +2695,6 @@ export default function AdminHoroscopePage() {
     setProgress([]);
     if (!keepExclusions) {
       setExcludedHoraryDates("");
-      setRegeneratedSections(new Set());
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -3293,17 +3276,8 @@ export default function AdminHoroscopePage() {
   // ── MutationObserver for Horary Date Recreation ──────────────────────
   useEffect(() => {
     if (currentSlug !== "horary_chart_v2") return;
-    
-    // Hide icons in ALREADY regenerated sections
-    document.querySelectorAll('[data-section-label]').forEach(section => {
-      const label = section.getAttribute('data-section-label');
-      if (label && regeneratedSections.has(label)) {
-        section.querySelectorAll('.timedata-btn').forEach(btn => (btn as HTMLElement).style.display = 'none');
-      }
-    });
 
     if (isSuggestingDate) {
-      // Temporarily hide all icons while suggesting
       document.querySelectorAll('.timedata-btn').forEach(btn => (btn as HTMLElement).style.display = 'none');
       return;
     }
@@ -3314,9 +3288,6 @@ export default function AdminHoroscopePage() {
         const sectionContainer = span.closest('[data-section-path]');
         const path = sectionContainer?.getAttribute('data-section-path');
         const label = sectionContainer?.getAttribute('data-section-label');
-        
-        // Don't add button if section is already regenerated
-        if (label && regeneratedSections.has(label)) return;
 
         span.setAttribute('data-timebutton', 'true');
         const btn = document.createElement('button');
@@ -3329,13 +3300,17 @@ export default function AdminHoroscopePage() {
             <path d="M3 21v-5h5"/>
           </svg>
         `;
+        btn.title = 'Suggest another date';
+
         btn.onclick = (e) => {
           e.stopPropagation();
           const clone = span.cloneNode(true) as HTMLElement;
           const b = clone.querySelector('.timedata-btn');
           if (b) b.remove();
-          handleSuggestAnotherDate((clone.textContent || "").trim(), path || "summary.recommendation_on_date_and_timeline", label || "Timeline Section");
+          const dateText = (clone.textContent || "").trim();
+          handleSuggestAnotherDate(dateText, path || "summary.recommendation_on_date_and_timeline", label || "Timeline Section");
         };
+
         span.appendChild(btn);
       });
     };
