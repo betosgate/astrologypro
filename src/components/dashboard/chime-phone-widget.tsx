@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Phone, PhoneOff, PhoneIncoming, Clock } from "lucide-react";
+import { Phone, PhoneOff, PhoneIncoming, Clock, Loader2 } from "lucide-react";
 
 interface PendingCall {
   id: string;
@@ -19,11 +19,11 @@ interface PendingCall {
  * When a client calls the diviner's Chime phone number, the SMA Lambda
  * stores a notification in phone_call_notifications. This widget polls
  * for pending calls and allows the diviner to accept them by joining
- * a Chime meeting that the SMA created for the call.
+ * a Chime meeting that the accept endpoint creates for the call.
  */
 export function ChimePhoneWidget() {
   const [status, setStatus] = useState<
-    "loading" | "idle" | "ringing" | "active" | "unavailable"
+    "loading" | "idle" | "ringing" | "accepting" | "active" | "unavailable"
   >("loading");
   const [pendingCall, setPendingCall] = useState<PendingCall | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -44,7 +44,7 @@ export function ChimePhoneWidget() {
         }
         const data = await res.json();
 
-        if (data.call && status !== "active") {
+        if (data.call && status !== "active" && status !== "accepting") {
           setPendingCall(data.call);
           setStatus("ringing");
         } else if (!data.call && status === "ringing") {
@@ -87,6 +87,9 @@ export function ChimePhoneWidget() {
   const handleAnswer = useCallback(async () => {
     if (!pendingCall) return;
 
+    // Show loading state immediately
+    setStatus("accepting");
+
     try {
       // Accept the call — this creates a Chime meeting and joins the diviner
       const res = await fetch("/api/chime/voice/accept", {
@@ -99,10 +102,20 @@ export function ChimePhoneWidget() {
       });
 
       if (res.ok) {
+        const data = await res.json();
+        console.log("[ChimePhoneWidget] Call accepted:", data);
+        // TODO: In future, use data.chimeMeetingId + data.joinToken
+        // to connect the diviner's browser audio via Chime SDK.
+        // For now, the call is active on the PSTN side.
         setStatus("active");
+      } else {
+        const err = await res.json().catch(() => ({}));
+        console.error("[ChimePhoneWidget] Accept failed:", err);
+        setStatus("ringing"); // Go back to ringing so they can retry
       }
-    } catch {
-      // Fallback
+    } catch (err) {
+      console.error("[ChimePhoneWidget] Accept error:", err);
+      setStatus("ringing");
     }
   }, [pendingCall]);
 
@@ -143,12 +156,15 @@ export function ChimePhoneWidget() {
   }
 
   // Ringing state
-  if (status === "ringing" && pendingCall) {
+  if ((status === "ringing" || status === "accepting") && pendingCall) {
+    const isAccepting = status === "accepting";
     return (
       <div className="fixed bottom-4 right-4 z-50 w-72 rounded-xl border-2 border-primary bg-card p-4 shadow-2xl">
         <div className="mb-3 flex items-center gap-2">
           <PhoneIncoming className="h-5 w-5 animate-bounce text-primary" />
-          <span className="text-sm font-semibold text-foreground">Incoming Call</span>
+          <span className="text-sm font-semibold text-foreground">
+            {isAccepting ? "Connecting…" : "Incoming Call"}
+          </span>
           <Badge
             variant="outline"
             className="ml-auto bg-primary/10 text-primary border-primary/20 text-xs"
@@ -164,15 +180,26 @@ export function ChimePhoneWidget() {
             size="sm"
             className="flex-1 bg-primary hover:bg-primary/80 text-primary-foreground"
             onClick={handleAnswer}
+            disabled={isAccepting}
           >
-            <Phone className="mr-1.5 h-3.5 w-3.5" />
-            Answer
+            {isAccepting ? (
+              <>
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                Connecting…
+              </>
+            ) : (
+              <>
+                <Phone className="mr-1.5 h-3.5 w-3.5" />
+                Answer
+              </>
+            )}
           </Button>
           <Button
             size="sm"
             variant="destructive"
             className="flex-1"
             onClick={handleDecline}
+            disabled={isAccepting}
           >
             <PhoneOff className="mr-1.5 h-3.5 w-3.5" />
             Decline
