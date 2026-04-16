@@ -17,6 +17,7 @@ import {
 import { ClipboardList, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw, CalendarClock, XCircle, Send, Receipt, Video, Clock, Share2, Download, FileText, Copy } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { SegmentVideoPlayer } from "@/components/dashboard/segment-video-player";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
@@ -106,6 +107,8 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
   const [refunded, setRefunded] = useState(!!booking.refunded_at);
   const [syncing, setSyncing] = useState(false);
   const [syncingRecording, setSyncingRecording] = useState(false);
+  const [recordingSegments, setRecordingSegments] = useState<{ key: string; size: number; url: string }[] | null>(null);
+  const [loadingSegments, setLoadingSegments] = useState(false);
   const [sessionNotes, setSessionNotes] = useState(booking.session_notes ?? "");
   const [savingNotes, setSavingNotes] = useState(false);
 
@@ -346,7 +349,11 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
         toast.error(data.message ?? "No recording files found in S3 yet");
         return;
       }
-      toast.success("Recording synced — reloading details");
+      if (data.segmentCount > 1) {
+        toast.success(`Synced — ${data.segmentCount} segments found. Use "Play Full Recording" for complete playback.`);
+      } else {
+        toast.success("Recording synced — reloading details");
+      }
       setSessionDetails(null); // force refetch
     } catch {
       toast.error("Failed to sync recording");
@@ -418,7 +425,21 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
                     <Video className="size-3.5 text-muted-foreground" />
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Recording</p>
                   </div>
-                  {sessionDetails.recording_url ? (
+
+                  {/* Segment player — loaded on demand */}
+                  {recordingSegments && recordingSegments.length > 0 ? (
+                    <>
+                      <SegmentVideoPlayer segments={recordingSegments} />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="w-full gap-2 text-xs text-muted-foreground"
+                        onClick={() => setRecordingSegments(null)}
+                      >
+                        Back to single recording view
+                      </Button>
+                    </>
+                  ) : sessionDetails.recording_url ? (
                     <>
                       <div className="rounded-lg overflow-hidden border border-border bg-black" style={{ aspectRatio: "16/9" }}>
                         <video src={sessionDetails.recording_url} controls preload="metadata" className="w-full h-full" />
@@ -437,6 +458,32 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
                           <Share2 className="size-3.5" />Copy Client Share Link
                         </Button>
                       )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full gap-2 text-xs"
+                        disabled={loadingSegments}
+                        onClick={async () => {
+                          setLoadingSegments(true);
+                          try {
+                            const res = await fetch(`/api/bookings/${booking.id}/recording-segments`);
+                            const data = await res.json();
+                            if (data.segments?.length > 0) {
+                              setRecordingSegments(data.segments);
+                              toast.success(`Loaded ${data.segments.length} segment${data.segments.length > 1 ? "s" : ""} — playing full recording`);
+                            } else {
+                              toast.error("No recording segments found in S3");
+                            }
+                          } catch {
+                            toast.error("Failed to load segments");
+                          } finally {
+                            setLoadingSegments(false);
+                          }
+                        }}
+                      >
+                        {loadingSegments ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+                        {loadingSegments ? "Loading segments…" : "Play Full Recording (all segments)"}
+                      </Button>
                     </>
                   ) : (
                     <div className="space-y-2">

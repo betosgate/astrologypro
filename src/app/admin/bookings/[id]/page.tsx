@@ -15,6 +15,7 @@ import {
   XCircle,
   Download,
   Calendar,
+  MessageSquare,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +35,7 @@ type BookingDetail = {
   stripe_payment_status: string | null;
   questionnaire_responses: Record<string, unknown> | null;
   session_notes: string | null;
+  chat_transcript: { from: string; text: string; time: string }[] | null;
   cancellation_reason: string | null;
   canceled_at: string | null;
   google_calendar_event_id: string | null;
@@ -103,7 +105,7 @@ async function getBooking(id: string): Promise<BookingDetail | null> {
       `id, scheduled_at, duration_minutes, actual_duration_minutes,
        base_price, total_amount, overage_amount, status,
        stripe_payment_intent_id, stripe_payment_status,
-       questionnaire_responses, session_notes,
+       questionnaire_responses, session_notes, chat_transcript,
        cancellation_reason, canceled_at,
        google_calendar_event_id, outlook_calendar_event_id,
        daily_room_url, booking_token, created_at, updated_at,
@@ -368,6 +370,29 @@ export default async function AdminBookingDetailPage({
           </CardHeader>
           <CardContent>
             <p className="text-sm whitespace-pre-wrap">{booking.session_notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Chat transcript */}
+      {Array.isArray(booking.chat_transcript) && booking.chat_transcript.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <MessageSquare className="h-4 w-4" />
+              Chat Transcript ({booking.chat_transcript.length} messages)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {booking.chat_transcript.map((msg, i) => (
+                <div key={i} className="text-sm">
+                  <span className="font-medium">{msg.from}</span>
+                  <span className="text-xs text-muted-foreground ml-2">{msg.time}</span>
+                  <p className="text-muted-foreground mt-0.5">{msg.text}</p>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}

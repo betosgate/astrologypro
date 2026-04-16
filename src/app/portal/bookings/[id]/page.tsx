@@ -15,6 +15,7 @@ import {
   MapPin,
   FileText,
   ArrowLeft,
+  MessageSquare,
 } from "lucide-react";
 import { BookingActions } from "@/components/portal/booking-actions";
 import { SectionContainer } from "@/components/shared/section-container";
@@ -59,7 +60,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
   const { data: booking } = await admin
     .from("bookings")
     .select(
-      "id, scheduled_at, status, duration_minutes, base_price, session_notes, booking_token, metadata, questionnaire_responses, services(name, slug), diviners(id, display_name, username), clients(id, full_name, email, user_id)"
+      "id, scheduled_at, status, duration_minutes, base_price, session_notes, chat_transcript, booking_token, metadata, questionnaire_responses, services(name, slug), diviners(id, display_name, username), clients(id, full_name, email, user_id)"
     )
     .eq("id", id)
     .single();
@@ -74,6 +75,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
     duration_minutes: number;
     base_price: number;
     session_notes: string | null;
+    chat_transcript: { from: string; text: string; time: string }[] | null;
     booking_token: string | null;
     metadata: { availability_title?: string; is_reminder?: boolean } | null;
     questionnaire_responses: Record<string, string> | null;
@@ -288,17 +290,39 @@ export default async function BookingDetailPage({ params }: PageProps) {
           )}
 
           {/* Session Notes */}
-          {(b.session_notes) && (
+          {b.session_notes && (
             <>
               <Separator />
               <div className="space-y-1">
-                <span className="text-sm text-muted-foreground">Session Notes</span>
-                <div
-                  className="text-sm rounded-lg bg-muted/30 p-3 prose prose-invert prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{
-                    __html: b.session_notes,
-                  }}
-                />
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <FileText className="size-4" />
+                  Session Notes
+                </div>
+                <p className="text-sm rounded-lg bg-muted/30 p-3 whitespace-pre-wrap">
+                  {b.session_notes}
+                </p>
+              </div>
+            </>
+          )}
+
+          {/* Chat Transcript */}
+          {Array.isArray(b.chat_transcript) && b.chat_transcript.length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MessageSquare className="size-4" />
+                  Chat Transcript ({b.chat_transcript.length} messages)
+                </div>
+                <div className="rounded-lg bg-muted/30 p-3 space-y-2 max-h-80 overflow-y-auto">
+                  {b.chat_transcript.map((msg, i) => (
+                    <div key={i} className="text-sm">
+                      <span className="font-medium text-primary">{msg.from}</span>
+                      <span className="text-xs text-muted-foreground ml-2">{msg.time}</span>
+                      <p className="text-muted-foreground mt-0.5">{msg.text}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </>
           )}

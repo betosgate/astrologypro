@@ -21,34 +21,68 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const {
-      phoneSessionId,
+      phoneSessionId: rawPhoneSessionId,
+      callId,
       callStatus,
       durationSeconds,
       chimeMeetingId,
       chimeTransactionId,
     } = body as {
       phoneSessionId?: string;
+      callId?: string;
       callStatus?: string;
       durationSeconds?: number;
       chimeMeetingId?: string;
       chimeTransactionId?: string;
     };
 
-    if (!phoneSessionId || callStatus !== "completed" || !durationSeconds) {
+    if (callStatus !== "completed" || !durationSeconds) {
       return NextResponse.json({ ok: true }); // Ignore non-completion events
+    }
+
+    // SMA Lambda sends callId; accept/notify routes use phoneSessionId.
+    // Support both: try phoneSessionId first, fall back to callId lookup.
+    if (!rawPhoneSessionId && !callId) {
+      return NextResponse.json({ ok: true });
     }
 
     const admin = createAdminClient();
 
-    // Find the phone session
-    const { data: session } = await admin
-      .from("phone_sessions")
-      .select("id, session_type, diviner_id, client_id")
-      .eq("id", phoneSessionId)
-      .single();
+    // Find the phone session — by ID directly, or by callId via notifications
+    let session: { id: string; session_type: string; diviner_id: string; client_id: string | null } | null = null;
 
-    if (!session) {
-      console.error("Chime voice status: phone session not found:", phoneSessionId);
+    if (rawPhoneSessionId) {
+      const { data } = await admin
+        .from("phone_sessions")
+        .select("id, session_type, diviner_id, client_id")
+        .eq("id", rawPhoneSessionId)
+        .single();
+      session = data;
+    }
+
+    // Fallback: look up by callId stored in phone_call_notifications
+    if (!session && callId) {
+      const { data: notif } = await admin
+        .from("phone_call_notifications")
+        .select("phone_session_id")
+        .eq("call_id", callId)
+        .limit(1)
+        .single();
+
+      if (notif?.phone_session_id) {
+        const { data } = await admin
+          .from("phone_sessions")
+          .select("id, session_type, diviner_id, client_id")
+          .eq("id", notif.phone_session_id)
+          .single();
+        session = data;
+      }
+    }
+
+    const phoneSessionId = session?.id;
+
+    if (!session || !phoneSessionId) {
+      console.error("Chime voice status: phone session not found. phoneSessionId:", rawPhoneSessionId, "callId:", callId);
       return NextResponse.json({ ok: true });
     }
 

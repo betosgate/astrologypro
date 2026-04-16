@@ -20,7 +20,10 @@ export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen,
   const { modal, trigger, close } = useShowMore();
   const isBusiness = tabSlug === "business_partner_v2";
   const isFriendship = tabSlug === "friendship_report_tropical_v2";
-  const isRomantic = tabSlug === "romantic_forecast_report_tropical_v2";
+  const timingSummaryBodyStyle = {
+    background: "linear-gradient(166deg, rgb(240, 160, 35) 0%, rgb(248, 214, 71) 100%)",
+    color: "#000000",
+  } as const;
 
   function AiBlock({ title, sectionKey, data }: { title: string; sectionKey: string; data: any }) {
     if (!data && data !== "error") return <SectionSkeleton title={title} />;
@@ -39,6 +42,9 @@ export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen,
         {items.map((item: any, i: number) => {
           const itemTitle = item.title ?? item.name;
           const bgClass = getRelationshipBgClass(itemTitle ?? title, tabSlug, sectionKey);
+          const normalizedItemTitle = String(itemTitle ?? "").trim().toLowerCase();
+          const isTimingSummaryCard = isBusiness && sectionKey === "timing_and_transits" && ["summary", "recommendations"].includes(normalizedItemTitle);
+          const isProfessionalAlignmentCard = isBusiness && sectionKey === "professional_alignment_and_goals";
 
           return (
             <div key={i} className="rounded-lg border overflow-hidden">
@@ -80,7 +86,16 @@ export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen,
                 </div>
               )}
 
-              <div className={cn(bgClass, "px-4 py-3 pb-8")} style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px' }}>
+              <div
+                className={cn(isTimingSummaryCard || isProfessionalAlignmentCard ? "" : bgClass, "px-4 py-3 pb-8")}
+                style={{
+                  fontFamily: "'Roboto', sans-serif",
+                  fontSize: '20px',
+                  fontWeight: 400,
+                  lineHeight: '26px',
+                  ...((isTimingSummaryCard || isProfessionalAlignmentCard) ? timingSummaryBodyStyle : null),
+                }}
+              >
                 <div className="flex items-center justify-center gap-2 mb-1">
                   {!itemTitle && <h4 className="text-xs font-semibold uppercase tracking-wider text-center">{title}</h4>}
                 </div>

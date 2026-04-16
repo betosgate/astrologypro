@@ -94,12 +94,26 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // Return list of found files for diagnostics, pick best recording
+  // Return list of found files for diagnostics
   const fileList = objects.map((o) => ({ key: o.Key, size: o.Size }));
 
+  // 1. Check for already-concatenated /final/ file
+  const finalFile = objects.find(
+    (o) => o.Key?.includes("/final/") && o.Key.endsWith(".mp4") && (o.Size ?? 0) > 10_000
+  );
+
+  // 2. Collect composited-video segments sorted by size (largest first)
+  const segments = objects
+    .filter((o) => o.Key?.includes("composited-video") && o.Key.endsWith(".mp4") && (o.Size ?? 0) > 0)
+    .sort((a, b) => (b.Size ?? 0) - (a.Size ?? 0));
+
+  // Pick the best single file: /final/ > largest segment > any MP4 > any file
+  // NOTE: When multiple segments exist, the full recording is played via
+  // the segment player (GET /api/bookings/[id]/recording-segments).
+  // This sync just picks the best single-file thumbnail for the standard player.
   const recordingKey =
-    objects.find((o) => o.Key?.includes("/final/") && o.Key.endsWith(".mp4"))?.Key ??
-    objects.find((o) => o.Key?.includes("composited-video") && o.Key.endsWith(".mp4"))?.Key ??
+    finalFile?.Key ??
+    segments[0]?.Key ??
     objects.sort((a, b) => (b.Size ?? 0) - (a.Size ?? 0)).find((o) => o.Key?.endsWith(".mp4"))?.Key ??
     objects.find((o) => o.Key?.endsWith(".webm"))?.Key ??
     objects.sort((a, b) => (b.Size ?? 0) - (a.Size ?? 0)).find((o) => (o.Size ?? 0) > 0)?.Key;
@@ -133,7 +147,10 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     synced: true,
     recordingKey,
+    segmentCount: segments.length,
     files: fileList,
-    message: "recording_url updated",
+    message: segments.length > 1
+      ? `recording_url updated (${segments.length} segments available — use "Play Full Recording" for all)`
+      : "recording_url updated",
   });
 }

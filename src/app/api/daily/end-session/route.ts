@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { bookingId, actualDurationMinutes } = await request.json();
+    const { bookingId, actualDurationMinutes, sessionNotes, chatTranscript } = await request.json();
 
     if (!bookingId || actualDurationMinutes == null) {
       return NextResponse.json(
@@ -70,15 +70,19 @@ export async function POST(request: NextRequest) {
     const totalAmount = Math.round((booking.base_price ?? 0) * 100) + overageAmount;
 
     // Update booking to completed
+    const updatePayload: Record<string, unknown> = {
+      status: "completed",
+      actual_duration_minutes: Math.round(actualDurationMinutes),
+      overage_amount: overageAmount,
+      total_amount: totalAmount,
+      completed_at: new Date().toISOString(),
+    };
+    if (sessionNotes) updatePayload.session_notes = sessionNotes;
+    if (chatTranscript) updatePayload.chat_transcript = chatTranscript;
+
     const { error: updateError } = await admin
       .from("bookings")
-      .update({
-        status: "completed",
-        actual_duration_minutes: Math.round(actualDurationMinutes),
-        overage_amount: overageAmount,
-        total_amount: totalAmount,
-        completed_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq("id", bookingId);
 
     if (updateError) {

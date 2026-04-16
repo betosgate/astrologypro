@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { bookingId, actualDurationMinutes } = await request.json();
+    const { bookingId, actualDurationMinutes, sessionNotes, chatTranscript } = await request.json();
 
     if (!bookingId || actualDurationMinutes == null) {
       return NextResponse.json(
@@ -58,28 +58,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // End the Chime meeting
+    // ── Recording & meeting teardown ─────────────────────────────────────────
+    // CORRECT SEQUENCE (order matters!):
+    //   1. Stop the capture pipeline — flushes remaining segment files to S3
+    //   2. Start concatenation — merges segments into one MP4
+    //   3. Delete the meeting — only AFTER pipeline is stopped
+    //
+    // Previous code deleted the meeting first, which killed the capture
+    // pipeline abruptly. AWS would only have the first few seconds of
+    // segments flushed, producing a 5-second recording for a 3-minute call.
     if (booking.chime_meeting_id) {
+      // Step 1: Stop the capture pipeline gracefully so all segments flush to S3
+      if (booking.chime_pipeline_id) {
+        try {
+          await stopChimeRecording(booking.chime_pipeline_id);
+          console.log(`[end-meeting] Capture pipeline stopped: ${booking.chime_pipeline_id}`);
+        } catch (err) {
+          // ConflictException means it's already stopped — safe to continue
+          const errName = (err as { name?: string }).name ?? "";
+          if (errName !== "ConflictException") {
+            console.error("[end-meeting] Failed to stop capture pipeline:", err);
+          }
+        }
+      }
+
+      // Step 2: Trigger concatenation — merges all segment files into a single
+      // MP4: recordings/{bookingId}/final/. Runs asynchronously on AWS;
+      // sync-recordings cron picks up the result.
+      if (booking.chime_pipeline_id) {
+        try {
+          await startChimeConcatenation(booking.chime_pipeline_id, bookingId);
+          console.log(`[end-meeting] Concatenation pipeline started for booking ${bookingId}`);
+        } catch (err) {
+          console.error("[end-meeting] Failed to start concatenation:", err);
+        }
+      }
+
+      // Step 3: Delete the meeting LAST — after pipeline is stopped and
+      // concatenation is queued
       try {
         await endChimeMeeting(booking.chime_meeting_id);
       } catch (err) {
         console.error("Failed to delete Chime meeting:", err);
-        // Non-blocking — continue with billing
       }
 
-      // Trigger concatenation pipeline — merges all segment files into a
-      // single named MP4: recordings/{bookingId}/final/{meetingId}.mp4
-      // This runs asynchronously on AWS; sync-recordings cron picks it up.
-      if (booking.chime_pipeline_id) {
-        startChimeConcatenation(
-          booking.chime_pipeline_id,
-          bookingId
-        ).catch((err) =>
-          console.error("Failed to start Chime concatenation:", err)
-        );
-      }
-
-      // Stop recording pipeline if active
+      // Update video_sessions record if one exists
       const { data: videoSession } = await admin
         .from("video_sessions")
         .select("id")
@@ -117,14 +140,18 @@ export async function POST(request: NextRequest) {
 
     // Update booking to completed
     // NOTE: completed_at column does not exist on bookings table — omit it.
+    const updatePayload: Record<string, unknown> = {
+      status: "completed",
+      actual_duration_minutes: Math.round(actualDurationMinutes),
+      overage_amount: overageAmount,
+      total_amount: totalAmount,
+    };
+    if (sessionNotes) updatePayload.session_notes = sessionNotes;
+    if (chatTranscript) updatePayload.chat_transcript = chatTranscript;
+
     const { error: updateError } = await admin
       .from("bookings")
-      .update({
-        status: "completed",
-        actual_duration_minutes: Math.round(actualDurationMinutes),
-        overage_amount: overageAmount,
-        total_amount: totalAmount,
-      })
+      .update(updatePayload)
       .eq("id", bookingId);
 
     if (updateError) {

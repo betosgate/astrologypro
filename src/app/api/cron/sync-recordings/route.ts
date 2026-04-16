@@ -88,15 +88,44 @@ export async function GET(request: NextRequest) {
       }
 
       // Priority order for finding the best recording file:
-      // 1. final/{meetingId}.mp4  — concatenated single file (best, named by meeting ID)
-      // 2. composited-video/*.mp4 — composited segment from capture pipeline
-      // 3. Any MP4
+      // 1. final/*.mp4 — concatenated single file (best, full session)
+      // 2. Largest composited-video/*.mp4 — best available segment
+      // 3. Largest MP4 > 500KB (skip tiny segment stubs)
       // 4. Any WebM
       // 5. Any non-empty file as last resort
+      //
+      // IMPORTANT: If only small segments exist (no /final/ file), the
+      // concatenation pipeline may still be running. Skip this booking and
+      // let the next cron run pick it up once concatenation completes.
+      const finalFile = objects.find((o) => o.Key?.includes("/final/") && o.Key.endsWith(".mp4"));
+
+      // Sort composited-video files by size descending to get the largest segment
+      const compositedFiles = objects
+        .filter((o) => o.Key?.includes("composited-video") && o.Key.endsWith(".mp4"))
+        .sort((a, b) => (b.Size ?? 0) - (a.Size ?? 0));
+
+      const allMp4sBySize = objects
+        .filter((o) => o.Key?.endsWith(".mp4") && (o.Size ?? 0) > 500_000)
+        .sort((a, b) => (b.Size ?? 0) - (a.Size ?? 0));
+
+      // If there are segment files but no /final/ file, and the booking was
+      // completed less than 30 minutes ago, skip — concatenation may still be running.
+      const updatedAt = booking.updated_at ?? booking.confirmed_at;
+      const ageMinutes = updatedAt
+        ? (Date.now() - new Date(updatedAt as string).getTime()) / 60_000
+        : Infinity;
+
+      if (!finalFile && compositedFiles.length > 0 && ageMinutes < 10) {
+        results.push({ bookingId, status: "waiting_for_concatenation" });
+        continue;
+      }
+
+      // Pick best single file: /final/ > largest segment > any MP4 > any file
+      // Full multi-segment playback is handled by the segment player in the UI.
       const recordingKey =
-        objects.find((o) => o.Key?.includes("/final/") && o.Key.endsWith(".mp4"))?.Key ??
-        objects.find((o) => o.Key?.includes("composited-video") && o.Key.endsWith(".mp4"))?.Key ??
-        objects.find((o) => o.Key?.endsWith(".mp4") && (o.Size ?? 0) > 100_000)?.Key ??
+        finalFile?.Key ??
+        compositedFiles[0]?.Key ??
+        allMp4sBySize[0]?.Key ??
         objects.find((o) => o.Key?.endsWith(".webm"))?.Key ??
         objects.find((o) => (o.Size ?? 0) > 0)?.Key;
 
