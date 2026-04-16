@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { generateShareId } from "@/lib/format";
 
@@ -99,76 +99,24 @@ export async function POST(request: NextRequest) {
 
   // 1. Check for already-concatenated /final/ file
   const finalFile = objects.find(
-    (o) => o.Key?.includes("/final/") && o.Key.endsWith(".mp4")
+    (o) => o.Key?.includes("/final/") && o.Key.endsWith(".mp4") && (o.Size ?? 0) > 10_000
   );
 
-  // 2. Collect composited-video segments sorted by name (chronological)
+  // 2. Collect composited-video segments sorted by size (largest first)
   const segments = objects
     .filter((o) => o.Key?.includes("composited-video") && o.Key.endsWith(".mp4") && (o.Size ?? 0) > 0)
-    .sort((a, b) => (a.Key ?? "").localeCompare(b.Key ?? ""));
+    .sort((a, b) => (b.Size ?? 0) - (a.Size ?? 0));
 
-  let recordingKey: string | undefined;
-  let stitchedFromSegments = false;
-
-  if (finalFile?.Key) {
-    // Already concatenated — use it
-    recordingKey = finalFile.Key;
-  } else if (segments.length > 1) {
-    // Multiple segments but no /final/ — stitch them by downloading and
-    // concatenating the raw bytes. Chime composited-video segments are
-    // fMP4 (fragmented MP4) with identical codec settings, so binary
-    // concatenation produces a valid fMP4 file. We take the first segment
-    // in full (contains the ftyp + moov init atoms) and append the mdat
-    // fragments from subsequent segments.
-    try {
-      console.log(`[sync-recording] Stitching ${segments.length} segments for booking ${bookingId}`);
-      const chunks: Uint8Array[] = [];
-
-      for (const seg of segments) {
-        const obj = await s3.send(
-          new GetObjectCommand({ Bucket: RECORDING_BUCKET, Key: seg.Key! })
-        );
-        const bytes = await obj.Body!.transformToByteArray();
-        chunks.push(bytes);
-      }
-
-      // Combine into a single buffer
-      const totalSize = chunks.reduce((sum, c) => sum + c.length, 0);
-      const merged = new Uint8Array(totalSize);
-      let offset = 0;
-      for (const chunk of chunks) {
-        merged.set(chunk, offset);
-        offset += chunk.length;
-      }
-
-      // Upload stitched file to /final/
-      const stitchedKey = `recordings/${bookingId}/final/stitched.mp4`;
-      await s3.send(
-        new PutObjectCommand({
-          Bucket: RECORDING_BUCKET,
-          Key: stitchedKey,
-          Body: merged,
-          ContentType: "video/mp4",
-        })
-      );
-
-      recordingKey = stitchedKey;
-      stitchedFromSegments = true;
-      console.log(`[sync-recording] Stitched ${segments.length} segments (${(totalSize / 1024 / 1024).toFixed(1)} MB) → ${stitchedKey}`);
-    } catch (err) {
-      console.error("[sync-recording] Segment stitching failed:", err);
-      // Fall back to largest single segment
-      recordingKey = segments.sort((a, b) => (b.Size ?? 0) - (a.Size ?? 0))[0]?.Key;
-    }
-  } else if (segments.length === 1) {
-    recordingKey = segments[0].Key;
-  } else {
-    // Fallback: largest MP4 or any file
-    recordingKey =
-      objects.sort((a, b) => (b.Size ?? 0) - (a.Size ?? 0)).find((o) => o.Key?.endsWith(".mp4"))?.Key ??
-      objects.find((o) => o.Key?.endsWith(".webm"))?.Key ??
-      objects.sort((a, b) => (b.Size ?? 0) - (a.Size ?? 0)).find((o) => (o.Size ?? 0) > 0)?.Key;
-  }
+  // Pick the best single file: /final/ > largest segment > any MP4 > any file
+  // NOTE: When multiple segments exist, the full recording is played via
+  // the segment player (GET /api/bookings/[id]/recording-segments).
+  // This sync just picks the best single-file thumbnail for the standard player.
+  const recordingKey =
+    finalFile?.Key ??
+    segments[0]?.Key ??
+    objects.sort((a, b) => (b.Size ?? 0) - (a.Size ?? 0)).find((o) => o.Key?.endsWith(".mp4"))?.Key ??
+    objects.find((o) => o.Key?.endsWith(".webm"))?.Key ??
+    objects.sort((a, b) => (b.Size ?? 0) - (a.Size ?? 0)).find((o) => (o.Size ?? 0) > 0)?.Key;
 
   if (!recordingKey) {
     return NextResponse.json({ found: false, files: fileList, message: "No playable file found" });
@@ -199,11 +147,10 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     synced: true,
     recordingKey,
-    stitchedFromSegments,
     segmentCount: segments.length,
     files: fileList,
-    message: stitchedFromSegments
-      ? `Stitched ${segments.length} segments into one recording`
+    message: segments.length > 1
+      ? `recording_url updated (${segments.length} segments available — use "Play Full Recording" for all)`
       : "recording_url updated",
   });
 }

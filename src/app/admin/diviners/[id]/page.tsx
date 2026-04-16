@@ -506,6 +506,7 @@ export default async function AdminDivinerDetailPage({
             (diviner.phone_answer_mode as "browser" | "mobile" | "both" | null) ?? null
           }
           phoneMobile={(diviner.phone_mobile as string | null) ?? null}
+          phoneDialinEnabled={!!diviner.phone_dialin_enabled}
         />
       </div>
 
