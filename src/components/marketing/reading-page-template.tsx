@@ -41,6 +41,7 @@ export interface ReadingPageTemplateProps {
   ctaBody: string;
   ctaButtonLabel: string;
   pageUrl: string;
+  heroImage?: string | null;
   relatedReadings?: Array<{ title: string; href: string; icon: string }>;
 }
 
@@ -151,6 +152,7 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
     ctaButtonLabel,
     relatedReadings = [],
     pageUrl,
+    heroImage,
   } = props;
 
   const readerLabel = serviceType === "tarot" ? "Tarot Reader" : "Reader";
@@ -234,62 +236,82 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
           {/* SECTION A — Hero */}
           <section className="relative overflow-hidden py-20 md:py-28">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_60%,rgba(201,168,76,0.07)_0%,transparent_60%)]" />
-            <div className="relative mx-auto max-w-4xl px-4 text-center">
-              {/* Badge pill */}
-              <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-[#c9a84c]/20 bg-[#c9a84c]/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#c9a84c]">
-                <span className="inline-block size-1.5 rounded-full bg-[#c9a84c]" />
-                {badge}
-              </div>
+            <div className="relative mx-auto max-w-6xl px-4">
+              <div className="grid items-center gap-12 md:grid-cols-[1fr_auto]">
+                {/* Left: text content */}
+                <div className="text-center md:text-left">
+                  {/* Badge pill */}
+                  <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#c9a84c]/20 bg-[#c9a84c]/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#c9a84c]">
+                    <span className="inline-block size-1.5 rounded-full bg-[#c9a84c]" />
+                    {badge}
+                  </div>
 
-              {/* H1 */}
-              <h1 className="text-4xl font-bold tracking-tight text-[#f5f0e8] sm:text-5xl lg:text-6xl">
-                {heroTitleBefore}{" "}
-                <span
-                  className="bg-clip-text text-transparent"
-                  style={{
-                    backgroundImage:
-                      "linear-gradient(135deg, #f8d275 0%, #c9a84c 50%, #a07838 100%)",
-                  }}
-                >
-                  {heroTitleGradient}
-                </span>
-              </h1>
+                  {/* H1 */}
+                  <h1 className="text-4xl font-bold tracking-tight text-[#f5f0e8] sm:text-5xl lg:text-6xl">
+                    {heroTitleBefore}{" "}
+                    <span
+                      className="bg-clip-text text-transparent"
+                      style={{
+                        backgroundImage:
+                          "linear-gradient(135deg, #f8d275 0%, #c9a84c 50%, #a07838 100%)",
+                      }}
+                    >
+                      {heroTitleGradient}
+                    </span>
+                  </h1>
 
-              {/* Subtitle */}
-              <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[#b8bcd0]/75">
-                {heroSubtitle}
-              </p>
+                  {/* Subtitle */}
+                  <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[#b8bcd0]/75 md:mx-0">
+                    {heroSubtitle}
+                  </p>
 
-              {/* Stats row */}
-              <div className="mt-10 flex flex-wrap items-center justify-center gap-10">
-                {heroStats.map((stat, i) => (
-                  <div key={stat.label} className="flex items-center gap-10">
-                    <div className="text-center">
-                      <p className="text-3xl font-bold text-[#c9a84c]">{stat.value}</p>
-                      <p className="mt-1 text-sm text-[#b8bcd0]/50">{stat.label}</p>
-                    </div>
-                    {i < heroStats.length - 1 && (
+                  {/* Stats row */}
+                  <div className="mt-10 flex flex-wrap items-center justify-center gap-10 md:justify-start">
+                    {heroStats.map((stat, i) => (
+                      <div key={stat.label} className="flex items-center gap-10">
+                        <div className="text-center">
+                          <p className="text-3xl font-bold text-[#c9a84c]">{stat.value}</p>
+                          <p className="mt-1 text-sm text-[#b8bcd0]/50">{stat.label}</p>
+                        </div>
+                        {i < heroStats.length - 1 && (
+                          <div className="h-10 w-px bg-white/10" aria-hidden="true" />
+                        )}
+                      </div>
+                    ))}
+                    {heroStats.length > 0 && (
                       <div className="h-10 w-px bg-white/10" aria-hidden="true" />
                     )}
+                    <div className="text-center">
+                      <p className="text-3xl font-bold text-[#c9a84c]">${startingPrice}</p>
+                      <p className="mt-1 text-sm text-[#b8bcd0]/50">Starting Price</p>
+                    </div>
                   </div>
-                ))}
-                {heroStats.length > 0 && (
-                  <div className="h-10 w-px bg-white/10" aria-hidden="true" />
-                )}
-                <div className="text-center">
-                  <p className="text-3xl font-bold text-[#c9a84c]">${startingPrice}</p>
-                  <p className="mt-1 text-sm text-[#b8bcd0]/50">Starting Price</p>
-                </div>
-              </div>
 
-              {/* CTA buttons */}
-              <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-                <a
-                  href="#diviners"
-                  className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#c9a84c] px-8 text-sm font-semibold text-black shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-[#e2c97e]"
-                >
-                  Find a {readerLabel} ↓
-                </a>
+                  {/* CTA buttons */}
+                  <div className="mt-10 flex flex-wrap items-center justify-center gap-4 md:justify-start">
+                    <a
+                      href="#diviners"
+                      className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#c9a84c] px-8 text-sm font-semibold text-black shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-[#e2c97e]"
+                    >
+                      Find a {readerLabel} ↓
+                    </a>
+                  </div>
+                </div>
+
+                {/* Right: service image card — desktop only */}
+                {heroImage && (
+                  <div className="hidden md:block">
+                    <div className="relative">
+                      <div className="absolute inset-0 rounded-2xl bg-[#c9a84c]/20 blur-2xl" />
+                      <img
+                        src={heroImage}
+                        alt=""
+                        aria-hidden="true"
+                        className="relative w-64 rounded-2xl border border-[#c9a84c]/20 object-cover shadow-[0_0_60px_rgba(201,168,76,0.15)]"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </section>
@@ -315,6 +337,11 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
             </div>
           </section>
 
+          {/* Divider — between Trust Bar and What Is */}
+          <div className="mx-auto max-w-5xl px-4">
+            <div className="h-px bg-gradient-to-r from-transparent via-[#c9a84c]/20 to-transparent" />
+          </div>
+
           {/* SECTION C — What Is */}
           <section id="what-is" className="px-4 py-16 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-5xl">
@@ -331,7 +358,8 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
 
                 {/* Right col */}
                 <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-7">
-                  <h3 className="mb-5 text-sm font-semibold uppercase tracking-widest text-[#c9a84c]">
+                  <h3 className="mb-5 flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-[#c9a84c]">
+                    <span aria-hidden="true">✨</span>
                     What {serviceType === "astrology" ? "This Reading" : "a Reading"} Reveals
                   </h3>
                   <div className="space-y-3">
@@ -340,7 +368,7 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                         key={item.label}
                         className="flex items-start gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3"
                       >
-                        <span className="mt-1 size-1.5 shrink-0 rounded-full bg-[#c9a84c]" />
+                        <span className="mt-0.5 shrink-0 text-xs font-bold text-[#c9a84c]">✓</span>
                         <div>
                           <p className="text-sm font-semibold text-[#f5f0e8]">{item.label}</p>
                           <p className="mt-0.5 text-xs text-[#b8bcd0]/50">{item.desc}</p>
@@ -363,7 +391,7 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                 Three simple steps to your reading
               </p>
               <div className="grid gap-8 sm:grid-cols-3">
-                {HOW_IT_WORKS_STEPS.map((step) => (
+                {HOW_IT_WORKS_STEPS.map((step, idx) => (
                   <div
                     key={step.number}
                     className="relative rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 transition-all hover:border-[#c9a84c]/20"
@@ -379,6 +407,15 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                       <span className="size-1 rounded-full bg-[#c9a84c]/70" />
                       Step {step.number}
                     </div>
+                    {/* Connector arrow — desktop only, not on last card */}
+                    {idx < HOW_IT_WORKS_STEPS.length - 1 && (
+                      <div
+                        className="absolute right-0 top-1/2 hidden -translate-y-1/2 translate-x-1/2 sm:block"
+                        aria-hidden="true"
+                      >
+                        <ArrowRight className="size-5 text-[#c9a84c]/30" />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -408,6 +445,11 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
               </div>
             </div>
           </section>
+
+          {/* Divider — between What to Expect and Mid-page CTA */}
+          <div className="mx-auto max-w-5xl px-4">
+            <div className="h-px bg-gradient-to-r from-transparent via-[#c9a84c]/20 to-transparent" />
+          </div>
 
           {/* SECTION F — Mid-page CTA Banner */}
           <section className="px-4 pb-4 sm:px-6 lg:px-8">
@@ -442,6 +484,10 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                     key={i}
                     className="flex flex-col rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 transition-all hover:border-[#c9a84c]/10"
                   >
+                    {/* Decorative quote mark */}
+                    <div className="mb-2 select-none font-serif text-5xl leading-none text-[#c9a84c]/10" aria-hidden="true">
+                      &ldquo;
+                    </div>
                     {/* Stars */}
                     <div className="mb-4 flex gap-0.5" aria-label="5 stars">
                       {Array.from({ length: 5 }).map((_, s) => (
@@ -454,7 +500,7 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                     </div>
                     {/* Quote */}
                     <p className="mb-5 text-sm italic leading-relaxed text-[#b8bcd0]/70">
-                      &ldquo;{t.quote}&rdquo;
+                      {t.quote}
                     </p>
                     {/* Author */}
                     <div className="mt-auto flex items-center gap-3">
@@ -473,6 +519,11 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
               </div>
             </div>
           </section>
+
+          {/* Divider — between Testimonials and Guarantee */}
+          <div className="mx-auto max-w-5xl px-4">
+            <div className="h-px bg-gradient-to-r from-transparent via-[#c9a84c]/20 to-transparent" />
+          </div>
 
           {/* SECTION G.5 — Guarantee / Risk Reversal */}
           <section className="px-4 pb-8 sm:px-6 lg:px-8">
@@ -657,20 +708,37 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
             </section>
           )}
 
+          {/* Divider — between Related Readings and Bottom CTA */}
+          <div className="mx-auto max-w-5xl px-4">
+            <div className="h-px bg-gradient-to-r from-transparent via-[#c9a84c]/20 to-transparent" />
+          </div>
+
           {/* SECTION L — Bottom CTA */}
           <section className="px-4 py-16 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl border border-[#c9a84c]/10 bg-[radial-gradient(ellipse_at_50%_50%,rgba(201,168,76,0.06)_0%,transparent_70%)] p-10 text-center md:p-14">
-              <h2 className="text-2xl font-bold text-[#f5f0e8] sm:text-3xl">{ctaTitle}</h2>
-              <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-[#b8bcd0]/65">
-                {ctaBody}
-              </p>
-              <div className="mt-8">
-                <a
-                  href="#diviners"
-                  className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#c9a84c] px-8 text-sm font-semibold text-black shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-[#e2c97e]"
-                >
-                  {ctaButtonLabel}
-                </a>
+            <div className="relative mx-auto max-w-3xl overflow-hidden rounded-2xl border border-[#c9a84c]/10 p-10 text-center md:p-14">
+              {/* Background layers */}
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_50%,rgba(201,168,76,0.08)_0%,transparent_70%)]" />
+              <div
+                className="pointer-events-none absolute inset-0 opacity-[0.03]"
+                style={{
+                  backgroundImage:
+                    "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c9a84c' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
+                }}
+              />
+              {/* Content */}
+              <div className="relative">
+                <h2 className="text-2xl font-bold text-[#f5f0e8] sm:text-3xl">{ctaTitle}</h2>
+                <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-[#b8bcd0]/65">
+                  {ctaBody}
+                </p>
+                <div className="mt-8">
+                  <a
+                    href="#diviners"
+                    className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#c9a84c] px-8 text-sm font-semibold text-black shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-[#e2c97e]"
+                  >
+                    {ctaButtonLabel}
+                  </a>
+                </div>
               </div>
             </div>
           </section>
