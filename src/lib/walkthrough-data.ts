@@ -1835,7 +1835,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
     {
-  "name": "horoscope_friendship_setup",
+  "name": "horoscope_friendship_setup_v1",
   "label": "Friendship: Compatibility Chart Setup",
   "description": "Enter both friends' birth details to generate the friendship compatibility charts and relationship reading.",
   "group": "Horoscope Toolkit",
@@ -2295,6 +2295,64 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Critical house-ruler aspect tracking",
           "Traditional dignity and receptivity scores",
           "Technical rationale for every predictive judgment"
+        ]
+      },
+
+      // Planetary Returns & Oppositions
+      { 
+        name: "horoscope_jupiter_return_setup", 
+        label: "Jupiter Return", 
+        description: "Calculate and interpret your Jupiter Return.", 
+        group: "Horoscope Toolkit",
+        subModule: "Jupiter Return",
+        purpose: "Analyzes the approximately 12-year cycle of Jupiter returning to its natal position, highlighting periods of expansion, luck, and spiritual growth.",
+        bullets: [
+          "Exact return date calculation",
+          "House activation and growth areas",
+          "Transiting aspects to natal planets",
+          "Opportunities for advancement and learning"
+        ]
+      },
+      { 
+        name: "horoscope_saturn_return_setup", 
+        label: "Saturn Return", 
+        description: "Detailed analysis of your Saturn Return.", 
+        group: "Horoscope Toolkit",
+        subModule: "Saturn Return",
+        purpose: "Evaluates the critical 28-30 year planetary milestone where Saturn returns to its natal degree, signifying maturity, major life lessons, and restructuring.",
+        bullets: [
+          "Identification of exact Saturn Return dates",
+          "Karmic lessons and maturity milestones",
+          "Career and relationship restructuring",
+          "Tools for navigating Saturnian pressure"
+        ]
+      },
+      { 
+        name: "horoscope_mars_return_setup", 
+        label: "Mars Return", 
+        description: "Action, energy, and drive forecasting for the 2-year Mars cycle.", 
+        group: "Horoscope Toolkit",
+        subModule: "Mars Return",
+        purpose: "Charts the return of Mars to its natal position, mapping out a new two-year cycle of energy, ambition, physical drive, and personal assertion.",
+        bullets: [
+          "Calculation of the 2-year Mars cycle reset",
+          "Areas of increased energy and motivation",
+          "Potential conflict or frustration triggers",
+          "Strategic planning for goal execution"
+        ]
+      },
+      { 
+        name: "horoscope_uranus_opposition_setup", 
+        label: "Uranus Opposition", 
+        description: "The mid-life astrological transit analysis.", 
+        group: "Horoscope Toolkit",
+        subModule: "Uranus Opposition",
+        purpose: "Maps out the major mid-life transit (around age 40-42) when transiting Uranus opposes natal Uranus, often bringing unexpected changes, awakenings, and shifts in direction.",
+        bullets: [
+          "Timing of the exact opposition points",
+          "Themes of rebellion, freedom, and authenticity",
+          "Major life shifts and breakthrough moments",
+          "Navigating mid-life awakenings safely"
         ]
       },
 
