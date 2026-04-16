@@ -13,10 +13,44 @@
  *   OUTBOUND: Server dials diviner's phone → diviner answers → join meeting → bridge caller
  *
  * SMA event structure: https://docs.aws.amazon.com/chime-sdk/latest/dg/pstn-invocations.html
+ *
+ * IMPORTANT — Argument paths differ per event type:
+ *   NEW_OUTBOUND_CALL:    event.ActionData.Parameters.Arguments
+ *   CALL_UPDATE_REQUESTED: event.ActionData.Parameters.Arguments
+ *   ACTION_SUCCESSFUL:     event.CallDetails.Parameters.ArgumentsMap (NOT guaranteed)
+ *
+ * Because ACTION_SUCCESSFUL may NOT carry the original ArgumentsMap, we cache
+ * outbound call arguments in a module-level Map keyed by TransactionId. The
+ * cache is cleaned up after use. This works because Lambda reuses execution
+ * contexts for sequential invocations on the same call.
  */
 
 const APP_URL = process.env.APP_URL || "https://astrologypro.com";
 const CRON_SECRET = process.env.CRON_SECRET || "";
+
+/**
+ * Module-level cache for outbound call arguments.
+ * Keyed by outbound TransactionId. Cleaned up after bridge-caller succeeds.
+ * Entries auto-expire after 5 minutes as a safety net.
+ */
+const _outboundArgs = new Map();
+
+function cacheArgs(transactionId, args) {
+  _outboundArgs.set(transactionId, { args, ts: Date.now() });
+  // Purge stale entries (> 5 min)
+  for (const [k, v] of _outboundArgs) {
+    if (Date.now() - v.ts > 300_000) _outboundArgs.delete(k);
+  }
+}
+
+function getCachedArgs(transactionId) {
+  const entry = _outboundArgs.get(transactionId);
+  if (entry) {
+    _outboundArgs.delete(transactionId);
+    return entry.args;
+  }
+  return null;
+}
 
 export async function handler(event) {
   console.log("SMA event:", JSON.stringify(event, null, 2));
@@ -29,6 +63,17 @@ export async function handler(event) {
 
     case "NEW_OUTBOUND_CALL":
       return handleNewOutboundCall(event);
+
+    case "RINGING":
+      // Informational — phone is ringing, no action needed
+      console.log("RINGING — no action needed");
+      return { SchemaVersion: "1.0", Actions: [] };
+
+    case "CALL_ANSWERED":
+      // Informational — diviner answered their phone, SMA will now execute
+      // the JoinChimeMeeting action we returned in NEW_OUTBOUND_CALL
+      console.log("CALL_ANSWERED — waiting for JoinChimeMeeting to execute");
+      return { SchemaVersion: "1.0", Actions: [] };
 
     case "CALL_UPDATE_REQUESTED":
       return handleCallUpdateRequested(event);
@@ -128,7 +173,9 @@ async function handleNewInboundCall(event) {
         lookup.phone_answer_mode
       );
 
-      // Notify diviner — this now also creates the meeting & dials their phone
+      // Notify diviner — creates meeting, dials their phone, sends push.
+      // Fire-and-forget: we must return the Pause action quickly to keep
+      // the SMA happy. The notify endpoint runs on Vercel independently.
       const transactionId = callDetails?.TransactionId;
       fetch(`${APP_URL}/api/chime/voice/notify`, {
         method: "POST",
@@ -142,7 +189,6 @@ async function handleNewInboundCall(event) {
           callerPhone,
           callId,
           transactionId,
-          // Pass these so notify can dial diviner's phone
           phoneAnswerMode: lookup.phone_answer_mode ?? "both",
           phoneMobile: lookup.phone_mobile ?? null,
           chimePhoneNumber: calledNumber,
@@ -191,18 +237,27 @@ async function handleNewOutboundCall(event) {
   const participants = callDetails?.Participants ?? [];
   const outbound = participants.find((p) => p.Direction === "Outbound");
   const callId = outbound?.CallId;
+  const txId = callDetails?.TransactionId;
 
-  // The ArgumentsMap we passed in CreateSipMediaApplicationCallCommand
-  const args = callDetails?.Parameters?.ArgumentsMap ?? {};
+  // !! CRITICAL: For NEW_OUTBOUND_CALL, arguments live in
+  //    event.ActionData.Parameters.Arguments
+  // NOT in callDetails.Parameters.ArgumentsMap (which is empty/missing)
+  const args = event.ActionData?.Parameters?.Arguments ?? {};
 
   console.log("=== NEW OUTBOUND CALL ===");
   console.log("callId:", callId);
+  console.log("txId:", txId);
   console.log("to:", outbound?.To);
   console.log("Arguments:", JSON.stringify(args));
 
   if (args.action === "ring_diviner" && args.meetingId && args.joinToken) {
-    // When the diviner answers their phone, join them into the Chime meeting
-    // and then bridge the original caller in
+    // Cache args so ACTION_SUCCESSFUL can retrieve them later
+    if (txId) {
+      cacheArgs(txId, args);
+      console.log("Cached outbound args for txId:", txId);
+    }
+
+    // Return JoinChimeMeeting — SMA will execute this when the diviner answers
     console.log(
       "Will join diviner to meeting:",
       args.meetingId,
@@ -282,6 +337,7 @@ async function handleActionSuccessful(event) {
   const participant = participants[0];
   const callId = participant?.CallId;
   const direction = participant?.Direction;
+  const txId = callDetails?.TransactionId;
 
   console.log(
     "ACTION_SUCCESSFUL:",
@@ -289,43 +345,51 @@ async function handleActionSuccessful(event) {
     "direction:",
     direction,
     "callId:",
-    callId
+    callId,
+    "txId:",
+    txId
   );
 
   // Diviner answered their phone and joined the Chime meeting
   // Now bridge the original caller into the same meeting
   if (actionType === "JoinChimeMeeting" && direction === "Outbound") {
-    const args = callDetails?.Parameters?.ArgumentsMap ?? {};
+    // Try multiple sources for the arguments:
+    // 1. Module-level cache (most reliable)
+    // 2. CallDetails.Parameters.ArgumentsMap (may not exist for outbound calls)
+    const cached = txId ? getCachedArgs(txId) : null;
+    const eventArgs = callDetails?.Parameters?.ArgumentsMap ?? {};
+    const args = cached || eventArgs;
+
     console.log(
       "Diviner joined meeting via phone! Bridging caller...",
-      "meetingId:",
-      args.meetingId
+      "source:", cached ? "cache" : "event",
+      "meetingId:", args.meetingId,
+      "phoneSessionId:", args.phoneSessionId
     );
 
-    // Call bridge-caller endpoint to bridge the inbound caller
-    if (
-      args.inboundTransactionId &&
-      args.meetingId &&
-      args.callerJoinToken
-    ) {
-      fetch(`${APP_URL}/api/chime/voice/bridge-caller`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${CRON_SECRET}`,
-        },
-        body: JSON.stringify({
-          phoneSessionId: args.phoneSessionId,
-          inboundTransactionId: args.inboundTransactionId,
-          meetingId: args.meetingId,
-          callerJoinToken: args.callerJoinToken,
-          callerAttendeeId: args.callerAttendeeId,
-        }),
-      }).catch((err) =>
-        console.error("Bridge-caller fire-and-forget failed:", err?.message)
-      );
+    // Call bridge-caller endpoint which looks up everything from the DB.
+    // Only needs meetingId and phoneSessionId.
+    // MUST await — Lambda freezes context on return.
+    if (args.meetingId && args.phoneSessionId) {
+      try {
+        const bridgeRes = await fetch(`${APP_URL}/api/chime/voice/bridge-caller`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${CRON_SECRET}`,
+          },
+          body: JSON.stringify({
+            phoneSessionId: args.phoneSessionId,
+            meetingId: args.meetingId,
+          }),
+        });
+        const bridgeBody = await bridgeRes.text();
+        console.log("Bridge-caller response:", bridgeRes.status, bridgeBody);
+      } catch (err) {
+        console.error("Bridge-caller call failed:", err?.message);
+      }
     } else {
-      console.warn("Missing bridge arguments:", JSON.stringify(args));
+      console.warn("Missing bridge arguments! args:", JSON.stringify(args));
     }
 
     return { SchemaVersion: "1.0", Actions: [] };
@@ -365,19 +429,28 @@ async function handleActionFailed(event) {
   const actionData = event.ActionData;
   const direction =
     event.CallDetails?.Participants?.[0]?.Direction ?? "Unknown";
+  const txId = event.CallDetails?.TransactionId;
   console.error(
     "SMA action failed:",
     JSON.stringify(actionData),
     "direction:",
-    direction
+    direction,
+    "txId:",
+    txId
   );
+
+  // Clean up cached args if the outbound call failed
+  if (txId) _outboundArgs.delete(txId);
 
   const callId = event.CallDetails?.Participants?.[0]?.CallId;
 
   // If the outbound call to diviner failed (no answer, busy, etc.), just end it
   if (direction === "Outbound") {
     console.log("Outbound call to diviner failed — hanging up outbound leg");
-    return { SchemaVersion: "1.0", Actions: [{ Type: "Hangup", Parameters: { SipResponseCode: "480" } }] };
+    return {
+      SchemaVersion: "1.0",
+      Actions: [{ Type: "Hangup", Parameters: { SipResponseCode: "480" } }],
+    };
   }
 
   return hangupWithMessage(
@@ -415,7 +488,7 @@ async function handleHangup(event) {
           callId,
           callStatus: "completed",
           durationSeconds: Math.round(
-            (Date.now() - new Date(participant.StartTime).getTime()) / 1000
+            (Date.now() - new Date(participant.StartTimeInMilliseconds).getTime()) / 1000
           ),
         }),
       });
@@ -426,8 +499,9 @@ async function handleHangup(event) {
 
   // Outbound call to diviner hung up (they declined or didn't answer)
   if (direction === "Outbound") {
+    const txId = callDetails?.TransactionId;
+    if (txId) _outboundArgs.delete(txId); // cleanup
     console.log("Outbound call to diviner ended (declined or no answer)");
-    // The inbound caller is still on hold — they can still be answered from dashboard
   }
 
   return { SchemaVersion: "1.0", Actions: [] };
