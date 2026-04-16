@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { generateShareId } from "@/lib/format";
 import { verifyCronAuth } from "@/lib/cron-auth";
@@ -120,55 +120,14 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      let recordingKey: string | undefined;
-
-      if (finalFile?.Key) {
-        recordingKey = finalFile.Key;
-      } else if (compositedFiles.length > 1 && ageMinutes >= 10) {
-        // Concatenation failed or never ran — stitch segments ourselves.
-        // Chime composited-video segments are fMP4 (fragmented MP4) with
-        // identical codec settings; binary concatenation produces a valid file.
-        try {
-          // Sort by name (chronological)
-          const sorted = [...compositedFiles].sort((a, b) =>
-            (a.Key ?? "").localeCompare(b.Key ?? "")
-          );
-
-          const chunks: Uint8Array[] = [];
-          for (const seg of sorted) {
-            const obj = await s3.send(
-              new GetObjectCommand({ Bucket: RECORDING_BUCKET, Key: seg.Key! })
-            );
-            chunks.push(await obj.Body!.transformToByteArray());
-          }
-
-          const totalSize = chunks.reduce((sum, c) => sum + c.length, 0);
-          const merged = new Uint8Array(totalSize);
-          let off = 0;
-          for (const chunk of chunks) { merged.set(chunk, off); off += chunk.length; }
-
-          const stitchedKey = `recordings/${bookingId}/final/stitched.mp4`;
-          await s3.send(
-            new PutObjectCommand({
-              Bucket: RECORDING_BUCKET,
-              Key: stitchedKey,
-              Body: merged,
-              ContentType: "video/mp4",
-            })
-          );
-          recordingKey = stitchedKey;
-          console.log(`[sync-recordings] Stitched ${sorted.length} segments (${(totalSize / 1024 / 1024).toFixed(1)} MB) for booking ${bookingId}`);
-        } catch (stitchErr) {
-          console.error(`[sync-recordings] Stitch failed for ${bookingId}:`, stitchErr);
-          recordingKey = compositedFiles[0]?.Key; // fallback to largest segment
-        }
-      } else {
-        recordingKey =
-          compositedFiles[0]?.Key ??
-          allMp4sBySize[0]?.Key ??
-          objects.find((o) => o.Key?.endsWith(".webm"))?.Key ??
-          objects.find((o) => (o.Size ?? 0) > 0)?.Key;
-      }
+      // Pick best single file: /final/ > largest segment > any MP4 > any file
+      // Full multi-segment playback is handled by the segment player in the UI.
+      const recordingKey =
+        finalFile?.Key ??
+        compositedFiles[0]?.Key ??
+        allMp4sBySize[0]?.Key ??
+        objects.find((o) => o.Key?.endsWith(".webm"))?.Key ??
+        objects.find((o) => (o.Size ?? 0) > 0)?.Key;
 
       if (!recordingKey) {
         results.push({ bookingId, status: "no_playable_file" });
