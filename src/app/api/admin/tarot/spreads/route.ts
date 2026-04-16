@@ -25,14 +25,17 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { name, description, card_count, priority, thumbnail_url, is_active } = body;
+  const { name, description, card_count, priority, image_url, layout_json, is_active } = body;
 
   if (!name) return NextResponse.json({ error: "Name is required" }, { status: 422 });
+
+  const insertData: Record<string, unknown> = { name, description, card_count, priority, image_url: image_url ?? null, is_active };
+  if (layout_json !== undefined) insertData.layout_json = layout_json;
 
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("tarot_spreads")
-    .insert({ name, description, card_count, priority, thumbnail_url: thumbnail_url ?? null, is_active })
+    .insert(insertData)
     .select()
     .single();
 
