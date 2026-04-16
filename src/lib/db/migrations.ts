@@ -30,6 +30,8 @@ import { MIGRATION_SQL as MIG_20260415000001 } from "@/data/migrations/202604150
 import { MIGRATION_SQL as MIG_20260416000001 } from "@/data/migrations/20260416000001_phone_call_notifications";
 import { MIGRATION_SQL as MIG_20260416000002 } from "@/data/migrations/20260416000002_phone_sessions_status_expand";
 import { MIGRATION_SQL as MIG_20260416000003 } from "@/data/migrations/20260416000003_add_chat_transcript";
+import { MIGRATION_SQL as MIG_20260416000006 } from "@/data/migrations/MIG_20260416000006_push_subscriptions";
+import { MIGRATION_SQL as MIG_20260416000005 } from "@/data/migrations/20260416000005_simultaneous_ring";
 import { MIGRATION_SQL as MIG_20260416000004 } from "@/data/migrations/20260416000004_tarot_dynamic_system";
 
 /**
@@ -311,6 +313,22 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds chat_transcript JSONB column to bookings. Stores the full array of chat messages exchanged during a video session. Each entry: {from, text, time}. Populated by end-meeting and end-session APIs when the diviner ends the call.",
     sortKey: "20260416000003",
     sql: MIG_20260416000003,
+  },
+  "MIG_20260416000006_push_subscriptions": {
+    id: "MIG_20260416000006_push_subscriptions",
+    title: "Push subscriptions (Web Push for call notifications)",
+    description:
+      "Creates push_subscriptions table for storing Web Push subscriptions per diviner. Supports multiple subscriptions per diviner (phone + desktop browsers). Cleaned up automatically when expired. RLS enabled with diviner-managed own-row policies and service-role-all for server-side push sending.",
+    sortKey: "MIG_20260416000006",
+    sql: MIG_20260416000006,
+  },
+  "20260416000005_simultaneous_ring": {
+    id: "20260416000005_simultaneous_ring",
+    title: "Simultaneous Ring (outbound transaction tracking)",
+    description:
+      "Adds chime_outbound_transaction_id to phone_sessions. Tracks the outbound PSTN call to the diviner's personal phone during simultaneous ring — needed to cancel the outbound call if the diviner answers from the dashboard instead.",
+    sortKey: "20260416000005",
+    sql: MIG_20260416000005,
   },
   "20260416000004_tarot_dynamic_system": {
     id: "20260416000004_tarot_dynamic_system",

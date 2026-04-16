@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, ChevronLeft } from "lucide-react";
+import Image from "next/image";
+import { ArrowRight, ChevronLeft, BadgeCheck, CalendarDays } from "lucide-react";
+import { getDivinerAvatarUrl } from "@/lib/diviner-images";
 
 const LIFE_AREAS = [
   "Career & Life Purpose",
@@ -15,21 +17,37 @@ const LIFE_AREAS = [
   "Other",
 ] as const;
 
+export interface LeadDivinerCard {
+  username: string;
+  displayName: string;
+  tagline: string | null;
+  avatarUrl: string | null;
+  isCertified: boolean;
+  startingPrice: number | null;
+  specialties?: string[] | null;
+}
+
 interface ReadingLeadFormProps {
   serviceType: "astrology" | "tarot";
   serviceName: string;
   sourceUrl?: string;
+  diviners?: LeadDivinerCard[];
 }
 
 type Step = 1 | 2;
 type Status = "idle" | "loading" | "success" | "error";
 
-export function ReadingLeadForm({ serviceType, serviceName, sourceUrl }: ReadingLeadFormProps) {
+export function ReadingLeadForm({
+  serviceType,
+  serviceName,
+  sourceUrl,
+  diviners = [],
+}: ReadingLeadFormProps) {
   const [step, setStep] = useState<Step>(1);
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Step 1 fields
+  // Step 1
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [lifeArea, setLifeArea] = useState("");
@@ -83,23 +101,59 @@ export function ReadingLeadForm({ serviceType, serviceName, sourceUrl }: Reading
     }
   }
 
+  // ── Success state: show reader selection ──────────────────────────────────
   if (status === "success") {
     return (
-      <div className="rounded-2xl border border-[#c9a84c]/30 bg-[#c9a84c]/8 px-6 py-8 text-center">
-        <div className="mb-4 inline-flex size-14 items-center justify-center rounded-full border border-[#c9a84c]/30 bg-[#c9a84c]/15">
-          <span className="text-2xl">✨</span>
+      <div className="space-y-6">
+        {/* Confirmation banner */}
+        <div className="flex items-start gap-3 rounded-xl border border-[#c9a84c]/30 bg-[#c9a84c]/8 px-4 py-4">
+          <span className="mt-0.5 text-xl" aria-hidden="true">✅</span>
+          <div>
+            <p className="text-sm font-semibold text-[#f5f0e8]">
+              Got it, {name.split(" ")[0]}! Your details are saved.
+            </p>
+            <p className="mt-0.5 text-xs text-[#b8bcd0]/60">
+              We&apos;ll send your free guide to {email}. Now choose a reader and book your session below.
+            </p>
+          </div>
         </div>
-        <p className="text-lg font-semibold text-[#f5f0e8]">
-          You&apos;re on the list, {name.split(" ")[0]}!
-        </p>
-        <p className="mt-2 text-sm text-[#b8bcd0]/65">
-          We&apos;ll match you with the right{" "}
-          {serviceType === "tarot" ? "tarot reader" : "astrologer"} and send your free guide shortly.
-        </p>
+
+        {/* Reader selection */}
+        {diviners.length > 0 ? (
+          <div className="space-y-4">
+            <p className="text-sm font-semibold text-[#f5f0e8]">
+              Choose your {serviceType === "tarot" ? "tarot reader" : "astrologer"} and book:
+            </p>
+            <div className="space-y-3">
+              {diviners.map((d) => (
+                <DivinerBookingRow key={d.username} diviner={d} serviceType={serviceType} />
+              ))}
+            </div>
+            <p className="text-center text-xs text-[#b8bcd0]/35">
+              All readers are vetted and DIB certified. Secure payment via Stripe.
+            </p>
+          </div>
+        ) : (
+          <div className="text-center">
+            <p className="mb-4 text-sm text-[#b8bcd0]/60">
+              Our team will match you with the right{" "}
+              {serviceType === "tarot" ? "tarot reader" : "astrologer"} and be in touch shortly.
+              Or browse all available readers now:
+            </p>
+            <a
+              href={serviceType === "tarot" ? "/discover?type=tarot" : "/discover?type=astrologer"}
+              className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#c9a84c] px-6 text-sm font-semibold text-black transition-colors hover:bg-[#e2c97e]"
+            >
+              Browse All {serviceType === "tarot" ? "Tarot Readers" : "Astrologers"}
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </a>
+          </div>
+        )}
       </div>
     );
   }
 
+  // ── Shared input styles ───────────────────────────────────────────────────
   const inputClass =
     "h-[48px] w-full rounded-lg border border-[#c9a84c]/20 bg-white/[0.04] px-4 text-sm text-[#f5f0e8] placeholder:text-[#b8bcd0]/30 focus:border-[#c9a84c]/50 focus:outline-none focus:ring-1 focus:ring-[#c9a84c]/20 transition-colors";
 
@@ -108,12 +162,24 @@ export function ReadingLeadForm({ serviceType, serviceName, sourceUrl }: Reading
 
   const labelClass = "mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#b8bcd0]/50";
 
+  const submitButtonClass =
+    "flex h-12 flex-1 items-center justify-center gap-2 rounded-lg font-semibold text-black transition-all hover:brightness-110 disabled:opacity-60";
+
+  const submitButtonStyle = {
+    background: "linear-gradient(180deg, #f8d275 0%, #cd912f 100%)",
+    boxShadow: "0 4px 15px rgba(201,168,76,0.3)",
+  };
+
   return (
     <div className="text-left">
       {/* Progress bar */}
       <div className="mb-6 flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <span className={`flex size-6 items-center justify-center rounded-full text-xs font-bold ${step >= 1 ? "bg-[#c9a84c] text-black" : "border border-white/20 text-white/40"}`}>
+          <span
+            className={`flex size-6 items-center justify-center rounded-full text-xs font-bold ${
+              step >= 1 ? "bg-[#c9a84c] text-black" : "border border-white/20 text-white/40"
+            }`}
+          >
             1
           </span>
           <span className={`text-xs font-medium ${step >= 1 ? "text-[#c9a84c]" : "text-white/30"}`}>
@@ -122,16 +188,27 @@ export function ReadingLeadForm({ serviceType, serviceName, sourceUrl }: Reading
         </div>
         <div className="h-px flex-1 bg-white/10" />
         <div className="flex items-center gap-2">
-          <span className={`flex size-6 items-center justify-center rounded-full text-xs font-bold ${step >= 2 ? "bg-[#c9a84c] text-black" : "border border-white/20 text-white/40"}`}>
+          <span
+            className={`flex size-6 items-center justify-center rounded-full text-xs font-bold ${
+              step >= 2 ? "bg-[#c9a84c] text-black" : "border border-white/20 text-white/40"
+            }`}
+          >
             2
           </span>
           <span className={`text-xs font-medium ${step >= 2 ? "text-[#c9a84c]" : "text-white/30"}`}>
             {serviceType === "astrology" ? "Birth Details" : "Your Question"}
           </span>
         </div>
+        <div className="h-px flex-1 bg-white/10" />
+        <div className="flex items-center gap-2">
+          <span className="flex size-6 items-center justify-center rounded-full border border-white/20 text-xs font-bold text-white/40">
+            3
+          </span>
+          <span className="text-xs font-medium text-white/30">Book</span>
+        </div>
       </div>
 
-      {/* Step 1 */}
+      {/* Step 1 — Contact + life area */}
       {step === 1 && (
         <form onSubmit={handleStep1} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -178,14 +255,17 @@ export function ReadingLeadForm({ serviceType, serviceName, sourceUrl }: Reading
                   <option key={area} value={area}>{area}</option>
                 ))}
               </select>
-              <ArrowRight className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 rotate-90 text-[#c9a84c]/40" aria-hidden="true" />
+              <ArrowRight
+                className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 rotate-90 text-[#c9a84c]/40"
+                aria-hidden="true"
+              />
             </div>
           </div>
 
           <button
             type="submit"
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-lg font-semibold text-black transition-all hover:brightness-110"
-            style={{ background: "linear-gradient(180deg, #f8d275 0%, #cd912f 100%)", boxShadow: "0 4px 15px rgba(201,168,76,0.3)" }}
+            className={submitButtonClass + " w-full"}
+            style={submitButtonStyle}
           >
             Continue <ArrowRight className="size-4" aria-hidden="true" />
           </button>
@@ -193,7 +273,7 @@ export function ReadingLeadForm({ serviceType, serviceName, sourceUrl }: Reading
         </form>
       )}
 
-      {/* Step 2 — Astrology */}
+      {/* Step 2 — Astrology: birth details */}
       {step === 2 && serviceType === "astrology" && (
         <form onSubmit={handleStep2} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -212,7 +292,8 @@ export function ReadingLeadForm({ serviceType, serviceName, sourceUrl }: Reading
             </div>
             <div>
               <label htmlFor="birth-time" className={labelClass}>
-                Birth Time <span className="text-[#b8bcd0]/35">(optional)</span>
+                Birth Time{" "}
+                <span className="text-[#b8bcd0]/35 normal-case font-normal">(optional)</span>
               </label>
               <input
                 id="birth-time"
@@ -226,7 +307,7 @@ export function ReadingLeadForm({ serviceType, serviceName, sourceUrl }: Reading
 
           <div>
             <label htmlFor="birth-place" className={labelClass}>
-              Birth City & Country <span className="text-[#c9a84c]">*</span>
+              Birth City &amp; Country <span className="text-[#c9a84c]">*</span>
             </label>
             <input
               id="birth-place"
@@ -241,15 +322,16 @@ export function ReadingLeadForm({ serviceType, serviceName, sourceUrl }: Reading
 
           <div>
             <label htmlFor="astrology-note" className={labelClass}>
-              Anything specific you want to explore? <span className="text-[#b8bcd0]/35">(optional)</span>
+              Anything specific to explore?{" "}
+              <span className="text-[#b8bcd0]/35 normal-case font-normal">(optional)</span>
             </label>
             <textarea
               id="astrology-note"
               rows={3}
               value={astrologyNote}
               onChange={(e) => setAstrologyNote(e.target.value)}
-              placeholder="e.g. I'm going through a big career change and want to understand my timing..."
-              className="w-full rounded-lg border border-[#c9a84c]/20 bg-white/[0.04] px-4 py-3 text-sm text-[#f5f0e8] placeholder:text-[#b8bcd0]/30 focus:border-[#c9a84c]/50 focus:outline-none focus:ring-1 focus:ring-[#c9a84c]/20 transition-colors resize-none"
+              placeholder="e.g. I'm navigating a career change and want clarity on timing..."
+              className="w-full resize-none rounded-lg border border-[#c9a84c]/20 bg-white/[0.04] px-4 py-3 text-sm text-[#f5f0e8] placeholder:text-[#b8bcd0]/30 focus:border-[#c9a84c]/50 focus:outline-none focus:ring-1 focus:ring-[#c9a84c]/20 transition-colors"
             />
           </div>
 
@@ -268,17 +350,17 @@ export function ReadingLeadForm({ serviceType, serviceName, sourceUrl }: Reading
             <button
               type="submit"
               disabled={status === "loading"}
-              className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg font-semibold text-black transition-all hover:brightness-110 disabled:opacity-60"
-              style={{ background: "linear-gradient(180deg, #f8d275 0%, #cd912f 100%)", boxShadow: "0 4px 15px rgba(201,168,76,0.3)" }}
+              className={submitButtonClass}
+              style={submitButtonStyle}
             >
-              {status === "loading" ? "Sending…" : "Get My Free Guide"}
+              {status === "loading" ? "Saving…" : "Save & Choose My Reader"}
               {status !== "loading" && <ArrowRight className="size-4" aria-hidden="true" />}
             </button>
           </div>
         </form>
       )}
 
-      {/* Step 2 — Tarot */}
+      {/* Step 2 — Tarot: question */}
       {step === 2 && serviceType === "tarot" && (
         <form onSubmit={handleStep2} className="space-y-4">
           <div>
@@ -292,10 +374,10 @@ export function ReadingLeadForm({ serviceType, serviceName, sourceUrl }: Reading
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               placeholder="Be as specific as you like — the more context you give, the more focused your reading will be..."
-              className="w-full rounded-lg border border-[#c9a84c]/20 bg-white/[0.04] px-4 py-3 text-sm text-[#f5f0e8] placeholder:text-[#b8bcd0]/30 focus:border-[#c9a84c]/50 focus:outline-none focus:ring-1 focus:ring-[#c9a84c]/20 transition-colors resize-none"
+              className="w-full resize-none rounded-lg border border-[#c9a84c]/20 bg-white/[0.04] px-4 py-3 text-sm text-[#f5f0e8] placeholder:text-[#b8bcd0]/30 focus:border-[#c9a84c]/50 focus:outline-none focus:ring-1 focus:ring-[#c9a84c]/20 transition-colors"
             />
             <p className="mt-1.5 text-xs text-[#b8bcd0]/35">
-              This is shared only with your matched reader, not stored publicly.
+              Shared only with your matched reader. Not stored publicly.
             </p>
           </div>
 
@@ -314,15 +396,82 @@ export function ReadingLeadForm({ serviceType, serviceName, sourceUrl }: Reading
             <button
               type="submit"
               disabled={status === "loading"}
-              className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg font-semibold text-black transition-all hover:brightness-110 disabled:opacity-60"
-              style={{ background: "linear-gradient(180deg, #f8d275 0%, #cd912f 100%)", boxShadow: "0 4px 15px rgba(201,168,76,0.3)" }}
+              className={submitButtonClass}
+              style={submitButtonStyle}
             >
-              {status === "loading" ? "Sending…" : "Get My Free Guide"}
+              {status === "loading" ? "Saving…" : "Save & Choose My Reader"}
               {status !== "loading" && <ArrowRight className="size-4" aria-hidden="true" />}
             </button>
           </div>
         </form>
       )}
+    </div>
+  );
+}
+
+// ── Diviner booking row ────────────────────────────────────────────────────
+function DivinerBookingRow({
+  diviner,
+  serviceType,
+}: {
+  diviner: LeadDivinerCard;
+  serviceType: "astrology" | "tarot";
+}) {
+  const avatarUrl = getDivinerAvatarUrl(diviner.avatarUrl);
+
+  return (
+    <div className="group flex items-center gap-4 rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 transition-all hover:border-[#c9a84c]/30 hover:bg-white/[0.04]">
+      {/* Avatar */}
+      <Image
+        src={avatarUrl}
+        alt={diviner.displayName}
+        width={48}
+        height={48}
+        className="size-12 shrink-0 rounded-full border border-[#c9a84c]/20 object-cover"
+      />
+
+      {/* Info */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className="truncate text-sm font-semibold text-[#f5f0e8] transition-colors group-hover:text-[#c9a84c]">
+            {diviner.displayName}
+          </p>
+          {diviner.isCertified && (
+            <BadgeCheck className="size-3.5 shrink-0 text-[#c9a84c]" aria-label="DIB Certified" />
+          )}
+        </div>
+        {diviner.tagline && (
+          <p className="mt-0.5 truncate text-xs text-[#b8bcd0]/50">{diviner.tagline}</p>
+        )}
+        {diviner.specialties && diviner.specialties.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {diviner.specialties.slice(0, 2).map((s) => (
+              <span
+                key={s}
+                className="rounded-full border border-[#c9a84c]/15 bg-[#c9a84c]/5 px-1.5 py-0.5 text-[10px] text-[#c9a84c]/70"
+              >
+                {s}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Price + Book CTA */}
+      <div className="flex shrink-0 flex-col items-end gap-2">
+        {diviner.startingPrice !== null && (
+          <p className="text-xs text-[#b8bcd0]/50">
+            From <span className="font-semibold text-[#f5f0e8]">${diviner.startingPrice}</span>
+          </p>
+        )}
+        <a
+          href={`/${diviner.username}`}
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#c9a84c] px-4 text-xs font-bold text-black transition-colors hover:bg-[#e2c97e]"
+        >
+          <CalendarDays className="size-3.5" aria-hidden="true" />
+          Book
+        </a>
+      </div>
     </div>
   );
 }
