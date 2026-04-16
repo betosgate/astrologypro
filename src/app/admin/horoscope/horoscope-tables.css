@@ -200,7 +200,7 @@
 }
 
 .interp-gradient-default {
-    background: linear-gradient(166deg, #f0a023 0%, #f8d647 100%) !important;
+    background: linear-gradient(166deg, rgb(240, 160, 35) 0%, rgb(248, 214, 71) 100%) !important;
     color: #000000 !important;
 }
 
@@ -285,67 +285,67 @@
     color: #000000 !important;
 }
 
-/* Moon: Silver/Soft White/Pale Blue */
+/* Moon */
 .planet-interp-moon {
-    background: linear-gradient(135deg, #e0e0e0 0%, #f5f5f5 50%, #d1d9e6 100%) !important;
-    color: #1a1a1a !important;
+    background: linear-gradient(166deg, #8c8c8c 0%, #C0C0C0 100%) !important;
+    color: #000000 !important;
 }
 
-/* Mercury: Grey/Teal/Mixed */
+/* Mercury */
 .planet-interp-mercury {
-    background: linear-gradient(135deg, #9ca3af 0%, #60a5fa 100%) !important;
+    background: linear-gradient(166deg, #FFFF00 0%, #FFD700 100%) !important;
     color: #000000 !important;
 }
 
-/* Venus: Soft Pink/Pastel Green */
+/* Venus */
 .planet-interp-venus {
-    background: linear-gradient(135deg, #fbcfe8 0%, #dbf7a6 100%) !important;
+    background: linear-gradient(166deg, #00FF00 0%, #32CD32 100%) !important;
     color: #000000 !important;
 }
 
-/* Mars: Crimson/Deep Orange */
+/* Mars */
 .planet-interp-mars {
-    background: linear-gradient(135deg, #ef4444 0%, #991b1b 100%) !important;
+    background: linear-gradient(166deg, #FF0000 0%, #B22222 100%) !important;
     color: #ffffff !important;
 }
 
-/* Jupiter: Royal Purple/Touch of Gold */
+/* Jupiter */
 .planet-interp-jupiter {
-    background: linear-gradient(135deg, #8b5cf6 0%, #4c1d95 100%) !important;
+    background: linear-gradient(166deg, #0000FF 0%, #1E90FF 100%) !important;
     color: #ffffff !important;
 }
 
-/* Saturn: Dark Slate/Deep Grey */
+/* Saturn */
 .planet-interp-saturn {
-    background: linear-gradient(135deg, #374151 0%, #111827 100%) !important;
+    background: linear-gradient(166deg, #000000 0%, #4B4B4B 100%) !important;
     color: #ffffff !important;
 }
 
-/* Uranus: Cyan/Electric Blue */
+/* Uranus */
 .planet-interp-uranus {
-    background: linear-gradient(135deg, #22d3ee 0%, #0369a1 100%) !important;
+    background: linear-gradient(166deg, #00FFFF 0%, #008B8B 100%) !important;
     color: #000000 !important;
 }
 
-/* Neptune: Sea Green/Ethereal Blue */
+/* Neptune */
 .planet-interp-neptune {
-    background: linear-gradient(135deg, #5eead4 0%, #0d9488 100%) !important;
-    color: #000000 !important;
+    background: linear-gradient(166deg, #00008B 0%, #4169E1 100%) !important;
+    color: #ffffff !important;
 }
 
-/* Pluto: Black/Deep Crimson */
+/* Pluto */
 .planet-interp-pluto {
-    background: linear-gradient(135deg, #7f1d1d 0%, #000000 100%) !important;
+    background: linear-gradient(166deg, #8B0000 0%, #CD5C5C 100%) !important;
     color: #ffffff !important;
 }
 
-/* Karmic/Other: Bronze/Earthy */
+/* Other sections */
 .section-karmic-indicators {
-    background: linear-gradient(135deg, #b45309 0%, #451a03 100%) !important;
-    color: #ffffff !important;
+    background: linear-gradient(166deg, rgb(240, 160, 35) 0%, rgb(248, 214, 71) 100%) !important;
+    color: #000000 !important;
 }
 
 .section-timing-transits {
-    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
-    color: #ffffff !important;
+    background: linear-gradient(166deg, rgb(240, 160, 35) 0%, rgb(248, 214, 71) 100%) !important;
+    color: #000000 !important;
 }

@@ -95,6 +95,13 @@ export function getRelationshipBgClass(itemTitle: string, tabSlug?: string, sect
 
   const lower = itemTitle.toLowerCase();
 
+  // For aspect-style titles like "Mars Sextile Mercury", use the leading planet.
+  if (ASPECT_TYPE_WORDS.some((word) => lower.includes(word.toLowerCase()))) {
+    const { p1 } = parseAspectTitle(itemTitle);
+    const primaryClass = getPlanetInterpClass(p1);
+    if (primaryClass !== "interp-gradient-default") return primaryClass;
+  }
+
   // 1. Planet-specific detection (Highest Priority)
   if (lower.includes("sun")) return "planet-interp-sun";
   if (lower.includes("moon")) return "planet-interp-moon";

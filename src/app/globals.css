@@ -259,22 +259,22 @@
 
 /* ─── Planet-specific interpretation gradients (Dynamic Text Color) ───── */
 .planet-interp-sun {
-  background: linear-gradient(166deg, rgba(240, 160, 35, 1) 0%, rgba(248, 214, 71, 1) 100%);
+  background: linear-gradient(166deg, rgb(240, 160, 35) 0%, rgb(248, 214, 71) 100%) !important;
   color: #000 !important;
 }
 
 .planet-interp-moon {
-  background: linear-gradient(166deg, #8c8c8c 0%, #C0C0C0 100%);
+  background: linear-gradient(166deg, #8c8c8c 0%, #C0C0C0 100%) !important;
   color: #000 !important;
 }
 
 .planet-interp-mercury {
-  background: linear-gradient(166deg, #FFFF00 0%, #FFD700 100%);
+  background: linear-gradient(166deg, #FFFF00 0%, #FFD700 100%) !important;
   color: #000 !important;
 }
 
 .planet-interp-venus {
-  background: linear-gradient(166deg, #00FF00 0%, #32CD32 100%);
+  background: linear-gradient(166deg, #00FF00 0%, #32CD32 100%) !important;
   color: #000 !important;
 }
 
@@ -294,7 +294,7 @@
 }
 
 .planet-interp-uranus {
-  background: linear-gradient(166deg, #00FFFF 0%, #008B8B 100%);
+  background: linear-gradient(166deg, #00FFFF 0%, #008B8B 100%) !important;
   color: #000 !important;
 }
 
@@ -310,19 +310,19 @@
 
 /* Specific Section Gradients for Romantic Forecast V2 */
 .section-timing-transits {
-  background: linear-gradient(166deg, #00008B 0%, #4169E1 100%);
-  color: #ffffff !important;
+  background: linear-gradient(166deg, rgb(240, 160, 35) 0%, rgb(248, 214, 71) 100%) !important;
+  color: #000 !important;
 }
 
 .section-karmic-indicators {
-  background: linear-gradient(166deg, #8B0000 0%, #CD5C5C 100%);
-  color: #ffffff !important;
+  background: linear-gradient(166deg, rgb(240, 160, 35) 0%, rgb(248, 214, 71) 100%) !important;
+  color: #000 !important;
 }
 
 /* Default golden-orange gradient for interpretations (non-planet sections) */
 .interp-gradient-default {
-  background: linear-gradient(166deg, #f0a023 0%, #f8d647 100%);
-  color: #000;
+  background: linear-gradient(166deg, rgb(240, 160, 35) 0%, rgb(248, 214, 71) 100%) !important;
+  color: #000 !important;
 }
 
 /* Horoscope section headers — Dark bg, White text */
