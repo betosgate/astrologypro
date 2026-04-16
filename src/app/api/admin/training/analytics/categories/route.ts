@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
 
   const sp = req.nextUrl.searchParams;
   const programIdFilter = sp.get("program_id")?.trim() ?? null;
+  const searchFilter = sp.get("search")?.trim() ?? null;
 
   const admin = createAdminClient();
 
@@ -34,6 +35,9 @@ export async function GET(req: NextRequest) {
 
   if (programIdFilter) {
     categoriesQuery = categoriesQuery.eq("training_id", programIdFilter);
+  }
+  if (searchFilter) {
+    categoriesQuery = categoriesQuery.ilike("name", `%${searchFilter}%`);
   }
 
   const [categoriesRes, programsRes] = await Promise.all([
@@ -138,9 +142,9 @@ export async function GET(req: NextRequest) {
     const mean_completion_time_seconds =
       completionStats.completion_times.length > 0
         ? Math.round(
-            completionStats.completion_times.reduce((s, n) => s + n, 0) /
-              completionStats.completion_times.length
-          )
+          completionStats.completion_times.reduce((s, n) => s + n, 0) /
+          completionStats.completion_times.length
+        )
         : 0;
     // median_completion_time — excludes records with no valid time data
     const median_completion_time_seconds = median(completionStats.completion_times);
