@@ -1809,7 +1809,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
     {
-  "name": "horoscope_friendship_setup",
+  "name": "horoscope_friendship_setup_v1",
   "label": "Friendship: Compatibility Chart Setup",
   "description": "Enter both friends' birth details to generate the friendship compatibility charts and relationship reading.",
   "group": "Horoscope Toolkit",
