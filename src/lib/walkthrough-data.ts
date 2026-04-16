@@ -2543,36 +2543,193 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
       // -----------Predictive Event (Horary)--------------//
-      { 
-        name: "horoscope_horary_setup", 
-        label: "Horary: Momentary Answers", 
-        description: "The astrology of questions.", 
-        group: "Horoscope Toolkit",
-        subModule: "Predictive Event (Horary)",
-        purpose: "A specialized predictive tool that analyzes the chart of the exact moment a question is asked and understood.",
-        bullets: [
-          "Automatic 'Question Timestamp' capture",
-          "Cusp-of-querent vs Cusp-of-quesited logic",
-          "Strict horary validity checks (Too early/Too late)",
-          "Clear 'Yes/No' indicators with technical rationale"
-        ]
-      },
-      { 
-        name: "horoscope_horary_result", 
-        label: "Horary: Momentary Synthesis", 
-        description: "Decoding the divine answer.", 
-        group: "Horoscope Toolkit",
-        subModule: "Predictive Event (Horary)",
-        purpose: "Provides the technical and AI-derived answer to a specific question based on the astrological moment.",
-        bullets: [
-          "Momentum-based 'Yes/No' decision matrix",
-          "Critical house-ruler aspect tracking",
-          "Traditional dignity and receptivity scores",
-          "Technical rationale for every predictive judgment"
-        ]
-      },
+      {
+  "name": "horoscope_predictive_event_entry_setup",
+  "label": "Predictive Event (Horary): Entry & Generation Setup",
+  "description": "Enter birth details and your question to generate the full predictive event reading and result screens in sequence.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This is the first screen of the Predictive Event (Horary) module. The user must enter date of birth, time of birth, and place of birth. These birth details are required because the system uses them to calculate the natal reference chart accurately. The user must also enter a clear question, because horary-style predictive guidance depends on the subject or event being asked about. After all required fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform starts building the predictive event reading based on the user's DOB, TOB, POB, and question, then displays the results screen by screen. The generated response depends on these details because they affect planetary positions, houses, angles, transit-to-natal contacts, activated life areas, timing recommendations, and the final guidance. This setup screen is important because if birth time, birth place, or the question is wrong or incomplete, the predictive reading may also change.",
+  "bullets": [
+    "📅 Step 1 — Enter Date of Birth: The user enters the birth date so the system can calculate the natal planetary positions.",
+    "🕒 Step 2 — Enter Time of Birth: The user enters the exact birth time because Ascendant, house cusps, chart angles, and timing-sensitive predictive calculations depend on correct timing.",
+    "📍 Step 3 — Enter Place of Birth: The user enters the birth place so the system can use the correct geographic coordinates and timezone for accurate chart creation.",
+    "❓ Step 4 — Enter Your Question: The user enters the specific question or event focus, such as career, relationship, decision timing, opportunity, or another life concern, so the predictive reading has a clear subject.",
+    "✅ Step 5 — Generate Reading Activation: After the required birth details and question are completed correctly, the Generate Reading button becomes enabled.",
+    "📊 Result Screen 1 — Chart View: The system generates the predictive chart view so the user can see the wheel chart, aspect structure, and overall astrological pattern behind the reading.",
+    "📅 Result Screen 2 — Recommendation on Date and Timeline: The platform highlights the most favorable period, top choice date, and other supportive dates for the user's question or goal.",
+    "🔗 Result Screen 3 — Aspect Guidance: The reading shows the most important transit-to-natal aspects so the user can understand which planetary connections are supporting the recommended timing.",
+    "🪐 Result Screen 4 — Planetary Timing Blocks: The platform explains the role of important transiting planets, such as Jupiter, Mars, or Venus, and how each one contributes to the event timing.",
+    "🏠 Result Screen 5 — House Activation: The system shows which natal houses are activated during the recommended period so the user can understand which life areas are most affected.",
+    "🧠 Result Screen 6 — Summary and Recommendations: The reading combines the strongest timing window, key transits, active houses, and practical guidance into a final clear recommendation for action."
+  ]
+},
+    {
+  "name": "horoscope_predictive_event_horary_chart",
+  "label": "Predictive Event (Horary): Chart View",
+  "description": "A horary-style predictive chart generated from the user's birth details to help understand the event-focused reading in a clear visual form.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This screen is shown after the user enters date of birth, time of birth, and place of birth, and the system generates the Predictive Event (Horary) response. The chart view helps the user and astrologer visually understand the planetary structure being used for the event-based reading. It displays the main Western wheel chart and its aspect view so the relationship between planets, signs, houses, and angular patterns can be read more clearly. The purpose of this chart is to make the prediction easier to understand by showing where the important energies are placed, which houses are active, how planets connect with each other, and what patterns may influence the event or question being studied.",
+  "bullets": [
+    "📅 Input-Based Generation — The system uses the user's date of birth, time of birth, and place of birth to calculate the chart that supports the Predictive Event reading.",
+    "🕒 Why Exact Birth Time Matters — Time of birth is important because house cusps, Ascendant, Midheaven, and angle-sensitive placements change with time and affect the predictive reading.",
+    "📍 Why Place of Birth Matters — Place of birth is used for correct coordinates and timezone so the chart is calculated accurately.",
+    "🌌 Chart Creation Process — After the required birth details are entered, the system calculates planetary positions, zodiac signs, houses, and aspect lines, then displays them in wheel-chart format.",
+    "🪐 Left Wheel Chart Meaning — The left chart shows the zodiac wheel with houses, planets, angles, and placements, helping astrologers see where each energy is positioned.",
+    "📐 Right Aspect Chart Meaning — The right chart emphasizes planetary relationships and aspect geometry, making it easier to study supportive, tense, or highly active connections.",
+    "🏠 House Meaning In The Chart — The 12 houses show which life areas are activated in the event reading, such as communication, work, relationships, career, money, or inner concerns.",
+    "♈ Zodiac Sign Meaning — Each sign shows the style or tone through which a planet is expressing itself in the chart.",
+    "🔗 Aspect Line Meaning — The lines inside the chart show how planets are interacting through conjunctions, trines, sextiles, squares, oppositions, and other aspect patterns.",
+    "🎯 What The User Understands From This Chart — The chart helps show which themes are strongest, where the pressure or support is located, and which parts of life or decision-making are most influenced in the predictive reading.",
+    "📊 Why This Chart Is Useful — It gives a visual foundation for the written prediction, so the user can understand that the result is based on actual chart structure and not only on text interpretation.",
+    "🧠 Astrologer-Friendly Use — Astrologers can use this screen to quickly identify dominant houses, active planets, strong aspects, and overall chart emphasis for the event analysis.",
+    "✨ Predictive Reading Support — This chart supports the event forecast by showing the underlying astrological pattern behind the generated response.",
+    "🚀 Practical Use — Useful for event timing insight, question-based analysis, understanding active chart energies, and giving the user a clearer view of how the predictive result is formed."
+  ]
+},
+  {
+  "name": "horoscope_predictive_event_recommendation_timeline",
+  "label": "Predictive Event (Horary): Recommendation on Date and Timeline",
+  "description": "A guided timeline screen that highlights the most supportive dates and periods for taking action based on the generated predictive chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system completes the Predictive Event reading. The platform studies the chart and identifies the most supportive period for the user's question, goal, or planned action. Instead of only giving one prediction, this screen translates the chart into a practical timeline by showing the best dates, other helpful dates, and the reasons those dates are stronger. It helps the user understand when to begin, when to act, and which windows are more favorable for progress, opportunity, communication, networking, or career movement.",
+  "bullets": [
+    "📅 Timeline Window Meaning — This section shows a recommended time range, such as between one month and another, to indicate when the overall energy is more supportive for the user's goal or event.",
+    "⭐ Top Choice Date — The strongest recommended date is highlighted first so the user can quickly identify the most favorable moment for action.",
+    "🗓 Additional Favorable Dates — The screen can also list other supportive dates that are good alternatives if the main recommended day is not possible.",
+    "🔭 How It Is Generated — The system uses the user's date of birth, time of birth, and place of birth to create the predictive chart, then studies planetary timing, supportive aspects, and active chart periods to identify stronger dates.",
+    "🪐 Transit Support Meaning — The recommended dates are chosen because important moving planets form helpful connections to key natal placements, increasing support for the event or decision.",
+    "🏠 Life Area Focus — The dates are explained in relation to the area of life being activated, such as career, communication, leadership, networking, opportunity, or visibility.",
+    "📈 Why One Date Is Better Than Another — The screen explains why a certain date is stronger, for example because it improves confidence, communication, attraction of opportunities, or strategic thinking.",
+    "💬 Easy User Understanding — This screen turns technical astrological timing into a clear practical recommendation so the user does not need to interpret raw chart data alone.",
+    "🎯 Action Guidance Purpose — It helps the user decide when to launch, speak, apply, meet, negotiate, present, or begin something important.",
+    "🧠 What The User Understands From This Screen — The user can clearly see the best period, best day, backup days, and the main reason those dates are astrologically supportive.",
+    "✨ Why This Screen Is Useful — It makes the predictive reading more practical by giving not only meaning, but also timing guidance that can be used in real decisions.",
+    "🚀 Practical Use — Useful for choosing favorable dates for career steps, business action, communication, important meetings, applications, launches, and other event-based decisions."
+  ]
+},
 
-      // Planetary Returns & Oppositions
+{
+  "name": "horoscope_predictive_event_aspects",
+  "label": "Predictive Event (Horary): Aspect Guidance",
+  "description": "A focused aspect screen showing the most supportive transit-to-natal connections behind the recommended dates and event timing.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system completes the Predictive Event reading. The platform then studies the important transit-to-natal aspects active around the recommended dates and displays them as separate cards. Each block explains which moving planet is interacting with which natal planet, what kind of aspect is formed, on which date it becomes important, and what kind of opportunity, support, or momentum it brings. The purpose of this screen is to help the user understand why certain dates are recommended and what astrological force is making that time more favorable for action.",
+  "bullets": [
+    "📅 How It Is Generated — The system uses the user's date of birth, time of birth, and place of birth to calculate the natal chart, then checks current and upcoming planetary transits to find strong supportive event-timing aspects.",
+    "🪐 Transit to Natal Meaning — Each card compares a moving planet in the sky with a natal planet in the birth chart to show how present timing is activating the user's personal chart.",
+    "🔗 Aspect Block Purpose — Every block explains one specific transit aspect so the user can understand why that date is important and what kind of influence is active.",
+    "♃ Jupiter Trine Venus Block — This block shows a supportive transit that can increase attraction, confidence, creativity, growth, opportunity, and positive visibility, especially for goals linked with expression, leadership, or favorable outcomes.",
+    "♂ Mars Sextile Mercury Block — This block shows a productive transit that can strengthen communication, fast thinking, strategy, planning, execution, and practical decision-making.",
+    "♀ Venus Sextile Jupiter Block — This block shows a harmonious transit that can improve networking, goodwill, support, optimism, relationship flow, and expansion through pleasant opportunities.",
+    "📆 Date Meaning — The date shown in each card marks the time when that transit becomes especially strong or useful for taking action.",
+    "🏠 House Meaning In The Reading — The interpretation may mention natal houses, such as the 5th or 6th house, to show which life area is being activated by the transit.",
+    "✨ Why These Aspects Matter — Supportive aspects such as trines and sextiles are often used to recommend better dates because they usually indicate smoother energy flow, easier progress, and more constructive outcomes.",
+    "💬 Easy Card Format — This screen turns technical aspect calculations into short readable guidance so the user can quickly understand which dates are strongest and why.",
+    "🎯 What The User Understands From This Screen — The user can clearly see which transit supports creativity, which helps communication and work, and which improves connection, visibility, or expansion.",
+    "📊 Why This Screen Is Useful — It gives a practical astrological reason behind the timeline recommendation, so the user understands that the best dates are based on real chart activation.",
+    "🧠 Astrologer-Friendly Use — Astrologers can use this screen to quickly explain the logic behind recommended dates without having to read all raw transit calculations separately.",
+    "🚀 Practical Use — Useful for choosing the best days for career action, communication, meetings, launches, decisions, planning, networking, and other event-based steps."
+  ]
+},
+
+{
+  "name": "horoscope_predictive_event_planets",
+  "label": "Predictive Event (Horary): Planetary Timing Blocks",
+  "description": "A focused timing screen that explains how specific transiting planets are supporting the recommended event period and what each planetary influence means.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system completes the Predictive Event reading. The platform studies the important transiting planets that are active during the recommended time window and displays them as separate planetary guidance blocks. Each block explains which planet is currently active, the time period or exact date when its influence is strongest, which natal placement it is affecting, and what kind of support it brings to the user's event, goal, or decision. The purpose of this screen is to help the user understand the timing in a simpler way by showing one active planet at a time instead of only showing raw aspect calculations.",
+  "bullets": [
+    "🪐 Planet Block Meaning — Each block focuses on one transiting planet and explains how that planet is influencing the user's natal chart during the predictive period.",
+    "📅 Date or Time Window Meaning — Some blocks show an exact date, while others show a wider date range, depending on how long the planetary influence remains active and useful.",
+    "♃ Transiting Jupiter Block — This block explains a growth-oriented influence that supports expansion, confidence, visibility, opportunities, success, and positive development.",
+    "♃ Jupiter Meaning In This Screen — Jupiter is shown when the timing supports progress, attraction of opportunities, optimism, wider reach, or beneficial outcomes connected with the user's goal.",
+    "♂ Transiting Mars Block — This block explains an action-oriented influence that supports movement, initiative, execution, courage, productivity, and decisive effort.",
+    "♂ Mars Meaning In This Screen — Mars is shown when the timing helps with communication action, problem-solving, execution speed, practical momentum, and taking direct steps forward.",
+    "♀ Transiting Venus Block — This block explains a harmonious influence that supports connection, goodwill, collaboration, attraction, networking, and smoother relationship flow.",
+    "♀ Venus Meaning In This Screen — Venus is shown when the timing improves cooperation, support from others, social ease, pleasant outcomes, or alignment with personal values and goals.",
+    "🔗 Transit to Natal Meaning — Each planetary block is based on how the moving planet is forming a connection to an important natal planet in the birth chart.",
+    "🏠 House Activation Meaning — The interpretation may mention natal houses to show which area of life is being activated, such as creativity, work, communication, leadership, networking, or public action.",
+    "✨ Why These Blocks Are Useful — These blocks help the user understand not just the best date, but also which planet is creating the support and what type of energy is available at that time.",
+    "💬 Easy User Understanding — This screen simplifies the predictive reading by separating the timing into clear planetary guidance blocks instead of showing everything as one long explanation.",
+    "🧠 What The User Understands From This Screen — The user can see which planet supports growth, which helps action, and which improves connection or opportunity during the recommended timeline.",
+    "🚀 Practical Use — Useful for understanding when to act, when to communicate, when to network, when to expand plans, and which planetary timing is most supportive for the event being considered."
+  ]
+},
+
+{
+  "name": "horoscope_predictive_event_house_activation",
+  "label": "Predictive Event (Horary): House Activation",
+  "description": "A focused timing screen that explains which natal houses are activated during the recommended period and what those activations mean for the user's event or decision.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system completes the Predictive Event reading. The platform studies the important transit-to-natal influences and then shows which natal houses are being activated during the recommended timeline. The purpose of this screen is to help the user understand not only which dates are supportive, but also which areas of life are receiving the strongest energy. In this example, the 5th house and 6th house are highlighted because specific transits are activating creativity, self-expression, networking, work, planning, and daily execution. This makes the predictive reading easier to understand in practical life terms.",
+  "bullets": [
+    "🏠 House Activation Meaning — This screen explains which natal houses become active during the recommended event period and what those houses represent in the user's life.",
+    "📅 Time Window Meaning — Each house block may show a date range or a specific day to indicate when that house is being strongly activated by transits.",
+    "🌟 5th House Activation Block — This block explains a period when the 5th house becomes active, highlighting creativity, self-expression, attraction, visibility, confidence, artistic effort, and opportunity through personal flair.",
+    "♃ Jupiter And ♀ Venus Support In The 5th House — When supportive transits activate the 5th house, they may increase charm, optimism, attraction of opportunities, networking strength, creative confidence, and personal magnetism.",
+    "💼 Practical Meaning Of 5th House Activation — This kind of activation can be favorable for leadership, creative work, visibility, public expression, relationship-based opportunities, and projects that need inspiration or confidence.",
+    "🛠 6th House Activation Block — This block explains a period or day when the 6th house becomes active, highlighting work, routines, problem-solving, organization, planning, service, productivity, and execution.",
+    "♂ Mars And ☿ Mercury Support In The 6th House — When supportive transits activate the 6th house, they may improve communication in work settings, strategic thinking, planning ability, practical action, and attention to detail.",
+    "📈 Practical Meaning Of 6th House Activation — This kind of activation can be favorable for getting tasks done, solving work problems, managing responsibilities, improving workflow, and taking clear practical steps toward goals.",
+    "🔭 How It Is Generated — The system uses the user's date of birth, time of birth, and place of birth to calculate the natal chart, then studies which transits are activating specific natal houses during the selected predictive period.",
+    "🧠 Why This Screen Is Useful — It helps the user understand where the astrological energy is landing in real life, so the recommendation feels practical instead of abstract.",
+    "💬 Easy User Understanding — Instead of only naming planets and aspects, this screen explains the event timing through life areas that the user can recognize more easily, such as creativity, work, routine, goals, and opportunity.",
+    "🎯 What The User Understands From This Screen — The user can clearly see which life area is strongest during the recommended period and why a certain date is better for visibility, action, communication, or career-related movement.",
+    "📊 Why House Activation Matters — Even when the same transit looks positive, the house it activates changes the meaning. This screen helps explain whether the support is more creative, practical, relational, financial, or work-focused.",
+    "🚀 Practical Use — Useful for choosing the right time for launches, communication, creative work, job action, planning, execution, and event-based decisions connected to the most activated life area."
+  ]
+},
+
+{
+  "name": "horoscope_predictive_event_summary",
+  "label": "Predictive Event (Horary): Summary",
+  "description": "A final summary screen that brings the most favorable period, key transits, and activated life areas into one clear recommendation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system completes the Predictive Event reading. The platform studies the natal chart, checks the strongest transits, identifies the most activated houses, and then combines that information into one final recommendation. The purpose of this screen is to give the user a simple, clear answer about the best period for action. Instead of showing many separate technical details, it summarizes the most important timing window, the strongest supporting transits, and the main life areas being activated, so the user can understand the final result easily.",
+  "bullets": [
+    "📅 Final Recommended Time Window — This block shows the most supportive overall period for the user's goal, event, or decision.",
+    "⭐ Main Opportunity Summary — It highlights why this period is important by combining the strongest supportive astrological factors into one clear message.",
+    "🪐 Key Transit Summary — The screen brings together the most helpful transit influences, such as Jupiter support, Mars support, or other strong aspects active during the period.",
+    "🏠 House Activation Summary — It explains which natal houses are most active during that time, such as the 5th house for creativity and visibility or the 6th house for work, planning, and execution.",
+    "🎯 Practical Meaning — The summary converts chart language into real-life advice, such as when to focus on career growth, communication, strategy, networking, or launching something important.",
+    "🔭 How It Is Generated — The system uses the user's date of birth, time of birth, and place of birth to calculate the natal chart, then studies transits, aspects, and house activation to find the strongest timing window.",
+    "💬 Easy User Understanding — This screen is designed to be simple and direct, so the user can understand the final recommendation without reading every technical block separately.",
+    "🧠 What The User Understands From This Screen — The user can quickly see the best period, why that period is strong, and which life themes are being supported the most.",
+    "📊 Why This Screen Is Useful — It acts as the final conclusion of the predictive reading, combining chart meaning, timing, and practical advice into one short summary.",
+    "🚀 Practical Use — Useful for choosing the best period for career advancement, communication, planning, launches, meetings, applications, and other important event-based actions."
+  ]
+},
+
+{
+  "name": "horoscope_predictive_event_recommendations",
+  "label": "Predictive Event (Horary): Recommendations",
+  "description": "A practical guidance screen that turns the predictive timing analysis into a clear action recommendation for the user.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system completes the Predictive Event reading. After analyzing the natal chart, supportive transits, active houses, and recommended time window, the platform converts that astrological timing into a practical recommendation. The purpose of this screen is to tell the user what kind of action is best supported during the favorable period. In this example, the reading recommends focusing on creative and strategic initiatives because the activated houses and transit support indicate stronger potential for visibility, planning, communication, and opportunity. This makes the forecast easier to use in real life because the user receives not only timing, but also clear direction.",
+  "bullets": [
+    "📅 Recommended Time Window Meaning — This block highlights the period when the chart shows the strongest support for the user's goal or planned action.",
+    "🎯 Main Recommendation Meaning — The screen explains what the user should focus on during that period, such as creative work, strategic planning, communication, leadership, or professional growth.",
+    "🏠 House-Based Recommendation — The advice is based on which natal houses are activated, so the recommendation matches the life areas receiving the strongest energy.",
+    "🪐 Transit Support Meaning — The recommendation is shaped by the strongest helpful transits, showing what type of opportunity or action is most supported during that timeline.",
+    "🎨 Creative Initiative Meaning — If the 5th house or other expressive placements are active, the system may recommend creative projects, visibility, leadership, self-expression, or innovation.",
+    "🧠 Strategic Initiative Meaning — If work and planning houses are active, the system may recommend strategy, communication, execution, professional planning, or structured problem-solving.",
+    "🔭 How It Is Generated — The system uses the user's date of birth, time of birth, and place of birth to build the natal chart, then studies transits, aspects, and house activation to generate practical advice.",
+    "💬 Easy User Understanding — This screen turns technical chart analysis into a clear recommendation so the user can understand what to do, not only what is happening astrologically.",
+    "📈 Why This Screen Is Useful — It connects prediction with action, helping the user use the favorable timing in a practical and confident way.",
+    "🧠 What The User Understands From This Screen — The user can clearly see the best type of action to take during the recommended period and why that action is astrologically supported.",
+    "✨ Action Guidance Purpose — This screen helps the user translate astrology into decision-making by showing where to place effort for better results.",
+    "🚀 Practical Use — Useful for planning career steps, launching ideas, starting creative work, making strategic decisions, improving communication, and using favorable timing more effectively."
+  ]
+},
+      // ------------------Jupiter Return------------------//
       { 
         name: "horoscope_jupiter_return_setup", 
         label: "Jupiter Return", 
