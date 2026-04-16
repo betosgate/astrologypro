@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
 
 // Dynamically import phone widgets with ssr:false inside a Client Component.
 // next/dynamic with ssr:false is only allowed in Client Components (Next.js 16).
@@ -16,6 +17,9 @@ const ChimePhoneWidget = dynamic(
 
 export function PhoneWidgetLoader() {
   const [provider, setProvider] = useState<string | null>(null);
+
+  // Register service worker + subscribe to Web Push for call notifications
+  usePushNotifications();
 
   useEffect(() => {
     // Fetch diviner's phone provider preference

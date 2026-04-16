@@ -10,7 +10,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Download } from "lucide-react";
+import { Download, RefreshCw, FilterX, Search } from "lucide-react";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { LocalSearchAutocomplete } from "@/components/ui/local-search-autocomplete";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -241,6 +244,43 @@ export default function TrainingAnalyticsPage() {
   const [quizzesLoading, setQuizzesLoading] = useState(false);
   const [quizzesFetched, setQuizzesFetched] = useState(false);
 
+  const [programsSearch, setProgramsSearch] = useState("");
+  const [categoriesSearch, setCategoriesSearch] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleReset = () => {
+    setUsersSearch(""); setUsersSort("name"); setUsersPage(1);
+    setProgramsSearch(""); setCategoriesSearch(""); setSelectedProgram("all"); setSelectedCategory("all");
+    fetchUsers(1, "", "name");
+    fetchPrograms();
+    fetchCategories("all");
+    fetchLessons("all");
+  };
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetch("/api/admin/training/analytics/overview")
+      .then(r => r.json())
+      .then(d => { if (d && typeof d.total_trainees === "number") setOverview(d); });
+
+    // Re-fetch data depending on tabs
+    fetchUsers(usersPage, usersSearch, usersSort);
+    fetchPrograms();
+    fetchCategories(selectedProgram);
+    fetchLessons(selectedCategory);
+    fetchQuizzes();
+
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
+
+  const filteredPrograms = programs.filter(p =>
+    p.title.toLowerCase().includes(programsSearch.toLowerCase())
+  );
+
+  const filteredCategories = categories.filter(c =>
+    c.title.toLowerCase().includes(categoriesSearch.toLowerCase())
+  );
+
   const USERS_LIMIT = 25;
 
   // ── Fetch overview (always on mount) ────────────────────────────────────────
@@ -253,7 +293,7 @@ export default function TrainingAnalyticsPage() {
           setOverview(d);
         }
       })
-      .catch(() => {/* silently ignore network/parse errors */})
+      .catch(() => {/* silently ignore network/parse errors */ })
       .finally(() => setOverviewLoading(false));
   }, []);
 
@@ -278,7 +318,6 @@ export default function TrainingAnalyticsPage() {
 
   // ── Fetch programs ────────────────────────────────────────────────────────────
   const fetchPrograms = () => {
-    if (programsFetched) return;
     setProgramsLoading(true);
     fetch("/api/admin/training/analytics/programs")
       .then((r) => r.json())
@@ -395,39 +434,39 @@ export default function TrainingAnalyticsPage() {
   // ── Stat cards data ───────────────────────────────────────────────────────────
   const statCards = overview
     ? [
-        {
-          label: "Total Trainees",
-          value: overview.total_trainees.toLocaleString(),
-          sub: `${overview.active_trainees} active`,
-        },
-        {
-          label: "Quiz Pass Rate",
-          value: fmtPct(overview.overall_quiz_pass_rate),
-          sub: `${overview.total_quiz_attempts} attempts`,
-        },
-        {
-          label: "Avg Attempts to Pass",
-          value: overview.avg_attempts_to_pass > 0 ? String(overview.avg_attempts_to_pass) : "—",
-          sub: "per lesson",
-        },
-        {
-          label: "Total Completions",
-          value: overview.total_lesson_completions.toLocaleString(),
-          sub: "lessons completed",
-        },
-        {
-          label: "Avg Time / Lesson",
-          value: overview.avg_time_per_lesson_mins > 0
-            ? `${overview.avg_time_per_lesson_mins} min`
-            : "—",
-          sub: "average",
-        },
-        {
-          label: "Active Programs",
-          value: overview.total_programs.toLocaleString(),
-          sub: `${overview.total_lessons} lessons`,
-        },
-      ]
+      {
+        label: "Total Trainees",
+        value: overview.total_trainees.toLocaleString(),
+        sub: `${overview.active_trainees} active`,
+      },
+      {
+        label: "Quiz Pass Rate",
+        value: fmtPct(overview.overall_quiz_pass_rate),
+        sub: `${overview.total_quiz_attempts} attempts`,
+      },
+      {
+        label: "Avg Attempts to Pass",
+        value: overview.avg_attempts_to_pass > 0 ? String(overview.avg_attempts_to_pass) : "—",
+        sub: "per lesson",
+      },
+      {
+        label: "Total Completions",
+        value: overview.total_lesson_completions.toLocaleString(),
+        sub: "lessons completed",
+      },
+      {
+        label: "Avg Time / Lesson",
+        value: overview.avg_time_per_lesson_mins > 0
+          ? `${overview.avg_time_per_lesson_mins} min`
+          : "—",
+        sub: "average",
+      },
+      {
+        label: "Active Programs",
+        value: overview.total_programs.toLocaleString(),
+        sub: `${overview.total_lessons} lessons`,
+      },
+    ]
     : null;
 
   // ─── Render ──────────────────────────────────────────────────────────────────
@@ -435,9 +474,11 @@ export default function TrainingAnalyticsPage() {
   return (
     <div className="space-y-8">
       {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Training Analytics</h1>
-        <p className="text-muted-foreground">Platform-wide learning performance insights</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Training Analytics</h1>
+          <p className="text-muted-foreground text-sm">Platform-wide learning performance insights</p>
+        </div>
       </div>
 
       {/* Overview stat cards — always visible */}
@@ -445,16 +486,16 @@ export default function TrainingAnalyticsPage() {
         {overviewLoading
           ? Array.from({ length: 6 }).map((_, i) => <StatCardSkeleton key={i} />)
           : statCards?.map((card) => (
-              <Card key={card.label}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">{card.label}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{card.value}</div>
-                  <p className="text-xs text-muted-foreground">{card.sub}</p>
-                </CardContent>
-              </Card>
-            ))}
+            <Card key={card.label}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{card.label}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{card.value}</div>
+                <p className="text-xs text-muted-foreground">{card.sub}</p>
+              </CardContent>
+            </Card>
+          ))}
       </div>
 
       {/* Main tabs */}
@@ -552,14 +593,14 @@ export default function TrainingAnalyticsPage() {
                   "Total", "Progress %", "Quiz Pass Rate", "Avg Attempts", "Time Spent (mins)",
                 ];
                 const rows = users.map((u) => ({
-                  "Name":              u.display_name || "",
-                  "Email":             u.email || "",
-                  "Status":            u.training_status,
-                  "Lessons Done":      u.completed_lessons,
-                  "Total":             u.total_lessons,
-                  "Progress %":        u.progress_pct,
-                  "Quiz Pass Rate":    u.quiz_pass_rate,
-                  "Avg Attempts":      u.avg_attempts_to_pass,
+                  "Name": u.display_name || "",
+                  "Email": u.email || "",
+                  "Status": u.training_status,
+                  "Lessons Done": u.completed_lessons,
+                  "Total": u.total_lessons,
+                  "Progress %": u.progress_pct,
+                  "Quiz Pass Rate": u.quiz_pass_rate,
+                  "Avg Attempts": u.avg_attempts_to_pass,
                   "Time Spent (mins)": Math.round(u.time_spent_seconds / 60),
                 }));
                 downloadCSV(
@@ -620,13 +661,12 @@ export default function TrainingAnalyticsPage() {
                           <TableCell>
                             <Badge
                               variant="outline"
-                              className={`text-xs ${
-                                u.training_status === "active"
-                                  ? "bg-green-500/10 text-green-600"
-                                  : u.training_status === "graduated"
+                              className={`text-xs ${u.training_status === "active"
+                                ? "bg-green-500/10 text-green-600"
+                                : u.training_status === "graduated"
                                   ? "bg-blue-500/10 text-blue-600"
                                   : "bg-muted text-muted-foreground"
-                              }`}
+                                }`}
                             >
                               {u.training_status}
                             </Badge>
@@ -662,9 +702,9 @@ export default function TrainingAnalyticsPage() {
                           <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                             {u.last_active_at
                               ? new Date(u.last_active_at).toLocaleDateString("en-US", {
-                                  month: "short",
-                                  day: "numeric",
-                                })
+                                month: "short",
+                                day: "numeric",
+                              })
                               : "—"}
                           </TableCell>
                         </TableRow>
@@ -706,14 +746,42 @@ export default function TrainingAnalyticsPage() {
         </TabsContent>
 
         {/* ── Programs tab ──────────────────────────────────────────────────── */}
-        <TabsContent value="programs" className="mt-6">
+        <TabsContent value="programs" className="mt-6 space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <LocalSearchAutocomplete
+              placeholder="Search programs..."
+              options={programs.map(p => ({ id: p.id, label: p.title }))}
+              defaultValue={programsSearch}
+              onSelect={(val) => setProgramsSearch(val)}
+              className="w-64"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReset}
+              className="gap-1.5 ml-auto text-muted-foreground hover:text-foreground"
+            >
+              <FilterX className="size-4" />
+              Reset
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="gap-1.5"
+            >
+              <RefreshCw className={cn("size-4", isRefreshing && "animate-spin")} />
+              Refresh
+            </Button>
+          </div>
           <Card>
             <CardContent className="p-0">
               {programsLoading ? (
                 <div className="px-6 py-4">
                   <TableSkeleton cols={7} rows={5} />
                 </div>
-              ) : programs.length === 0 ? (
+              ) : filteredPrograms.length === 0 ? (
                 <p className="px-6 py-8 text-center text-sm text-muted-foreground">No program data yet.</p>
               ) : (
                 <div className="overflow-x-auto">
@@ -732,18 +800,17 @@ export default function TrainingAnalyticsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {programs.map((p) => (
+                      {filteredPrograms.map((p) => (
                         <TableRow key={p.id}>
                           <TableCell>
                             <div className="font-medium">{p.title}</div>
                             <div>
                               <Badge
                                 variant="outline"
-                                className={`text-xs mt-0.5 ${
-                                  p.is_active
-                                    ? "bg-green-500/10 text-green-600"
-                                    : "bg-red-500/10 text-red-600"
-                                }`}
+                                className={`text-xs mt-0.5 ${p.is_active
+                                  ? "bg-green-500/10 text-green-600"
+                                  : "bg-red-500/10 text-red-600"
+                                  }`}
                               >
                                 {p.is_active ? "Active" : "Inactive"}
                               </Badge>
@@ -789,26 +856,47 @@ export default function TrainingAnalyticsPage() {
 
         {/* ── Categories tab ────────────────────────────────────────────────── */}
         <TabsContent value="categories" className="space-y-4 mt-6">
-          <div className="flex items-center gap-3">
-            <Select
+          <div className="flex flex-wrap items-center gap-3">
+            <SearchableSelect
               value={selectedProgram}
               onValueChange={(v) => {
                 setSelectedProgram(v);
                 fetchCategories(v);
               }}
+              options={[
+                { value: "all", label: "All Programs" },
+                ...programOptions.map(p => ({ value: p.id, label: p.name }))
+              ]}
+              placeholder="All Programs"
+            />
+
+            <LocalSearchAutocomplete
+              placeholder="Search by category..."
+              options={categories.map(c => ({ id: c.id, label: c.title }))}
+              defaultValue={categoriesSearch}
+              onSelect={(val) => setCategoriesSearch(val)}
+              className="w-64"
+            />
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReset}
+              className="gap-1.5 ml-auto text-muted-foreground hover:text-foreground"
             >
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Filter by program" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Programs</SelectItem>
-                {programOptions.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <FilterX className="size-4" />
+              Reset
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="gap-1.5"
+            >
+              <RefreshCw className={cn("size-4", isRefreshing && "animate-spin")} />
+              Refresh
+            </Button>
           </div>
 
           <Card>
@@ -817,7 +905,7 @@ export default function TrainingAnalyticsPage() {
                 <div className="px-6 py-4">
                   <TableSkeleton cols={6} rows={5} />
                 </div>
-              ) : categories.length === 0 ? (
+              ) : filteredCategories.length === 0 ? (
                 <p className="px-6 py-8 text-center text-sm text-muted-foreground">No category data found.</p>
               ) : (
                 <div className="overflow-x-auto">
@@ -835,7 +923,7 @@ export default function TrainingAnalyticsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {categories.map((c) => (
+                      {filteredCategories.map((c) => (
                         <TableRow key={c.id}>
                           <TableCell className="font-medium">{c.title}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">
@@ -870,25 +958,18 @@ export default function TrainingAnalyticsPage() {
         {/* ── Lessons tab ───────────────────────────────────────────────────── */}
         <TabsContent value="lessons" className="space-y-4 mt-6">
           <div className="flex items-center gap-3">
-            <Select
+            <SearchableSelect
               value={selectedCategory}
               onValueChange={(v) => {
                 setSelectedCategory(v);
                 fetchLessons(v);
               }}
-            >
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Filter by category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categoryOptions.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={[
+                { value: "all", label: "All Categories" },
+                ...categoryOptions.map(c => ({ value: c.id, label: c.name }))
+              ]}
+              placeholder="All Categories"
+            />
           </div>
 
           <Card>
