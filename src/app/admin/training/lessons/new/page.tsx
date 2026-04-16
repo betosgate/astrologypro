@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { LocalSearchAutocomplete } from "@/components/ui/local-search-autocomplete";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -82,17 +83,21 @@ export default function NewLessonPage() {
     is_active: true,
   });
 
+  const [categoryLabel, setCategoryLabel] = useState("");
+
   useEffect(() => {
     async function loadCategories() {
       try {
-        const res = await fetch("/api/admin/training/categories");
+        // pageSize=1000 ensures all categories are loaded, not just the first 10
+        const res = await fetch("/api/admin/training/categories?pageSize=1000");
         if (res.ok) {
           const data = await res.json();
           setCategories(data.categories ?? []);
           if (data.categories?.length > 0) {
-            const firstId = data.categories[0].id;
-            setForm((prev) => ({ ...prev, category_id: firstId }));
-            loadLessonsForCategory(firstId);
+            const first = data.categories[0];
+            setForm((prev) => ({ ...prev, category_id: first.id }));
+            setCategoryLabel(first.name);
+            loadLessonsForCategory(first.id);
           }
         }
       } catch {
@@ -344,27 +349,27 @@ export default function NewLessonPage() {
 
             {/* Category */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium" htmlFor="category_id">
+              <label className="text-sm font-medium">
                 Category <span className="text-red-500">*</span>
               </label>
-              <select
-                id="category_id"
-                name="category_id"
-                value={form.category_id}
-                onChange={handleChange}
-                required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {categories.length === 0 ? (
-                  <option value="">No categories available</option>
-                ) : (
-                  categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))
-                )}
-              </select>
+              <LocalSearchAutocomplete
+                placeholder={categories.length === 0 ? "Loading categories…" : "Search category…"}
+                options={categories.map((c) => ({ id: c.id, label: c.name }))}
+                defaultValue={categoryLabel}
+                onSelect={(val) => {
+                  const matched = categories.find((c) => c.name === val);
+                  if (matched) {
+                    setForm((prev) => ({ ...prev, category_id: matched.id, previous_lesson_id: "" }));
+                    setCategoryLabel(matched.name);
+                    loadLessonsForCategory(matched.id);
+                  } else {
+                    setCategoryLabel(val);
+                  }
+                }}
+              />
+              {!form.category_id && categoryLabel && (
+                <p className="text-xs text-amber-500">Please select a valid category from the list.</p>
+              )}
             </div>
 
             {/* Previous Lesson */}
@@ -416,11 +421,10 @@ export default function NewLessonPage() {
                     key={mode}
                     type="button"
                     onClick={() => handleVideoModeChange(mode)}
-                    className={`flex-1 px-3 py-1.5 transition-colors ${
-                      videoMode === mode
+                    className={`flex-1 px-3 py-1.5 transition-colors ${videoMode === mode
                         ? "bg-primary text-primary-foreground font-medium"
                         : "bg-background text-muted-foreground hover:bg-muted"
-                    }`}
+                      }`}
                   >
                     {mode === "youtube" ? "YouTube" : mode === "url" ? "Direct URL" : "Upload"}
                   </button>
@@ -499,11 +503,10 @@ export default function NewLessonPage() {
                     key={mode}
                     type="button"
                     onClick={() => handlePdfModeChange(mode)}
-                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${
-                      pdfMode === mode
+                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${pdfMode === mode
                         ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
-                    }`}
+                      }`}
                   >
                     {mode === "url" ? "PDF URL" : "Upload PDF"}
                   </button>

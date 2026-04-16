@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { LocalSearchAutocomplete } from "@/components/ui/local-search-autocomplete";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -126,6 +127,7 @@ export default function EditLessonPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryLabel, setCategoryLabel] = useState("");
   const [categoryLessons, setCategoryLessons] = useState<LessonOption[]>([]);
   const [videoMode, setVideoMode] = useState<VideoMode>("youtube");
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
@@ -204,7 +206,8 @@ export default function EditLessonPage() {
       try {
         const [lessonRes, catsRes] = await Promise.all([
           fetch(`/api/admin/training/lessons/${id}`),
-          fetch("/api/admin/training/categories"),
+          // pageSize=1000 ensures all categories are loaded, not just the first 10
+          fetch("/api/admin/training/categories?pageSize=1000"),
         ]);
 
         if (!lessonRes.ok) {
@@ -233,6 +236,9 @@ export default function EditLessonPage() {
           previous_lesson_id: l.previous_lesson_id ?? "",
           is_active: l.is_active ?? true,
         });
+        // Set the category label for the autocomplete
+        const currentCat = (catsData.categories ?? []).find((c: Category) => c.id === l.category_id);
+        if (currentCat) setCategoryLabel(currentCat.name);
 
         // Load sibling lessons for the "previous lesson" dropdown (exclude self)
         if (l.category_id) {
@@ -577,7 +583,7 @@ export default function EditLessonPage() {
               .sort((a: LessonOption, b: LessonOption) => a.priority - b.priority);
             setCategoryLessons(sorted);
           })
-          .catch(() => {});
+          .catch(() => { });
       }
     }
   }
@@ -816,27 +822,36 @@ export default function EditLessonPage() {
 
             {/* Category */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium" htmlFor="category_id">
+              <label className="text-sm font-medium">
                 Category <span className="text-red-500">*</span>
               </label>
-              <select
-                id="category_id"
-                name="category_id"
-                value={form.category_id}
-                onChange={handleChange}
-                required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {categories.length === 0 ? (
-                  <option value="">No categories available</option>
-                ) : (
-                  categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))
-                )}
-              </select>
+              <LocalSearchAutocomplete
+                placeholder={categories.length === 0 ? "Loading categories…" : "Search category…"}
+                options={categories.map((c) => ({ id: c.id, label: c.name }))}
+                defaultValue={categoryLabel}
+                onSelect={(val) => {
+                  const matched = categories.find((c) => c.name === val);
+                  if (matched) {
+                    setForm((prev) => ({ ...prev, category_id: matched.id, previous_lesson_id: "" }));
+                    setCategoryLabel(matched.name);
+                    // Reload siblings for new category, excluding self
+                    fetch(`/api/admin/training/lessons?category_id=${matched.id}`)
+                      .then((r) => r.json())
+                      .then((data) => {
+                        const sorted = (data.lessons ?? [])
+                          .filter((s: LessonOption) => s.id !== id)
+                          .sort((a: LessonOption, b: LessonOption) => a.priority - b.priority);
+                        setCategoryLessons(sorted);
+                      })
+                      .catch(() => { });
+                  } else {
+                    setCategoryLabel(val);
+                  }
+                }}
+              />
+              {!form.category_id && categoryLabel && (
+                <p className="text-xs text-amber-500">Please select a valid category from the list.</p>
+              )}
             </div>
 
             {/* Previous Lesson */}
@@ -888,11 +903,10 @@ export default function EditLessonPage() {
                     key={mode}
                     type="button"
                     onClick={() => handleVideoModeChange(mode)}
-                    className={`flex-1 px-3 py-1.5 transition-colors ${
-                      videoMode === mode
+                    className={`flex-1 px-3 py-1.5 transition-colors ${videoMode === mode
                         ? "bg-primary text-primary-foreground font-medium"
                         : "bg-background text-muted-foreground hover:bg-muted"
-                    }`}
+                      }`}
                   >
                     {mode === "youtube" ? "YouTube" : mode === "url" ? "Direct URL" : "Upload"}
                   </button>
@@ -921,30 +935,30 @@ export default function EditLessonPage() {
 
               {videoMode === "url" && (
                 <div className="space-y-2">
-                <input
-                  type="url"
-                  value={form.video_url}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, video_url: e.target.value }))
-                  }
-                  onBlur={(e) => void handleMainVideoUrlBlur(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                  placeholder="https://example.com/video.mp4"
-                />
-                {/* Video preview for direct URL */}
-                {form.video_url && /\.(mp4|webm|ogg|mov)(\?|$)/i.test(form.video_url) && (
-                  <div className="rounded-lg border overflow-hidden bg-black">
-                    <video
-                      src={form.video_url}
-                      controls
-                      controlsList="nodownload"
-                      className="w-full max-h-[300px]"
-                      preload="metadata"
-                    >
-                      Your browser does not support the video tag.
-                    </video>
-                  </div>
-                )}
+                  <input
+                    type="url"
+                    value={form.video_url}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, video_url: e.target.value }))
+                    }
+                    onBlur={(e) => void handleMainVideoUrlBlur(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    placeholder="https://example.com/video.mp4"
+                  />
+                  {/* Video preview for direct URL */}
+                  {form.video_url && /\.(mp4|webm|ogg|mov)(\?|$)/i.test(form.video_url) && (
+                    <div className="rounded-lg border overflow-hidden bg-black">
+                      <video
+                        src={form.video_url}
+                        controls
+                        controlsList="nodownload"
+                        className="w-full max-h-[300px]"
+                        preload="metadata"
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1006,11 +1020,10 @@ export default function EditLessonPage() {
                     key={mode}
                     type="button"
                     onClick={() => handlePdfModeChange(mode)}
-                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${
-                      pdfMode === mode
+                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${pdfMode === mode
                         ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
-                    }`}
+                      }`}
                   >
                     {mode === "url" ? "PDF URL" : "Upload PDF"}
                   </button>
@@ -1515,11 +1528,10 @@ export default function EditLessonPage() {
                       {q.options.map((opt, i) => (
                         <li
                           key={i}
-                          className={`text-xs px-2 py-1 rounded ${
-                            i === q.correct_answer
+                          className={`text-xs px-2 py-1 rounded ${i === q.correct_answer
                               ? "bg-green-100 text-green-800 font-medium"
                               : "text-muted-foreground"
-                          }`}
+                            }`}
                         >
                           {OPTION_LABELS[i] ?? i}. {opt}
                           {i === q.correct_answer && " ✓"}
