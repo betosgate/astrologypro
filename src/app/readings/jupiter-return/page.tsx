@@ -143,26 +143,24 @@ export default async function JupiterReturnPage() {
       badge="Astrological Life Events"
       heroTitleBefore="Your Jupiter Return:"
       heroTitleGradient="A Cycle of Abundance Begins"
-      heroSubtitle="Every ~12 years, Jupiter returns to its birth position — bringing a wave of expansion, opportunity, and good fortune. Book a reading to make the most of this powerful window."
+      heroSubtitle="Every ~12 years, Jupiter returns to its birth position — opening a new chapter of expansion, opportunity, and abundance. A Jupiter Return reading reveals exactly where that growth is directed in your unique chart and how to align with it."
       heroStats={[
-        { value: "~Age 12", label: "Jupiter Returns" },
-        { value: "~Age 24", label: "Jupiter Returns" },
-        { value: "~Age 35", label: "Jupiter Returns" },
-        { value: "~Age 47", label: "Jupiter Returns" },
+        { value: "~Every 12 Years", label: "Jupiter Returns" },
+        { value: "New 12-Year Chapter", label: "Begins at Each Return" },
       ]}
       startingPrice={95}
       whatIsTitle="What Is a Jupiter Return?"
       whatIsParagraphs={[
-        "Jupiter, the planet of growth, luck, wisdom, and abundance, completes its orbit around the Sun approximately every 12 years. When it returns to the same zodiac position it occupied at your birth, you experience a Jupiter Return — a personal renewal of your potential.",
-        "Unlike Saturn's demanding energy, Jupiter brings gifts: expanded opportunities, renewed optimism, and a broader sense of what is possible. Each return opens a new 12-year chapter of your story.",
-        "The key is alignment. Those who are conscious of this window and take deliberate action tend to experience the most profound breakthroughs. A skilled astrologer can help you identify exactly where Jupiter's abundance is directed in your chart.",
+        "Jupiter, the planet of growth, luck, wisdom, and abundance, completes its orbit around the Sun approximately every 12 years. When it returns to the same zodiac position it occupied at your birth, you experience a Jupiter Return — a personal renewal of your potential and a reset of your 12-year cycle of expansion.",
+        "Unlike Saturn's demanding energy, Jupiter brings gifts: expanded opportunities, renewed optimism, and a broader sense of what is possible. Each return opens a new chapter — in career, relationships, learning, and spiritual growth — and the house Jupiter occupies in your natal chart reveals exactly where that expansion is directed.",
+        "The depth of what you experience depends on alignment. An astrologer reads your Jupiter placement, the transiting return chart, and the aspects forming to other planets — giving you a precise map of where to invest your energy, which doors are genuinely opening, and how to avoid Jupiter's shadow of overreach, overcommitment, or scattered focus.",
       ]}
       revealsItems={[
-        { label: "Every ~12 years", desc: "Jupiter completes its full cycle" },
-        { label: "1-year window", desc: "The peak period of expanded potential" },
-        { label: "6 returns by age 72", desc: "Multiple opportunities across a lifetime" },
-        { label: "Career & Abundance Themes", desc: "The specific life areas where Jupiter's expansion is most powerfully directed in this cycle" },
-        { label: "Optimal Timing Windows", desc: "When to take bold action to align with Jupiter's energy for maximum expansion and growth" },
+        { label: "Which Life Area Jupiter Is Activating", desc: "The specific house and domain — career, love, learning, travel, creativity — where expansion is most powerfully directed in your chart for this 12-year cycle" },
+        { label: "Concrete Opportunities Opening Now", desc: "The real doors Jupiter is unlocking — business growth, educational paths, relationships, creative projects — and the optimal window to walk through them" },
+        { label: "Your Philosophical & Spiritual Direction", desc: "How this return reorients your beliefs, values, and sense of meaning — and what Jupiter's placement says about the deeper purpose driving this new chapter" },
+        { label: "Timing: When to Act Boldly", desc: "The peak months of the return transit and the specific windows when launching, investing, committing, or expanding will be most powerfully supported" },
+        { label: "Blind Spots & Overreach Risks", desc: "Where Jupiter's excess may lead to overconfidence, overcommitment, or scattered energy — and how your reader helps you channel abundance without losing focus" },
       ]}
       expectCards={[
         { icon: "💰", title: "Career & Abundance", desc: "Jupiter returns often coincide with major career leaps, new business opportunities, financial expansion, and professional recognition. This is the time to take bold action toward your biggest goals." },
@@ -190,6 +188,11 @@ export default async function JupiterReturnPage() {
       ctaTitle="Ready to harness your Jupiter Return?"
       ctaBody="Work with a certified astrologer to understand exactly where Jupiter's abundance is flowing in your chart — and how to align your actions with this cosmic window."
       ctaButtonLabel="Browse All Astrologers"
+      relatedReadings={[
+        { title: "Saturn Return Reading", href: "/readings/saturn-return", icon: "🪐" },
+        { title: "Nativity Birth Chart", href: "/readings/nativity-birth-chart", icon: "🌟" },
+        { title: "Solar Return Reading", href: "/readings/solar-return", icon: "☀️" },
+      ]}
       pageUrl={`${APP_URL}/readings/jupiter-return`}
     />
   );

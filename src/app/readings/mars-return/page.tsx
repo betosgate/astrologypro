@@ -176,6 +176,11 @@ export default async function MarsReturnPage() {
       ctaTitle="Ready to harness your next Mars cycle?"
       ctaBody="Connect with a certified astrologer who can decode your Mars Return chart — showing you where your drive is focused, what ambitions are ready to launch, and how to channel your energy for maximum impact over the next two years."
       ctaButtonLabel="Browse All Astrologers"
+      relatedReadings={[
+        { title: "Saturn Return Reading", href: "/readings/saturn-return", icon: "🪐" },
+        { title: "Jupiter Return Reading", href: "/readings/jupiter-return", icon: "💫" },
+        { title: "Nativity Birth Chart", href: "/readings/nativity-birth-chart", icon: "🌟" },
+      ]}
       pageUrl={`${APP_URL}/readings/mars-return`}
     />
   );

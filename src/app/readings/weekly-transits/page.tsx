@@ -176,6 +176,11 @@ export default async function WeeklyTransitsPage() {
       ctaTitle="Ready to navigate your week with cosmic precision?"
       ctaBody="Work with a certified astrologer to map the planetary movements activating your chart this week — so you can act with clarity, timing, and intention."
       ctaButtonLabel="Browse All Astrologers"
+      relatedReadings={[
+        { title: "Nativity Birth Chart", href: "/readings/nativity-birth-chart", icon: "🌟" },
+        { title: "Monthly Transits & Lunar Return", href: "/readings/monthly-transits-lunar-return", icon: "🌙" },
+        { title: "Predictive Event (Horary)", href: "/readings/predictive-event-horary", icon: "🔮" },
+      ]}
       pageUrl={`${APP_URL}/readings/weekly-transits`}
     />
   );

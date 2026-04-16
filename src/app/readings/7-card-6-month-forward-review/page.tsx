@@ -218,6 +218,11 @@ export default async function SevenCard6MonthForwardReviewPage() {
       ctaTitle="Ready to map the six months ahead?"
       ctaBody="Connect with a skilled tarot reader who can draw your 7-card 6-month forecast — giving you a month-by-month energy map and the overall guidance you need to move through the half-year with awareness."
       ctaButtonLabel="Browse All Tarot Readers"
+      relatedReadings={[
+  { title: "Celtic Cross Reading", href: "/readings/10-card-celtic-cross-major-read", icon: "✨" },
+  { title: "5-Card Complex Spread", href: "/readings/5-card-complex-question-spread", icon: "🃏" },
+  { title: "3-Card Basic Spread", href: "/readings/3-card-basic-question-spread", icon: "🃏" },
+]}
       pageUrl={`${APP_URL}/readings/7-card-6-month-forward-review`}
     />
   );

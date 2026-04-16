@@ -176,6 +176,11 @@ export default async function CelticCrossPage() {
       ctaTitle="Ready for the most complete tarot reading available?"
       ctaBody="Connect with a skilled tarot reader who can navigate all ten positions of the Celtic Cross — giving you the full picture of your situation from subconscious roots to final outcome."
       ctaButtonLabel="Browse All Tarot Readers"
+      relatedReadings={[
+  { title: "3-Card Basic Spread", href: "/readings/3-card-basic-question-spread", icon: "🃏" },
+  { title: "5-Card Complex Spread", href: "/readings/5-card-complex-question-spread", icon: "🃏" },
+  { title: "Horseshoe Spread", href: "/readings/7-card-horseshoe-spread-major-read", icon: "🧲" },
+]}
       pageUrl={`${APP_URL}/readings/10-card-celtic-cross-major-read`}
     />
   );

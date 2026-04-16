@@ -176,6 +176,11 @@ export default async function NativityBirthChartPage() {
       ctaTitle="Ready to understand your soul's blueprint?"
       ctaBody="Connect with a certified astrologer who can decode the full architecture of your natal chart — revealing the gifts, challenges, and purpose written in the stars at the moment of your birth."
       ctaButtonLabel="Browse All Astrologers"
+      relatedReadings={[
+        { title: "Solar Return Reading", href: "/readings/solar-return", icon: "☀️" },
+        { title: "Saturn Return Reading", href: "/readings/saturn-return", icon: "🪐" },
+        { title: "Romantic Relationship Reading", href: "/readings/romantic-relationships", icon: "💞" },
+      ]}
       pageUrl={`${APP_URL}/readings/nativity-birth-chart`}
     />
   );

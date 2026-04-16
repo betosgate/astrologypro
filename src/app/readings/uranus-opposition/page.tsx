@@ -176,6 +176,11 @@ export default async function UranusOppositionPage() {
       ctaTitle="Ready to navigate your mid-life awakening with clarity?"
       ctaBody="Connect with a certified astrologer who specializes in outer planet transits — helping you understand what Uranus is asking of you and how to move through this profound turning point with intention rather than crisis."
       ctaButtonLabel="Browse All Astrologers"
+      relatedReadings={[
+        { title: "Saturn Return Reading", href: "/readings/saturn-return", icon: "🪐" },
+        { title: "Jupiter Return Reading", href: "/readings/jupiter-return", icon: "💫" },
+        { title: "Nativity Birth Chart", href: "/readings/nativity-birth-chart", icon: "🌟" },
+      ]}
       pageUrl={`${APP_URL}/readings/uranus-opposition`}
     />
   );

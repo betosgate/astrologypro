@@ -176,6 +176,11 @@ export default async function RelationshipSpreadPage() {
       ctaTitle="Ready to understand your most important connection?"
       ctaBody="Connect with a skilled tarot reader who can map both sides of your relationship — surfacing hidden dynamics, both perspectives, and the clearest possible path forward."
       ctaButtonLabel="Browse All Tarot Readers"
+      relatedReadings={[
+  { title: "3-Card Basic Spread", href: "/readings/3-card-basic-question-spread", icon: "🃏" },
+  { title: "Celtic Cross Reading", href: "/readings/10-card-celtic-cross-major-read", icon: "✨" },
+  { title: "12-Card Astrological Spread", href: "/readings/12-card-astrological-spread-major-read", icon: "🌌" },
+]}
       pageUrl={`${APP_URL}/readings/10-card-relationship-spread`}
     />
   );

@@ -218,6 +218,11 @@ export default async function FiveCardComplexQuestionSpreadPage() {
       ctaTitle="Ready for a reading that holds your question's full complexity?"
       ctaBody="Connect with a skilled tarot reader who can use the 5-card spread to map every layer of your situation — from root cause to advice to outcome — in a single, cohesive reading."
       ctaButtonLabel="Browse All Tarot Readers"
+      relatedReadings={[
+  { title: "3-Card Basic Spread", href: "/readings/3-card-basic-question-spread", icon: "🃏" },
+  { title: "Celtic Cross Reading", href: "/readings/10-card-celtic-cross-major-read", icon: "✨" },
+  { title: "Horseshoe Spread", href: "/readings/7-card-horseshoe-spread-major-read", icon: "🧲" },
+]}
       pageUrl={`${APP_URL}/readings/5-card-complex-question-spread`}
     />
   );

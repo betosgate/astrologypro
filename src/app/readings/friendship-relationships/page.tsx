@@ -176,6 +176,11 @@ export default async function FriendshipRelationshipsPage() {
       ctaTitle="Ready to understand your closest connections more deeply?"
       ctaBody="Connect with a certified astrologer to explore the synastry and composite chart of your most significant friendships — discovering the astrological roots of the bonds that shape your life."
       ctaButtonLabel="Browse All Astrologers"
+      relatedReadings={[
+        { title: "Romantic Relationship Reading", href: "/readings/romantic-relationships", icon: "💞" },
+        { title: "Business Relationship Reading", href: "/readings/business-relationship", icon: "💼" },
+        { title: "Nativity Birth Chart", href: "/readings/nativity-birth-chart", icon: "🌟" },
+      ]}
       pageUrl={`${APP_URL}/readings/friendship-relationships`}
     />
   );

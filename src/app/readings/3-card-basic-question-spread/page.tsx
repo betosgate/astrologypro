@@ -218,6 +218,11 @@ export default async function ThreeCardBasicQuestionSpreadPage() {
       ctaTitle="Ready for direct clarity on your question?"
       ctaBody="Connect with a skilled tarot reader who can translate the symbolism of three cards into grounded, actionable guidance — the fast-track to clarity when you need a focused answer."
       ctaButtonLabel="Browse All Tarot Readers"
+      relatedReadings={[
+  { title: "5-Card Complex Spread", href: "/readings/5-card-complex-question-spread", icon: "🃏" },
+  { title: "Celtic Cross Reading", href: "/readings/10-card-celtic-cross-major-read", icon: "✨" },
+  { title: "10-Card Relationship Spread", href: "/readings/10-card-relationship-spread", icon: "💞" },
+]}
       pageUrl={`${APP_URL}/readings/3-card-basic-question-spread`}
     />
   );

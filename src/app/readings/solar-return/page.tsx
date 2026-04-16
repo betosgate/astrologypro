@@ -218,6 +218,11 @@ export default async function SolarReturnPage() {
       ctaTitle="Ready to map your year ahead?"
       ctaBody="Connect with a certified astrologer who can decode your Solar Return chart and help you move through the year with clarity, intention, and grace."
       ctaButtonLabel="Browse All Astrologers"
+      relatedReadings={[
+        { title: "Nativity Birth Chart", href: "/readings/nativity-birth-chart", icon: "🌟" },
+        { title: "Saturn Return Reading", href: "/readings/saturn-return", icon: "🪐" },
+        { title: "Monthly Transits & Lunar Return", href: "/readings/monthly-transits-lunar-return", icon: "🌙" },
+      ]}
       pageUrl={`${APP_URL}/readings/solar-return`}
     />
   );

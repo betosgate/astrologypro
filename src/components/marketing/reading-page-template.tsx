@@ -40,6 +40,7 @@ export interface ReadingPageTemplateProps {
   ctaBody: string;
   ctaButtonLabel: string;
   pageUrl: string;
+  relatedReadings?: Array<{ title: string; href: string; icon: string }>;
 }
 
 const HOW_IT_WORKS_STEPS = [
@@ -135,6 +136,7 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
     ctaTitle,
     ctaBody,
     ctaButtonLabel,
+    relatedReadings = [],
   } = props;
 
   const readerLabel = serviceType === "tarot" ? "Tarot Reader" : "Reader";
@@ -525,7 +527,33 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
             </div>
           </section>
 
-          {/* SECTION K — Bottom CTA */}
+          {/* SECTION K — Related Readings */}
+          {relatedReadings.length > 0 && (
+            <section className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
+              <div className="mx-auto max-w-5xl">
+                <h2 className="mb-6 text-center text-xl font-bold text-[#f5f0e8]">
+                  Explore More Readings
+                </h2>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {relatedReadings.map((r) => (
+                    <Link
+                      key={r.href}
+                      href={r.href}
+                      className="group flex items-center gap-4 rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 transition-all hover:border-[#c9a84c]/30 hover:bg-white/[0.04]"
+                    >
+                      <span className="text-2xl shrink-0" aria-hidden="true">{r.icon}</span>
+                      <span className="text-sm font-semibold text-[#f5f0e8] transition-colors group-hover:text-[#c9a84c]">
+                        {r.title}
+                      </span>
+                      <ArrowRight className="ml-auto size-4 shrink-0 text-[#c9a84c]/40 transition-colors group-hover:text-[#c9a84c]" aria-hidden="true" />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* SECTION L — Bottom CTA */}
           <section className="px-4 py-16 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl border border-[#c9a84c]/10 bg-[radial-gradient(ellipse_at_50%_50%,rgba(201,168,76,0.06)_0%,transparent_70%)] p-10 text-center md:p-14">
               <h2 className="text-2xl font-bold text-[#f5f0e8] sm:text-3xl">{ctaTitle}</h2>
@@ -533,12 +561,12 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                 {ctaBody}
               </p>
               <div className="mt-8">
-                <Link
-                  href={discoverLink}
+                <a
+                  href="#diviners"
                   className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#c9a84c] px-8 text-sm font-semibold text-black shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-[#e2c97e]"
                 >
                   {ctaButtonLabel}
-                </Link>
+                </a>
               </div>
             </div>
           </section>
@@ -547,7 +575,7 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
         <ReadingStickyBar
           serviceLabel={heroTitleBefore.trim().replace(/:$/, "")}
           startingPrice={startingPrice}
-          discoverLink={discoverLink}
+          discoverLink="#diviners"
         />
 
         <MarketingFooter />

@@ -176,6 +176,11 @@ export default async function MonthlyTransitsLunarReturnPage() {
       ctaTitle="Ready to map your month ahead?"
       ctaBody="Work with a certified astrologer to decode your Lunar Return chart and monthly transits — giving you a clear, practical roadmap for the 28 days ahead."
       ctaButtonLabel="Browse All Astrologers"
+      relatedReadings={[
+        { title: "Weekly Transits Reading", href: "/readings/weekly-transits", icon: "📅" },
+        { title: "Solar Return Reading", href: "/readings/solar-return", icon: "☀️" },
+        { title: "Nativity Birth Chart", href: "/readings/nativity-birth-chart", icon: "🌟" },
+      ]}
       pageUrl={`${APP_URL}/readings/monthly-transits-lunar-return`}
     />
   );

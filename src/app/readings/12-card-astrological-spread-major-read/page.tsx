@@ -176,6 +176,11 @@ export default async function AstrologicalSpreadPage() {
       ctaTitle="Ready for the full panorama of your life?"
       ctaBody="Connect with a skilled tarot reader who can map all twelve houses of your life in a single reading — giving you a holistic, detailed portrait of where you are, where you're growing, and where your attention is most needed."
       ctaButtonLabel="Browse All Tarot Readers"
+      relatedReadings={[
+  { title: "10-Card Relationship Spread", href: "/readings/10-card-relationship-spread", icon: "💞" },
+  { title: "Celtic Cross Reading", href: "/readings/10-card-celtic-cross-major-read", icon: "✨" },
+  { title: "Nativity Birth Chart", href: "/readings/nativity-birth-chart", icon: "🌟" },
+]}
       pageUrl={`${APP_URL}/readings/12-card-astrological-spread-major-read`}
     />
   );

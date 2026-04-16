@@ -176,6 +176,11 @@ export default async function RomanticRelationshipsPage() {
       ctaTitle="Ready to understand your connection at its deepest level?"
       ctaBody="Connect with a certified relationship astrologer who can decode the synastry and composite charts — revealing the magnetic pull, growth edges, and deeper purpose of your most important connection."
       ctaButtonLabel="Browse All Astrologers"
+      relatedReadings={[
+        { title: "Friendship Relationship Reading", href: "/readings/friendship-relationships", icon: "🤝" },
+        { title: "Business Relationship Reading", href: "/readings/business-relationship", icon: "💼" },
+        { title: "Nativity Birth Chart", href: "/readings/nativity-birth-chart", icon: "🌟" },
+      ]}
       pageUrl={`${APP_URL}/readings/romantic-relationships`}
     />
   );

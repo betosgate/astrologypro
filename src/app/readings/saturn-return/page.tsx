@@ -149,8 +149,8 @@ export default async function SaturnReturnPage() {
       serviceType="astrology"
       badge="Astrological Life Events"
       heroTitleBefore="Your Saturn Return"
-      heroTitleGradient="Is Calling"
-      heroSubtitle="Occurring every ~29.5 years, your Saturn Return is a defining life transition. Work with a certified astrologer to understand what it means for you."
+      heroTitleGradient="Demands Your Attention"
+      heroSubtitle="Every ~29.5 years, Saturn returns to its birth position — triggering a deep restructuring of career, relationships, identity, and purpose. A Saturn Return reading gives you a clear map of what is being dismantled, what must be built, and when the pressure peaks."
       heroStats={[
         { value: "~Age 29", label: "First Return" },
         { value: "~Age 59", label: "Second Return" },
@@ -158,16 +158,16 @@ export default async function SaturnReturnPage() {
       startingPrice={125}
       whatIsTitle="What Is a Saturn Return?"
       whatIsParagraphs={[
-        "Saturn, the planet of discipline, structure, and karma, takes approximately 29.5 years to complete one full orbit around the Sun. When it returns to the exact position it held at the moment of your birth, you experience what astrologers call a Saturn Return.",
-        "This transit marks a rite of passage — a cosmic audit of your life choices, values, and foundations. Saturn asks you to take responsibility, shed what no longer serves you, and step into the next chapter of your life with greater maturity.",
-        "Common themes include career pivots, relationship milestones or endings, identity shifts, and a deep reassessment of what you truly want from life.",
+        "Saturn, the planet of discipline, structure, and karma, takes approximately 29.5 years to complete one full orbit around the Sun. When it returns to the exact position it held at the moment of your birth, you experience what astrologers call a Saturn Return — one of the most structurally significant transits in your entire life.",
+        "This transit is a cosmic audit of your foundations. Saturn does not destroy — it tests. Relationships built on genuine alignment deepen. Careers built on authenticity advance. Structures built on illusion or avoidance are dismantled. The return asks you to take full ownership of your choices, release what no longer fits, and rebuild on firmer ground.",
+        "A certified astrologer reads your Saturn's natal house, sign, and aspects to map exactly which areas of your life are under review — and when. Without this chart-specific analysis, the Saturn Return can feel like overwhelming chaos. With it, each shift has context, timing, and a direction to move toward.",
       ]}
       revealsItems={[
-        { label: "Ages 27–30", desc: "First Saturn Return — the entry into true adulthood" },
-        { label: "Ages 56–60", desc: "Second Saturn Return — stepping into elder wisdom" },
-        { label: "Ages 84–88", desc: "Third Saturn Return — the master's harvest" },
-        { label: "Duration", desc: "The transit itself typically spans 2–3 years per return" },
-        { label: "Exact Timing", desc: "A certified astrologer can calculate precise dates from your birth date, time, and location" },
+        { label: "Where Saturn Is Restructuring Your Life", desc: "The specific house(s) Saturn occupies — showing exactly which life domain (career, relationships, home, identity) is undergoing the deepest review and rebuilding in your chart" },
+        { label: "What Must Change vs. What Can Stay", desc: "A clear map of what the transit is asking you to release, redesign, and recommit to — based on your Saturn placement, aspects, and current life circumstances" },
+        { label: "Career & Vocation Reckoning", desc: "How Saturn's return is testing and reshaping your professional path — and what your chart reveals about your true calling versus the roles you have been playing by default" },
+        { label: "Relationship Foundations Under Review", desc: "Which relationships Saturn is stress-testing and why — and what the chart says about their long-term viability, the lessons they carry, and what commitment truly means for you now" },
+        { label: "The Timeline: When Peak Pressure Hits", desc: "The specific years and key dates when Saturn's influence is most concentrated — so you can prepare, make conscious choices, and move through the transit with clarity rather than crisis" },
       ]}
       expectCards={[
         {
@@ -237,6 +237,11 @@ export default async function SaturnReturnPage() {
       ctaTitle="Ready to navigate your Saturn Return?"
       ctaBody="Connect with a certified astrologer who can illuminate what this powerful transition means for your unique chart — and how to move through it with clarity."
       ctaButtonLabel="Browse All Astrologers"
+      relatedReadings={[
+        { title: "Solar Return Reading", href: "/readings/solar-return", icon: "☀️" },
+        { title: "Jupiter Return Reading", href: "/readings/jupiter-return", icon: "💫" },
+        { title: "Nativity Birth Chart", href: "/readings/nativity-birth-chart", icon: "🌟" },
+      ]}
       pageUrl={`${APP_URL}/readings/saturn-return`}
     />
   );

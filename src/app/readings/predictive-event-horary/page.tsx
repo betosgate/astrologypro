@@ -176,6 +176,11 @@ export default async function PredictiveEventHoraryPage() {
       ctaTitle="Have a question that deserves a real answer?"
       ctaBody="Connect with a certified horary astrologer who can cast a chart for your specific question and apply classical techniques to extract a clear, grounded answer from the stars."
       ctaButtonLabel="Browse All Astrologers"
+      relatedReadings={[
+        { title: "Weekly Transits Reading", href: "/readings/weekly-transits", icon: "📅" },
+        { title: "Nativity Birth Chart", href: "/readings/nativity-birth-chart", icon: "🌟" },
+        { title: "Saturn Return Reading", href: "/readings/saturn-return", icon: "🪐" },
+      ]}
       pageUrl={`${APP_URL}/readings/predictive-event-horary`}
     />
   );

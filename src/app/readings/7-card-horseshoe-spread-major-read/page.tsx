@@ -176,6 +176,11 @@ export default async function SevenCardHorseshoeSpreadMajorReadPage() {
       ctaTitle="Ready for the full picture of your situation?"
       ctaBody="Connect with a skilled tarot reader who can use the horseshoe spread to map every dimension of your situation — from hidden influences to final outcome — in one comprehensive, actionable reading."
       ctaButtonLabel="Browse All Tarot Readers"
+      relatedReadings={[
+  { title: "5-Card Complex Spread", href: "/readings/5-card-complex-question-spread", icon: "🃏" },
+  { title: "Celtic Cross Reading", href: "/readings/10-card-celtic-cross-major-read", icon: "✨" },
+  { title: "6-Month Forward Review", href: "/readings/7-card-6-month-forward-review", icon: "📆" },
+]}
       pageUrl={`${APP_URL}/readings/7-card-horseshoe-spread-major-read`}
     />
   );

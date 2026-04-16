@@ -176,6 +176,11 @@ export default async function BusinessRelationshipPage() {
       ctaTitle="Ready to build your partnership on solid astrological ground?"
       ctaBody="Connect with a certified astrologer who specializes in business relationship charts — revealing the strengths, blind spots, and optimal timing for your most important professional alliance."
       ctaButtonLabel="Browse All Astrologers"
+      relatedReadings={[
+        { title: "Romantic Relationship Reading", href: "/readings/romantic-relationships", icon: "💞" },
+        { title: "Friendship Relationship Reading", href: "/readings/friendship-relationships", icon: "🤝" },
+        { title: "Nativity Birth Chart", href: "/readings/nativity-birth-chart", icon: "🌟" },
+      ]}
       pageUrl={`${APP_URL}/readings/business-relationship`}
     />
   );
