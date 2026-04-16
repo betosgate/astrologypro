@@ -441,6 +441,16 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
                           <Share2 className="size-3.5" />Copy Client Share Link
                         </Button>
                       )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="w-full gap-2 text-xs text-muted-foreground"
+                        disabled={syncingRecording}
+                        onClick={handleSyncRecording}
+                      >
+                        {syncingRecording ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+                        {syncingRecording ? "Re-stitching segments…" : "Re-sync / Re-stitch Recording"}
+                      </Button>
                     </>
                   ) : (
                     <div className="space-y-2">
