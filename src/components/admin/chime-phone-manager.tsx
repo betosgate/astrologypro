@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   Phone,
   PhoneOff,
+  PhoneIncoming,
   Loader2,
   CheckCircle2,
   AlertTriangle,
@@ -15,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +50,7 @@ interface ChimePhoneManagerProps {
   chimeSmaPhoneArn: string | null;
   phoneAnswerMode: PhoneAnswerMode | null;
   phoneMobile: string | null;
+  phoneDialinEnabled: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -58,6 +61,7 @@ export function ChimePhoneManager({
   chimeSmaPhoneArn: initialSmaArn,
   phoneAnswerMode: initialAnswerMode,
   phoneMobile: initialMobile,
+  phoneDialinEnabled: initialDialinEnabled,
 }: ChimePhoneManagerProps) {
   const [phone, setPhone] = useState<string | null>(initialPhone);
   const [smaArn, setSmaArn] = useState<string | null>(initialSmaArn);
@@ -71,6 +75,8 @@ export function ChimePhoneManager({
     initialAnswerMode ?? "both"
   );
   const [mobileMobile, setMobileMobile] = useState(initialMobile ?? "");
+  const [dialinEnabled, setDialinEnabled] = useState(initialDialinEnabled);
+  const [togglingDialin, setTogglingDialin] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
 
   // ── Provision ──────────────────────────────────────────────────────────────
@@ -124,6 +130,30 @@ export function ChimePhoneManager({
       toast.error("Network error — could not release number");
     } finally {
       setReleasing(false);
+    }
+  }
+
+  // ── Toggle dial-in ─────────────────────────────────────────────────────────
+
+  async function handleToggleDialin(enabled: boolean) {
+    setTogglingDialin(true);
+    try {
+      const res = await fetch(`/api/admin/diviners/${divinerId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone_dialin_enabled: enabled }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Failed to update dial-in setting");
+        return;
+      }
+      setDialinEnabled(enabled);
+      toast.success(enabled ? "Inbound calls enabled" : "Inbound calls disabled");
+    } catch {
+      toast.error("Network error — could not update setting");
+    } finally {
+      setTogglingDialin(false);
     }
   }
 
@@ -274,6 +304,30 @@ export function ChimePhoneManager({
           )}
         </CardContent>
       </Card>
+
+      {/* ── Dial-in enabled toggle (only shown when number is provisioned) */}
+      {phone && (
+        <Card>
+          <CardContent className="flex items-center justify-between py-4">
+            <div className="flex items-center gap-3">
+              <PhoneIncoming className="size-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Inbound Calls</p>
+                <p className="text-xs text-muted-foreground">
+                  {dialinEnabled
+                    ? "Callers can reach this diviner via phone"
+                    : "Inbound calls are disabled — callers will be rejected"}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={dialinEnabled}
+              disabled={togglingDialin}
+              onCheckedChange={handleToggleDialin}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Answer mode card (only shown when number is provisioned) ──── */}
       {phone && (
