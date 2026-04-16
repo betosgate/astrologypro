@@ -86,27 +86,15 @@ async function callAstrologyApiWithSetting<T = unknown>(
   return res.json() as Promise<T>;
 }
 
-async function toggleSettingStatusBySecretValue(secretValue: string): Promise<void> {
+async function updateSettingStatusById(id: string, nextStatus: "active" | "inactive"): Promise<void> {
   const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("astro_system_settings")
-    .select("id, status")
-    .eq("type", "ASTROLOGY_API")
-    .eq("secret_value", secretValue)
-    .maybeSingle();
-
-  if (error || !data) {
-    throw new Error(error?.message ?? "Astro system setting not found");
-  }
-
-  const nextStatus = data.status === "active" ? "inactive" : "active";
-  const { error: updateError } = await admin
+  const { error } = await admin
     .from("astro_system_settings")
     .update({ status: nextStatus })
-    .eq("id", data.id);
+    .eq("id", id);
 
-  if (updateError) {
-    throw new Error(updateError.message);
+  if (error) {
+    throw new Error(error.message);
   }
 }
 
@@ -148,7 +136,7 @@ export async function POST(req: NextRequest) {
 
         try {
           if (candidate.status !== "active") {
-            await toggleSettingStatusBySecretValue(candidate.secret_value);
+            await updateSettingStatusById(candidate.id, "active");
             candidate.status = "active";
           }
 
@@ -161,7 +149,7 @@ export async function POST(req: NextRequest) {
             throw lastError;
           }
 
-          await toggleSettingStatusBySecretValue(candidate.secret_value);
+          await updateSettingStatusById(candidate.id, "inactive");
           candidate.status = "inactive";
         }
       }
