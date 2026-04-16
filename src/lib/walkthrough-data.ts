@@ -1428,35 +1428,361 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
 
-      // ---------------Romantic: Synastry Setup---------------//
-      { 
-        name: "horoscope_romantic_setup", 
-        label: "Romantic: Synastry Setup", 
-        description: "Dual-chart relationship mapping.", 
-        group: "Horoscope Toolkit",
-        subModule: "Romantic Relationships",
-        purpose: "Calculates the dynamic interaction between two individuals to assess long-term compatibility and attraction.",
-        bullets: [
-          "Partner birth data entry with GMT preservation",
-          "Synastry vs Composite calculation methods",
-          "Attraction vs Stability metrics",
-          "AI compatibility score generation across 5 dimensions"
-        ]
-      },
-      { 
-        name: "horoscope_romantic_result_synthesis", 
-        label: "Romantic: Synastry Synthesis", 
-        description: "Dual-provider compatibility mapping.", 
-        group: "Horoscope Toolkit",
-        subModule: "Romantic Relationships",
-        purpose: "Visualizes the complex interaction between two natal charts, highlighting points of attraction, tension, and long-term viability.",
-        bullets: [
-          "Interactive dual-wheel synastry overlay",
-          "Aspect-to-aspect comparison table for the pair",
-          "Compatibility scoring across Love, Sex, and Long-term values",
-          "AI narrative on the karmic purpose of the relationship"
-        ]
-      },
+// ---------------Romantic: Synastry Setup---------------//
+      
+//       {
+//   "name": "horoscope_synastry_setup",
+//   "label": "Romantic: Synastry Setup",
+//   "description": "Enter both partners' birth details to generate the romantic synastry chart and relationship compatibility reading.",
+//   "group": "Horoscope Toolkit",
+//   "subModule": "Romantic Synastry",
+//   "purpose": "This section is the entry point for the Romantic Synastry module. It is generated using the birth details of two people, including date of birth, time of birth, and place of birth for each partner. The system first creates both natal charts separately, then compares the planetary positions, houses, and chart angles between the two people. This creates the synastry chart, which helps astrologers understand how one person's energy interacts with the other person's emotional nature, communication style, attraction pattern, values, intimacy, and long-term compatibility. The purpose of this chart is to study relationship chemistry, emotional bonding, romantic harmony, tension points, karmic links, communication flow, and the areas where the couple naturally supports or challenges each other.",
+//   "bullets": [
+//     "💕 Two-Person Birth Data Input — The system uses date of birth, time of birth, and place of birth for both partners to calculate two separate natal charts.",
+//     "🌌 Dual Natal Chart Creation — Each partner's birth chart is created first so their individual planets, signs, houses, and angles can be studied accurately.",
+//     "🔗 Synastry Comparison Engine — The platform then compares Person 1 and Person 2 chart data to find planetary overlays, cross-chart aspects, and compatibility patterns.",
+//     "🪐 Relationship Dynamics Mapping — The chart shows how one partner's planets affect the other partner's planets, houses, Ascendant, Descendant, and emotional responses.",
+//     "💬 Communication Compatibility — Helps astrologers understand how the couple may talk, think, listen, misunderstand, or mentally support each other.",
+//     "❤️ Romantic Attraction Insight — Reveals emotional bonding, love style, affection patterns, intimacy potential, and physical or magnetic attraction between the partners.",
+//     "⚖ Harmony and Tension Detection — Shows supportive aspects such as trines and sextiles, as well as difficult dynamics such as squares, oppositions, or emotional friction points.",
+//     "🏠 House Overlay Meaning — Explains which life areas are activated in each partner by the other person, such as love, marriage, home, sexuality, career, or spiritual growth.",
+//     "🔮 Karmic and Soul Connection Clues — Can highlight deeper relationship themes through strong Saturn, Node, Pluto, Moon, Venus, or angle connections.",
+//     "📊 Astrologer-Friendly Chart View — Displays both individual charts and synastry wheels so astrologers can visually compare the relationship structure more easily.",
+//     "🧠 What We Understand From This Chart — It helps identify compatibility strengths, emotional needs, attraction patterns, conflict zones, commitment potential, and the deeper purpose of the relationship.",
+//     "🚀 Practical Use — Useful for romantic compatibility readings, couple counseling, marriage analysis, relationship guidance, soulmate analysis, and understanding long-term partnership dynamics."
+//   ]
+// },
+
+// ---------------Romantic Relationships---------------//
+
+{
+  "name": "horoscope_romantic_relationships_setup",
+  "label": "Romantic Relationships: Entry & Generation Setup",
+  "description": "Enter both partners' birth details to generate the full romantic compatibility reading step by step.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This is the first screen of the Romantic Relationships module. The user must enter date of birth, time of birth, and place of birth for both Person 1 and Person 2. These details are required because the system uses them to calculate two accurate natal charts. After the required fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform starts building the relationship reading screen by screen. It compares both charts and then generates compatibility summary, synastry interpretations, deep synastry analysis, composite relationship insights, Davison relationship insights, elemental balance, timing and transits, and karmic or soulmate indicators. This setup screen is important because if birth time or birth place is wrong, houses, angles, compatibility patterns, and relationship analysis may change.",
+  "bullets": [
+    "📅 Step 1 — Enter Both Birth Dates: The user enters date of birth for both partners so the system can create the two natal chart foundations.",
+    "🕒 Step 2 — Enter Both Birth Times: The user enters exact time of birth for both partners because Ascendant, houses, and relationship overlays depend on correct timing.",
+    "📍 Step 3 — Enter Both Birth Places: The user enters place of birth for both partners so the engine can use the correct coordinates and timezone for accurate chart generation.",
+    "📝 Step 4 — Area of Inquiry (Optional): The user can add a focus topic such as love, marriage, trust, communication, long-term future, or emotional connection.",
+    "✅ Step 5 — Generate Reading Activation: After both partners' required birth details are completed correctly, the Generate Reading button becomes active.",
+    "💕 Step 6 — Compatibility Summary: The system gives a simple first overview of the relationship through Sun, Moon, Venus, and Mars compatibility so the user can quickly understand the basic connection.",
+    "🔗 Step 7 — Synastry Interpretations: The platform compares both natal charts directly and shows how one partner's planets interact with the other partner's planets in love, emotion, and communication.",
+    "🧠 Step 8 — Deep Synastry Analysis: Important synastry aspects can open in deeper view so the astrologer can understand the emotional and psychological meaning more clearly.",
+    "🌌 Step 9 — Composite Relationship Reading: The system creates the composite chart to show the energy of the relationship itself as one shared entity.",
+    "❤️ Step 10 — Davison Relationship Reading: The platform creates the Davison chart to explain how the relationship lives and develops in real life as a shared partnership.",
+    "🌍 Step 11 — Elemental Balance: The system compares Fire, Earth, Air, and Water between both partners to show passion, stability, communication, and emotional depth in the relationship.",
+    "⏳ Step 12 — Timing & Transits: The reading highlights relationship timing, active connection periods, and important emotional or romantic phases between the two people.",
+    "🔮 Step 13 — Karmic & Soulmate Indicators: The system identifies deep karmic, soulmate, growth, and destiny-style patterns that make the relationship feel especially meaningful.",
+    "📖 Step 14 — Show More Deep Readings: Important cards can open into deeper explanation screens so the user can understand the relationship in more detail without confusion."
+  ]
+},
+     {
+  "name": "horoscope_synastry_setup",
+  "label": "Romantic: Synastry Setup",
+  "description": "Enter both partners' birth details to generate the romantic synastry chart and relationship compatibility reading.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is the entry point for the Romantic Synastry module. It is generated using the birth details of two people, including date of birth, time of birth, and place of birth for each partner. The system first creates both natal charts separately, then compares the planetary positions, houses, and chart angles between the two people. This creates the synastry chart, which helps astrologers understand how one person's energy interacts with the other person's emotional nature, communication style, attraction pattern, values, intimacy, and long-term compatibility. The purpose of this chart is to study relationship chemistry, emotional bonding, romantic harmony, tension points, karmic links, communication flow, and the areas where the couple naturally supports or challenges each other.",
+  "bullets": [
+    "💕 Two-Person Birth Data Input — The system uses date of birth, time of birth, and place of birth for both partners to calculate two separate natal charts.",
+    "🌌 Dual Natal Chart Creation — Each partner's birth chart is created first so their individual planets, signs, houses, and angles can be studied accurately.",
+    "🔗 Synastry Comparison Engine — The platform then compares Person 1 and Person 2 chart data to find planetary overlays, cross-chart aspects, and compatibility patterns.",
+    "🪐 Relationship Dynamics Mapping — The chart shows how one partner's planets affect the other partner's planets, houses, Ascendant, Descendant, and emotional responses.",
+    "💬 Communication Compatibility — Helps astrologers understand how the couple may talk, think, listen, misunderstand, or mentally support each other.",
+    "❤️ Romantic Attraction Insight — Reveals emotional bonding, love style, affection patterns, intimacy potential, and physical or magnetic attraction between the partners.",
+    "⚖ Harmony and Tension Detection — Shows supportive aspects such as trines and sextiles, as well as difficult dynamics such as squares, oppositions, or emotional friction points.",
+    "🏠 House Overlay Meaning — Explains which life areas are activated in each partner by the other person, such as love, marriage, home, sexuality, career, or spiritual growth.",
+    "🔮 Karmic and Soul Connection Clues — Can highlight deeper relationship themes through strong Saturn, Node, Pluto, Moon, Venus, or angle connections.",
+    "📊 Astrologer-Friendly Chart View — Displays both individual charts and synastry wheels so astrologers can visually compare the relationship structure more easily.",
+    "🧠 What We Understand From This Chart — It helps identify compatibility strengths, emotional needs, attraction patterns, conflict zones, commitment potential, and the deeper purpose of the relationship.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, couple counseling, marriage analysis, relationship guidance, soulmate analysis, and understanding long-term partnership dynamics."
+  ]
+},
+     {
+  "name": "horoscope_synastry_interpretations",
+  "label": "Romantic: Synastry Interpretations",
+  "description": "Readable relationship interpretation cards showing how one partner's planets connect with the other partner's planets.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the birth details of both partners are entered, including date of birth, time of birth, and place of birth for each person. The system first creates two separate natal charts, then compares the planets, signs, houses, and angles between both charts. When an important synastry aspect is found, such as Sun conjunct Sun or Sun trine Moon, the platform creates an interpretation card for that relationship pattern. Each card explains the aspect between the two partners, what kind of emotional or romantic dynamic it creates, and how that connection may be experienced in real life. This helps astrologers understand compatibility, attraction, harmony, shared values, communication flow, emotional support, and possible tension in the relationship.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate two accurate natal charts before compatibility comparison begins.",
+    "🌌 Two-Chart Comparison — The system compares Person 1 and Person 2 planetary positions to detect important synastry aspects between both charts.",
+    "🔗 Aspect Meaning — Each card explains the relationship between two planets, such as conjunction, trine, sextile, square, or opposition, and what that means for the couple.",
+    "☀ Planet-to-Planet Compatibility — Shows how one partner's core identity, emotions, affection, communication, and desire patterns connect with the other partner's chart.",
+    "❤️ Romantic and Emotional Insight — Helps reveal emotional bonding, mutual understanding, attraction potential, comfort, care, and relationship chemistry.",
+    "💬 Relationship Communication Meaning — Explains how the aspect may influence understanding, emotional expression, mental connection, and the way the couple interacts.",
+    "⚖ Harmony and Challenge Detection — Highlights whether the connection is naturally supportive, emotionally easy, inspiring, intense, or more challenging to manage.",
+    "📖 Show More Support — Each synastry card can include a Show More action so astrologers can open a deeper explanation of that specific compatibility aspect.",
+    "🧠 Practical Relationship Guidance — Helps astrologers explain how the aspect may influence love, trust, emotional support, shared values, conflict handling, and long-term bonding.",
+    "📊 Easy Card Format — Converts complex synastry comparison into short readable cards so astrologers can quickly scan the strongest relationship dynamics.",
+    "🔮 What We Understand From This Section — It helps identify where the couple naturally connects, where they may emotionally support each other, and where deeper adjustment may be needed.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, couple guidance, marriage analysis, soulmate interpretation, and understanding relationship strengths and challenges."
+  ]
+},
+
+{
+  "name": "horoscope_synastry_deep_analysis",
+  "label": "Romantic: Deep Synastry Analysis",
+  "description": "A detailed compatibility reading for one specific synastry aspect, with expanded relationship insight and picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system creates natal charts for both partners using each person's date of birth, time of birth, and place of birth. The synastry engine then compares both charts and detects important relationship aspects between the partners' planets. When the user clicks Show More on a synastry interpretation card, this deep analysis screen opens and gives a fuller explanation of that one compatibility aspect. In this example, Sun conjunct Sun shows how both partners share similar identity patterns, values, and life expression. This section helps astrologers understand the deeper emotional, psychological, romantic, and practical meaning of a specific relationship connection, while also using a visual picture representation to make the shared planetary energy easier to understand.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate two natal charts before deep compatibility analysis begins.",
+    "🌌 Synastry Aspect Detection — The system compares both charts and selects one important aspect, such as Sun conjunction Sun, for expanded interpretation.",
+    "🔗 Deep Aspect Meaning — Explains in detail how the selected aspect works in the relationship and what kind of bond, harmony, attraction, or challenge it creates.",
+    "☀ Planet-to-Planet Relationship Insight — Shows how one partner's planet connects with the other partner's planet and how their core energies blend together.",
+    "❤️ Romantic Compatibility Depth — Helps astrologers understand emotional closeness, mutual support, attraction pattern, relationship tone, and shared life direction.",
+    "🧠 Psychological Relationship Reading — Explains the deeper mindset, emotional resonance, shared values, and personal growth pattern created by the aspect.",
+    "⚖ Harmony and Adjustment Insight — Shows where the aspect creates natural ease, understanding, shared purpose, or where conscious balance may still be needed.",
+    "📖 Show More Deep Reading Purpose — This modal appears after clicking Show More so the astrologer can study one important synastry aspect in greater detail.",
+    "🖼 Picture Representation — Includes a visual symbolic panel that combines the meaning of both planets and the aspect between them for faster astrological understanding.",
+    "🔮 What We Understand From This Screen — It helps reveal the deeper purpose of a specific relationship aspect, including compatibility strength, emotional bonding, shared values, and the lesson of the connection.",
+    "💬 Astrologer-Friendly Use — Converts complex synastry comparison into a fuller, more meaningful explanation that is easier to use in couple readings and relationship guidance.",
+    "🚀 Practical Use — Useful for romantic compatibility analysis, soulmate readings, marriage guidance, couple counseling, and deep relationship interpretation."
+  ]
+},
+
+{
+  "name": "horoscope_synastry_interpretations_v1",
+  "label": "Romantic: Synastry Interpretations",
+  "description": "Relationship interpretation cards that explain each synastry aspect in a fresh, non-repetitive, and emotionally meaningful way.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system creates natal charts for both partners using each person's date of birth, time of birth, and place of birth. The synastry engine compares the planets, signs, houses, and chart angles of both people and identifies important compatibility aspects between them. Each result is shown as a separate interpretation card. The purpose of this section is not only to explain compatibility, but also to make each relationship insight feel unique and engaging. Instead of repeating the same sentence structure for every card, the content should change according to the aspect type, the two planets involved, and the emotional or romantic meaning of that connection. This keeps the reading more natural, more personal, and less boring for the user while still being useful for astrologers.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate two accurate natal charts before synastry comparison begins.",
+    "🌌 Aspect-Based Relationship Matching — The system compares both charts and detects important synastry links such as Moon sextile Moon, Mars conjunct Mercury, or Venus conjunct Mars.",
+    "🔗 Unique Interpretation Per Aspect — Each card should be written differently based on the exact planets and aspect involved, so the reading does not feel copied or repetitive.",
+    "☀ Planet Meaning Variation — The content changes according to the planets involved, such as Moon for emotions, Mercury for communication, Mars for passion and action, and Venus for love and attraction.",
+    "⚖ Aspect Tone Variation — The wording also changes by aspect type, such as conjunction for intensity, sextile for support, trine for ease, square for tension, and opposition for polarity.",
+    "❤️ Relationship Experience Focus — Each card explains how that aspect may appear in real life, such as emotional comfort, playful attraction, mental stimulation, romantic chemistry, or conflict potential.",
+    "💬 Natural Reading Style — The text should feel smooth and human, not robotic, so users remain interested while reading multiple compatibility cards.",
+    "🧠 Non-Repetitive Narrative Design — Sentence openings, interpretation flow, and emotional tone should vary from card to card to keep the synastry reading fresh and engaging.",
+    "📖 Show More Support — Each synastry card can include a Show More option that opens a deeper explanation of the aspect without repeating the same summary language.",
+    "📊 Astrologer-Friendly Clarity — Even though the wording changes, the interpretation must still clearly explain compatibility strength, emotional meaning, attraction pattern, and practical relationship dynamics.",
+    "🔮 What We Understand From This Section — It helps identify where the couple connects naturally, where they excite or challenge each other, and how each specific aspect contributes to the relationship story.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, couple guidance, soulmate analysis, marriage insight, and giving users a more engaging synastry experience."
+  ]
+},
+
+{
+  "name": "horoscope_synastry_deep_analysis_v1",
+  "label": "Romantic: Deep Synastry Analysis",
+  "description": "A detailed relationship reading for one important synastry aspect, with an expanded explanation and picture representation for easier understanding.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section appears when the user opens the deeper view of a specific synastry aspect after entering both partners' date of birth, time of birth, and place of birth. The system first creates two natal charts, then compares the planetary positions between both partners and detects major relationship aspects. When the user clicks Show More on an aspect card, this deep analysis screen opens and explains that one connection in greater depth. In this example, Venus conjunction Mars shows strong romantic attraction, chemistry, passion, and mutual desire. The purpose of this screen is to help astrologers understand the deeper emotional, romantic, physical, and psychological meaning of the aspect, while the picture representation gives a fast visual summary of how both planetary energies blend together in the relationship.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to generate two natal charts before deep synastry interpretation begins.",
+    "🌌 Deep Aspect Focus — This screen explains one specific relationship aspect in detail, such as Venus conjunction Mars, after it is selected from the synastry interpretation list.",
+    "🔗 Aspect Meaning — Shows how the two planets connect and what kind of romantic, emotional, or psychological pattern they create between the partners.",
+    "♀ Venus Meaning In Relationship — Venus represents love, affection, closeness, attraction style, charm, beauty, pleasure, and the way a person expresses care and emotional warmth.",
+    "♂ Mars Meaning In Relationship — Mars represents passion, physical drive, desire, pursuit, action, excitement, intensity, courage, and the way energy is expressed in attraction.",
+    "❤️ Venus Conjunction Mars Meaning — This aspect often shows strong chemistry, romantic magnetism, physical attraction, active affection, and a relationship that feels alive, expressive, and emotionally charged.",
+    "⚖ Relationship Guidance — The reading can also show that strong attraction needs balance, so passion does not overpower empathy, patience, or emotional understanding.",
+    "🧠 Deep Compatibility Understanding — Helps astrologers explain not only attraction, but also how desire, affection, emotional style, and relationship energy work together in real life.",
+    "🖼 Picture Representation Purpose — The image is used to visually combine Venus qualities, Mars qualities, and the shared blended zone in the center so the astrologer can understand the aspect faster.",
+    "🎨 Left Side Meaning — The left visual area represents Venus traits such as tenderness, love, harmony, closeness, appreciation, attraction, beauty, and relational softness.",
+    "🔥 Right Side Meaning — The right visual area represents Mars traits such as drive, initiative, pursuit, courage, passion, assertion, intensity, and energetic desire.",
+    "✨ Center Blend Meaning — The center area represents the merged meaning of Venus and Mars together, showing the shared relationship themes created by the conjunction, such as chemistry, magnetism, expression, connection, intensity, longing, and active romance.",
+    "📖 Show More Deep Reading Purpose — This screen is designed to expand a short compatibility card into a fuller explanation that feels more meaningful and less surface-level.",
+    "🔮 What We Understand From This Screen — It helps astrologers understand whether the couple shares romantic attraction, emotional warmth, mutual desire, playful chemistry, or a highly energized bond that can grow through conscious balance.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, couple counseling, attraction analysis, marriage insight, and explaining strong love-and-passion connections in a clear way."
+  ]
+},
+
+{
+  "name": "horoscope_composite_interpretations_v1",
+  "label": "Romantic: Composite Interpretations",
+  "description": "Relationship interpretation cards that explain the shared energy of the couple through the composite chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and creates both natal charts. Then the platform calculates the composite chart, which is the combined relationship chart showing the energy of the relationship itself rather than only Person 1 or Person 2 separately. From this composite chart, the system detects important composite aspects such as Sun conjunction Sun or Moon trine Moon and presents them as readable interpretation cards. Each card explains what that shared aspect means for the relationship, how the couple functions together emotionally and practically, and what kind of bond, harmony, challenge, or growth pattern is created. This helps astrologers understand the deeper identity of the relationship itself, including emotional flow, shared purpose, compatibility tone, and how the partnership behaves as one combined unit.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate two natal charts before creating the composite relationship chart.",
+    "🌌 Composite Chart Creation — The system combines both partners' chart data into one shared relationship chart that represents the partnership as a single energetic entity.",
+    "🔗 Composite Aspect Detection — Important aspects inside the composite chart are identified, such as conjunctions, trines, sextiles, squares, and oppositions.",
+    "☀ Shared Relationship Identity — Aspects such as Sun conjunction Sun help explain the main identity, purpose, direction, and style of the relationship itself.",
+    "🌙 Emotional Bond Meaning — Aspects such as Moon trine Moon help explain emotional compatibility, comfort level, mutual support, and the emotional climate of the partnership.",
+    "❤️ Relationship Energy Focus — Each card explains how the shared chart reflects harmony, closeness, attraction, support, challenge, or growth within the relationship.",
+    "💬 Easy Card Interpretation — The technical composite chart is converted into short readable cards so astrologers can quickly understand the meaning without reading raw chart data only.",
+    "⚖ Harmony and Challenge Insight — Helps astrologers see whether the relationship naturally flows with ease, needs emotional adjustment, or carries strong areas of tension and development.",
+    "📖 Show More Support — Each composite card can include a Show More action so the astrologer or user can open a deeper explanation of that shared relationship aspect.",
+    "🧠 What We Understand From This Section — It shows how the relationship behaves as a whole, how both partners function together, and what the shared emotional and practical dynamics look like.",
+    "🔮 Why This Section Is Useful — It helps astrologers move beyond simple partner-to-partner comparison and understand the actual personality and purpose of the relationship itself.",
+    "🚀 Practical Use — Useful for couple compatibility readings, marriage analysis, long-term partnership understanding, relationship counseling, and studying the shared life path of the couple."
+  ]
+},
+{
+  "name": "horoscope_composite_deep_analysis_v1",
+  "label": "Romantic: Deep Composite Analysis",
+  "description": "A detailed composite relationship reading for one important shared aspect, with expanded explanation and picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and creates both natal charts. Then it builds the composite chart, which represents the relationship itself as one shared chart. From that composite chart, the system identifies important aspects and creates interpretation cards. When the user clicks Show More, this deep analysis screen opens and explains one composite aspect in greater detail. In this example, Moon trine Moon shows emotional ease, mutual understanding, comfort, and supportive emotional flow inside the relationship. This screen helps astrologers understand the deeper emotional structure of the partnership, the way both people feel safe together, and how the relationship naturally supports emotional bonding and inner stability.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate two natal charts before creating the composite chart.",
+    "🌌 Composite Chart Focus — This screen explains one specific aspect from the composite chart, which represents the shared energy of the relationship itself.",
+    "🔗 Deep Aspect Meaning — Gives a fuller explanation of one important shared aspect, such as Moon trine Moon, and how it shapes the emotional tone of the relationship.",
+    "🌙 Moon Meaning In Composite Relationship — The Moon represents emotions, comfort, inner needs, instinctive reactions, emotional bonding, care, and the feeling of safety within the partnership.",
+    "△ Trine Meaning In Composite Reading — A trine shows natural ease, supportive flow, harmony, emotional compatibility, and a relationship pattern that works smoothly without much forcing.",
+    "❤️ Moon Trine Moon Meaning — This aspect often shows emotional understanding, mutual care, natural empathy, peaceful emotional exchange, and a relationship where both partners can feel heard and supported.",
+    "🧠 Emotional Compatibility Insight — Helps astrologers understand how the relationship handles feelings, nurtures closeness, and creates emotional reassurance between both people.",
+    "⚖ Relationship Support Meaning — Shows that the relationship may have a gentle emotional rhythm, easier conflict recovery, and a strong base for trust, comfort, and emotional cooperation.",
+    "🖼 Picture Representation Purpose — The image visually explains the aspect by showing Moon energy on both sides and the trine quality in the center, helping astrologers understand the aspect faster.",
+    "🌙 Left Side Meaning — The left visual side represents one Moon expression, including emotional sensitivity, reflection, comfort, nourishment, rhythm, and personal feeling patterns.",
+    "🌙 Right Side Meaning — The right visual side represents the other Moon expression, including intuition, receptivity, memory, vulnerability, care, empathy, and emotional response style.",
+    "✨ Center Blend Meaning — The center area represents the shared result of the trine, such as harmony, trust, balance, support, understanding, comfort, connection, and emotional integration.",
+    "📖 Show More Deep Reading Purpose — This screen expands a short composite interpretation card into a deeper emotional and relational explanation.",
+    "🔮 What We Understand From This Screen — It helps astrologers see whether the relationship has emotional ease, nurturing energy, mutual reassurance, and a naturally supportive emotional foundation.",
+    "🚀 Practical Use — Useful for couple compatibility readings, marriage analysis, emotional bond assessment, relationship counseling, and understanding the emotional heart of the partnership."
+  ]
+},
+
+{
+  "name": "horoscope_davison_relationship_v1",
+  "label": "Romantic: Davison Relationship Summary",
+  "description": "A readable Davison relationship summary showing core compatibility themes through shared Sun and Moon dynamics.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and calculates the Davison relationship chart. The Davison chart is created from the midpoint in time and space between the two birth charts, and it represents the relationship as a real shared entity. This screen gives a simplified relationship summary by focusing on major compatibility themes such as Sun compatibility and Moon compatibility inside the Davison chart. Its purpose is to help astrologers quickly understand how the relationship functions at its core, especially in identity, partnership style, emotional connection, and shared daily dynamics. It acts as an easy relationship overview before moving into deeper Davison aspect and house analysis.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate the Davison relationship chart from the midpoint of both birth patterns.",
+    "🌌 Davison Relationship Meaning — The Davison chart shows the relationship itself as a shared chart, helping astrologers understand how the partnership lives, develops, and behaves as one combined unit.",
+    "☀ Sun Compatibility Meaning — Sun compatibility explains the shared identity of the relationship, including common values, purpose, direction, expression, and how the couple functions together in visible life.",
+    "🌙 Moon Compatibility Meaning — Moon compatibility explains the emotional atmosphere of the relationship, including comfort needs, emotional reactions, support style, bonding pattern, and inner security.",
+    "❤️ Relationship Summary Purpose — This screen provides a first-level understanding of the Davison relationship through major emotional and identity-based compatibility themes.",
+    "⚖ Harmony and Adjustment Insight — Helps astrologers see where the relationship naturally flows with support and where more awareness or communication may be needed.",
+    "💬 Easy Summary Card Format — Converts Davison compatibility into short readable cards so astrologers and users can quickly understand the relationship tone.",
+    "📖 Show More Support — Each summary card can include a Show More action so deeper explanation can be opened without making the main screen too dense.",
+    "🧠 What We Understand From This Screen — It helps reveal how the couple connects through shared purpose, emotional rhythm, relationship tone, and basic partnership dynamics.",
+    "🔮 Why This Section Is Useful — It offers a clear and accessible overview of the Davison relationship before deeper interpretation of aspects, houses, and advanced relationship structures.",
+    "📊 Astrologer-Friendly Value — Useful as a quick relationship summary that helps the astrologer identify the strongest core themes of the partnership.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, relationship overview, marriage analysis, couple guidance, and introducing the Davison chart in a simple way."
+  ]
+},
+
+{
+  "name": "horoscope_davison_interpretations_v1",
+  "label": "Romantic: Davison Major Aspects & Connections",
+  "description": "Readable interpretation cards showing the most important aspects in the Davison relationship chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and calculates the Davison relationship chart. Unlike synastry, which compares one partner's chart to the other, the Davison chart creates a shared relationship chart based on the midpoint in time and space between both births. This chart represents the lived relationship as its own entity. The purpose of this screen is to highlight the major aspects and connections inside that Davison chart, such as Sun conjunct Venus or Moon trine Jupiter, and explain what those patterns mean for love, bonding, shared purpose, emotional climate, affection, growth, and long-term partnership development.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate the Davison relationship chart from the midpoint of the two birth patterns.",
+    "🌌 Davison Chart Meaning — The Davison chart represents the relationship itself as a real shared chart, showing how the partnership lives, grows, and functions as one combined experience.",
+    "🔗 Major Aspect Detection — The system identifies the strongest aspects in the Davison chart, such as conjunctions, trines, sextiles, squares, and oppositions, then presents them as readable cards.",
+    "☀ Sun Conjunct Venus Meaning — This type of aspect often shows warmth, affection, shared appreciation, romantic harmony, attraction, and a relationship that naturally values closeness and partnership.",
+    "🌙 Moon Trine Jupiter Meaning — This type of aspect often shows emotional generosity, comfort, mutual encouragement, emotional growth, and a nurturing atmosphere within the relationship.",
+    "🏠 House Placement Importance — The interpretation may also mention the house position of the aspect, such as the 7th house for partnership or the 4th house for home and emotional security, to show where the relationship energy is most active.",
+    "❤️ Shared Relationship Purpose — These cards help explain what the relationship is built around, such as love, emotional support, commitment, optimism, creativity, or mutual development.",
+    "💬 Easy Card Interpretation — Converts technical Davison chart aspects into short readable cards so astrologers can quickly understand the main relationship patterns.",
+    "⚖ Harmony and Growth Insight — Helps astrologers see which parts of the relationship flow naturally, where there is emotional support, and where the couple may find shared growth and long-term strength.",
+    "📖 Show More Support — Each Davison aspect card can include a Show More action so the astrologer or user can open a deeper explanation of that specific shared aspect.",
+    "🧠 What We Understand From This Screen — It helps reveal the emotional tone, romantic potential, supportive patterns, and key themes that define how the relationship operates as a whole.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, relationship counseling, marriage analysis, long-term partnership guidance, and understanding the shared energetic structure of the couple."
+  ]
+},
+{
+  "name": "horoscope_compatibility_summary_v1",
+  "label": "Romantic: Compatibility Score / Summary",
+  "description": "A quick relationship summary that explains the couple's core compatibility through Sun, Moon, Venus, and Mars dynamics.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and creates both natal charts. It then compares the most important personal relationship indicators between the two people, especially Sun, Moon, Venus, and Mars. The purpose of this screen is to give a fast but meaningful overview of the relationship before deeper synastry, composite, or Davison analysis. It helps astrologers understand how the couple connects through identity, emotional style, love nature, attraction pattern, and action dynamics, while also showing where harmony is strong and where conscious adjustment may be needed.",
+  "bullets": [
+    "☀ Sun Sign Compatibility — Explains how both partners connect through identity, shared values, personality style, life direction, and overall relationship tone. It helps show whether the couple naturally understands each other's core nature.",
+    "🌙 Moon Sign Dynamics — Explains the emotional side of compatibility, including comfort needs, emotional reactions, nurturing style, and inner security. It helps astrologers understand how the couple feels together on a deeper emotional level.",
+    "♀♂ Venus and Mars Interactions — Explains love, attraction, romance, desire, passion, and the way both partners express affection and action in the relationship. It helps show chemistry, emotional magnetism, and how love and desire flow between them.",
+    "⚖ Compatibility Strength and Tension — Each section highlights both supportive qualities and possible friction points, so the reading feels balanced and realistic rather than overly positive.",
+    "💬 Easy Summary Card Format — The technical comparison is turned into short readable cards so astrologers and users can quickly understand the main relationship pattern.",
+    "📖 Show More Support — Each summary card can open a deeper explanation so the user can move from quick insight into a more complete relationship reading.",
+    "🧠 What We Understand From This Screen — It gives a first-level view of the couple's emotional bond, romantic chemistry, communication tone, and overall compatibility foundation.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, first-level couple analysis, quick partner matching, and preparing for deeper relationship interpretation."
+  ]
+},
+
+{
+  "name": "horoscope_elemental_balance_v1",
+  "label": "Romantic: Elemental Balance",
+  "description": "A relationship reading that compares elemental balance between both partners to show natural harmony, missing energies, and emotional style in the connection.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and creates both natal charts. It then studies the elemental distribution in each chart by measuring how strongly Fire, Earth, Air, and Water are expressed through the partners' planets and major placements. The purpose of this screen is to help astrologers understand the natural energetic chemistry of the relationship. It shows whether the couple is more emotional, practical, intellectual, or passionate, where the relationship feels balanced, and where one or both partners may be missing an important element. This screen is useful because elemental balance often explains why two people communicate easily, feel emotionally supported, struggle with spontaneity, or experience differences in emotional depth, passion, or stability.",
+  "bullets": [
+    "🌍 What Elemental Balance Means — Elemental balance is the comparison of Fire, Earth, Air, and Water energies in both partners' charts to understand how their natural temperaments combine inside the relationship.",
+    "🔥 Fire Element Meaning — Fire represents passion, enthusiasm, courage, spontaneity, inspiration, excitement, action, and the drive to express energy directly.",
+    "🏔 Earth Element Meaning — Earth represents stability, practicality, reliability, groundedness, patience, routine, material awareness, and the ability to build lasting structure.",
+    "🌬 Air Element Meaning — Air represents communication, ideas, curiosity, social flow, intellectual connection, objectivity, adaptability, and mental exchange.",
+    "🌊 Water Element Meaning — Water represents emotions, intuition, sensitivity, empathy, bonding, emotional depth, inner response, and the need for emotional closeness.",
+    "💕 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both partners to calculate both natal charts, then measures the elemental emphasis across important placements in each chart.",
+    "📊 Why This Screen Is Used — It helps astrologers quickly understand the natural chemistry of the relationship by showing which elemental energies are strong, weak, balanced, or missing between the two people.",
+    "🧠 What We Understand From This Reading — It explains whether the relationship is more mental, emotional, practical, or passionate, and shows how the partners naturally exchange energy with one another.",
+    "⚖ Elemental Balance Section Meaning — The main Elemental Balance card gives an overall summary of how the couple's elemental energies blend together and what that means for the relationship as a whole.",
+    "🔥 Fire Element Section Meaning — This card explains how much shared passion, motivation, spontaneity, confidence, and adventurous energy exists between the two partners, or whether this energy is missing and needs conscious development.",
+    "🌊 Water Element Section Meaning — This card explains how much emotional depth, empathy, intuition, and emotional support exists between the two partners, or whether emotional expression feels uneven or difficult.",
+    "🏔 Earth and 🌬 Air Value In Relationship — Earth helps the relationship stay stable and workable, while Air helps the relationship stay communicative, social, and mentally connected. Together they often show how ideas can become practical reality.",
+    "📖 Show More Purpose — Each elemental card can open a deeper explanation so the astrologer or user can study one elemental theme more fully without making the summary screen too heavy.",
+    "🔮 Practical Relationship Insight — Strong Air may show easy communication, strong Earth may show stability, strong Water may show emotional bonding, and strong Fire may show chemistry and excitement. Missing elements often reveal what the relationship must consciously develop.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, friendship and partner analysis, emotional matching, relationship counseling, and explaining why a relationship feels strong, steady, intense, intellectual, or emotionally uneven."
+  ]
+},
+
+{
+  "name": "horoscope_relationship_timing_transits",
+  "label": "Romantic: Timing & Transits",
+  "description": "A relationship timing screen that shows how active transits and inter-chart contacts influence the couple's connection, emotional flow, and growth periods.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and creates both natal charts. The platform then compares important planetary contacts between the two people and highlights active relationship dynamics through aspect-based timing indicators. The purpose of this screen is to help astrologers understand when certain romantic, emotional, mental, or supportive energies become more noticeable in the relationship. It shows how one partner's planet in a specific sign connects with the other partner's planet in another sign, what type of aspect is formed, and what that means for the relationship at a practical and emotional level. This screen is useful because it adds timing awareness to compatibility, showing where harmony, tension, growth, attraction, or emotional challenge may become especially active.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate two natal charts before relationship timing analysis begins.",
+    "🪐 Inter-Chart Timing Detection — The system compares active relationship contacts between both charts and identifies important aspect patterns that influence how the relationship develops and responds over time.",
+    "🔗 Aspect-Based Timing Meaning — Each card explains a specific contact such as conjunction, trine, sextile, square, or opposition and shows how that aspect shapes relationship timing and experience.",
+    "♈ Sign-Based Relationship Tone — The screen also includes the zodiac signs involved, such as Libra, Aries, Aquarius, Leo, or Pisces, to show how each planet expresses its energy inside the connection.",
+    "☀ Sun and Mercury Connection Meaning — A contact such as Sun conjunct Mercury can show strong communication, shared understanding, mental harmony, and easier conflict resolution through conversation.",
+    "🌙 Moon-to-Moon Timing Meaning — A contact such as Moon opposite Moon helps reveal emotional differences, instinctive reactions, tension in feeling styles, and opportunities for growth through understanding each other's needs.",
+    "♀ Venus and ♃ Jupiter Harmony Meaning — A contact such as Venus trine Jupiter often shows warmth, joy, generosity, affection, shared pleasure, and an uplifting emotional or romantic atmosphere.",
+    "⏳ Why This Screen Is Used — It helps astrologers understand not only whether the couple is compatible, but also which relationship themes become especially active, easy, intense, or important over time.",
+    "💬 Easy Card Interpretation — The technical relationship timing data is converted into short readable cards so astrologers and users can quickly understand the meaning of each active connection.",
+    "⚖ Harmony and Tension Insight — This screen helps identify where the relationship naturally flows with support and warmth, and where emotional adjustment, patience, or conscious communication may be needed.",
+    "📖 Show More Support — Each timing card can include a Show More action so the astrologer or user can open a deeper explanation of that specific relationship aspect.",
+    "🧠 What We Understand From This Screen — It helps reveal mental connection, emotional timing, romantic ease, growth opportunities, and changing relationship dynamics through active planetary contacts.",
+    "🔮 Astrologer-Friendly Value — Useful for understanding when communication improves, when emotional tension may rise, when love feels more expressive, and when the relationship is supported by growth-oriented energy.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, relationship timing analysis, couple guidance, emotional pattern study, and identifying important phases in the partnership."
+  ]
+},
+
+{
+  "name": "horoscope_karmic_soulmate_indicators_v1",
+  "label": "Romantic: Karmic & Soulmate Indicators",
+  "description": "A relationship reading that highlights karmic ties, soulmate-style bonds, and important spiritual lessons between both partners through major inter-chart aspects.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and creates two natal charts. The platform then compares the planets, signs, houses, and important relationship contacts between both charts to identify aspects that often feel karmic, fated, deeply magnetic, emotionally significant, or spiritually instructive. The purpose of this screen is to help astrologers understand whether the relationship carries strong attraction, emotional pull, growth lessons, soulmate-style familiarity, or important commitment themes. It is useful because some aspects do not only show compatibility, but also reveal why the relationship feels meaningful, transformative, healing, challenging, or hard to ignore.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to create two accurate natal charts before karmic comparison begins.",
+    "🌌 Karmic Relationship Detection — The system compares both charts to identify meaningful aspects that may indicate soulmate attraction, karmic connection, emotional familiarity, growth lessons, or long-term significance.",
+    "🔗 Aspect Meaning — Each card explains one specific inter-chart aspect, such as conjunction, trine, sextile, square, or opposition, and what that contact means for the relationship bond.",
+    "☀ Sun Conjunct Venus Meaning — This type of connection often shows affection, appreciation, attraction, beauty, warmth, and a relationship that feels naturally pleasant, loving, and emotionally inviting.",
+    "🌙 Moon Trine Mars Meaning — This type of connection often shows emotional responsiveness, active support, instinctive chemistry, natural encouragement, and a bond where feelings and action can work together smoothly.",
+    "♀ Venus Square Saturn Meaning — This type of connection can show karmic lessons around love, trust, patience, fear of rejection, emotional restraint, commitment pressure, or the need to build stability slowly over time.",
+    "❤️ Soulmate and Karmic Theme Insight — This screen helps reveal whether the relationship feels easy and destined, emotionally charged and growth-oriented, or deeply meaningful because of the lessons it brings.",
+    "⚖ Harmony and Lesson Balance — Some indicators show affection, support, and closeness, while others show challenge, maturity, and the emotional work needed to make the relationship stronger.",
+    "💬 Easy Card Interpretation — The technical chart comparison is turned into short readable cards so astrologers and users can quickly understand the emotional and spiritual meaning of the connection.",
+    "📖 Show More Support — Each karmic indicator card can include a Show More action so deeper explanation can be opened without overloading the main summary screen.",
+    "🧠 What We Understand From This Screen — It helps astrologers identify attraction patterns, emotional support, karmic lessons, trust themes, growth pressure, and the deeper reason the relationship may feel special or unforgettable.",
+    "🔮 Why This Section Is Useful — It moves beyond simple compatibility and explains whether the relationship carries emotional destiny, healing value, long-term teaching, or deep spiritual significance.",
+    "🚀 Practical Use — Useful for soulmate readings, karmic relationship analysis, romantic compatibility sessions, couple counseling, commitment insight, and understanding why a relationship feels deeply important."
+  ]
+},
+      // ---------------Friendship Relationships---------------//
       { 
         name: "horoscope_friendship_setup", 
         label: "Friendship: Social Dynamics", 
