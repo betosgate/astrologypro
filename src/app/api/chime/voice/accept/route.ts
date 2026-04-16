@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createChimeMeeting, createChimeAttendee } from "@/lib/chime-meetings";
+import { createChimeMeeting, createChimeAttendee, getChimeMeeting } from "@/lib/chime-meetings";
 import { getChimeVoiceClient } from "@/lib/chime-client";
 import { UpdateSipMediaApplicationCallCommand } from "@aws-sdk/client-chime-sdk-voice";
 
@@ -159,6 +159,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // ── Fetch full meeting object (includes MediaPlacement for browser SDK) ──
+    const fullMeeting = await getChimeMeeting(chimeMeetingId);
+
     // ── Mark notification as accepted ──────────────────────────────────────
     await admin
       .from("phone_call_notifications")
@@ -177,6 +180,12 @@ export async function POST(request: NextRequest) {
       chimeMeetingId,
       attendeeId: attendee.attendeeId,
       joinToken: attendee.joinToken,
+      // Full AWS objects needed by browser SDK MeetingSessionConfiguration
+      meeting: fullMeeting,
+      attendee: {
+        AttendeeId: attendee.attendeeId,
+        JoinToken: attendee.joinToken,
+      },
     });
   } catch (error) {
     console.error("[chime/voice/accept] error:", error);
