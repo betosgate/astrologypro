@@ -472,7 +472,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
 
                   <div className={cn(
                     "overflow-hidden transition-all duration-300 ease-in-out",
-                    isExpanded ? "mt-1 max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
+                    isExpanded ? "mt-1 max-h-[8000px] opacity-100" : "max-h-0 opacity-0"
                   )}>
                     <div className="ml-5 flex flex-col gap-1.5 border-l border-white/5 pl-3 py-1">
                       {group.subModules.map((sub) => {
@@ -486,7 +486,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                               <button
                                 onClick={() => {
                                   toggleSubModule(sub.name);
-                                  scrollToSubModule(sub.name, group.name);
+                                  if (!isSubExpanded) scrollToSubModule(sub.name, group.name);
                                 }}
                                 className={cn(
                                   "flex w-full items-center gap-2 rounded-lg py-1.5 px-2 text-left text-[11px] font-bold transition-all",
