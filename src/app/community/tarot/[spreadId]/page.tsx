@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
+import { SpreadLayout } from "./spread-layouts";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -432,64 +433,16 @@ export default function SpreadReadingPage() {
         </Button>
       </div>
 
-      {/* Card Grid — old site style */}
-      <div className="rounded-2xl border border-[#343a45] bg-[#1a1e27] p-6 md:p-10">
-        <div
-          className="mx-auto flex flex-wrap justify-center gap-6"
-        >
-          {positionLabels.map((label, i) => {
-            const drawn = drawnCards[i];
-            const isRevealed = drawn !== null;
-
-            return (
-              <div key={i} className="flex flex-col items-center gap-2">
-                {/* Card slot */}
-                <div
-                  className={`relative overflow-hidden rounded-lg border-[3px] transition-all duration-300 ${
-                    isRevealed
-                      ? "border-[#343a45] bg-black"
-                      : "border-[#343a45] bg-[#2a2e37] cursor-pointer hover:border-indigo-400/60 hover:shadow-lg hover:shadow-indigo-500/10"
-                  }`}
-                  style={{ width: 150, height: 220 }}
-                  onClick={() => !isRevealed && handleReveal(i)}
-                  role={isRevealed ? undefined : "button"}
-                  tabIndex={isRevealed ? undefined : 0}
-                  onKeyDown={(e) => {
-                    if (!isRevealed && (e.key === "Enter" || e.key === " ")) {
-                      e.preventDefault();
-                      handleReveal(i);
-                    }
-                  }}
-                  aria-label={isRevealed ? `${label}: ${drawn.card.name}` : `Click to reveal ${label}`}
-                >
-                  {isRevealed ? (
-                    /* Revealed card — show image with fade-in */
-                    <img
-                      src={drawn.card.image_url ?? ""}
-                      alt={drawn.card.name}
-                      className="h-full w-full object-contain animate-[fadeIn_0.5s_ease-in]"
-                    />
-                  ) : (
-                    /* Card back */
-                    <img
-                      src={CARD_BACK_URL}
-                      alt="Card back"
-                      className="h-full w-full object-cover"
-                    />
-                  )}
-                </div>
-
-                {/* Position number + label below card */}
-                <div className="flex flex-col items-center text-center">
-                  <span className="text-lg font-bold text-white">{i + 1}</span>
-                  <span className="text-xs text-muted-foreground max-w-[140px] leading-tight">
-                    {label}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {/* Spread-specific card layout — break out of container max-width for large spreads */}
+      <div className="rounded-2xl border border-[#343a45] bg-[#1a1e27] p-6 md:p-10 overflow-hidden -mx-4 md:-mx-10 lg:-mx-16">
+        <SpreadLayout
+          spreadName={spread.name}
+          cardCount={spread.card_count}
+          positionLabels={positionLabels}
+          drawnCards={drawnCards}
+          onReveal={handleReveal}
+          cardBackUrl={CARD_BACK_URL}
+        />
       </div>
     </div>
   );

@@ -235,6 +235,32 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Performance metrics and review moderation"
         ]
       },
+      {
+        name: "admin_assign_chime_phone",
+        label: "Assign Chime Phone Number to Diviner",
+        description: "From the diviner detail page under Phone & Calling, the admin assigns a Chime phone number so clients can call the diviner directly. Once assigned, the number shows as Active with SMA routing confirmation, and the admin can toggle inbound calls on or off.",
+        group: "People",
+        purpose: "This is the first step to enable phone readings for a diviner. Without an assigned Chime number, no inbound calls can reach them. The SMA link status confirms the number is correctly wired to the telephony pipeline so calls route through AWS Chime.",
+        bullets: [
+          "Chime Phone Number: the assigned E.164 number displayed with Active/Inactive status badge",
+          "SMA link status: confirms the number is linked to the SIP Media Application and inbound calls will route correctly",
+          "Release Number button: unassigns the number from this diviner and returns it to the available pool",
+          "Inbound Calls toggle: master switch to enable or disable whether callers can reach this diviner via phone"
+        ]
+      },
+      {
+        name: "admin_answer_mode_config",
+        label: "Answer Mode & Mobile Number",
+        description: "Admin selects how the diviner receives incoming calls — Browser Widget (web only), Mobile Phone (personal phone only), or Both (simultaneous ring). When mobile is included, the diviner's personal phone number must be entered in E.164 format.",
+        group: "People",
+        purpose: "Simultaneous ring ('Both') ensures diviners never miss a call — their personal mobile phone rings at the same time as the browser widget on their dashboard, so they can answer from wherever they are.",
+        bullets: [
+          "Answer mode radio buttons: 'Browser Widget', 'Mobile Phone', or 'Both' — controls how the diviner's phone rings when a client calls",
+          "Diviner Mobile Number field: E.164 format phone number used for CallAndBridge when mobile answer mode is active",
+          "Save Settings: updates the diviner profile immediately — the next incoming call uses the new answer mode",
+          "Voicemails section below: shows count of any voicemails left by callers when the diviner didn't answer"
+        ]
+      },
       { name: "affiliates_v2", label: "Affiliates", description: "Tracking of platform growth partners.", group: "People" },
       // { name: "campaigns", label: "Marketing Campaigns", description: "Governance of promotional initiatives.", group: "People" },
       { 
@@ -4440,17 +4466,73 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       {
         name: "phone-session-flow",
         label: "Phone Session Flow",
-        description: "Initiate and manage phone-based reading sessions using the platform's built-in Chime telephony integration. Clients call a platform-managed number; you receive the call through your connected phone without sharing your personal number.",
-        group: "Engagement",
-        purpose: "Not every client is comfortable with video, and phone readings are a significant portion of the market. This flow handles the entire phone session experience — the client dials a platform number, the call routes to you, and both sides are protected. Your personal phone number is never exposed. Calls can optionally be recorded with client consent, and the session is logged automatically in your booking record.",
+        description: "Receive phone-based reading sessions via the platform's Chime telephony. Clients call your assigned Chime number; you answer from your web dashboard or personal phone (simultaneous ring) — your personal number is never exposed to the client.",
+        group: "Phone & Calling",
+        purpose: "Not every client is comfortable with video, and phone readings are a significant portion of the market. This flow handles the entire phone session — the client dials a platform number, the call routes to you via web and/or your mobile phone depending on your answer mode, and both sides are protected. Your personal phone number is never exposed to the client.",
         bullets: [
-          "Platform phone number — clients call a dedicated Chime-managed number assigned to your profile",
-          "Incoming call alert — a browser notification appears when the client calls at their session time",
-          "Accept or decline — answer the call from your dashboard without picking up a separate device",
-          "Call recording (optional) — record the call with client consent; recording is saved to the session record",
-          "Call duration timer — see elapsed call time so you manage session length correctly",
-          "Post-call session log — the system logs call start time, duration, and outcome automatically",
-          "International support — phased rollout supporting US first, then UK, AU, and Germany in subsequent phases"
+          "Platform phone number — clients call a dedicated Chime-managed number assigned to your profile by the admin",
+          "Answer mode — admin configures 'Browser Widget', 'Mobile Phone', or 'Both' (simultaneous ring) for how you receive calls",
+          "Incoming call alert — a browser notification and ringtone play in your dashboard when a client calls",
+          "Simultaneous ring — if 'Both' mode is enabled, your personal phone rings at the same time as the web widget",
+          "Accept from web — click the green Answer button on the incoming call popup to answer directly in the browser",
+          "Accept from phone — pick up your personal phone to answer; the web widget auto-dismisses",
+          "Post-call session log — the system logs call start time, duration, and outcome automatically"
+        ]
+      },
+      {
+        name: "diviner_phone_widget_idle",
+        label: "Phone Widget — Idle State",
+        description: "The Chime phone widget on your diviner dashboard in its idle state — showing your assigned phone number and readiness indicator. This widget is always visible when you have a Chime number assigned.",
+        group: "Phone & Calling",
+        purpose: "The idle widget confirms that your phone line is active and ready to receive calls. It shows the number clients should dial and confirms your answer mode setting.",
+        bullets: [
+          "Assigned Chime number displayed — the E.164 number clients will dial to reach you",
+          "Answer mode indicator — shows whether calls ring on web, phone, or both",
+          "Status: Ready — confirms the telephony connection is healthy and waiting for calls",
+          "Widget auto-hides if admin has not yet assigned a Chime number to your profile"
+        ]
+      },
+      {
+        name: "diviner_phone_widget_ringing",
+        label: "Phone Widget — Incoming Call",
+        description: "The phone widget in ringing state — a client is calling your Chime number. The widget shows the caller info, plays a ringtone, and displays accept/decline buttons. A browser push notification also appears.",
+        group: "Phone & Calling",
+        purpose: "When a client dials your Chime number, this is what you see. The ringing state gives you the caller's info and lets you answer with one click. If simultaneous ring is on, your personal phone also rings at the same time.",
+        bullets: [
+          "Caller info displayed — shows the client's phone number (or name if matched to a booking)",
+          "Accept button (green) — click to answer the call in your browser using WebRTC audio",
+          "Decline button (red) — sends the caller to a 'diviner unavailable' message",
+          "Ringtone plays — audible ring in the browser tab so you notice even if the tab is in the background",
+          "Browser push notification — a system notification pops up outside the browser window",
+          "Simultaneous ring — if 'Both' mode is on, your personal phone also rings at the same time",
+          "Auto-timeout — if no answer within 90 seconds, the call is released and the client hears a message"
+        ]
+      },
+      {
+        name: "diviner_phone_widget_active",
+        label: "Phone Widget — Active Call",
+        description: "The phone widget during an active call — showing call duration, mute/unmute toggle, and end call button. This is the in-call experience when you answered from the web dashboard.",
+        group: "Phone & Calling",
+        purpose: "Once you accept the call, the widget switches to active mode. You can see how long the call has been going, mute yourself if needed, and end the call cleanly when the session is done.",
+        bullets: [
+          "Call timer — elapsed time displayed so you manage session length",
+          "Mute/unmute toggle — mute your microphone without ending the call",
+          "End call button — cleanly terminates the call and triggers post-session logging",
+          "Audio indicator — visual feedback showing when audio is flowing in both directions"
+        ]
+      },
+      {
+        name: "diviner_phone_answer_mobile",
+        label: "Simultaneous Ring — Answer from Phone",
+        description: "When answer mode is set to 'Both', your personal phone rings at the same time as the web widget. If you pick up your phone, the web widget automatically dismisses and the client is bridged to your phone call.",
+        group: "Phone & Calling",
+        purpose: "Simultaneous ring means you never miss a call — even if you're away from your computer. The platform dials your personal phone in parallel. When you answer your phone, the system joins you into the Chime meeting and bridges the waiting client automatically.",
+        bullets: [
+          "Personal phone rings — your mobile rings with a call from the Chime platform number",
+          "Answer your phone — pick up normally; the system joins you to the meeting automatically",
+          "Web widget auto-dismisses — once you answer on your phone, the dashboard ringing stops",
+          "Client bridged in — the waiting client is connected to you within seconds of you answering",
+          "Your personal number stays hidden — the client only ever sees the platform Chime number"
         ]
       },
       {
