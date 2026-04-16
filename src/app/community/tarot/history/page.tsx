@@ -1,9 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import tarotSpreads from "@/data/tarot-spreads";
 import ReadingHistoryClient from "./ReadingHistoryClient";
 
 export const metadata = { title: "My Reading History - AstrologyPro" };
@@ -77,7 +75,13 @@ export default async function ReadingHistoryPage({
 
   const total = count ?? 0;
   const totalPages = Math.ceil(total / limit);
-  const spreadOptions = tarotSpreads.map((s) => ({ slug: s.slug, name: s.name }));
+  // Fetch spread options from DB for the filter dropdown
+  const { data: dbSpreads } = await supabase
+    .from("tarot_spreads")
+    .select("id, name")
+    .eq("is_active", true)
+    .order("priority", { ascending: true });
+  const spreadOptions = (dbSpreads ?? []).map((s: { id: string; name: string }) => ({ slug: s.id, name: s.name }));
 
   return (
     <div className="space-y-6">

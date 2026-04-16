@@ -16,7 +16,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/lib/supabase/client";
-import { ArrowLeft, Loader2, ImagePlus } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
+import { ArrowLeft, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 const BUCKET = "all-frontend-assets";
@@ -30,12 +34,16 @@ export default function NewTarotSpreadPage() {
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [positionLabels, setPositionLabels] = useState<string[]>([]);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [newLabel, setNewLabel] = useState("");
 
   const [form, setForm] = useState({
     name: "",
     description: "",
     card_count: "",
     priority: "",
+    image_url: "",
     is_active: true,
   });
 
@@ -96,7 +104,8 @@ export default function NewTarotSpreadPage() {
         description: form.description,
         card_count: parseInt(form.card_count) || 0,
         priority: form.priority ? parseInt(form.priority) : 0,
-        thumbnail_url: thumbnailUrl || null,
+        image_url: form.image_url || thumbnailUrl || null,
+        layout_json: { position_labels: positionLabels },
         is_active: form.is_active,
       }),
     });
@@ -187,49 +196,132 @@ export default function NewTarotSpreadPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Thumbnail Image</Label>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div
-                  className="relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-dashed border-muted-foreground/50 bg-muted/30 transition-colors hover:bg-muted/50"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  {thumbnailUrl ? (
-                    <img src={thumbnailUrl} alt="Thumbnail" className="h-full w-full object-cover" />
-                  ) : (
-                    <ImagePlus className="size-6 text-muted-foreground opacity-50" />
-                  )}
-                  {uploading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm">
-                      <Loader2 className="size-5 animate-spin" />
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Upload Image</p>
-                  <p className="text-xs text-muted-foreground">JPEG, PNG, WebP up to 10MB.</p>
-                  <div className="mt-2 flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      disabled={uploading}
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      {thumbnailUrl ? "Change image" : "Select image"}
-                    </Button>
-                    {thumbnailUrl && (
+            {/* Position Labels */}
+            <div className="space-y-3">
+              <Label>Card Position Names</Label>
+              <p className="text-xs text-muted-foreground">
+                Define the label for each card position in this spread (e.g. Past, Present, Future).
+              </p>
+              {positionLabels.length > 0 && (
+                <div className="space-y-2 rounded-md border border-input p-3 bg-muted/20">
+                  {positionLabels.map((label, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="min-w-[1.5rem] text-xs font-bold text-muted-foreground">{i + 1}.</span>
+                      <Input
+                        value={label}
+                        onChange={(e) => {
+                          const updated = [...positionLabels];
+                          updated[i] = e.target.value;
+                          setPositionLabels(updated);
+                        }}
+                        className="h-8 text-sm"
+                      />
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => setThumbnailUrl("")}
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => setPositionLabels(positionLabels.filter((_, idx) => idx !== i))}
                       >
-                        Remove
+                        <X className="size-3.5" />
                       </Button>
-                    )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="New position name..."
+                  value={newLabel}
+                  onChange={(e) => setNewLabel(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newLabel.trim()) {
+                      e.preventDefault();
+                      setPositionLabels([...positionLabels, newLabel.trim()]);
+                      setNewLabel("");
+                    }
+                  }}
+                  className="h-8 text-sm"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1"
+                  disabled={!newLabel.trim()}
+                  onClick={() => {
+                    setPositionLabels([...positionLabels, newLabel.trim()]);
+                    setNewLabel("");
+                  }}
+                >
+                  <Plus className="size-3.5" />
+                  Add
+                </Button>
+              </div>
+            </div>
+
+            {/* ── Spread Image Section ── */}
+            <div className="space-y-4 rounded-lg border border-input p-4 bg-muted/10">
+              <Label className="text-sm font-semibold">Spread Image</Label>
+
+              {(form.image_url || thumbnailUrl) && (
+                <div className="flex items-start gap-4">
+                  <div
+                    className="relative h-32 w-48 shrink-0 cursor-pointer overflow-hidden rounded-lg border border-input bg-black transition-shadow hover:shadow-lg hover:shadow-primary/10"
+                    onClick={() => setLightboxUrl(form.image_url || thumbnailUrl)}
+                  >
+                    <img
+                      src={form.image_url || thumbnailUrl}
+                      alt="Spread preview"
+                      className="h-full w-full object-contain"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-colors">
+                      <span className="text-white/0 hover:text-white/90 text-xs font-medium">Click to enlarge</span>
+                    </div>
                   </div>
+                  <div className="text-xs text-muted-foreground pt-1">
+                    {form.image_url ? "External URL" : "Uploaded image"}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <Label htmlFor="image_url" className="text-xs">External Image URL</Label>
+                <Input
+                  id="image_url"
+                  type="url"
+                  value={form.image_url}
+                  onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                  placeholder="https://..."
+                  className="h-9"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Or Upload Image</Label>
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={uploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {uploading && <Loader2 className="mr-2 size-3.5 animate-spin" />}
+                    {thumbnailUrl ? "Change image" : "Select image"}
+                  </Button>
+                  {thumbnailUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setThumbnailUrl("")}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                  <span className="text-xs text-muted-foreground">JPEG, PNG, WebP up to 10MB</span>
                 </div>
                 <input
                   ref={fileInputRef}
@@ -264,6 +356,15 @@ export default function NewTarotSpreadPage() {
           </CardContent>
         </Card>
       </form>
+
+      {/* Lightbox */}
+      <Dialog open={!!lightboxUrl} onOpenChange={(open) => !open && setLightboxUrl(null)}>
+        <DialogContent className="max-w-lg p-2 bg-black/95 border-none">
+          {lightboxUrl && (
+            <img src={lightboxUrl} alt="Full preview" className="w-full h-auto max-h-[80vh] object-contain rounded" />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

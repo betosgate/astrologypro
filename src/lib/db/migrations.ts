@@ -33,6 +33,7 @@ import { MIGRATION_SQL as MIG_20260416000003 } from "@/data/migrations/202604160
 import { MIGRATION_SQL as MIG_20260416000006 } from "@/data/migrations/MIG_20260416000006_push_subscriptions";
 import { MIGRATION_SQL as MIG_20260416000005 } from "@/data/migrations/20260416000005_simultaneous_ring";
 import { MIGRATION_SQL as MIG_20260416000004 } from "@/data/migrations/20260416000004_tarot_dynamic_system";
+import { MIGRATION_SQL as MIG_20260416000007 } from "@/data/migrations/20260416000007_drop_tarot_spread_cards";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -337,6 +338,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds description, priority, card_image_url, related_spread_ids columns to tarot_cards. Adds image_url to tarot_spreads. Creates tarot_spread_cards junction table for many-to-many card-to-spread linking with RLS policies.",
     sortKey: "20260416000004",
     sql: MIG_20260416000004,
+  },
+  "20260416000007_drop_tarot_spread_cards": {
+    id: "20260416000007_drop_tarot_spread_cards",
+    title: "Drop unused tarot_spread_cards junction table",
+    description:
+      "Drops the tarot_spread_cards junction table. Card-to-spread relationship now uses the related_spread_ids UUID[] array column on tarot_cards instead.",
+    sortKey: "20260416000007",
+    sql: MIG_20260416000007,
   },
 };
 
