@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -10,18 +11,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Celtic Cross Tarot Reading | AstrologyPro",
     description:
       "The Celtic Cross is the most iconic and comprehensive spread in all of tarot — 10 cards covering the full spectrum of a situation: present, past, future, subconscious, external influences, hopes, fears, and outcome.",
+    alternates: { canonical: `${APP_URL}/readings/10-card-celtic-cross-major-read` },
     openGraph: {
       title: "Celtic Cross Tarot Reading | AstrologyPro",
       description:
         "The Celtic Cross is the most iconic and comprehensive spread in all of tarot — 10 cards covering the full spectrum of a situation: present, past, future, subconscious, external influences, hopes, fears, and outcome.",
       type: "website",
       url: `${APP_URL}/readings/10-card-celtic-cross-major-read`,
+      images: [{ url: "https://astrologypro.com/images/services/10-card-celtic-cross.png", width: 1200, height: 630, alt: "Celtic Cross Tarot Reading" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Celtic Cross Tarot Reading | AstrologyPro",
       description:
         "The Celtic Cross is the most iconic and comprehensive spread in all of tarot — 10 cards covering the full spectrum of a situation: present, past, future, subconscious, external influences, hopes, fears, and outcome.",
+      images: ["https://astrologypro.com/images/services/10-card-celtic-cross.png"],
     },
   };
 }
@@ -51,7 +55,7 @@ async function getCelticCrossDiviners(): Promise<DivinerLandingCard[]> {
 
   let query = admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, is_certified")
+    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
     .eq("is_active", true)
     .eq("onboarding_completed", true)
     .eq("charges_enabled", true)
@@ -68,7 +72,7 @@ async function getCelticCrossDiviners(): Promise<DivinerLandingCard[]> {
   if (!diviners || diviners.length === 0) {
     const { data: fallback } = await admin
       .from("diviners")
-      .select("id, username, display_name, tagline, avatar_url, is_certified")
+      .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
       .eq("is_active", true)
       .eq("onboarding_completed", true)
       .eq("charges_enabled", true)
@@ -94,6 +98,7 @@ async function getCelticCrossDiviners(): Promise<DivinerLandingCard[]> {
       displayName: d.display_name as string,
       tagline: (d.tagline as string | null) ?? null,
       avatarUrl: (d.avatar_url as string | null) ?? null,
+      specialties: (d.specialties as string[] | null) ?? null,
       isCertified: !!(d.is_certified as boolean | null),
       startingPrice: fallbackPrices.get(d.id as string) ?? null,
     }));
@@ -118,6 +123,7 @@ async function getCelticCrossDiviners(): Promise<DivinerLandingCard[]> {
     displayName: d.display_name as string,
     tagline: (d.tagline as string | null) ?? null,
     avatarUrl: (d.avatar_url as string | null) ?? null,
+    specialties: (d.specialties as string[] | null) ?? null,
     isCertified: !!(d.is_certified as boolean | null),
     startingPrice: priceByDiviner.get(d.id as string) ?? null,
   }));
@@ -129,6 +135,7 @@ export default async function CelticCrossPage() {
     <ReadingPageTemplate
       serviceType="tarot"
       badge="The Gold Standard of Tarot Spreads"
+      heroImage={getReadingOgImageUrl("10-card-celtic-cross-major-read")}
       heroTitleBefore="The Celtic Cross:"
       heroTitleGradient="Tarot's Most Complete Spread"
       heroSubtitle="For over a century, the Celtic Cross has been the definitive major tarot reading — ten cards, ten positions, covering every dimension of a situation from your deepest subconscious to the most likely final outcome."

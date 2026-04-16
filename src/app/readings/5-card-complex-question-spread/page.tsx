@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -10,18 +11,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "5 Card Tarot Spread Readings | AstrologyPro",
     description:
       "The 5-card spread adds layers of nuance to complex questions — covering situation, past influences, future possibilities, the advice card, and the hidden factor affecting the outcome.",
+    alternates: { canonical: `${APP_URL}/readings/5-card-complex-question-spread` },
     openGraph: {
       title: "5 Card Tarot Spread Readings | AstrologyPro",
       description:
         "The 5-card spread adds layers of nuance to complex questions — covering situation, past influences, future possibilities, the advice card, and the hidden factor affecting the outcome.",
       type: "website",
       url: `${APP_URL}/readings/5-card-complex-question-spread`,
+      images: [{ url: "https://astrologypro.com/images/services/5-card-complex.png", width: 1200, height: 630, alt: "5-Card Complex Question Spread" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "5 Card Tarot Spread Readings | AstrologyPro",
       description:
         "The 5-card spread adds layers of nuance to complex questions — covering situation, past influences, future possibilities, the advice card, and the hidden factor affecting the outcome.",
+      images: ["https://astrologypro.com/images/services/5-card-complex.png"],
     },
   };
 }
@@ -51,7 +55,7 @@ async function get5CardComplexQuestionSpreadDiviners(): Promise<DivinerLandingCa
 
   let query = admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, is_certified")
+    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
     .eq("is_active", true)
     .eq("onboarding_completed", true)
     .eq("charges_enabled", true)
@@ -68,7 +72,7 @@ async function get5CardComplexQuestionSpreadDiviners(): Promise<DivinerLandingCa
   if (!diviners || diviners.length === 0) {
     const { data: fallback } = await admin
       .from("diviners")
-      .select("id, username, display_name, tagline, avatar_url, is_certified")
+      .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
       .eq("is_active", true)
       .eq("onboarding_completed", true)
       .eq("charges_enabled", true)
@@ -94,6 +98,7 @@ async function get5CardComplexQuestionSpreadDiviners(): Promise<DivinerLandingCa
       displayName: d.display_name as string,
       tagline: (d.tagline as string | null) ?? null,
       avatarUrl: (d.avatar_url as string | null) ?? null,
+      specialties: (d.specialties as string[] | null) ?? null,
       isCertified: !!(d.is_certified as boolean | null),
       startingPrice: fallbackPrices.get(d.id as string) ?? null,
     }));
@@ -118,6 +123,7 @@ async function get5CardComplexQuestionSpreadDiviners(): Promise<DivinerLandingCa
     displayName: d.display_name as string,
     tagline: (d.tagline as string | null) ?? null,
     avatarUrl: (d.avatar_url as string | null) ?? null,
+    specialties: (d.specialties as string[] | null) ?? null,
     isCertified: !!(d.is_certified as boolean | null),
     startingPrice: priceByDiviner.get(d.id as string) ?? null,
   }));
@@ -129,6 +135,7 @@ export default async function FiveCardComplexQuestionSpreadPage() {
     <ReadingPageTemplate
       serviceType="tarot"
       badge="In-Depth Tarot Spread"
+      heroImage={getReadingOgImageUrl("5-card-complex-question-spread")}
       heroTitleBefore="The 5-Card Spread:"
       heroTitleGradient="Nuance for Complex Questions"
       heroSubtitle="Some questions have more moving parts than a 3-card spread can hold. The 5-card spread adds context, influences, and deeper nuance — making it the ideal format for situations that require a fuller picture."

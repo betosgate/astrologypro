@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -10,18 +11,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "7 Card Horseshoe Tarot Spread | AstrologyPro",
     description:
       "The horseshoe spread is one of tarot's most elegant seven-card layouts — covering past, present, hidden influences, obstacles, outside influences, advice, and outcome in a single cohesive reading.",
+    alternates: { canonical: `${APP_URL}/readings/7-card-horseshoe-spread-major-read` },
     openGraph: {
       title: "7 Card Horseshoe Tarot Spread | AstrologyPro",
       description:
         "The horseshoe spread is one of tarot's most elegant seven-card layouts — covering past, present, hidden influences, obstacles, outside influences, advice, and outcome in a single cohesive reading.",
       type: "website",
       url: `${APP_URL}/readings/7-card-horseshoe-spread-major-read`,
+      images: [{ url: "https://astrologypro.com/images/services/7-card-horseshoe.png", width: 1200, height: 630, alt: "7-Card Horseshoe Spread" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "7 Card Horseshoe Tarot Spread | AstrologyPro",
       description:
         "The horseshoe spread is one of tarot's most elegant seven-card layouts — covering past, present, hidden influences, obstacles, outside influences, advice, and outcome in a single cohesive reading.",
+      images: ["https://astrologypro.com/images/services/7-card-horseshoe.png"],
     },
   };
 }
@@ -51,7 +55,7 @@ async function get7CardHorseshoeSpreadMajorReadDiviners(): Promise<DivinerLandin
 
   let query = admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, is_certified")
+    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
     .eq("is_active", true)
     .eq("onboarding_completed", true)
     .eq("charges_enabled", true)
@@ -68,7 +72,7 @@ async function get7CardHorseshoeSpreadMajorReadDiviners(): Promise<DivinerLandin
   if (!diviners || diviners.length === 0) {
     const { data: fallback } = await admin
       .from("diviners")
-      .select("id, username, display_name, tagline, avatar_url, is_certified")
+      .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
       .eq("is_active", true)
       .eq("onboarding_completed", true)
       .eq("charges_enabled", true)
@@ -94,6 +98,7 @@ async function get7CardHorseshoeSpreadMajorReadDiviners(): Promise<DivinerLandin
       displayName: d.display_name as string,
       tagline: (d.tagline as string | null) ?? null,
       avatarUrl: (d.avatar_url as string | null) ?? null,
+      specialties: (d.specialties as string[] | null) ?? null,
       isCertified: !!(d.is_certified as boolean | null),
       startingPrice: fallbackPrices.get(d.id as string) ?? null,
     }));
@@ -118,6 +123,7 @@ async function get7CardHorseshoeSpreadMajorReadDiviners(): Promise<DivinerLandin
     displayName: d.display_name as string,
     tagline: (d.tagline as string | null) ?? null,
     avatarUrl: (d.avatar_url as string | null) ?? null,
+    specialties: (d.specialties as string[] | null) ?? null,
     isCertified: !!(d.is_certified as boolean | null),
     startingPrice: priceByDiviner.get(d.id as string) ?? null,
   }));
@@ -129,6 +135,7 @@ export default async function SevenCardHorseshoeSpreadMajorReadPage() {
     <ReadingPageTemplate
       serviceType="tarot"
       badge="Classic Major Tarot Spread"
+      heroImage={getReadingOgImageUrl("7-card-horseshoe-spread-major-read")}
       heroTitleBefore="The 7-Card Horseshoe Spread:"
       heroTitleGradient="A Complete View of Any Situation"
       heroSubtitle="The horseshoe spread has been a cornerstone of tarot practice for centuries. Seven positions covering past, present, hidden factors, obstacles, external influences, advice, and outcome — it's the most complete single-question spread in the classical tarot canon."

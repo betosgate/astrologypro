@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -10,18 +11,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Uranus Opposition Readings | AstrologyPro",
     description:
       "Around age 42, Uranus reaches the point exactly opposite its natal position — triggering the astrological mid-life awakening. A Uranus Opposition reading helps you navigate this profound turning point with awareness and intention.",
+    alternates: { canonical: `${APP_URL}/readings/uranus-opposition` },
     openGraph: {
       title: "Uranus Opposition Readings | AstrologyPro",
       description:
         "Around age 42, Uranus reaches the point exactly opposite its natal position — triggering the astrological mid-life awakening. A Uranus Opposition reading helps you navigate this profound turning point with awareness and intention.",
       type: "website",
       url: `${APP_URL}/readings/uranus-opposition`,
+      images: [{ url: "https://astrologypro.com/images/home/og-card.jpg", width: 1200, height: 630, alt: "Uranus Opposition Readings" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Uranus Opposition Readings | AstrologyPro",
       description:
         "Around age 42, Uranus reaches the point exactly opposite its natal position — triggering the astrological mid-life awakening. A Uranus Opposition reading helps you navigate this profound turning point with awareness and intention.",
+      images: ["https://astrologypro.com/images/home/og-card.jpg"],
     },
   };
 }
@@ -51,7 +55,7 @@ async function getUranusOppositionDiviners(): Promise<DivinerLandingCard[]> {
 
   let query = admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, is_certified")
+    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
     .eq("is_active", true)
     .eq("onboarding_completed", true)
     .eq("charges_enabled", true)
@@ -68,7 +72,7 @@ async function getUranusOppositionDiviners(): Promise<DivinerLandingCard[]> {
   if (!diviners || diviners.length === 0) {
     const { data: fallback } = await admin
       .from("diviners")
-      .select("id, username, display_name, tagline, avatar_url, is_certified")
+      .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
       .eq("is_active", true)
       .eq("onboarding_completed", true)
       .eq("charges_enabled", true)
@@ -94,6 +98,7 @@ async function getUranusOppositionDiviners(): Promise<DivinerLandingCard[]> {
       displayName: d.display_name as string,
       tagline: (d.tagline as string | null) ?? null,
       avatarUrl: (d.avatar_url as string | null) ?? null,
+      specialties: (d.specialties as string[] | null) ?? null,
       isCertified: !!(d.is_certified as boolean | null),
       startingPrice: fallbackPrices.get(d.id as string) ?? null,
     }));
@@ -118,6 +123,7 @@ async function getUranusOppositionDiviners(): Promise<DivinerLandingCard[]> {
     displayName: d.display_name as string,
     tagline: (d.tagline as string | null) ?? null,
     avatarUrl: (d.avatar_url as string | null) ?? null,
+    specialties: (d.specialties as string[] | null) ?? null,
     isCertified: !!(d.is_certified as boolean | null),
     startingPrice: priceByDiviner.get(d.id as string) ?? null,
   }));
@@ -129,6 +135,7 @@ export default async function UranusOppositionPage() {
     <ReadingPageTemplate
       serviceType="astrology"
       badge="The Mid-Life Awakening Transit"
+      heroImage={getReadingOgImageUrl("uranus-opposition")}
       heroTitleBefore="Uranus Opposition:"
       heroTitleGradient="The Astrological Mid-Life Turning Point"
       heroSubtitle="Around your early 40s, Uranus reaches the point directly opposite its natal position — and everything that has been repressed, suppressed, or outgrown begins demanding release. This is the astrological engine behind the mid-life awakening."

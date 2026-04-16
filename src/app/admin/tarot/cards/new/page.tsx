@@ -16,7 +16,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/lib/supabase/client";
-import { ArrowLeft, Loader2, ImagePlus } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const BUCKET = "all-frontend-assets";
@@ -35,6 +39,7 @@ export default function NewTarotCardPage() {
 
   const [form, setForm] = useState({
     name: "",
+    description: "",
     arcana: "major",
     suit: "",
     number: "",
@@ -46,6 +51,7 @@ export default function NewTarotCardPage() {
   });
   const [cardImageUrl, setCardImageUrl] = useState("");
   const [relatedSpreadIds, setRelatedSpreadIds] = useState<string[]>([]);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/tarot/spreads")
@@ -113,6 +119,7 @@ export default function NewTarotCardPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: form.name,
+        description: form.description || null,
         arcana: form.arcana,
         suit: form.arcana === "minor" ? (form.suit || null) : null,
         number: form.number ? parseInt(form.number) : null,
@@ -187,6 +194,18 @@ export default function NewTarotCardPage() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                rows={3}
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Card description..."
+                className="resize-none"
+              />
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {form.arcana === "minor" && (
                 <div className="space-y-2">
@@ -249,60 +268,68 @@ export default function NewTarotCardPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="image_url">External Image URL (Optional)</Label>
-              <Input
-                id="image_url"
-                type="url"
-                value={form.image_url}
-                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                placeholder="https://..."
-              />
-            </div>
+            {/* ── Card Image Section ── */}
+            <div className="space-y-4 rounded-lg border border-input p-4 bg-muted/10">
+              <Label className="text-sm font-semibold">Card Image</Label>
 
-            <div className="space-y-2">
-              <Label>Card Image Upload</Label>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div
-                  className="relative flex h-32 w-24 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-dashed border-muted-foreground/50 bg-muted/30 transition-colors hover:bg-muted/50"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  {cardImageUrl ? (
-                    <img src={cardImageUrl} alt="Card preview" className="h-full w-full object-cover" />
-                  ) : (
-                    <ImagePlus className="size-6 text-muted-foreground opacity-50" />
-                  )}
-                  {uploading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm">
-                      <Loader2 className="size-5 animate-spin" />
+              {(form.image_url || cardImageUrl) && (
+                <div className="flex items-start gap-4">
+                  <div
+                    className="relative h-40 w-28 shrink-0 cursor-pointer overflow-hidden rounded-lg border border-input bg-black transition-shadow hover:shadow-lg hover:shadow-primary/10"
+                    onClick={() => setLightboxUrl(form.image_url || cardImageUrl)}
+                  >
+                    <img
+                      src={form.image_url || cardImageUrl}
+                      alt="Card preview"
+                      className="h-full w-full object-contain"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-colors">
+                      <span className="text-white/0 hover:text-white/90 text-xs font-medium">Click to enlarge</span>
                     </div>
-                  )}
+                  </div>
+                  <div className="text-xs text-muted-foreground pt-1">
+                    {form.image_url ? "External URL" : "Uploaded image"}
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Upload Card Image</p>
-                  <p className="text-xs text-muted-foreground">JPEG, PNG, WebP up to 10MB.</p>
-                  <div className="mt-2 flex items-center gap-2">
+              )}
+
+              <div className="space-y-1.5">
+                <Label htmlFor="image_url" className="text-xs">External Image URL</Label>
+                <Input
+                  id="image_url"
+                  type="url"
+                  value={form.image_url}
+                  onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                  placeholder="https://..."
+                  className="h-9"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Or Upload Image</Label>
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={uploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {uploading && <Loader2 className="mr-2 size-3.5 animate-spin" />}
+                    {cardImageUrl ? "Change image" : "Select image"}
+                  </Button>
+                  {cardImageUrl && (
                     <Button
                       type="button"
-                      variant="secondary"
+                      variant="ghost"
                       size="sm"
-                      disabled={uploading}
-                      onClick={() => fileInputRef.current?.click()}
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setCardImageUrl("")}
                     >
-                      {cardImageUrl ? "Change image" : "Select image"}
+                      Remove
                     </Button>
-                    {cardImageUrl && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => setCardImageUrl("")}
-                      >
-                        Remove
-                      </Button>
-                    )}
-                  </div>
+                  )}
+                  <span className="text-xs text-muted-foreground">JPEG, PNG, WebP up to 10MB</span>
                 </div>
                 <input
                   ref={fileInputRef}
@@ -316,7 +343,21 @@ export default function NewTarotCardPage() {
 
             {spreads.length > 0 && (
               <div className="space-y-2">
-                <Label>Related Spreads</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Related Spreads</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs text-muted-foreground"
+                    onClick={() => {
+                      const allSelected = spreads.every((s) => relatedSpreadIds.includes(s.id));
+                      setRelatedSpreadIds(allSelected ? [] : spreads.map((s) => s.id));
+                    }}
+                  >
+                    {spreads.every((s) => relatedSpreadIds.includes(s.id)) ? "Deselect All" : "Select All"}
+                  </Button>
+                </div>
                 <div className="rounded-md border border-input p-3 space-y-2 max-h-48 overflow-y-auto bg-muted/20">
                   {spreads.map((s) => (
                     <div key={s.id} className="flex items-center gap-2">
@@ -357,6 +398,15 @@ export default function NewTarotCardPage() {
           </CardContent>
         </Card>
       </form>
+
+      {/* Lightbox */}
+      <Dialog open={!!lightboxUrl} onOpenChange={(open) => !open && setLightboxUrl(null)}>
+        <DialogContent className="max-w-md p-2 bg-black/95 border-none">
+          {lightboxUrl && (
+            <img src={lightboxUrl} alt="Full preview" className="w-full h-auto max-h-[80vh] object-contain rounded" />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

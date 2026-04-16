@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -10,18 +11,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Mars Return Readings | AstrologyPro",
     description:
       "Every two years, Mars returns to its natal position — beginning a new cycle of drive, ambition, and assertive energy. A Mars Return reading reveals the themes, battles, and momentum that will define your next chapter of action.",
+    alternates: { canonical: `${APP_URL}/readings/mars-return` },
     openGraph: {
       title: "Mars Return Readings | AstrologyPro",
       description:
         "Every two years, Mars returns to its natal position — beginning a new cycle of drive, ambition, and assertive energy. A Mars Return reading reveals the themes, battles, and momentum that will define your next chapter of action.",
       type: "website",
       url: `${APP_URL}/readings/mars-return`,
+      images: [{ url: "https://astrologypro.com/images/home/og-card.jpg", width: 1200, height: 630, alt: "Mars Return Readings" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Mars Return Readings | AstrologyPro",
       description:
         "Every two years, Mars returns to its natal position — beginning a new cycle of drive, ambition, and assertive energy. A Mars Return reading reveals the themes, battles, and momentum that will define your next chapter of action.",
+      images: ["https://astrologypro.com/images/home/og-card.jpg"],
     },
   };
 }
@@ -51,7 +55,7 @@ async function getMarsReturnDiviners(): Promise<DivinerLandingCard[]> {
 
   let query = admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, is_certified")
+    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
     .eq("is_active", true)
     .eq("onboarding_completed", true)
     .eq("charges_enabled", true)
@@ -68,7 +72,7 @@ async function getMarsReturnDiviners(): Promise<DivinerLandingCard[]> {
   if (!diviners || diviners.length === 0) {
     const { data: fallback } = await admin
       .from("diviners")
-      .select("id, username, display_name, tagline, avatar_url, is_certified")
+      .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
       .eq("is_active", true)
       .eq("onboarding_completed", true)
       .eq("charges_enabled", true)
@@ -94,6 +98,7 @@ async function getMarsReturnDiviners(): Promise<DivinerLandingCard[]> {
       displayName: d.display_name as string,
       tagline: (d.tagline as string | null) ?? null,
       avatarUrl: (d.avatar_url as string | null) ?? null,
+      specialties: (d.specialties as string[] | null) ?? null,
       isCertified: !!(d.is_certified as boolean | null),
       startingPrice: fallbackPrices.get(d.id as string) ?? null,
     }));
@@ -118,6 +123,7 @@ async function getMarsReturnDiviners(): Promise<DivinerLandingCard[]> {
     displayName: d.display_name as string,
     tagline: (d.tagline as string | null) ?? null,
     avatarUrl: (d.avatar_url as string | null) ?? null,
+    specialties: (d.specialties as string[] | null) ?? null,
     isCertified: !!(d.is_certified as boolean | null),
     startingPrice: priceByDiviner.get(d.id as string) ?? null,
   }));
@@ -129,6 +135,7 @@ export default async function MarsReturnPage() {
     <ReadingPageTemplate
       serviceType="astrology"
       badge="Annual Mars Cycle"
+      heroImage={getReadingOgImageUrl("mars-return")}
       heroTitleBefore="Your Mars Return:"
       heroTitleGradient="A New Cycle of Drive & Desire"
       heroSubtitle="Every two years, Mars returns to the exact position it occupied at your birth — resetting your personal engine. A Mars Return reading reveals the themes of drive, ambition, desire, conflict, and action that will define your next chapter."

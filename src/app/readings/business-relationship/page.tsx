@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -10,18 +11,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Business Relationship Astrology Readings | AstrologyPro",
     description:
       "Astrological compatibility for business partnerships — revealing strengths, blind spots, communication dynamics, and optimal timing for a professional alliance that lasts.",
+    alternates: { canonical: `${APP_URL}/readings/business-relationship` },
     openGraph: {
       title: "Business Relationship Astrology Readings | AstrologyPro",
       description:
         "Astrological compatibility for business partnerships — revealing strengths, blind spots, communication dynamics, and optimal timing for a professional alliance that lasts.",
       type: "website",
       url: `${APP_URL}/readings/business-relationship`,
+      images: [{ url: "https://astrologypro.com/images/services/business-relationships.png", width: 1200, height: 630, alt: "Business Relationship Readings" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Business Relationship Astrology Readings | AstrologyPro",
       description:
         "Astrological compatibility for business partnerships — revealing strengths, blind spots, communication dynamics, and optimal timing for a professional alliance that lasts.",
+      images: ["https://astrologypro.com/images/services/business-relationships.png"],
     },
   };
 }
@@ -51,7 +55,7 @@ async function getBusinessRelationshipDiviners(): Promise<DivinerLandingCard[]> 
 
   let query = admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, is_certified")
+    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
     .eq("is_active", true)
     .eq("onboarding_completed", true)
     .eq("charges_enabled", true)
@@ -68,7 +72,7 @@ async function getBusinessRelationshipDiviners(): Promise<DivinerLandingCard[]> 
   if (!diviners || diviners.length === 0) {
     const { data: fallback } = await admin
       .from("diviners")
-      .select("id, username, display_name, tagline, avatar_url, is_certified")
+      .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
       .eq("is_active", true)
       .eq("onboarding_completed", true)
       .eq("charges_enabled", true)
@@ -94,6 +98,7 @@ async function getBusinessRelationshipDiviners(): Promise<DivinerLandingCard[]> 
       displayName: d.display_name as string,
       tagline: (d.tagline as string | null) ?? null,
       avatarUrl: (d.avatar_url as string | null) ?? null,
+      specialties: (d.specialties as string[] | null) ?? null,
       isCertified: !!(d.is_certified as boolean | null),
       startingPrice: fallbackPrices.get(d.id as string) ?? null,
     }));
@@ -118,6 +123,7 @@ async function getBusinessRelationshipDiviners(): Promise<DivinerLandingCard[]> 
     displayName: d.display_name as string,
     tagline: (d.tagline as string | null) ?? null,
     avatarUrl: (d.avatar_url as string | null) ?? null,
+    specialties: (d.specialties as string[] | null) ?? null,
     isCertified: !!(d.is_certified as boolean | null),
     startingPrice: priceByDiviner.get(d.id as string) ?? null,
   }));
@@ -129,6 +135,7 @@ export default async function BusinessRelationshipPage() {
     <ReadingPageTemplate
       serviceType="astrology"
       badge="Business Astrology"
+      heroImage={getReadingOgImageUrl("business-relationship")}
       heroTitleBefore="Business Relationships:"
       heroTitleGradient="Partnership Chemistry in the Stars"
       heroSubtitle="Business partnerships are among the highest-stakes relationships you'll enter. Astrology can reveal the natural strengths your charts bring together, where power dynamics or communication gaps could create friction, and the optimal timing for decisions that affect both parties."

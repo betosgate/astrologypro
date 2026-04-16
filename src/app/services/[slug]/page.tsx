@@ -66,6 +66,20 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         `Choose a diviner for ${template.name} on AstrologyPro.`,
       url: `${APP_URL}/services/${slug}`,
       type: "website",
+      images: [
+        {
+          url: getServiceImageUrl(slug) ? `${APP_URL}${getServiceImageUrl(slug)}` : `${APP_URL}/images/home/og-card.jpg`,
+          width: 1200,
+          height: 630,
+          alt: template.name,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${template.name} | AstrologyPro`,
+      description: template.description ?? `Choose a diviner for ${template.name} on AstrologyPro.`,
+      images: [getServiceImageUrl(slug) ? `${APP_URL}${getServiceImageUrl(slug)}` : `${APP_URL}/images/home/og-card.jpg`],
     },
   };
 }

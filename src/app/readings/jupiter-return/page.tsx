@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -10,18 +11,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Jupiter Return Readings | AstrologyPro",
     description:
       "Every ~12 years, Jupiter returns to its birth position — bringing a wave of expansion, opportunity, and good fortune. Book a reading to make the most of this powerful window.",
+    alternates: { canonical: `${APP_URL}/readings/jupiter-return` },
     openGraph: {
       title: "Jupiter Return Readings | AstrologyPro",
       description:
         "Every ~12 years, Jupiter returns to its birth position — bringing a wave of expansion, opportunity, and good fortune. Book a reading to make the most of this powerful window.",
       type: "website",
       url: `${APP_URL}/readings/jupiter-return`,
+      images: [{ url: "https://astrologypro.com/images/services/jupiter-return.png", width: 1200, height: 630, alt: "Jupiter Return Readings" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Jupiter Return Readings | AstrologyPro",
       description:
         "Every ~12 years, Jupiter returns to its birth position — bringing a wave of expansion, opportunity, and good fortune. Book a reading to make the most of this powerful window.",
+      images: ["https://astrologypro.com/images/services/jupiter-return.png"],
     },
   };
 }
@@ -141,6 +145,7 @@ export default async function JupiterReturnPage() {
     <ReadingPageTemplate
       serviceType="astrology"
       badge="Astrological Life Events"
+      heroImage={getReadingOgImageUrl("jupiter-return")}
       heroTitleBefore="Your Jupiter Return:"
       heroTitleGradient="A Cycle of Abundance Begins"
       heroSubtitle="Every ~12 years, Jupiter returns to its birth position — opening a new chapter of expansion, opportunity, and abundance. A Jupiter Return reading reveals exactly where that growth is directed in your unique chart and how to align with it."

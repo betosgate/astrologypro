@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -10,18 +11,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "10 Card Relationship Tarot Spread | AstrologyPro",
     description:
       "A 10-card relationship tarot spread offers a complete astrological portrait of a romantic or important personal connection — covering both people's feelings, the connection's dynamics, challenges, and where the relationship is heading.",
+    alternates: { canonical: `${APP_URL}/readings/10-card-relationship-spread` },
     openGraph: {
       title: "10 Card Relationship Tarot Spread | AstrologyPro",
       description:
         "A 10-card relationship tarot spread offers a complete astrological portrait of a romantic or important personal connection — covering both people's feelings, the connection's dynamics, challenges, and where the relationship is heading.",
       type: "website",
       url: `${APP_URL}/readings/10-card-relationship-spread`,
+      images: [{ url: "https://astrologypro.com/images/services/10-card-relationship.png", width: 1200, height: 630, alt: "10-Card Relationship Spread" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "10 Card Relationship Tarot Spread | AstrologyPro",
       description:
         "A 10-card relationship tarot spread offers a complete astrological portrait of a romantic or important personal connection — covering both people's feelings, the connection's dynamics, challenges, and where the relationship is heading.",
+      images: ["https://astrologypro.com/images/services/10-card-relationship.png"],
     },
   };
 }
@@ -51,7 +55,7 @@ async function getRelationshipSpreadDiviners(): Promise<DivinerLandingCard[]> {
 
   let query = admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, is_certified")
+    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
     .eq("is_active", true)
     .eq("onboarding_completed", true)
     .eq("charges_enabled", true)
@@ -68,7 +72,7 @@ async function getRelationshipSpreadDiviners(): Promise<DivinerLandingCard[]> {
   if (!diviners || diviners.length === 0) {
     const { data: fallback } = await admin
       .from("diviners")
-      .select("id, username, display_name, tagline, avatar_url, is_certified")
+      .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
       .eq("is_active", true)
       .eq("onboarding_completed", true)
       .eq("charges_enabled", true)
@@ -94,6 +98,7 @@ async function getRelationshipSpreadDiviners(): Promise<DivinerLandingCard[]> {
       displayName: d.display_name as string,
       tagline: (d.tagline as string | null) ?? null,
       avatarUrl: (d.avatar_url as string | null) ?? null,
+      specialties: (d.specialties as string[] | null) ?? null,
       isCertified: !!(d.is_certified as boolean | null),
       startingPrice: fallbackPrices.get(d.id as string) ?? null,
     }));
@@ -118,6 +123,7 @@ async function getRelationshipSpreadDiviners(): Promise<DivinerLandingCard[]> {
     displayName: d.display_name as string,
     tagline: (d.tagline as string | null) ?? null,
     avatarUrl: (d.avatar_url as string | null) ?? null,
+    specialties: (d.specialties as string[] | null) ?? null,
     isCertified: !!(d.is_certified as boolean | null),
     startingPrice: priceByDiviner.get(d.id as string) ?? null,
   }));
@@ -129,6 +135,7 @@ export default async function RelationshipSpreadPage() {
     <ReadingPageTemplate
       serviceType="tarot"
       badge="Deep Relationship Tarot"
+      heroImage={getReadingOgImageUrl("10-card-relationship-spread")}
       heroTitleBefore="10-Card Relationship Spread:"
       heroTitleGradient="The Complete Portrait of a Connection"
       heroSubtitle="Ten positions. Two people. One complete picture. The relationship spread maps both sides of a connection — how each person feels, what draws and divides them, what's hidden, and where the bond is heading."

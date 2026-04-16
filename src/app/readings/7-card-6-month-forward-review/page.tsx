@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -10,18 +11,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "7 Card 6-Month Forecast Tarot Reading | AstrologyPro",
     description:
       "A 7-card tarot forecast spread gives you a month-by-month preview of the next six months — with an overall guidance card revealing the overarching energy of the period ahead.",
+    alternates: { canonical: `${APP_URL}/readings/7-card-6-month-forward-review` },
     openGraph: {
       title: "7 Card 6-Month Forecast Tarot Reading | AstrologyPro",
       description:
         "A 7-card tarot forecast spread gives you a month-by-month preview of the next six months — with an overall guidance card revealing the overarching energy of the period ahead.",
       type: "website",
       url: `${APP_URL}/readings/7-card-6-month-forward-review`,
+      images: [{ url: "https://astrologypro.com/images/services/7-card-forecast.png", width: 1200, height: 630, alt: "7-Card 6-Month Forward Review" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "7 Card 6-Month Forecast Tarot Reading | AstrologyPro",
       description:
         "A 7-card tarot forecast spread gives you a month-by-month preview of the next six months — with an overall guidance card revealing the overarching energy of the period ahead.",
+      images: ["https://astrologypro.com/images/services/7-card-forecast.png"],
     },
   };
 }
@@ -51,7 +55,7 @@ async function get7Card6MonthForwardReviewDiviners(): Promise<DivinerLandingCard
 
   let query = admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, is_certified")
+    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
     .eq("is_active", true)
     .eq("onboarding_completed", true)
     .eq("charges_enabled", true)
@@ -68,7 +72,7 @@ async function get7Card6MonthForwardReviewDiviners(): Promise<DivinerLandingCard
   if (!diviners || diviners.length === 0) {
     const { data: fallback } = await admin
       .from("diviners")
-      .select("id, username, display_name, tagline, avatar_url, is_certified")
+      .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
       .eq("is_active", true)
       .eq("onboarding_completed", true)
       .eq("charges_enabled", true)
@@ -94,6 +98,7 @@ async function get7Card6MonthForwardReviewDiviners(): Promise<DivinerLandingCard
       displayName: d.display_name as string,
       tagline: (d.tagline as string | null) ?? null,
       avatarUrl: (d.avatar_url as string | null) ?? null,
+      specialties: (d.specialties as string[] | null) ?? null,
       isCertified: !!(d.is_certified as boolean | null),
       startingPrice: fallbackPrices.get(d.id as string) ?? null,
     }));
@@ -118,6 +123,7 @@ async function get7Card6MonthForwardReviewDiviners(): Promise<DivinerLandingCard
     displayName: d.display_name as string,
     tagline: (d.tagline as string | null) ?? null,
     avatarUrl: (d.avatar_url as string | null) ?? null,
+    specialties: (d.specialties as string[] | null) ?? null,
     isCertified: !!(d.is_certified as boolean | null),
     startingPrice: priceByDiviner.get(d.id as string) ?? null,
   }));
@@ -129,6 +135,7 @@ export default async function SevenCard6MonthForwardReviewPage() {
     <ReadingPageTemplate
       serviceType="tarot"
       badge="6-Month Forecast Spread"
+      heroImage={getReadingOgImageUrl("7-card-6-month-forward-review")}
       heroTitleBefore="7-Card 6-Month Forecast:"
       heroTitleGradient="Your Roadmap for the Half-Year Ahead"
       heroSubtitle="Six cards for six months, plus one overarching guidance card — this spread gives you the most practical forward-looking tarot tool available, mapping the themes and energy of each coming month before they arrive."

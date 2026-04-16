@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -10,18 +11,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "12 Card Astrological Tarot Spread | AstrologyPro",
     description:
       "The 12-card astrological spread maps one card to each astrological house — creating a holistic yearly overview covering all major life areas from identity and money to relationships, career, and spirituality.",
+    alternates: { canonical: `${APP_URL}/readings/12-card-astrological-spread-major-read` },
     openGraph: {
       title: "12 Card Astrological Tarot Spread | AstrologyPro",
       description:
         "The 12-card astrological spread maps one card to each astrological house — creating a holistic yearly overview covering all major life areas from identity and money to relationships, career, and spirituality.",
       type: "website",
       url: `${APP_URL}/readings/12-card-astrological-spread-major-read`,
+      images: [{ url: "https://astrologypro.com/images/services/12-card-astrological.png", width: 1200, height: 630, alt: "12-Card Astrological Spread" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "12 Card Astrological Tarot Spread | AstrologyPro",
       description:
         "The 12-card astrological spread maps one card to each astrological house — creating a holistic yearly overview covering all major life areas from identity and money to relationships, career, and spirituality.",
+      images: ["https://astrologypro.com/images/services/12-card-astrological.png"],
     },
   };
 }
@@ -51,7 +55,7 @@ async function getAstrologicalSpreadDiviners(): Promise<DivinerLandingCard[]> {
 
   let query = admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, is_certified")
+    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
     .eq("is_active", true)
     .eq("onboarding_completed", true)
     .eq("charges_enabled", true)
@@ -68,7 +72,7 @@ async function getAstrologicalSpreadDiviners(): Promise<DivinerLandingCard[]> {
   if (!diviners || diviners.length === 0) {
     const { data: fallback } = await admin
       .from("diviners")
-      .select("id, username, display_name, tagline, avatar_url, is_certified")
+      .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
       .eq("is_active", true)
       .eq("onboarding_completed", true)
       .eq("charges_enabled", true)
@@ -94,6 +98,7 @@ async function getAstrologicalSpreadDiviners(): Promise<DivinerLandingCard[]> {
       displayName: d.display_name as string,
       tagline: (d.tagline as string | null) ?? null,
       avatarUrl: (d.avatar_url as string | null) ?? null,
+      specialties: (d.specialties as string[] | null) ?? null,
       isCertified: !!(d.is_certified as boolean | null),
       startingPrice: fallbackPrices.get(d.id as string) ?? null,
     }));
@@ -118,6 +123,7 @@ async function getAstrologicalSpreadDiviners(): Promise<DivinerLandingCard[]> {
     displayName: d.display_name as string,
     tagline: (d.tagline as string | null) ?? null,
     avatarUrl: (d.avatar_url as string | null) ?? null,
+    specialties: (d.specialties as string[] | null) ?? null,
     isCertified: !!(d.is_certified as boolean | null),
     startingPrice: priceByDiviner.get(d.id as string) ?? null,
   }));
@@ -129,6 +135,7 @@ export default async function AstrologicalSpreadPage() {
     <ReadingPageTemplate
       serviceType="tarot"
       badge="Tarot Meets Astrology"
+      heroImage={getReadingOgImageUrl("12-card-astrological-spread-major-read")}
       heroTitleBefore="12-Card Astrological Spread:"
       heroTitleGradient="Your Life's Full Landscape"
       heroSubtitle="One card for each of the twelve astrological houses — this spread merges tarot symbolism with the holistic architecture of astrology to give you a panoramic view of every major dimension of your life in a single reading."
@@ -144,11 +151,11 @@ export default async function AstrologicalSpreadPage() {
         "This spread works especially well as a yearly overview reading — a panoramic snapshot of where each life area stands right now and where it's moving. It reveals which areas are flourishing, which are under pressure, and which are ready for conscious attention — all in a single, integrated session.",
       ]}
       revealsItems={[
-        { label: "Identity & Self-Image (House 1)", desc: "The card here shows the current state of your sense of self — how you're presenting and experiencing your own identity right now" },
-        { label: "Resources & Relationships (Houses 2, 7)", desc: "Financial energy and the state of your most significant partnerships — romantic, business, and close personal" },
-        { label: "Career & Purpose (Houses 6, 10)", desc: "Your current work energy and vocational direction — what's active in daily work and what's being built toward as long-term achievement" },
-        { label: "Home & Family (House 4)", desc: "The card here maps the current state of your home, family roots, and emotional foundation — the private inner life behind the public face" },
-        { label: "Spirituality & Hidden Matters (House 12)", desc: "What's operating in the hidden, subconscious, or spiritual realm — what needs to be released, what's being dreamed into being beneath the surface" },
+        { label: "Which Life Area Needs Your Attention Most", desc: "The spread instantly shows where strong or challenging cards cluster — revealing which houses are active and which are quiet, so you know where to direct your energy in the months ahead" },
+        { label: "Your Financial & Relationship Energy Right Now", desc: "Separate cards for Houses 2 and 7 show the current state of your material resources and your most important partnership simultaneously — often revealing whether these two areas are supporting or draining each other" },
+        { label: "Career Trajectory vs. Daily Work Reality", desc: "House 10 (long-term vocation) and House 6 (daily work and health) each get their own card — surfacing the gap or alignment between what you're building and what you're actually living day to day" },
+        { label: "What's Hidden or Subconscious Right Now", desc: "House 12 is often the most surprising card of the spread — revealing what's operating beneath conscious awareness: what needs releasing, what's being quietly prepared, what you haven't yet let yourself see" },
+        { label: "The Overarching Story Across All 12 Areas", desc: "Beyond individual houses, your reader identifies the dominant suit, the recurring archetypes, and the unifying message the full circle of twelve cards is collectively telling about where you are in your life right now" },
       ]}
       expectCards={[
         { icon: "🔮", title: "Twelve-Card Full Layout", desc: "Your reader draws one card for each of the 12 astrological houses and lays them in order, creating a full-circle map of your life. Even before interpretation begins, the overall energy pattern — which houses have 'strong' cards, which have 'quiet' cards — tells its own story." },
@@ -174,7 +181,7 @@ export default async function AstrologicalSpreadPage() {
         { q: "Can this spread address a specific question or is it always a general overview?", a: "It works best as a holistic overview — that's its design. If you have a specific, focused question, a 3-card or 5-card spread will serve it better. The 12-card astrological spread shines when you want the big picture: all twelve life areas, all at once, with the depth that brings clarity to each." },
       ]}
       ctaTitle="Ready for the full panorama of your life?"
-      ctaBody="Connect with a skilled tarot reader who can map all twelve houses of your life in a single reading — giving you a holistic, detailed portrait of where you are, where you're growing, and where your attention is most needed."
+      ctaBody="Connect with a skilled tarot reader who works fluently at the intersection of tarot and astrology — mapping one card to each of the twelve houses to give you the most complete single-session portrait of your life available anywhere."
       ctaButtonLabel="Browse All Tarot Readers"
       relatedReadings={[
   { title: "10-Card Relationship Spread", href: "/readings/10-card-relationship-spread", icon: "💞" },

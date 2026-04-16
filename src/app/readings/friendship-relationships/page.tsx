@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -10,18 +11,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Friendship Compatibility Readings | AstrologyPro",
     description:
       "Understand your friendships through synastry and composite chart analysis — revealing the shared values, communication chemistry, and long-term connection potential between you and your closest companions.",
+    alternates: { canonical: `${APP_URL}/readings/friendship-relationships` },
     openGraph: {
       title: "Friendship Compatibility Readings | AstrologyPro",
       description:
         "Understand your friendships through synastry and composite chart analysis — revealing the shared values, communication chemistry, and long-term connection potential between you and your closest companions.",
       type: "website",
       url: `${APP_URL}/readings/friendship-relationships`,
+      images: [{ url: "https://astrologypro.com/images/services/friendship-relationships.png", width: 1200, height: 630, alt: "Friendship Relationship Readings" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Friendship Compatibility Readings | AstrologyPro",
       description:
         "Understand your friendships through synastry and composite chart analysis — revealing the shared values, communication chemistry, and long-term connection potential between you and your closest companions.",
+      images: ["https://astrologypro.com/images/services/friendship-relationships.png"],
     },
   };
 }
@@ -51,7 +55,7 @@ async function getFriendshipRelationshipsDiviners(): Promise<DivinerLandingCard[
 
   let query = admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, is_certified")
+    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
     .eq("is_active", true)
     .eq("onboarding_completed", true)
     .eq("charges_enabled", true)
@@ -68,7 +72,7 @@ async function getFriendshipRelationshipsDiviners(): Promise<DivinerLandingCard[
   if (!diviners || diviners.length === 0) {
     const { data: fallback } = await admin
       .from("diviners")
-      .select("id, username, display_name, tagline, avatar_url, is_certified")
+      .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
       .eq("is_active", true)
       .eq("onboarding_completed", true)
       .eq("charges_enabled", true)
@@ -94,6 +98,7 @@ async function getFriendshipRelationshipsDiviners(): Promise<DivinerLandingCard[
       displayName: d.display_name as string,
       tagline: (d.tagline as string | null) ?? null,
       avatarUrl: (d.avatar_url as string | null) ?? null,
+      specialties: (d.specialties as string[] | null) ?? null,
       isCertified: !!(d.is_certified as boolean | null),
       startingPrice: fallbackPrices.get(d.id as string) ?? null,
     }));
@@ -118,6 +123,7 @@ async function getFriendshipRelationshipsDiviners(): Promise<DivinerLandingCard[
     displayName: d.display_name as string,
     tagline: (d.tagline as string | null) ?? null,
     avatarUrl: (d.avatar_url as string | null) ?? null,
+    specialties: (d.specialties as string[] | null) ?? null,
     isCertified: !!(d.is_certified as boolean | null),
     startingPrice: priceByDiviner.get(d.id as string) ?? null,
   }));
@@ -129,6 +135,7 @@ export default async function FriendshipRelationshipsPage() {
     <ReadingPageTemplate
       serviceType="astrology"
       badge="Friendship Astrology"
+      heroImage={getReadingOgImageUrl("friendship-relationships")}
       heroTitleBefore="Friendship Compatibility: "
       heroTitleGradient="The Astrology of Your Closest Bonds"
       heroSubtitle="Friendships are not random. The people who become your trusted companions carry specific astrological signatures that resonate with your own chart. Understanding that resonance reveals why certain connections feel effortless — and why others require more conscious navigation."

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -15,13 +15,25 @@ function median(values: number[]): number {
 }
 
 // GET /api/admin/training/analytics/programs
-export async function GET() {
+export async function GET(req: NextRequest) {
   const user = await getAdminUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const sp = req.nextUrl.searchParams;
+  const searchFilter = sp.get("search")?.trim() ?? null;
+
   const admin = createAdminClient();
+
+  let programsQuery = admin
+    .from("training_programs")
+    .select("id, name, is_active, created_at")
+    .order("created_at", { ascending: false });
+
+  if (searchFilter) {
+    programsQuery = programsQuery.ilike("name", `%${searchFilter}%`);
+  }
 
   // Fetch all programs with their categories and lessons counts, enrollments, and quiz attempts
   const [
@@ -31,10 +43,7 @@ export async function GET() {
     enrollmentsRes,
     quizAttemptsRes,
   ] = await Promise.all([
-    admin
-      .from("training_programs")
-      .select("id, name, is_active, created_at")
-      .order("created_at", { ascending: false }),
+    programsQuery,
     admin
       .from("training_categories")
       .select("id, training_id")
@@ -147,9 +156,9 @@ export async function GET() {
     const mean_completion_time_seconds =
       enrollData.completion_times.length > 0
         ? Math.round(
-            enrollData.completion_times.reduce((s, n) => s + n, 0) /
-              enrollData.completion_times.length
-          )
+          enrollData.completion_times.reduce((s, n) => s + n, 0) /
+          enrollData.completion_times.length
+        )
         : 0;
     // median_completion_time — excludes records with no valid time data
     const median_completion_time_seconds = median(enrollData.completion_times);
