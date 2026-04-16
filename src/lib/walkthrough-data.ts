@@ -1783,34 +1783,438 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
       // ---------------Friendship Relationships---------------//
-      { 
-        name: "horoscope_friendship_setup", 
-        label: "Friendship: Social Dynamics", 
-        description: "Platonic relationship analysis.", 
-        group: "Horoscope Toolkit",
-        subModule: "Friendship Relationships",
-        purpose: "Tailors the relationship engine to focus on social compatibility, communication, and shared interests.",
-        bullets: [
-          "Group dynamic modeling",
-          "Mercury-alignment focus for communication",
-          "Shared hobby/Jupiter-expansion indicators",
-          "Conflict-resolution 'Shadow Work' insights"
-        ]
-      },
-      { 
-        name: "horoscope_friendship_result", 
-        label: "Friendship: Social Synthesis", 
-        description: "Platonic bond analytics.", 
-        group: "Horoscope Toolkit",
-        subModule: "Friendship Relationships",
-        purpose: "Analyzes the intellectual and social chemistry between two individuals to foster deeper communication and shared growth.",
-        bullets: [
-          "Communication style (Mercury) compatibility profiling",
-          "Shared social interests and Jupiter alignment mapping",
-          "Boundaries and Saturn influence assessments",
-          "Team dynamic AI summaries for collaborative success"
-        ]
-      },
+
+      {
+  "name": "horoscope_friendship_relationships_setup",
+  "label": "Friendship Relationships: Entry & Generation Setup",
+  "description": "Enter both friends' birth details to generate the full friendship compatibility reading step by step.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This is the first screen of the Friendship Relationships module. The user must enter date of birth, time of birth, and place of birth for both Person 1 and Person 2. These details are required because the system uses them to calculate two accurate natal charts. After all required birth fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform begins building the friendship reading screen by screen. It compares both charts and then generates friendship compatibility summary, synastry interpretations, deep friendship analysis, composite friendship insights, Davison friendship insights, elemental balance, timing and transits, and karmic or soul-bond indicators. This setup screen is important because if birth time or birth place is incorrect, houses, angles, chart overlays, emotional patterns, and friendship compatibility results may change.",
+  "bullets": [
+    "📅 Step 1 — Enter Both Dates of Birth: The user enters date of birth for both friends so the system can create the two natal chart foundations.",
+    "🕒 Step 2 — Enter Both Times of Birth: The user enters exact time of birth for both friends because Ascendant, houses, angles, and chart overlays depend on correct timing.",
+    "📍 Step 3 — Enter Both Places of Birth: The user enters place of birth for both friends so the engine can use correct coordinates and timezone for accurate chart calculation.",
+    "📝 Step 4 — Area of Inquiry (Optional): The user may add a focus topic such as trust, support, communication, long-term friendship, teamwork, emotional bonding, or conflict understanding.",
+    "✅ Step 5 — Generate Reading Activation: After both friends' required birth details are completed correctly, the Generate Reading button becomes enabled.",
+    "🤝 Step 6 — Friendship Compatibility Summary: The system gives a simple first overview of the friendship through Sun, Moon, Venus, and Mars compatibility so the user can quickly understand the basic connection.",
+    "🔗 Step 7 — Friendship Synastry Interpretations: The platform compares both natal charts directly and shows how one friend's planets interact with the other friend's planets in friendship, communication, support, and emotional understanding.",
+    "🧠 Step 8 — Deep Friendship Analysis: Important friendship aspects can open in deeper view so the astrologer can understand the emotional and psychological meaning more clearly.",
+    "🌌 Step 9 — Composite Friendship Reading: The system creates the composite chart to show the energy of the friendship itself as one shared bond.",
+    "🪐 Step 10 — Davison Friendship Reading: The platform creates the Davison chart to explain how the friendship lives, grows, and develops in real life as a shared relationship.",
+    "🌍 Step 11 — Elemental Balance & Interaction: The system compares Fire, Earth, Air, and Water, along with modal interaction, to show communication style, emotional depth, stability, spontaneity, and natural chemistry in the friendship.",
+    "⏳ Step 12 — Timing & Transits: The reading highlights active friendship connection periods, emotional timing, communication flow, and important phases between both people.",
+    "🔮 Step 13 — Karmic & Soul-Bond Indicators: The system identifies deeper healing, karmic, soul-growth, and meaningful life-pattern connections that make the friendship feel especially important.",
+    "📖 Step 14 — Show More Deep Readings: Important cards can open into deeper explanation screens so the user can understand each friendship pattern more clearly and without confusion."
+  ]
+},
+    {
+  "name": "horoscope_friendship_setup",
+  "label": "Friendship: Compatibility Chart Setup",
+  "description": "Enter both friends' birth details to generate the friendship compatibility charts and relationship reading.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is used to generate friendship compatibility charts between two people. The system takes date of birth, time of birth, and place of birth for both Person 1 and Person 2, then creates two separate natal charts. After that, it compares both charts to understand how the friendship works through personality, emotions, communication style, trust, loyalty, shared interests, support patterns, and possible tension points. The chart helps astrologers understand whether the friendship is naturally easy, mentally stimulating, emotionally supportive, practically stable, or more challenging. It is useful because friendships are not judged only by attraction, but also by mutual understanding, emotional safety, shared values, and the ability to grow together over time.",
+  "bullets": [
+    "🤝 Two-Person Birth Data Input — The system uses date of birth, time of birth, and place of birth for both friends to calculate two accurate natal charts.",
+    "🌌 Individual Chart Creation — Each person's chart is created first so their planets, signs, houses, and chart angles can be studied separately before comparison.",
+    "🔗 Friendship Compatibility Comparison — The platform then compares Person 1 and Person 2 charts to identify how their energies interact in friendship.",
+    "🪐 What The Chart Shows — It shows the personality style, emotional nature, communication pattern, support system, trust potential, and shared friendship dynamic between the two people.",
+    "💬 Communication Meaning — Helps astrologers understand how the two friends talk, think, share ideas, solve misunderstandings, and mentally connect with one another.",
+    "🌙 Emotional Friendship Meaning — Shows whether the friendship feels emotionally safe, understanding, caring, protective, supportive, or sometimes emotionally distant.",
+    "⚖ Harmony and Tension Detection — Reveals where the friendship flows naturally and where there may be conflict, misunderstanding, different expectations, or growth lessons.",
+    "🏠 House Overlay Insight — Shows which life areas each person activates in the other, such as learning, fun, daily life, emotional support, teamwork, social connection, or long-term trust.",
+    "🌍 Shared Interest and Support Pattern — Helps explain whether the friendship is more intellectual, emotional, adventurous, creative, practical, or spiritually supportive.",
+    "📊 Why This Chart Is Used — It is used to understand compatibility in friendship, mutual encouragement, emotional bonding, loyalty, shared values, and long-term friendship potential.",
+    "🧠 What We Understand From This Chart — It helps identify friendship strengths, easy connection points, possible tension zones, emotional support style, and how both people help each other grow.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, trust and support readings, social compatibility insight, and understanding the deeper purpose of a friendship."
+  ]
+},
+    {
+  "name": "horoscope_friendship_synastry_interpretations",
+  "label": "Friendship: Synastry Interpretations",
+  "description": "Readable friendship interpretation cards showing how one person's planets connect with the other person's planets.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. It then compares both charts through synastry, which means it studies how one person's planets, signs, houses, and chart angles interact with the other person's chart. The purpose of this screen is to explain the most important friendship connections in a simple card format. These cards help astrologers understand why the friendship feels easy, emotionally supportive, mentally stimulating, motivating, or sometimes challenging. It is especially useful for showing how two people understand each other, communicate, solve problems, build trust, and support each other's growth over time.",
+  "bullets": [
+    "🤝 Friendship Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both people to create two accurate natal charts before friendship comparison begins.",
+    "🌌 Synastry Comparison Meaning — The system compares Person 1 and Person 2 chart placements to detect important planet-to-planet friendship aspects such as conjunctions, trines, sextiles, squares, and oppositions.",
+    "☀ Sun Conjunction Sun Meaning — This kind of connection often shows shared values, similar life outlook, natural understanding, mutual respect, and a friendship built on common perspective and cooperation.",
+    "🌙 Moon Trine Moon Meaning — This kind of connection often shows emotional compatibility, intuitive support, comfort, shared understanding, and a friendship where both people can feel emotionally safe and understood.",
+    "♂ Conjunction Mercury Meaning — A connection like Mars conjunct Mercury can show lively discussion, energizing conversation, direct expression, mental stimulation, and a friendship that stays active through ideas and debate.",
+    "💬 Why This Screen Is Used — It helps astrologers quickly understand the main friendship dynamics by turning technical synastry aspects into readable interpretation cards.",
+    "🧠 What We Understand From These Cards — The cards help reveal shared thinking style, emotional support pattern, communication flow, mutual encouragement, and where the friendship feels easy or needs adjustment.",
+    "⚖ Harmony and Challenge Insight — Supportive aspects may show trust, comfort, teamwork, and easy connection, while more intense aspects may show debate, friction, or growth through difference.",
+    "🏠 Deeper Friendship Meaning — Even when the card focuses on planets, the full interpretation can also reflect house overlays and show which life areas the friendship activates, such as learning, teamwork, fun, emotional support, or practical help.",
+    "📖 Show More Purpose — Each card can include a Show More action so the user or astrologer can open a deeper explanation of that specific friendship aspect without crowding the main screen.",
+    "📊 Easy Card Format — The technical friendship chart comparison is presented in short readable cards so users can understand the meaning quickly and without confusion.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, trust and support readings, teamwork compatibility, and understanding the deeper strength and purpose of a friendship."
+  ]
+},
+
+{
+  "name": "horoscope_friendship_deep_analysis",
+  "label": "Friendship: Deep Synastry Analysis",
+  "description": "A detailed friendship reading for one important synastry aspect, with expanded meaning, significance, and picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. The platform then compares both charts through synastry and identifies important friendship aspects. When the user clicks Show More on a friendship synastry card, this deep analysis screen opens and explains one selected aspect in much greater detail. In this example, Moon trine Moon shows emotional ease, intuitive support, mutual comfort, and a friendship that naturally understands feelings without too much effort. The purpose of this screen is to help astrologers understand the deeper emotional structure of the friendship, the significance of the selected aspect, and the way both people support each other through trust, emotional safety, shared understanding, and long-term bonding.",
+  "bullets": [
+    "🤝 Friendship Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both people to calculate two accurate natal charts before deep friendship analysis begins.",
+    "🌌 Deep Aspect Focus — This screen explains one specific friendship synastry aspect in detail after it is selected from the main synastry interpretation cards.",
+    "🌙 Moon Meaning In Friendship — The Moon represents emotions, comfort, trust, instinctive reactions, care, emotional safety, and the natural feeling tone between two friends.",
+    "△ Trine Meaning In Friendship — A trine shows ease, natural flow, support, harmony, understanding, and a connection that works smoothly without much resistance.",
+    "❤️ Moon Trine Moon Meaning — This aspect often shows emotional understanding, easy support, shared comfort, mutual empathy, and a friendship where both people feel accepted and emotionally safe.",
+    "🧠 Deep Emotional Insight — Helps astrologers understand how the friendship handles feelings, sensitivity, reassurance, emotional expression, and supportive presence during difficult times.",
+    "📖 Significance And Impact Section — This part explains why the selected aspect matters in real friendship life, showing how it influences loyalty, trust, emotional resilience, encouragement, and long-term closeness.",
+    "⚖ Friendship Strength Meaning — The aspect can show where the friendship feels naturally balanced, nurturing, and emotionally dependable, while also highlighting how both people strengthen one another.",
+    "🖼 Picture Representation Purpose — The image visually combines the Moon qualities of both friends and the trine energy in the center so the astrologer can understand the aspect faster and more clearly.",
+    "🌙 Left Side Picture Meaning — The left side represents one person's Moon qualities, such as mood, reflection, belonging, comfort, sensitivity, imagination, and personal emotional rhythm.",
+    "🌙 Right Side Picture Meaning — The right side represents the other person's Moon qualities, such as cycles, intuition, receptivity, memory, vulnerability, empathy, and emotional care style.",
+    "✨ Center Blend Meaning — The center area represents the shared result of the trine, such as harmony, support, trust, balance, ease, comfort, connection, understanding, and emotional solidarity.",
+    "💬 Why This Screen Is Used — It gives a clearer and deeper explanation than the short summary card, helping the astrologer explain not only what the aspect is, but why it matters in the friendship.",
+    "🔮 What We Understand From This Screen — It helps reveal whether the friendship has emotional ease, deep trust, intuitive support, mutual encouragement, and a naturally protective emotional foundation.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, emotional support readings, trust and bonding insight, and understanding the deeper emotional purpose of a friendship."
+  ]
+},
+
+{
+  "name": "horoscope_friendship_composite_interpretations",
+  "label": "Friendship: Composite Horoscope",
+  "description": "A shared friendship chart reading that explains the combined energy of the friendship through important composite placements.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. The platform then builds the composite chart, which represents the friendship itself as one shared relationship chart instead of reading each person separately. The purpose of this screen is to explain major composite placements, such as the Sun in Libra in the 3rd house or the Moon in Virgo in the 2nd house, so astrologers can understand the core identity, emotional tone, communication style, shared values, and practical foundation of the friendship. This is useful because it shows how the friendship behaves as a whole, what holds it together, and which life themes become central in the connection.",
+  "bullets": [
+    "🤝 Friendship Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both friends to calculate two natal charts before creating the composite friendship chart.",
+    "🌌 Composite Chart Meaning — The composite chart represents the friendship itself as one shared energetic pattern, showing how the bond functions as a combined unit.",
+    "☀ Sun Placement Meaning — The composite Sun shows the main identity, purpose, and visible tone of the friendship, including what the friendship is centered around and how it expresses itself.",
+    "♎ Sun in Libra Meaning — This placement often shows a friendship built on balance, fairness, cooperation, mutual respect, and a natural wish to keep the connection peaceful and supportive.",
+    "🏠 3rd House Meaning — The 3rd house highlights communication, sharing ideas, learning, conversation, mental exchange, and day-to-day interaction, showing that talking and understanding each other are central to the friendship.",
+    "☀ Sun in Libra in the 3rd House — This combination suggests that the friendship grows through dialogue, shared interests, thoughtful communication, and mutual intellectual connection.",
+    "🌙 Moon Placement Meaning — The composite Moon shows the emotional atmosphere of the friendship, including comfort, trust, support, instinctive bonding, and the emotional needs of the connection.",
+    "♍ Moon in Virgo Meaning — This placement often shows a practical, dependable, helpful, and detail-aware emotional tone, where care is expressed through support, consistency, and usefulness.",
+    "🏠 2nd House Meaning — The 2nd house highlights shared values, security, stability, trust, dependability, and the sense of building something steady together.",
+    "🌙 Moon in Virgo in the 2nd House — This combination suggests that the friendship feels emotionally secure when both people are reliable, supportive, grounded, and aligned in values or practical priorities.",
+    "🧠 Why This Screen Is Used — It helps astrologers understand the friendship as a whole, not just person-to-person interactions, by showing the shared character and emotional structure of the bond.",
+    "💬 Easy Interpretation Format — The composite placements are shown in readable cards so users and astrologers can quickly understand the core meaning of the friendship without reading raw chart data.",
+    "📖 Show More Support — Each composite placement card can include a Show More action so deeper explanation can be opened for clearer friendship guidance.",
+    "🔮 What We Understand From This Screen — It helps reveal what the friendship is built on, how the two people communicate, what creates emotional safety, and why the bond feels mentally, emotionally, or practically strong.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, trust and support readings, social bond interpretation, and understanding the shared purpose of a friendship."
+  ]
+},
+
+{
+  "name": "horoscope_friendship_davison_relationship",
+  "label": "Friendship: Davison Relationship",
+  "description": "A shared friendship reading that explains the Davison chart through major sign and house placements.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and calculates the Davison relationship chart. The Davison chart is created from the midpoint in time and space between the two birth charts, and it represents the friendship as a real shared entity. The purpose of this screen is to explain important Davison placements, such as the Sun in Libra in the 9th house or the Moon in Aquarius in the 1st house, so astrologers can understand the shared identity, emotional atmosphere, growth path, and lived expression of the friendship. This screen is useful because it shows how the friendship functions in real life, what kind of experiences strengthen the bond, and which themes become central in the connection over time.",
+  "bullets": [
+    "🤝 Friendship Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both friends to calculate two natal charts before creating the Davison friendship chart.",
+    "🌌 Davison Chart Meaning — The Davison chart represents the friendship itself as a shared lived relationship, showing how the bond develops, expresses itself, and grows over time.",
+    "☀ Sun Placement Meaning — The Sun in the Davison chart shows the core identity, purpose, direction, and visible tone of the friendship.",
+    "♎ Sun in Libra Meaning — This placement often shows a friendship built on balance, fairness, cooperation, respect, diplomacy, and mutual understanding.",
+    "🏠 Sun in the 9th House Meaning — This placement highlights learning, travel, higher knowledge, philosophy, belief systems, exploration, and broadening perspectives together.",
+    "☀ Sun in Libra in the 9th House — This combination suggests a friendship that grows through shared ideas, meaningful conversation, learning, travel, discovery, and a desire to understand life from a wider point of view.",
+    "🌙 Moon Placement Meaning — The Moon in the Davison chart shows the emotional tone of the friendship, including comfort, trust, instinctive bonding, and emotional expression.",
+    "♒ Moon in Aquarius Meaning — This placement often shows emotional independence, openness to individuality, unconventional thinking, friendship through ideas, and respect for personal freedom.",
+    "🏠 Moon in the 1st House Meaning — This placement shows that emotional expression is very visible in the friendship and becomes a direct part of how the bond presents itself and feels in daily interaction.",
+    "🌙 Moon in Aquarius in the 1st House — This combination suggests a friendship where both people feel comfortable being themselves, value individuality, support each other's uniqueness, and connect through honesty, openness, and shared social awareness.",
+    "🧠 Why This Screen Is Used — It helps astrologers understand the friendship as a real shared relationship, not only as person-to-person comparison, by showing the bond's identity and emotional life as one living chart.",
+    "💬 Easy Interpretation Format — The Davison placements are shown in readable cards so users and astrologers can quickly understand the main meaning without reading raw chart calculations.",
+    "📖 Show More Support — Each Davison placement card can include a Show More action so deeper explanation can be opened for clearer friendship guidance.",
+    "🔮 What We Understand From This Screen — It helps reveal what the friendship is built around, how it feels emotionally, how it shows itself in real life, and what experiences help the bond grow stronger.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, trust and support readings, shared growth interpretation, and understanding the long-term purpose of a friendship."
+  ]
+},
+
+{
+  "name": "horoscope_friendship_major_aspects",
+  "label": "Friendship: Major Aspects & Connections",
+  "description": "A friendship aspect screen that highlights the strongest planet-to-planet connections between both friends and explains how those energies shape the bond.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. The platform then compares both charts through synastry and identifies the strongest cross-chart aspects between the two people. These major aspects and connections help astrologers understand the main energetic patterns in the friendship, such as warmth, support, admiration, emotional ease, optimism, frustration, or growth through challenge. The purpose of this screen is to turn those important aspect connections into readable friendship cards so the user can understand why the friendship feels natural, helpful, energizing, demanding, or deeply meaningful.",
+  "bullets": [
+    "🤝 Friendship Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both people to create two accurate natal charts before friendship aspect comparison begins.",
+    "🌌 Synastry Aspect Detection — The system compares both charts and finds the strongest inter-chart aspects, such as conjunctions, trines, sextiles, squares, and oppositions, between important friendship planets.",
+    "☀ Sun Conjunct Venus Meaning — This type of friendship connection often shows warmth, appreciation, admiration, social ease, shared enjoyment, kindness, and a bond that feels pleasant and welcoming.",
+    "🌙 Moon Trine Jupiter Meaning — This type of connection often shows emotional support, encouragement, generosity, optimism, comfort, and a friendship that helps both people feel valued and uplifted.",
+    "♂ Mars Square Saturn Meaning — This type of connection can show friction between action and caution, enthusiasm and restraint, speed and patience, but it can also create growth through learning balance and maturity.",
+    "💬 Why This Screen Is Used — It helps astrologers quickly see the most important friendship dynamics without having to read every smaller aspect in the full comparison chart.",
+    "🧠 What We Understand From These Cards — The cards help reveal admiration, emotional support, shared motivation, optimism, challenge points, loyalty patterns, and how both friends influence each other's growth.",
+    "⚖ Harmony and Challenge Insight — Supportive aspects may show trust, encouragement, and easy connection, while challenging aspects may show differences in pace, expression, expectations, or problem-solving style.",
+    "🏠 Deeper Friendship Meaning — Even when the card focuses on planets and signs, the full interpretation may also reflect house influence and show which life areas the friendship activates, such as teamwork, fun, learning, stability, or emotional help.",
+    "📖 Show More Purpose — Each major friendship aspect card can include a Show More action so the astrologer or user can open a deeper explanation of that specific connection without crowding the summary screen.",
+    "📊 Easy Friendship Card Format — The technical friendship synastry comparison is converted into short readable cards so users can understand the strongest connections clearly and without confusion.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, trust and support readings, teamwork compatibility, conflict understanding, and explaining the strongest strengths and lessons of a friendship."
+  ]
+},
+{
+  "name": "horoscope_friendship_deep_analysis_v1",
+  "label": "Friendship: Deep Synastry Analysis",
+  "description": "A detailed friendship reading for one selected synastry aspect, with expanded meaning, significance, and visual interpretation support.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This screen opens when the user clicks Show More on an important friendship synastry aspect. The system first uses date of birth, time of birth, and place of birth for both friends to generate two natal charts. It then compares both charts and identifies key friendship aspects. When one aspect is selected, this deep analysis view explains that single connection in much greater detail. In this example, Moon trine Moon shows emotional harmony, intuitive understanding, and a supportive bond between the two friends. The purpose of this screen is to help astrologers understand not only what the aspect means, but also why it matters, how it affects the friendship in real life, and what the visual picture representation is trying to show.",
+  "bullets": [
+    "🤝 How It Is Generated — The system uses both friends' date of birth, time of birth, and place of birth to calculate two natal charts, then compares them through synastry and selects one important aspect for deeper explanation.",
+    "🌙 Main Title Meaning — The selected aspect name, such as Moon trine Moon, appears at the top to show exactly which friendship connection is being analyzed in depth.",
+    "📖 Main Interpretation Block — This first large text block explains the full emotional and relational meaning of the selected aspect in natural language so the astrologer can understand the friendship dynamic clearly.",
+    "🌙 Moon Meaning In Friendship — The Moon represents feelings, emotional comfort, instinctive reactions, support style, trust, and the deeper emotional tone between two friends.",
+    "△ Trine Meaning In Friendship — A trine is a harmonious aspect that shows ease, natural understanding, smooth energy flow, mutual support, and a connection that works without too much force.",
+    "❤️ Moon Trine Moon Meaning — This aspect often shows emotional compatibility, natural empathy, easy reassurance, emotional safety, and a friendship where both people feel understood and supported.",
+    "⭐ Significance And Impact Block — This second content section explains why the aspect is important in real friendship life, showing how it influences trust, loyalty, emotional resilience, shared comfort, and long-term bond strength.",
+    "🧠 Why This Block Is Useful — It moves beyond simple meaning and helps astrologers explain the practical emotional effect of the aspect, such as how the friends handle feelings, support each other, and grow together.",
+    "🖼 Picture Representation Block — This section uses a symbolic image to visually explain the aspect, making the friendship dynamic easier to understand at a glance.",
+    "🌙 Left Visual Side Meaning — The left side of the picture represents one friend's Moon qualities, such as mood, belonging, reflection, serenity, imagination, attachment, and emotional rhythm.",
+    "🌙 Right Visual Side Meaning — The right side of the picture represents the other friend's Moon qualities, such as cycles, intuition, sensitivity, memory, vulnerability, empathy, care, and emotional response style.",
+    "✨ Center Visual Meaning — The center area represents the shared result of the trine, such as harmony, balance, support, union, understanding, trust, comfort, and emotional integration between both friends.",
+    "🎯 Why This Screen Is Used — It is used when the astrologer or user wants deeper understanding of one specific friendship aspect instead of only reading a short summary card.",
+    "🔮 What We Understand From This Screen — It helps reveal why the friendship feels emotionally easy, how both friends support each other, what creates trust, and why the bond may feel naturally secure and uplifting.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, emotional support analysis, best-friend interpretation, trust and bonding insight, and explaining the deeper meaning of one important friendship aspect."
+  ]
+},
+
+{
+  "name": "horoscope_friendship_composite_interpretations_1",
+  "label": "Friendship: Composite Horoscope",
+  "description": "A shared friendship chart reading that explains the combined identity, emotional tone, and active energy of the friendship through major composite placements.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. It then builds the composite chart, which represents the friendship itself as one shared chart instead of reading each person separately. This screen explains important composite placements such as Sun in Libra in the 3rd house, Moon in Virgo in the 2nd house, and Mars in Virgo in the 2nd house. The purpose of this screen is to help astrologers understand what the friendship is built around, how the friendship feels emotionally, how the two people communicate, and how they act together in practical life. It is useful because it shows the friendship as a single living bond with its own identity, emotional needs, and shared motivation.",
+  "bullets": [
+    "🤝 How It Is Generated — Uses date of birth, time of birth, and place of birth for both friends to calculate two natal charts, then combines them into one composite friendship chart.",
+    "🌌 Why This Chart Is Used — It is used to understand the friendship itself as a shared entity, not only as two separate people comparing charts.",
+    "☀ Sun Placement Block — This block explains the main identity, purpose, visible tone, and central focus of the friendship.",
+    "♎ Sun in Libra Meaning — Shows a friendship built on balance, fairness, harmony, diplomacy, mutual respect, and cooperative interaction.",
+    "🏠 Sun in the 3rd House Meaning — Shows that communication, conversation, idea-sharing, learning, daily connection, and mental exchange are central to the friendship.",
+    "☀ Sun in Libra in the 3rd House — Suggests a friendship that grows through dialogue, shared interests, understanding, and thoughtful communication.",
+    "🌙 Moon Placement Block — This block explains the emotional atmosphere of the friendship, including comfort, trust, support style, and emotional bonding.",
+    "♍ Moon in Virgo Meaning — Shows practical care, reliability, detail-awareness, useful support, emotional steadiness, and a grounded way of showing concern.",
+    "🏠 Moon in the 2nd House Meaning — Highlights shared values, stability, loyalty, dependability, trust, and the need to build a secure friendship foundation.",
+    "🌙 Moon in Virgo in the 2nd House — Suggests that the friendship feels emotionally safe when both people are reliable, helpful, consistent, and aligned in values.",
+    "♂ Mars Placement Block — This block explains the action style, shared drive, problem-solving energy, initiative, and productive force inside the friendship.",
+    "♍ Mars in Virgo Meaning — Shows disciplined effort, practical action, careful planning, helpful teamwork, and productive energy used in a thoughtful way.",
+    "🏠 Mars in the 2nd House Meaning — Shows that the friendship puts effort into security, shared goals, practical achievements, trust-building, and stable results.",
+    "♂ Mars in Virgo in the 2nd House — Suggests that both friends may work hard together, focus on useful goals, and build the friendship through consistency, effort, and practical support.",
+    "💬 Show More Purpose — Each block includes a Show More action so the astrologer or user can open a deeper explanation of that specific composite placement.",
+    "🧠 What We Understand From This Screen — It helps reveal what the friendship is built on, how emotional security is created, how communication works, and how both friends take action together.",
+    "🔮 Overall Friendship Meaning — This screen shows whether the friendship is mainly based on communication, stability, trust, teamwork, practical support, shared values, or long-term dependability.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, trust and support readings, teamwork understanding, and explaining the shared purpose of a friendship."
+  ]
+},
+
+{
+  "name": "horoscope_friendship_deep_analysis_1",
+  "label": "Friendship: Deep Astrological Analysis",
+  "description": "A detailed friendship reading that opens from a major synastry aspect and explains its deeper meaning, impact, and visual symbolism.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This screen is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. The platform then compares both charts through synastry and identifies the strongest friendship aspects. When the user clicks Show More on an important friendship aspect, this deep analysis screen opens and explains that one connection in greater detail. In this example, Sun conjunction Sun shows strong similarity in identity, values, outlook, and mutual understanding. The purpose of this screen is to help astrologers understand the deeper meaning of the selected aspect, why it matters in the friendship, how it affects the bond in real life, and what the picture representation is showing symbolically.",
+  "bullets": [
+    "🤝 How It Is Generated — The system uses both friends' date of birth, time of birth, and place of birth to calculate two natal charts, then compares them through synastry and selects one important aspect for deeper explanation.",
+    "☀ Main Title Meaning — The title at the top shows the exact aspect being analyzed, such as Sun Conjunction Sun, so the astrologer knows which friendship connection is in focus.",
+    "📖 Main Interpretation Block — This first large text block explains the full meaning of the selected aspect in friendship terms, showing how the two people connect through identity, outlook, values, and mutual understanding.",
+    "☀ Sun Meaning In Friendship — The Sun represents identity, self-expression, confidence, values, direction, and the visible personality energy each friend brings into the bond.",
+    "☌ Conjunction Meaning In Friendship — A conjunction shows two energies joining strongly together, creating intensity, similarity, shared focus, and a bond that feels direct and noticeable.",
+    "❤️ Sun Conjunction Sun Meaning — This aspect often shows shared values, similar life approach, natural understanding, mutual respect, and a friendship built on common goals, outlook, and personal resonance.",
+    "⭐ Why This Aspect Matters — It can become a strong foundation for friendship because both people often understand each other's style, priorities, and way of moving through life without too much explanation.",
+    "🖼 Picture Representation Block — This section uses a symbolic image to visually explain the selected friendship aspect, making the deeper meaning easier to understand at a glance.",
+    "☀ Left Visual Side Meaning — The left side represents one friend's Sun qualities, such as self-expression, purpose, confidence, leadership, individuality, creativity, clarity, and personal power.",
+    "☀ Right Visual Side Meaning — The right side represents the other friend's Sun qualities, such as self-awareness, initiative, motivation, influence, strength, enthusiasm, and identity expression.",
+    "✨ Center Visual Meaning — The center area represents the shared conjunction energy, showing what both Suns create together, such as recognition, honesty, self-awareness, courage, focus, confidence, dignity, and mutual support.",
+    "🎯 Why This Screen Is Used — It is used to move beyond a short summary card and give astrologers a deeper understanding of how one important aspect shapes the friendship.",
+    "🧠 What We Understand From This Screen — It helps reveal why the friendship feels naturally aligned, how both friends support each other's identity, and why the bond may feel strong, respectful, and long-lasting.",
+    "🔮 Deeper Friendship Value — This screen shows whether the friendship is supported by shared life direction, mutual admiration, easy understanding, and a naturally cooperative way of interacting.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, personality alignment insight, trust and respect readings, and understanding the deeper purpose of one major friendship aspect."
+  ]
+},
+{
+  "name": "horoscope_friendship_davison_relationship_v1",
+  "label": "Friendship: Davison Relationship",
+  "description": "A Davison friendship reading that explains how the bond lives, grows, and expresses itself through shared sign and house placements.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and calculates the Davison relationship chart. The Davison chart is created from the midpoint in time and space between both birth charts, and it represents the friendship as a real shared relationship with its own identity, emotional climate, and growth pattern. This screen explains important Davison placements such as the Sun in Libra in the 9th house and the Moon in Aquarius in the 1st house. Its purpose is to help astrologers understand how the friendship behaves in lived experience, what kind of journey the two people share, how they emotionally relate to one another, and what themes naturally become central in the friendship over time.",
+  "bullets": [
+    "🤝 How It Is Generated — The system uses both friends' date of birth, time of birth, and place of birth to calculate two natal charts, then creates the Davison chart using the midpoint of time and space between them.",
+    "🌌 Why The Davison Chart Is Used — It is used to understand the friendship as a living shared relationship, not only as a comparison between two separate charts.",
+    "☀ Sun Placement Block — This block explains the main identity, purpose, direction, and visible life path of the friendship.",
+    "♎ Sun in Libra Meaning — This placement shows that the friendship is naturally centered on fairness, cooperation, mutual respect, peaceful interaction, and balanced exchange.",
+    "🏠 Sun in the 9th House Meaning — This placement highlights exploration, learning, philosophy, travel, broader thinking, higher knowledge, and the wish to grow through shared experiences.",
+    "☀ Sun in Libra in the 9th House — This combination suggests a friendship that becomes stronger through thoughtful discussion, new ideas, shared adventures, learning together, and widening each other's worldview.",
+    "🌙 Moon Placement Block — This block explains the emotional atmosphere of the friendship, including how the bond feels, how emotions are expressed, and how comfort is created between both people.",
+    "♒ Moon in Aquarius Meaning — This placement shows emotional independence, originality, social awareness, openness to difference, and a friendship that respects individuality.",
+    "🏠 Moon in the 1st House Meaning — This placement makes the emotional tone of the friendship very visible, immediate, and central to how the relationship presents itself in everyday life.",
+    "🌙 Moon in Aquarius in the 1st House — This combination suggests a friendship where both people feel free to be themselves, value authenticity, support personal growth, and connect through openness, uniqueness, and mutual acceptance.",
+    "🧭 What This Screen Helps Us Understand — It shows what the friendship is built around, how it grows, what emotional style it carries, and why certain shared experiences make the bond stronger.",
+    "💬 Why The Data Feels Different Here — Unlike simple compatibility cards, this screen explains the friendship through the Davison relationship chart, so it focuses more on the life of the bond itself rather than only person-to-person interaction.",
+    "📖 Show More Purpose — Each placement card can include a Show More action so deeper meaning of that specific Davison placement can be opened without overloading the main screen.",
+    "🔮 Practical Friendship Meaning — This screen can reveal whether the friendship is built on shared learning, emotional freedom, mutual support, social awareness, travel, ideas, or long-term personal development together.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, long-term bond interpretation, shared growth readings, and understanding the deeper journey and emotional tone of a friendship."
+  ]
+},
+{
+  "name": "horoscope_friendship_davison_deep_analysis_v1",
+  "label": "Friendship: Deep Davison Analysis",
+  "description": "A deeper friendship reading for one important Davison placement, with expanded interpretation and picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This screen opens when the user clicks Show More on an important Davison friendship placement. The system first uses date of birth, time of birth, and place of birth for both friends to generate two natal charts. Then it creates the Davison chart using the midpoint in time and space between both births. From that shared Davison chart, it selects one meaningful placement for deeper explanation. In this example, Sun in Libra in the 9th house shows a friendship built around fairness, shared learning, wider perspective, and meaningful exploration. The purpose of this screen is to help astrologers understand how one specific Davison placement shapes the friendship's long-term growth, shared values, intellectual connection, and real-life journey together.",
+  "bullets": [
+    "🤝 How It Is Generated — The system uses both friends' date of birth, time of birth, and place of birth to create two natal charts, then calculates the Davison chart as the shared friendship chart.",
+    "🌌 Why This Screen Is Used — It gives a deeper explanation of one selected Davison placement so the astrologer can understand the friendship beyond a short summary card.",
+    "☀ Main Placement Title — The title at the top shows the exact placement being analyzed, such as Sun in Libra in the 9th House, so the focus of the reading is immediately clear.",
+    "📖 Main Interpretation Block — This first large text section explains the deeper meaning of the placement in natural language, showing how the friendship behaves, grows, and expresses itself through that shared energy.",
+    "☀ Sun Meaning In Davison Friendship — The Sun represents the central identity of the friendship, its purpose, visible tone, shared direction, and the main life force holding the bond together.",
+    "♎ Libra Meaning In Friendship — Libra brings harmony, fairness, balance, respect, cooperation, diplomacy, and a desire to keep the friendship thoughtful and mutually supportive.",
+    "🏠 9th House Meaning In Friendship — The 9th house represents exploration, higher learning, belief systems, travel, wisdom, philosophy, new experiences, and growth through wider understanding.",
+    "☀ Sun in Libra in the 9th House Meaning — This combination suggests a friendship that grows through conversation, shared curiosity, open-minded learning, meaningful ideas, travel, culture, and expanding each other's perspective.",
+    "🧠 Deeper Friendship Purpose — This placement often shows that the friendship is not only social, but also educational, inspiring, and growth-oriented, helping both people understand life in a broader way.",
+    "🖼 Picture Representation Purpose — The image is used to visually break the placement into three layers so the astrologer can quickly understand sign meaning, house meaning, and the combined result.",
+    "♎ Left Visual Block Meaning — The left side explains Libra qualities such as harmony, tact, justice, fairness, diplomacy, elegance, cooperation, partnership, and social grace.",
+    "🏠 Right Visual Block Meaning — The right side explains 9th house themes such as journeys, principles, ethics, learning, worldview, religion, study, wisdom, development, and expanded awareness.",
+    "✨ Center Blend Meaning — The center area combines Libra and 9th house energy, showing the friendship's shared themes such as higher learning, cultural exchange, philosophy, exploration, broad-mindedness, knowledge, and mutual growth.",
+    "🎯 What We Understand From This Screen — It helps reveal why the friendship may feel mentally enriching, balanced, meaningful, and strongly connected through ideas, values, travel, or shared discovery.",
+    "💬 Why It Matters In Real Life — This placement can show a friendship that becomes stronger through honest discussion, shared beliefs, learning experiences, and helping each other see life more clearly and fairly.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, long-term bond analysis, shared growth interpretation, travel or learning partnership insight, and understanding the deeper mission of a friendship."
+  ]
+},
+{
+  "name": "horoscope_friendship_major_aspects_v1",
+  "label": "Friendship: Major Aspects & Connections",
+  "description": "A focused friendship compatibility screen that highlights the strongest planet-to-planet connections between both friends and explains how each one shapes the bond.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. It then compares the two charts through synastry and selects the most important cross-chart aspects for friendship analysis. These aspect cards show how one friend's planets interact with the other friend's planets, revealing the strongest patterns of support, warmth, communication, growth, tension, and mutual influence inside the friendship. The purpose of this screen is to help astrologers quickly identify the major energetic links that define how the friendship feels, how both people respond to each other, and where the connection becomes especially harmonious, emotionally supportive, or growth-producing.",
+  "bullets": [
+    "🤝 How It Is Generated — The system uses both friends' date of birth, time of birth, and place of birth to calculate two natal charts, then compares them to detect the strongest synastry aspects between their planets.",
+    "🌌 Why This Screen Is Used — It is used to show the most important friendship connections first, so the astrologer can quickly understand the strongest patterns in the relationship without reading every minor aspect.",
+    "☀ Sun in Libra Conjunct Venus in Libra Block — This block explains a warm and pleasant friendship connection built on appreciation, kindness, social ease, charm, mutual admiration, and enjoyment of each other's company.",
+    "❤️ Meaning Of Sun Conjunct Venus In Friendship — This aspect often shows affection, friendly attraction, appreciation of each other's personality, easy bonding, shared taste, and a friendship that feels welcoming and enjoyable.",
+    "🌙 Moon in Taurus Trine Jupiter in Virgo Block — This block explains emotional support, reliability, generosity, calm encouragement, and a friendship where both people can feel nurtured, valued, and emotionally steady.",
+    "💛 Meaning Of Moon Trine Jupiter In Friendship — This aspect often shows emotional warmth, trust, optimism, support in difficult times, and a friendship that naturally helps both people grow with reassurance and goodwill.",
+    "♂ Mars in Leo Square Saturn in Taurus Block — This block explains a more challenging friendship pattern where action, enthusiasm, and speed may clash with caution, structure, patience, or slower decision-making.",
+    "⚖ Meaning Of Mars Square Saturn In Friendship — This aspect can show frustration, delays, stubbornness, or mismatched pace, but it can also help the friendship grow stronger by teaching balance, maturity, patience, and responsibility.",
+    "🎨 Color Meaning Of The Cards — Supportive or warm aspects may appear in lighter or brighter tones, while more emotionally neutral or challenging aspects may use different colors to help astrologers quickly read the overall energy.",
+    "💬 Why The Text Is Split Into Cards — Each card explains one major aspect separately so the user can understand the friendship one connection at a time instead of reading one long confusing paragraph.",
+    "📖 Show More Purpose — Each card includes a Show More option so the astrologer or user can open deeper explanation of that exact friendship aspect without making the main screen too crowded.",
+    "🧠 What We Understand From This Screen — It helps reveal which parts of the friendship create warmth, emotional safety, shared joy, encouragement, friction, personal growth, and long-term bonding.",
+    "🔮 Practical Friendship Meaning — This screen can show whether the friendship is socially easy, emotionally supportive, growth-oriented, challenging in useful ways, or built through both harmony and effort.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, teamwork understanding, emotional support insight, conflict pattern study, and explaining the strongest strengths and lessons in a friendship."
+  ]
+},
+
+{
+  "name": "horoscope_friendship_compatibility_summary_1V",
+  "label": "Friendship: Compatibility Score / Summary",
+  "description": "A simple friendship summary that explains the core connection through Sun, Moon, Venus, and Mars compatibility in an easy-to-read card format.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. It then compares the most important personal placements between both people, especially Sun, Moon, Venus, and Mars. The purpose of this screen is to give a quick but meaningful overview of the friendship before moving into deeper synastry, composite, or Davison analysis. It helps astrologers understand how the friendship connects through identity, emotional style, social comfort, affection pattern, motivation, and shared action. This screen is useful because it gives a first clear picture of where the friendship feels natural, where both people emotionally support each other, and where adjustment may be needed.",
+  "bullets": [
+    "🤝 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both friends to calculate two natal charts, then compares key placements between them to create the friendship summary.",
+    "☀ Sun Sign Compatibility Block — This block explains how the two friends connect through core identity, values, personality style, social behavior, and general life approach.",
+    "♎ Sun in Libra Compatibility Meaning — This type of connection often shows harmony, mutual respect, diplomacy, fairness, cooperation, and a friendship that grows through balance and shared understanding.",
+    "🌙 Moon Sign Dynamics Block — This block explains the emotional side of the friendship, including comfort, trust, emotional reactions, support style, and the way both people handle feelings together.",
+    "♉ Taurus Moon and ♍ Virgo Moon Meaning — This combination often shows practical emotional support, reliability, grounded care, and a friendship where comfort is expressed through steadiness, usefulness, and consistency.",
+    "♀ Venus and ♂ Mars Interactions Block — This block explains affection style, social charm, shared enjoyment, action pattern, motivation, and how the friendship expresses warmth, enthusiasm, and collaboration.",
+    "♏ Venus in Scorpio with ♎ Venus in Libra Meaning — This combination can show a friendship that mixes emotional depth with social grace, creating both intensity and friendliness in the connection.",
+    "♂ Mars in Virgo with ♂ Mars in Leo Meaning — This pairing can show a mix of practical action and creative energy, where one friend prefers useful effort and the other brings confidence, excitement, and bold expression.",
+    "⚖ Why This Screen Is Used — It gives a quick overview of the friendship so astrologers can understand the basic connection before reading more advanced friendship analysis screens.",
+    "💬 Easy Card Format — The summary is divided into separate cards so the user can understand identity compatibility, emotional dynamics, and interaction style one layer at a time.",
+    "📖 Show More Purpose — Each card can include a Show More action so deeper explanation of that friendship layer can be opened without making the summary screen too crowded.",
+    "🧠 What We Understand From This Screen — It helps reveal whether the friendship is based on shared values, emotional steadiness, mutual respect, social ease, practical support, or mixed but workable personality styles.",
+    "🔮 Friendship Meaning In Real Life — This screen can show why two friends feel naturally connected, how they emotionally help each other, and how their different styles can either strengthen the friendship or create small friction points.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, trust and support insight, social bond overview, and introducing the deeper friendship astrology reading in a clear way."
+  ]
+},
+
+
+{
+  "name":  "horoscope_friendship_composite_interpretations_v1",
+  "label": "Friendship: Elemental Balance",
+  "description": "A friendship analysis screen that compares elemental energy and interaction style between both friends.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. The platform then studies the elemental distribution and modal qualities in both charts to understand how the friendship works at a natural energy level. The purpose of this screen is to help astrologers understand whether the friendship is more mental, emotional, practical, or action-driven, and how both people naturally respond to one another. It also explains how the elements and modalities combine to create harmony, support, challenge, movement, stability, or emotional difference inside the friendship.",
+  "bullets": [
+    "🤝 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both friends to calculate two natal charts, then compares the elemental and modal balance between them.",
+    "🌍 Why This Screen Is Used — It is used to understand the basic energetic chemistry of the friendship before going into deeper aspect-based or house-based analysis.",
+    "🔥 Fire Element Meaning — Fire represents enthusiasm, action, courage, spontaneity, excitement, motivation, and the energy that keeps a friendship active and lively.",
+    "🏔 Earth Element Meaning — Earth represents stability, reliability, practicality, patience, consistency, and the ability to build trust and dependability in friendship.",
+    "🌬 Air Element Meaning — Air represents communication, ideas, curiosity, social connection, intellectual exchange, adaptability, and easy mental interaction.",
+    "🌊 Water Element Meaning — Water represents emotions, intuition, empathy, sensitivity, inner bonding, emotional understanding, and protective friendship energy.",
+    "🌍 Elemental Balance Block — This block explains the overall balance of Fire, Earth, Air, and Water between both friends and shows the main natural chemistry of the bond.",
+    "🌬 Strong Air Influence Meaning — A strong Air influence often shows a friendship built on communication, ideas, humor, learning, and intellectual connection.",
+    "🌊 Air And Water Blend Meaning — When one chart has stronger Air and the other has stronger Water, the friendship may combine thought and feeling, creating both conversation and emotional depth.",
+    "🔥 Lack Of Fire Meaning — A weaker Fire presence can suggest the friendship may need more spontaneity, excitement, courage, or shared adventure to stay energized and active.",
+    "🧭 Modalities And Interaction Block — This block explains how Cardinal, Fixed, and Mutable energies shape the way both friends act, respond, and move through the friendship.",
+    "▶ Cardinal Meaning — Cardinal energy shows initiative, action, leadership, and the tendency to begin things, make plans, and move the friendship forward.",
+    "⏺ Fixed Meaning — Fixed energy shows stability, loyalty, persistence, emotional depth, consistency, and the ability to hold the friendship together over time.",
+    "🔄 Mutable Meaning — Mutable energy shows flexibility, adaptability, openness, adjustment, and the ability to keep the friendship flowing through change.",
+    "⚖ Cardinal And Fixed Blend Meaning — When one friend brings more Cardinal energy and the other brings more Fixed energy, the friendship may balance action with stability, movement with consistency, and initiative with endurance.",
+    "💬 Show More Purpose — Each block can include a Show More action so the astrologer or user can open a deeper explanation of that elemental or modal theme.",
+    "🧠 What We Understand From This Screen — It helps reveal whether the friendship is mainly intellectual, emotional, practical, spontaneous, stable, or mixed in style, and how both people naturally support or challenge each other.",
+    "🔮 Practical Friendship Meaning — This screen can explain why a friendship feels easy to talk through, emotionally rich, practically dependable, or in need of more energy and flexibility.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, emotional and mental chemistry insight, trust and support readings, and understanding the natural energetic structure of a friendship."
+  ]
+},
+
+{
+  "name": "horoscope_friendship_timing_transits_v1",
+  "label": "Friendship: Timing & Transits",
+  "description": "A friendship timing screen that highlights active planet-to-planet connections and shows when certain friendship energies become more noticeable, supportive, or challenging.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. The platform then compares both charts and highlights important active connections that shape the timing, tone, and development of the friendship. These cards explain how major inter-chart aspects such as Sun conjunction Sun, Moon sextile Moon, or Mars conjunction Mercury influence the bond in practical life. The purpose of this screen is to help astrologers understand which friendship themes are especially active, such as shared understanding, emotional support, communication flow, cooperation, or mental stimulation. It is useful because it shows how the friendship energy moves and becomes expressed through important relationship contacts rather than only through static compatibility meanings.",
+  "bullets": [
+    "🤝 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both friends to calculate two natal charts, then compares the charts to identify key active friendship connections.",
+    "⏳ Why This Screen Is Used — It is used to show how important friendship energies become expressed through active aspect links, helping astrologers understand timing, interaction style, and relationship flow.",
+    "☀ Sun Conjunction Sun Block — This block explains a strong shared identity connection, showing common values, similar outlook, mutual respect, cooperation, and a friendship built on natural understanding.",
+    "🌙 Moon Sextile Moon Block — This block explains emotional compatibility with flexibility, support, comfort, and a friendship where both people can emotionally respond to each other in a helpful and balanced way.",
+    "♂ Mars Conjunction Mercury Block — This block explains energized communication, shared curiosity, fast conversation, lively idea exchange, debate, initiative, and a friendship that stays mentally active.",
+    "🔗 Meaning Of Conjunction In Friendship — A conjunction shows strong direct blending of two energies, making the connection more immediate, obvious, and powerful in how the friendship is experienced.",
+    "✨ Meaning Of Sextile In Friendship — A sextile shows supportive, cooperative, and opportunity-based energy, where both people can work well together if they actively use the connection.",
+    "💬 Communication And Timing Value — This screen is especially useful for understanding when the friendship is mentally aligned, emotionally responsive, socially cooperative, or energized through shared action and ideas.",
+    "⚖ Harmony And Growth Insight — Some timing cards show easy support and cooperation, while others show dynamic energy that encourages action, discussion, or development within the friendship.",
+    "📖 Show More Purpose — Each card includes a Show More option so the astrologer or user can open a deeper explanation of that specific friendship connection without overloading the main screen.",
+    "🧠 What We Understand From This Screen — It helps reveal when the friendship feels most aligned, emotionally supportive, mentally stimulating, or mutually active through specific planetary contacts.",
+    "🔮 Practical Friendship Meaning — This screen can show why two friends feel naturally in sync at certain times, why emotional understanding becomes easier, or why communication becomes especially strong and motivating.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, active connection timing, communication pattern study, emotional support insight, and understanding the evolving energy of a friendship."
+  ]
+},
+
+{
+  "name": "horoscope_friendship_karmic_soulmate_indicators",
+  "label": "Friendship: Karmic & Soulmate Indicators",
+  "description": "A deeper friendship analysis screen that highlights karmic ties, healing bonds, and soul-growth connections between two friends.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. The platform then compares both charts and looks for special karmic and soul-growth indicators, especially connections involving Chiron, the North Node, the South Node, and important personal planets such as the Sun. The purpose of this screen is to help astrologers understand whether the friendship carries a deeper meaning beyond ordinary compatibility. It shows whether the bond may feel fated, healing, familiar, spiritually significant, or connected to growth lessons that both people help each other work through.",
+  "bullets": [
+    "🤝 How It Is Generated — The system uses both friends' date of birth, time of birth, and place of birth to calculate two natal charts, then compares them to detect karmic and soul-growth connections.",
+    "🌌 Why This Screen Is Used — It is used to identify deeper friendship patterns that may feel destined, healing, emotionally important, or connected to personal growth and life lessons.",
+    "🩹 Chiron And Lunar Nodes Connection Block — This block explains healing-based karmic ties between one friend's Chiron and the other friend's North or South Node, showing how the friendship may support emotional healing and growth.",
+    "🩹 Chiron Meaning In Friendship — Chiron represents wounds, healing, vulnerability, wisdom gained through pain, and the ability to help another person grow through compassion and understanding.",
+    "☊ North Node Meaning In Friendship — The North Node represents future growth, soul direction, learning, destiny, and the qualities a person is meant to develop in this life.",
+    "☋ South Node Meaning In Friendship — The South Node represents familiarity, past patterns, comfort zones, karmic memory, and the feeling that a connection is already known or deeply familiar.",
+    "✨ Chiron Trine North Node Meaning — This type of connection can show a supportive healing bond where one friend naturally helps the other move toward growth, recovery, confidence, and emotional development.",
+    "☀ Personal Planets And Lunar Nodes Block — This block explains karmic ties between personal planets, such as the Sun, and the other friend's Lunar Nodes, showing destiny, familiarity, and meaningful life influence.",
+    "☀ Sun Conjunct South Node Meaning — This connection can suggest a past-life style familiarity, a strong sense of recognition, and a friendship that quickly feels natural, known, or emotionally important.",
+    "❤️ Why These Connections Matter — These indicators often show that the friendship is not only enjoyable or supportive, but also carries deeper lessons, healing value, or a sense of meaningful timing in both lives.",
+    "💬 Show More Purpose — Each karmic indicator card includes a Show More option so the astrologer or user can open a deeper explanation of that specific soul-growth connection.",
+    "🧠 What We Understand From This Screen — It helps reveal whether the friendship supports healing, personal growth, emotional acceptance, soul lessons, forgiveness, trust, and deeper mutual understanding.",
+    "🔮 Friendship Meaning In Real Life — This screen can explain why a friend feels unforgettable, why the bond feels instantly familiar, why healing happens through the connection, or why the friendship becomes an important turning point.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, soul-bond analysis, karmic friendship interpretation, healing relationship guidance, and understanding the deeper spiritual purpose of a friendship."
+  ]
+},
+
+      // ---------------Business Relationships--------------//
       { 
         name: "horoscope_business_setup", 
         label: "Business: Professional Synergy", 
