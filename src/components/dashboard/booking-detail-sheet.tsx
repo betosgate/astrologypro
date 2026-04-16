@@ -468,13 +468,11 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
                           try {
                             const res = await fetch(`/api/bookings/${booking.id}/recording-segments`);
                             const data = await res.json();
-                            if (data.segments?.length > 1) {
+                            if (data.segments?.length > 0) {
                               setRecordingSegments(data.segments);
-                              toast.success(`Loaded ${data.segments.length} segments — playing full recording`);
-                            } else if (data.segments?.length === 1) {
-                              toast.info("Only one segment found — already showing the full recording");
+                              toast.success(`Loaded ${data.segments.length} segment${data.segments.length > 1 ? "s" : ""} — playing full recording`);
                             } else {
-                              toast.error("No segments found in S3");
+                              toast.error("No recording segments found in S3");
                             }
                           } catch {
                             toast.error("Failed to load segments");
