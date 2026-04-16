@@ -1949,7 +1949,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
         <div className="horoscope-table-container">
           <div className="horoscope-table-header">
             <h3>
-              {tabSlug === "tropical_transits_weekly_v2" ? "Tropical Transits Weekly Relation" : `${label} — Transit Aspects`}
+              {tabSlug === "tropical_transits_weekly_v2" ? "Future Tropical Transits Weekly Relation" : `${label} — Transit Aspects`}
             </h3>
           </div>
           <div className="horoscope-table-wrapper">
