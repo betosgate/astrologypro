@@ -120,7 +120,6 @@ export function buildAiPrompts(data: any, tab: string, areaOfInquiry?: string, e
     const p2 = data.person2_birth ?? {};
     const personaCity = typeof data.persona_city === "object" ? data.persona_city.label : (data.persona_city ?? "");
     const partnerCity = typeof data.partner_city === "object" ? data.partner_city.label : (data.partner_city ?? "");
-    const context = tab === "romantic_forecast_report_tropical_v2" ? "love" : tab === "friendship_report_tropical_v2" ? "friendship" : "business partnership";
     const relationshipContext = tab === "romantic_forecast_report_tropical_v2" ? "love relationship partner" : tab === "friendship_report_tropical_v2" ? "friendship partner" : "business relationship partner";
     const sys = "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation inportant aspects of assessing the potential for a To conduct a detailed synastry chart analysis, you will need precise birth data from both parties, including the exact birth time, date, and location, to accurately calculate their astrological charts. Start by examining the aspects between each person's personal planets (Sun, Moon, Venus, Mars) and the other's outer planets (Jupiter, Saturn, Uranus, Neptune, Pluto) to uncover dynamics of attraction, compatibility, and potential friction points. Assess the house overlays by noting where each individual's planets land in the other's astrological houses, which sheds light on the influence they exert over various life areas of their partner. Analyze the interactions between each person's Ascendant (self-expression) and Descendant (partnership qualities) to gauge core compatibility and relational dynamics. Additionally, explore the North and South Nodes to delve into themes of karmic connections or shared life purposes. Utilizing advanced astrology software or reliable online resources can facilitate this complex analysis, while reference books from respected astrologers can provide deeper interpretive frameworks. For a nuanced understanding, especially in complicated synastry situations, consulting with a professional astrologer is advisable.";
 
@@ -214,17 +213,14 @@ The user has provided a specific "Area of Inquiry": "${areaOfInquiry || "marriag
   }
 
   if (tab === "horary_chart_v2") {
-    const currentDate = new Date().toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
     const b = data;
-    const city = data.city ?? "";
-    const question = data.question ?? "";
-    const natalChartData = data.horary_chart_data ?? data;
+    const city = b.city ?? "";
+    const question = b.question ?? "";
+    const natalChartData = b.horary_chart_data ?? b;
 
-    const sys = `give response only in json format as a whole , nothing else answer as astrologer not AI BOT user data index related to astrology as data under that aspect and under that interpretation . Provide a deeply personalized response as if you are speaking directly to your astrology client in a one-on-one session. Use the language and tone of a trusted Western astrologer offering tailored guidance based on the client’s unique chart. Always interpret the chart using the Placidus house system as the default house_type. Avoid using generic phrases or repeated sentence structures. Each sentence should feel intentionally crafted and distinct, offering fresh insight without duplicating wording from similar interpretations.
+    const sys = `give response only in json format as a whole , nothing else answer as astrologer not AI BOT user data index related to astrology as data under that aspect and under that interpretation . Provide a deeply personalized response as if you are speaking directly to your astrology client in a one-on-one session. Use the language and tone of a trusted Western astrologer offering tailored guidance based on the client’s unique chart. Always interpret the chart using the Placidus house system as the default house_type. Avoid using generic phrases or repeated sentence structures. Each sentence should feel intentionally crafted and distinct, offering fresh insight without duplicating wording from similar interpretations.`;
 
-The user has provided a specific "Area of Inquiry": "${areaOfInquiry || "general"}". Make this the central theme of your interpretation. While you should ground the reading in this context, also incorporate other relevant insights from the chart that support or add nuance to this primary focus. Conclude the response by explicitly summarizing how the various astrological insights tie back to the client’s stated area of inquiry.`;
-
-    const user = `I was born on ${getMonthName(b.month)} ${b.day}, ${b.year} time ${b.hour}:${String(b.min ?? 0).padStart(2, "0")}, in ${city} ,'lat:${b.lat},lon:${b.lon},tzone:${b.tzone}'. ${question}. I'm providing you with my birth chart data in a separate JSON object. You MUST use this data to generate a personalized astrological analysis in the following JSON format:{data:{astrological_aspect:{aspect:[{title:data}],planet:[{title:data}],house:[{title:data}]},summary:{answer:[{title:data}],recommendation:[{title:data}],recommendation_on_date_and_timeline:[{timeline_title:timeline_data}]}}}
+    const user = `I was born on ${getMonthName(b.month)} ${b.day}, ${b.year} time ${b.hour}:${b.min ?? 0}, in ${city} ,'lat:${b.lat},lon:${b.lon},tzone:${b.tzone}'. ${question}. I'm providing you with my birth chart data in a separate JSON object. You MUST use this data to generate a personalized astrological analysis in the following JSON format:{data:{astrological_aspect:{aspect:[{title:data}],planet:[{title:data}],house:[{title:data}]},summary:{answer:[{title:data}],recommendation:[{title:data}],recommendation_on_date_and_timeline:[{timeline_title:timeline_data}]}}}
 
 example format to follow :
 {
@@ -233,39 +229,47 @@ example format to follow :
  "aspect": [
  {
  "title": "Mars Trine Jupiter (Transit to Natal)",
- "data": "Between <span class=\"timedata\">January 10th and February 15th, 2025</span>, transiting Mars in Sagittarius forms a trine aspect to your natal Jupiter in the 12th house. This harmonious alignment amplifies your ambition, optimism, and drive to pursue your goals, particularly those related to spirituality, intuition, or humanitarian causes. It supports taking decisive action and expanding your vision, bringing opportunities for growth and success in these areas."
+ "data": "Between January 10th and February 15th, 2025, transiting Mars in Sagittarius forms a trine aspect to your natal Jupiter in the 12th house. This harmonious alignment amplifies your ambition, optimism, and drive to pursue your goals, particularly those related to spirituality, intuition, or humanitarian causes. It supports taking decisive action and expanding your vision, bringing opportunities for growth and success in these areas."
+ },
+ {
+ "title": "Venus Sextile Neptune (Transit to Natal)",
+ "data": "During the same period, transiting Venus in Pisces forms a sextile aspect to your natal Neptune in the 12th house. This harmonious connection enhances your creativity, intuition, and compassion. It supports collaboration, artistic expression, and connecting with your dreams and ideals. This alignment also strengthens your spiritual connection and fosters a sense of harmony and idealism in your endeavors."
  }
  ],
  "planet": [
  {
  "title": "Transiting Mars",
- "data": "Between <span class=\"timedata\">January 10th and February 15th, 2025</span>, Mars transits through Sagittarius and forms a harmonious trine to your natal Jupiter in the 12th house."
+ "data": "Between January 10th and February 15th, 2025, Mars transits through Sagittarius and forms a harmonious trine to your natal Jupiter in the 12th house. This amplifies your ambition, drive, and optimism, particularly in areas related to spirituality, intuition, and humanitarian pursuits. It supports taking decisive action and expanding your vision, bringing opportunities for growth and success."
+ },
+ {
+ "title": "Transiting Venus",
+ "data": "During this same period, Venus transits through Pisces and forms a supportive sextile to your natal Neptune in the 12th house. This enhances your creativity, intuition, and compassion, supporting artistic expression, collaboration, and connecting with your dreams and ideals. It also strengthens your spiritual connection and fosters a sense of harmony and idealism."
  }
  ],
  "house": [
  {
  "title": "12th House (Transit Activation)",
- "data": "Between <span class=\"timedata\">January 10th and February 15th, 2025</span>, your 12th house is activated."
+ "data": "Between January 10th and February 15th, 2025, your 12th house of spirituality, imagination, and hidden realms is activated by the transits of Mars and Venus. Mars trine natal Jupiter enhances your intuition, drive, and optimism in pursuing spiritual or humanitarian goals. Venus sextile natal Neptune strengthens your creativity, compassion, and connection to your dreams and ideals."
  }
  ]
  },
  "summary": {
  "answer": [
  {
- "title": "Optimal Time",
- "data": "Based on your birth chart data, the optimal time is between <span class=\"timedata\">January 10th and February 15th, 2025</span>."
+ "title": "Optimal Time for Starting a Business",
+ "data": "Based on your birth chart data, the optimal time to start a business with your Taurus partner is between January 10th and February 15th, 2025. During this period, Mars trines your natal Jupiter and Venus sextiles your natal Neptune, both occurring in your 12th house. This alignment supports ambitious endeavors, collaborative efforts, and creative inspiration, increasing the likelihood of a successful launch."
  }
  ],
  "recommendation": [
  {
  "title": "Focus on 12th House Themes",
- "data": "Given the emphasis on your 12th house, consider incorporating themes related to spirituality."
+ "data": "Given the emphasis on your 12th house during the period between January 10th and February 15th, 2025, consider incorporating themes related to spirituality, intuition, creativity, and compassion into your business endeavors. This could involve ventures with a humanitarian focus, artistic expression, or utilizing your intuition and imagination for innovative solutions."
  }
  ],
  "recommendation_on_date_and_timeline": [
  {
- "timeline_title": "Between <span class=\"timedata\">January 10th and February 15th, 2025</span>",
- "timeline_data": "This period is particularly auspicious."
+ "timeline_title": "Between January 10th and February 15th, 2025",
+ "timeline_data": "This period is particularly auspicious for launching your business due to the following transits and their impact on your natal chart: 1. Mars trine Jupiter: Transit Mars in Sagittarius will trine your natal Jupiter in the 12th house. This alignment enhances your optimism, expands your vision, and supports taking decisive action towards your entrepreneurial goals. It can bring opportunities for growth and success through spiritual practices, intuition, or ventures with a humanitarian focus. 2. Venus sextile Neptune: Transit Venus in Pisces will sextile your natal Neptune in the 12th house. This harmonious aspect enhances your creativity, intuition, and compassion. It supports collaboration, artistic expression, and connecting with your dreams and ideals in your business pursuits. This alignment also strengthens your spiritual connection and fosters a sense of harmony and idealism in your endeavors."
  }
  ]
  }
@@ -275,21 +279,24 @@ I need you to strictly adhere to these rules:
 
 1.Personalized Interpretations ONLY: Absolutely NO generic explanations of planets, aspects, or houses. Every interpretation in the data fields must be derived from and specific to MY birth chart data and reasoning with timeline_data you suggested. No general info expected.
 
-2.FUTURE Justified Timelines: The timeline_data must identify a favorable future date range that begins strictly after ${currentDate}. Within this recommended time period, you MUST also pinpoint multiple specific, highly auspicious dates for taking action. You must structure this recommendation by first presenting the single "Top Choice Date," followed by a list of "Other Favorable Dates." For both the overall date range and each specific date, you MUST provide a detailed astrological justification, explaining exactly which transits to MY birth chart make these times significant.
+2.FUTURE Justified Timelines: The timeline_data must identify a favorable future date range that begins strictly after 04/16/2026. Within this recommended time period, you MUST also pinpoint multiple specific, highly auspicious dates for taking action. You must structure this recommendation by first presenting the single \"Top Choice Date,\" followed by a list of \"Other Favorable Dates.\" For both the overall date range and each specific date, you MUST provide a detailed astrological justification, explaining exactly which transits to MY birth chart make these times significant.
 3.Data Richness: Each data field needs at least three full sentences of detailed, personalized interpretation.
 4.Accurate Titles: Use concise labels for each title (e.g., 'Sun Conjunct Moon', 'Mars in Aries').
 5.Complete Data: Ensure ALL objects have both title and data fields.
-6. Date Formatting: In all "data" and "timeline_data" fields, you MUST wrap every specific date or date range with an HTML span tag using the class "timedata". This formatting is mandatory.
+Rule 2 is the most important instruction. Add the following rules:
+6. Date Formatting: In all \"data\" and \"timeline_data\" fields, you MUST wrap every specific date or date range with an HTML span tag using the class \"timedata\". For example, \"<span class=\"timedata\">October 20th, 2025</span>\" or \"<span class=\"timedata\">November 1-15, 2025</span>\". This formatting is mandatory.
 ${excludedDates ? `7. Excluded Dates: You MUST AVOID recommending the following dates or date ranges entirely: ${excludedDates}. All of your suggested timelines must fall outside of these exclusion periods.` : ""}
+
 8. Flexible Timeline Search: If a user-provided date range contains no potent astrological windows (especially due to excluded dates), or if a significantly more powerful alignment exists just outside it, you are permitted to suggest an alternative. This alternative must be within 30 days of the requested range's start or end, and you must never suggest a past date. When doing so, you must explicitly note that you are going beyond the requested range and provide a compelling astrological justification for why the alternative date is a superior choice.
 
-7.Response should not start with string 'json' ever and must be valid json format.`;
+Finally, ensure all dates mentioned throughout the response are consistent with one another.
+Response should not start with string 'json' ever and must be valid json format.`;
 
     prompts.push({
       key: "horary_chart_question",
       system: sys,
       user: user,
-      json: [natalChartData],
+      json: natalChartData,
     });
   }
 
