@@ -35,9 +35,73 @@ export function ChimePhoneWidget() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const statusPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const ringtoneRef = useRef<HTMLAudioElement | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const meetingSessionRef = useRef<any>(null);
   const phoneSessionIdRef = useRef<string | null>(null);
+  const notificationRef = useRef<Notification | null>(null);
+
+  // Request browser notification permission on mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission().then((perm) => {
+          console.log("[ChimePhoneWidget] Notification permission:", perm);
+        });
+      }
+    }
+  }, []);
+
+  // Play/stop ringtone and show/dismiss browser notification based on status
+  useEffect(() => {
+    if (status === "ringing") {
+      // Start ringtone
+      const ring = ringtoneRef.current;
+      if (ring) {
+        ring.currentTime = 0;
+        ring.loop = true;
+        ring.play().catch((e) =>
+          console.warn("[ChimePhoneWidget] Ringtone play blocked:", e)
+        );
+      }
+
+      // Show browser notification
+      if (
+        typeof window !== "undefined" &&
+        "Notification" in window &&
+        Notification.permission === "granted"
+      ) {
+        try {
+          const callerPhone = pendingCall?.caller_phone ?? "Unknown";
+          notificationRef.current = new Notification("Incoming Call", {
+            body: `Call from ${callerPhone}`,
+            icon: "/favicon.svg",
+            tag: "chime-incoming-call",
+            requireInteraction: true,
+          });
+          notificationRef.current.onclick = () => {
+            window.focus();
+            notificationRef.current?.close();
+          };
+        } catch (e) {
+          console.warn("[ChimePhoneWidget] Notification error:", e);
+        }
+      }
+    } else {
+      // Stop ringtone
+      const ring = ringtoneRef.current;
+      if (ring) {
+        ring.pause();
+        ring.currentTime = 0;
+      }
+
+      // Dismiss notification
+      if (notificationRef.current) {
+        notificationRef.current.close();
+        notificationRef.current = null;
+      }
+    }
+  }, [status, pendingCall]);
 
   // Poll for incoming calls
   useEffect(() => {
@@ -202,7 +266,16 @@ export function ChimePhoneWidget() {
           console.log("[ChimePhoneWidget] audioVideo session started — two-way audio active");
         },
         audioVideoDidStop: (sessionStatus: { statusCode: () => number }) => {
-          console.log("[ChimePhoneWidget] audioVideo session stopped, status:", sessionStatus.statusCode());
+          const code = sessionStatus.statusCode();
+          console.log("[ChimePhoneWidget] audioVideo session stopped, status:", code);
+          // Meeting was ended (e.g. caller hung up and Lambda ended meeting,
+          // or the Chime meeting was deleted via endChimeMeeting).
+          // Auto-cleanup the widget UI.
+          meetingSessionRef.current = null;
+          setIsMuted(false);
+          setStatus("idle");
+          setPendingCall(null);
+          phoneSessionIdRef.current = null;
         },
         audioVideoDidStartConnecting: (reconnecting: boolean) => {
           console.log("[ChimePhoneWidget] Connecting to audio…", reconnecting ? "(reconnecting)" : "");
@@ -282,12 +355,30 @@ export function ChimePhoneWidget() {
     setStatus("idle");
   }, [pendingCall]);
 
-  const handleHangup = useCallback(() => {
+  const handleHangup = useCallback(async () => {
+    const sessionId = phoneSessionIdRef.current;
+
+    // Clean up browser audio immediately for snappy UX
     cleanupChimeSession();
     setStatus("idle");
     setPendingCall(null);
     setElapsedSeconds(0);
     phoneSessionIdRef.current = null;
+
+    // Tell the server to end the Chime meeting (disconnects PSTN caller)
+    // and mark the phone session as completed
+    if (sessionId) {
+      try {
+        await fetch("/api/chime/voice/hangup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phoneSessionId: sessionId }),
+        });
+        console.log("[ChimePhoneWidget] Server hangup completed");
+      } catch (err) {
+        console.error("[ChimePhoneWidget] Server hangup failed:", err);
+      }
+    }
   }, [cleanupChimeSession]);
 
   const handleToggleMute = useCallback(() => {
@@ -313,9 +404,12 @@ export function ChimePhoneWidget() {
     return null;
   }
 
-  // Persistent hidden audio element for Chime SDK — must exist across all states
+  // Persistent hidden audio elements — must exist across all states
   const persistentAudio = (
-    <audio ref={audioRef} autoPlay style={{ display: "none" }} />
+    <>
+      <audio ref={audioRef} autoPlay style={{ display: "none" }} />
+      <audio ref={ringtoneRef} src="/audio/ringtone.wav" preload="auto" style={{ display: "none" }} />
+    </>
   );
 
   // Ringing state
