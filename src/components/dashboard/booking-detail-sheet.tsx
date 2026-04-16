@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +85,108 @@ interface SessionDetails {
   overage_amount: number | null;
 }
 
+/**
+ * Self-contained recording player. Auto-loads segments from S3 on mount
+ * and plays them seamlessly as one video via SegmentVideoPlayer.
+ */
+function RecordingSection({
+  bookingId,
+  recordingUrl,
+  shareId,
+  syncingRecording,
+  onSync,
+}: {
+  bookingId: string;
+  recordingUrl: string | null;
+  shareId: string | null;
+  syncingRecording: boolean;
+  onSync: () => void;
+}) {
+  const [segments, setSegments] = useState<{ key: string; size: number; url: string }[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Auto-load segments when component mounts
+  const loadSegments = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/recording-segments`);
+      const data = await res.json();
+      if (data.segments?.length > 0) {
+        setSegments(data.segments);
+      } else {
+        setError("No recording segments found in S3");
+      }
+    } catch {
+      setError("Failed to load recording");
+    } finally {
+      setLoading(false);
+    }
+  }, [bookingId]);
+
+  useEffect(() => {
+    loadSegments();
+  }, [loadSegments]);
+
+  return (
+    <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-3">
+      <div className="flex items-center gap-1.5">
+        <Video className="size-3.5 text-muted-foreground" />
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Recording</p>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-sm text-muted-foreground">Loading recording…</span>
+        </div>
+      ) : segments && segments.length > 0 ? (
+        <>
+          <SegmentVideoPlayer segments={segments} />
+          {recordingUrl && (
+            <a href={recordingUrl} download target="_blank" rel="noopener noreferrer">
+              <Button size="sm" variant="outline" className="w-full gap-2">
+                <Download className="size-3.5" />Download Recording
+              </Button>
+            </a>
+          )}
+          {shareId && (
+            <Button size="sm" variant="ghost" className="w-full gap-2 text-xs text-muted-foreground"
+              onClick={() => {
+                navigator.clipboard.writeText(`${window.location.origin}/session/${shareId}/recording`);
+                toast.success("Share link copied");
+              }}>
+              <Share2 className="size-3.5" />Copy Client Share Link
+            </Button>
+          )}
+        </>
+      ) : error ? (
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <Button size="sm" variant="outline" className="w-full gap-2" onClick={loadSegments}>
+            <RefreshCw className="size-3.5" />Retry
+          </Button>
+          {!recordingUrl && (
+            <Button size="sm" variant="outline" className="w-full gap-2" disabled={syncingRecording} onClick={onSync}>
+              {syncingRecording ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+              {syncingRecording ? "Syncing…" : "Sync Recording from S3"}
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">No recording available yet.</p>
+          <Button size="sm" variant="outline" className="w-full gap-2" disabled={syncingRecording} onClick={onSync}>
+            {syncingRecording ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+            {syncingRecording ? "Syncing…" : "Sync Recording from S3"}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -107,8 +209,6 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
   const [refunded, setRefunded] = useState(!!booking.refunded_at);
   const [syncing, setSyncing] = useState(false);
   const [syncingRecording, setSyncingRecording] = useState(false);
-  const [recordingSegments, setRecordingSegments] = useState<{ key: string; size: number; url: string }[] | null>(null);
-  const [loadingSegments, setLoadingSegments] = useState(false);
   const [sessionNotes, setSessionNotes] = useState(booking.session_notes ?? "");
   const [savingNotes, setSavingNotes] = useState(false);
 
@@ -420,87 +520,13 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-3">
-                  <div className="flex items-center gap-1.5">
-                    <Video className="size-3.5 text-muted-foreground" />
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Recording</p>
-                  </div>
-
-                  {/* Segment player — loaded on demand */}
-                  {recordingSegments && recordingSegments.length > 0 ? (
-                    <>
-                      <SegmentVideoPlayer segments={recordingSegments} />
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="w-full gap-2 text-xs text-muted-foreground"
-                        onClick={() => setRecordingSegments(null)}
-                      >
-                        Back to single recording view
-                      </Button>
-                    </>
-                  ) : sessionDetails.recording_url ? (
-                    <>
-                      <div className="rounded-lg overflow-hidden border border-border bg-black" style={{ aspectRatio: "16/9" }}>
-                        <video src={sessionDetails.recording_url} controls preload="metadata" className="w-full h-full" />
-                      </div>
-                      <a href={sessionDetails.recording_url} download target="_blank" rel="noopener noreferrer">
-                        <Button size="sm" variant="outline" className="w-full gap-2">
-                          <Download className="size-3.5" />Download Recording
-                        </Button>
-                      </a>
-                      {sessionDetails.recording_share_id && (
-                        <Button size="sm" variant="ghost" className="w-full gap-2 text-xs text-muted-foreground"
-                          onClick={() => {
-                            navigator.clipboard.writeText(`${window.location.origin}/session/${sessionDetails!.recording_share_id}/recording`);
-                            toast.success("Share link copied");
-                          }}>
-                          <Share2 className="size-3.5" />Copy Client Share Link
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full gap-2 text-xs"
-                        disabled={loadingSegments}
-                        onClick={async () => {
-                          setLoadingSegments(true);
-                          try {
-                            const res = await fetch(`/api/bookings/${booking.id}/recording-segments`);
-                            const data = await res.json();
-                            if (data.segments?.length > 0) {
-                              setRecordingSegments(data.segments);
-                              toast.success(`Loaded ${data.segments.length} segment${data.segments.length > 1 ? "s" : ""} — playing full recording`);
-                            } else {
-                              toast.error("No recording segments found in S3");
-                            }
-                          } catch {
-                            toast.error("Failed to load segments");
-                          } finally {
-                            setLoadingSegments(false);
-                          }
-                        }}
-                      >
-                        {loadingSegments ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
-                        {loadingSegments ? "Loading segments…" : "Play Full Recording (all segments)"}
-                      </Button>
-                    </>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">No recording available yet. Recordings are processed after the session ends.</p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full gap-2"
-                        disabled={syncingRecording}
-                        onClick={handleSyncRecording}
-                      >
-                        {syncingRecording ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
-                        {syncingRecording ? "Syncing…" : "Sync Recording from S3"}
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                <RecordingSection
+                  bookingId={booking.id}
+                  recordingUrl={sessionDetails.recording_url}
+                  shareId={sessionDetails.recording_share_id}
+                  syncingRecording={syncingRecording}
+                  onSync={handleSyncRecording}
+                />
 
                 <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
                   <div className="flex items-center gap-1.5">

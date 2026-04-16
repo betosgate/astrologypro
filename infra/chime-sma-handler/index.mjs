@@ -55,7 +55,11 @@ async function handleNewInboundCall(event) {
 
   // Call back to Next.js API to look up diviner + client + booking
   try {
-    const lookupRes = await fetch(`${APP_URL}/api/chime/voice/lookup`, {
+    const lookupUrl = `${APP_URL}/api/chime/voice/lookup`;
+    console.log("Calling lookup:", lookupUrl, "callerPhone:", callerPhone, "calledNumber:", calledNumber, "callId:", callId);
+    console.log("CRON_SECRET set:", !!CRON_SECRET, "length:", CRON_SECRET.length, "prefix:", CRON_SECRET.slice(0, 16));
+
+    const lookupRes = await fetch(lookupUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -68,14 +72,18 @@ async function handleNewInboundCall(event) {
       }),
     });
 
+    console.log("Lookup response status:", lookupRes.status);
+
     if (!lookupRes.ok) {
-      console.error("Lookup failed:", await lookupRes.text());
+      const errText = await lookupRes.text();
+      console.error("Lookup failed:", lookupRes.status, errText);
       return hangupWithMessage(
         "We couldn't find your account. Please book a session online."
       );
     }
 
     const lookup = await lookupRes.json();
+    console.log("Lookup result:", JSON.stringify(lookup));
 
     // Scheduled dial-in: join existing Chime meeting
     if (lookup.action === "join_meeting" && lookup.chimeMeetingId) {
@@ -198,7 +206,7 @@ async function handleNewInboundCall(event) {
       "We couldn't match your call to a session. Please book online at astrologypro.com."
     );
   } catch (err) {
-    console.error("SMA lookup error:", err);
+    console.error("SMA lookup error:", err?.message ?? err, err?.stack ?? "");
     return hangupWithMessage(
       "We're experiencing technical difficulties. Please try again later."
     );
