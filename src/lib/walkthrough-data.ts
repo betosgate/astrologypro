@@ -4135,14 +4135,14 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         name: "phone-session-flow",
         label: "Phone Session Flow",
         description: "Receive phone-based reading sessions via the platform's Chime telephony. Clients call your assigned Chime number; you answer from your web dashboard or personal phone (simultaneous ring) — your personal number is never exposed to the client.",
-        group: "Engagement",
+        group: "Phone & Calling",
         purpose: "Not every client is comfortable with video, and phone readings are a significant portion of the market. This flow handles the entire phone session — the client dials a platform number, the call routes to you via web and/or your mobile phone depending on your answer mode, and both sides are protected. Your personal phone number is never exposed to the client.",
         bullets: [
           "Platform phone number — clients call a dedicated Chime-managed number assigned to your profile by the admin",
-          "Answer mode — admin configures 'Web Only', 'Phone Only', or 'Both' (simultaneous ring) for how you receive calls",
+          "Answer mode — admin configures 'Browser Widget', 'Mobile Phone', or 'Both' (simultaneous ring) for how you receive calls",
           "Incoming call alert — a browser notification and ringtone play in your dashboard when a client calls",
           "Simultaneous ring — if 'Both' mode is enabled, your personal phone rings at the same time as the web widget",
-          "Accept from web — click the green phone icon on your dashboard to answer directly in the browser",
+          "Accept from web — click the green Answer button on the incoming call popup to answer directly in the browser",
           "Accept from phone — pick up your personal phone to answer; the web widget auto-dismisses",
           "Post-call session log — the system logs call start time, duration, and outcome automatically"
         ]
@@ -4151,7 +4151,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         name: "diviner_phone_widget_idle",
         label: "Phone Widget — Idle State",
         description: "The Chime phone widget on your diviner dashboard in its idle state — showing your assigned phone number and readiness indicator. This widget is always visible when you have a Chime number assigned.",
-        group: "Engagement",
+        group: "Phone & Calling",
         purpose: "The idle widget confirms that your phone line is active and ready to receive calls. It shows the number clients should dial and confirms your answer mode setting.",
         bullets: [
           "Assigned Chime number displayed — the E.164 number clients will dial to reach you",
@@ -4164,7 +4164,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         name: "diviner_phone_widget_ringing",
         label: "Phone Widget — Incoming Call",
         description: "The phone widget in ringing state — a client is calling your Chime number. The widget shows the caller info, plays a ringtone, and displays accept/decline buttons. A browser push notification also appears.",
-        group: "Engagement",
+        group: "Phone & Calling",
         purpose: "When a client dials your Chime number, this is what you see. The ringing state gives you the caller's info and lets you answer with one click. If simultaneous ring is on, your personal phone also rings at the same time.",
         bullets: [
           "Caller info displayed — shows the client's phone number (or name if matched to a booking)",
@@ -4172,6 +4172,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Decline button (red) — sends the caller to a 'diviner unavailable' message",
           "Ringtone plays — audible ring in the browser tab so you notice even if the tab is in the background",
           "Browser push notification — a system notification pops up outside the browser window",
+          "Simultaneous ring — if 'Both' mode is on, your personal phone also rings at the same time",
           "Auto-timeout — if no answer within 90 seconds, the call is released and the client hears a message"
         ]
       },
@@ -4179,7 +4180,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         name: "diviner_phone_widget_active",
         label: "Phone Widget — Active Call",
         description: "The phone widget during an active call — showing call duration, mute/unmute toggle, and end call button. This is the in-call experience when you answered from the web dashboard.",
-        group: "Engagement",
+        group: "Phone & Calling",
         purpose: "Once you accept the call, the widget switches to active mode. You can see how long the call has been going, mute yourself if needed, and end the call cleanly when the session is done.",
         bullets: [
           "Call timer — elapsed time displayed so you manage session length",
@@ -4192,7 +4193,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         name: "diviner_phone_answer_mobile",
         label: "Simultaneous Ring — Answer from Phone",
         description: "When answer mode is set to 'Both', your personal phone rings at the same time as the web widget. If you pick up your phone, the web widget automatically dismisses and the client is bridged to your phone call.",
-        group: "Engagement",
+        group: "Phone & Calling",
         purpose: "Simultaneous ring means you never miss a call — even if you're away from your computer. The platform dials your personal phone in parallel. When you answer your phone, the system joins you into the Chime meeting and bridges the waiting client automatically.",
         bullets: [
           "Personal phone rings — your mobile rings with a call from the Chime platform number",
