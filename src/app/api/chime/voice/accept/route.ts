@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createChimeMeeting, createChimeAttendee } from "@/lib/chime-meetings";
+import { createChimeMeeting, createChimeAttendee, getChimeMeeting } from "@/lib/chime-meetings";
+import { getChimeVoiceClient } from "@/lib/chime-client";
+import { UpdateSipMediaApplicationCallCommand } from "@aws-sdk/client-chime-sdk-voice";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +16,9 @@ export const dynamic = "force-dynamic";
  *   2. Look up the phone session and call notification
  *   3. Create a Chime meeting for the call (if standalone — no existing meeting)
  *   4. Create an attendee for the diviner
- *   5. Mark the notification as "accepted"
- *   6. Return meeting + attendee info so the widget can join
+ *   5. Use UpdateSipMediaApplicationCall to bridge the PSTN caller into the meeting
+ *   6. Mark the notification as "accepted"
+ *   7. Return meeting + attendee info so the widget can join
  */
 export async function POST(request: NextRequest) {
   try {
@@ -62,7 +65,7 @@ export async function POST(request: NextRequest) {
     // ── Fetch phone session ────────────────────────────────────────────────
     const { data: session } = await admin
       .from("phone_sessions")
-      .select("id, diviner_id, client_id, session_type, chime_meeting_id, status")
+      .select("id, diviner_id, client_id, session_type, chime_meeting_id, chime_transaction_id, status")
       .eq("id", phoneSessionId)
       .single();
 
@@ -105,6 +108,60 @@ export async function POST(request: NextRequest) {
       `diviner-${diviner.id}`
     );
 
+    // ── Bridge the PSTN caller into the Chime meeting ──────────────────────
+    // Use the TransactionId stored by the notify endpoint to call UpdateSipMediaApplicationCall
+    const transactionId = session.chime_transaction_id;
+    const smaId = process.env.CHIME_SMA_ID?.trim();
+
+    if (transactionId && smaId) {
+      try {
+        // Create an attendee for the PSTN caller
+        const callerAttendee = await createChimeAttendee(
+          chimeMeetingId,
+          `phone-caller-${phoneSessionId}`
+        );
+
+        // Tell the SMA to bridge the PSTN call into the meeting
+        const voiceClient = getChimeVoiceClient();
+        await voiceClient.send(
+          new UpdateSipMediaApplicationCallCommand({
+            SipMediaApplicationId: smaId,
+            TransactionId: transactionId,
+            Arguments: {
+              action: "join_meeting",
+              meetingId: chimeMeetingId,
+              joinToken: callerAttendee.joinToken,
+              attendeeId: callerAttendee.attendeeId,
+            },
+          })
+        );
+
+        console.log("[chime/voice/accept] Sent UpdateSipMediaApplicationCall to bridge caller. transactionId:", transactionId, "meetingId:", chimeMeetingId);
+      } catch (bridgeErr) {
+        console.error("[chime/voice/accept] Failed to bridge PSTN caller:", bridgeErr);
+        // Return error details so we can debug from the browser console
+        return NextResponse.json({
+          chimeMeetingId,
+          attendeeId: attendee.attendeeId,
+          joinToken: attendee.joinToken,
+          bridgeError: bridgeErr instanceof Error ? bridgeErr.message : String(bridgeErr),
+          bridgeDetails: { transactionId, smaId },
+        });
+      }
+    } else {
+      console.warn("[chime/voice/accept] Cannot bridge PSTN caller. transactionId:", transactionId, "smaId:", smaId);
+      return NextResponse.json({
+        chimeMeetingId,
+        attendeeId: attendee.attendeeId,
+        joinToken: attendee.joinToken,
+        bridgeError: "Missing transactionId or CHIME_SMA_ID",
+        bridgeDetails: { transactionId: transactionId ?? "NOT SET", smaId: smaId ?? "NOT SET" },
+      });
+    }
+
+    // ── Fetch full meeting object (includes MediaPlacement for browser SDK) ──
+    const fullMeeting = await getChimeMeeting(chimeMeetingId);
+
     // ── Mark notification as accepted ──────────────────────────────────────
     await admin
       .from("phone_call_notifications")
@@ -116,13 +173,19 @@ export async function POST(request: NextRequest) {
     // ── Update phone session status ────────────────────────────────────────
     await admin
       .from("phone_sessions")
-      .update({ status: "active" })
+      .update({ status: "accepted" })
       .eq("id", phoneSessionId);
 
     return NextResponse.json({
       chimeMeetingId,
       attendeeId: attendee.attendeeId,
       joinToken: attendee.joinToken,
+      // Full AWS objects needed by browser SDK MeetingSessionConfiguration
+      meeting: fullMeeting,
+      attendee: {
+        AttendeeId: attendee.attendeeId,
+        JoinToken: attendee.joinToken,
+      },
     });
   } catch (error) {
     console.error("[chime/voice/accept] error:", error);

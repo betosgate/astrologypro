@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { callAstrologyApi } from "@/lib/astrology-api";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+const ASTROLOGY_API_BASE = "https://json.astrologyapi.com/v1";
 
 // Extended allowlist for admin (includes all tool endpoints)
 const ALLOWED_ENDPOINTS = [
@@ -35,6 +39,77 @@ const ALLOWED_ENDPOINTS = [
   "horary_chart",
 ];
 
+type AstrologyApiSettingRow = {
+  id: string;
+  key_name: string;
+  key_value: string;
+  secret_value: string | null;
+  status: "active" | "inactive";
+  created_at: string;
+};
+
+function buildBasicAuthHeader(accessKey: string, secretKey: string): string {
+  return "Basic " + Buffer.from(`${accessKey}:${secretKey}`).toString("base64");
+}
+
+function isTrialLimitExceededError(message: string): boolean {
+  return (
+    message.includes("AstrologyAPI error 429") &&
+    message.includes("TRIAL_REQUEST_LIMIT_EXCEEDED")
+  );
+}
+
+async function callAstrologyApiWithSetting<T = unknown>(
+  endpoint: string,
+  body: Record<string, unknown>,
+  setting: AstrologyApiSettingRow,
+): Promise<T> {
+  if (!setting.secret_value) {
+    throw new Error(`AstrologyAPI secret missing for key ${setting.key_name}`);
+  }
+
+  const res = await fetch(`${ASTROLOGY_API_BASE}/${endpoint}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: buildBasicAuthHeader(setting.key_value, setting.secret_value),
+      "Accept-Language": "en",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`AstrologyAPI error ${res.status}: ${text}`);
+  }
+
+  return res.json() as Promise<T>;
+}
+
+async function toggleSettingStatusBySecretValue(secretValue: string): Promise<void> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("astro_system_settings")
+    .select("id, status")
+    .eq("type", "ASTROLOGY_API")
+    .eq("secret_value", secretValue)
+    .maybeSingle();
+
+  if (error || !data) {
+    throw new Error(error?.message ?? "Astro system setting not found");
+  }
+
+  const nextStatus = data.status === "active" ? "inactive" : "active";
+  const { error: updateError } = await admin
+    .from("astro_system_settings")
+    .update({ status: nextStatus })
+    .eq("id", data.id);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+}
+
 export async function POST(req: NextRequest) {
   const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -51,8 +126,82 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await callAstrologyApi(endpoint, payload);
-    return NextResponse.json(result);
+    const admin = createAdminClient();
+    const { data: rows, error } = await admin
+      .from("astro_system_settings")
+      .select("id, key_name, key_value, secret_value, status, created_at")
+      .eq("type", "ASTROLOGY_API")
+      .order("created_at", { ascending: true });
+
+    if (error || !rows || rows.length === 0) {
+      const result = await callAstrologyApi(endpoint, payload);
+      return NextResponse.json(result);
+    }
+
+    const triedSecrets = new Set<string>();
+    const tryWithRotation = async (candidates: AstrologyApiSettingRow[]) => {
+      let lastError: Error | null = null;
+
+      for (const candidate of candidates) {
+        if (!candidate.secret_value || triedSecrets.has(candidate.secret_value)) continue;
+        triedSecrets.add(candidate.secret_value);
+
+        try {
+          if (candidate.status !== "active") {
+            await toggleSettingStatusBySecretValue(candidate.secret_value);
+            candidate.status = "active";
+          }
+
+          return await callAstrologyApiWithSetting(endpoint, payload, candidate);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          lastError = err instanceof Error ? err : new Error(message);
+
+          if (!isTrialLimitExceededError(message)) {
+            throw lastError;
+          }
+
+          await toggleSettingStatusBySecretValue(candidate.secret_value);
+          candidate.status = "inactive";
+        }
+      }
+
+      return { __rotation_error: lastError } as const;
+    };
+
+    const activeRows = (rows as AstrologyApiSettingRow[]).filter((row) => row.status === "active");
+    const inactiveRows = (rows as AstrologyApiSettingRow[]).filter((row) => row.status !== "active");
+
+    const activeAttempt = await tryWithRotation(activeRows);
+    if (!("__rotation_error" in activeAttempt)) {
+      return NextResponse.json(activeAttempt);
+    }
+
+    if (inactiveRows.length > 0) {
+      const { error: activateAllError } = await admin
+        .from("astro_system_settings")
+        .update({ status: "active" })
+        .eq("type", "ASTROLOGY_API")
+        .eq("status", "inactive")
+        .in("id", inactiveRows.map((row) => row.id));
+
+      if (activateAllError) {
+        throw new Error(activateAllError.message);
+      }
+
+      inactiveRows.forEach((row) => {
+        row.status = "active";
+      });
+
+      const inactiveAttempt = await tryWithRotation(inactiveRows);
+      if (!("__rotation_error" in inactiveAttempt)) {
+        return NextResponse.json(inactiveAttempt);
+      }
+
+      throw inactiveAttempt.__rotation_error ?? activeAttempt.__rotation_error ?? new Error("All AstrologyAPI keys were exhausted");
+    }
+
+    throw activeAttempt.__rotation_error ?? new Error("All AstrologyAPI keys were exhausted");
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "AstrologyAPI error";
     return NextResponse.json({ error: msg }, { status: 502 });

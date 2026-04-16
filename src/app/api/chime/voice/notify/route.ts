@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { divinerId, phoneSessionId, callerPhone, callId } =
+    const { divinerId, phoneSessionId, callerPhone, callId, transactionId } =
       await request.json();
 
     if (!divinerId) {
@@ -38,6 +38,15 @@ export async function POST(request: NextRequest) {
       provider: "chime",
       created_at: new Date().toISOString(),
     });
+
+    // Store transactionId on the phone session so the accept route can
+    // use UpdateSipMediaApplicationCall to bridge the caller into the meeting
+    if (phoneSessionId && transactionId) {
+      await admin
+        .from("phone_sessions")
+        .update({ chime_transaction_id: transactionId })
+        .eq("id", phoneSessionId);
+    }
 
     // In a production system, you'd push this via WebSocket/SSE or
     // use Supabase Realtime to notify the diviner's dashboard in real-time.

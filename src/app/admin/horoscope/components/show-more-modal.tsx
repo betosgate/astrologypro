@@ -73,10 +73,29 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
     if (!open) setShowFullImage(false);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    
+    // Prevent the inner result container from scrolling while modal is open
+    const scrollContainer = document.querySelector(".result-scroll-container") as HTMLElement | null;
+    if (scrollContainer) {
+      const originalOverflow = scrollContainer.style.overflowY;
+      scrollContainer.style.overflowY = "hidden";
+      return () => {
+        scrollContainer.style.overflowY = originalOverflow;
+      };
+    }
+  }, [open]);
+
   return (
     <>
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="sm:max-w-4xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
+        <DialogContent
+          className="sm:max-w-4xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10"
+          showCloseButton={false}
+          onOpenAutoFocus={(event) => event.preventDefault()}
+          onCloseAutoFocus={(event) => event.preventDefault()}
+        >
           <button
             onClick={onClose}
             className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.15)] group"

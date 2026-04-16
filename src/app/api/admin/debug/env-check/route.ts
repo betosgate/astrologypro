@@ -40,10 +40,7 @@ export async function GET() {
 
     // ── Cron / Shared Secrets ─────────────────────────────────
     secrets: {
-      CRON_SECRET: preview(process.env.CRON_SECRET, 12),
-      CRON_SECRET_FULL_HASH: process.env.CRON_SECRET
-        ? `sha256-prefix: ${process.env.CRON_SECRET.slice(0, 16)}...`
-        : "❌ NOT SET",
+      CRON_SECRET: exact(process.env.CRON_SECRET),
     },
 
     // ── Stripe ────────────────────────────────────────────────

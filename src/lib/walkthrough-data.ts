@@ -1428,35 +1428,361 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
 
-      // ---------------Romantic: Synastry Setup---------------//
-      { 
-        name: "horoscope_romantic_setup", 
-        label: "Romantic: Synastry Setup", 
-        description: "Dual-chart relationship mapping.", 
-        group: "Horoscope Toolkit",
-        subModule: "Romantic Relationships",
-        purpose: "Calculates the dynamic interaction between two individuals to assess long-term compatibility and attraction.",
-        bullets: [
-          "Partner birth data entry with GMT preservation",
-          "Synastry vs Composite calculation methods",
-          "Attraction vs Stability metrics",
-          "AI compatibility score generation across 5 dimensions"
-        ]
-      },
-      { 
-        name: "horoscope_romantic_result_synthesis", 
-        label: "Romantic: Synastry Synthesis", 
-        description: "Dual-provider compatibility mapping.", 
-        group: "Horoscope Toolkit",
-        subModule: "Romantic Relationships",
-        purpose: "Visualizes the complex interaction between two natal charts, highlighting points of attraction, tension, and long-term viability.",
-        bullets: [
-          "Interactive dual-wheel synastry overlay",
-          "Aspect-to-aspect comparison table for the pair",
-          "Compatibility scoring across Love, Sex, and Long-term values",
-          "AI narrative on the karmic purpose of the relationship"
-        ]
-      },
+// ---------------Romantic: Synastry Setup---------------//
+      
+//       {
+//   "name": "horoscope_synastry_setup",
+//   "label": "Romantic: Synastry Setup",
+//   "description": "Enter both partners' birth details to generate the romantic synastry chart and relationship compatibility reading.",
+//   "group": "Horoscope Toolkit",
+//   "subModule": "Romantic Synastry",
+//   "purpose": "This section is the entry point for the Romantic Synastry module. It is generated using the birth details of two people, including date of birth, time of birth, and place of birth for each partner. The system first creates both natal charts separately, then compares the planetary positions, houses, and chart angles between the two people. This creates the synastry chart, which helps astrologers understand how one person's energy interacts with the other person's emotional nature, communication style, attraction pattern, values, intimacy, and long-term compatibility. The purpose of this chart is to study relationship chemistry, emotional bonding, romantic harmony, tension points, karmic links, communication flow, and the areas where the couple naturally supports or challenges each other.",
+//   "bullets": [
+//     "💕 Two-Person Birth Data Input — The system uses date of birth, time of birth, and place of birth for both partners to calculate two separate natal charts.",
+//     "🌌 Dual Natal Chart Creation — Each partner's birth chart is created first so their individual planets, signs, houses, and angles can be studied accurately.",
+//     "🔗 Synastry Comparison Engine — The platform then compares Person 1 and Person 2 chart data to find planetary overlays, cross-chart aspects, and compatibility patterns.",
+//     "🪐 Relationship Dynamics Mapping — The chart shows how one partner's planets affect the other partner's planets, houses, Ascendant, Descendant, and emotional responses.",
+//     "💬 Communication Compatibility — Helps astrologers understand how the couple may talk, think, listen, misunderstand, or mentally support each other.",
+//     "❤️ Romantic Attraction Insight — Reveals emotional bonding, love style, affection patterns, intimacy potential, and physical or magnetic attraction between the partners.",
+//     "⚖ Harmony and Tension Detection — Shows supportive aspects such as trines and sextiles, as well as difficult dynamics such as squares, oppositions, or emotional friction points.",
+//     "🏠 House Overlay Meaning — Explains which life areas are activated in each partner by the other person, such as love, marriage, home, sexuality, career, or spiritual growth.",
+//     "🔮 Karmic and Soul Connection Clues — Can highlight deeper relationship themes through strong Saturn, Node, Pluto, Moon, Venus, or angle connections.",
+//     "📊 Astrologer-Friendly Chart View — Displays both individual charts and synastry wheels so astrologers can visually compare the relationship structure more easily.",
+//     "🧠 What We Understand From This Chart — It helps identify compatibility strengths, emotional needs, attraction patterns, conflict zones, commitment potential, and the deeper purpose of the relationship.",
+//     "🚀 Practical Use — Useful for romantic compatibility readings, couple counseling, marriage analysis, relationship guidance, soulmate analysis, and understanding long-term partnership dynamics."
+//   ]
+// },
+
+// ---------------Romantic Relationships---------------//
+
+{
+  "name": "horoscope_romantic_relationships_setup",
+  "label": "Romantic Relationships: Entry & Generation Setup",
+  "description": "Enter both partners' birth details to generate the full romantic compatibility reading step by step.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This is the first screen of the Romantic Relationships module. The user must enter date of birth, time of birth, and place of birth for both Person 1 and Person 2. These details are required because the system uses them to calculate two accurate natal charts. After the required fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform starts building the relationship reading screen by screen. It compares both charts and then generates compatibility summary, synastry interpretations, deep synastry analysis, composite relationship insights, Davison relationship insights, elemental balance, timing and transits, and karmic or soulmate indicators. This setup screen is important because if birth time or birth place is wrong, houses, angles, compatibility patterns, and relationship analysis may change.",
+  "bullets": [
+    "📅 Step 1 — Enter Both Birth Dates: The user enters date of birth for both partners so the system can create the two natal chart foundations.",
+    "🕒 Step 2 — Enter Both Birth Times: The user enters exact time of birth for both partners because Ascendant, houses, and relationship overlays depend on correct timing.",
+    "📍 Step 3 — Enter Both Birth Places: The user enters place of birth for both partners so the engine can use the correct coordinates and timezone for accurate chart generation.",
+    "📝 Step 4 — Area of Inquiry (Optional): The user can add a focus topic such as love, marriage, trust, communication, long-term future, or emotional connection.",
+    "✅ Step 5 — Generate Reading Activation: After both partners' required birth details are completed correctly, the Generate Reading button becomes active.",
+    "💕 Step 6 — Compatibility Summary: The system gives a simple first overview of the relationship through Sun, Moon, Venus, and Mars compatibility so the user can quickly understand the basic connection.",
+    "🔗 Step 7 — Synastry Interpretations: The platform compares both natal charts directly and shows how one partner's planets interact with the other partner's planets in love, emotion, and communication.",
+    "🧠 Step 8 — Deep Synastry Analysis: Important synastry aspects can open in deeper view so the astrologer can understand the emotional and psychological meaning more clearly.",
+    "🌌 Step 9 — Composite Relationship Reading: The system creates the composite chart to show the energy of the relationship itself as one shared entity.",
+    "❤️ Step 10 — Davison Relationship Reading: The platform creates the Davison chart to explain how the relationship lives and develops in real life as a shared partnership.",
+    "🌍 Step 11 — Elemental Balance: The system compares Fire, Earth, Air, and Water between both partners to show passion, stability, communication, and emotional depth in the relationship.",
+    "⏳ Step 12 — Timing & Transits: The reading highlights relationship timing, active connection periods, and important emotional or romantic phases between the two people.",
+    "🔮 Step 13 — Karmic & Soulmate Indicators: The system identifies deep karmic, soulmate, growth, and destiny-style patterns that make the relationship feel especially meaningful.",
+    "📖 Step 14 — Show More Deep Readings: Important cards can open into deeper explanation screens so the user can understand the relationship in more detail without confusion."
+  ]
+},
+     {
+  "name": "horoscope_synastry_setup",
+  "label": "Romantic: Synastry Setup",
+  "description": "Enter both partners' birth details to generate the romantic synastry chart and relationship compatibility reading.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is the entry point for the Romantic Synastry module. It is generated using the birth details of two people, including date of birth, time of birth, and place of birth for each partner. The system first creates both natal charts separately, then compares the planetary positions, houses, and chart angles between the two people. This creates the synastry chart, which helps astrologers understand how one person's energy interacts with the other person's emotional nature, communication style, attraction pattern, values, intimacy, and long-term compatibility. The purpose of this chart is to study relationship chemistry, emotional bonding, romantic harmony, tension points, karmic links, communication flow, and the areas where the couple naturally supports or challenges each other.",
+  "bullets": [
+    "💕 Two-Person Birth Data Input — The system uses date of birth, time of birth, and place of birth for both partners to calculate two separate natal charts.",
+    "🌌 Dual Natal Chart Creation — Each partner's birth chart is created first so their individual planets, signs, houses, and angles can be studied accurately.",
+    "🔗 Synastry Comparison Engine — The platform then compares Person 1 and Person 2 chart data to find planetary overlays, cross-chart aspects, and compatibility patterns.",
+    "🪐 Relationship Dynamics Mapping — The chart shows how one partner's planets affect the other partner's planets, houses, Ascendant, Descendant, and emotional responses.",
+    "💬 Communication Compatibility — Helps astrologers understand how the couple may talk, think, listen, misunderstand, or mentally support each other.",
+    "❤️ Romantic Attraction Insight — Reveals emotional bonding, love style, affection patterns, intimacy potential, and physical or magnetic attraction between the partners.",
+    "⚖ Harmony and Tension Detection — Shows supportive aspects such as trines and sextiles, as well as difficult dynamics such as squares, oppositions, or emotional friction points.",
+    "🏠 House Overlay Meaning — Explains which life areas are activated in each partner by the other person, such as love, marriage, home, sexuality, career, or spiritual growth.",
+    "🔮 Karmic and Soul Connection Clues — Can highlight deeper relationship themes through strong Saturn, Node, Pluto, Moon, Venus, or angle connections.",
+    "📊 Astrologer-Friendly Chart View — Displays both individual charts and synastry wheels so astrologers can visually compare the relationship structure more easily.",
+    "🧠 What We Understand From This Chart — It helps identify compatibility strengths, emotional needs, attraction patterns, conflict zones, commitment potential, and the deeper purpose of the relationship.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, couple counseling, marriage analysis, relationship guidance, soulmate analysis, and understanding long-term partnership dynamics."
+  ]
+},
+     {
+  "name": "horoscope_synastry_interpretations",
+  "label": "Romantic: Synastry Interpretations",
+  "description": "Readable relationship interpretation cards showing how one partner's planets connect with the other partner's planets.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the birth details of both partners are entered, including date of birth, time of birth, and place of birth for each person. The system first creates two separate natal charts, then compares the planets, signs, houses, and angles between both charts. When an important synastry aspect is found, such as Sun conjunct Sun or Sun trine Moon, the platform creates an interpretation card for that relationship pattern. Each card explains the aspect between the two partners, what kind of emotional or romantic dynamic it creates, and how that connection may be experienced in real life. This helps astrologers understand compatibility, attraction, harmony, shared values, communication flow, emotional support, and possible tension in the relationship.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate two accurate natal charts before compatibility comparison begins.",
+    "🌌 Two-Chart Comparison — The system compares Person 1 and Person 2 planetary positions to detect important synastry aspects between both charts.",
+    "🔗 Aspect Meaning — Each card explains the relationship between two planets, such as conjunction, trine, sextile, square, or opposition, and what that means for the couple.",
+    "☀ Planet-to-Planet Compatibility — Shows how one partner's core identity, emotions, affection, communication, and desire patterns connect with the other partner's chart.",
+    "❤️ Romantic and Emotional Insight — Helps reveal emotional bonding, mutual understanding, attraction potential, comfort, care, and relationship chemistry.",
+    "💬 Relationship Communication Meaning — Explains how the aspect may influence understanding, emotional expression, mental connection, and the way the couple interacts.",
+    "⚖ Harmony and Challenge Detection — Highlights whether the connection is naturally supportive, emotionally easy, inspiring, intense, or more challenging to manage.",
+    "📖 Show More Support — Each synastry card can include a Show More action so astrologers can open a deeper explanation of that specific compatibility aspect.",
+    "🧠 Practical Relationship Guidance — Helps astrologers explain how the aspect may influence love, trust, emotional support, shared values, conflict handling, and long-term bonding.",
+    "📊 Easy Card Format — Converts complex synastry comparison into short readable cards so astrologers can quickly scan the strongest relationship dynamics.",
+    "🔮 What We Understand From This Section — It helps identify where the couple naturally connects, where they may emotionally support each other, and where deeper adjustment may be needed.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, couple guidance, marriage analysis, soulmate interpretation, and understanding relationship strengths and challenges."
+  ]
+},
+
+{
+  "name": "horoscope_synastry_deep_analysis",
+  "label": "Romantic: Deep Synastry Analysis",
+  "description": "A detailed compatibility reading for one specific synastry aspect, with expanded relationship insight and picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system creates natal charts for both partners using each person's date of birth, time of birth, and place of birth. The synastry engine then compares both charts and detects important relationship aspects between the partners' planets. When the user clicks Show More on a synastry interpretation card, this deep analysis screen opens and gives a fuller explanation of that one compatibility aspect. In this example, Sun conjunct Sun shows how both partners share similar identity patterns, values, and life expression. This section helps astrologers understand the deeper emotional, psychological, romantic, and practical meaning of a specific relationship connection, while also using a visual picture representation to make the shared planetary energy easier to understand.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate two natal charts before deep compatibility analysis begins.",
+    "🌌 Synastry Aspect Detection — The system compares both charts and selects one important aspect, such as Sun conjunction Sun, for expanded interpretation.",
+    "🔗 Deep Aspect Meaning — Explains in detail how the selected aspect works in the relationship and what kind of bond, harmony, attraction, or challenge it creates.",
+    "☀ Planet-to-Planet Relationship Insight — Shows how one partner's planet connects with the other partner's planet and how their core energies blend together.",
+    "❤️ Romantic Compatibility Depth — Helps astrologers understand emotional closeness, mutual support, attraction pattern, relationship tone, and shared life direction.",
+    "🧠 Psychological Relationship Reading — Explains the deeper mindset, emotional resonance, shared values, and personal growth pattern created by the aspect.",
+    "⚖ Harmony and Adjustment Insight — Shows where the aspect creates natural ease, understanding, shared purpose, or where conscious balance may still be needed.",
+    "📖 Show More Deep Reading Purpose — This modal appears after clicking Show More so the astrologer can study one important synastry aspect in greater detail.",
+    "🖼 Picture Representation — Includes a visual symbolic panel that combines the meaning of both planets and the aspect between them for faster astrological understanding.",
+    "🔮 What We Understand From This Screen — It helps reveal the deeper purpose of a specific relationship aspect, including compatibility strength, emotional bonding, shared values, and the lesson of the connection.",
+    "💬 Astrologer-Friendly Use — Converts complex synastry comparison into a fuller, more meaningful explanation that is easier to use in couple readings and relationship guidance.",
+    "🚀 Practical Use — Useful for romantic compatibility analysis, soulmate readings, marriage guidance, couple counseling, and deep relationship interpretation."
+  ]
+},
+
+{
+  "name": "horoscope_synastry_interpretations_v1",
+  "label": "Romantic: Synastry Interpretations",
+  "description": "Relationship interpretation cards that explain each synastry aspect in a fresh, non-repetitive, and emotionally meaningful way.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system creates natal charts for both partners using each person's date of birth, time of birth, and place of birth. The synastry engine compares the planets, signs, houses, and chart angles of both people and identifies important compatibility aspects between them. Each result is shown as a separate interpretation card. The purpose of this section is not only to explain compatibility, but also to make each relationship insight feel unique and engaging. Instead of repeating the same sentence structure for every card, the content should change according to the aspect type, the two planets involved, and the emotional or romantic meaning of that connection. This keeps the reading more natural, more personal, and less boring for the user while still being useful for astrologers.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate two accurate natal charts before synastry comparison begins.",
+    "🌌 Aspect-Based Relationship Matching — The system compares both charts and detects important synastry links such as Moon sextile Moon, Mars conjunct Mercury, or Venus conjunct Mars.",
+    "🔗 Unique Interpretation Per Aspect — Each card should be written differently based on the exact planets and aspect involved, so the reading does not feel copied or repetitive.",
+    "☀ Planet Meaning Variation — The content changes according to the planets involved, such as Moon for emotions, Mercury for communication, Mars for passion and action, and Venus for love and attraction.",
+    "⚖ Aspect Tone Variation — The wording also changes by aspect type, such as conjunction for intensity, sextile for support, trine for ease, square for tension, and opposition for polarity.",
+    "❤️ Relationship Experience Focus — Each card explains how that aspect may appear in real life, such as emotional comfort, playful attraction, mental stimulation, romantic chemistry, or conflict potential.",
+    "💬 Natural Reading Style — The text should feel smooth and human, not robotic, so users remain interested while reading multiple compatibility cards.",
+    "🧠 Non-Repetitive Narrative Design — Sentence openings, interpretation flow, and emotional tone should vary from card to card to keep the synastry reading fresh and engaging.",
+    "📖 Show More Support — Each synastry card can include a Show More option that opens a deeper explanation of the aspect without repeating the same summary language.",
+    "📊 Astrologer-Friendly Clarity — Even though the wording changes, the interpretation must still clearly explain compatibility strength, emotional meaning, attraction pattern, and practical relationship dynamics.",
+    "🔮 What We Understand From This Section — It helps identify where the couple connects naturally, where they excite or challenge each other, and how each specific aspect contributes to the relationship story.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, couple guidance, soulmate analysis, marriage insight, and giving users a more engaging synastry experience."
+  ]
+},
+
+{
+  "name": "horoscope_synastry_deep_analysis_v1",
+  "label": "Romantic: Deep Synastry Analysis",
+  "description": "A detailed relationship reading for one important synastry aspect, with an expanded explanation and picture representation for easier understanding.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section appears when the user opens the deeper view of a specific synastry aspect after entering both partners' date of birth, time of birth, and place of birth. The system first creates two natal charts, then compares the planetary positions between both partners and detects major relationship aspects. When the user clicks Show More on an aspect card, this deep analysis screen opens and explains that one connection in greater depth. In this example, Venus conjunction Mars shows strong romantic attraction, chemistry, passion, and mutual desire. The purpose of this screen is to help astrologers understand the deeper emotional, romantic, physical, and psychological meaning of the aspect, while the picture representation gives a fast visual summary of how both planetary energies blend together in the relationship.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to generate two natal charts before deep synastry interpretation begins.",
+    "🌌 Deep Aspect Focus — This screen explains one specific relationship aspect in detail, such as Venus conjunction Mars, after it is selected from the synastry interpretation list.",
+    "🔗 Aspect Meaning — Shows how the two planets connect and what kind of romantic, emotional, or psychological pattern they create between the partners.",
+    "♀ Venus Meaning In Relationship — Venus represents love, affection, closeness, attraction style, charm, beauty, pleasure, and the way a person expresses care and emotional warmth.",
+    "♂ Mars Meaning In Relationship — Mars represents passion, physical drive, desire, pursuit, action, excitement, intensity, courage, and the way energy is expressed in attraction.",
+    "❤️ Venus Conjunction Mars Meaning — This aspect often shows strong chemistry, romantic magnetism, physical attraction, active affection, and a relationship that feels alive, expressive, and emotionally charged.",
+    "⚖ Relationship Guidance — The reading can also show that strong attraction needs balance, so passion does not overpower empathy, patience, or emotional understanding.",
+    "🧠 Deep Compatibility Understanding — Helps astrologers explain not only attraction, but also how desire, affection, emotional style, and relationship energy work together in real life.",
+    "🖼 Picture Representation Purpose — The image is used to visually combine Venus qualities, Mars qualities, and the shared blended zone in the center so the astrologer can understand the aspect faster.",
+    "🎨 Left Side Meaning — The left visual area represents Venus traits such as tenderness, love, harmony, closeness, appreciation, attraction, beauty, and relational softness.",
+    "🔥 Right Side Meaning — The right visual area represents Mars traits such as drive, initiative, pursuit, courage, passion, assertion, intensity, and energetic desire.",
+    "✨ Center Blend Meaning — The center area represents the merged meaning of Venus and Mars together, showing the shared relationship themes created by the conjunction, such as chemistry, magnetism, expression, connection, intensity, longing, and active romance.",
+    "📖 Show More Deep Reading Purpose — This screen is designed to expand a short compatibility card into a fuller explanation that feels more meaningful and less surface-level.",
+    "🔮 What We Understand From This Screen — It helps astrologers understand whether the couple shares romantic attraction, emotional warmth, mutual desire, playful chemistry, or a highly energized bond that can grow through conscious balance.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, couple counseling, attraction analysis, marriage insight, and explaining strong love-and-passion connections in a clear way."
+  ]
+},
+
+{
+  "name": "horoscope_composite_interpretations_v1",
+  "label": "Romantic: Composite Interpretations",
+  "description": "Relationship interpretation cards that explain the shared energy of the couple through the composite chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and creates both natal charts. Then the platform calculates the composite chart, which is the combined relationship chart showing the energy of the relationship itself rather than only Person 1 or Person 2 separately. From this composite chart, the system detects important composite aspects such as Sun conjunction Sun or Moon trine Moon and presents them as readable interpretation cards. Each card explains what that shared aspect means for the relationship, how the couple functions together emotionally and practically, and what kind of bond, harmony, challenge, or growth pattern is created. This helps astrologers understand the deeper identity of the relationship itself, including emotional flow, shared purpose, compatibility tone, and how the partnership behaves as one combined unit.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate two natal charts before creating the composite relationship chart.",
+    "🌌 Composite Chart Creation — The system combines both partners' chart data into one shared relationship chart that represents the partnership as a single energetic entity.",
+    "🔗 Composite Aspect Detection — Important aspects inside the composite chart are identified, such as conjunctions, trines, sextiles, squares, and oppositions.",
+    "☀ Shared Relationship Identity — Aspects such as Sun conjunction Sun help explain the main identity, purpose, direction, and style of the relationship itself.",
+    "🌙 Emotional Bond Meaning — Aspects such as Moon trine Moon help explain emotional compatibility, comfort level, mutual support, and the emotional climate of the partnership.",
+    "❤️ Relationship Energy Focus — Each card explains how the shared chart reflects harmony, closeness, attraction, support, challenge, or growth within the relationship.",
+    "💬 Easy Card Interpretation — The technical composite chart is converted into short readable cards so astrologers can quickly understand the meaning without reading raw chart data only.",
+    "⚖ Harmony and Challenge Insight — Helps astrologers see whether the relationship naturally flows with ease, needs emotional adjustment, or carries strong areas of tension and development.",
+    "📖 Show More Support — Each composite card can include a Show More action so the astrologer or user can open a deeper explanation of that shared relationship aspect.",
+    "🧠 What We Understand From This Section — It shows how the relationship behaves as a whole, how both partners function together, and what the shared emotional and practical dynamics look like.",
+    "🔮 Why This Section Is Useful — It helps astrologers move beyond simple partner-to-partner comparison and understand the actual personality and purpose of the relationship itself.",
+    "🚀 Practical Use — Useful for couple compatibility readings, marriage analysis, long-term partnership understanding, relationship counseling, and studying the shared life path of the couple."
+  ]
+},
+{
+  "name": "horoscope_composite_deep_analysis_v1",
+  "label": "Romantic: Deep Composite Analysis",
+  "description": "A detailed composite relationship reading for one important shared aspect, with expanded explanation and picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and creates both natal charts. Then it builds the composite chart, which represents the relationship itself as one shared chart. From that composite chart, the system identifies important aspects and creates interpretation cards. When the user clicks Show More, this deep analysis screen opens and explains one composite aspect in greater detail. In this example, Moon trine Moon shows emotional ease, mutual understanding, comfort, and supportive emotional flow inside the relationship. This screen helps astrologers understand the deeper emotional structure of the partnership, the way both people feel safe together, and how the relationship naturally supports emotional bonding and inner stability.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate two natal charts before creating the composite chart.",
+    "🌌 Composite Chart Focus — This screen explains one specific aspect from the composite chart, which represents the shared energy of the relationship itself.",
+    "🔗 Deep Aspect Meaning — Gives a fuller explanation of one important shared aspect, such as Moon trine Moon, and how it shapes the emotional tone of the relationship.",
+    "🌙 Moon Meaning In Composite Relationship — The Moon represents emotions, comfort, inner needs, instinctive reactions, emotional bonding, care, and the feeling of safety within the partnership.",
+    "△ Trine Meaning In Composite Reading — A trine shows natural ease, supportive flow, harmony, emotional compatibility, and a relationship pattern that works smoothly without much forcing.",
+    "❤️ Moon Trine Moon Meaning — This aspect often shows emotional understanding, mutual care, natural empathy, peaceful emotional exchange, and a relationship where both partners can feel heard and supported.",
+    "🧠 Emotional Compatibility Insight — Helps astrologers understand how the relationship handles feelings, nurtures closeness, and creates emotional reassurance between both people.",
+    "⚖ Relationship Support Meaning — Shows that the relationship may have a gentle emotional rhythm, easier conflict recovery, and a strong base for trust, comfort, and emotional cooperation.",
+    "🖼 Picture Representation Purpose — The image visually explains the aspect by showing Moon energy on both sides and the trine quality in the center, helping astrologers understand the aspect faster.",
+    "🌙 Left Side Meaning — The left visual side represents one Moon expression, including emotional sensitivity, reflection, comfort, nourishment, rhythm, and personal feeling patterns.",
+    "🌙 Right Side Meaning — The right visual side represents the other Moon expression, including intuition, receptivity, memory, vulnerability, care, empathy, and emotional response style.",
+    "✨ Center Blend Meaning — The center area represents the shared result of the trine, such as harmony, trust, balance, support, understanding, comfort, connection, and emotional integration.",
+    "📖 Show More Deep Reading Purpose — This screen expands a short composite interpretation card into a deeper emotional and relational explanation.",
+    "🔮 What We Understand From This Screen — It helps astrologers see whether the relationship has emotional ease, nurturing energy, mutual reassurance, and a naturally supportive emotional foundation.",
+    "🚀 Practical Use — Useful for couple compatibility readings, marriage analysis, emotional bond assessment, relationship counseling, and understanding the emotional heart of the partnership."
+  ]
+},
+
+{
+  "name": "horoscope_davison_relationship_v1",
+  "label": "Romantic: Davison Relationship Summary",
+  "description": "A readable Davison relationship summary showing core compatibility themes through shared Sun and Moon dynamics.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and calculates the Davison relationship chart. The Davison chart is created from the midpoint in time and space between the two birth charts, and it represents the relationship as a real shared entity. This screen gives a simplified relationship summary by focusing on major compatibility themes such as Sun compatibility and Moon compatibility inside the Davison chart. Its purpose is to help astrologers quickly understand how the relationship functions at its core, especially in identity, partnership style, emotional connection, and shared daily dynamics. It acts as an easy relationship overview before moving into deeper Davison aspect and house analysis.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate the Davison relationship chart from the midpoint of both birth patterns.",
+    "🌌 Davison Relationship Meaning — The Davison chart shows the relationship itself as a shared chart, helping astrologers understand how the partnership lives, develops, and behaves as one combined unit.",
+    "☀ Sun Compatibility Meaning — Sun compatibility explains the shared identity of the relationship, including common values, purpose, direction, expression, and how the couple functions together in visible life.",
+    "🌙 Moon Compatibility Meaning — Moon compatibility explains the emotional atmosphere of the relationship, including comfort needs, emotional reactions, support style, bonding pattern, and inner security.",
+    "❤️ Relationship Summary Purpose — This screen provides a first-level understanding of the Davison relationship through major emotional and identity-based compatibility themes.",
+    "⚖ Harmony and Adjustment Insight — Helps astrologers see where the relationship naturally flows with support and where more awareness or communication may be needed.",
+    "💬 Easy Summary Card Format — Converts Davison compatibility into short readable cards so astrologers and users can quickly understand the relationship tone.",
+    "📖 Show More Support — Each summary card can include a Show More action so deeper explanation can be opened without making the main screen too dense.",
+    "🧠 What We Understand From This Screen — It helps reveal how the couple connects through shared purpose, emotional rhythm, relationship tone, and basic partnership dynamics.",
+    "🔮 Why This Section Is Useful — It offers a clear and accessible overview of the Davison relationship before deeper interpretation of aspects, houses, and advanced relationship structures.",
+    "📊 Astrologer-Friendly Value — Useful as a quick relationship summary that helps the astrologer identify the strongest core themes of the partnership.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, relationship overview, marriage analysis, couple guidance, and introducing the Davison chart in a simple way."
+  ]
+},
+
+{
+  "name": "horoscope_davison_interpretations_v1",
+  "label": "Romantic: Davison Major Aspects & Connections",
+  "description": "Readable interpretation cards showing the most important aspects in the Davison relationship chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and calculates the Davison relationship chart. Unlike synastry, which compares one partner's chart to the other, the Davison chart creates a shared relationship chart based on the midpoint in time and space between both births. This chart represents the lived relationship as its own entity. The purpose of this screen is to highlight the major aspects and connections inside that Davison chart, such as Sun conjunct Venus or Moon trine Jupiter, and explain what those patterns mean for love, bonding, shared purpose, emotional climate, affection, growth, and long-term partnership development.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate the Davison relationship chart from the midpoint of the two birth patterns.",
+    "🌌 Davison Chart Meaning — The Davison chart represents the relationship itself as a real shared chart, showing how the partnership lives, grows, and functions as one combined experience.",
+    "🔗 Major Aspect Detection — The system identifies the strongest aspects in the Davison chart, such as conjunctions, trines, sextiles, squares, and oppositions, then presents them as readable cards.",
+    "☀ Sun Conjunct Venus Meaning — This type of aspect often shows warmth, affection, shared appreciation, romantic harmony, attraction, and a relationship that naturally values closeness and partnership.",
+    "🌙 Moon Trine Jupiter Meaning — This type of aspect often shows emotional generosity, comfort, mutual encouragement, emotional growth, and a nurturing atmosphere within the relationship.",
+    "🏠 House Placement Importance — The interpretation may also mention the house position of the aspect, such as the 7th house for partnership or the 4th house for home and emotional security, to show where the relationship energy is most active.",
+    "❤️ Shared Relationship Purpose — These cards help explain what the relationship is built around, such as love, emotional support, commitment, optimism, creativity, or mutual development.",
+    "💬 Easy Card Interpretation — Converts technical Davison chart aspects into short readable cards so astrologers can quickly understand the main relationship patterns.",
+    "⚖ Harmony and Growth Insight — Helps astrologers see which parts of the relationship flow naturally, where there is emotional support, and where the couple may find shared growth and long-term strength.",
+    "📖 Show More Support — Each Davison aspect card can include a Show More action so the astrologer or user can open a deeper explanation of that specific shared aspect.",
+    "🧠 What We Understand From This Screen — It helps reveal the emotional tone, romantic potential, supportive patterns, and key themes that define how the relationship operates as a whole.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, relationship counseling, marriage analysis, long-term partnership guidance, and understanding the shared energetic structure of the couple."
+  ]
+},
+{
+  "name": "horoscope_compatibility_summary_v1",
+  "label": "Romantic: Compatibility Score / Summary",
+  "description": "A quick relationship summary that explains the couple's core compatibility through Sun, Moon, Venus, and Mars dynamics.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and creates both natal charts. It then compares the most important personal relationship indicators between the two people, especially Sun, Moon, Venus, and Mars. The purpose of this screen is to give a fast but meaningful overview of the relationship before deeper synastry, composite, or Davison analysis. It helps astrologers understand how the couple connects through identity, emotional style, love nature, attraction pattern, and action dynamics, while also showing where harmony is strong and where conscious adjustment may be needed.",
+  "bullets": [
+    "☀ Sun Sign Compatibility — Explains how both partners connect through identity, shared values, personality style, life direction, and overall relationship tone. It helps show whether the couple naturally understands each other's core nature.",
+    "🌙 Moon Sign Dynamics — Explains the emotional side of compatibility, including comfort needs, emotional reactions, nurturing style, and inner security. It helps astrologers understand how the couple feels together on a deeper emotional level.",
+    "♀♂ Venus and Mars Interactions — Explains love, attraction, romance, desire, passion, and the way both partners express affection and action in the relationship. It helps show chemistry, emotional magnetism, and how love and desire flow between them.",
+    "⚖ Compatibility Strength and Tension — Each section highlights both supportive qualities and possible friction points, so the reading feels balanced and realistic rather than overly positive.",
+    "💬 Easy Summary Card Format — The technical comparison is turned into short readable cards so astrologers and users can quickly understand the main relationship pattern.",
+    "📖 Show More Support — Each summary card can open a deeper explanation so the user can move from quick insight into a more complete relationship reading.",
+    "🧠 What We Understand From This Screen — It gives a first-level view of the couple's emotional bond, romantic chemistry, communication tone, and overall compatibility foundation.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, first-level couple analysis, quick partner matching, and preparing for deeper relationship interpretation."
+  ]
+},
+
+{
+  "name": "horoscope_elemental_balance_v1",
+  "label": "Romantic: Elemental Balance",
+  "description": "A relationship reading that compares elemental balance between both partners to show natural harmony, missing energies, and emotional style in the connection.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and creates both natal charts. It then studies the elemental distribution in each chart by measuring how strongly Fire, Earth, Air, and Water are expressed through the partners' planets and major placements. The purpose of this screen is to help astrologers understand the natural energetic chemistry of the relationship. It shows whether the couple is more emotional, practical, intellectual, or passionate, where the relationship feels balanced, and where one or both partners may be missing an important element. This screen is useful because elemental balance often explains why two people communicate easily, feel emotionally supported, struggle with spontaneity, or experience differences in emotional depth, passion, or stability.",
+  "bullets": [
+    "🌍 What Elemental Balance Means — Elemental balance is the comparison of Fire, Earth, Air, and Water energies in both partners' charts to understand how their natural temperaments combine inside the relationship.",
+    "🔥 Fire Element Meaning — Fire represents passion, enthusiasm, courage, spontaneity, inspiration, excitement, action, and the drive to express energy directly.",
+    "🏔 Earth Element Meaning — Earth represents stability, practicality, reliability, groundedness, patience, routine, material awareness, and the ability to build lasting structure.",
+    "🌬 Air Element Meaning — Air represents communication, ideas, curiosity, social flow, intellectual connection, objectivity, adaptability, and mental exchange.",
+    "🌊 Water Element Meaning — Water represents emotions, intuition, sensitivity, empathy, bonding, emotional depth, inner response, and the need for emotional closeness.",
+    "💕 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both partners to calculate both natal charts, then measures the elemental emphasis across important placements in each chart.",
+    "📊 Why This Screen Is Used — It helps astrologers quickly understand the natural chemistry of the relationship by showing which elemental energies are strong, weak, balanced, or missing between the two people.",
+    "🧠 What We Understand From This Reading — It explains whether the relationship is more mental, emotional, practical, or passionate, and shows how the partners naturally exchange energy with one another.",
+    "⚖ Elemental Balance Section Meaning — The main Elemental Balance card gives an overall summary of how the couple's elemental energies blend together and what that means for the relationship as a whole.",
+    "🔥 Fire Element Section Meaning — This card explains how much shared passion, motivation, spontaneity, confidence, and adventurous energy exists between the two partners, or whether this energy is missing and needs conscious development.",
+    "🌊 Water Element Section Meaning — This card explains how much emotional depth, empathy, intuition, and emotional support exists between the two partners, or whether emotional expression feels uneven or difficult.",
+    "🏔 Earth and 🌬 Air Value In Relationship — Earth helps the relationship stay stable and workable, while Air helps the relationship stay communicative, social, and mentally connected. Together they often show how ideas can become practical reality.",
+    "📖 Show More Purpose — Each elemental card can open a deeper explanation so the astrologer or user can study one elemental theme more fully without making the summary screen too heavy.",
+    "🔮 Practical Relationship Insight — Strong Air may show easy communication, strong Earth may show stability, strong Water may show emotional bonding, and strong Fire may show chemistry and excitement. Missing elements often reveal what the relationship must consciously develop.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, friendship and partner analysis, emotional matching, relationship counseling, and explaining why a relationship feels strong, steady, intense, intellectual, or emotionally uneven."
+  ]
+},
+
+{
+  "name": "horoscope_relationship_timing_transits",
+  "label": "Romantic: Timing & Transits",
+  "description": "A relationship timing screen that shows how active transits and inter-chart contacts influence the couple's connection, emotional flow, and growth periods.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and creates both natal charts. The platform then compares important planetary contacts between the two people and highlights active relationship dynamics through aspect-based timing indicators. The purpose of this screen is to help astrologers understand when certain romantic, emotional, mental, or supportive energies become more noticeable in the relationship. It shows how one partner's planet in a specific sign connects with the other partner's planet in another sign, what type of aspect is formed, and what that means for the relationship at a practical and emotional level. This screen is useful because it adds timing awareness to compatibility, showing where harmony, tension, growth, attraction, or emotional challenge may become especially active.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate two natal charts before relationship timing analysis begins.",
+    "🪐 Inter-Chart Timing Detection — The system compares active relationship contacts between both charts and identifies important aspect patterns that influence how the relationship develops and responds over time.",
+    "🔗 Aspect-Based Timing Meaning — Each card explains a specific contact such as conjunction, trine, sextile, square, or opposition and shows how that aspect shapes relationship timing and experience.",
+    "♈ Sign-Based Relationship Tone — The screen also includes the zodiac signs involved, such as Libra, Aries, Aquarius, Leo, or Pisces, to show how each planet expresses its energy inside the connection.",
+    "☀ Sun and Mercury Connection Meaning — A contact such as Sun conjunct Mercury can show strong communication, shared understanding, mental harmony, and easier conflict resolution through conversation.",
+    "🌙 Moon-to-Moon Timing Meaning — A contact such as Moon opposite Moon helps reveal emotional differences, instinctive reactions, tension in feeling styles, and opportunities for growth through understanding each other's needs.",
+    "♀ Venus and ♃ Jupiter Harmony Meaning — A contact such as Venus trine Jupiter often shows warmth, joy, generosity, affection, shared pleasure, and an uplifting emotional or romantic atmosphere.",
+    "⏳ Why This Screen Is Used — It helps astrologers understand not only whether the couple is compatible, but also which relationship themes become especially active, easy, intense, or important over time.",
+    "💬 Easy Card Interpretation — The technical relationship timing data is converted into short readable cards so astrologers and users can quickly understand the meaning of each active connection.",
+    "⚖ Harmony and Tension Insight — This screen helps identify where the relationship naturally flows with support and warmth, and where emotional adjustment, patience, or conscious communication may be needed.",
+    "📖 Show More Support — Each timing card can include a Show More action so the astrologer or user can open a deeper explanation of that specific relationship aspect.",
+    "🧠 What We Understand From This Screen — It helps reveal mental connection, emotional timing, romantic ease, growth opportunities, and changing relationship dynamics through active planetary contacts.",
+    "🔮 Astrologer-Friendly Value — Useful for understanding when communication improves, when emotional tension may rise, when love feels more expressive, and when the relationship is supported by growth-oriented energy.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, relationship timing analysis, couple guidance, emotional pattern study, and identifying important phases in the partnership."
+  ]
+},
+
+{
+  "name": "horoscope_karmic_soulmate_indicators_v1",
+  "label": "Romantic: Karmic & Soulmate Indicators",
+  "description": "A relationship reading that highlights karmic ties, soulmate-style bonds, and important spiritual lessons between both partners through major inter-chart aspects.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and creates two natal charts. The platform then compares the planets, signs, houses, and important relationship contacts between both charts to identify aspects that often feel karmic, fated, deeply magnetic, emotionally significant, or spiritually instructive. The purpose of this screen is to help astrologers understand whether the relationship carries strong attraction, emotional pull, growth lessons, soulmate-style familiarity, or important commitment themes. It is useful because some aspects do not only show compatibility, but also reveal why the relationship feels meaningful, transformative, healing, challenging, or hard to ignore.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to create two accurate natal charts before karmic comparison begins.",
+    "🌌 Karmic Relationship Detection — The system compares both charts to identify meaningful aspects that may indicate soulmate attraction, karmic connection, emotional familiarity, growth lessons, or long-term significance.",
+    "🔗 Aspect Meaning — Each card explains one specific inter-chart aspect, such as conjunction, trine, sextile, square, or opposition, and what that contact means for the relationship bond.",
+    "☀ Sun Conjunct Venus Meaning — This type of connection often shows affection, appreciation, attraction, beauty, warmth, and a relationship that feels naturally pleasant, loving, and emotionally inviting.",
+    "🌙 Moon Trine Mars Meaning — This type of connection often shows emotional responsiveness, active support, instinctive chemistry, natural encouragement, and a bond where feelings and action can work together smoothly.",
+    "♀ Venus Square Saturn Meaning — This type of connection can show karmic lessons around love, trust, patience, fear of rejection, emotional restraint, commitment pressure, or the need to build stability slowly over time.",
+    "❤️ Soulmate and Karmic Theme Insight — This screen helps reveal whether the relationship feels easy and destined, emotionally charged and growth-oriented, or deeply meaningful because of the lessons it brings.",
+    "⚖ Harmony and Lesson Balance — Some indicators show affection, support, and closeness, while others show challenge, maturity, and the emotional work needed to make the relationship stronger.",
+    "💬 Easy Card Interpretation — The technical chart comparison is turned into short readable cards so astrologers and users can quickly understand the emotional and spiritual meaning of the connection.",
+    "📖 Show More Support — Each karmic indicator card can include a Show More action so deeper explanation can be opened without overloading the main summary screen.",
+    "🧠 What We Understand From This Screen — It helps astrologers identify attraction patterns, emotional support, karmic lessons, trust themes, growth pressure, and the deeper reason the relationship may feel special or unforgettable.",
+    "🔮 Why This Section Is Useful — It moves beyond simple compatibility and explains whether the relationship carries emotional destiny, healing value, long-term teaching, or deep spiritual significance.",
+    "🚀 Practical Use — Useful for soulmate readings, karmic relationship analysis, romantic compatibility sessions, couple counseling, commitment insight, and understanding why a relationship feels deeply important."
+  ]
+},
+      // ---------------Friendship Relationships---------------//
       { 
         name: "horoscope_friendship_setup", 
         label: "Friendship: Social Dynamics", 
@@ -3014,69 +3340,98 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
     ],
     screens: [
-      { 
-        name: "overview", 
-        label: "Practitioner CRM", 
-        description: "Overview of today's operations.", 
+      {
+        name: "overview",
+        label: "Practitioner CRM",
+        description: "The full-length command centre for your practice — every signal you need to run your day surfaces here on a single scrolling page. At the top, a banner shows promo opportunities (training, community). Below that, Today's Sessions shows your next appointment date, while Planetary Returns — Next 30 Days lists all upcoming planetary return milestones for your client base with exact dates. A profile completion checklist tracks your setup progress with a percentage bar. Eight stat cards follow: This Month Revenue, This Month Bookings, New Clients, Upcoming sessions, Testimonials rating, Client Retention rate, No-Show Rate, and Follow-Ups Due. A Revenue — Last 6 Months bar chart gives the financial arc at a glance. Then two columns of live widgets round out the page: Upcoming Bookings (next 5 appointments with status badges), Quick Actions (View Bookings, Edit Profile, Manage Services, View Live Profile), Check-Ins last 7 days, Gift Certificates outstanding value, Weekly Subscriptions active count, and Active Campaigns with spend vs. budget.",
         group: "My Schedule",
-        purpose: "The primary command center for professional diviners to manage their daily workflow and client load.",
+        purpose: "The primary command center for professional diviners to manage their daily workflow, revenue, and client load.",
         bullets: [
-          "Real-time overview of today's appointments",
-          "Quick-access to recent client interactions",
-          "Pending reading request notifications",
-          "Daily revenue and session velocity stats"
+          "Today's Sessions — shows the date of your next confirmed session; 'No sessions today' if the day is clear",
+          "Planetary Returns — Next 30 Days — lists every upcoming Mars/Jupiter/Saturn return across your client roster with dates",
+          "Complete Your Profile checklist — tracks 6 setup tasks (photo, tagline, Stripe, bio, specialties, testimonial, calendar) with a progress bar",
+          "This Month Revenue / Bookings / New Clients / Upcoming — four top stat cards with month-over-month comparison arrows",
+          "Testimonials / Client Retention / No-Show Rate / Follow-Ups Due — four operational health cards",
+          "Revenue — Last 6 Months — bar chart of monthly earnings for the trailing six months with a Full Report link",
+          "Upcoming Bookings — your next confirmed and pending sessions with client, service, date/time, and status badge",
+          "Quick Actions — one-click shortcuts: View Bookings, Edit Profile, Manage Services, View Live Profile",
+          "Check-Ins (Last 7 Days) — recent leads captured from your live session check-in page with dates",
+          "Gift Certificates — count of unredeemed certificates and their total remaining value",
+          "Weekly Subscriptions — count of currently active weekly subscribers",
+          "Active Campaigns — affiliate campaigns running now with spend vs. budget per campaign"
         ]
       },
-      { 
-        name: "calendar", 
-        label: "Session Calendar", 
-        description: "Map of upcoming readings.", 
+      {
+        name: "calendar",
+        label: "Session Calendar",
+        description: "The live calendar view of your practice schedule — every confirmed booking, available window, and blocked slot displayed across Day, Week, and Month layouts. The page header is titled 'Availability' and shows your public booking link with a one-click copy button. A colour legend at the top distinguishes Available slots (teal background fill), Booked sessions (amber blocks with title), and Blocked windows. Action buttons along the top bar let you Block Day Off, Add Special Hours, or Create Manual Booking without leaving the calendar. Session blocks show the service name and client, and the week navigator arrows let you move forward and backward through your schedule.",
         group: "My Schedule",
-        purpose: "A high-precision scheduling interface for managing personal availability and upcoming consultations.",
+        purpose: "A real-time visual map of your schedule so you can manage availability, spot gaps, and create bookings without switching between pages.",
         bullets: [
-          "Dynamic weekly and monthly session views",
-          "One-click availability overrides and holidays",
-          "Automated session remainder status tracking",
-          "Direct integration with live broadcast scheduling"
+          "Day / Week / Month toggle — switch between views to zoom in on today or survey the full month",
+          "Booking link banner — your public booking URL displayed at the top with a Copy Link button for sharing",
+          "Available window fill — teal background shows your configured open hours as a visual layer behind sessions",
+          "Booked session blocks — amber blocks with service name displayed; today is highlighted with an accent border",
+          "Block Day Off button — marks an entire day as unavailable in one click",
+          "Add Special Hours button — create a one-off availability window outside your regular schedule",
+          "Create Manual Booking button — add a booking directly from the calendar without a client self-booking",
+          "Week navigation — arrow controls to move between weeks; current week shown as default on page load",
+          "Calendar Connections shortcut — button in the header to jump to Google/Outlook calendar sync settings",
+          "Manage Weekly Schedule shortcut — button to edit your recurring availability windows"
         ]
       },
-      { 
-        name: "client-detail", 
-        label: "Client Spiritual Twin", 
-        description: "Comprehensive client history.", 
+      {
+        name: "client-detail",
+        label: "Client Spiritual Twin",
+        description: "The deepest view of any individual client on the platform — a single screen that assembles everything you know about one person before you sit down together. At the top, the client's avatar, full name, birth data, and natal chart thumbnail give you the astrological context immediately. Below that, a tabbed layout separates their complete session history, your private notes, their intake form responses, their birth chart in full, and a synastry comparison with your own chart if you have loaded yours. The session history table shows every past reading — date, type, duration, amount paid, and a link to the notes you wrote afterwards — so you carry full continuity into every future session without needing to ask the client to recap.",
         group: "Business",
         purpose: "A deep-dive clinical interface providing the full spiritual and interaction history for a specific client.",
         bullets: [
-          "Natal chart and transit history archive",
-          "Private practitioner notes and session logs",
-          "Client-specific compatibility and synastry data",
-          "Reading frequency and loyalty metrics"
+          "Client header — avatar, full name, email, birth date, birth time, and birth city displayed at a glance",
+          "Natal chart thumbnail — a miniature chart wheel rendered from the client's birth data, click to expand to full screen",
+          "Session history tab — every completed and upcoming booking with date, service type, duration, amount, and notes link",
+          "Private notes tab — your personal notes across all sessions with this client, newest at the top",
+          "Intake responses tab — all pre-session questionnaire answers the client has submitted, linked to their booking",
+          "Full birth chart tab — the complete natal chart wheel with planet positions, house cusps, and aspect grid",
+          "Synastry tab — a side-by-side comparison of the client's chart with yours, showing major relationship aspects",
+          "Loyalty and stats — total sessions with you, total spend, average session frequency, and first session date"
         ]
       },
-      { 
-        name: "broadcast", 
-        label: "Live Hub", 
-        description: "Streaming and chat interface.", 
+      {
+        name: "broadcast",
+        label: "Live Hub",
+        description: "Your professional broadcast studio for hosting live astrology sessions, group rituals, community gatherings, and subscriber-only events. The Live Hub is divided into three panels: a pre-live setup area where you configure your stream title, access level, recording preference, and thumbnail; the live stage itself with your camera feed, stream health indicator, viewer count, and a one-click start button; and a post-broadcast dashboard showing replay view counts, peak concurrent viewers, and check-ins captured during the event. Upcoming scheduled broadcasts appear at the top as countdown cards so followers know what is coming and you never start a session without an audience primed.",
         group: "Engagement",
         purpose: "The professional broadcast studio for hosting live sessions, rituals, and community gatherings.",
         bullets: [
-          "Integrated WebRTC live streaming controls",
-          "Real-time moderated community chat",
-          "Active viewer list and engagement triggers",
-          "One-click recording and archive dispatch"
+          "Scheduled broadcasts — upcoming live events shown as countdown cards with title, date, and RSVP count",
+          "Pre-live setup panel — set title, description, access level (public / members / paid), and recording toggle",
+          "Thumbnail upload — add a cover image shown in the live schedule and on your profile during the event",
+          "Go Live button — starts the stream and notifies followers who opted in to live alerts",
+          "Stream health indicator — live bitrate, frame rate, and latency gauge so you catch quality issues immediately",
+          "Viewer count — real-time count of active viewers updating every 10 seconds",
+          "Moderated chat — live audience chat with mod tools to mute or remove disruptive participants",
+          "Recording — automatic or manual recording with status light; saved recordings appear in the archive on stream end",
+          "Check-in capture — viewers who enter their name and email during the broadcast are logged as leads",
+          "Post-broadcast stats — total unique viewers, peak concurrent, average watch time, and check-ins captured"
         ]
       },
-      { 
-        name: "payouts", 
-        label: "Billing & Payouts", 
-        description: "Financial transparency.", 
+      {
+        name: "payouts",
+        label: "Billing & Payouts",
+        description: "Your complete financial record on the platform — every dollar earned, every platform fee deducted, every payout transferred to your bank, and every commission owed to affiliates, laid out transparently in one screen. The top of the page shows four headline figures: your current pending balance (earnings processed but not yet transferred), your total earnings to date, your total platform fees paid, and your next scheduled payout date. Below that, a transaction log breaks down every session by date, client, gross charge, platform fee percentage, and your net take-home. A separate Payouts tab shows each bank transfer with its Stripe transfer ID and settlement timestamp. The Tax tab calculates your estimated tax reserve at your configured percentage so you are never caught short at year-end.",
         group: "Business",
         purpose: "Ensures full financial clarity for practitioners regarding their platform earnings and transfer history.",
         bullets: [
-          "Real-time pending balance tracking",
-          "Detailed commission and fee breakdown",
-          "Historical payout bank transfer logs",
-          "Tax summary and financial year reports"
+          "Pending balance — earnings processed and awaiting the next payout cycle transfer to your bank",
+          "Total earned — cumulative gross earnings on the platform since account creation",
+          "Total fees paid — cumulative platform fee (percentage) deducted across all sessions",
+          "Next payout date — when the pending balance will be transferred based on your payout schedule",
+          "Transaction log — every completed session with date, client name, gross amount, fee, and net earnings",
+          "Payouts tab — each bank transfer with Stripe transfer ID, amount, currency, and settlement date",
+          "Tax reserve tab — estimated tax liability at your configured rate with year-to-date tracking",
+          "Filter by date range — narrow the transaction log to any period for reconciliation or export",
+          "Download CSV — export the full transaction log or payout history for your accountant or tax filing"
         ]
       },
       {
@@ -3231,20 +3586,21 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
       {
         name: "mktcontent",
-        label: "Content Management",
-        description: "Create and manage marketing content — images, videos, and caption templates — that you upload to social media to drive bookings. Write a caption once with dynamic placeholders for your username and booking link, then select the platforms you want to post to and preview how it will look before publishing.",
+        label: "Social Media Marketing",
+        description: "Your Push-to-Share marketing hub where the platform delivers branded cosmic content tied to real planetary events every day, and you share it to all your social platforms in 30 seconds. The page is built around four tabs: Push-to-Share (the daily content delivery), Content Library (all past packages), Upcoming (what content is queued for future events), and Share Tracking (engagement data across platforms). A 'Today's Shares' banner shows whether today's content is ready or still being prepared. Below that, the three-step flow explains how it works — the platform sends content triggered by planetary events, you tap Share Hub to distribute to all your connected platforms at once, and the system tracks which platforms you shared to and when. Email and SMS notification toggles let you choose how you are alerted when new content is ready. A Share History table below logs every past content package with its planetary event name, platform icons, date, and a Share Hub button to reshare.",
         group: "Marketing & Growth",
-        purpose: "Produce ready-to-post social content that consistently promotes your practice.",
+        purpose: "Distribute daily branded planetary content across all social platforms in one tap to maintain a consistent marketing presence without writing copy.",
         bullets: [
-          "Title field — give the content piece a name for your own library reference (e.g. 'Mercury Retrograde Awareness Post')",
-          "Media upload — drag and drop PNG, JPG, or MP4 files up to 50 MB; supports images and short video clips",
-          "Caption Template — write your post copy using {username} and {link} placeholders that auto-fill at share time",
-          "Available variables listed — {username} and {link} are shown as clickable hints below the caption field",
-          "Platform selection — toggle Instagram, Twitter / X, YouTube, TikTok, and Facebook individually",
-          "Preview panel — shows a real-time preview of how the caption looks with placeholders resolved",
-          "Content Tips sidebar — best-practice reminders (square images for IG, keep captions under 280 chars for Twitter, post peak hours)",
-          "Saved content library — all uploaded pieces appear below the form for reuse or editing",
-          "Share directly — once saved, each content piece has a one-click share button per selected platform"
+          "Today's Shares banner — shows whether today's cosmic content package is ready or still being prepared (check back at 10am UTC)",
+          "Push-to-Share tab — the main daily content delivery view with the Share Hub button",
+          "Content Library tab — all historical content packages you can browse and reshare",
+          "Upcoming tab — preview content packages queued for future planetary events",
+          "Share Tracking tab — engagement and reach data for each shared content package",
+          "Three-step explainer — We Send Content → You Tap Share → We Track It, shown on first use",
+          "Email Notifications toggle — turn on/off email alerts when new daily content is ready",
+          "SMS Notifications toggle — requires phone number in Settings; delivers a text when content drops",
+          "Share History — table of past packages with planetary event name, platforms shared, date, and reshare button",
+          "Share Hub — opens the sharing panel for a specific content package showing all connected platform options"
         ]
       },
       {
@@ -3815,6 +4171,171 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Session count selector and eligible service types multi-select",
           "Bundle price field with automatic per-session savings calculation shown to the diviner",
           "Expiry window selector: 30, 60, 90, or 180 days from purchase date"
+        ]
+      },
+      {
+        name: "orders",
+        label: "My Orders",
+        description: "A complete transaction log of every order and payment placed by your clients — one-time session bookings, package purchases, gift certificate sales, and subscription charges all appear here. Four stat cards at the top give an instant snapshot: Total Orders all time, Completed orders with total value, Pending orders awaiting payment, and Refunded orders. A search bar lets you find any order by client name, email, service name, or Stripe payment ID. A date-range picker narrows the view to a specific period. The sortable table below shows every order row with Client, Service, Amount, Status, Date, and an Actions column for opening the full order detail.",
+        group: "My Practice",
+        purpose: "Track every payment and order your clients have placed so you can reconcile revenue, chase unpaid orders, and handle refund requests from one screen.",
+        bullets: [
+          "Total Orders — all-time count of orders across all types (sessions, packages, subscriptions, gift certs)",
+          "Completed — count and total value of fully paid and delivered orders",
+          "Pending — orders placed but not yet paid; click to see which clients need a payment nudge",
+          "Refunded — orders that have been reversed; click to see the refund reason and Stripe refund ID",
+          "Search bar — find any order instantly by client name, email, service name, or Stripe payment ID",
+          "Date range picker — filter the table to any custom date range for period reporting",
+          "Status filter dropdown — narrow to All Statuses, Completed, Pending, Refunded, or Cancelled",
+          "Sortable table — columns for Client, Service, Amount, Status (with colour badge), Date, and Actions",
+          "Actions column — open the full order detail to see line items, payment method, and refund controls"
+        ]
+      },
+      {
+        name: "clients-list",
+        label: "Clients",
+        description: "Your full client roster — every person who has ever booked a session with you, in one searchable, sortable table. Four stat cards at the top show Total Clients (all time), Active Clients (had a session in the last 30 days), Total Sessions completed across all clients, and Total Revenue from your client base. A search bar filters by name or email. Each row in the table shows the client's avatar, name, birth date, session count, total spend, date of first session, date of last session, and a Details button to open their full profile.",
+        group: "Clients",
+        purpose: "A bird's-eye view of your entire client base so you can spot your most loyal clients, identify who hasn't booked recently, and access any client's full profile in one click.",
+        bullets: [
+          "Total Clients — count of all unique clients who have ever booked with you",
+          "Active (30 days) — clients who had at least one session in the last 30 days",
+          "Total Sessions — cumulative completed session count across your entire client roster",
+          "Total Revenue — sum of all payments received from clients",
+          "Search by name or email — instant filter across your roster as you type",
+          "Birth Date column — client's birth date shown for quick reference without opening their profile",
+          "Sessions column — total completed sessions with this diviner, sortable ascending or descending",
+          "Spent column — lifetime spend per client, sortable to identify your highest-value relationships",
+          "First Session / Last Session columns — useful for spotting clients who have gone quiet",
+          "Details button — opens the full Client Detail screen with chart, session history, and notes"
+        ]
+      },
+      {
+        name: "rituals",
+        label: "My Rituals",
+        description: "Create and manage your configured Perennial ritual sessions — structured spiritual experiences you build once and offer to clients or run during live events. The page lists all your saved rituals with their title, status, and a playback link. A '+ Create New Ritual' button opens the ritual builder where you define the ritual's name, steps, timing cues, and resources. Each ritual can be played back during a live session or sent to a client as a guided practice.",
+        group: "Content & Media",
+        purpose: "Build reusable spiritual ritual experiences that you can run during live sessions, share with clients, or offer as standalone content products.",
+        bullets: [
+          "Ritual list — all configured rituals shown with title and current status",
+          "Create New Ritual button — opens the ritual builder to define name, steps, and resources",
+          "Ritual playback — each ritual has a playback view you can open during a live session for guided delivery",
+          "Status indicator — shows whether a ritual is Draft, Active, or Archived",
+          "Perennial rituals — rituals tied to the Perennial Mandalism spiritual framework used across the platform",
+          "Reusable format — build a ritual once and run it with any client or audience without rebuilding it each time"
+        ]
+      },
+      {
+        name: "mundane-diviner",
+        label: "Mundane Astrology",
+        description: "A world-astrology research workspace giving diviners access to geopolitical entity tracking, open forecasting projects, active sky alerts, and research notes — all tied to real planetary transits. Five stat cards at the top show Watched Entities, Today's Events, Open Forecasts, Active Projects, and Sky — Next 7 Days. The page has four main panels: Today's Sky (a live summary of significant sky events for the day), Watchlist (countries and institutions you are tracking, like Brazil, China, India, European Union, United States), Open Projects (research projects you have created to track specific geopolitical or economic themes), and Active Alerts (system-generated planetary alerts for your watched entities). A Recent Notes sidebar shows the latest entries from your mundane research journal. The toolbar at the top lets you filter by astrological tradition: Traditional, Ancient, Vedic, Hybrid, or Hellenistic.",
+        group: "Content & Tools",
+        purpose: "Use mundane astrology tools to research world events, build forecasting projects around real planetary transits, and deepen your practice beyond personal chart readings.",
+        bullets: [
+          "Watched Entities — count of countries, institutions, and public figures you are actively tracking",
+          "Today's Events — number of significant planetary events affecting your watchlist entities today",
+          "Open Forecasts — research forecasts you have started but not yet completed or published",
+          "Active Projects — live research projects tracking specific geopolitical, economic, or election themes",
+          "Sky — Next 7 Days — count of notable sky events in the coming week across your watchlist",
+          "Today's Sky panel — current planetary positions and any major sky events for today with interpretive notes",
+          "Watchlist panel — your tracked entities (countries, institutions) with a Manage button to add or remove",
+          "Open Projects panel — list of active research projects with status badges and links to full project pages",
+          "Active Alerts — system alerts for planetary events affecting your watched entities (Medium / Low / High severity)",
+          "Recent Notes — your latest research journal entries with excerpts and links to full notes",
+          "Tradition tabs — filter all data through Traditional, Ancient, Vedic, Hybrid, or Hellenistic frameworks"
+        ]
+      },
+      {
+        name: "subscriptions-manage",
+        label: "Weekly Subscriptions",
+        description: "Manage your weekly subscription product, your subscriber list, and your delivery history all from one screen. The active subscription product is shown at the top as a card — name, price per month, status, and an Edit button. Six stat cards follow: Active Subscribers, Deliveries Sent, Email Opt-outs, Payment Issues, Failed Deliveries, and Last Delivery date. Below the stats, two tabs separate the view: Subscribers (the list of everyone subscribed, with their payment status, email receipt setting, join date, and cancellation date if applicable) and Deliveries (a log of every weekly delivery sent, with date and open/click stats).",
+        group: "Finance & Billing",
+        purpose: "Monitor the health of your subscription product — who is active, who has a payment issue, and which weekly deliveries have been sent successfully.",
+        bullets: [
+          "Subscription product card — shows the product name (e.g. 'Weekly Astrological Insights'), monthly price, and active status",
+          "Edit button — opens the subscription product editor to update name, price, or content",
+          "Active Subscribers — current count of paying, receiving subscribers",
+          "Deliveries Sent — total weekly deliveries dispatched since the subscription launched",
+          "Email Opt-outs — count of subscribers who unsubscribed from delivery emails",
+          "Payment Issues — subscribers with failed or past-due payments; click to see who needs attention",
+          "Failed Deliveries — deliveries that bounced or failed to reach the subscriber",
+          "Last Delivery date — when the most recent weekly delivery was sent",
+          "Subscribers tab — full list with Name/Email, Status (Active / Unpaid / Past Due / Cancelled), Joined, Cancelled date",
+          "Deliveries tab — log of all past deliveries with date and engagement metrics"
+        ]
+      },
+      {
+        name: "gift-certificates",
+        label: "Gift Certificates",
+        description: "Track every gift certificate sold for your services — who bought it, who it was sent to, how much is remaining, and whether it has been redeemed. Four stat cards at the top show Total Sold, Total Revenue from certificates, count Redeemed, and Outstanding Value (total dollar value of unredeemed certificates still in circulation). The full table below shows each certificate with its unique Code, face Amount, Remaining balance, Purchaser name and email, Recipient name and email, Status (Active or Used), Expiry date, and date Issued.",
+        group: "Finance & Billing",
+        purpose: "Monitor your gift certificate programme — understand outstanding liability (unredeemed value), verify redemptions, and see which clients are buying certificates for others.",
+        bullets: [
+          "Total Sold — count of all gift certificates ever issued for your services",
+          "Total Revenue — total dollar amount collected from gift certificate purchases",
+          "Redeemed — count of certificates that have been fully used by the recipient",
+          "Outstanding Value — total remaining dollar value across all active (unredeemed) certificates",
+          "Certificate Code — unique alphanumeric code the recipient uses at checkout (e.g. T02-GIFT-001)",
+          "Amount / Remaining columns — original face value and how much has been used so far",
+          "Purchaser / Recipient columns — who bought the certificate and who received it, with email addresses",
+          "Status badge — Active (available to use) or Used (fully redeemed)",
+          "Expires — date after which the certificate is no longer valid",
+          "Issued — date the certificate was created and sent to the recipient"
+        ]
+      },
+      {
+        name: "analytics",
+        label: "Analytics",
+        description: "A public-profile analytics dashboard showing how prospective clients discover and interact with your diviner page. Eight stat cards at the top cover: Today's page views, This Week page views, Unique Visitors this week, Engagements (booking starts, check-ins, testimonials, subscription starts combined), Booking Starts (clients who began the booking flow), Check-Ins captured (last 30 days), Testimonials submitted (last 30 days), and Subscription Starts. A Views — Last 30 Days bar chart shows daily traffic for the month with a total count. Below the chart, two panels sit side by side: Top Referrers (traffic sources — social platforms, direct, referral links) and Recent Activity (a live feed of the latest public interactions — booking started, check-in submitted, page view, testimonial submitted — each tagged with referral source and the specific page visited).",
+        group: "Finance & Billing",
+        purpose: "Understand how prospective clients find and engage with your public profile so you can focus your marketing on what actually drives bookings.",
+        bullets: [
+          "Today — page views recorded today on your public diviner profile",
+          "This Week — total page views in the current 7-day window",
+          "Unique Visitors — distinct visitor count for the week (deduped by session)",
+          "Engagements — combined count of all meaningful interactions: booking starts, check-ins, testimonials, subscription starts",
+          "Booking Starts — how many visitors clicked through to begin booking a session this month",
+          "Check-Ins — check-in form submissions from your live session pages in the last 30 days",
+          "Testimonials — reviews submitted on your public profile in the last 30 days",
+          "Subscription Starts — weekly subscription checkout initiations",
+          "Views (Last 30 Days) bar chart — daily traffic bars with a total monthly view count",
+          "Top Referrers panel — where your traffic comes from: Instagram, Facebook, TikTok, direct, referral",
+          "Recent Activity feed — timestamped log of booking starts, check-ins, page views, and testimonial submissions with referral source tag"
+        ]
+      },
+      {
+        name: "billing-plan",
+        label: "Billing & Plan",
+        description: "Manage your AstrologyPro platform subscription plan and optional add-ons. The Current Plan section shows your active SaaS plan status — if no plan is active, the Professional Plan ($99/month) is recommended with a 'Get Started' call-to-action. Below the plan card, an Add-Ons section lists optional features you can bolt on to your plan: AI Question Helper ($30/month — AI-powered question suggestions during live readings), Phone Readings ($19/month — enable phone-based sessions billed per minute with automatic invoicing), and Priority Support ($9/month — guaranteed 4-hour response SLA). Each add-on shows its price and an availability badge. A Invoices section (further down) lists past billing receipts.",
+        group: "Account & Profile",
+        purpose: "Control your platform subscription tier and unlock optional capabilities like phone readings and AI reading assistance without contacting support.",
+        bullets: [
+          "Current Plan card — shows active plan name, status, and monthly price; prompts upgrade if no active subscription",
+          "Professional Plan — the recommended plan at $99/month covering bookings, client portal, live sessions, and more",
+          "Get Started button — initiates the subscription checkout flow for the recommended plan",
+          "Add-Ons section — optional features to extend the plan, each listed with price and availability badge",
+          "AI Question Helper add-on — $30/month; surfaces AI-suggested questions during live sessions",
+          "Phone Readings add-on — $19/month; enables phone sessions with per-minute billing and auto-invoicing",
+          "Priority Support add-on — $9/month; guarantees a 4-hour support response SLA",
+          "Subscribe to a plan first — add-ons require an active base plan before they can be enabled",
+          "Invoices — billing history with dates and amounts for each charge on your account"
+        ]
+      },
+      {
+        name: "availability-schedule",
+        label: "Availability (Weekly Schedule)",
+        description: "Define the recurring weekly windows when clients are allowed to book sessions with you. This screen manages your base availability schedule — the repeating pattern of open hours across each day of the week. It is separate from the Calendar View (which shows booked sessions against your availability) and from Blocked Dates (which overrides specific days). Click '+ New Schedule' to create a named schedule with days of the week and time ranges. Multiple schedules can exist — for example, a standard week schedule and a summer schedule — and you activate whichever applies.",
+        group: "Schedule & Availability",
+        purpose: "Set the foundation of your booking calendar by defining which days and hours each week you accept client sessions.",
+        bullets: [
+          "Schedule list — all saved availability schedules with their name and active/inactive status",
+          "New Schedule button — creates a new named schedule with day and time range configuration",
+          "Day toggles — enable or disable individual days of the week for the schedule",
+          "Time range picker — set start and end times for each enabled day (e.g. Mon–Fri 9am–6pm)",
+          "Multiple schedules — create separate schedules for different seasons or service types and switch between them",
+          "Active indicator — the currently live schedule driving your booking calendar is marked as active",
+          "Connection to Calendar — changes here reflect immediately in the teal availability overlay on the Calendar View page",
+          "Connection to Booking Page — your public booking page only shows slots within the active schedule's windows"
         ]
       },
     ],

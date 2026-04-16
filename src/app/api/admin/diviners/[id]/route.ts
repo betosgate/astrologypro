@@ -10,7 +10,7 @@ type PhoneAnswerMode = (typeof VALID_ANSWER_MODES)[number];
 /**
  * PATCH /api/admin/diviners/[id]
  * Admin-only: update phone answer settings for a diviner.
- * Accepted body: { phone_answer_mode, phone_mobile }
+ * Accepted body: { phone_answer_mode, phone_mobile, phone_dialin_enabled }
  */
 export async function PATCH(
   request: NextRequest,
@@ -52,10 +52,20 @@ export async function PATCH(
       );
     }
 
+    // ── Validate phone_dialin_enabled ─────────────────────────────────────────
+    const rawDialin = body.phone_dialin_enabled;
+    if (rawDialin !== undefined && typeof rawDialin !== "boolean") {
+      return NextResponse.json(
+        { error: "phone_dialin_enabled must be a boolean" },
+        { status: 422 }
+      );
+    }
+
     // ── Build update payload (only allowed fields) ──────────────────────────
-    const updates: Record<string, string | null> = {};
+    const updates: Record<string, string | boolean | null> = {};
     if (rawMode !== undefined) updates.phone_answer_mode = rawMode as string;
     if ("phone_mobile" in body) updates.phone_mobile = rawMobile;
+    if (rawDialin !== undefined) updates.phone_dialin_enabled = rawDialin;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(
