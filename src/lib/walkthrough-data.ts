@@ -3017,35 +3017,41 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       {
         name: "overview",
         label: "Practitioner CRM",
-        description: "Your command centre for the entire working day — every appointment, client action, and revenue signal in a single glance. The dashboard loads the moment you open your dashboard and surfaces what needs your attention first: today's sessions with countdown timers to each start time, new booking requests waiting for confirmation, unread client messages, and a live tally of today's earnings. Stat cards across the top show your total sessions this week, your completion rate, pending payout balance, and how many new clients you acquired this month. Below the stats, a timeline view maps your day chronologically so you can see gaps, back-to-backs, and breathing room at a glance.",
+        description: "The full-length command centre for your practice — every signal you need to run your day surfaces here on a single scrolling page. At the top, a banner shows promo opportunities (training, community). Below that, Today's Sessions shows your next appointment date, while Planetary Returns — Next 30 Days lists all upcoming planetary return milestones for your client base with exact dates. A profile completion checklist tracks your setup progress with a percentage bar. Eight stat cards follow: This Month Revenue, This Month Bookings, New Clients, Upcoming sessions, Testimonials rating, Client Retention rate, No-Show Rate, and Follow-Ups Due. A Revenue — Last 6 Months bar chart gives the financial arc at a glance. Then two columns of live widgets round out the page: Upcoming Bookings (next 5 appointments with status badges), Quick Actions (View Bookings, Edit Profile, Manage Services, View Live Profile), Check-Ins last 7 days, Gift Certificates outstanding value, Weekly Subscriptions active count, and Active Campaigns with spend vs. budget.",
         group: "My Schedule",
-        purpose: "The primary command center for professional diviners to manage their daily workflow and client load.",
+        purpose: "The primary command center for professional diviners to manage their daily workflow, revenue, and client load.",
         bullets: [
-          "Today's sessions list — every confirmed appointment with client name, service type, start time, and a countdown badge",
-          "New booking requests — incoming requests awaiting your accept or decline, shown with urgency if the requested time is soon",
-          "Unread messages count — a badge showing how many client messages are waiting for a reply across all conversations",
-          "Today's earnings — cumulative revenue from all completed sessions today, updating in real time as sessions close",
-          "This-week session count — total confirmed sessions in the current calendar week with a completion rate percentage",
-          "Pending payout balance — earnings processed but not yet transferred to your bank account",
-          "New clients this month — count of first-time clients who have booked with you in the current calendar month",
-          "Day timeline view — a horizontal time map from your first to last slot showing sessions, gaps, and blocked windows"
+          "Today's Sessions — shows the date of your next confirmed session; 'No sessions today' if the day is clear",
+          "Planetary Returns — Next 30 Days — lists every upcoming Mars/Jupiter/Saturn return across your client roster with dates",
+          "Complete Your Profile checklist — tracks 6 setup tasks (photo, tagline, Stripe, bio, specialties, testimonial, calendar) with a progress bar",
+          "This Month Revenue / Bookings / New Clients / Upcoming — four top stat cards with month-over-month comparison arrows",
+          "Testimonials / Client Retention / No-Show Rate / Follow-Ups Due — four operational health cards",
+          "Revenue — Last 6 Months — bar chart of monthly earnings for the trailing six months with a Full Report link",
+          "Upcoming Bookings — your next confirmed and pending sessions with client, service, date/time, and status badge",
+          "Quick Actions — one-click shortcuts: View Bookings, Edit Profile, Manage Services, View Live Profile",
+          "Check-Ins (Last 7 Days) — recent leads captured from your live session check-in page with dates",
+          "Gift Certificates — count of unredeemed certificates and their total remaining value",
+          "Weekly Subscriptions — count of currently active weekly subscribers",
+          "Active Campaigns — affiliate campaigns running now with spend vs. budget per campaign"
         ]
       },
       {
         name: "calendar",
         label: "Session Calendar",
-        description: "A full-featured scheduling calendar showing every confirmed booking, pending request, blocked window, and live broadcast slot across weekly and monthly views. The calendar colour-codes each entry by type — video sessions in indigo, phone sessions in teal, group broadcasts in amber, and blocked windows in grey — so you can read your schedule at a glance without opening individual bookings. Click any session to open the booking detail inline, or click an empty slot to create a manual booking. The availability editor lives alongside the calendar so you can tighten your open hours without leaving the page.",
+        description: "The live calendar view of your practice schedule — every confirmed booking, available window, and blocked slot displayed across Day, Week, and Month layouts. The page header is titled 'Availability' and shows your public booking link with a one-click copy button. A colour legend at the top distinguishes Available slots (teal background fill), Booked sessions (amber blocks with title), and Blocked windows. Action buttons along the top bar let you Block Day Off, Add Special Hours, or Create Manual Booking without leaving the calendar. Session blocks show the service name and client, and the week navigator arrows let you move forward and backward through your schedule.",
         group: "My Schedule",
-        purpose: "A high-precision scheduling interface for managing personal availability and upcoming consultations.",
+        purpose: "A real-time visual map of your schedule so you can manage availability, spot gaps, and create bookings without switching between pages.",
         bullets: [
-          "Weekly view — a 7-column layout showing every slot from your earliest to latest available hour",
-          "Monthly view — a traditional calendar grid with dot indicators showing session density per day",
-          "Colour-coded entry types — video, phone, group, and blocked windows rendered in distinct colours",
-          "Inline booking detail — click any session block to see client name, service, and actions without a page change",
-          "Click-to-create — click an empty slot to open a quick-create form for a manual booking or block",
-          "Today highlight — current day is visually accented so you always orient quickly in the monthly view",
-          "Availability overlay — your configured open-hours windows shown as a soft background behind the calendar grid",
-          "Broadcast slots — live broadcast events appear as full-width banners spanning their scheduled duration"
+          "Day / Week / Month toggle — switch between views to zoom in on today or survey the full month",
+          "Booking link banner — your public booking URL displayed at the top with a Copy Link button for sharing",
+          "Available window fill — teal background shows your configured open hours as a visual layer behind sessions",
+          "Booked session blocks — amber blocks with service name displayed; today is highlighted with an accent border",
+          "Block Day Off button — marks an entire day as unavailable in one click",
+          "Add Special Hours button — create a one-off availability window outside your regular schedule",
+          "Create Manual Booking button — add a booking directly from the calendar without a client self-booking",
+          "Week navigation — arrow controls to move between weeks; current week shown as default on page load",
+          "Calendar Connections shortcut — button in the header to jump to Google/Outlook calendar sync settings",
+          "Manage Weekly Schedule shortcut — button to edit your recurring availability windows"
         ]
       },
       {
@@ -3254,20 +3260,21 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
       {
         name: "mktcontent",
-        label: "Content Management",
-        description: "Create and manage marketing content — images, videos, and caption templates — that you upload to social media to drive bookings. Write a caption once with dynamic placeholders for your username and booking link, then select the platforms you want to post to and preview how it will look before publishing.",
+        label: "Social Media Marketing",
+        description: "Your Push-to-Share marketing hub where the platform delivers branded cosmic content tied to real planetary events every day, and you share it to all your social platforms in 30 seconds. The page is built around four tabs: Push-to-Share (the daily content delivery), Content Library (all past packages), Upcoming (what content is queued for future events), and Share Tracking (engagement data across platforms). A 'Today's Shares' banner shows whether today's content is ready or still being prepared. Below that, the three-step flow explains how it works — the platform sends content triggered by planetary events, you tap Share Hub to distribute to all your connected platforms at once, and the system tracks which platforms you shared to and when. Email and SMS notification toggles let you choose how you are alerted when new content is ready. A Share History table below logs every past content package with its planetary event name, platform icons, date, and a Share Hub button to reshare.",
         group: "Marketing & Growth",
-        purpose: "Produce ready-to-post social content that consistently promotes your practice.",
+        purpose: "Distribute daily branded planetary content across all social platforms in one tap to maintain a consistent marketing presence without writing copy.",
         bullets: [
-          "Title field — give the content piece a name for your own library reference (e.g. 'Mercury Retrograde Awareness Post')",
-          "Media upload — drag and drop PNG, JPG, or MP4 files up to 50 MB; supports images and short video clips",
-          "Caption Template — write your post copy using {username} and {link} placeholders that auto-fill at share time",
-          "Available variables listed — {username} and {link} are shown as clickable hints below the caption field",
-          "Platform selection — toggle Instagram, Twitter / X, YouTube, TikTok, and Facebook individually",
-          "Preview panel — shows a real-time preview of how the caption looks with placeholders resolved",
-          "Content Tips sidebar — best-practice reminders (square images for IG, keep captions under 280 chars for Twitter, post peak hours)",
-          "Saved content library — all uploaded pieces appear below the form for reuse or editing",
-          "Share directly — once saved, each content piece has a one-click share button per selected platform"
+          "Today's Shares banner — shows whether today's cosmic content package is ready or still being prepared (check back at 10am UTC)",
+          "Push-to-Share tab — the main daily content delivery view with the Share Hub button",
+          "Content Library tab — all historical content packages you can browse and reshare",
+          "Upcoming tab — preview content packages queued for future planetary events",
+          "Share Tracking tab — engagement and reach data for each shared content package",
+          "Three-step explainer — We Send Content → You Tap Share → We Track It, shown on first use",
+          "Email Notifications toggle — turn on/off email alerts when new daily content is ready",
+          "SMS Notifications toggle — requires phone number in Settings; delivers a text when content drops",
+          "Share History — table of past packages with planetary event name, platforms shared, date, and reshare button",
+          "Share Hub — opens the sharing panel for a specific content package showing all connected platform options"
         ]
       },
       {
@@ -3838,6 +3845,171 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Session count selector and eligible service types multi-select",
           "Bundle price field with automatic per-session savings calculation shown to the diviner",
           "Expiry window selector: 30, 60, 90, or 180 days from purchase date"
+        ]
+      },
+      {
+        name: "orders",
+        label: "My Orders",
+        description: "A complete transaction log of every order and payment placed by your clients — one-time session bookings, package purchases, gift certificate sales, and subscription charges all appear here. Four stat cards at the top give an instant snapshot: Total Orders all time, Completed orders with total value, Pending orders awaiting payment, and Refunded orders. A search bar lets you find any order by client name, email, service name, or Stripe payment ID. A date-range picker narrows the view to a specific period. The sortable table below shows every order row with Client, Service, Amount, Status, Date, and an Actions column for opening the full order detail.",
+        group: "My Practice",
+        purpose: "Track every payment and order your clients have placed so you can reconcile revenue, chase unpaid orders, and handle refund requests from one screen.",
+        bullets: [
+          "Total Orders — all-time count of orders across all types (sessions, packages, subscriptions, gift certs)",
+          "Completed — count and total value of fully paid and delivered orders",
+          "Pending — orders placed but not yet paid; click to see which clients need a payment nudge",
+          "Refunded — orders that have been reversed; click to see the refund reason and Stripe refund ID",
+          "Search bar — find any order instantly by client name, email, service name, or Stripe payment ID",
+          "Date range picker — filter the table to any custom date range for period reporting",
+          "Status filter dropdown — narrow to All Statuses, Completed, Pending, Refunded, or Cancelled",
+          "Sortable table — columns for Client, Service, Amount, Status (with colour badge), Date, and Actions",
+          "Actions column — open the full order detail to see line items, payment method, and refund controls"
+        ]
+      },
+      {
+        name: "clients-list",
+        label: "Clients",
+        description: "Your full client roster — every person who has ever booked a session with you, in one searchable, sortable table. Four stat cards at the top show Total Clients (all time), Active Clients (had a session in the last 30 days), Total Sessions completed across all clients, and Total Revenue from your client base. A search bar filters by name or email. Each row in the table shows the client's avatar, name, birth date, session count, total spend, date of first session, date of last session, and a Details button to open their full profile.",
+        group: "Clients",
+        purpose: "A bird's-eye view of your entire client base so you can spot your most loyal clients, identify who hasn't booked recently, and access any client's full profile in one click.",
+        bullets: [
+          "Total Clients — count of all unique clients who have ever booked with you",
+          "Active (30 days) — clients who had at least one session in the last 30 days",
+          "Total Sessions — cumulative completed session count across your entire client roster",
+          "Total Revenue — sum of all payments received from clients",
+          "Search by name or email — instant filter across your roster as you type",
+          "Birth Date column — client's birth date shown for quick reference without opening their profile",
+          "Sessions column — total completed sessions with this diviner, sortable ascending or descending",
+          "Spent column — lifetime spend per client, sortable to identify your highest-value relationships",
+          "First Session / Last Session columns — useful for spotting clients who have gone quiet",
+          "Details button — opens the full Client Detail screen with chart, session history, and notes"
+        ]
+      },
+      {
+        name: "rituals",
+        label: "My Rituals",
+        description: "Create and manage your configured Perennial ritual sessions — structured spiritual experiences you build once and offer to clients or run during live events. The page lists all your saved rituals with their title, status, and a playback link. A '+ Create New Ritual' button opens the ritual builder where you define the ritual's name, steps, timing cues, and resources. Each ritual can be played back during a live session or sent to a client as a guided practice.",
+        group: "Content & Media",
+        purpose: "Build reusable spiritual ritual experiences that you can run during live sessions, share with clients, or offer as standalone content products.",
+        bullets: [
+          "Ritual list — all configured rituals shown with title and current status",
+          "Create New Ritual button — opens the ritual builder to define name, steps, and resources",
+          "Ritual playback — each ritual has a playback view you can open during a live session for guided delivery",
+          "Status indicator — shows whether a ritual is Draft, Active, or Archived",
+          "Perennial rituals — rituals tied to the Perennial Mandalism spiritual framework used across the platform",
+          "Reusable format — build a ritual once and run it with any client or audience without rebuilding it each time"
+        ]
+      },
+      {
+        name: "mundane-diviner",
+        label: "Mundane Astrology",
+        description: "A world-astrology research workspace giving diviners access to geopolitical entity tracking, open forecasting projects, active sky alerts, and research notes — all tied to real planetary transits. Five stat cards at the top show Watched Entities, Today's Events, Open Forecasts, Active Projects, and Sky — Next 7 Days. The page has four main panels: Today's Sky (a live summary of significant sky events for the day), Watchlist (countries and institutions you are tracking, like Brazil, China, India, European Union, United States), Open Projects (research projects you have created to track specific geopolitical or economic themes), and Active Alerts (system-generated planetary alerts for your watched entities). A Recent Notes sidebar shows the latest entries from your mundane research journal. The toolbar at the top lets you filter by astrological tradition: Traditional, Ancient, Vedic, Hybrid, or Hellenistic.",
+        group: "Content & Tools",
+        purpose: "Use mundane astrology tools to research world events, build forecasting projects around real planetary transits, and deepen your practice beyond personal chart readings.",
+        bullets: [
+          "Watched Entities — count of countries, institutions, and public figures you are actively tracking",
+          "Today's Events — number of significant planetary events affecting your watchlist entities today",
+          "Open Forecasts — research forecasts you have started but not yet completed or published",
+          "Active Projects — live research projects tracking specific geopolitical, economic, or election themes",
+          "Sky — Next 7 Days — count of notable sky events in the coming week across your watchlist",
+          "Today's Sky panel — current planetary positions and any major sky events for today with interpretive notes",
+          "Watchlist panel — your tracked entities (countries, institutions) with a Manage button to add or remove",
+          "Open Projects panel — list of active research projects with status badges and links to full project pages",
+          "Active Alerts — system alerts for planetary events affecting your watched entities (Medium / Low / High severity)",
+          "Recent Notes — your latest research journal entries with excerpts and links to full notes",
+          "Tradition tabs — filter all data through Traditional, Ancient, Vedic, Hybrid, or Hellenistic frameworks"
+        ]
+      },
+      {
+        name: "subscriptions-manage",
+        label: "Weekly Subscriptions",
+        description: "Manage your weekly subscription product, your subscriber list, and your delivery history all from one screen. The active subscription product is shown at the top as a card — name, price per month, status, and an Edit button. Six stat cards follow: Active Subscribers, Deliveries Sent, Email Opt-outs, Payment Issues, Failed Deliveries, and Last Delivery date. Below the stats, two tabs separate the view: Subscribers (the list of everyone subscribed, with their payment status, email receipt setting, join date, and cancellation date if applicable) and Deliveries (a log of every weekly delivery sent, with date and open/click stats).",
+        group: "Finance & Billing",
+        purpose: "Monitor the health of your subscription product — who is active, who has a payment issue, and which weekly deliveries have been sent successfully.",
+        bullets: [
+          "Subscription product card — shows the product name (e.g. 'Weekly Astrological Insights'), monthly price, and active status",
+          "Edit button — opens the subscription product editor to update name, price, or content",
+          "Active Subscribers — current count of paying, receiving subscribers",
+          "Deliveries Sent — total weekly deliveries dispatched since the subscription launched",
+          "Email Opt-outs — count of subscribers who unsubscribed from delivery emails",
+          "Payment Issues — subscribers with failed or past-due payments; click to see who needs attention",
+          "Failed Deliveries — deliveries that bounced or failed to reach the subscriber",
+          "Last Delivery date — when the most recent weekly delivery was sent",
+          "Subscribers tab — full list with Name/Email, Status (Active / Unpaid / Past Due / Cancelled), Joined, Cancelled date",
+          "Deliveries tab — log of all past deliveries with date and engagement metrics"
+        ]
+      },
+      {
+        name: "gift-certificates",
+        label: "Gift Certificates",
+        description: "Track every gift certificate sold for your services — who bought it, who it was sent to, how much is remaining, and whether it has been redeemed. Four stat cards at the top show Total Sold, Total Revenue from certificates, count Redeemed, and Outstanding Value (total dollar value of unredeemed certificates still in circulation). The full table below shows each certificate with its unique Code, face Amount, Remaining balance, Purchaser name and email, Recipient name and email, Status (Active or Used), Expiry date, and date Issued.",
+        group: "Finance & Billing",
+        purpose: "Monitor your gift certificate programme — understand outstanding liability (unredeemed value), verify redemptions, and see which clients are buying certificates for others.",
+        bullets: [
+          "Total Sold — count of all gift certificates ever issued for your services",
+          "Total Revenue — total dollar amount collected from gift certificate purchases",
+          "Redeemed — count of certificates that have been fully used by the recipient",
+          "Outstanding Value — total remaining dollar value across all active (unredeemed) certificates",
+          "Certificate Code — unique alphanumeric code the recipient uses at checkout (e.g. T02-GIFT-001)",
+          "Amount / Remaining columns — original face value and how much has been used so far",
+          "Purchaser / Recipient columns — who bought the certificate and who received it, with email addresses",
+          "Status badge — Active (available to use) or Used (fully redeemed)",
+          "Expires — date after which the certificate is no longer valid",
+          "Issued — date the certificate was created and sent to the recipient"
+        ]
+      },
+      {
+        name: "analytics",
+        label: "Analytics",
+        description: "A public-profile analytics dashboard showing how prospective clients discover and interact with your diviner page. Eight stat cards at the top cover: Today's page views, This Week page views, Unique Visitors this week, Engagements (booking starts, check-ins, testimonials, subscription starts combined), Booking Starts (clients who began the booking flow), Check-Ins captured (last 30 days), Testimonials submitted (last 30 days), and Subscription Starts. A Views — Last 30 Days bar chart shows daily traffic for the month with a total count. Below the chart, two panels sit side by side: Top Referrers (traffic sources — social platforms, direct, referral links) and Recent Activity (a live feed of the latest public interactions — booking started, check-in submitted, page view, testimonial submitted — each tagged with referral source and the specific page visited).",
+        group: "Finance & Billing",
+        purpose: "Understand how prospective clients find and engage with your public profile so you can focus your marketing on what actually drives bookings.",
+        bullets: [
+          "Today — page views recorded today on your public diviner profile",
+          "This Week — total page views in the current 7-day window",
+          "Unique Visitors — distinct visitor count for the week (deduped by session)",
+          "Engagements — combined count of all meaningful interactions: booking starts, check-ins, testimonials, subscription starts",
+          "Booking Starts — how many visitors clicked through to begin booking a session this month",
+          "Check-Ins — check-in form submissions from your live session pages in the last 30 days",
+          "Testimonials — reviews submitted on your public profile in the last 30 days",
+          "Subscription Starts — weekly subscription checkout initiations",
+          "Views (Last 30 Days) bar chart — daily traffic bars with a total monthly view count",
+          "Top Referrers panel — where your traffic comes from: Instagram, Facebook, TikTok, direct, referral",
+          "Recent Activity feed — timestamped log of booking starts, check-ins, page views, and testimonial submissions with referral source tag"
+        ]
+      },
+      {
+        name: "billing-plan",
+        label: "Billing & Plan",
+        description: "Manage your AstrologyPro platform subscription plan and optional add-ons. The Current Plan section shows your active SaaS plan status — if no plan is active, the Professional Plan ($99/month) is recommended with a 'Get Started' call-to-action. Below the plan card, an Add-Ons section lists optional features you can bolt on to your plan: AI Question Helper ($30/month — AI-powered question suggestions during live readings), Phone Readings ($19/month — enable phone-based sessions billed per minute with automatic invoicing), and Priority Support ($9/month — guaranteed 4-hour response SLA). Each add-on shows its price and an availability badge. A Invoices section (further down) lists past billing receipts.",
+        group: "Account & Profile",
+        purpose: "Control your platform subscription tier and unlock optional capabilities like phone readings and AI reading assistance without contacting support.",
+        bullets: [
+          "Current Plan card — shows active plan name, status, and monthly price; prompts upgrade if no active subscription",
+          "Professional Plan — the recommended plan at $99/month covering bookings, client portal, live sessions, and more",
+          "Get Started button — initiates the subscription checkout flow for the recommended plan",
+          "Add-Ons section — optional features to extend the plan, each listed with price and availability badge",
+          "AI Question Helper add-on — $30/month; surfaces AI-suggested questions during live sessions",
+          "Phone Readings add-on — $19/month; enables phone sessions with per-minute billing and auto-invoicing",
+          "Priority Support add-on — $9/month; guarantees a 4-hour support response SLA",
+          "Subscribe to a plan first — add-ons require an active base plan before they can be enabled",
+          "Invoices — billing history with dates and amounts for each charge on your account"
+        ]
+      },
+      {
+        name: "availability-schedule",
+        label: "Availability (Weekly Schedule)",
+        description: "Define the recurring weekly windows when clients are allowed to book sessions with you. This screen manages your base availability schedule — the repeating pattern of open hours across each day of the week. It is separate from the Calendar View (which shows booked sessions against your availability) and from Blocked Dates (which overrides specific days). Click '+ New Schedule' to create a named schedule with days of the week and time ranges. Multiple schedules can exist — for example, a standard week schedule and a summer schedule — and you activate whichever applies.",
+        group: "Schedule & Availability",
+        purpose: "Set the foundation of your booking calendar by defining which days and hours each week you accept client sessions.",
+        bullets: [
+          "Schedule list — all saved availability schedules with their name and active/inactive status",
+          "New Schedule button — creates a new named schedule with day and time range configuration",
+          "Day toggles — enable or disable individual days of the week for the schedule",
+          "Time range picker — set start and end times for each enabled day (e.g. Mon–Fri 9am–6pm)",
+          "Multiple schedules — create separate schedules for different seasons or service types and switch between them",
+          "Active indicator — the currently live schedule driving your booking calendar is marked as active",
+          "Connection to Calendar — changes here reflect immediately in the teal availability overlay on the Calendar View page",
+          "Connection to Booking Page — your public booking page only shows slots within the active schedule's windows"
         ]
       },
     ],

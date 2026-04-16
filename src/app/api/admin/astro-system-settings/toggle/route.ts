@@ -3,62 +3,49 @@ import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  // const user = await getAdminUser();
-  // if (!user) {
-  //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  // }
+  const user = await getAdminUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-  const body = await req.json();
-  const secretValue =
-    typeof body?.secret_value === "string" ? body.secret_value.trim() : "";
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
 
+  const secretValue = String(body.secret_value ?? "").trim();
   if (!secretValue) {
-    return NextResponse.json(
-      { error: "secret_value is required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "secret_value is required" }, { status: 422 });
   }
 
   const admin = createAdminClient();
-
-  const { data: existing, error: fetchError } = await admin
+  const { data, error } = await admin
     .from("astro_system_settings")
-    .select("id, type, key_name, key_value, secret_value, status, updated_at")
+    .select("id, type, key_name, key_value, secret_value, status, notes, created_at, updated_at")
+    .eq("type", "ASTROLOGY_API")
     .eq("secret_value", secretValue)
     .maybeSingle();
 
-  if (fetchError) {
-    return NextResponse.json({ error: fetchError.message }, { status: 500 });
+  if (error || !data) {
+    return NextResponse.json({ error: error?.message ?? "Not found" }, { status: 404 });
   }
 
-  if (!existing) {
-    return NextResponse.json(
-      { error: "No astro system setting found for the provided secret_value" },
-      { status: 404 }
-    );
-  }
-
-  const nextStatus = existing.status === "active" ? "inactive" : "active";
-
+  const nextStatus = data.status === "active" ? "inactive" : "active";
   const { data: updated, error: updateError } = await admin
     .from("astro_system_settings")
-    .update({
-      status: nextStatus,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", existing.id)
-    .select("id, type, key_name, key_value, secret_value, status, updated_at")
+    .update({ status: nextStatus })
+    .eq("id", data.id)
+    .select("id, type, key_name, key_value, secret_value, status, notes, created_at, updated_at")
     .single();
 
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+  if (updateError || !updated) {
+    return NextResponse.json({ error: updateError?.message ?? "Toggle failed" }, { status: 500 });
   }
 
-  return NextResponse.json({
-    success: true,
-    message: `Status changed to ${nextStatus}`,
-    data: updated,
-  });
+  return NextResponse.json({ setting: updated });
 }
