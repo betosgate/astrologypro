@@ -3222,69 +3222,92 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
     ],
     screens: [
-      { 
-        name: "overview", 
-        label: "Practitioner CRM", 
-        description: "Overview of today's operations.", 
+      {
+        name: "overview",
+        label: "Practitioner CRM",
+        description: "Your command centre for the entire working day — every appointment, client action, and revenue signal in a single glance. The dashboard loads the moment you open your dashboard and surfaces what needs your attention first: today's sessions with countdown timers to each start time, new booking requests waiting for confirmation, unread client messages, and a live tally of today's earnings. Stat cards across the top show your total sessions this week, your completion rate, pending payout balance, and how many new clients you acquired this month. Below the stats, a timeline view maps your day chronologically so you can see gaps, back-to-backs, and breathing room at a glance.",
         group: "My Schedule",
         purpose: "The primary command center for professional diviners to manage their daily workflow and client load.",
         bullets: [
-          "Real-time overview of today's appointments",
-          "Quick-access to recent client interactions",
-          "Pending reading request notifications",
-          "Daily revenue and session velocity stats"
+          "Today's sessions list — every confirmed appointment with client name, service type, start time, and a countdown badge",
+          "New booking requests — incoming requests awaiting your accept or decline, shown with urgency if the requested time is soon",
+          "Unread messages count — a badge showing how many client messages are waiting for a reply across all conversations",
+          "Today's earnings — cumulative revenue from all completed sessions today, updating in real time as sessions close",
+          "This-week session count — total confirmed sessions in the current calendar week with a completion rate percentage",
+          "Pending payout balance — earnings processed but not yet transferred to your bank account",
+          "New clients this month — count of first-time clients who have booked with you in the current calendar month",
+          "Day timeline view — a horizontal time map from your first to last slot showing sessions, gaps, and blocked windows"
         ]
       },
-      { 
-        name: "calendar", 
-        label: "Session Calendar", 
-        description: "Map of upcoming readings.", 
+      {
+        name: "calendar",
+        label: "Session Calendar",
+        description: "A full-featured scheduling calendar showing every confirmed booking, pending request, blocked window, and live broadcast slot across weekly and monthly views. The calendar colour-codes each entry by type — video sessions in indigo, phone sessions in teal, group broadcasts in amber, and blocked windows in grey — so you can read your schedule at a glance without opening individual bookings. Click any session to open the booking detail inline, or click an empty slot to create a manual booking. The availability editor lives alongside the calendar so you can tighten your open hours without leaving the page.",
         group: "My Schedule",
         purpose: "A high-precision scheduling interface for managing personal availability and upcoming consultations.",
         bullets: [
-          "Dynamic weekly and monthly session views",
-          "One-click availability overrides and holidays",
-          "Automated session remainder status tracking",
-          "Direct integration with live broadcast scheduling"
+          "Weekly view — a 7-column layout showing every slot from your earliest to latest available hour",
+          "Monthly view — a traditional calendar grid with dot indicators showing session density per day",
+          "Colour-coded entry types — video, phone, group, and blocked windows rendered in distinct colours",
+          "Inline booking detail — click any session block to see client name, service, and actions without a page change",
+          "Click-to-create — click an empty slot to open a quick-create form for a manual booking or block",
+          "Today highlight — current day is visually accented so you always orient quickly in the monthly view",
+          "Availability overlay — your configured open-hours windows shown as a soft background behind the calendar grid",
+          "Broadcast slots — live broadcast events appear as full-width banners spanning their scheduled duration"
         ]
       },
-      { 
-        name: "client-detail", 
-        label: "Client Spiritual Twin", 
-        description: "Comprehensive client history.", 
+      {
+        name: "client-detail",
+        label: "Client Spiritual Twin",
+        description: "The deepest view of any individual client on the platform — a single screen that assembles everything you know about one person before you sit down together. At the top, the client's avatar, full name, birth data, and natal chart thumbnail give you the astrological context immediately. Below that, a tabbed layout separates their complete session history, your private notes, their intake form responses, their birth chart in full, and a synastry comparison with your own chart if you have loaded yours. The session history table shows every past reading — date, type, duration, amount paid, and a link to the notes you wrote afterwards — so you carry full continuity into every future session without needing to ask the client to recap.",
         group: "Business",
         purpose: "A deep-dive clinical interface providing the full spiritual and interaction history for a specific client.",
         bullets: [
-          "Natal chart and transit history archive",
-          "Private practitioner notes and session logs",
-          "Client-specific compatibility and synastry data",
-          "Reading frequency and loyalty metrics"
+          "Client header — avatar, full name, email, birth date, birth time, and birth city displayed at a glance",
+          "Natal chart thumbnail — a miniature chart wheel rendered from the client's birth data, click to expand to full screen",
+          "Session history tab — every completed and upcoming booking with date, service type, duration, amount, and notes link",
+          "Private notes tab — your personal notes across all sessions with this client, newest at the top",
+          "Intake responses tab — all pre-session questionnaire answers the client has submitted, linked to their booking",
+          "Full birth chart tab — the complete natal chart wheel with planet positions, house cusps, and aspect grid",
+          "Synastry tab — a side-by-side comparison of the client's chart with yours, showing major relationship aspects",
+          "Loyalty and stats — total sessions with you, total spend, average session frequency, and first session date"
         ]
       },
-      { 
-        name: "broadcast", 
-        label: "Live Hub", 
-        description: "Streaming and chat interface.", 
+      {
+        name: "broadcast",
+        label: "Live Hub",
+        description: "Your professional broadcast studio for hosting live astrology sessions, group rituals, community gatherings, and subscriber-only events. The Live Hub is divided into three panels: a pre-live setup area where you configure your stream title, access level, recording preference, and thumbnail; the live stage itself with your camera feed, stream health indicator, viewer count, and a one-click start button; and a post-broadcast dashboard showing replay view counts, peak concurrent viewers, and check-ins captured during the event. Upcoming scheduled broadcasts appear at the top as countdown cards so followers know what is coming and you never start a session without an audience primed.",
         group: "Engagement",
         purpose: "The professional broadcast studio for hosting live sessions, rituals, and community gatherings.",
         bullets: [
-          "Integrated WebRTC live streaming controls",
-          "Real-time moderated community chat",
-          "Active viewer list and engagement triggers",
-          "One-click recording and archive dispatch"
+          "Scheduled broadcasts — upcoming live events shown as countdown cards with title, date, and RSVP count",
+          "Pre-live setup panel — set title, description, access level (public / members / paid), and recording toggle",
+          "Thumbnail upload — add a cover image shown in the live schedule and on your profile during the event",
+          "Go Live button — starts the stream and notifies followers who opted in to live alerts",
+          "Stream health indicator — live bitrate, frame rate, and latency gauge so you catch quality issues immediately",
+          "Viewer count — real-time count of active viewers updating every 10 seconds",
+          "Moderated chat — live audience chat with mod tools to mute or remove disruptive participants",
+          "Recording — automatic or manual recording with status light; saved recordings appear in the archive on stream end",
+          "Check-in capture — viewers who enter their name and email during the broadcast are logged as leads",
+          "Post-broadcast stats — total unique viewers, peak concurrent, average watch time, and check-ins captured"
         ]
       },
-      { 
-        name: "payouts", 
-        label: "Billing & Payouts", 
-        description: "Financial transparency.", 
+      {
+        name: "payouts",
+        label: "Billing & Payouts",
+        description: "Your complete financial record on the platform — every dollar earned, every platform fee deducted, every payout transferred to your bank, and every commission owed to affiliates, laid out transparently in one screen. The top of the page shows four headline figures: your current pending balance (earnings processed but not yet transferred), your total earnings to date, your total platform fees paid, and your next scheduled payout date. Below that, a transaction log breaks down every session by date, client, gross charge, platform fee percentage, and your net take-home. A separate Payouts tab shows each bank transfer with its Stripe transfer ID and settlement timestamp. The Tax tab calculates your estimated tax reserve at your configured percentage so you are never caught short at year-end.",
         group: "Business",
         purpose: "Ensures full financial clarity for practitioners regarding their platform earnings and transfer history.",
         bullets: [
-          "Real-time pending balance tracking",
-          "Detailed commission and fee breakdown",
-          "Historical payout bank transfer logs",
-          "Tax summary and financial year reports"
+          "Pending balance — earnings processed and awaiting the next payout cycle transfer to your bank",
+          "Total earned — cumulative gross earnings on the platform since account creation",
+          "Total fees paid — cumulative platform fee (percentage) deducted across all sessions",
+          "Next payout date — when the pending balance will be transferred based on your payout schedule",
+          "Transaction log — every completed session with date, client name, gross amount, fee, and net earnings",
+          "Payouts tab — each bank transfer with Stripe transfer ID, amount, currency, and settlement date",
+          "Tax reserve tab — estimated tax liability at your configured rate with year-to-date tracking",
+          "Filter by date range — narrow the transaction log to any period for reconciliation or export",
+          "Download CSV — export the full transaction log or payout history for your accountant or tax filing"
         ]
       },
       {
