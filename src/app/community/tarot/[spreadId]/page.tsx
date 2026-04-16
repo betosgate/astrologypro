@@ -1,24 +1,34 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import tarotSpreads, { TarotSpread } from "@/data/tarot-spreads";
-import tarotCards, { TarotCard } from "@/data/tarot-cards";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ReadingState = "setup" | "drawing" | "revealed";
+interface TarotCard {
+  id: string;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+}
+
+interface SpreadData {
+  id: string;
+  name: string;
+  description: string | null;
+  card_count: number;
+  layout_json: { position_labels: string[] };
+  image_url: string | null;
+}
+
+type ReadingState = "loading" | "error" | "drawing" | "revealed";
 
 interface DrawnCard {
   card: TarotCard;
-  reversed: boolean;
 }
 
 interface SavedCard {
@@ -32,6 +42,9 @@ interface SavedCard {
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
+const CARD_BACK_URL =
+  "https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/TarotCardBG.jpg";
+
 // ─── Fisher-Yates shuffle ─────────────────────────────────────────────────────
 
 function shuffle<T>(arr: T[]): T[] {
@@ -43,246 +56,20 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-// ─── Celtic Cross layout ──────────────────────────────────────────────────────
-// Grid positions (row, col) for each card slot 1–10 in a 5×4 grid.
-// The cross occupies columns 0-2; the staff occupies column 3.
-const CELTIC_CROSS_GRID: [number, number][] = [
-  [2, 1], // 1 – Present  (center)
-  [2, 1], // 2 – Challenge (overlaid, handled by z-index in render)
-  [4, 1], // 3 – Foundation (below center)
-  [2, 0], // 4 – Recent Past (left)
-  [0, 1], // 5 – Crown (above)
-  [2, 2], // 6 – Near Future (right)
-  [4, 3], // 7 – Attitude (staff bottom)
-  [3, 3], // 8 – External Influences
-  [2, 3], // 9 – Hopes and Fears
-  [1, 3], // 10 – Outcome (staff top)
-];
-
-// ─── Card Face ────────────────────────────────────────────────────────────────
-
-function CardFace({ drawn }: { drawn: DrawnCard }) {
-  const { card, reversed } = drawn;
-  const arcanaLabel =
-    card.arcana === "major"
-      ? "Major Arcana"
-      : card.suit
-      ? card.suit.charAt(0).toUpperCase() + card.suit.slice(1)
-      : "Minor Arcana";
-
-  return (
-    <div
-      className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded-lg bg-indigo-950 px-1.5 py-2 text-center ring-1 ring-indigo-400/30 ${
-        reversed ? "rotate-180" : ""
-      }`}
-    >
-      <p className="text-[9px] font-semibold uppercase tracking-widest text-indigo-300">
-        {arcanaLabel}
-      </p>
-      <p className="text-xs font-bold leading-tight text-indigo-50">
-        {reversed ? "Rev." : ""} {card.name}
-      </p>
-      <p className="line-clamp-2 text-[9px] text-indigo-300/80">
-        {card.keywords.slice(0, 2).join(" · ")}
-      </p>
-    </div>
-  );
-}
-
-// ─── Card Back (face-down slot) ────────────────────────────────────────────────
-
-function CardBack({
-  position,
-  onClick,
-  disabled,
-}: {
-  position: number;
-  onClick: () => void;
-  disabled: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={`Reveal card for position ${position}`}
-      disabled={disabled}
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick();
-        }
-      }}
-      className={`relative h-full w-full overflow-hidden rounded-lg border-2 border-indigo-700/50 bg-indigo-900/80 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 ${
-        disabled
-          ? "cursor-default opacity-40"
-          : "cursor-pointer hover:border-indigo-400/70 hover:bg-indigo-800/80"
-      }`}
-    >
-      {/* shimmer */}
-      {!disabled && (
-        <span className="absolute inset-0 -translate-x-full animate-[card-shimmer_2s_linear_infinite] bg-gradient-to-r from-transparent via-indigo-400/10 to-transparent" />
-      )}
-      <span className="absolute inset-0 flex items-center justify-center text-indigo-400/50 text-lg select-none">
-        ✦
-      </span>
-      <span className="absolute bottom-1 left-0 right-0 text-center text-[9px] font-medium text-indigo-400/60">
-        {position}
-      </span>
-    </button>
-  );
-}
-
-// ─── Flip card wrapper ─────────────────────────────────────────────────────────
-
-function FlipCard({
-  position,
-  drawn,
-  onReveal,
-  drawingDisabled,
-}: {
-  position: number;
-  drawn: DrawnCard | null;
-  onReveal: () => void;
-  drawingDisabled: boolean;
-}) {
-  return (
-    <div className="perspective-[600px] h-full w-full">
-      <div
-        className={`relative h-full w-full transition-transform duration-700 [transform-style:preserve-3d] ${
-          drawn ? "[transform:rotateY(180deg)]" : ""
-        }`}
-      >
-        {/* Back */}
-        <div className="absolute inset-0 [backface-visibility:hidden]">
-          <CardBack
-            position={position}
-            onClick={onReveal}
-            disabled={drawingDisabled || drawn !== null}
-          />
-        </div>
-        {/* Front */}
-        <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)]">
-          {drawn && <CardFace drawn={drawn} />}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Celtic Cross Layout ───────────────────────────────────────────────────────
-
-function CelticCrossLayout({
-  spread,
-  drawnCards,
-  onReveal,
-  nextSlot,
-}: {
-  spread: TarotSpread;
-  drawnCards: (DrawnCard | null)[];
-  onReveal: (index: number) => void;
-  nextSlot: number;
-}) {
-  // 5 rows × 4 cols grid, each cell 64×96px
-  const ROWS = 5;
-  const COLS = 4;
-  const W = 64;
-  const H = 96;
-  const GAP = 8;
-
-  // Card 2 (challenge) overlays card 1 rotated 90°
-  return (
-    <div
-      className="relative mx-auto"
-      style={{ width: COLS * (W + GAP) - GAP, height: ROWS * (H + GAP) - GAP }}
-    >
-      {spread.positions.map((pos, i) => {
-        const [row, col] = CELTIC_CROSS_GRID[i];
-        const isChallenge = i === 1;
-        const drawn = drawnCards[i];
-        const isNext = i === nextSlot;
-
-        return (
-          <div
-            key={pos.number}
-            className={`absolute ${isChallenge ? "rotate-90" : ""}`}
-            style={{
-              left: col * (W + GAP),
-              top: row * (H + GAP),
-              width: W,
-              height: H,
-              zIndex: i === 0 ? 1 : isChallenge ? 2 : 0,
-            }}
-          >
-            <div className={`h-full w-full ${isNext && !drawn ? "ring-2 ring-indigo-400 ring-offset-2 rounded-lg" : ""}`}>
-              <FlipCard
-                position={pos.number}
-                drawn={drawn}
-                onReveal={() => onReveal(i)}
-                drawingDisabled={i !== nextSlot}
-              />
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── Generic Grid Layout ──────────────────────────────────────────────────────
-
-function GridLayout({
-  spread,
-  drawnCards,
-  onReveal,
-  nextSlot,
-}: {
-  spread: TarotSpread;
-  drawnCards: (DrawnCard | null)[];
-  onReveal: (index: number) => void;
-  nextSlot: number;
-}) {
-  const count = spread.positions.length;
-  // Up to 5 per row
-  const cols = Math.min(count, 5);
-
-  return (
-    <div
-      className="mx-auto grid gap-2"
-      style={{ gridTemplateColumns: `repeat(${cols}, 64px)` }}
-    >
-      {spread.positions.map((pos, i) => {
-        const drawn = drawnCards[i];
-        const isNext = i === nextSlot;
-        return (
-          <div
-            key={pos.number}
-            className={`h-24 w-16 ${isNext && !drawn ? "ring-2 ring-indigo-400 ring-offset-2 rounded-lg" : ""}`}
-          >
-            <FlipCard
-              position={pos.number}
-              drawn={drawn}
-              onReveal={() => onReveal(i)}
-              drawingDisabled={i !== nextSlot}
-            />
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 // ─── Reading Summary ──────────────────────────────────────────────────────────
 
 function ReadingSummary({
   spread,
   drawnCards,
+  positionLabels,
   onNewReading,
   onSave,
   savedReadingId,
   saveState,
 }: {
-  spread: TarotSpread;
+  spread: SpreadData;
   drawnCards: (DrawnCard | null)[];
+  positionLabels: string[];
   onNewReading: () => void;
   onSave: () => void;
   savedReadingId: string | null;
@@ -343,72 +130,55 @@ function ReadingSummary({
       </div>
 
       <div className="space-y-5">
-        {spread.positions.map((pos, i) => {
+        {positionLabels.map((label, i) => {
           const drawn = drawnCards[i];
           if (!drawn) return null;
-          const { card, reversed } = drawn;
-          const displayName = reversed ? `Reversed: ${card.name}` : card.name;
-          const meaning = reversed ? card.reversedMeaning : card.uprightMeaning;
-          const keywords = reversed ? card.reversedKeywords : card.keywords;
-
           return (
-            <div key={pos.number} className="space-y-2">
+            <div key={i} className="space-y-2">
               <div className="flex flex-wrap items-baseline gap-2">
                 <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  {pos.number}.
+                  {i + 1}.
                 </span>
-                <span className="font-semibold text-sm">{pos.name}</span>
-                <span className="text-xs text-muted-foreground">— {pos.meaning}</span>
+                <span className="font-semibold text-sm">{label}</span>
               </div>
-
-              <div className="rounded-lg border border-indigo-800/30 bg-indigo-950/30 px-4 py-3 space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-bold text-indigo-100">{displayName}</span>
-                  {reversed && (
-                    <Badge variant="outline" className="border-amber-500/50 text-amber-400 text-xs">
-                      Reversed
-                    </Badge>
+              <div className="rounded-lg border border-indigo-800/30 bg-indigo-950/30 px-4 py-3 space-y-3">
+                <div className="flex items-start gap-4">
+                  {drawn.card.image_url && (
+                    <img
+                      src={drawn.card.image_url}
+                      alt={drawn.card.name}
+                      className="w-16 h-24 rounded object-contain bg-black shrink-0"
+                    />
                   )}
+                  <div className="space-y-1">
+                    <span className="font-bold text-indigo-100">{drawn.card.name}</span>
+                    {drawn.card.description && (
+                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">
+                        {drawn.card.description}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-1">
-                  {keywords.slice(0, 5).map((kw) => (
-                    <Badge key={kw} variant="secondary" className="text-[10px] px-1.5 py-0.5">
-                      {kw}
-                    </Badge>
-                  ))}
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">
-                  {meaning}
-                </p>
               </div>
-
-              {i < spread.positions.length - 1 && <Separator className="mt-4" />}
             </div>
           );
         })}
       </div>
 
-      {/* ── Save / Notes / Share panel ── */}
+      {/* Save / Notes / Share */}
       <div className="rounded-lg border border-indigo-800/30 bg-indigo-950/20 px-4 py-4 space-y-4">
-        {/* Save button row */}
         <div className="flex flex-wrap items-center gap-3">
           {saveState === "idle" && (
-            <Button
-              onClick={onSave}
-              className="bg-indigo-700 hover:bg-indigo-600"
-              size="sm"
-            >
+            <Button onClick={onSave} className="bg-indigo-700 hover:bg-indigo-600" size="sm">
               Save Reading
             </Button>
           )}
           {saveState === "saving" && (
-            <Button disabled size="sm" className="bg-indigo-700/60">
-              Saving…
-            </Button>
+            <Button disabled size="sm" className="bg-indigo-700/60">Saving…</Button>
           )}
-          {(saveState === "saved") && (
+          {saveState === "saved" && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-900/40 px-3 py-1 text-xs font-medium text-emerald-400 ring-1 ring-emerald-700/40">
-              ✓ Reading saved to your history
+              ✓ Reading saved
             </span>
           )}
           {saveState === "error" && (
@@ -421,54 +191,32 @@ function ReadingSummary({
           )}
         </div>
 
-        {/* Notes — only shown after save */}
         {saveState === "saved" && savedReadingId && (
           <div className="space-y-2">
-            <label
-              htmlFor="reading-notes"
-              className="text-xs font-semibold uppercase tracking-widest text-indigo-400"
-            >
+            <label htmlFor="reading-notes" className="text-xs font-semibold uppercase tracking-widest text-indigo-400">
               Add Notes
             </label>
             <Textarea
               id="reading-notes"
-              placeholder="Write your personal reflections on this reading…"
+              placeholder="Write your personal reflections…"
               value={notes}
-              onChange={(e) => {
-                setNotes(e.target.value);
-                setNotesSaved(false);
-              }}
+              onChange={(e) => { setNotes(e.target.value); setNotesSaved(false); }}
               rows={3}
               className="resize-none bg-indigo-950/30 border-indigo-800/40 text-sm"
             />
             <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleSaveNotes}
-                disabled={notesSaving || !notes.trim()}
-              >
+              <Button size="sm" variant="outline" onClick={handleSaveNotes} disabled={notesSaving || !notes.trim()}>
                 {notesSaving ? "Saving…" : "Save Notes"}
               </Button>
-              {notesSaved && (
-                <span className="text-xs text-emerald-400">Notes saved.</span>
-              )}
+              {notesSaved && <span className="text-xs text-emerald-400">Notes saved.</span>}
             </div>
           </div>
         )}
 
-        {/* Share — only shown after save */}
         {saveState === "saved" && savedReadingId && (
           <div className="flex flex-wrap items-center gap-3 pt-1">
             {!shareToken ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleShare}
-                disabled={shareLoading}
-                className="border-indigo-700/50 text-indigo-300 hover:bg-indigo-900/30"
-                aria-label="Generate and copy shareable link for this reading"
-              >
+              <Button size="sm" variant="outline" onClick={handleShare} disabled={shareLoading} className="border-indigo-700/50 text-indigo-300 hover:bg-indigo-900/30">
                 {shareLoading ? "Generating…" : "Share Reading"}
               </Button>
             ) : (
@@ -482,14 +230,11 @@ function ReadingSummary({
                   setTimeout(() => setShareCopied(false), 3000);
                 }}
                 className="border-indigo-700/50 text-indigo-300 hover:bg-indigo-900/30"
-                aria-label="Copy shareable link to clipboard"
               >
                 {shareCopied ? "Link Copied!" : "Copy Share Link"}
               </Button>
             )}
-            {shareCopied && (
-              <span className="text-xs text-emerald-400">Copied to clipboard.</span>
-            )}
+            {shareCopied && <span className="text-xs text-emerald-400">Copied to clipboard.</span>}
           </div>
         )}
       </div>
@@ -510,75 +255,111 @@ function ReadingSummary({
 
 export default function SpreadReadingPage() {
   const params = useParams<{ spreadId: string }>();
-  const spread = useMemo(
-    () => tarotSpreads.find((s) => s.slug === params.spreadId),
-    [params.spreadId]
-  );
 
-  const [state, setState] = useState<ReadingState>("setup");
+  const [state, setState] = useState<ReadingState>("loading");
+  const [spread, setSpread] = useState<SpreadData | null>(null);
+  const [allCards, setAllCards] = useState<TarotCard[]>([]);
   const [deck, setDeck] = useState<TarotCard[]>([]);
+  const [drawIndex, setDrawIndex] = useState(0); // next index in shuffled deck to pick from
   const [drawnCards, setDrawnCards] = useState<(DrawnCard | null)[]>([]);
-  const [nextSlot, setNextSlot] = useState(0);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [savedReadingId, setSavedReadingId] = useState<string | null>(null);
+  const [revealedSlots, setRevealedSlots] = useState<Set<number>>(new Set());
 
-  const handleShuffleAndBegin = useCallback(() => {
-    if (!spread) return;
-    const shuffled = shuffle([...tarotCards]);
-    setDeck(shuffled);
-    setDrawnCards(Array(spread.positions.length).fill(null));
-    setNextSlot(0);
-    setState("drawing");
-  }, [spread]);
+  // Fetch spread + linked cards, then go straight to drawing
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/community/tarot/spreads/${params.spreadId}/cards`);
+        if (!res.ok) { setState("error"); return; }
+        const data = await res.json();
+        setSpread(data.spread);
+        setAllCards(data.cards);
 
+        // Preload card images
+        (data.cards as TarotCard[]).forEach((c) => {
+          if (c.image_url) {
+            const img = document.createElement("img");
+            img.src = c.image_url;
+          }
+        });
+
+        // Preload card back
+        const backImg = document.createElement("img");
+        backImg.src = CARD_BACK_URL;
+
+        // Shuffle and go straight to drawing (no setup screen)
+        const positions = data.spread?.layout_json?.position_labels ?? [];
+        const shuffled = shuffle([...data.cards]);
+        setDeck(shuffled);
+        setDrawnCards(Array(positions.length).fill(null));
+        setDrawIndex(0);
+        setRevealedSlots(new Set());
+        setState("drawing");
+      } catch {
+        setState("error");
+      }
+    })();
+  }, [params.spreadId]);
+
+  const positionLabels = useMemo(
+    () => spread?.layout_json?.position_labels ?? [],
+    [spread],
+  );
+  const totalCards = positionLabels.length;
+
+  // Click any empty slot to reveal — not forced sequential
   const handleReveal = useCallback(
     (index: number) => {
-      if (!spread || index !== nextSlot) return;
-      const card = deck[nextSlot];
-      const reversed = Math.random() < 0.2;
-      const drawn: DrawnCard = { card, reversed };
+      if (!spread || drawnCards[index] !== null) return; // already drawn
+      if (drawIndex >= deck.length) return; // no cards left in deck
+
+      const card = deck[drawIndex];
+      const drawn: DrawnCard = { card };
 
       setDrawnCards((prev) => {
         const next = [...prev];
         next[index] = drawn;
         return next;
       });
+      setRevealedSlots((prev) => new Set(prev).add(index));
+      setDrawIndex((prev) => prev + 1);
 
-      const newNext = nextSlot + 1;
-      setNextSlot(newNext);
-
-      if (newNext >= spread.positions.length) {
-        // Small delay so last flip animation can complete before switching to revealed
+      // Check if all positions filled
+      const newRevealed = revealedSlots.size + 1;
+      if (newRevealed >= totalCards) {
         setTimeout(() => setState("revealed"), 750);
       }
     },
-    [spread, deck, nextSlot]
+    [spread, deck, drawIndex, drawnCards, revealedSlots, totalCards],
   );
 
   const handleNewReading = useCallback(() => {
-    setState("setup");
-    setDeck([]);
-    setDrawnCards([]);
-    setNextSlot(0);
+    if (!allCards.length) return;
+    const shuffled = shuffle([...allCards]);
+    setDeck(shuffled);
+    setDrawnCards(Array(totalCards).fill(null));
+    setDrawIndex(0);
+    setRevealedSlots(new Set());
     setSaveState("idle");
     setSavedReadingId(null);
-  }, []);
+    setState("drawing");
+  }, [allCards, totalCards]);
 
   const handleSave = useCallback(async () => {
     if (!spread || saveState !== "idle") return;
     setSaveState("saving");
 
-    const cards: SavedCard[] = spread.positions.map((pos, i) => {
+    const cards: SavedCard[] = positionLabels.map((label, i) => {
       const drawn = drawnCards[i];
       if (!drawn) return null;
-      const { card, reversed } = drawn;
       return {
-        position: pos.number,
-        position_name: pos.name,
-        card_name: card.name,
-        is_reversed: reversed,
-        keywords: reversed ? card.reversedKeywords : card.keywords,
-        meaning: reversed ? card.reversedMeaning : card.uprightMeaning,
+        position: i + 1,
+        position_name: label,
+        card_name: drawn.card.name,
+        is_reversed: false,
+        keywords: [],
+        meaning: drawn.card.description ?? "",
       };
     }).filter((c): c is SavedCard => c !== null);
 
@@ -586,7 +367,7 @@ export default function SpreadReadingPage() {
       const res = await fetch("/api/community/tarot/readings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ spread_id: spread.slug, spread_name: spread.name, cards }),
+        body: JSON.stringify({ spread_id: spread.id, spread_name: spread.name, cards }),
       });
       if (!res.ok) throw new Error("Save failed");
       const json = await res.json();
@@ -595,91 +376,24 @@ export default function SpreadReadingPage() {
     } catch {
       setSaveState("error");
     }
-  }, [spread, drawnCards, saveState]);
+  }, [spread, drawnCards, saveState, positionLabels]);
 
-  // ── 404 ──
-  if (!spread) {
+  // ── Loading ──
+  if (state === "loading") {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="size-8 animate-spin text-indigo-400/60" />
+      </div>
+    );
+  }
+
+  // ── Error ──
+  if (state === "error" || !spread) {
     return (
       <div className="space-y-4 text-center py-16">
         <p className="text-lg font-semibold">Spread not found.</p>
         <Button asChild variant="outline">
           <Link href="/community/tarot">Browse Spreads</Link>
-        </Button>
-      </div>
-    );
-  }
-
-  const revealedCount = drawnCards.filter(Boolean).length;
-  const totalCards = spread.positions.length;
-  const progressPct = totalCards > 0 ? Math.round((revealedCount / totalCards) * 100) : 0;
-
-  // ── Setup screen ──────────────────────────────────────────────────────────
-  if (state === "setup") {
-    return (
-      <div className="mx-auto max-w-2xl space-y-6">
-        <div>
-          <Link
-            href="/community/tarot"
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            ← Tarot Spreads
-          </Link>
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">{spread.name}</h1>
-            <Badge
-              variant={
-                spread.difficulty === "Beginner"
-                  ? "secondary"
-                  : spread.difficulty === "Intermediate"
-                  ? "outline"
-                  : "default"
-              }
-            >
-              {spread.difficulty}
-            </Badge>
-            <Badge variant="secondary">
-              {spread.cardCount} {spread.cardCount === 1 ? "card" : "cards"}
-            </Badge>
-          </div>
-          <p className="mt-2 text-muted-foreground">{spread.purpose}</p>
-        </div>
-
-        <Card className="border-indigo-800/30 bg-indigo-950/20">
-          <CardContent className="pt-5">
-            <h2 className="font-semibold text-sm uppercase tracking-widest text-indigo-400 mb-2">
-              Overview
-            </h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {spread.overview.split("\n\n")[0]}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-indigo-800/30 bg-indigo-950/20">
-          <CardContent className="pt-5 space-y-2">
-            <h2 className="font-semibold text-sm uppercase tracking-widest text-indigo-400 mb-3">
-              Card Positions
-            </h2>
-            {spread.positions.map((pos) => (
-              <div key={pos.number} className="flex gap-3">
-                <span className="min-w-[1.5rem] text-sm font-bold text-indigo-400">
-                  {pos.number}.
-                </span>
-                <div>
-                  <span className="text-sm font-semibold">{pos.name}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">{pos.meaning}</span>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Button
-          size="lg"
-          className="w-full bg-indigo-700 hover:bg-indigo-600 text-white font-semibold"
-          onClick={handleShuffleAndBegin}
-        >
-          Shuffle &amp; Begin
         </Button>
       </div>
     );
@@ -692,6 +406,7 @@ export default function SpreadReadingPage() {
         <ReadingSummary
           spread={spread}
           drawnCards={drawnCards}
+          positionLabels={positionLabels}
           onNewReading={handleNewReading}
           onSave={handleSave}
           savedReadingId={savedReadingId}
@@ -701,92 +416,81 @@ export default function SpreadReadingPage() {
     );
   }
 
-  // ── Drawing screen ────────────────────────────────────────────────────────
-  const isCelticCross = spread.slug === "celtic-cross";
-
+  // ── Drawing screen (main view — matches old site) ─────────────────────────
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <Link
-          href="/community/tarot"
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          ← Tarot Spreads
-        </Link>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">{spread.name}</h1>
-        {nextSlot < totalCards && (
-          <p className="mt-1 text-sm text-muted-foreground">
-            Click card{" "}
-            <span className="font-semibold text-indigo-400">
-              {spread.positions[nextSlot].name}
-            </span>{" "}
-            (position {nextSlot + 1}) to reveal it.
-          </p>
-        )}
-      </div>
-
-      {/* Progress */}
-      <div className="space-y-1">
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>
-            {revealedCount} of {totalCards} revealed
-          </span>
-          <span>{progressPct}%</span>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <Link href="/community/tarot" className="text-sm text-muted-foreground hover:text-foreground">
+            ← Tarot Spreads
+          </Link>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight">{spread.name}</h1>
         </div>
-        <Progress value={progressPct} className="h-1.5" />
+        <Button variant="ghost" size="sm" onClick={handleNewReading} className="text-muted-foreground">
+          Start Over
+        </Button>
       </div>
 
-      {/* Layout */}
-      <div className="py-4">
-        {isCelticCross ? (
-          <CelticCrossLayout
-            spread={spread}
-            drawnCards={drawnCards}
-            onReveal={handleReveal}
-            nextSlot={nextSlot}
-          />
-        ) : (
-          <GridLayout
-            spread={spread}
-            drawnCards={drawnCards}
-            onReveal={handleReveal}
-            nextSlot={nextSlot}
-          />
-        )}
-      </div>
+      {/* Card Grid — old site style */}
+      <div className="rounded-2xl border border-[#343a45] bg-[#1a1e27] p-6 md:p-10">
+        <div
+          className="mx-auto flex flex-wrap justify-center gap-6"
+        >
+          {positionLabels.map((label, i) => {
+            const drawn = drawnCards[i];
+            const isRevealed = drawn !== null;
 
-      {/* Position legend */}
-      <div className="grid gap-1.5 sm:grid-cols-2">
-        {spread.positions.map((pos, i) => {
-          const drawn = drawnCards[i];
-          return (
-            <div
-              key={pos.number}
-              className={`flex items-start gap-2 rounded-md px-3 py-2 text-xs transition-colors ${
-                drawn
-                  ? "bg-indigo-950/40 text-indigo-200"
-                  : i === nextSlot
-                  ? "bg-indigo-900/40 ring-1 ring-indigo-500/40 text-foreground"
-                  : "text-muted-foreground"
-              }`}
-            >
-              <span className="min-w-[1.25rem] font-bold text-indigo-400">{pos.number}.</span>
-              <div>
-                <span className="font-semibold">{pos.name}</span>
-                {drawn && (
-                  <span className="ml-1 text-indigo-300/80">
-                    — {drawn.reversed ? `Rev. ${drawn.card.name}` : drawn.card.name}
+            return (
+              <div key={i} className="flex flex-col items-center gap-2">
+                {/* Card slot */}
+                <div
+                  className={`relative overflow-hidden rounded-lg border-[3px] transition-all duration-300 ${
+                    isRevealed
+                      ? "border-[#343a45] bg-black"
+                      : "border-[#343a45] bg-[#2a2e37] cursor-pointer hover:border-indigo-400/60 hover:shadow-lg hover:shadow-indigo-500/10"
+                  }`}
+                  style={{ width: 150, height: 220 }}
+                  onClick={() => !isRevealed && handleReveal(i)}
+                  role={isRevealed ? undefined : "button"}
+                  tabIndex={isRevealed ? undefined : 0}
+                  onKeyDown={(e) => {
+                    if (!isRevealed && (e.key === "Enter" || e.key === " ")) {
+                      e.preventDefault();
+                      handleReveal(i);
+                    }
+                  }}
+                  aria-label={isRevealed ? `${label}: ${drawn.card.name}` : `Click to reveal ${label}`}
+                >
+                  {isRevealed ? (
+                    /* Revealed card — show image with fade-in */
+                    <img
+                      src={drawn.card.image_url ?? ""}
+                      alt={drawn.card.name}
+                      className="h-full w-full object-contain animate-[fadeIn_0.5s_ease-in]"
+                    />
+                  ) : (
+                    /* Card back */
+                    <img
+                      src={CARD_BACK_URL}
+                      alt="Card back"
+                      className="h-full w-full object-cover"
+                    />
+                  )}
+                </div>
+
+                {/* Position number + label below card */}
+                <div className="flex flex-col items-center text-center">
+                  <span className="text-lg font-bold text-white">{i + 1}</span>
+                  <span className="text-xs text-muted-foreground max-w-[140px] leading-tight">
+                    {label}
                   </span>
-                )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
-
-      <Button variant="ghost" size="sm" onClick={handleNewReading} className="text-muted-foreground">
-        Start Over
-      </Button>
     </div>
   );
 }

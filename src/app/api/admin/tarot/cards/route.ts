@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const {
-    name, arcana, suit, number,
+    name, description, arcana, suit, number,
     priority, upright_meaning, reversed_meaning,
     image_url, card_image_url, related_spread_ids,
     spread_id, is_active,
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await admin
     .from("tarot_cards")
     .insert({
-      name, arcana, suit, number,
+      name, description, arcana, suit, number,
       priority: Number(priority),
       upright_meaning, reversed_meaning,
       image_url,

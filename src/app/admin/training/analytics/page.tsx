@@ -10,7 +10,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Download, RefreshCw, FilterX, Search } from "lucide-react";
+import { Download, RefreshCw, FilterX, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { LocalSearchAutocomplete } from "@/components/ui/local-search-autocomplete";
 import { cn } from "@/lib/utils";
@@ -218,6 +218,7 @@ export default function TrainingAnalyticsPage() {
   const [usersSearch, setUsersSearch] = useState("");
   const [usersSort, setUsersSort] = useState("name");
   const [usersLoading, setUsersLoading] = useState(false);
+  const [usersPageSize, setUsersPageSize] = useState(25);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Programs tab
@@ -251,7 +252,7 @@ export default function TrainingAnalyticsPage() {
   const handleReset = () => {
     setUsersSearch(""); setUsersSort("name"); setUsersPage(1);
     setProgramsSearch(""); setCategoriesSearch(""); setSelectedProgram("all"); setSelectedCategory("all");
-    fetchUsers(1, "", "name");
+    fetchUsers(1, "", "name", usersPageSize);
     fetchPrograms();
     fetchCategories("all");
     fetchLessons("all");
@@ -281,7 +282,7 @@ export default function TrainingAnalyticsPage() {
     c.title.toLowerCase().includes(categoriesSearch.toLowerCase())
   );
 
-  const USERS_LIMIT = 25;
+  const usersTotalPages = Math.max(1, Math.ceil(usersTotal / usersPageSize));
 
   // ── Fetch overview (always on mount) ────────────────────────────────────────
   useEffect(() => {
@@ -298,11 +299,12 @@ export default function TrainingAnalyticsPage() {
   }, []);
 
   // ── Fetch users ──────────────────────────────────────────────────────────────
-  const fetchUsers = (page: number, search: string, sort: string) => {
+  const fetchUsers = (page: number, search: string, sort: string, limitOverride?: number) => {
     setUsersLoading(true);
+    const limit = limitOverride ?? usersPageSize;
     const params = new URLSearchParams({
       page: String(page),
-      limit: String(USERS_LIMIT),
+      limit: String(limit),
       search,
       sort,
     });
@@ -410,6 +412,13 @@ export default function TrainingAnalyticsPage() {
     fetchUsers(newPage, usersSearch, usersSort);
   };
 
+  const handlePageSizeChange = (newSize: string) => {
+    const size = parseInt(newSize, 10);
+    setUsersPageSize(size);
+    setUsersPage(1);
+    fetchUsers(1, usersSearch, usersSort, size);
+  };
+
   // ── Tab change handler ────────────────────────────────────────────────────────
   const handleTabChange = (value: string) => {
     if (value === "users" && users.length === 0 && !usersLoading) {
@@ -478,6 +487,27 @@ export default function TrainingAnalyticsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Training Analytics</h1>
           <p className="text-muted-foreground text-sm">Platform-wide learning performance insights</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="gap-2"
+          >
+            <RefreshCw className={cn("size-4", isRefreshing && "animate-spin")} />
+            Refresh Data
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleReset}
+            className="gap-2"
+          >
+            <FilterX className="size-4" />
+            Reset All Filters
+          </Button>
         </div>
       </div>
 
@@ -581,6 +611,32 @@ export default function TrainingAnalyticsPage() {
                 <SelectItem value="time_spent">Time Spent</SelectItem>
               </SelectContent>
             </Select>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchUsers(usersPage, usersSearch, usersSort)}
+              disabled={usersLoading}
+              className="gap-1.5"
+            >
+              <RefreshCw className={cn("size-3.5", usersLoading && "animate-spin")} />
+              Refresh
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setUsersSearch("");
+                setUsersSort("name");
+                setUsersPage(1);
+                fetchUsers(1, "", "name");
+              }}
+              className="gap-1.5"
+            >
+              <FilterX className="size-3.5" />
+              Reset
+            </Button>
             {/* Export current view — client-side CSV from loaded data */}
             <Button
               variant="outline"
@@ -717,32 +773,80 @@ export default function TrainingAnalyticsPage() {
           </Card>
 
           {/* Pagination */}
-          {usersTotal > USERS_LIMIT && (
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>
-                Showing {(usersPage - 1) * USERS_LIMIT + 1}–
-                {Math.min(usersPage * USERS_LIMIT, usersTotal)} of {usersTotal}
-              </span>
-              <div className="flex items-center gap-2">
+          <div
+            className={cn(
+              "flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm text-muted-foreground mt-4",
+              usersLoading && "opacity-50 pointer-events-none"
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <p>
+                Showing {usersTotal === 0 ? 0 : Math.min((usersPage - 1) * usersPageSize + 1, usersTotal)}–
+                {Math.min(usersPage * usersPageSize, usersTotal)} of {usersTotal}
+              </p>
+              <Select value={String(usersPageSize)} onValueChange={handlePageSizeChange}>
+                <SelectTrigger className="h-8 w-28">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[10, 25, 50, 100].map((n) => (
+                    <SelectItem key={n} value={String(n)}>
+                      {n} / page
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {usersTotalPages > 1 && (
+              <div className="flex items-center gap-1">
                 <Button
-                  size="sm"
                   variant="outline"
-                  disabled={usersPage <= 1 || usersLoading}
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  disabled={usersPage <= 1}
                   onClick={() => handlePageChange(usersPage - 1)}
                 >
-                  Previous
+                  <ChevronLeft className="size-4" />
                 </Button>
+
+                {Array.from({ length: usersTotalPages }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === usersTotalPages || Math.abs(p - usersPage) <= 2)
+                  .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+                    if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push("…");
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, idx) =>
+                    p === "…" ? (
+                      <span key={`ellipsis-${idx}`} className="px-2">
+                        ...
+                      </span>
+                    ) : (
+                      <Button
+                        key={p}
+                        variant={p === usersPage ? "default" : "outline"}
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => handlePageChange(p as number)}
+                      >
+                        {p}
+                      </Button>
+                    )
+                  )}
+
                 <Button
-                  size="sm"
                   variant="outline"
-                  disabled={usersPage * USERS_LIMIT >= usersTotal || usersLoading}
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  disabled={usersPage >= usersTotalPages}
                   onClick={() => handlePageChange(usersPage + 1)}
                 >
-                  Next
+                  <ChevronRight className="size-4" />
                 </Button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </TabsContent>
 
         {/* ── Programs tab ──────────────────────────────────────────────────── */}
