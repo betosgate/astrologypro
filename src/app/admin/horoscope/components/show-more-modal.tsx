@@ -149,7 +149,7 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
                                  {entryTitle}
                                </h4>
                              </div>
-                             <div className={cn("rounded-xl border border-black/10 pt-6 pb-2 px-8 shadow-2xl relative overflow-hidden text-black text-[19px] leading-[28px] font-normal", entryBg || "bg-[#f0a023]")}>
+                             <div className={cn("rounded-xl border border-black/10 pt-6 pb-2 px-8 shadow-2xl relative overflow-hidden text-black text-[19px] leading-[28px] font-normal", entryBg || "interp-gradient-default")}>
                                 {entryContent}
                              </div>
                           </div>
@@ -162,7 +162,7 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
                              {isAspect ? (aspectTitle ?? title) : title.replace(/_/g, " ")}
                            </h2>
                         </div>
-                        <div className={cn("rounded-xl border border-black/10 pt-6 pb-4 px-8 shadow-3xl text-black text-[19px] leading-[28px] font-normal relative overflow-hidden", bgClass || "bg-[#f0a023]")}>
+                        <div className={cn("rounded-xl border border-black/10 pt-6 pb-4 px-8 shadow-3xl text-black text-[19px] leading-[28px] font-normal relative overflow-hidden", bgClass || "interp-gradient-default")}>
                           {content}
                         </div>
                       </div>
