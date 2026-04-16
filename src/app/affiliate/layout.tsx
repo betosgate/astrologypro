@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, DollarSign, Link as LinkIcon } from "lucide-react";
+import { LayoutDashboard, DollarSign, Link as LinkIcon, Megaphone } from "lucide-react";
 import { PortalLogoutButton } from "@/components/portal/logout-button";
 import { SectionContainer } from "@/components/shared/section-container";
 
 const navItems = [
   { href: "/affiliate/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/affiliate/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/affiliate/links", label: "My Links", icon: LinkIcon },
   { href: "/affiliate/commissions", label: "Commissions", icon: DollarSign },
 ];
