@@ -132,11 +132,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // No match — reject call
-    return NextResponse.json({
-      action: "reject",
-      reason: "No scheduled booking or card on file",
-    });
+    // TODO: Remove test bypass before production launch
+    // Temporary: allow call through even without booking/card for testing
+    {
+      const { data: phoneSession } = await admin
+        .from("phone_sessions")
+        .insert({
+          diviner_id: diviner.id,
+          client_id: client?.id ?? null,
+          caller_phone: callerPhone,
+          session_type: "standalone",
+          phone_provider: "chime",
+          started_at: new Date().toISOString(),
+          status: "active",
+        })
+        .select("id")
+        .single();
+
+      return NextResponse.json({
+        action: "enqueue",
+        divinerId: diviner.id,
+        phoneSessionId: phoneSession?.id,
+        phone_answer_mode: diviner.phone_answer_mode ?? "both",
+        phone_mobile: diviner.phone_mobile ?? null,
+      });
+    }
   } catch (error) {
     console.error("Chime voice lookup error:", error);
     return NextResponse.json(
