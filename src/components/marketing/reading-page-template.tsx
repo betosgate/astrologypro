@@ -5,6 +5,7 @@ import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { getDivinerAvatarUrl } from "@/lib/diviner-images";
 import { ReadingLeadCapture } from "@/components/marketing/reading-lead-capture";
+import { ReadingLeadForm } from "@/components/marketing/reading-lead-form";
 import { ReadingStickyBar } from "@/components/marketing/reading-sticky-bar";
 
 export interface DivinerLandingCard {
@@ -436,26 +437,39 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
             </div>
           </section>
 
-          {/* SECTION D.5 — Email Lead Capture (mid-page, after education, before deep-dive) */}
+          {/* SECTION D.5 — Qualified Lead Form (mid-page, after education) */}
           <section className="px-4 pb-8 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-2xl">
-              <div className="relative overflow-hidden rounded-2xl border border-[#c9a84c]/20 bg-[radial-gradient(ellipse_at_50%_50%,rgba(201,168,76,0.06)_0%,transparent_70%)] p-8 text-center sm:p-10">
-                <div className="pointer-events-none absolute -left-10 -top-10 size-40 rounded-full bg-[#c9a84c]/10 blur-3xl" />
-                <div className="pointer-events-none absolute -bottom-10 -right-10 size-40 rounded-full bg-[#c9a84c]/10 blur-3xl" />
+              <div className="relative overflow-hidden rounded-2xl border border-[#c9a84c]/20 bg-[#0d1117]/80 p-8 sm:p-10">
+                <div className="pointer-events-none absolute -left-10 -top-10 size-52 rounded-full bg-[#c9a84c]/6 blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-10 -right-10 size-52 rounded-full bg-[#c9a84c]/6 blur-3xl" />
                 <div className="relative">
-                  <div className="mb-4 inline-flex size-12 items-center justify-center rounded-full border border-[#c9a84c]/30 bg-[#c9a84c]/10">
-                    <svg className="size-6 text-[#e2c97e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                    </svg>
+                  {/* Header */}
+                  <div className="mb-6 text-center">
+                    <div className="mb-3 inline-flex size-12 items-center justify-center rounded-full border border-[#c9a84c]/30 bg-[#c9a84c]/10">
+                      <span className="text-xl" aria-hidden="true">
+                        {serviceType === "astrology" ? "🔮" : "🃏"}
+                      </span>
+                    </div>
+                    <h2 className="text-xl font-bold text-[#f5f0e8]">
+                      Get a Free{" "}
+                      {serviceType === "astrology" ? "Astrology" : "Tarot"} Reading Guide
+                      <span className="ml-2 inline-block rounded-full bg-[#c9a84c]/15 px-2 py-0.5 text-xs font-semibold text-[#c9a84c]">
+                        Free
+                      </span>
+                    </h2>
+                    <p className="mt-2 text-sm text-[#b8bcd0]/55">
+                      {serviceType === "astrology"
+                        ? "Share your birth details and we'll send a personalised guide for your " + serviceLabel + " reading."
+                        : "Tell us your question and we'll match you with the right tarot reader for " + serviceLabel + "."}
+                    </p>
                   </div>
-                  <h2 className="mb-2 text-xl font-bold text-[#f5f0e8]">
-                    Get Your Free {serviceType === "tarot" ? "Tarot" : "Astrology"} Reading Guide
-                  </h2>
-                  <p className="mx-auto mb-6 max-w-md text-sm leading-relaxed text-[#b8bcd0]/65">
-                    What to prepare, what questions to ask, and how to get the most from {emailGuideSubject} — delivered to your inbox.
-                  </p>
-                  <ReadingLeadCapture subject={emailGuideSubject} />
-                  <p className="mt-3 text-xs text-[#b8bcd0]/35">No spam. Unsubscribe anytime.</p>
+
+                  <ReadingLeadForm
+                    serviceType={serviceType}
+                    serviceName={serviceLabel}
+                    sourceUrl={pageUrl}
+                  />
                 </div>
               </div>
             </div>
