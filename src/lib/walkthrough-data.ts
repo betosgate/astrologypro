@@ -1167,27 +1167,19 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 // ---------weekly transits----------//
 
 {
-  "name": "horoscope_romantic_relationships_setup",
-  "label": "Romantic Relationships: Entry & Generation Setup",
-  "description": "Enter both partners' birth details to generate the full romantic compatibility reading step by step.",
+  "name": "horoscope_weekly_entry_setup",
+  "label": "Weekly Transits: Entry & Generation Setup",
+  "description": "Enter birth details to generate the full weekly transit reading in 6 screens.",
   "group": "Horoscope Toolkit",
-  "subModule": "Romantic Relationships",
-  "purpose": "This is the first screen of the Romantic Relationships module. The user must enter date of birth, time of birth, and place of birth for both Person 1 and Person 2. These details are required because the system uses them to calculate two accurate natal charts. After the required fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform starts building the relationship reading screen by screen. It compares both charts and then generates compatibility summary, synastry interpretations, deep synastry analysis, composite relationship insights, Davison relationship insights, elemental balance, timing and transits, and karmic or soulmate indicators. This setup screen is important because if birth time or birth place is wrong, houses, angles, compatibility patterns, and relationship analysis may change.",
+  "subModule": "Weekly Transits",
+  "purpose": "This is the first entry point of the Weekly Transits module. The user enters date of birth, time of birth, and place of birth so the system can calculate the natal chart as the base astrological reference. After the required fields are filled, the Generate Reading button becomes enabled. Once the user clicks Generate Reading, the platform starts building the weekly transit response screen by screen. It creates the natal chart, calculates the selected week's transit positions, compares transit planets with natal planets, and then generates the weekly chart view, transit relation table, transit interpretation cards, deep natal planet analysis, and deeper transit event analysis. This setup is important because all weekly transit readings depend on accurate birth data. If the time or place is wrong, houses, angles, and transit activations may change, which can affect the astrologer's interpretation.",
   "bullets": [
-    "📅 Step 1 — Enter Both Birth Dates: The user enters date of birth for both partners so the system can create the two natal chart foundations.",
-    "🕒 Step 2 — Enter Both Birth Times: The user enters exact time of birth for both partners because Ascendant, houses, and relationship overlays depend on correct timing.",
-    "📍 Step 3 — Enter Both Birth Places: The user enters place of birth for both partners so the engine can use the correct coordinates and timezone for accurate chart generation.",
-    "📝 Step 4 — Area of Inquiry (Optional): The user can add a focus topic such as love, marriage, trust, communication, long-term future, or emotional connection.",
-    "✅ Step 5 — Generate Reading Activation: After both partners' required birth details are completed correctly, the Generate Reading button becomes active.",
-    "💕 Step 6 — Compatibility Summary: The system gives a simple first overview of the relationship through Sun, Moon, Venus, and Mars compatibility so the user can quickly understand the basic connection.",
-    "🔗 Step 7 — Synastry Interpretations: The platform compares both natal charts directly and shows how one partner's planets interact with the other partner's planets in love, emotion, and communication.",
-    "🧠 Step 8 — Deep Synastry Analysis: Important synastry aspects can open in deeper view so the astrologer can understand the emotional and psychological meaning more clearly.",
-    "🌌 Step 9 — Composite Relationship Reading: The system creates the composite chart to show the energy of the relationship itself as one shared entity.",
-    "❤️ Step 10 — Davison Relationship Reading: The platform creates the Davison chart to explain how the relationship lives and develops in real life as a shared partnership.",
-    "🌍 Step 11 — Elemental Balance: The system compares Fire, Earth, Air, and Water between both partners to show passion, stability, communication, and emotional depth in the relationship.",
-    "⏳ Step 12 — Timing & Transits: The reading highlights relationship timing, active connection periods, and important emotional or romantic phases between the two people.",
-    "🔮 Step 13 — Karmic & Soulmate Indicators: The system identifies deep karmic, soulmate, growth, and destiny-style patterns that make the relationship feel especially meaningful.",
-    "📖 Step 14 — Show More Deep Readings: Important cards can open into deeper explanation screens so the user can understand the relationship in more detail without confusion."
+    "📅 Step 1 — Birth Data Entry: The user enters date of birth, time of birth, and place of birth. The user may also select a specific week and optionally add an area of inquiry.",
+    "✅ Step 2 — Generate Reading Activation: After the required birth details are filled correctly, the Generate Reading button becomes enabled and starts the weekly transit calculation.",
+    "📊 Step 3 — Weekly Chart View: The system generates the natal chart, weekly transit chart, and overlay chart so astrologers can visually compare birth positions with current weekly planetary movement.",
+    "📋 Step 4 — Weekly Transit Relation Table: The platform creates a table showing the date, transit planet, aspect type, and natal planet being activated during the selected week.",
+    "💬 Step 5 — Weekly Transit Interpretations: Important weekly transit aspects are converted into short readable interpretation cards so astrologers can quickly understand the meaning of each active influence.",
+    "🧠 Step 6 — Deep Weekly Analysis: The system provides deeper analysis of important natal planet activations and major transit events for more detailed astrological understanding."
   ]
 },
    {
