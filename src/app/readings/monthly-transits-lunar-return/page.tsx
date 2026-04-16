@@ -10,18 +10,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Monthly Transits + Lunar Return Readings | AstrologyPro",
     description:
       "Every month the Moon returns to its natal position, creating a personal lunar chart for the next 28 days. Combined with monthly transits, this reading maps your emotional and practical themes for the month ahead.",
+    alternates: { canonical: `${APP_URL}/readings/monthly-transits-lunar-return` },
     openGraph: {
       title: "Monthly Transits + Lunar Return Readings | AstrologyPro",
       description:
         "Every month the Moon returns to its natal position, creating a personal lunar chart for the next 28 days. Combined with monthly transits, this reading maps your emotional and practical themes for the month ahead.",
       type: "website",
       url: `${APP_URL}/readings/monthly-transits-lunar-return`,
+      images: [{ url: "https://astrologypro.com/images/services/monthly-transit.png", width: 1200, height: 630, alt: "Monthly Transits & Lunar Return Readings" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Monthly Transits + Lunar Return Readings | AstrologyPro",
       description:
         "Every month the Moon returns to its natal position, creating a personal lunar chart for the next 28 days. Combined with monthly transits, this reading maps your emotional and practical themes for the month ahead.",
+      images: ["https://astrologypro.com/images/services/monthly-transit.png"],
     },
   };
 }
@@ -51,7 +54,7 @@ async function getMonthlyTransitsLunarReturnDiviners(): Promise<DivinerLandingCa
 
   let query = admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, is_certified")
+    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
     .eq("is_active", true)
     .eq("onboarding_completed", true)
     .eq("charges_enabled", true)
@@ -68,7 +71,7 @@ async function getMonthlyTransitsLunarReturnDiviners(): Promise<DivinerLandingCa
   if (!diviners || diviners.length === 0) {
     const { data: fallback } = await admin
       .from("diviners")
-      .select("id, username, display_name, tagline, avatar_url, is_certified")
+      .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
       .eq("is_active", true)
       .eq("onboarding_completed", true)
       .eq("charges_enabled", true)
@@ -94,6 +97,7 @@ async function getMonthlyTransitsLunarReturnDiviners(): Promise<DivinerLandingCa
       displayName: d.display_name as string,
       tagline: (d.tagline as string | null) ?? null,
       avatarUrl: (d.avatar_url as string | null) ?? null,
+      specialties: (d.specialties as string[] | null) ?? null,
       isCertified: !!(d.is_certified as boolean | null),
       startingPrice: fallbackPrices.get(d.id as string) ?? null,
     }));
@@ -118,6 +122,7 @@ async function getMonthlyTransitsLunarReturnDiviners(): Promise<DivinerLandingCa
     displayName: d.display_name as string,
     tagline: (d.tagline as string | null) ?? null,
     avatarUrl: (d.avatar_url as string | null) ?? null,
+    specialties: (d.specialties as string[] | null) ?? null,
     isCertified: !!(d.is_certified as boolean | null),
     startingPrice: priceByDiviner.get(d.id as string) ?? null,
   }));

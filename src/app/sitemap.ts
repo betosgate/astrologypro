@@ -126,14 +126,39 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     '/glossary',
     '/zodiac',
     '/readings',
-    '/readings/saturn-return',
-    '/readings/jupiter-return',
-    '/readings/solar-return',
   ].map((route) => ({
     url: `${BASE_URL}${route}`,
     lastModified: now,
     changeFrequency: 'weekly' as const,
     priority: 0.8,
+  }))
+
+  // All 19 reading landing pages — high SEO value
+  const readingLandingPages: MetadataRoute.Sitemap = [
+    '/readings/nativity-birth-chart',
+    '/readings/solar-return',
+    '/readings/saturn-return',
+    '/readings/jupiter-return',
+    '/readings/mars-return',
+    '/readings/uranus-opposition',
+    '/readings/weekly-transits',
+    '/readings/monthly-transits-lunar-return',
+    '/readings/romantic-relationships',
+    '/readings/friendship-relationships',
+    '/readings/business-relationship',
+    '/readings/predictive-event-horary',
+    '/readings/3-card-basic-question-spread',
+    '/readings/5-card-complex-question-spread',
+    '/readings/7-card-6-month-forward-review',
+    '/readings/7-card-horseshoe-spread-major-read',
+    '/readings/10-card-relationship-spread',
+    '/readings/10-card-celtic-cross-major-read',
+    '/readings/12-card-astrological-spread-major-read',
+  ].map((route) => ({
+    url: `${BASE_URL}${route}`,
+    lastModified: now,
+    changeFrequency: 'weekly' as const,
+    priority: 0.9,
   }))
 
   // Zodiac sign pages
@@ -240,6 +265,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...marketingPages,
     ...hubPages,
+    ...readingLandingPages,
     ...divinerProfilePages,
     ...divinerServicesHubPages,
     ...divinerServiceDetailPages,

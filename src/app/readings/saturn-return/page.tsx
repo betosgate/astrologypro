@@ -10,18 +10,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Saturn Return Readings | AstrologyPro",
     description:
       "Your Saturn Return is one of the most significant astrological events of your life. Book a personal reading with a certified astrologer to navigate this powerful transition.",
+    alternates: { canonical: `${APP_URL}/readings/saturn-return` },
     openGraph: {
       title: "Saturn Return Readings | AstrologyPro",
       description:
         "Your Saturn Return is one of the most significant astrological events of your life. Book a personal reading with a certified astrologer to navigate this powerful transition.",
       type: "website",
       url: `${APP_URL}/readings/saturn-return`,
+      images: [{ url: "https://astrologypro.com/images/services/saturn-return.png", width: 1200, height: 630, alt: "Saturn Return Readings" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Saturn Return Readings | AstrologyPro",
       description:
         "Your Saturn Return is one of the most significant astrological events of your life. Book a personal reading with a certified astrologer to navigate this powerful transition.",
+      images: ["https://astrologypro.com/images/services/saturn-return.png"],
     },
   };
 }

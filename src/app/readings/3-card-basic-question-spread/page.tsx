@@ -10,18 +10,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "3 Card Tarot Spread Readings | AstrologyPro",
     description:
       "A focused 3-card tarot reading gives you direct clarity on any question — past, present, and future, or situation, action, and outcome. Quick, powerful, and surprisingly precise.",
+    alternates: { canonical: `${APP_URL}/readings/3-card-basic-question-spread` },
     openGraph: {
       title: "3 Card Tarot Spread Readings | AstrologyPro",
       description:
         "A focused 3-card tarot reading gives you direct clarity on any question — past, present, and future, or situation, action, and outcome. Quick, powerful, and surprisingly precise.",
       type: "website",
       url: `${APP_URL}/readings/3-card-basic-question-spread`,
+      images: [{ url: "https://astrologypro.com/images/services/3-card-basic.png", width: 1200, height: 630, alt: "3-Card Basic Question Spread" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "3 Card Tarot Spread Readings | AstrologyPro",
       description:
         "A focused 3-card tarot reading gives you direct clarity on any question — past, present, and future, or situation, action, and outcome. Quick, powerful, and surprisingly precise.",
+      images: ["https://astrologypro.com/images/services/3-card-basic.png"],
     },
   };
 }
@@ -51,7 +54,7 @@ async function get3CardBasicQuestionSpreadDiviners(): Promise<DivinerLandingCard
 
   let query = admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, is_certified")
+    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
     .eq("is_active", true)
     .eq("onboarding_completed", true)
     .eq("charges_enabled", true)
@@ -68,7 +71,7 @@ async function get3CardBasicQuestionSpreadDiviners(): Promise<DivinerLandingCard
   if (!diviners || diviners.length === 0) {
     const { data: fallback } = await admin
       .from("diviners")
-      .select("id, username, display_name, tagline, avatar_url, is_certified")
+      .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
       .eq("is_active", true)
       .eq("onboarding_completed", true)
       .eq("charges_enabled", true)
@@ -94,6 +97,7 @@ async function get3CardBasicQuestionSpreadDiviners(): Promise<DivinerLandingCard
       displayName: d.display_name as string,
       tagline: (d.tagline as string | null) ?? null,
       avatarUrl: (d.avatar_url as string | null) ?? null,
+      specialties: (d.specialties as string[] | null) ?? null,
       isCertified: !!(d.is_certified as boolean | null),
       startingPrice: fallbackPrices.get(d.id as string) ?? null,
     }));
@@ -118,6 +122,7 @@ async function get3CardBasicQuestionSpreadDiviners(): Promise<DivinerLandingCard
     displayName: d.display_name as string,
     tagline: (d.tagline as string | null) ?? null,
     avatarUrl: (d.avatar_url as string | null) ?? null,
+    specialties: (d.specialties as string[] | null) ?? null,
     isCertified: !!(d.is_certified as boolean | null),
     startingPrice: priceByDiviner.get(d.id as string) ?? null,
   }));

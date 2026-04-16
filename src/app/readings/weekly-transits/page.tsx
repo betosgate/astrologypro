@@ -10,18 +10,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Weekly Transit Readings | AstrologyPro",
     description:
       "Personalized weekly transit readings show you exactly how current planetary movements activate your natal chart — so you can act with precision rather than guesswork.",
+    alternates: { canonical: `${APP_URL}/readings/weekly-transits` },
     openGraph: {
       title: "Weekly Transit Readings | AstrologyPro",
       description:
         "Personalized weekly transit readings show you exactly how current planetary movements activate your natal chart — so you can act with precision rather than guesswork.",
       type: "website",
       url: `${APP_URL}/readings/weekly-transits`,
+      images: [{ url: "https://astrologypro.com/images/services/weekly-transits.png", width: 1200, height: 630, alt: "Weekly Transits Readings" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Weekly Transit Readings | AstrologyPro",
       description:
         "Personalized weekly transit readings show you exactly how current planetary movements activate your natal chart — so you can act with precision rather than guesswork.",
+      images: ["https://astrologypro.com/images/services/weekly-transits.png"],
     },
   };
 }
@@ -51,7 +54,7 @@ async function getWeeklyTransitsDiviners(): Promise<DivinerLandingCard[]> {
 
   let query = admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, is_certified")
+    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
     .eq("is_active", true)
     .eq("onboarding_completed", true)
     .eq("charges_enabled", true)
@@ -68,7 +71,7 @@ async function getWeeklyTransitsDiviners(): Promise<DivinerLandingCard[]> {
   if (!diviners || diviners.length === 0) {
     const { data: fallback } = await admin
       .from("diviners")
-      .select("id, username, display_name, tagline, avatar_url, is_certified")
+      .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
       .eq("is_active", true)
       .eq("onboarding_completed", true)
       .eq("charges_enabled", true)
@@ -94,6 +97,7 @@ async function getWeeklyTransitsDiviners(): Promise<DivinerLandingCard[]> {
       displayName: d.display_name as string,
       tagline: (d.tagline as string | null) ?? null,
       avatarUrl: (d.avatar_url as string | null) ?? null,
+      specialties: (d.specialties as string[] | null) ?? null,
       isCertified: !!(d.is_certified as boolean | null),
       startingPrice: fallbackPrices.get(d.id as string) ?? null,
     }));
@@ -118,6 +122,7 @@ async function getWeeklyTransitsDiviners(): Promise<DivinerLandingCard[]> {
     displayName: d.display_name as string,
     tagline: (d.tagline as string | null) ?? null,
     avatarUrl: (d.avatar_url as string | null) ?? null,
+    specialties: (d.specialties as string[] | null) ?? null,
     isCertified: !!(d.is_certified as boolean | null),
     startingPrice: priceByDiviner.get(d.id as string) ?? null,
   }));

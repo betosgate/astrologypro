@@ -10,18 +10,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Solar Return Readings | AstrologyPro",
     description:
       "Every year on your birthday, the Sun returns to its exact natal position — creating a new energetic blueprint. Book a Solar Return reading to discover what the year ahead holds.",
+    alternates: { canonical: `${APP_URL}/readings/solar-return` },
     openGraph: {
       title: "Solar Return Readings | AstrologyPro",
       description:
         "Every year on your birthday, the Sun returns to its exact natal position — creating a new energetic blueprint for the year ahead.",
       type: "website",
       url: `${APP_URL}/readings/solar-return`,
+      images: [{ url: "https://astrologypro.com/images/services/solar-return.png", width: 1200, height: 630, alt: "Solar Return Readings" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Solar Return Readings | AstrologyPro",
       description:
         "Every year on your birthday, the Sun returns to its exact natal position — discover what the year ahead holds.",
+      images: ["https://astrologypro.com/images/services/solar-return.png"],
     },
   };
 }
@@ -51,7 +54,7 @@ async function getSolarReturnDiviners(): Promise<DivinerLandingCard[]> {
 
   let query = admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, is_certified")
+    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
     .eq("is_active", true)
     .eq("onboarding_completed", true)
     .eq("charges_enabled", true)
@@ -68,7 +71,7 @@ async function getSolarReturnDiviners(): Promise<DivinerLandingCard[]> {
   if (!diviners || diviners.length === 0) {
     const { data: fallback } = await admin
       .from("diviners")
-      .select("id, username, display_name, tagline, avatar_url, is_certified")
+      .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
       .eq("is_active", true)
       .eq("onboarding_completed", true)
       .eq("charges_enabled", true)
@@ -94,6 +97,7 @@ async function getSolarReturnDiviners(): Promise<DivinerLandingCard[]> {
       displayName: d.display_name as string,
       tagline: (d.tagline as string | null) ?? null,
       avatarUrl: (d.avatar_url as string | null) ?? null,
+      specialties: (d.specialties as string[] | null) ?? null,
       isCertified: !!(d.is_certified as boolean | null),
       startingPrice: fallbackPrices.get(d.id as string) ?? null,
     }));
@@ -118,6 +122,7 @@ async function getSolarReturnDiviners(): Promise<DivinerLandingCard[]> {
     displayName: d.display_name as string,
     tagline: (d.tagline as string | null) ?? null,
     avatarUrl: (d.avatar_url as string | null) ?? null,
+    specialties: (d.specialties as string[] | null) ?? null,
     isCertified: !!(d.is_certified as boolean | null),
     startingPrice: priceByDiviner.get(d.id as string) ?? null,
   }));

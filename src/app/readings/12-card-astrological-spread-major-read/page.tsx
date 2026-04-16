@@ -10,18 +10,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "12 Card Astrological Tarot Spread | AstrologyPro",
     description:
       "The 12-card astrological spread maps one card to each astrological house — creating a holistic yearly overview covering all major life areas from identity and money to relationships, career, and spirituality.",
+    alternates: { canonical: `${APP_URL}/readings/12-card-astrological-spread-major-read` },
     openGraph: {
       title: "12 Card Astrological Tarot Spread | AstrologyPro",
       description:
         "The 12-card astrological spread maps one card to each astrological house — creating a holistic yearly overview covering all major life areas from identity and money to relationships, career, and spirituality.",
       type: "website",
       url: `${APP_URL}/readings/12-card-astrological-spread-major-read`,
+      images: [{ url: "https://astrologypro.com/images/services/12-card-astrological.png", width: 1200, height: 630, alt: "12-Card Astrological Spread" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "12 Card Astrological Tarot Spread | AstrologyPro",
       description:
         "The 12-card astrological spread maps one card to each astrological house — creating a holistic yearly overview covering all major life areas from identity and money to relationships, career, and spirituality.",
+      images: ["https://astrologypro.com/images/services/12-card-astrological.png"],
     },
   };
 }
@@ -51,7 +54,7 @@ async function getAstrologicalSpreadDiviners(): Promise<DivinerLandingCard[]> {
 
   let query = admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, is_certified")
+    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
     .eq("is_active", true)
     .eq("onboarding_completed", true)
     .eq("charges_enabled", true)
@@ -68,7 +71,7 @@ async function getAstrologicalSpreadDiviners(): Promise<DivinerLandingCard[]> {
   if (!diviners || diviners.length === 0) {
     const { data: fallback } = await admin
       .from("diviners")
-      .select("id, username, display_name, tagline, avatar_url, is_certified")
+      .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
       .eq("is_active", true)
       .eq("onboarding_completed", true)
       .eq("charges_enabled", true)
@@ -94,6 +97,7 @@ async function getAstrologicalSpreadDiviners(): Promise<DivinerLandingCard[]> {
       displayName: d.display_name as string,
       tagline: (d.tagline as string | null) ?? null,
       avatarUrl: (d.avatar_url as string | null) ?? null,
+      specialties: (d.specialties as string[] | null) ?? null,
       isCertified: !!(d.is_certified as boolean | null),
       startingPrice: fallbackPrices.get(d.id as string) ?? null,
     }));
@@ -118,6 +122,7 @@ async function getAstrologicalSpreadDiviners(): Promise<DivinerLandingCard[]> {
     displayName: d.display_name as string,
     tagline: (d.tagline as string | null) ?? null,
     avatarUrl: (d.avatar_url as string | null) ?? null,
+    specialties: (d.specialties as string[] | null) ?? null,
     isCertified: !!(d.is_certified as boolean | null),
     startingPrice: priceByDiviner.get(d.id as string) ?? null,
   }));

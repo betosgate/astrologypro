@@ -10,18 +10,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Nativity Birth Chart Readings | AstrologyPro",
     description:
       "Your natal chart is the celestial blueprint of your entire life — cast at the exact moment you drew your first breath. Book a birth chart reading to understand your core nature, purpose, and life path.",
+    alternates: { canonical: `${APP_URL}/readings/nativity-birth-chart` },
     openGraph: {
       title: "Nativity Birth Chart Readings | AstrologyPro",
       description:
         "Your natal chart is the celestial blueprint of your entire life — cast at the exact moment you drew your first breath. Book a birth chart reading to understand your core nature, purpose, and life path.",
       type: "website",
       url: `${APP_URL}/readings/nativity-birth-chart`,
+      images: [{ url: "https://astrologypro.com/images/services/natal-chart.png", width: 1200, height: 630, alt: "Nativity Birth Chart Readings" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Nativity Birth Chart Readings | AstrologyPro",
       description:
         "Your natal chart is the celestial blueprint of your entire life — cast at the exact moment you drew your first breath.",
+      images: ["https://astrologypro.com/images/services/natal-chart.png"],
     },
   };
 }
@@ -51,7 +54,7 @@ async function getNativityBirthChartDiviners(): Promise<DivinerLandingCard[]> {
 
   let query = admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, is_certified")
+    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
     .eq("is_active", true)
     .eq("onboarding_completed", true)
     .eq("charges_enabled", true)
@@ -68,7 +71,7 @@ async function getNativityBirthChartDiviners(): Promise<DivinerLandingCard[]> {
   if (!diviners || diviners.length === 0) {
     const { data: fallback } = await admin
       .from("diviners")
-      .select("id, username, display_name, tagline, avatar_url, is_certified")
+      .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
       .eq("is_active", true)
       .eq("onboarding_completed", true)
       .eq("charges_enabled", true)
@@ -94,6 +97,7 @@ async function getNativityBirthChartDiviners(): Promise<DivinerLandingCard[]> {
       displayName: d.display_name as string,
       tagline: (d.tagline as string | null) ?? null,
       avatarUrl: (d.avatar_url as string | null) ?? null,
+      specialties: (d.specialties as string[] | null) ?? null,
       isCertified: !!(d.is_certified as boolean | null),
       startingPrice: fallbackPrices.get(d.id as string) ?? null,
     }));
@@ -118,6 +122,7 @@ async function getNativityBirthChartDiviners(): Promise<DivinerLandingCard[]> {
     displayName: d.display_name as string,
     tagline: (d.tagline as string | null) ?? null,
     avatarUrl: (d.avatar_url as string | null) ?? null,
+    specialties: (d.specialties as string[] | null) ?? null,
     isCertified: !!(d.is_certified as boolean | null),
     startingPrice: priceByDiviner.get(d.id as string) ?? null,
   }));

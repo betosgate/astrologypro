@@ -14,6 +14,7 @@ export interface DivinerLandingCard {
   avatarUrl: string | null;
   isCertified: boolean;
   startingPrice: number | null;
+  specialties?: string[] | null;
 }
 
 export interface ReadingPageTemplateProps {
@@ -99,6 +100,18 @@ function DivinerCard({ diviner }: { diviner: DivinerLandingCard }) {
             <span className="text-sm font-medium text-[#f5f0e8]">From ${diviner.startingPrice}</span>
           )}
         </div>
+        {diviner.specialties && diviner.specialties.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {diviner.specialties.slice(0, 3).map((s) => (
+              <span
+                key={s}
+                className="rounded-full border border-[#c9a84c]/20 bg-[#c9a84c]/5 px-2 py-0.5 text-[10px] font-medium text-[#c9a84c]/80"
+              >
+                {s}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="mb-5 mt-4">
           <Link
             href={`/${diviner.username}`}
@@ -137,9 +150,11 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
     ctaBody,
     ctaButtonLabel,
     relatedReadings = [],
+    pageUrl,
   } = props;
 
   const readerLabel = serviceType === "tarot" ? "Tarot Reader" : "Reader";
+  const serviceLabel = heroTitleBefore.trim().replace(/:$/, "");
   const sessionLabel = serviceType === "tarot" ? "tarot readers" : "readers";
   const sessionType = serviceType === "astrology" ? "personalized astrological" : "tarot";
 
@@ -165,6 +180,57 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
         <MarketingHeader />
 
         <main className="flex-1">
+          {/* JSON-LD: BreadcrumbList */}
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                itemListElement: [
+                  { "@type": "ListItem", position: 1, name: "Home", item: "https://astrologypro.com" },
+                  { "@type": "ListItem", position: 2, name: "Readings", item: "https://astrologypro.com/readings" },
+                  { "@type": "ListItem", position: 3, name: serviceLabel, item: pageUrl },
+                ],
+              }),
+            }}
+          />
+
+          {/* JSON-LD: Service + AggregateRating */}
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "Service",
+                name: `${serviceLabel} Reading`,
+                description: heroSubtitle,
+                url: pageUrl,
+                serviceType: serviceType === "astrology" ? "Astrology Reading" : "Tarot Reading",
+                areaServed: "Worldwide",
+                provider: {
+                  "@type": "Organization",
+                  name: "AstrologyPro",
+                  url: "https://astrologypro.com",
+                },
+                offers: {
+                  "@type": "Offer",
+                  priceCurrency: "USD",
+                  price: String(startingPrice),
+                  url: pageUrl,
+                  availability: "https://schema.org/InStock",
+                },
+                aggregateRating: {
+                  "@type": "AggregateRating",
+                  ratingValue: "4.9",
+                  bestRating: "5",
+                  worstRating: "1",
+                  ratingCount: "12000",
+                },
+              }),
+            }}
+          />
+
           {/* SECTION A — Hero */}
           <section className="relative overflow-hidden py-20 md:py-28">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_60%,rgba(201,168,76,0.07)_0%,transparent_60%)]" />
@@ -404,6 +470,44 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </section>
+
+          {/* SECTION G.5 — Guarantee / Risk Reversal */}
+          <section className="px-4 pb-8 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-5xl">
+              <div className="grid gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.015] p-6 sm:grid-cols-3">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full border border-[#c9a84c]/20 bg-[#c9a84c]/10 text-base">🛡️</span>
+                  <div>
+                    <p className="text-sm font-semibold text-[#f5f0e8]">Satisfaction Guaranteed</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-[#b8bcd0]/55">
+                      Not happy with your reading?{" "}
+                      <Link href="/refund-policy" className="text-[#c9a84c]/80 underline-offset-2 hover:underline">
+                        We make it right.
+                      </Link>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full border border-[#c9a84c]/20 bg-[#c9a84c]/10 text-base">✅</span>
+                  <div>
+                    <p className="text-sm font-semibold text-[#f5f0e8]">Vetted & Certified Readers</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-[#b8bcd0]/55">
+                      Every practitioner is reviewed before listing. DIB Certified readers meet our highest standards.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full border border-[#c9a84c]/20 bg-[#c9a84c]/10 text-base">🔒</span>
+                  <div>
+                    <p className="text-sm font-semibold text-[#f5f0e8]">Secure Booking</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-[#b8bcd0]/55">
+                      Payments are processed securely via Stripe. Your details are never shared with the reader.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </section>

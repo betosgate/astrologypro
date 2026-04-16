@@ -10,18 +10,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Jupiter Return Readings | AstrologyPro",
     description:
       "Every ~12 years, Jupiter returns to its birth position — bringing a wave of expansion, opportunity, and good fortune. Book a reading to make the most of this powerful window.",
+    alternates: { canonical: `${APP_URL}/readings/jupiter-return` },
     openGraph: {
       title: "Jupiter Return Readings | AstrologyPro",
       description:
         "Every ~12 years, Jupiter returns to its birth position — bringing a wave of expansion, opportunity, and good fortune. Book a reading to make the most of this powerful window.",
       type: "website",
       url: `${APP_URL}/readings/jupiter-return`,
+      images: [{ url: "https://astrologypro.com/images/services/jupiter-return.png", width: 1200, height: 630, alt: "Jupiter Return Readings" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Jupiter Return Readings | AstrologyPro",
       description:
         "Every ~12 years, Jupiter returns to its birth position — bringing a wave of expansion, opportunity, and good fortune. Book a reading to make the most of this powerful window.",
+      images: ["https://astrologypro.com/images/services/jupiter-return.png"],
     },
   };
 }

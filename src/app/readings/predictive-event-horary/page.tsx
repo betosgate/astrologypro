@@ -10,18 +10,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Horary Astrology Readings | AstrologyPro",
     description:
       "Horary astrology answers specific questions by casting a chart for the exact moment the question is asked. One of the most precise predictive techniques in all of traditional astrology.",
+    alternates: { canonical: `${APP_URL}/readings/predictive-event-horary` },
     openGraph: {
       title: "Horary Astrology Readings | AstrologyPro",
       description:
         "Horary astrology answers specific questions by casting a chart for the exact moment the question is asked. One of the most precise predictive techniques in all of traditional astrology.",
       type: "website",
       url: `${APP_URL}/readings/predictive-event-horary`,
+      images: [{ url: "https://astrologypro.com/images/services/horary.png", width: 1200, height: 630, alt: "Predictive Event & Horary Readings" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Horary Astrology Readings | AstrologyPro",
       description:
         "Horary astrology answers specific questions by casting a chart for the exact moment the question is asked. One of the most precise predictive techniques in all of traditional astrology.",
+      images: ["https://astrologypro.com/images/services/horary.png"],
     },
   };
 }
@@ -51,7 +54,7 @@ async function getHoraryDiviners(): Promise<DivinerLandingCard[]> {
 
   let query = admin
     .from("diviners")
-    .select("id, username, display_name, tagline, avatar_url, is_certified")
+    .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
     .eq("is_active", true)
     .eq("onboarding_completed", true)
     .eq("charges_enabled", true)
@@ -68,7 +71,7 @@ async function getHoraryDiviners(): Promise<DivinerLandingCard[]> {
   if (!diviners || diviners.length === 0) {
     const { data: fallback } = await admin
       .from("diviners")
-      .select("id, username, display_name, tagline, avatar_url, is_certified")
+      .select("id, username, display_name, tagline, avatar_url, specialties, is_certified")
       .eq("is_active", true)
       .eq("onboarding_completed", true)
       .eq("charges_enabled", true)
@@ -94,6 +97,7 @@ async function getHoraryDiviners(): Promise<DivinerLandingCard[]> {
       displayName: d.display_name as string,
       tagline: (d.tagline as string | null) ?? null,
       avatarUrl: (d.avatar_url as string | null) ?? null,
+      specialties: (d.specialties as string[] | null) ?? null,
       isCertified: !!(d.is_certified as boolean | null),
       startingPrice: fallbackPrices.get(d.id as string) ?? null,
     }));
@@ -118,6 +122,7 @@ async function getHoraryDiviners(): Promise<DivinerLandingCard[]> {
     displayName: d.display_name as string,
     tagline: (d.tagline as string | null) ?? null,
     avatarUrl: (d.avatar_url as string | null) ?? null,
+    specialties: (d.specialties as string[] | null) ?? null,
     isCertified: !!(d.is_certified as boolean | null),
     startingPrice: priceByDiviner.get(d.id as string) ?? null,
   }));
