@@ -1810,8 +1810,8 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {/* Transit Chart Image Section */}
       {transitWheelSvg && (
         <div className="rounded-lg border overflow-hidden">
-          <div className="px-4 py-2.5 horoscope-section-header text-center">
-            <h3 className="text-[20px] font-semibold text-center w-full text-white" style={{ fontFamily: "'Roboto', sans-serif" }}>Transit Chart</h3>
+          <div className="px-4 py-2.5 horoscope-section-header text-center flex items-center justify-center gap-2">
+            <h3 className="text-[20px] font-semibold text-center w-full text-white" style={{ fontFamily: "'Roboto', sans-serif" }}>Western Chart Horoscope</h3>
           </div>
           <div className="p-6 bg-slate-950 flex justify-center border-b border-white/5">
             <div className="relative group max-w-lg w-full">
@@ -3376,23 +3376,46 @@ export default function AdminHoroscopePage() {
                     )}
 
                     {/* Natal charts — always show first */}
-                    <div id="natal-charts-row" className="space-y-4">
-                      <NatalChartsRow
-                        svgs={[natalSvg, natalSvgTransit]}
-                        labels={[
-                          isTwoPersonAiTab ? "Person 1 (AstrologyAPI)" : "Natal Wheel Chart",
-                          isTwoPersonAiTab ? "Person 1 (FreeAstrology)" : "Natal Wheel Chart"
-                        ]}
-                        onExpandImg={(src) => setChartModal(src)}
-                      />
-                      <NatalChartsRow
-                        svgs={[natalSvgP2, natalSvgTransitP2]}
-                        labels={[
-                          "Person 2 (AstrologyAPI)",
-                          "Person 2 (FreeAstrology)"
-                        ]}
-                        onExpandImg={(src) => setChartModal(src)}
-                      />
+                    <div id="natal-charts-row" className="space-y-6">
+                      {(natalSvg || natalSvgTransit) && (
+                        <div className="rounded-lg border overflow-hidden">
+                          <div className="px-4 py-3 flex items-center justify-center gap-2 bg-black text-white border-none rounded-t-lg">
+                            <User className="size-4 text-white" />
+                            <h2 className="text-sm font-semibold text-white text-center">
+                              {isTwoPersonAiTab ? "Western Chart Horoscope For Self" : "Western Chart Horoscope"}
+                            </h2>
+                          </div>
+                          <div className="p-4">
+                            <NatalChartsRow
+                              svgs={[natalSvg, natalSvgTransit]}
+                              labels={[
+                                isTwoPersonAiTab ? "Person 1" : "Natal Wheel Chart",
+                                isTwoPersonAiTab ? "Person 1" : "Natal Wheel Chart"
+                              ]}
+                              onExpandImg={(src) => setChartModal(src)}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {isTwoPersonAiTab && (natalSvgP2 || natalSvgTransitP2) && (
+                        <div className="rounded-lg border overflow-hidden">
+                          <div className="px-4 py-3 flex items-center justify-center gap-2 bg-black text-white border-none rounded-t-lg">
+                            <Users className="size-4 text-white" />
+                            <h2 className="text-sm font-semibold text-white text-center">Western Chart Horoscope For Partner</h2>
+                          </div>
+                          <div className="p-4">
+                            <NatalChartsRow
+                              svgs={[natalSvgP2, natalSvgTransitP2]}
+                              labels={[
+                                "Person 2",
+                                "Person 2"
+                              ]}
+                              onExpandImg={(src) => setChartModal(src)}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* ─── Planet Return Summary ──────────────────── */}
