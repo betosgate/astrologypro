@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -134,6 +135,7 @@ export default async function NativityBirthChartPage() {
     <ReadingPageTemplate
       serviceType="astrology"
       badge="The Foundation of All Astrology"
+      heroImage={getReadingOgImageUrl("nativity-birth-chart")}
       heroTitleBefore="Your Natal Chart: "
       heroTitleGradient="The Map of Your Soul"
       heroSubtitle="Cast at the precise moment you were born, your natal chart is the most personal astrological document that exists — a complete portrait of your soul's journey, gifts, challenges, and purpose."

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -134,6 +135,7 @@ export default async function CelticCrossPage() {
     <ReadingPageTemplate
       serviceType="tarot"
       badge="The Gold Standard of Tarot Spreads"
+      heroImage={getReadingOgImageUrl("10-card-celtic-cross-major-read")}
       heroTitleBefore="The Celtic Cross:"
       heroTitleGradient="Tarot's Most Complete Spread"
       heroSubtitle="For over a century, the Celtic Cross has been the definitive major tarot reading — ten cards, ten positions, covering every dimension of a situation from your deepest subconscious to the most likely final outcome."

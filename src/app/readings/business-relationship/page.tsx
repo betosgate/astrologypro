@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -134,6 +135,7 @@ export default async function BusinessRelationshipPage() {
     <ReadingPageTemplate
       serviceType="astrology"
       badge="Business Astrology"
+      heroImage={getReadingOgImageUrl("business-relationship")}
       heroTitleBefore="Business Relationships:"
       heroTitleGradient="Partnership Chemistry in the Stars"
       heroSubtitle="Business partnerships are among the highest-stakes relationships you'll enter. Astrology can reveal the natural strengths your charts bring together, where power dynamics or communication gaps could create friction, and the optimal timing for decisions that affect both parties."

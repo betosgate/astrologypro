@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -134,6 +135,7 @@ export default async function SolarReturnPage() {
     <ReadingPageTemplate
       serviceType="astrology"
       badge="Annual Astrological Event"
+      heroImage={getReadingOgImageUrl("solar-return")}
       heroTitleBefore="Your Solar Return:"
       heroTitleGradient="A New Year in the Stars"
       heroSubtitle="Every year on your birthday, the Sun returns to its exact natal position — creating a new energetic blueprint for the year ahead. A Solar Return reading reveals what the universe has in store for you."

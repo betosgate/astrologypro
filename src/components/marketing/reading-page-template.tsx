@@ -5,6 +5,7 @@ import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { getDivinerAvatarUrl } from "@/lib/diviner-images";
 import { ReadingLeadCapture } from "@/components/marketing/reading-lead-capture";
+import { ReadingLeadForm } from "@/components/marketing/reading-lead-form";
 import { ReadingStickyBar } from "@/components/marketing/reading-sticky-bar";
 
 export interface DivinerLandingCard {
@@ -296,6 +297,20 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                       Find a {readerLabel} ↓
                     </a>
                   </div>
+
+                  {/* Hero inline lead capture */}
+                  <div className="mt-6">
+                    <div className="mb-3 flex items-center gap-3">
+                      <div className="h-px flex-1 bg-white/10" aria-hidden="true" />
+                      <span className="text-xs uppercase tracking-widest text-[#b8bcd0]/35">
+                        or get a free reading guide
+                      </span>
+                      <div className="h-px flex-1 bg-white/10" aria-hidden="true" />
+                    </div>
+                    <div className="mx-auto max-w-sm md:mx-0">
+                      <ReadingLeadCapture subject={emailGuideSubject} />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Right: service image card — desktop only */}
@@ -422,6 +437,44 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
             </div>
           </section>
 
+          {/* SECTION D.5 — Qualified Lead Form (mid-page, after education) */}
+          <section className="px-4 pb-8 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-2xl">
+              <div className="relative overflow-hidden rounded-2xl border border-[#c9a84c]/20 bg-[#0d1117]/80 p-8 sm:p-10">
+                <div className="pointer-events-none absolute -left-10 -top-10 size-52 rounded-full bg-[#c9a84c]/6 blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-10 -right-10 size-52 rounded-full bg-[#c9a84c]/6 blur-3xl" />
+                <div className="relative">
+                  {/* Header */}
+                  <div className="mb-6 text-center">
+                    <div className="mb-3 inline-flex size-12 items-center justify-center rounded-full border border-[#c9a84c]/30 bg-[#c9a84c]/10">
+                      <span className="text-xl" aria-hidden="true">
+                        {serviceType === "astrology" ? "🔮" : "🃏"}
+                      </span>
+                    </div>
+                    <h2 className="text-xl font-bold text-[#f5f0e8]">
+                      Get a Free{" "}
+                      {serviceType === "astrology" ? "Astrology" : "Tarot"} Reading Guide
+                      <span className="ml-2 inline-block rounded-full bg-[#c9a84c]/15 px-2 py-0.5 text-xs font-semibold text-[#c9a84c]">
+                        Free
+                      </span>
+                    </h2>
+                    <p className="mt-2 text-sm text-[#b8bcd0]/55">
+                      {serviceType === "astrology"
+                        ? "Share your birth details and we'll send a personalised guide for your " + serviceLabel + " reading."
+                        : "Tell us your question and we'll match you with the right tarot reader for " + serviceLabel + "."}
+                    </p>
+                  </div>
+
+                  <ReadingLeadForm
+                    serviceType={serviceType}
+                    serviceName={serviceLabel}
+                    sourceUrl={pageUrl}
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
           {/* SECTION E — What to Expect */}
           <section className="px-4 py-16 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-5xl">
@@ -451,23 +504,25 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
             <div className="h-px bg-gradient-to-r from-transparent via-[#c9a84c]/20 to-transparent" />
           </div>
 
-          {/* SECTION F — Mid-page CTA Banner */}
-          <section className="px-4 pb-4 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-5xl">
-              <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-[#c9a84c]/20 bg-[#c9a84c]/5 px-6 py-5 sm:flex-row">
-                <p className="text-sm text-[#b8bcd0]/70">
-                  <span className="font-semibold text-[#f5f0e8]">Ready to book?</span>
-                  {" "}Browse available {sessionLabel} and find your match.
-                </p>
-                <a
-                  href="#diviners"
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#c9a84c] px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-[#e2c97e]"
-                >
-                  Find a Reader <ArrowRight className="size-3.5" aria-hidden="true" />
-                </a>
+          {/* SECTION F — Mid-page CTA Banner (only shown when readers are available) */}
+          {diviners.length > 0 && (
+            <section className="px-4 pb-4 sm:px-6 lg:px-8">
+              <div className="mx-auto max-w-5xl">
+                <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-[#c9a84c]/20 bg-[#c9a84c]/5 px-6 py-5 sm:flex-row">
+                  <p className="text-sm text-[#b8bcd0]/70">
+                    <span className="font-semibold text-[#f5f0e8]">Ready to book?</span>
+                    {" "}Browse available {sessionLabel} and find your match.
+                  </p>
+                  <a
+                    href="#diviners"
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#c9a84c] px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-[#e2c97e]"
+                  >
+                    Find a Reader <ArrowRight className="size-3.5" aria-hidden="true" />
+                  </a>
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
+          )}
 
           {/* SECTION G — Client Testimonials */}
           <section className="px-4 py-16 sm:px-6 lg:px-8">
@@ -563,80 +618,24 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
             </div>
           </section>
 
-          {/* SECTION H — Diviner Grid */}
-          <section id="diviners" className="scroll-mt-20 px-4 py-16 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-5xl">
-              <h2 className="mb-2 text-center text-2xl font-bold text-[#f5f0e8] sm:text-3xl">
-                {divinerSectionTitle}
-              </h2>
-              <p className="mb-10 text-center text-sm text-[#b8bcd0]/50">
-                {divinerSectionSubtitle}
-              </p>
-              {diviners.length > 0 ? (
+          {/* SECTION H — Diviner Grid (hidden entirely when no readers available) */}
+          {diviners.length > 0 && (
+            <section id="diviners" className="scroll-mt-20 px-4 py-16 sm:px-6 lg:px-8">
+              <div className="mx-auto max-w-5xl">
+                <h2 className="mb-2 text-center text-2xl font-bold text-[#f5f0e8] sm:text-3xl">
+                  {divinerSectionTitle}
+                </h2>
+                <p className="mb-10 text-center text-sm text-[#b8bcd0]/50">
+                  {divinerSectionSubtitle}
+                </p>
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {diviners.map((d) => (
                     <DivinerCard key={d.username} diviner={d} />
                   ))}
                 </div>
-              ) : (
-                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] py-16 text-center">
-                  <p className="text-[#b8bcd0]/50">
-                    New practitioners are joining soon. Browse all readers in the meantime.
-                  </p>
-                </div>
-              )}
-              <div className="mt-8 text-center">
-                <Link
-                  href={discoverLink}
-                  className="inline-flex items-center gap-1.5 text-sm text-[#c9a84c]/70 transition-colors hover:text-[#c9a84c]"
-                >
-                  {discoverLabel} <ArrowRight className="size-3.5" aria-hidden="true" />
-                </Link>
               </div>
-            </div>
-          </section>
-
-          {/* SECTION I — Email Lead Capture */}
-          <section className="px-4 py-16 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-2xl">
-              <div className="relative overflow-hidden rounded-2xl border border-[#c9a84c]/20 bg-[radial-gradient(ellipse_at_50%_50%,rgba(201,168,76,0.06)_0%,transparent_70%)] p-10 text-center">
-                {/* Gold glow accents */}
-                <div className="pointer-events-none absolute -left-10 -top-10 size-40 rounded-full bg-[#c9a84c]/10 blur-3xl" />
-                <div className="pointer-events-none absolute -bottom-10 -right-10 size-40 rounded-full bg-[#c9a84c]/10 blur-3xl" />
-
-                <div className="relative">
-                  {/* Envelope icon circle */}
-                  <div className="mb-5 inline-flex size-14 items-center justify-center rounded-full border border-[#c9a84c]/30 bg-[#c9a84c]/10">
-                    <svg
-                      className="size-7 text-[#e2c97e]"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={1.5}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-                      />
-                    </svg>
-                  </div>
-
-                  <h2 className="mb-3 text-2xl font-bold text-[#f5f0e8]">
-                    Get Your Free Reading Guide
-                  </h2>
-                  <p className="mx-auto mb-8 max-w-md text-sm leading-relaxed text-[#b8bcd0]/70">
-                    Learn what to expect from {emailGuideSubject}, what questions to prepare, and
-                    how to get the most from your session.
-                  </p>
-
-                  <ReadingLeadCapture subject={emailGuideSubject} />
-
-                  <p className="mt-4 text-xs text-[#b8bcd0]/40">No spam. Unsubscribe anytime.</p>
-                </div>
-              </div>
-            </div>
-          </section>
+            </section>
+          )}
 
           {/* SECTION J — FAQ with JSON-LD */}
           <section className="px-4 py-16 sm:px-6 lg:px-8">
@@ -733,10 +732,11 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                 </p>
                 <div className="mt-8">
                   <a
-                    href="#diviners"
+                    href={diviners.length > 0 ? "#diviners" : (relatedReadings[0]?.href ?? "/readings")}
                     className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#c9a84c] px-8 text-sm font-semibold text-black shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-[#e2c97e]"
                   >
-                    {ctaButtonLabel}
+                    {diviners.length > 0 ? ctaButtonLabel : "Explore Related Readings"}
+                    <ArrowRight className="size-4" aria-hidden="true" />
                   </a>
                 </div>
               </div>

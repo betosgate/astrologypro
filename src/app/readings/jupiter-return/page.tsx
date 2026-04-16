@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -144,6 +145,7 @@ export default async function JupiterReturnPage() {
     <ReadingPageTemplate
       serviceType="astrology"
       badge="Astrological Life Events"
+      heroImage={getReadingOgImageUrl("jupiter-return")}
       heroTitleBefore="Your Jupiter Return:"
       heroTitleGradient="A Cycle of Abundance Begins"
       heroSubtitle="Every ~12 years, Jupiter returns to its birth position — opening a new chapter of expansion, opportunity, and abundance. A Jupiter Return reading reveals exactly where that growth is directed in your unique chart and how to align with it."

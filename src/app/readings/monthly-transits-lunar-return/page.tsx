@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -134,6 +135,7 @@ export default async function MonthlyTransitsLunarReturnPage() {
     <ReadingPageTemplate
       serviceType="astrology"
       badge="Monthly Cosmic Forecast"
+      heroImage={getReadingOgImageUrl("monthly-transits-lunar-return")}
       heroTitleBefore="Monthly Transits + Lunar Return: "
       heroTitleGradient="Your Month Mapped in the Stars"
       heroSubtitle="Each month, the Moon completes its return to your natal position — setting a new emotional tone for the 28 days ahead. Combined with the current planetary transits, this reading gives you the most complete monthly astrological picture available."

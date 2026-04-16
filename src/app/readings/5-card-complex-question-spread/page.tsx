@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -134,6 +135,7 @@ export default async function FiveCardComplexQuestionSpreadPage() {
     <ReadingPageTemplate
       serviceType="tarot"
       badge="In-Depth Tarot Spread"
+      heroImage={getReadingOgImageUrl("5-card-complex-question-spread")}
       heroTitleBefore="The 5-Card Spread:"
       heroTitleGradient="Nuance for Complex Questions"
       heroSubtitle="Some questions have more moving parts than a 3-card spread can hold. The 5-card spread adds context, influences, and deeper nuance — making it the ideal format for situations that require a fuller picture."

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -134,6 +135,7 @@ export default async function ThreeCardBasicQuestionSpreadPage() {
     <ReadingPageTemplate
       serviceType="tarot"
       badge="The Classic Tarot Spread"
+      heroImage={getReadingOgImageUrl("3-card-basic-question-spread")}
       heroTitleBefore="The 3-Card Spread:"
       heroTitleGradient="Fast Clarity on Any Question"
       heroSubtitle="Three cards. Three positions. Infinite clarity. The 3-card spread is the most versatile tool in tarot — deceptively simple but capable of remarkable depth when read by a skilled practitioner."
