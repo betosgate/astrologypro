@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createChimeAttendee } from "@/lib/chime-meetings";
 import { getChimeVoiceClient } from "@/lib/chime-client";
 import { UpdateSipMediaApplicationCallCommand } from "@aws-sdk/client-chime-sdk-voice";
 
@@ -9,8 +10,13 @@ export const dynamic = "force-dynamic";
  * POST /api/chime/voice/bridge-caller
  * Called by the SMA Lambda when the diviner answers their personal phone.
  *
- * Uses UpdateSipMediaApplicationCall to tell the SMA to bridge the
- * original PSTN caller (who is on hold) into the Chime meeting.
+ * Looks up the phone session in the database to get the inbound transaction ID,
+ * creates a fresh caller attendee (JoinToken), and uses
+ * UpdateSipMediaApplicationCall to bridge the original PSTN caller into
+ * the Chime meeting.
+ *
+ * Body: { phoneSessionId, meetingId }
+ *   — all other data is looked up from the database.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -22,23 +28,38 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const {
-      phoneSessionId,
-      inboundTransactionId,
-      meetingId,
-      callerJoinToken,
-      callerAttendeeId,
-    } = body as {
+    const { phoneSessionId, meetingId } = body as {
       phoneSessionId?: string;
-      inboundTransactionId?: string;
       meetingId?: string;
-      callerJoinToken?: string;
-      callerAttendeeId?: string;
     };
 
-    if (!inboundTransactionId || !meetingId || !callerJoinToken) {
+    if (!phoneSessionId || !meetingId) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing phoneSessionId or meetingId" },
+        { status: 400 }
+      );
+    }
+
+    const admin = createAdminClient();
+
+    // Look up the phone session to get the inbound transaction ID
+    const { data: session } = await admin
+      .from("phone_sessions")
+      .select("id, chime_transaction_id, chime_meeting_id")
+      .eq("id", phoneSessionId)
+      .single();
+
+    if (!session) {
+      return NextResponse.json(
+        { error: "Phone session not found" },
+        { status: 404 }
+      );
+    }
+
+    const inboundTransactionId = session.chime_transaction_id;
+    if (!inboundTransactionId) {
+      return NextResponse.json(
+        { error: "No inbound transaction ID on phone session" },
         { status: 400 }
       );
     }
@@ -51,6 +72,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Create a fresh caller attendee with a valid JoinToken
+    const callerAttendee = await createChimeAttendee(
+      meetingId,
+      `phone-caller-${phoneSessionId}`
+    );
+
+    console.log(
+      "[chime/voice/bridge-caller] Created caller attendee:",
+      callerAttendee.attendeeId,
+      "joinToken length:",
+      callerAttendee.joinToken?.length
+    );
+
     // Bridge the original caller into the Chime meeting
     const voiceClient = getChimeVoiceClient();
     await voiceClient.send(
@@ -60,8 +94,8 @@ export async function POST(request: NextRequest) {
         Arguments: {
           action: "join_meeting",
           meetingId,
-          joinToken: callerJoinToken,
-          attendeeId: callerAttendeeId ?? "",
+          joinToken: callerAttendee.joinToken,
+          attendeeId: callerAttendee.attendeeId,
         },
       })
     );
@@ -74,20 +108,17 @@ export async function POST(request: NextRequest) {
     );
 
     // Update phone session status
-    if (phoneSessionId) {
-      const admin = createAdminClient();
-      await admin
-        .from("phone_sessions")
-        .update({ status: "accepted" })
-        .eq("id", phoneSessionId);
+    await admin
+      .from("phone_sessions")
+      .update({ status: "accepted" })
+      .eq("id", phoneSessionId);
 
-      // Mark notification as accepted
-      await admin
-        .from("phone_call_notifications")
-        .update({ status: "accepted" })
-        .eq("phone_session_id", phoneSessionId)
-        .eq("status", "ringing");
-    }
+    // Mark notification as accepted
+    await admin
+      .from("phone_call_notifications")
+      .update({ status: "accepted" })
+      .eq("phone_session_id", phoneSessionId)
+      .eq("status", "ringing");
 
     return NextResponse.json({ bridged: true });
   } catch (error) {
