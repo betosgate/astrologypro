@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     // ── Bridge the PSTN caller into the Chime meeting ──────────────────────
     // Use the TransactionId stored by the notify endpoint to call UpdateSipMediaApplicationCall
     const transactionId = session.chime_transaction_id;
-    const smaId = process.env.CHIME_SMA_ID;
+    const smaId = process.env.CHIME_SMA_ID?.trim();
 
     if (transactionId && smaId) {
       try {
